@@ -1,12 +1,15 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley
-version: 1.16.0.0
+version: 1.18.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
 synopsis: Shelley Ledger Executable Model
 build-type: Simple
-data-files: cddl-files/shelley.cddl
+data-files:
+  cddl/data/shelley.cddl
+  golden/*.json
+
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -29,12 +32,11 @@ library
     Cardano.Ledger.Shelley.API.Validation
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.AdaPots
-    Cardano.Ledger.Shelley.BlockChain
-    Cardano.Ledger.Shelley.CertState
+    Cardano.Ledger.Shelley.BlockBody
+    Cardano.Ledger.Shelley.BlockBody.Internal
     Cardano.Ledger.Shelley.Core
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.Governance
-    Cardano.Ledger.Shelley.HardForks
     Cardano.Ledger.Shelley.Internal
     Cardano.Ledger.Shelley.LedgerState
     Cardano.Ledger.Shelley.PParams
@@ -51,7 +53,6 @@ library
     Cardano.Ledger.Shelley.Transition
     Cardano.Ledger.Shelley.Translation
     Cardano.Ledger.Shelley.Tx
-    Cardano.Ledger.Shelley.Tx.Internal
     Cardano.Ledger.Shelley.TxAuxData
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.TxCert
@@ -85,8 +86,69 @@ library
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo
     Cardano.Ledger.Shelley.Rules.Utxow
+    Cardano.Ledger.Shelley.State.Account
+    Cardano.Ledger.Shelley.State.CertState
     Cardano.Ledger.Shelley.State.Stake
 
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+  build-depends:
+    FailT,
+    aeson >=2,
+    base >=4.18 && <5,
+    bytestring,
+    cardano-base >=0.1.1.0,
+    cardano-crypto-class ^>=2.3,
+    cardano-crypto-wrapper,
+    cardano-data ^>=1.3,
+    cardano-ledger-binary ^>=1.8,
+    cardano-ledger-byron,
+    cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.20,
+    cardano-slotting,
+    cardano-strict-containers >=0.1.5,
+    containers,
+    data-default,
+    deepseq,
+    groups,
+    mempack,
+    microlens,
+    mtl,
+    nothunks,
+    primitive,
+    quiet,
+    small-steps >=1.1.1,
+    text,
+    time,
+    transformers,
+    validation-selective,
+    vector-map >=1.1,
+
+  if flag(asserts)
+    ghc-options: -fno-ignore-asserts
+
+library cddl
+  exposed-modules:
+    Cardano.Ledger.Shelley.HuddleSpec
+
+  visibility: public
+  hs-source-dirs: cddl/lib
   default-language: Haskell2010
   ghc-options:
     -Wall
@@ -98,57 +160,14 @@ library
     -Wunused-packages
 
   build-depends:
-    aeson >=2,
-    base >=4.14 && <5,
-    bytestring,
-    cardano-crypto-class,
-    cardano-crypto-wrapper,
-    cardano-data ^>=1.2.2,
-    cardano-ledger-binary ^>=1.6,
-    cardano-ledger-byron,
-    cardano-ledger-core ^>=1.17,
-    cardano-slotting,
-    cardano-strict-containers,
-    containers,
-    data-default,
-    deepseq,
-    groups,
-    heapwords,
-    mempack,
-    microlens,
-    mtl,
-    nothunks,
-    quiet,
-    set-algebra >=1.0,
-    small-steps >=1.1.1,
-    text,
-    time,
-    transformers,
-    validation-selective,
-    vector-map ^>=1.1,
+    base,
+    cardano-ledger-core:cddl,
+    cardano-ledger-shelley,
+    heredoc,
 
-  if flag(asserts)
-    ghc-options: -fno-ignore-asserts
-
-library testlib
-  exposed-modules:
-    Test.Cardano.Ledger.Shelley.Arbitrary
-    Test.Cardano.Ledger.Shelley.Binary.Cddl
-    Test.Cardano.Ledger.Shelley.Binary.Golden
-    Test.Cardano.Ledger.Shelley.Binary.RoundTrip
-    Test.Cardano.Ledger.Shelley.CDDL
-    Test.Cardano.Ledger.Shelley.Constants
-    Test.Cardano.Ledger.Shelley.Imp
-    Test.Cardano.Ledger.Shelley.Imp.EpochSpec
-    Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
-    Test.Cardano.Ledger.Shelley.Imp.UtxoSpec
-    Test.Cardano.Ledger.Shelley.Imp.UtxowSpec
-    Test.Cardano.Ledger.Shelley.ImpTest
-    Test.Cardano.Ledger.Shelley.TreeDiff
-    Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest
-
-  visibility: public
-  hs-source-dirs: testlib
+executable generate-cddl
+  main-is: Main.hs
+  hs-source-dirs: cddl/exe
   other-modules: Paths_cardano_ledger_shelley
   default-language: Haskell2010
   ghc-options:
@@ -161,24 +180,75 @@ library testlib
     -Wunused-packages
 
   build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.4,
+    cddl,
+
+library testlib
+  exposed-modules:
+    Test.Cardano.Ledger.Shelley.Arbitrary
+    Test.Cardano.Ledger.Shelley.Binary.Annotator
+    Test.Cardano.Ledger.Shelley.Binary.Cddl
+    Test.Cardano.Ledger.Shelley.Binary.Golden
+    Test.Cardano.Ledger.Shelley.Binary.RoundTrip
+    Test.Cardano.Ledger.Shelley.Constants
+    Test.Cardano.Ledger.Shelley.Era
+    Test.Cardano.Ledger.Shelley.Examples
+    Test.Cardano.Ledger.Shelley.Imp
+    Test.Cardano.Ledger.Shelley.Imp.DelegSpec
+    Test.Cardano.Ledger.Shelley.Imp.EpochSpec
+    Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
+    Test.Cardano.Ledger.Shelley.Imp.PoolSpec
+    Test.Cardano.Ledger.Shelley.Imp.UtxoSpec
+    Test.Cardano.Ledger.Shelley.Imp.UtxowSpec
+    Test.Cardano.Ledger.Shelley.ImpTest
+    Test.Cardano.Ledger.Shelley.JSON
+    Test.Cardano.Ledger.Shelley.TreeDiff
+    Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest
+
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules: Paths_cardano_ledger_shelley
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+  build-depends:
     FailT,
     ImpSpec,
     base,
     bytestring,
-    cardano-data,
+    cardano-base:testlib,
+    cardano-crypto,
+    cardano-crypto-class,
+    cardano-crypto-wrapper,
+    cardano-data:{cardano-data, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-ledger-byron,
-    cardano-ledger-byron-test,
+    cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley,
     cardano-slotting:{cardano-slotting, testlib},
     cardano-strict-containers,
     containers,
-    cuddle >=0.3.2,
     data-default,
     generic-random,
     hedgehog-quickcheck,
-    heredoc,
+    mempack,
     microlens,
     microlens-mtl,
     mtl,
@@ -193,33 +263,12 @@ library testlib
     unliftio,
     vector-map,
 
-executable huddle-cddl
-  main-is: Main.hs
-  hs-source-dirs: huddle-cddl
-  other-modules: Paths_cardano_ledger_shelley
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base,
-    cardano-ledger-binary:testlib >=1.4,
-    testlib,
-
 test-suite tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
+    Paths_cardano_ledger_shelley
     Test.Cardano.Ledger.Shelley.Binary.CddlSpec
     Test.Cardano.Ledger.Shelley.Binary.GoldenSpec
     Test.Cardano.Ledger.Shelley.Binary.RoundTripSpec
@@ -242,5 +291,5 @@ test-suite tests
     base,
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-shelley,
+    cardano-ledger-shelley:{cardano-ledger-shelley, cddl},
     testlib,

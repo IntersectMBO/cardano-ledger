@@ -10,8 +10,7 @@
 -- Examples demonstrating the use of multi-assets.
 module Test.Cardano.Ledger.Mary.Examples.MultiAssets (
   multiAssetsExample,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (
@@ -20,10 +19,11 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary (MaryEra, Tx (..))
 import Cardano.Ledger.Mary.Core
+import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -31,7 +31,6 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -41,7 +40,6 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -51,6 +49,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import GHC.Exts (fromString)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
@@ -75,7 +74,7 @@ unboundedInterval = ValidityInterval SNothing SNothing
 bootstrapTxId :: TxId
 bootstrapTxId = txIdTxBody txb
   where
-    txb :: TxBody MaryEra
+    txb :: TxBody TopTx MaryEra
     txb = mkBasicTxBody
 
 initUTxO :: UTxO MaryEra
@@ -89,13 +88,13 @@ initUTxO =
 pp :: PParams MaryEra
 pp =
   emptyPParams
-    & ppMinFeeAL .~ Coin 0
-    & ppMinFeeBL .~ Coin 1
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 0)
+    & ppTxFeeFixedL .~ Coin 1
     & ppMaxTxSizeL .~ 16384
     & ppMinUTxOValueL .~ Coin 100
 
 ledgerEnv :: SlotNo -> LedgerEnv MaryEra
-ledgerEnv s = LedgerEnv s Nothing minBound pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv s = LedgerEnv s Nothing minBound pp (ChainAccountState (Coin 0) (Coin 0))
 
 feeEx :: Coin
 feeEx = Coin 3
@@ -107,7 +106,7 @@ makeMaryTxBody ::
   [ShelleyTxOut MaryEra] ->
   ValidityInterval ->
   MultiAsset ->
-  TxBody MaryEra
+  TxBody TopTx MaryEra
 makeMaryTxBody ins outs interval minted =
   mkBasicTxBody
     & inputsTxBodyL .~ Set.fromList ins
@@ -119,12 +118,12 @@ makeMaryTxBody ins outs interval minted =
 policyFailure ::
   PolicyID -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
 policyFailure p =
-  Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ Set.singleton (policyID p)
+  Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ NES.singleton (policyID p)
 
 outTooBigFailure ::
   ShelleyTxOut MaryEra -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra)
 outTooBigFailure out =
-  Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO [out]
+  Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO $ pure out
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens
@@ -163,7 +162,7 @@ tokensSimpleEx1 = MaryValue mempty mintSimpleEx1 <+> Val.inject aliceCoinSimpleE
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
 -- Give the bundle to Alice.
-txbodySimpleEx1 :: TxBody MaryEra
+txbodySimpleEx1 :: TxBody TopTx MaryEra
 txbodySimpleEx1 =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 0]
@@ -171,7 +170,7 @@ txbodySimpleEx1 =
     unboundedInterval
     mintSimpleEx1
 
-txSimpleEx1 :: ShelleyTx MaryEra
+txSimpleEx1 :: Tx TopTx MaryEra
 txSimpleEx1 =
   mkBasicTx txbodySimpleEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -210,7 +209,7 @@ bobTokensSimpleEx2 =
       Map.singleton purplePolicyId (Map.singleton plum 5)
 
 -- Alice gives five plums to Bob.
-txbodySimpleEx2 :: TxBody MaryEra
+txbodySimpleEx2 :: TxBody TopTx MaryEra
 txbodySimpleEx2 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodySimpleEx1) 0]
@@ -220,7 +219,7 @@ txbodySimpleEx2 =
     unboundedInterval
     mempty
 
-txSimpleEx2 :: ShelleyTx MaryEra
+txSimpleEx2 :: Tx TopTx MaryEra
 txSimpleEx2 =
   mkBasicTx txbodySimpleEx2
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw)
@@ -286,7 +285,7 @@ tokensTimeEx1 :: MaryValue
 tokensTimeEx1 = MaryValue mempty mintTimeEx1 <+> Val.inject aliceCoinsTimeEx1
 
 -- Mint tokens
-txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody MaryEra
+txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody TopTx MaryEra
 txbodyTimeEx1 s e =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 0]
@@ -294,10 +293,10 @@ txbodyTimeEx1 s e =
     (ValidityInterval s e)
     mintTimeEx1
 
-txbodyTimeEx1Valid :: TxBody MaryEra
+txbodyTimeEx1Valid :: TxBody TopTx MaryEra
 txbodyTimeEx1Valid = txbodyTimeEx1 (SJust startInterval) (SJust stopInterval)
 
-txTimeEx1 :: TxBody MaryEra -> ShelleyTx MaryEra
+txTimeEx1 :: TxBody TopTx MaryEra -> Tx TopTx MaryEra
 txTimeEx1 txbody =
   mkBasicTx txbody
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -305,19 +304,19 @@ txTimeEx1 txbody =
     atw = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay]
     stw = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
 
-txTimeEx1Valid :: ShelleyTx MaryEra
+txTimeEx1Valid :: Tx TopTx MaryEra
 txTimeEx1Valid = txTimeEx1 txbodyTimeEx1Valid
 
-txTimeEx1InvalidLHSfixed :: ShelleyTx MaryEra
+txTimeEx1InvalidLHSfixed :: Tx TopTx MaryEra
 txTimeEx1InvalidLHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust beforeStart) (SJust stopInterval)
 
-txTimeEx1InvalidLHSopen :: ShelleyTx MaryEra
+txTimeEx1InvalidLHSopen :: Tx TopTx MaryEra
 txTimeEx1InvalidLHSopen = txTimeEx1 $ txbodyTimeEx1 SNothing (SJust stopInterval)
 
-txTimeEx1InvalidRHSfixed :: ShelleyTx MaryEra
+txTimeEx1InvalidRHSfixed :: Tx TopTx MaryEra
 txTimeEx1InvalidRHSfixed = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) (SJust afterStop)
 
-txTimeEx1InvalidRHSopen :: ShelleyTx MaryEra
+txTimeEx1InvalidRHSopen :: Tx TopTx MaryEra
 txTimeEx1InvalidRHSopen = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) SNothing
 
 expectedUTxOTimeEx1 :: UTxO MaryEra
@@ -345,7 +344,7 @@ aliceCoinsTimeEx2 :: Coin
 aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
 
 -- Alice gives one token to Bob
-txbodyTimeEx2 :: TxBody MaryEra
+txbodyTimeEx2 :: TxBody TopTx MaryEra
 txbodyTimeEx2 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodyTimeEx1Valid) 0]
@@ -355,15 +354,16 @@ txbodyTimeEx2 =
     unboundedInterval
     mempty
 
-txTimeEx2 :: ShelleyTx MaryEra
+txTimeEx2 :: Tx TopTx MaryEra
 txTimeEx2 =
-  ShelleyTx
-    txbodyTimeEx2
-    mempty
-      { addrWits =
-          mkWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
-      }
-    SNothing
+  MkMaryTx $
+    ShelleyTx
+      txbodyTimeEx2
+      mempty
+        { addrWits =
+            mkWitnessesVKey (hashAnnotated txbodyTimeEx2) [asWitness Cast.alicePay]
+        }
+      SNothing
 
 expectedUTxOTimeEx2 :: UTxO MaryEra
 expectedUTxOTimeEx2 =
@@ -409,7 +409,7 @@ tokensSingWitEx1 :: MaryValue
 tokensSingWitEx1 = MaryValue mempty mintSingWitEx1 <+> Val.inject bobCoinsSingWitEx1
 
 -- Bob pays the fees, but only alice can witness the minting
-txbodySingWitEx1 :: TxBody MaryEra
+txbodySingWitEx1 :: TxBody TopTx MaryEra
 txbodySingWitEx1 =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 1]
@@ -417,7 +417,7 @@ txbodySingWitEx1 =
     unboundedInterval
     mintSingWitEx1
 
-txSingWitEx1Valid :: ShelleyTx MaryEra
+txSingWitEx1Valid :: Tx TopTx MaryEra
 txSingWitEx1Valid =
   mkBasicTx txbodySingWitEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -433,7 +433,7 @@ expectedUTxOSingWitEx1 =
       , (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
-txSingWitEx1Invalid :: ShelleyTx MaryEra
+txSingWitEx1Invalid :: Tx TopTx MaryEra
 txSingWitEx1Invalid =
   mkBasicTx txbodySingWitEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -463,7 +463,7 @@ aliceTokensNegEx1 =
     MultiAsset $
       Map.singleton purplePolicyId (Map.singleton amethyst 2)
 
-txbodyNegEx1 :: TxBody MaryEra
+txbodyNegEx1 :: TxBody TopTx MaryEra
 txbodyNegEx1 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodySimpleEx2) 0]
@@ -471,7 +471,7 @@ txbodyNegEx1 =
     unboundedInterval
     mintNegEx1
 
-txNegEx1 :: ShelleyTx MaryEra
+txNegEx1 :: Tx TopTx MaryEra
 txNegEx1 =
   mkBasicTx txbodyNegEx1
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
@@ -507,7 +507,7 @@ aliceTokensNegEx2 =
       Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
 
 -- Mint negative valued tokens
-txbodyNegEx2 :: TxBody MaryEra
+txbodyNegEx2 :: TxBody TopTx MaryEra
 txbodyNegEx2 =
   makeMaryTxBody
     [mkTxInPartial (txIdTxBody txbodySimpleEx2) 0]
@@ -553,7 +553,7 @@ bigValue =
 bigOut :: ShelleyTxOut MaryEra
 bigOut = ShelleyTxOut Cast.aliceAddr $ MaryValue mempty bigValue <+> Val.inject minUtxoBigEx
 
-txbodyWithBigValue :: TxBody MaryEra
+txbodyWithBigValue :: TxBody TopTx MaryEra
 txbodyWithBigValue =
   makeMaryTxBody
     [mkTxInPartial bootstrapTxId 0]
@@ -561,7 +561,7 @@ txbodyWithBigValue =
     unboundedInterval
     (bigValue <> smallValue)
 
-txBigValue :: ShelleyTx MaryEra
+txBigValue :: Tx TopTx MaryEra
 txBigValue =
   mkBasicTx txbodyWithBigValue
     & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)

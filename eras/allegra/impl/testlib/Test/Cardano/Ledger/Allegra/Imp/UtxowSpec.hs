@@ -24,12 +24,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary (genUtf8StringOfSize)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec ::
-  forall era.
-  ( ShelleyEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   it "InvalidMetadata" $ do
     invalidMetadatum <- genInvalidMetadata

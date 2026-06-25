@@ -1,21 +1,87 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.9.0.0
+
+* Add `Generic` instance for `ApplyTxError`
+* Add `AllegraApplyTxError` constructor for `ApplyTxError era`
+* Change sets containing errors into `NonEmptySet` for `AllegraUtxoPredFailure`
+* Change all lists into `NonEmpty` for `AllegraUtxoPredFailure`
+* Add `cddl` sub-library, and `generate-cddl` executable.
+* Remove deprecated type `Allegra`
+* Remove deprecated type `TimelockConstr`
+* Add `invalidBeforeL`, `invalidHereAfterL`
+* Add `basicAllegraTxBody`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
+* Remove deprecated `timelockScriptsTxAuxDataL`
+
+### `cddl`
+
+* Move `cddl-files` to `cddl/data`.
+* Make `max_int64`, `min_int64` and `int64` era generic.
+* Export for cross-era reuse:
+  - `auxiliaryScriptsRule`, `auxiliaryDataArrayRule`, `auxiliaryDataRule`
+  - `minInt64Rule`, `maxInt64Rule`, `int64Rule`
+  - `nativeScriptRule`
+  - `scriptNOfKGroup`, `scriptInvalidBeforeGroup`, `scriptInvalidHereafterGroup`
+* Add `HuddleSpec` module with `Huddle{Rule|Group}` instances for all types.
+* Add smart constructors `mkBlock` and `mkTransaction`.
+* Add `generate-cddl` executable target to test the generation of `.cddl` files against the existing `huddle-cddl` executable.
+
+### `testlib`
+
+* Remove `huddle-cddl` and the `CDDL` modules.
+* Add `Test.Cardano.Ledger.Allegra.Binary.Golden`
+* Add `allegraDecodeDuplicateDelegCertSucceeds`
+* Add CDDL definitions for int64 types: `int64`, `min_int64`, `max_int64`, `negative_int64`, `positive_int64`, `nonzero_int64`
+* Rename `native_script` -> `allegra_native_script` in CDDL
+* Add `auxiliary_data_array` to CDDL for simplification
+* Remove `metadata` redefinition in CDDL
+* Use fixed-sized `uint .size 8` for `slot` in CDDL for timelock validity intervals
+* Add `impSatisfyMNativeScripts`
+* Add `impSatisfySignature`
+
+## 1.8.0.0
+
+* Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
+* Replace `timelockScriptsAllegraTxAuxDataL` with `nativeScriptsAllegraTxAuxDataL`
+* Changed `MaxTxSizeUTxO` to use `Word32`
+* Remove `TriesToForgeADA`
+* Change the type of `actualSize` and `PParameterMaxValue` fields in `OutputTooBigUTxO` to `Int`
+* Added `COMPLETE` pragma for `TxCert AllegraEra`
+* Added `COMPLETE` pragma for `NativeScript AllegraEra`
+* Move to `testlib` `DecCBOR` instances for: `TxBody AllegraEra`, `AllegraTxAuxDataRaw`, `AllegraTxAuxData`, `TimelockRaw`, `Timelock`
+* Remove `AllegraTxBody`
+* Removed `era` parameter from `AllegraTxBodyRaw`
+* Expose access to `AllegraTxBodyRaw`, `AllegraTxAuxData` and `TimelockRaw`
+* Expose constructor `MkAllegraTxBody`, `MkTxAuxData` and `MkTimelock`
+* Deprecate `TimelockConstr`
+* Rename `atbrTxFee` to `atbrFee` for consistency
+
+### `testlib`
+
+* Added `EraSpecificSpec AllegraEra` instance
+* Added `Examples` module with: `ledgerExamples`, `exampleAllegraTxBody`, `exampleAllegraTxAuxData`
+* Added `Arbitrary` instance for `TransitionConfig AllegraEra`
+* Added `Era` module with `AllegraEraTest` class
+
 ## 1.7.0.0
 
 * Add `DecCBOR` instances for:
-  * `Timelock`
-  * `AllegraTxAuxData`
-  * `AllegraTxBody`
+  - `Timelock`
+  - `AllegraTxAuxData`
+  - `AllegraTxBody`
 * Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy
 * Add `Era era` constraint to `NoThunks` instance for `TimeLock`
 * Remove `Era era` constraint from:
-  * `getRequireSignatureTimelock`
-  * `getRequireAllOfTimelock`
-  * `getRequireAnyOfTimelock`
-  * `getRequireMOfTimelock`
-  * `getTimeStartTimelock`
-  * `getTimeExpireTimelock`
+  - `getRequireSignatureTimelock`
+  - `getRequireAllOfTimelock`
+  - `getRequireAnyOfTimelock`
+  - `getRequireMOfTimelock`
+  - `getTimeStartTimelock`
+  - `getTimeExpireTimelock`
 * Add `MemPack` instance for `Timelock`
 * Remove deprecated `AuxiliaryData` type synonym
 * Deprecate `Allegra` type synonym
@@ -40,24 +106,24 @@
 ## 1.5.0.0
 
 * Replace patterns within `Timelock` with `AllegraEraScript`- constrained ones:
-  * `RequireTimeExpire`
-  * `RequireTimeStart`
+  - `RequireTimeExpire`
+  - `RequireTimeStart`
 * Remove `Timelock` patterns:
-  * `RequireSignature`
-  * `RequireAllOf`
-  * `RequireAnyOf`
-  * `RequireMOf`
+  - `RequireSignature`
+  - `RequireAllOf`
+  - `RequireAnyOf`
+  - `RequireMOf`
 * Introduce `AllegraEraScript` class
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `AllegraEra`
 * Change signatures of `evalTimelock` and `validateTimelock`:
-  * replace `Era` constraint with `AllegraEraScript`
-  * replace `Timelock` with `NativeScript`
+  - replace `Era` constraint with `AllegraEraScript`
+  - replace `Timelock` with `NativeScript`
 
 ### testlib
 
 * Change signatures of `Arbitrary` instances for `Timelock` and `AllegraTxAuxData era`:
-  * replace `Era` constraint with `AllegraEraScript`
-  * add `NativeScript era ~ Timelock era` constraint
+  - replace `Era` constraint with `AllegraEraScript`
+  - add `NativeScript era ~ Timelock era` constraint
 
 ## 1.4.1.0
 
@@ -155,9 +221,9 @@
 ## 1.1.1.0
 
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 
 ## 1.1.0.0
 

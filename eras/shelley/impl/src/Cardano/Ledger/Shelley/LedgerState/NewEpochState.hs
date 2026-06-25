@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -15,18 +17,11 @@ import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
  )
-import Cardano.Ledger.CertState (
-  DState (..),
-  EraCertState (..),
-  InstantaneousRewards (..),
-  dsGenDelegsL,
- )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.State
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default (def)
 import Data.Foldable (fold)
@@ -39,11 +34,11 @@ import Lens.Micro.Extras (view)
 -- | This function returns the coin balance of a given pot, either the
 -- reserves or the treasury, after the instantaneous rewards and pot
 -- transfers are accounted for.
-availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards -> Coin
+availableAfterMIR :: MIRPot -> ChainAccountState -> InstantaneousRewards -> Coin
 availableAfterMIR ReservesMIR as ir =
-  asReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
+  casReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
-  asTreasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
+  casTreasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
 
 -- ========================
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
@@ -51,7 +46,7 @@ availableAfterMIR TreasuryMIR as ir =
 getGKeys ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'Genesis)
+  Set (KeyHash GenesisRole)
 getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsGenDelegsL)
   where
     NewEpochState _ _ _ es _ _ _ = nes
@@ -62,7 +57,7 @@ getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsG
 genesisState ::
   forall era.
   (EraGov era, EraCertState era, EraStake era) =>
-  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash GenesisRole) GenDelegPair ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
@@ -75,12 +70,14 @@ genesisState genDelegs0 utxo0 =
         mempty
         mempty
     )
-    (mkCertState def def dState)
+    ( def
+        & certDStateL .~ dState
+    )
   where
     dState :: DState era
     dState =
       DState
-        { dsUnified = UM.empty
+        { dsAccounts = def
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs
         , dsIRewards = def
@@ -104,14 +101,14 @@ updateNES ::
   NewEpochState era
 updateNES
   oldNes@( NewEpochState
-            _eL
-            _bprev
-            _
-            es@(EpochState acnt _ ss nm)
-            _ru
-            _pd
-            _avvm
-          )
+             _eL
+             _bprev
+             _
+             es@(EpochState acnt _ ss nm)
+             _ru
+             _pd
+             _avvm
+           )
   bcur
   ls =
     let
@@ -131,18 +128,18 @@ returnRedeemAddrsToReserves ::
   EraTxOut era =>
   EpochState era ->
   EpochState era
-returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
+returnRedeemAddrsToReserves es = es {esChainAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
     us = lsUTxOState ls
     UTxO utxo = utxosUtxo us
     (redeemers, nonredeemers) =
       Map.partition (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
-    acnt = esAccountState es
+    acnt = esChainAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
-        { asReserves = asReserves acnt <+> coinBalance utxoR
+        { casReserves = casReserves acnt <+> sumCoinUTxO utxoR
         }
     us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

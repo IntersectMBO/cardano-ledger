@@ -1,5 +1,14 @@
 # Version history for `small-steps`
 
+## 1.1.3.0
+
+* Add `failOnNonEmptyMap` and `failureOnNonEmptyMap`
+* Add `failOnNonEmptySet` and `failureOnNonEmptySet`
+
+## 1.1.2.0
+
+* Add `whenFailureFreeDefault`
+
 ## 1.1.1.0
 
 * Add `STSResult` and `applySTSOptsResult`

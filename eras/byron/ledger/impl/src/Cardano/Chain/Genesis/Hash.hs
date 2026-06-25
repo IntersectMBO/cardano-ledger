@@ -5,12 +5,11 @@
 
 module Cardano.Chain.Genesis.Hash (
   GenesisHash (..),
-)
-where
+) where
 
 import Cardano.Crypto.Hashing (Hash)
 import Cardano.Crypto.Raw (Raw)
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import NoThunks.Class (NoThunks (..))
@@ -18,7 +17,7 @@ import NoThunks.Class (NoThunks (..))
 newtype GenesisHash = GenesisHash
   { unGenesisHash :: Hash Raw
   }
-  deriving (Eq, Generic, NFData, DecCBOR, EncCBOR, NoThunks)
+  deriving (Eq, Generic, NFData, FromCBOR, ToCBOR, DecCBOR, EncCBOR, NoThunks)
 
 deriving instance Show GenesisHash
 

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Ssc (
   SscPayload (..),
@@ -16,8 +17,7 @@ module Cardano.Chain.Ssc (
   dropInnerSharesMap,
   dropVssCertificatesMap,
   dropVssCertificate,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -76,7 +76,7 @@ instance DecCBOR SscPayload where
 dropSscPayload :: Dropper s
 dropSscPayload = do
   actualLen <- decodeListLen
-  decCBOR >>= \case
+  decCBOR @Word8 >>= \case
     0 -> do
       matchSize "CommitmentsPayload" 3 actualLen
       dropCommitmentsMap
@@ -92,7 +92,7 @@ dropSscPayload = do
     3 -> do
       matchSize "CertificatesPayload" 2 actualLen
       dropVssCertificatesMap
-    t -> cborError $ DecoderErrorUnknownTag "SscPayload" t
+    t -> cborError $ DecoderErrorUnknownTag "SscPayload" $ fromIntegral @Word8 @Word t
 
 --------------------------------------------------------------------------------
 -- SscProof
@@ -104,6 +104,10 @@ data SscProof
 
 instance ToCBOR SscProof where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    1
+      + encodedSizeExpr size (Proxy :: Proxy Word8)
+      + 34
 
 instance FromCBOR SscProof where
   fromCBOR = fromByronCBOR
@@ -157,11 +161,6 @@ instance EncCBOR SscProof where
           , 0x6c
           ]
 
-  encodedSizeExpr size _ =
-    1
-      + encodedSizeExpr size (Proxy :: Proxy Word8)
-      + 34
-
 instance DecCBOR SscProof where
   decCBOR = do
     dropSscProof
@@ -170,7 +169,7 @@ instance DecCBOR SscProof where
 dropSscProof :: Dropper s
 dropSscProof = do
   actualLen <- decodeListLen
-  decCBOR >>= \case
+  decCBOR @Word8 >>= \case
     0 -> do
       matchSize "CommitmentsProof" 3 actualLen
       dropBytes
@@ -186,7 +185,7 @@ dropSscProof = do
     3 -> do
       matchSize "CertificatesProof" 2 actualLen
       dropBytes
-    t -> cborError $ DecoderErrorUnknownTag "SscProof" t
+    t -> cborError $ DecoderErrorUnknownTag "SscProof" $ fromIntegral @Word8 @Word t
 
 --------------------------------------------------------------------------------
 -- CommitmentsMap

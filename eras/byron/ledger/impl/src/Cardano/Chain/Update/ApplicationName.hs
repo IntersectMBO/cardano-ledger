@@ -4,14 +4,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.ApplicationName (
   ApplicationName (..),
   applicationNameMaxLength,
   ApplicationNameError (..),
   checkApplicationName,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   Case (..),
@@ -45,18 +45,18 @@ newtype ApplicationName = ApplicationName
 
 instance ToCBOR ApplicationName where
   toCBOR = toByronCBOR
-
-instance FromCBOR ApplicationName where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR ApplicationName where
-  encCBOR appName = encCBOR (unApplicationName appName)
   encodedSizeExpr _ _ =
     1
       + szCases
         [ Case "minBound" 0
         , Case "maxBound" (fromInteger applicationNameMaxLength)
         ]
+
+instance FromCBOR ApplicationName where
+  fromCBOR = fromByronCBOR
+
+instance EncCBOR ApplicationName where
+  encCBOR appName = encCBOR (unApplicationName appName)
 
 instance DecCBOR ApplicationName where
   decCBOR = ApplicationName <$> decCBOR
@@ -95,7 +95,7 @@ instance DecCBOR ApplicationNameError where
     case tag of
       0 -> checkSize 2 >> ApplicationNameTooLong <$> decCBOR
       1 -> checkSize 2 >> ApplicationNameNotAscii <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "ApplicationNameError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "ApplicationNameError" $ fromIntegral @Word8 @Word tag
 
 instance B.Buildable ApplicationNameError where
   build = \case

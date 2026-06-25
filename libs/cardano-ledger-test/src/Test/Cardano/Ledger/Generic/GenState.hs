@@ -1,5 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -12,22 +15,20 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Strategy for Generic Tests
 --   Make the GenState include a Mode of the NewEpochState, modify
 --   the ModelNewEpochState to reflect what we generated.
 module Test.Cardano.Ledger.Generic.GenState (
+  EraGenericGen (..),
   GenEnv (..),
   GenRS,
   GenState (..),
   GenSize (..),
+  defaultGenSize,
   PlutusPurposeTag (..),
   plutusPurposeTags,
-  mkRedeemers,
-  mkRedeemersFromTags,
-  mkPlutusPurposePointer,
-  mkAlonzoPlutusPurposePointer,
-  mkConwayPlutusPurposePointer,
   elementsT, -- TODO move to a utilities module
   frequencyT, -- TODO move to a utilities module
   positiveSingleDigitInt,
@@ -54,11 +55,9 @@ module Test.Cardano.Ledger.Generic.GenState (
   getUtxoTest,
   getCollInputsMax,
   getNewPoolTest,
-  viewGenState,
   initialLedgerState,
   modifyModel,
   runGenRS,
-  ioGenRS,
   small,
   genDatumWithHash,
   genKeyHash,
@@ -68,20 +67,19 @@ module Test.Cardano.Ledger.Generic.GenState (
   genFreshCredential,
   genFreshRegCred,
   genPool,
-  genPoolParams,
+  genStakePoolParams,
   genRewards,
   genNewPool,
   genRetirementHash,
   initStableFields,
   modifyGenStateInitialUtxo,
-  modifyGenStateInitialRewards,
+  modifyGenStateInitialAccounts,
   modifyModelCount,
   modifyModelIndex,
   modifyModelUTxO,
   modifyModelMutFee,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -89,22 +87,19 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
+import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
+import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   LedgerState (..),
-  PState (..),
   smartUTxOState,
   totalObligation,
   utxosGovStateL,
@@ -117,74 +112,90 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (IndividualPoolStake (..), UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (join, replicateM, when, zipWithM_)
+import Control.Monad (forM, join, replicateM, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
-import Control.SetAlgebra (eval, (⨃))
 import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Word (Word32, Word64)
+import Data.TreeDiff (Expr, ToExpr (toExpr))
+import Data.Word (Word16, Word32, Word64)
+import GHC.Generics (Generic)
 import Lens.Micro
 import Numeric.Natural
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Allegra.TreeDiff ()
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields
+import Test.Cardano.Ledger.Era
+import Test.Cardano.Ledger.Examples.STSTestUtils (EraModel (..), PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
-  primaryLanguage,
-  protocolVersion,
-  txoutFields,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
   genDelegsZero,
   instantaneousRewardsZero,
-  mKeyDeposits,
   mNewEpochStateZero,
-  mPoolDeposits,
-  pcModelNewEpochState,
- )
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcCoin,
-  pcCredential,
-  pcIndividualPoolStake,
-  pcKeyHash,
-  pcPoolParams,
-  pcTxIn,
-  pcTxOut,
-  ppInt,
-  ppMap,
-  ppRecord,
-  ppSet,
-  ppString,
-  ppValidityInterval,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
-import Test.Tasty.QuickCheck (
+import Test.Cardano.Ledger.Shelley.Era
+import Test.QuickCheck (
   Gen,
   Positive (..),
   arbitrary,
   choose,
-  chooseInt,
   elements,
   frequency,
-  generate,
  )
+
+class (EraTest era, Reflect era, EraModel era) => EraGenericGen era where
+  setValidity :: ValidityInterval -> TxBody TopTx era -> TxBody TopTx era
+
+  setReferenceInputs :: Set TxIn -> TxBody TopTx era -> TxBody TopTx era
+
+  setCollateralInputs :: Set TxIn -> TxBody TopTx era -> TxBody TopTx era
+
+  setTotalCollateral :: StrictMaybe Coin -> TxBody TopTx era -> TxBody TopTx era
+
+  setCollateralReturn :: StrictMaybe (TxOut era) -> TxBody TopTx era -> TxBody TopTx era
+
+  addRedeemers :: Redeemers era -> TxWits era -> TxWits era
+
+  setScriptIntegrityHash :: StrictMaybe ScriptIntegrityHash -> TxBody TopTx era -> TxBody TopTx era
+
+  setNetworkIdTxBody :: StrictMaybe Network -> TxBody TopTx era -> TxBody TopTx era
+
+  genExUnits :: Int -> GenRS era [ExUnits]
+
+  genPParams :: GenSize -> Gen (PParams era)
+
+  -- Era generic "lenses" for testing
+
+  ppMaxCollateralInputsT :: Lens' (PParams era) Word16
+
+  ppCollateralPercentageT :: Lens' (PParams era) Word16
+
+  ppCostModelsT :: Lens' (PParams era) CostModels
+
+  ppMaxTxExUnitsT :: Lens' (PParams era) ExUnits
+
+  ppMaxBlockExUnitsT :: Lens' (PParams era) ExUnits
+
+  ppMaxValSizeT :: Lens' (PParams era) Word32
+
+  -- Utils
+
+  mkScriptIntegrityHash :: PParams era -> [Language] -> TxWits era -> StrictMaybe ScriptIntegrityHash
 
 -- =================================================
 
@@ -195,7 +206,7 @@ data GenSize = GenSize
   , startSlot :: !Word64
   , slotDelta :: !(Word64, Word64)
   , blocksizeMax :: !Integer
-  , collInputsMax :: !Natural
+  , collInputsMax :: !Word16
   , spendInputsMax :: !Int
   , refInputsMax :: !Int
   , utxoChoicesMax :: !Int
@@ -207,40 +218,64 @@ data GenSize = GenSize
   , regCertFreq :: !Int
   , delegCertFreq :: !Int
   }
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToExpr GenSize
+
+defaultGenSize :: GenSize
+defaultGenSize =
+  GenSize
+    { treasury = 1000000
+    , reserves = 1000000
+    , startSlot = 0
+    , slotDelta = (3, 7)
+    , blocksizeMax = 10
+    , collInputsMax = 5
+    , oldUtxoPercent = 15
+    , spendInputsMax = 10
+    , refInputsMax = 6
+    , utxoChoicesMax = 30
+    , certificateMax = 10
+    , withdrawalMax = 10
+    , maxStablePools = 5
+    , invalidScriptFreq = 5
+    , regCertFreq = 75
+    , delegCertFreq = 50
+    }
 
 data GenEnv era = GenEnv
   { gePParams :: PParams era
   , geSize :: GenSize
   }
+  deriving (Generic)
 
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
-  , gsKeys :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
+  , gsKeys :: !(Map (KeyHash Witness) (KeyPair Witness))
   , gsScripts :: !(Map ScriptHash (Script era))
   , gsPlutusScripts :: !(Map (ScriptHash, PlutusPurposeTag) (IsValid, Script era))
   , gsDatums :: !(Map DataHash (Data era))
   , gsVI :: !(Map ValidityInterval (Set ScriptHash))
   , gsModel :: !(ModelNewEpochState era)
   , gsInitialUtxo :: !(Map TxIn (TxOut era))
-  , gsInitialRewards :: !(Map (Credential 'Staking) Coin)
-  , gsInitialDelegations ::
-      !(Map (Credential 'Staking) (KeyHash 'StakePool))
-  , gsInitialPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , gsInitialAccounts :: !(Map (Credential Staking) (AccountState era))
+  , gsInitialStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
   , gsInitialPoolDistr ::
-      !(Map (KeyHash 'StakePool) IndividualPoolStake)
+      !(Map (KeyHash StakePool) IndividualPoolStake)
   , -- Stable fields are stable from initialization to the end of the generation process
-    gsStablePools :: !(Set (KeyHash 'StakePool))
-  , gsStableDelegators :: !(Set StakeCredential)
-  , gsAvoidCred :: !(Set (Credential 'Staking))
-  , gsAvoidKey :: !(Set (KeyHash 'StakePool))
-  , gsProof :: !(Proof era)
+    gsStablePools :: !(Set (KeyHash StakePool))
+  , gsStableDelegators :: !(Set (Credential Staking))
+  , gsAvoidCred :: !(Set (Credential Staking))
+  , gsAvoidKey :: !(Set (KeyHash StakePool))
   , gsGenEnv :: !(GenEnv era)
   , gsSeedIdx :: !Int
   }
+  deriving (Generic)
 
-emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
-emptyGenState proof genv =
+instance EraTest era => ToExpr (GenEnv era)
+
+emptyGenState :: Reflect era => GenEnv era -> GenState era
+emptyGenState genv =
   GenState
     (ValidityInterval SNothing SNothing)
     mempty
@@ -253,36 +288,13 @@ emptyGenState proof genv =
     Map.empty
     Map.empty
     Map.empty
-    Map.empty
     Set.empty
     Set.empty
     Set.empty
     Set.empty
-    proof
     genv
     0
 {-# NOINLINE emptyGenState #-}
-
-instance Default GenSize where
-  def =
-    GenSize
-      { treasury = 1000000
-      , reserves = 1000000
-      , startSlot = 0
-      , slotDelta = (3, 7)
-      , blocksizeMax = 10
-      , collInputsMax = 5
-      , oldUtxoPercent = 15
-      , spendInputsMax = 10
-      , refInputsMax = 6
-      , utxoChoicesMax = 30
-      , certificateMax = 10
-      , withdrawalMax = 10
-      , maxStablePools = 5
-      , invalidScriptFreq = 5
-      , regCertFreq = 75
-      , delegCertFreq = 50
-      }
 
 small :: GenSize
 small =
@@ -305,15 +317,6 @@ small =
     , delegCertFreq = 50
     }
 
-data PlutusPurposeTag
-  = Spending
-  | Minting
-  | Certifying
-  | Rewarding
-  | Voting
-  | Proposing
-  deriving (Eq, Ord, Show, Enum, Bounded)
-
 plutusPurposeTags :: Proof era -> [PlutusPurposeTag]
 plutusPurposeTags = \case
   Shelley {} -> []
@@ -322,79 +325,6 @@ plutusPurposeTags = \case
   Alonzo {} -> [Spending .. Rewarding]
   Babbage {} -> [Spending .. Rewarding]
   Conway {} -> [Spending .. Proposing]
-
-mkRedeemers ::
-  forall era.
-  Proof era ->
-  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
-  Redeemers era
-mkRedeemers proof redeemerMap =
-  -- Pattern match on proof is needed in order to avoid leacking Ord constraint.
-  case proof of
-    Shelley {} -> error "No Redeemers"
-    Allegra {} -> error "No Redeemers"
-    Mary {} -> error "No Redeemers"
-    Alonzo {} -> Redeemers $ Map.fromList redeemerMap
-    Babbage {} -> Redeemers $ Map.fromList redeemerMap
-    Conway {} -> Redeemers $ Map.fromList redeemerMap
-
-mkRedeemersFromTags ::
-  forall era.
-  Proof era ->
-  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] ->
-  Redeemers era
-mkRedeemersFromTags proof redeemerPointers =
-  case proof of
-    Shelley {} -> error "No Redeemers"
-    Allegra {} -> error "No Redeemers"
-    Mary {} -> error "No Redeemers"
-    Alonzo {} -> mkRedeemers proof redeemerAssocs
-    Babbage {} -> mkRedeemers proof redeemerAssocs
-    Conway {} -> mkRedeemers proof redeemerAssocs
-  where
-    redeemerAssocs :: [(PlutusPurpose AsIx era, (Data era, ExUnits))]
-    redeemerAssocs =
-      [ (mkPlutusPurposePointer proof tag i, redeemer)
-      | ((tag, i), redeemer) <- redeemerPointers
-      ]
-
-mkPlutusPurposePointer ::
-  Proof era ->
-  PlutusPurposeTag ->
-  Word32 ->
-  PlutusPurpose AsIx era
-mkPlutusPurposePointer proof tag i =
-  case proof of
-    Shelley {} -> error "No PlutusPurpose"
-    Allegra {} -> error "No PlutusPurpose"
-    Mary {} -> error "No PlutusPurpose"
-    Alonzo {} -> mkAlonzoPlutusPurposePointer tag i
-    Babbage {} -> mkAlonzoPlutusPurposePointer tag i
-    Conway {} -> mkConwayPlutusPurposePointer tag i
-
-mkAlonzoPlutusPurposePointer ::
-  forall era.
-  Era era =>
-  PlutusPurposeTag ->
-  Word32 ->
-  AlonzoPlutusPurpose AsIx era
-mkAlonzoPlutusPurposePointer tag i =
-  case tag of
-    Spending -> AlonzoSpending (AsIx i)
-    Minting -> AlonzoMinting (AsIx i)
-    Certifying -> AlonzoCertifying (AsIx i)
-    Rewarding -> AlonzoRewarding (AsIx i)
-    _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
-
-mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIx era
-mkConwayPlutusPurposePointer tag i =
-  case tag of
-    Spending -> ConwaySpending (AsIx i)
-    Minting -> ConwayMinting (AsIx i)
-    Certifying -> ConwayCertifying (AsIx i)
-    Rewarding -> ConwayRewarding (AsIx i)
-    Voting -> ConwayVoting (AsIx i)
-    Proposing -> ConwayProposing (AsIx i)
 
 -- =====================================================================
 -- Accessing information
@@ -420,7 +350,7 @@ getCertificateMax = certificateMax . geSize . gsGenEnv
 getUtxoChoicesMax :: GenState era -> Int
 getUtxoChoicesMax = utxoChoicesMax . geSize . gsGenEnv
 
-getCollInputsMax :: GenState era -> Natural
+getCollInputsMax :: GenState era -> Word16
 getCollInputsMax = collInputsMax . geSize . gsGenEnv
 
 getOldUtxoPercent :: GenState era -> Int
@@ -440,8 +370,8 @@ setVi gs vi = gs {gsValidityInterval = vi}
 {-# NOINLINE setVi #-}
 
 modifyGenStateKeys ::
-  ( Map.Map (KeyHash 'Witness) (KeyPair 'Witness) ->
-    Map.Map (KeyHash 'Witness) (KeyPair 'Witness)
+  ( Map.Map (KeyHash Witness) (KeyPair Witness) ->
+    Map.Map (KeyHash Witness) (KeyPair Witness)
   ) ->
   GenRS era ()
 modifyGenStateKeys f = modify (\x -> x {gsKeys = f (gsKeys x)})
@@ -458,12 +388,12 @@ modifyGenStateVI ::
   GenRS era ()
 modifyGenStateVI f = modify (\x -> x {gsVI = f (gsVI x)})
 
-modifyGenStateInitialRewards ::
-  ( Map.Map (Credential 'Staking) Coin ->
-    Map.Map (Credential 'Staking) Coin
+modifyGenStateInitialAccounts ::
+  ( Map.Map (Credential Staking) (AccountState era) ->
+    Map.Map (Credential Staking) (AccountState era)
   ) ->
   GenRS era ()
-modifyGenStateInitialRewards f = modify $ \st -> st {gsInitialRewards = f (gsInitialRewards st)}
+modifyGenStateInitialAccounts f = modify $ \st -> st {gsInitialAccounts = f (gsInitialAccounts st)}
 
 modifyGenStateInitialUtxo ::
   ( Map TxIn (TxOut era) ->
@@ -473,47 +403,40 @@ modifyGenStateInitialUtxo ::
 modifyGenStateInitialUtxo f = modify $ \st -> st {gsInitialUtxo = f (gsInitialUtxo st)}
 
 modifyGenStateAvoidCred ::
-  ( Set (Credential 'Staking) ->
-    Set (Credential 'Staking)
+  ( Set (Credential Staking) ->
+    Set (Credential Staking)
   ) ->
   GenRS era ()
 modifyGenStateAvoidCred f = modify (\st -> st {gsAvoidCred = f (gsAvoidCred st)})
 
 modifyGenStateAvoidKey ::
-  (Set (KeyHash 'StakePool) -> Set (KeyHash 'StakePool)) ->
+  (Set (KeyHash StakePool) -> Set (KeyHash StakePool)) ->
   GenRS era ()
 modifyGenStateAvoidKey f = modify (\s -> s {gsAvoidKey = f (gsAvoidKey s)})
 
 modifyGenStateStablePools ::
-  (Set (KeyHash 'StakePool) -> Set (KeyHash 'StakePool)) ->
+  (Set (KeyHash StakePool) -> Set (KeyHash StakePool)) ->
   GenRS era ()
 modifyGenStateStablePools f = modify (\gs -> gs {gsStablePools = f (gsStablePools gs)})
 
-modifyGenStateInitialPoolParams ::
-  ( Map.Map (KeyHash 'StakePool) PoolParams ->
-    Map.Map (KeyHash 'StakePool) PoolParams
+modifyGenStateInitialStakePoolParams ::
+  ( Map.Map (KeyHash StakePool) StakePoolParams ->
+    Map.Map (KeyHash StakePool) StakePoolParams
   ) ->
   GenRS era ()
-modifyGenStateInitialPoolParams f = modify (\gs -> gs {gsInitialPoolParams = f (gsInitialPoolParams gs)})
+modifyGenStateInitialStakePoolParams f = modify (\gs -> gs {gsInitialStakePoolParams = f (gsInitialStakePoolParams gs)})
 
 modifyGenStateInitialPoolDistr ::
-  ( Map.Map (KeyHash 'StakePool) IndividualPoolStake ->
-    Map.Map (KeyHash 'StakePool) IndividualPoolStake
+  ( Map.Map (KeyHash StakePool) IndividualPoolStake ->
+    Map.Map (KeyHash StakePool) IndividualPoolStake
   ) ->
   GenRS era ()
 modifyGenStateInitialPoolDistr f = modify (\gs -> gs {gsInitialPoolDistr = f (gsInitialPoolDistr gs)})
 
 modifyGenStateStableDelegators ::
-  (Set StakeCredential -> Set StakeCredential) ->
+  (Set (Credential Staking) -> Set (Credential Staking)) ->
   GenRS era ()
 modifyGenStateStableDelegators f = modify (\gs -> gs {gsStableDelegators = f (gsStableDelegators gs)})
-
-modifyGenStateInitialDelegations ::
-  ( Map.Map (Credential 'Staking) (KeyHash 'StakePool) ->
-    Map.Map (Credential 'Staking) (KeyHash 'StakePool)
-  ) ->
-  GenRS era ()
-modifyGenStateInitialDelegations f = modify (\gs -> gs {gsInitialDelegations = f (gsInitialDelegations gs)})
 
 modifyGenStateScripts ::
   ( Map.Map ScriptHash (Script era) ->
@@ -536,44 +459,25 @@ modifyPlutusScripts f = modify (\gs -> gs {gsPlutusScripts = f (gsPlutusScripts 
 modifyModel :: (ModelNewEpochState era -> ModelNewEpochState era) -> GenRS era ()
 modifyModel f = modify (\gstate -> gstate {gsModel = f (gsModel gstate)})
 
-modifyModelDelegations ::
-  ( Map.Map (Credential 'Staking) (KeyHash 'StakePool) ->
-    Map.Map (Credential 'Staking) (KeyHash 'StakePool)
-  ) ->
-  GenRS era ()
-modifyModelDelegations f = modifyModel (\ms -> ms {mDelegations = f (mDelegations ms)})
-
-modifyModelRewards ::
-  ( Map.Map (Credential 'Staking) Coin ->
-    Map.Map (Credential 'Staking) Coin
-  ) ->
-  GenRS era ()
-modifyModelRewards f = modifyModel (\ms -> ms {mRewards = f (mRewards ms)})
+modifyModelAccounts :: (Accounts era -> Accounts era) -> GenRS era ()
+modifyModelAccounts f = modifyModel (\ms -> ms {mAccounts = f (mAccounts ms)})
 
 modifyModelDeposited :: (Coin -> Coin) -> GenRS era ()
 modifyModelDeposited f = modifyModel (\ms -> ms {mDeposited = f (mDeposited ms)})
 
-modifyKeyDeposits :: Credential 'Staking -> Coin -> GenRS era ()
-modifyKeyDeposits cred c =
-  modifyModel (\ms -> ms {mKeyDeposits = Map.insert cred c (mKeyDeposits ms)})
-
-modifyModelPoolParams ::
-  ( Map.Map (KeyHash 'StakePool) PoolParams ->
-    Map.Map (KeyHash 'StakePool) PoolParams
+modifyModelStakePools ::
+  ( Map.Map (KeyHash StakePool) StakePoolState ->
+    Map.Map (KeyHash StakePool) StakePoolState
   ) ->
   GenRS era ()
-modifyModelPoolParams f = modifyModel (\ms -> ms {mPoolParams = f (mPoolParams ms)})
+modifyModelStakePools f = modifyModel (\ms -> ms {mStakePools = f (mStakePools ms)})
 
 modifyModelPoolDistr ::
-  ( Map (KeyHash 'StakePool) IndividualPoolStake ->
-    Map (KeyHash 'StakePool) IndividualPoolStake
+  ( Map (KeyHash StakePool) IndividualPoolStake ->
+    Map (KeyHash StakePool) IndividualPoolStake
   ) ->
   GenRS era ()
 modifyModelPoolDistr f = modifyModel (\ms -> ms {mPoolDistr = f (mPoolDistr ms)})
-
-modifyModelKeyDeposits :: KeyHash 'StakePool -> Coin -> GenRS era ()
-modifyModelKeyDeposits kh pooldeposit =
-  modifyModel (\ms -> ms {mPoolDeposits = Map.insert kh pooldeposit (mPoolDeposits ms)})
 
 modifyModelCount :: (Int -> Int) -> GenRS era ()
 modifyModelCount f = modifyModel (\ms -> ms {mCount = f (mCount ms)})
@@ -665,35 +569,16 @@ genPositiveVal = inject . Coin . getPositive <$> arbitrary
 genRewardVal :: Val v => Gen v
 genRewardVal = frequency [(3, pure mempty), (97, genPositiveVal)]
 
--- | Test if the Payment part of the Address in the TxOut
---   is valid in the current ValidityInterval. Using the simple rule allowing
---   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
-validTxOut ::
-  Proof era ->
-  Map ScriptHash (Script era) ->
-  TxIn ->
-  TxOut era ->
-  Bool
-validTxOut proof m _txin txout = case txoutFields proof txout of
-  (Addr _ (KeyHashObj _) _, _, _) -> True
-  (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
-    (Conway, Just (PlutusScript _)) -> True
-    (Babbage, Just (PlutusScript _)) -> True
-    (Alonzo, Just (PlutusScript _)) -> True
-    (Shelley, Just _msig) -> True
-    _ -> False
-  _bootstrap -> False
-
 -- | Pick a UTxO element where we can use it in a new Tx. Most of the time we generate new
 --   elements for each Tx, but once in a while we choose an existing one. We must be carefull
 --   that that the Pay credential of the TxOut can run in the curent ValidityInterval
 --   A crude but simple way is to insist Pay credential is either Key locked, or locked
 --   with Plutus or MultiSig scripts, and return False for any Timelock scripts.
-getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn, TxOut era))
+getUtxoElem :: EraModel era => GenRS era (Maybe (TxIn, TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
   scriptmap <- gets gsScripts
-  lift $ genMapElemWhere x 20 (validTxOut reify scriptmap)
+  lift $ genMapElemWhere x 20 (\_ -> validTxOut scriptmap)
 
 getUtxoTest :: GenRS era (TxIn -> Bool)
 getUtxoTest = do
@@ -703,67 +588,45 @@ getUtxoTest = do
 -- | To compute deposits we need a function that tells if the KeyHash is a new Pool
 --   Compute this function before we do any generation, since such generation
 --   may actually add to the mPoolParams, and then the added thing won't appear new.
-getNewPoolTest :: GenRS era (KeyHash 'StakePool -> Bool)
+getNewPoolTest :: GenRS era (KeyHash StakePool -> Bool)
 getNewPoolTest = do
-  poolparams <- gets (mPoolParams . gsModel)
-  pure (`Map.member` poolparams)
+  stakePools <- gets (mStakePools . gsModel)
+  pure (`Map.member` stakePools)
 
 -- ========================================================================
 -- Tools to get started in the Monad
 
 runGenRS ::
-  Reflect era =>
-  Proof era ->
+  EraGenericGen era =>
   GenSize ->
   GenRS era a ->
   Gen (a, GenState era)
-runGenRS proof gsize action = do
-  genenv <- genGenEnv proof gsize
-  (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
+runGenRS gsize action = do
+  genenv <- genGenEnv gsize
+  (ans, state, ()) <- runRWST action genenv (emptyGenState genenv)
   pure (ans, state)
 
--- | Should not be used in tests, this is a helper function to be used in ghci only!
-ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenState era)
-ioGenRS proof gsize action = generate $ runGenRS proof gsize action
-
 -- | Generate a random, well-formed, GenEnv
-genGenEnv :: EraPParams era => Proof era -> GenSize -> Gen (GenEnv era)
-genGenEnv proof gsize = do
-  maxTxExUnits <- arbitrary :: Gen ExUnits
-  maxCollateralInputs <- elements [1 .. collInputsMax gsize]
-  collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
-  minfeeA <- Coin <$> choose (0, 1000)
-  minfeeB <- Coin <$> choose (0, 10000)
-  let pp =
-        newPParams
-          proof
-          [ MinfeeA minfeeA
-          , MinfeeB minfeeB
-          , defaultCostModels proof
-          , MaxValSize 1000
-          , MaxTxSize $ fromIntegral (maxBound :: Int)
-          , MaxTxExUnits maxTxExUnits
-          , MaxCollateralInputs maxCollateralInputs
-          , CollateralPercentage collateralPercentage
-          , ProtocolVersion $ protocolVersion proof
-          , PoolDeposit $ Coin 5
-          , KeyDeposit $ Coin 2
-          , EMax $ EpochInterval 5
-          ]
-  pure $
+genGenEnv :: forall era. EraGenericGen era => GenSize -> Gen (GenEnv era)
+genGenEnv gsize = do
+  pp <- genPParams gsize
+  pure
     GenEnv
-      { gePParams = pp
-      , geSize = gsize
+      { geSize = gsize
+      , gePParams = pp
       }
 
-genGenState :: Reflect era => Proof era -> GenSize -> Gen (GenState era)
-genGenState proof gsize = do
+genGenState ::
+  EraGenericGen era =>
+  GenSize ->
+  Gen (GenState era)
+genGenState gsize = do
   let slotNo = startSlot gsize
   minSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, slotNo))]
   maxSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (slotNo + 1, maxBound))]
   let vi = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo)
-  env <- genGenEnv proof gsize
-  pure (setVi (emptyGenState proof env) vi)
+  env <- genGenEnv gsize
+  pure (setVi (emptyGenState env) vi)
 
 -- | Generate a transaction body validity interval which is close in proximity
 --  (less than a stability window) from the current slot.
@@ -776,39 +639,13 @@ genValidityInterval (SlotNo s) = do
 
 -- =================================================================
 
-pcGenState :: forall era. Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof gs =
-  ppRecord
-    "GenState Summary"
-    [ ("ValidityInterval", ppValidityInterval (gsValidityInterval gs))
-    , ("Keymap", ppInt (Map.size (gsKeys gs)))
-    , ("Scriptmap", ppInt (Map.size (gsScripts gs)))
-    , ("PlutusScripts", ppInt (Map.size (gsPlutusScripts gs)))
-    , ("Datums", ppInt (Map.size (gsDatums gs)))
-    , ("VI-ScriptMap", ppInt (Map.size (gsVI gs)))
-    , ("Model", pcModelNewEpochState @era proof (gsModel gs))
-    , ("Initial Utxo", ppMap pcTxIn (pcTxOut @era proof) (gsInitialUtxo gs))
-    , ("Initial Rewards", ppMap pcCredential pcCoin (gsInitialRewards gs))
-    , ("Initial SPoolUView", ppMap pcCredential pcKeyHash (gsInitialDelegations gs))
-    , ("Initial PoolParams", ppMap pcKeyHash pcPoolParams (gsInitialPoolParams gs))
-    , ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake (gsInitialPoolDistr gs))
-    , ("Stable PoolParams", ppSet pcKeyHash (gsStablePools gs))
-    , ("Stable Delegators", ppSet pcCredential (gsStableDelegators gs))
-    , ("Previous RegKey", ppSet pcCredential (gsAvoidCred gs))
-    , ("GenEnv", ppString "GenEnv ...")
-    , ("Proof", ppString (show (gsProof gs)))
-    ]
+pcGenState :: ShelleyEraTest era => GenState era -> Expr
+pcGenState = toExpr
 
--- | Helper function for development and debugging in ghci
-viewGenState :: Reflect era => Proof era -> GenSize -> Bool -> IO ()
-viewGenState proof gsize verbose = do
-  st <- generate (genGenState proof gsize)
-  when verbose $ print (pcGenState proof st)
+instance ShelleyEraTest era => ToExpr (GenState era)
 
-instance Reflect era => PrettyA (GenState era) where prettyA = pcGenState reify
-
-instance Reflect era => Show (GenState era) where
-  show x = show (pcGenState reify x)
+instance (Reflect era, ShelleyEraTest era) => Show (GenState era) where
+  show x = show (pcGenState x)
 
 -- =====================================================================
 -- Build an Initial LedgerState for a Trace from a GenState, after
@@ -818,28 +655,45 @@ instance Reflect era => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    umap =
-      UM.unify
-        (Map.map rdpair (gsInitialRewards gstate))
-        Map.empty
-        (gsInitialDelegations gstate)
-        Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
-    dpstate = mkCertState def pstate dstate
+    dpstate =
+      def
+        & certPStateL .~ pstate
+        & certDStateL .~ dstate
     dstate =
       DState
-        umap
+        (accountsFromAccountsMap (gsInitialAccounts gstate))
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
-    pstate = PState pools Map.empty Map.empty (fmap (const poolDeposit) pools)
+    accountsMap = gsInitialAccounts gstate
+    delegatorsPerStakePool =
+      Map.foldlWithKey'
+        ( \acc cred accountState ->
+            case accountState ^. stakePoolDelegationAccountStateL of
+              Nothing -> acc
+              Just poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc
+        )
+        mempty
+        accountsMap
+    pstate =
+      PState
+        Map.empty
+        ( Map.mapWithKey
+            ( \poolId sps ->
+                let mbDelegs = Map.lookup poolId delegatorsPerStakePool
+                    delegs = fromMaybe mempty mbDelegs
+                 in mkStakePoolState poolDeposit delegs sps
+            )
+            pools
+        )
+        Map.empty
+        Map.empty
     -- In a wellformed LedgerState the deposited equals the obligation
     deposited = totalObligation dpstate (utxostate ^. utxosGovStateL)
-    pools = gsInitialPoolParams gstate
+    pools = gsInitialStakePoolParams gstate
     pp = mPParams (gsModel gstate)
-    keyDeposit = pp ^. ppKeyDepositL
-    !poolDeposit = pp ^. ppPoolDepositL
-    rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keyDeposit)
+    poolDeposit = pp ^. ppPoolDepositCompactL
 
 -- =============================================
 -- Generators of inter-related items
@@ -876,11 +730,11 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era ScriptHash
-genScript proof tag = case proof of
-  Conway -> elementsT [genTimelockScript, genPlutusScript proof tag]
-  Babbage -> elementsT [genTimelockScript, genPlutusScript proof tag]
-  Alonzo -> elementsT [genTimelockScript, genPlutusScript proof tag]
+genScript :: forall era. Reflect era => PlutusPurposeTag -> GenRS era ScriptHash
+genScript tag = case reify @era of
+  Conway -> elementsT [genTimelockScript, genPlutusScript tag]
+  Babbage -> elementsT [genTimelockScript, genPlutusScript tag]
+  Alonzo -> elementsT [genTimelockScript, genPlutusScript tag]
   Mary -> genTimelockScript
   Allegra -> genTimelockScript
   Shelley -> genMultiSigScript
@@ -966,18 +820,19 @@ genMultiSigScript = do
 -- Adds to gsPlutusScripts
 genPlutusScript ::
   forall era.
-  Reflect era =>
-  Proof era ->
+  ( Reflect era
+  , EraPlutusContext era
+  ) =>
   PlutusPurposeTag ->
   GenRS era ScriptHash
-genPlutusScript proof tag = do
+genPlutusScript tag = do
   falseFreq <- asks $ invalidScriptFreq . geSize
   isValid <- lift $ frequency [(falseFreq, pure False), (100 - falseFreq, pure True)]
   -- Plutus scripts alwaysSucceeds needs at least numArgs, while
   -- alwaysFails needs exactly numArgs to have the desired affect.
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
-  let numArgs = case (proof, tag) of
+  let numArgs = case (reify @era, tag) of
         (Conway, Spending) -> 2
         (Conway, _) -> 1
         (Babbage, Spending) -> 2
@@ -986,25 +841,18 @@ genPlutusScript proof tag = do
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  let mlanguage = primaryLanguage proof
+  let mlanguage = case reify @era of
+        Conway -> Just PlutusV2
+        Babbage -> Just PlutusV2
+        Alonzo -> Just PlutusV1
+        _ -> Nothing
   script <-
     if isValid
-      then alwaysTrue proof mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
-      else pure $ alwaysFalse proof mlanguage numArgs
+      then alwaysTrue mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
+      else pure $ alwaysFalse mlanguage numArgs
 
-  let corescript :: Script era
-      corescript = case proof of
-        Alonzo -> script
-        Babbage -> script
-        Conway -> script
-        _ ->
-          error
-            ( "PlutusScripts are available starting in the Alonzo era. "
-                ++ show proof
-                ++ " does not support PlutusScripts."
-            )
-      scriptHash = hashScript @era corescript
-  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, corescript))
+  let scriptHash = hashScript @era script
+  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, script))
   pure scriptHash
 
 -- ======================================================================
@@ -1026,10 +874,16 @@ genCredential tag =
     , (20, pickExistingScript)
     ]
   where
+    genNewAccountState = do
+      ptr <- lift arbitrary
+      deposit <- lift arbitrary
+      pure $ mkTestAccountState (Just ptr) deposit Nothing Nothing
     genKeyHash' = do
       kh <- genFreshKeyHash -- We need to avoid some key credentials
       case tag of
-        Rewarding -> modifyGenStateInitialRewards (Map.insert (KeyHashObj kh) (Coin 0))
+        Rewarding -> do
+          accountState <- genNewAccountState
+          modifyGenStateInitialAccounts (Map.insert (KeyHashObj kh) accountState)
         _ -> pure ()
       return $ coerceKeyRole kh
     genScript' = f (100 :: Int)
@@ -1037,14 +891,16 @@ genCredential tag =
         f n
           | n <= 0 = error "Failed to generate a fresh script hash"
           | otherwise = do
-              sh <- genScript @era reify tag
-              initialRewards <- gets gsInitialRewards
+              sh <- genScript @era tag
+              initialRewards <- gets gsInitialAccounts
               avoidCredentials <- gets gsAvoidCred
               let newcred = ScriptHashObj sh
               if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
                 then do
                   case tag of
-                    Rewarding -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
+                    Rewarding -> do
+                      accountState <- genNewAccountState
+                      modifyGenStateInitialAccounts (Map.insert newcred accountState)
                     _ -> pure ()
                   return sh
                 else f $ n - 1
@@ -1062,16 +918,16 @@ genCredential tag =
         Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
       lift (genMapElem plutusScriptsMap) >>= \case
         Just ((h, _), _) -> pure h
-        Nothing -> genScript reify tag
+        Nothing -> genScript tag
     pickExistingTimelockScript = do
       -- Only pick one if it matches the
       vi <- gets gsValidityInterval -- current ValidityInterval
       vimap <- gets gsVI
       case Map.lookup vi vimap of
-        Nothing -> genScript @era reify tag
+        Nothing -> genScript @era tag
         Just s ->
           lift (genSetElem s) >>= \case
-            Nothing -> genScript reify tag
+            Nothing -> genScript tag
             Just hash -> pure hash
 
 -- Return a fresh credential, one that is not a member of the set 'old'.
@@ -1094,29 +950,29 @@ genFreshCredential tries0 tag old = go tries0
         else pure c
 
 genFreshRegCred ::
-  Reflect era => PlutusPurposeTag -> GenRS era (Credential 'Staking)
+  Reflect era => PlutusPurposeTag -> GenRS era (Credential Staking)
 genFreshRegCred tag = do
-  old <- gets (Map.keysSet . gsInitialRewards)
+  old <- gets (Map.keysSet . gsInitialAccounts)
   avoid <- gets gsAvoidCred
-  rewards <- gets $ Map.keysSet . mRewards . gsModel
+  rewards <- gets $ Map.keysSet . (^. accountsMapL) . mAccounts . gsModel
   cred <- genFreshCredential 100 tag $ old <> avoid <> rewards
   modifyGenStateAvoidCred (Set.insert cred)
   pure cred
 
-genPoolParams ::
+genStakePoolParams ::
   Reflect era =>
-  KeyHash 'StakePool ->
-  GenRS era PoolParams
-genPoolParams ppId = do
-  ppVrf <- lift arbitrary
-  ppPledge <- lift genPositiveVal
-  ppCost <- lift genPositiveVal
-  ppMargin <- lift arbitrary
-  ppRewardAccount <- RewardAccount Testnet <$> genFreshRegCred Rewarding
-  let ppOwners = mempty
-  let ppRelays = mempty
-  let ppMetadata = SNothing
-  pure PoolParams {..}
+  KeyHash StakePool ->
+  GenRS era StakePoolParams
+genStakePoolParams sppId = do
+  sppVrf <- lift arbitrary
+  sppPledge <- lift genPositiveVal
+  sppCost <- lift genPositiveVal
+  sppMargin <- lift arbitrary
+  sppAccountAddress <- AccountAddress Testnet . AccountId <$> genFreshRegCred Rewarding
+  let sppOwners = mempty
+  let sppRelays = mempty
+  let sppMetadata = SNothing
+  pure StakePoolParams {..}
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
 --   if it doesn't work in 'tries' attempts then quit with an error. Better to raise an error
@@ -1144,17 +1000,17 @@ genNewPool ::
   Reflect era =>
   GenRS
     era
-    ( KeyHash 'StakePool
-    , PoolParams
+    ( KeyHash StakePool
+    , StakePoolParams
     , IndividualPoolStake
     )
 genNewPool = do
   poolId <- genFreshKeyHash
-  poolParam <- genPoolParams poolId
+  stakePoolParams <- genStakePoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake (toRational percent) mempty (ppVrf poolParam)
+  let stake = IndividualPoolStake (toRational percent) mempty (sppVrf stakePoolParams)
   modifyGenStateAvoidKey (Set.insert (coerceKeyRole poolId))
-  pure (poolId, poolParam, stake)
+  pure (poolId, stakePoolParams, stake)
 
 -- | Initialize (or overwrite if they are not empty) the Stable fields. It is
 --   intended that this be called just once at the beginning of a trace generation.
@@ -1162,59 +1018,63 @@ initStableFields :: forall era. Reflect era => GenRS era ()
 initStableFields = do
   GenEnv {geSize} <- ask
   hashes <- replicateM (maxStablePools geSize) $ do
-    pp <- asks gePParams
-    (kh, poolParams, ips) <- genNewPool
+    (kh, stakePoolParams, ips) <- genNewPool
     modifyGenStateStablePools (Set.insert kh)
-    modifyGenStateInitialPoolParams (Map.insert kh poolParams)
+    modifyGenStateInitialStakePoolParams (Map.insert kh stakePoolParams)
     modifyGenStateInitialPoolDistr (Map.insert kh ips)
-    modifyModelPoolParams (Map.insert kh poolParams)
-    modifyModelKeyDeposits kh (pp ^. ppPoolDepositL)
     return kh
 
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM (maxStablePools geSize) $ do
-    old' <- gets (Map.keysSet . gsInitialRewards)
+    old <- gets (Map.keysSet . gsInitialAccounts)
     prev <- gets gsAvoidCred
-    cred <- genFreshCredential 100 Rewarding (Set.union old' prev)
-    modifyGenStateStableDelegators (Set.insert cred)
-    modifyGenStateInitialRewards (Map.insert cred (Coin 0))
+    cred <- genFreshCredential 100 Rewarding (Set.union old prev)
     return cred
-  let f :: Credential 'Staking -> KeyHash 'StakePool -> GenRS era ()
-      f cred kh = do
-        pp <- asks gePParams
-        let keyDeposit = pp ^. ppKeyDepositL
-        modifyModelDelegations (Map.insert cred kh)
-        modifyModelRewards (Map.insert cred (Coin 0))
-        modifyModelDeposited (<+> keyDeposit)
-        modifyKeyDeposits cred keyDeposit
-        modifyGenStateInitialDelegations (Map.insert cred kh)
-  zipWithM_ f credentials hashes
+  zipWithM_ (\cred poolId -> registerNewAccount cred (Just poolId)) credentials hashes
+  modifyGenStateStableDelegators (Set.union (Set.fromList credentials))
+
+registerNewAccount ::
+  EraTest era => Credential Staking -> Maybe (KeyHash StakePool) -> GenRS era ()
+registerNewAccount cred mPoolId = do
+  pp <- asks gePParams
+  let deposit = pp ^. ppKeyDepositL
+  ptr <- lift arbitrary
+  modifyModelAccounts $
+    registerTestAccount cred (Just ptr) (compactCoinOrError deposit) mPoolId Nothing
+  accountState <- fromJust . lookupAccountState cred . mAccounts . gsModel <$> get
+  modifyModelDeposited (<+> deposit)
+  modifyGenStateInitialAccounts (Map.insert cred accountState)
 
 -- =============================================
 -- Generators of inter-related items
 
 -- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
 -- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
-genRewards :: Reflect era => GenRS era (Map (Credential 'Staking) Coin)
+genRewards :: Reflect era => GenRS era (Map (Credential Staking) Coin)
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)
   -- we need a fresh credential, one that was not previously
   -- generated here, or one that arose from gsAvoidCred (i.e. prev)
-  old <- gets (Map.keysSet . gsInitialRewards)
+  old <- gets (Map.keysSet . gsInitialAccounts)
   prev <- gets gsAvoidCred
   credentials <- genFreshCredentials n 100 Rewarding (Set.union old prev) []
-  newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
-  modifyModelRewards (\rewards -> eval (rewards ⨃ newRewards)) -- Prefers coins in newrewards
-  pp <- asks gePParams
-  sequence_ (map (\cred -> modifyKeyDeposits cred (pp ^. ppKeyDepositL)) credentials)
-  modifyGenStateInitialRewards (\rewards -> eval (rewards ⨃ newRewards))
-  modifyGenStateAvoidCred (Set.union (Set.fromList credentials))
-  pure newRewards
+  balances <- forM credentials $ \cred -> do
+    registerNewAccount cred Nothing
+    (,) cred <$> lift genRewardVal
+  let balanceMap = Map.fromList balances
+      compactBalanceMap = Map.map compactCoinOrError balanceMap
+      replaceBalances acc =
+        Map.foldrWithKey' (\cred b -> Map.adjust (balanceAccountStateL .~ b) cred) acc compactBalanceMap
+  modifyModelAccounts (addToBalanceAccounts compactBalanceMap)
+  modifyGenStateInitialAccounts replaceBalances
+  modifyGenStateAvoidCred (Set.union (Map.keysSet balanceMap))
+  pure balanceMap
 
-genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool)
+genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash StakePool)
 genRetirementHash = do
-  m <- gets (mPoolParams . gsModel)
+  m <- gets (mStakePools . gsModel)
+  pp <- gets (mPParams . gsModel)
   honestKhs <- gets gsStablePools
   avoidKey <- gets gsAvoidKey
   res <- lift . genMapElemWhere m 10 $ \kh _ ->
@@ -1228,11 +1088,12 @@ genRetirementHash = do
       (poolid, poolparams, stake) <- genNewPool
 
       -- add the Pool to the initial state
-      modifyGenStateInitialPoolParams (Map.insert poolid poolparams)
+      modifyGenStateInitialStakePoolParams (Map.insert poolid poolparams)
       modifyGenStateInitialPoolDistr (Map.insert poolid stake)
 
       -- add the Pool to the Model
-      modifyModelPoolParams (Map.insert poolid poolparams)
+      modifyModelStakePools
+        (Map.insert poolid $ mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty poolparams)
       modifyModelPoolDistr (Map.insert poolid stake)
       pure poolid
 
@@ -1240,20 +1101,22 @@ genRetirementHash = do
 genPool ::
   forall era.
   Reflect era =>
-  GenRS era (KeyHash 'StakePool, PoolParams)
+  GenRS era (KeyHash StakePool, StakePoolParams)
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do
-      (kh, pp, ips) <- genNewPool
+      (kh, spp, ips) <- genNewPool
+      pparams <- gets (mPParams . gsModel)
       -- add pool to initial state
-      modifyGenStateInitialPoolParams (Map.insert kh pp)
+      modifyGenStateInitialStakePoolParams (Map.insert kh spp)
       modifyGenStateInitialPoolDistr (Map.insert kh ips)
       -- update the model
-      modifyModelPoolParams (Map.insert kh pp)
-      return (kh, pp)
+      modifyModelStakePools
+        (Map.insert kh $ mkStakePoolState (pparams ^. ppPoolDepositCompactL) mempty spp)
+      return (kh, spp)
     pickExisting = do
-      psStakePoolParams <- gets (mPoolParams . gsModel)
+      psStakePools <- gets (mStakePools . gsModel)
       avoidKey <- gets gsAvoidKey
-      lift (genMapElemWhere psStakePoolParams 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
+      lift (genMapElemWhere psStakePools 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
         Nothing -> genNew
-        Just (kh, pp) -> pure (kh, pp)
+        Just (kh, sps) -> pure (kh, stakePoolStateToStakePoolParams Testnet kh sps)

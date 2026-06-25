@@ -1,7 +1,6 @@
 module Cardano.Chain.Delegation (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.Delegation.Certificate as X
 import Cardano.Chain.Delegation.Map as X

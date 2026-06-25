@@ -3,17 +3,14 @@
 
 module Test.Cardano.Ledger.Shelley.Examples.NetworkID (
   testPoolNetworkId,
-)
-where
+) where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
+import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  Network (..),
   PoolEnv (..),
-  PoolParams (..),
-  RewardAccount (..),
   ShelleyPOOL,
+  StakePoolParams (..),
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -36,17 +33,17 @@ data Expectation = ExpectSuccess | ExpectFailure
 
 testPoolNetworkID ::
   ProtVer ->
-  PoolParams ->
+  StakePoolParams ->
   Expectation ->
   Assertion
-testPoolNetworkID pv poolParams e = do
+testPoolNetworkID pv stakePoolParams e = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyPOOL ShelleyEra)
             ( TRC
                 ( PoolEnv (EpochNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
                 , def
-                , RegPool poolParams
+                , RegPool stakePoolParams
                 )
             )
   case (st, e) of
@@ -55,15 +52,15 @@ testPoolNetworkID pv poolParams e = do
     (Right _, ExpectFailure) -> assertBool "We expected failure." False
     (Left _, ExpectSuccess) -> assertBool "We expected success." False
 
-matchingNetworkIDPoolParams :: PoolParams
+matchingNetworkIDPoolParams :: StakePoolParams
 matchingNetworkIDPoolParams =
-  Cast.alicePoolParams {ppRewardAccount = RewardAccount Testnet Cast.aliceSHK}
+  Cast.aliceStakePoolParams {sppAccountAddress = AccountAddress Testnet (AccountId Cast.aliceSHK)}
 
 -- test globals use Testnet
 
-mismatchingNetworkIDPoolParams :: PoolParams
+mismatchingNetworkIDPoolParams :: StakePoolParams
 mismatchingNetworkIDPoolParams =
-  Cast.alicePoolParams {ppRewardAccount = RewardAccount Mainnet Cast.aliceSHK}
+  Cast.aliceStakePoolParams {sppAccountAddress = AccountAddress Mainnet (AccountId Cast.aliceSHK)}
 
 -- test globals use Testnet
 

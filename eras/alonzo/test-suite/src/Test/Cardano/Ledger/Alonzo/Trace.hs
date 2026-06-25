@@ -16,18 +16,17 @@ module Test.Cardano.Ledger.Alonzo.Trace () where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.CertState (EraCertState)
-import Cardano.Ledger.Shelley.LedgerState (CertState, UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
   DelplEnv,
   LedgerEnv (..),
   ShelleyDelplPredFailure,
+  ShelleyLedgerPredFailure,
   UtxoEnv,
  )
-import Cardano.Ledger.State (EraUTxO)
+import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
@@ -50,6 +49,7 @@ instance
   , EraGov era
   , EraUTxO era
   , AlonzoEraTx era
+  , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -60,14 +60,15 @@ instance
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , Tx era ~ AlonzoTx era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraCertState era
   , Crypto c
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , EraRule "LEDGER" era ~ AlonzoLEDGER era
   ) =>
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv c era)
   where
@@ -76,7 +77,7 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen genenv env state = genTx genenv env state
+  sigGen = genTx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 

@@ -20,24 +20,24 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys hiding (Hash)
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UMap (rewardMap, sPoolMap)
-import qualified Cardano.Ledger.UMap as UM (ptrMap)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
-import Control.SetAlgebra (range)
+import Control.Monad ((<=<))
+import Data.Bifunctor (first)
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable as F
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
 import Lens.Micro
@@ -57,11 +57,20 @@ readEpochState ::
   IO (EpochState CurrentEra)
 readEpochState = readDecCBOR
 
+readHexUTxO ::
+  FilePath ->
+  IO (UTxO CurrentEra)
+readHexUTxO = readDecCBORHex
+
 readDecCBOR :: FromCBOR a => FilePath -> IO a
-readDecCBOR fp =
-  LBS.readFile fp <&> Plain.decodeFull >>= \case
-    Left exc -> throwIO exc
-    Right res -> pure res
+readDecCBOR = either throwIO pure . Plain.decodeFull <=< LBS.readFile
+
+readDecCBORHex :: FromCBOR a => FilePath -> IO a
+readDecCBORHex = either throwIO pure . decodeFullHex <=< LBS.readFile
+  where
+    decodeFullHex =
+      Plain.decodeFull
+        <=< first (DecoderErrorCustom "Invalid Hex encoding:" . T.pack) . Base16.decode
 
 writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
 writeEpochState fp = LBS.writeFile fp . Plain.serialize
@@ -190,10 +199,10 @@ prettyRecord h content = h <> ":" <+> line <> indent 2 (vsep content)
 infixr 6 <:>
 
 data SnapShotStats = SnapShotStats
-  { sssStake :: !(Stat (Credential 'Staking))
-  , sssDelegationCredential :: !(Stat (Credential 'Staking))
-  , sssDelegationStakePool :: !(Stat (KeyHash 'StakePool))
-  , sssPoolParams :: !(Stat (KeyHash 'StakePool))
+  { sssStake :: !(Stat (Credential Staking))
+  , sssDelegationCredential :: !(Stat (Credential Staking))
+  , sssDelegationStakePool :: !(Stat (KeyHash StakePool))
+  , sssPoolParams :: !(Stat (KeyHash StakePool))
   , sssPoolParamsStats :: !PoolParamsStats
   }
 
@@ -227,20 +236,36 @@ instance AggregateStat SnapShotStats where
       , gsKeyHashStakePool = sssDelegationStakePool <> sssPoolParams
       }
 
+countStakePoolSnapShotStats :: KeyHash StakePool -> StakePoolSnapShot -> PoolParamsStats
+countStakePoolSnapShotStats poolId StakePoolSnapShot {..} =
+  PoolParamsStats
+    { ppsPoolId = statSingleton poolId
+    , ppsAccountId = statSingleton (unAccountId spssAccountId)
+    , ppsOwners = statSet spssSelfDelegatedOwners
+    }
+
 countSnapShotStat :: SnapShot -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (VMap.toMap (unStake ssStake))
-    , sssDelegationCredential = statMapKeys (VMap.toMap ssDelegations)
-    , sssDelegationStakePool = statFoldable (VMap.toMap ssDelegations)
-    , sssPoolParams = statMapKeys (VMap.toMap ssPoolParams)
-    , sssPoolParamsStats = VMap.foldMap countPoolParamsStats ssPoolParams
+    { sssStake = statMapKeys activeStakeMap
+    , sssDelegationCredential = statMapKeys activeStakeMap
+    , sssDelegationStakePool = statFoldable $ Map.map swdDelegation activeStakeMap
+    , sssPoolParams = statMapKeys (VMap.toMap ssStakePoolsSnapShot)
+    , sssPoolParamsStats =
+        VMap.foldlWithKey
+          ( \acc poolId spss ->
+              acc <> countStakePoolSnapShotStats poolId spss
+          )
+          mempty
+          ssStakePoolsSnapShot
     }
+  where
+    activeStakeMap = VMap.toMap $ unActiveStake ssActiveStake
 
 data PoolParamsStats = PoolParamsStats
-  { ppsPoolId :: !(Stat (KeyHash 'StakePool))
-  , ppsRewardAccount :: !(Stat (Credential 'Staking))
-  , ppsOwners :: !(Stat (KeyHash 'Staking))
+  { ppsPoolId :: !(Stat (KeyHash StakePool))
+  , ppsAccountId :: !(Stat (Credential Staking))
+  , ppsOwners :: !(Stat (KeyHash Staking))
   }
 
 instance Semigroup PoolParamsStats where
@@ -258,20 +283,20 @@ instance Pretty PoolParamsStats where
     prettyRecord
       "PoolParamsStats"
       [ "PoolId" <:> ppsPoolId
-      , "RewardAccount" <:> ppsRewardAccount
+      , "AccountAddress" <:> ppsAccountId
       , "Owners" <:> ppsOwners
       ]
 
 instance AggregateStat PoolParamsStats where
   aggregateStat PoolParamsStats {..} =
-    mempty {gsCredentialStaking = ppsRewardAccount, gsKeyHashStakePool = ppsPoolId}
+    mempty {gsCredentialStaking = ppsAccountId, gsKeyHashStakePool = ppsPoolId}
 
-countPoolParamsStats :: PoolParams -> PoolParamsStats
-countPoolParamsStats PoolParams {..} =
+countPoolParamsStats :: StakePoolParams -> PoolParamsStats
+countPoolParamsStats StakePoolParams {..} =
   PoolParamsStats
-    { ppsPoolId = statSingleton ppId
-    , ppsRewardAccount = statSingleton (raCredential ppRewardAccount)
-    , ppsOwners = statSet ppOwners
+    { ppsPoolId = statSingleton sppId
+    , ppsAccountId = statSingleton (unAccountId (aaId sppAccountAddress))
+    , ppsOwners = statSet sppOwners
     }
 
 data RewardUpdateStats = RewardUpdateStats
@@ -284,8 +309,8 @@ instance AggregateStat RewardUpdateStats where
   aggregateStat RewardUpdateStats = mempty
 
 data PoolDistrStats = PoolDistrStats
-  { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool))
-  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash 'StakePoolVRF))
+  { pdsStakePoolKeyHash :: !(Stat (KeyHash StakePool))
+  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash StakePoolVRF))
   }
 
 instance Pretty PoolDistrStats where
@@ -311,9 +336,9 @@ calcPoolDistrStats (PoolDistr pd _tot) =
     }
 
 data NewEpochStateStats = NewEpochStateStats
-  { nessPrevBlocksMade :: !(Stat (KeyHash 'StakePool))
-  , nessCurBlocksMade :: !(Stat (KeyHash 'StakePool))
-  , nessBlocksMade :: !(Stat (KeyHash 'StakePool))
+  { nessPrevBlocksMade :: !(Stat (KeyHash StakePool))
+  , nessCurBlocksMade :: !(Stat (KeyHash StakePool))
+  , nessBlocksMade :: !(Stat (KeyHash StakePool))
   , nessEpochStateStats :: !EpochStateStats
   , nessRewardUpdate :: !RewardUpdateStats
   , nessPoolDistrStats :: !PoolDistrStats
@@ -366,7 +391,7 @@ data EpochStateStats = EpochStateStats
   , essGoSnapShotStats :: !SnapShotStats
   , essSnapShotsStats :: !SnapShotStats
   , essLedgerStateStats :: !LedgerStateStats
-  , essNonMyopic :: !(Stat (KeyHash 'StakePool))
+  , essNonMyopic :: !(Stat (KeyHash StakePool))
   , essAggregateStats :: !AggregateStats
   }
 
@@ -395,7 +420,7 @@ countEpochStateStats EpochState {..} =
           , essGoSnapShotStats = goSnap
           , essSnapShotsStats = markSnap <> setSnap <> goSnap
           , essLedgerStateStats = countLedgerStateStats esLState
-          , essNonMyopic = statMapKeys (likelihoodsNM esNonMyopic)
+          , essNonMyopic = statMapKeys $ VMap.toMap $ likelihoodsNM esNonMyopic
           , essAggregateStats = mempty
           }
    in stats
@@ -408,11 +433,11 @@ countEpochStateStats EpochState {..} =
         }
 
 data DStateStats = DStateStats
-  { dssCredentialStaking :: !(Stat (Credential 'Staking))
-  , dssDelegations :: !(Stat (KeyHash 'StakePool))
-  , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
-  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
-  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash 'GenDelegVRF))
+  { dssCredentialStaking :: !(Stat (Credential Staking))
+  , dssDelegations :: !(Stat (KeyHash StakePool))
+  , dssKeyHashGenesis :: !(Stat (KeyHash GenesisRole))
+  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash GenesisDelegate))
+  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash GenDelegVRF))
   }
 
 instance Pretty DStateStats where
@@ -437,28 +462,26 @@ instance AggregateStat DStateStats where
       }
 
 countDStateStats :: DState CurrentEra -> DStateStats
-countDStateStats DState {..} =
-  DStateStats
-    { dssCredentialStaking =
-        statMapKeys (rewardMap dsUnified)
-          <> statMapKeys (sPoolMap dsUnified)
-          <> statSet (range (UM.ptrMap dsUnified))
-    , dssDelegations = statFoldable (sPoolMap dsUnified)
-    , dssKeyHashGenesis =
-        statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
-          <> statMapKeys (unGenDelegs dsGenDelegs)
-    , dssKeyHashGenesisDelegate =
-        statFoldable (genDelegKeyHash <$> Map.elems dsFutureGenDelegs)
-          <> statFoldable
-            (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs))
-    , dssHashVerKeyVRF =
-        statFoldable (genDelegVrfHash <$> Map.elems dsFutureGenDelegs)
-          <> statFoldable
-            (genDelegVrfHash <$> Map.elems (unGenDelegs dsGenDelegs))
-    }
+countDStateStats ds@DState {..} =
+  let accountsMap = ds ^. accountsL . accountsMapL
+   in DStateStats
+        { dssCredentialStaking = statMapKeys accountsMap
+        , dssDelegations = statFoldable (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
+        , dssKeyHashGenesis =
+            statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
+              <> statMapKeys (unGenDelegs dsGenDelegs)
+        , dssKeyHashGenesisDelegate =
+            statFoldable (genDelegKeyHash <$> Map.elems dsFutureGenDelegs)
+              <> statFoldable
+                (genDelegKeyHash <$> Map.elems (unGenDelegs dsGenDelegs))
+        , dssHashVerKeyVRF =
+            statFoldable (genDelegVrfHash <$> Map.elems dsFutureGenDelegs)
+              <> statFoldable
+                (genDelegVrfHash <$> Map.elems (unGenDelegs dsGenDelegs))
+        }
 
 data PStateStats = PStateStats
-  { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
+  { pssKeyHashStakePool :: !(Stat (KeyHash StakePool))
   , pssPoolParamsStats :: !PoolParamsStats
   }
 
@@ -478,11 +501,13 @@ countPStateStats :: PState CurrentEra -> PStateStats
 countPStateStats PState {..} =
   PStateStats
     { pssKeyHashStakePool =
-        statMapKeys psStakePoolParams
+        statMapKeys psStakePools
           <> statMapKeys psFutureStakePoolParams
           <> statMapKeys psRetiring
     , pssPoolParamsStats =
-        foldMap countPoolParamsStats psStakePoolParams
+        foldMap
+          countPoolParamsStats
+          (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
           <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 
@@ -537,8 +562,8 @@ countTxInStats txIns =
 
 data TxOutStats = TxOutStats
   { tosBootstrap :: !(Stat BootstrapAddress)
-  , tosPaymentCredential :: !(Stat (Credential 'Payment))
-  , tosStakingCredential :: !(Stat (Credential 'Staking))
+  , tosPaymentCredential :: !(Stat (Credential Payment))
+  , tosStakingCredential :: !(Stat (Credential Staking))
   , tosStakingPtr :: !(Stat Ptr)
   , tosNetwork :: !(Stat Network)
   , tosValue :: !(Stat Integer)
@@ -640,10 +665,10 @@ countUTxOStats (UTxO m) =
     }
 
 data AggregateStats = AggregateStats
-  { gsCredentialStaking :: !(Stat (Credential 'Staking))
-  , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
-  , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
-  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
+  { gsCredentialStaking :: !(Stat (Credential Staking))
+  , gsKeyHashStakePool :: !(Stat (KeyHash StakePool))
+  , gsKeyHashGenesis :: !(Stat (KeyHash GenesisRole))
+  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash GenesisDelegate))
   , gsVerKeyVRF :: !(Stat (Hash HASH KeyRoleVRF))
   , gsScriptHash :: !(Stat ScriptHash)
   }
@@ -673,10 +698,10 @@ instance Pretty AggregateStats where
 class AggregateStat s where
   aggregateStat :: s -> AggregateStats
 
-instance AggregateStat (Stat (Credential 'Staking)) where
+instance AggregateStat (Stat (Credential Staking)) where
   aggregateStat s = mempty {gsCredentialStaking = s}
 
-instance AggregateStat (Stat (KeyHash 'StakePool)) where
+instance AggregateStat (Stat (KeyHash StakePool)) where
   aggregateStat s = mempty {gsKeyHashStakePool = s}
 
 instance AggregateStat (Stat ScriptHash) where
@@ -686,9 +711,9 @@ instance AggregateStat (Stat ScriptHash) where
 -- approach that works for the whole state
 
 data UTxOUniques = UTxOUniques
-  { paymentKeys :: !(Set.Set (KeyHash 'Payment))
+  { paymentKeys :: !(Set.Set (KeyHash Payment))
   , paymentScripts :: !(Set.Set ScriptHash)
-  , stakeKeys :: !(Set.Set (KeyHash 'Staking))
+  , stakeKeys :: !(Set.Set (KeyHash Staking))
   , stakeScripts :: !(Set.Set ScriptHash)
   , stakePtrs :: !(Set.Set Ptr)
   , scripts :: !(Set.Set ScriptHash)

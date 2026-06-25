@@ -12,6 +12,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,16 +31,15 @@
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.MemoBytes.Internal (
   MemoBytes (.., Memo),
-  MemoHashIndex,
   Mem,
+  MemoHashIndex,
   mkMemoBytes,
+  mkMemoBytesShort,
+  mkMemoBytesStrict,
   getMemoBytesType,
   getMemoBytesHash,
   memoBytes,
   memoBytesEra,
-  shorten,
-  showMemo,
-  printMemo,
   shortToLazy,
   contentsEq,
   decodeMemoBytes,
@@ -55,7 +55,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   eqRawType,
   getMemoRawBytes,
   lensMemoRawType,
-  getterMemoRawType,
+  memoRawTypeL,
 
   -- * MemoBytes MemPack instance definitions
   byteCountMemoBytes,
@@ -64,8 +64,7 @@ module Cardano.Ledger.MemoBytes.Internal (
 
   -- * Raw equality
   EqRaw (..),
-)
-where
+) where
 
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
@@ -73,10 +72,11 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
-  EncCBOR,
+  EncCBOR (..),
   Version,
   decodeAnnotated,
   decodeFullAnnotator,
+  encodePreEncoded,
   serialize,
   withSlice,
  )
@@ -108,7 +108,7 @@ import Prelude hiding (span)
 --   that were used to transmit it. Important since hashes are computed
 --   from the serialization of a type, and EncCBOR instances do not have unique
 --   serializations.
-data MemoBytes t = Memo'
+data MemoBytes t = MemoBytes
   { mbRawType :: !t
   , mbBytes :: ShortByteString
   , mbHash :: SafeHash (MemoHashIndex t)
@@ -116,11 +116,14 @@ data MemoBytes t = Memo'
   deriving (Generic)
   deriving (NoThunks) via AllowThunksIn '["mbBytes", "mbHash"] (MemoBytes t)
 
+-- | Prevent coercion on MemoBytes because it does not preserve the invariants
+type role MemoBytes nominal
+
 pattern Memo :: t -> ShortByteString -> MemoBytes t
 pattern Memo memoType memoBytes <-
-  Memo' memoType memoBytes _
+  MemoBytes memoType memoBytes _
   where
-    Memo mt mb = mkMemoBytes mt (shortToLazy mb)
+    Memo mt mb = mkMemoBytesShort mt mb
 
 {-# COMPLETE Memo #-}
 
@@ -131,15 +134,20 @@ packMemoBytesM :: MemoBytes t -> Pack s ()
 packMemoBytesM = packM . mbBytes
 
 unpackMemoBytesM ::
-  forall t b.
-  (Typeable t, DecCBOR (Annotator t), Buffer b) =>
-  Version ->
-  Unpack b (MemoBytes t)
+  ( DecCBOR (Annotator t)
+  , Typeable t
+  , Buffer b
+  ) =>
+  Version -> Unpack s b (MemoBytes t)
 unpackMemoBytesM v = unpackM >>= decodeMemoBytes v
 
 decodeMemoBytes ::
   forall t m.
-  (Typeable t, DecCBOR (Annotator t), MonadFail m) => Version -> ByteString -> m (MemoBytes t)
+  ( Typeable t
+  , DecCBOR (Annotator t)
+  , MonadFail m
+  ) =>
+  Version -> ByteString -> m (MemoBytes t)
 decodeMemoBytes v bs =
   either (fail . show) pure $
     decodeFullAnnotator
@@ -153,7 +161,13 @@ type family MemoHashIndex (t :: Type) :: Type
 deriving instance NFData t => NFData (MemoBytes t)
 
 instance Typeable t => Plain.ToCBOR (MemoBytes t) where
-  toCBOR (Memo' _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
+  toCBOR (MemoBytes _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
+
+instance EncCBOR (MemoBytes t) where
+  encCBOR (MemoBytes _ bytes _hash) = encodePreEncoded (fromShort bytes)
+
+instance DecCBOR t => DecCBOR (MemoBytes t) where
+  decCBOR = decodeMemoized decCBOR
 
 instance
   (Typeable t, DecCBOR (Annotator t)) =>
@@ -161,17 +175,15 @@ instance
   where
   decCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice decCBOR
-    pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
-
-instance DecCBOR t => DecCBOR (MemoBytes t) where
-  decCBOR = decodeMemoized decCBOR
+    pure $ Annotator $ \fullBytes ->
+      mkMemoBytesForce <$> getT fullBytes <*> getBytes fullBytes
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where
   x == y = mbBytes x == mbBytes y && mbRawType x == mbRawType y
 
 instance Show t => Show (MemoBytes t) where
-  show (Memo' y _ h) =
+  show (MemoBytes y _ h) =
     show y
       <> " ("
       <> hashAlgorithmName (Proxy :: Proxy HASH)
@@ -183,42 +195,61 @@ instance SafeToHash (MemoBytes t) where
   originalBytes = fromShort . mbBytes
   originalBytesSize = SBS.length . mbBytes
 
--- | Turn a lazy bytestring into a short bytestring.
-shorten :: BSL.ByteString -> ShortByteString
-shorten x = toShort (toStrict x)
-
 -- | Useful when deriving DecCBOR(Annotator T)
 -- deriving via (Mem T) instance DecCBOR (Annotator T)
 type Mem t = Annotator (MemoBytes t)
 
--- | Smart constructor
-mkMemoBytes :: forall t. t -> BSL.ByteString -> MemoBytes t
-mkMemoBytes t bsl =
-  Memo'
-    t
-    (toShort bs)
-    (makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs)
+-- | Constructor that takes the underlying type and the original bytes as lazy
+-- `BSL.ByteString`.
+--
+-- /Warning/ - This is a dangerous constructor because it allows one to construct a `MemoBytes` type
+-- with wrong bytes.
+mkMemoBytes :: t -> BSL.ByteString -> MemoBytes t
+mkMemoBytes t = mkMemoBytesStrict t . toStrict
+
+-- | Same as `mkMemoBytes`, but with strict bytes
+mkMemoBytesStrict :: forall t. t -> ByteString -> MemoBytes t
+mkMemoBytesStrict t bs =
+  MemoBytes t sbs hash
   where
-    bs = toStrict bsl
+    sbs = toShort bs
+    -- Ensure original `ByteString` can be garbage collected as soon as the hash is computed
+    hash = sbs `seq` makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs
 
--- | Turn a MemoBytes into a string, Showing both its internal structure and its original bytes.
---   Useful since the Show instance of MemoBytes does not display the original bytes.
-showMemo :: Show t => MemoBytes t -> String
-showMemo (Memo' t b _) = "(Memo " ++ show t ++ "  " ++ show b ++ ")"
+-- | Same as `mkMemoBytes`, but for `ShortByteString`. This will be more efficient if original bytes are
+-- already available in a form of a `ShortByteString` and especially whenever hash is never demanded.
+mkMemoBytesShort :: forall t. t -> ShortByteString -> MemoBytes t
+mkMemoBytesShort t sbs =
+  MemoBytes t sbs hash
+  where
+    hash = makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) (fromShort sbs)
 
-printMemo :: Show t => MemoBytes t -> IO ()
-printMemo x = putStrLn (showMemo x)
+-- | Same as `mkMemoBytes`, but immediately makes a copy of the original bytes, in order to ensure
+-- that potentially much larger source `LazyByteString` is not retained in memory.
+mkMemoBytesForce :: t -> BSL.ByteString -> MemoBytes t
+mkMemoBytesForce t bsl =
+  -- Note: we cannot simply use `toStrict` here, since it does not guarantee a copy, which is why we
+  -- must convert it to a `ShortByteString` and ensure it is fully evaluated.
+  mkMemoBytesShort t $! toShort $ BSL.toStrict bsl
 
 -- | Create MemoBytes from its CBOR encoding
+--
+-- /Warning/ - This is a dangerous constructor because it allows one to construct a `MemoBytes` type
+-- from the wrong encoding. Use `mkMemoized` instead when possible.
 memoBytes :: Version -> Encode w t -> MemoBytes t
 memoBytes v t = mkMemoBytes (runE t) (serialize v (encode t))
 
+-- | Same as `memoBytes`, but derives `Version` from the era.
+--
+-- /Warning/ - This is a dangerous constructor because it allows one to construct a `MemoBytes` type
+-- from the wrong encoding. Use `mkMemoizedEra` instead when possible.
 memoBytesEra :: forall era w t. Era era => Encode w t -> MemoBytes t
 memoBytesEra = memoBytes (eraProtVerLow @era)
 
 -- | Helper function. Converts a short bytestring to a lazy bytestring.
 shortToLazy :: ShortByteString -> BSL.ByteString
 shortToLazy = fromStrict . fromShort
+{-# INLINE shortToLazy #-}
 
 -- | Returns true if the contents of the MemoBytes are equal
 contentsEq :: Eq t => MemoBytes t -> MemoBytes t -> Bool
@@ -266,7 +297,7 @@ mkMemoizedEra = mkMemoized (eraProtVerLow @era)
 decodeMemoized :: Decoder s t -> Decoder s (MemoBytes t)
 decodeMemoized rawTypeDecoder = do
   Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
-  pure $ mkMemoBytes rawType lazyBytes
+  pure $! mkMemoBytesForce rawType lazyBytes
 
 -- | Extract memoized SafeHash
 getMemoSafeHash :: Memoized t => t -> SafeHash (MemoHashIndex (RawType t))
@@ -308,14 +339,14 @@ lensMemoRawType getter setter =
   lens (getter . getMemoRawType) (\t b -> mkMemoizedEra @era $ setter (getMemoRawType t) b)
 {-# INLINEABLE lensMemoRawType #-}
 
--- | This is a helper SimpleGetter creator for any Memoized type
-getterMemoRawType ::
-  Memoized t =>
-  (RawType t -> a) ->
-  SimpleGetter t a
-getterMemoRawType getter =
-  to (getter . getMemoRawType)
-{-# INLINEABLE getterMemoRawType #-}
+memoRawTypeL ::
+  forall era t.
+  ( Era era
+  , EncCBOR (RawType t)
+  , Memoized t
+  ) =>
+  Lens' t (RawType t)
+memoRawTypeL = lensMemoRawType @era id (\_ x -> x)
 
 -- | Type class that implements equality on the Haskell type, ignoring any of the
 -- potentially memoized binary representation of the type.

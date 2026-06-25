@@ -28,6 +28,8 @@ $purposeIsWellformedWithDatumQ
 $datumIsWellformedQ
 $inputsOutputsAreNotEmptyNoDatumQ
 $inputsOutputsAreNotEmptyWithDatumQ
+$inputsOverlapsWithRefInputsQ
+$ensureTreasuryReserveQ
 
 -- ================================================================
 -- Compile and serialize the real functions as Plutus scripts.
@@ -109,4 +111,16 @@ inputsOutputsAreNotEmptyWithDatumBytes :: (Q [Dec], PlutusBinary)
 inputsOutputsAreNotEmptyWithDatumBytes =
   ( inputsOutputsAreNotEmptyWithDatumQ
   , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyWithDatum||])
+  )
+
+inputsOverlapsWithRefInputsBytes :: (Q [Dec], PlutusBinary)
+inputsOverlapsWithRefInputsBytes =
+  ( inputsOverlapsWithRefInputsQ
+  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||inputsOverlapsWithRefInputs||])
+  )
+
+ensureTreasuryReserveBytes :: (Q [Dec], PlutusBinary)
+ensureTreasuryReserveBytes =
+  ( ensureTreasuryReserveQ
+  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||ensureTreasuryReserve||])
   )

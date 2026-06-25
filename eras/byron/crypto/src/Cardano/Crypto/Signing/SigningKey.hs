@@ -11,8 +11,7 @@ module Cardano.Crypto.Signing.SigningKey (
   decCBORXPrv,
   toCBORXPrv,
   fromCBORXPrv,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)
 import qualified Cardano.Crypto.Wallet as CC

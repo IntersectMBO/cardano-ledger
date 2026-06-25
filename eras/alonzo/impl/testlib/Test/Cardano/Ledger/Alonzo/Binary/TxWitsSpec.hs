@@ -10,8 +10,8 @@
 
 module Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec (spec) where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.BaseTypes
@@ -20,16 +20,16 @@ import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Plutus.Language
 import Data.List (isPrefixOf)
+import qualified Data.List.NonEmpty as NE (toList)
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe (mapMaybe)
 import Test.Cardano.Ledger.Alonzo.Arbitrary
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Common
 
 spec ::
   forall era.
-  ( AlonzoEraScript era
-  , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  ( EraPlutusContext era
+  , Arbitrary (NativeScript era)
   ) =>
   Spec
 spec = do
@@ -40,9 +40,7 @@ spec = do
       nativeScriptsProp @era
 
 emptyFieldsProps ::
-  forall era.
-  AlonzoEraScript era =>
-  Spec
+  forall era. AlonzoEraScript era => Spec
 emptyFieldsProps = do
   prop "fails to deserialize if fields contain an empty collection" $
     conjoin $
@@ -50,26 +48,23 @@ emptyFieldsProps = do
   where
     emptyFieldProp :: Int -> Property
     emptyFieldProp k =
-      property $
-        expectDeserialiseFailureFromVersion @era
+      counterexample ("Key: " <> show k)
+        . property
+        $ expectDeserialiseFailureFromVersion @era
           (natVersion @9)
           (emptyEnc k)
           "Empty list"
     emptyEnc k = encCBOR $ Map.singleton k (encCBOR ([] :: [Encoding]))
 
 plutusScriptsProp ::
-  forall era.
-  ( AlonzoEraScript era
-  , Script era ~ AlonzoScript era
-  ) =>
-  Spec
+  forall era. EraPlutusContext era => Spec
 plutusScriptsProp = do
   prop "fails to deserialize if empty or if it contains duplicates, starting with Conway" $
     conjoin $
       [ distinctProp
       , duplicateProp
       ]
-        <*> [minBound .. eraMaxLanguage @era]
+        <*> NE.toList (supportedLanguages @era)
   where
     distinctProp lang =
       forAllShow (genEncoding lang False) (showEnc @era) $
@@ -83,26 +78,23 @@ plutusScriptsProp = do
             enc
             "Final number of elements"
 
-    genEncoding :: Language -> Bool -> Gen Encoding
-    genEncoding lang duplicate = do
-      sc <- genPlutusScript @era lang
-      let scs
-            | duplicate = [sc, sc]
-            | otherwise = [sc]
-      let plutusBins = withSLanguage lang $ \slang ->
-            Maybe.mapMaybe
-              (\x -> plutusBinary <$> (toPlutusScript x >>= toPlutusSLanguage slang))
-              scs
-      pure $ encCBOR $ Map.singleton (keys lang) (encCBOR plutusBins)
-    keys PlutusV1 = 3 :: Int
-    keys PlutusV2 = 6
-    keys PlutusV3 = 7
+    genEncoding :: SupportedLanguage era -> Bool -> Gen Encoding
+    genEncoding supportedLanguage@(SupportedLanguage slang) duplicate = do
+      plutusScript <- genPlutusScript supportedLanguage
+      let plutusScripts
+            | duplicate = [plutusScript, plutusScript]
+            | otherwise = [plutusScript]
+      pure $ encCBOR $ Map.singleton (keys slang) (encCBOR (plutusScriptBinary <$> plutusScripts))
+    keys :: SLanguage l -> Int
+    keys SPlutusV1 = 3
+    keys SPlutusV2 = 6
+    keys SPlutusV3 = 7
+    keys SPlutusV4 = 8
 
 nativeScriptsProp ::
   forall era.
   ( AlonzoEraScript era
-  , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   ) =>
   Spec
 nativeScriptsProp = do
@@ -125,13 +117,12 @@ nativeScriptsProp = do
 
     genEncoding :: Bool -> Gen Encoding
     genEncoding duplicate = do
-      sc <- genNativeScript @era
-      let scs
-            | duplicate = [sc, sc]
-            | otherwise = [sc]
+      nativeScript <- genNativeScript @era
+      let nativeScripts
+            | duplicate = [nativeScript, nativeScript]
+            | otherwise = [nativeScript]
 
-      let natives = Maybe.mapMaybe getNativeScript scs
-      pure $ encCBOR $ Map.singleton (1 :: Int) (encCBOR natives)
+      pure $ encCBOR $ Map.singleton (1 :: Int) (encCBOR nativeScripts)
 
 expectDeserialiseSuccess ::
   forall era.

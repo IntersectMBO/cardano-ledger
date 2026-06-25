@@ -9,7 +9,7 @@ import Byron.Spec.Ledger.Core
 import Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
 import Byron.Spec.Ledger.Update
 import Control.State.Transition
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import GHC.Stack (HasCallStack)
 
 -- | Compute the epoch for the given _absolute_ slot and chain stability parameter.
@@ -25,11 +25,11 @@ sEpoch (Slot s) k =
   where
     k' = slotsPerEpoch k
 
-data EPOCH deriving (Data, Typeable)
+data EPOCH deriving (Data)
 
 data EpochPredicateFailure
   = UPIECFailure (PredicateFailure UPIEC)
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS EPOCH where
   type

@@ -24,13 +24,14 @@
 
 module Cardano.Ledger.Alonzo.Scripts (
   PlutusBinary (..),
-  AlonzoScript (TimelockScript, PlutusScript),
+  AlonzoScript (NativeScript, PlutusScript),
   Script,
   isPlutusScript,
   validScript,
   eqAlonzoScriptRaw,
   AlonzoEraScript (..),
   eraLanguages,
+  eraUnsupportedLanguage,
   PlutusScript (..),
   withPlutusScriptLanguage,
   plutusScriptLanguage,
@@ -57,16 +58,15 @@ module Cardano.Ledger.Alonzo.Scripts (
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
   module Cardano.Ledger.Plutus.ExUnits,
-)
-where
+) where
 
-import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
+  CBORGroup (..),
   DecCBOR (decCBOR),
   DecCBORGroup (..),
   Decoder,
@@ -84,7 +84,6 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   (!>),
-  (<!),
   (<*!),
  )
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
@@ -116,7 +115,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
 import Data.MemPack
 import Data.Typeable
-import Data.Word (Word16, Word32, Word8)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack
 import NoThunks.Class (NoThunks (..))
@@ -173,7 +172,7 @@ class
   fromPlutusScript = PlutusScript
 
   -- | Returns Nothing, whenver plutus language is not supported for this era.
-  mkPlutusScript :: PlutusLanguage l => Plutus l -> Maybe (PlutusScript era)
+  mkPlutusScript :: (PlutusLanguage l, MonadFail m) => Plutus l -> m (PlutusScript era)
 
   -- | Give a `PlutusScript` apply a function that can handle `Plutus` scripts of all
   -- known versions.
@@ -199,16 +198,20 @@ class
 
   toCertifyingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
 
-  mkRewardingPurpose :: f Word32 RewardAccount -> PlutusPurpose f era
+  mkRewardingPurpose :: f Word32 AccountAddress -> PlutusPurpose f era
 
-  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 RewardAccount)
+  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 AccountAddress)
 
   upgradePlutusPurposeAsIx ::
     AlonzoEraScript (PreviousEra era) =>
     PlutusPurpose AsIx (PreviousEra era) ->
     PlutusPurpose AsIx era
 
-mkBinaryPlutusScript :: AlonzoEraScript era => Language -> PlutusBinary -> Maybe (PlutusScript era)
+mkBinaryPlutusScript ::
+  (MonadFail m, AlonzoEraScript era) =>
+  Language ->
+  PlutusBinary ->
+  m (PlutusScript era)
 mkBinaryPlutusScript lang pb = withSLanguage lang (mkPlutusScript . (`asSLanguage` Plutus pb))
 
 -- | Apply a function to a plutus script, but only if it is of expected language version,
@@ -291,20 +294,27 @@ data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 TxIn)
   | AlonzoMinting !(f Word32 PolicyID)
   | AlonzoCertifying !(f Word32 (TxCert era))
-  | AlonzoRewarding !(f Word32 RewardAccount)
+  | AlonzoRewarding !(f Word32 AccountAddress)
   deriving (Generic)
 
 deriving instance Eq (AlonzoPlutusPurpose AsIx era)
+
 deriving instance Ord (AlonzoPlutusPurpose AsIx era)
+
 deriving instance Show (AlonzoPlutusPurpose AsIx era)
+
 instance NoThunks (AlonzoPlutusPurpose AsIx era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsItem era)
+
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsItem era)
+
 instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsItem era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsIxItem era)
+
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsIxItem era)
+
 instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsIxItem era)
 
 instance
@@ -317,36 +327,56 @@ instance
     AlonzoCertifying x -> rnf x
     AlonzoRewarding x -> rnf x
 
-instance Era era => EncCBORGroup (AlonzoPlutusPurpose AsIx era) where
+instance
+  ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+  , Era era
+  , EncCBOR (TxCert era)
+  ) =>
+  EncCBORGroup (AlonzoPlutusPurpose f era)
+  where
   listLen _ = 2
-  listLenBound _ = 2
   encCBORGroup = \case
-    AlonzoSpending (AsIx redeemerIx) -> encodeWord8 0 <> encCBOR redeemerIx
-    AlonzoMinting (AsIx redeemerIx) -> encodeWord8 1 <> encCBOR redeemerIx
-    AlonzoCertifying (AsIx redeemerIx) -> encodeWord8 2 <> encCBOR redeemerIx
-    AlonzoRewarding (AsIx redeemerIx) -> encodeWord8 3 <> encCBOR redeemerIx
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy :: Proxy Word8)
-      + encodedSizeExpr size_ (Proxy :: Proxy Word16)
+    AlonzoSpending p -> encodeWord8 0 <> encCBOR p
+    AlonzoMinting p -> encodeWord8 1 <> encCBOR p
+    AlonzoCertifying p -> encodeWord8 2 <> encCBOR p
+    AlonzoRewarding p -> encodeWord8 3 <> encCBOR p
 
-instance Era era => DecCBORGroup (AlonzoPlutusPurpose AsIx era) where
+instance
+  ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+  , Era era
+  , Typeable f
+  , DecCBOR (TxCert era)
+  ) =>
+  DecCBORGroup (AlonzoPlutusPurpose f era)
+  where
   decCBORGroup =
     decodeWord8 >>= \case
-      0 -> AlonzoSpending . AsIx <$> decCBOR
-      1 -> AlonzoMinting . AsIx <$> decCBOR
-      2 -> AlonzoCertifying . AsIx <$> decCBOR
-      3 -> AlonzoRewarding . AsIx <$> decCBOR
+      0 -> AlonzoSpending <$> decCBOR
+      1 -> AlonzoMinting <$> decCBOR
+      2 -> AlonzoCertifying <$> decCBOR
+      3 -> AlonzoRewarding <$> decCBOR
       n -> fail $ "Unexpected tag for AlonzoPlutusPurpose: " <> show n
 
--- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
--- compatibility
-instance Era era => EncCBOR (AlonzoPlutusPurpose AsIx era) where
-  encCBOR = encCBORGroup
+deriving via
+  (CBORGroup (AlonzoPlutusPurpose f era))
+  instance
+    ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , Era era
+    , EncCBOR (TxCert era)
+    ) =>
+    EncCBOR (AlonzoPlutusPurpose f era)
 
--- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
--- compatibility
-instance Era era => DecCBOR (AlonzoPlutusPurpose AsIx era) where
-  decCBOR = decCBORGroup
+deriving via
+  (CBORGroup (AlonzoPlutusPurpose f era))
+  instance
+    ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+    , Era era
+    , Typeable f
+    , EncCBOR (TxCert era)
+    , DecCBOR (TxCert era)
+    ) =>
+    DecCBOR (AlonzoPlutusPurpose f era)
 
 instance
   ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
@@ -362,29 +392,6 @@ instance
     AlonzoRewarding n -> kindObjectWithValue "AlonzoRewarding" n
     where
       kindObjectWithValue name n = kindObject name ["value" .= n]
-
--- | /Note/ - serialization of `AlonzoPlutusPurpose` `AsItem`
---
--- * Tags do not match the `AlonzoPlutusPurpose` `AsIx`. Unfortunate inconsistency
---
--- * It is only used for predicate failures. Thus we can change it after Conway to be
---   consistent with `AlonzoPlutusPurpose` `AsIx`
-instance (Era era, EncCBOR (TxCert era)) => EncCBOR (AlonzoPlutusPurpose AsItem era) where
-  encCBOR = \case
-    AlonzoSpending (AsItem x) -> encode (Sum (AlonzoSpending @_ @era . AsItem) 1 !> To x)
-    AlonzoMinting (AsItem x) -> encode (Sum (AlonzoMinting @_ @era . AsItem) 0 !> To x)
-    AlonzoCertifying (AsItem x) -> encode (Sum (AlonzoCertifying . AsItem) 3 !> To x)
-    AlonzoRewarding (AsItem x) -> encode (Sum (AlonzoRewarding @_ @era . AsItem) 2 !> To x)
-
--- | See note on the `EncCBOR` instace.
-instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoPlutusPurpose AsItem era) where
-  decCBOR = decode (Summands "AlonzoPlutusPurpose" dec)
-    where
-      dec 1 = SumD (AlonzoSpending . AsItem) <! From
-      dec 0 = SumD (AlonzoMinting . AsItem) <! From
-      dec 3 = SumD (AlonzoCertifying . AsItem) <! From
-      dec 2 = SumD (AlonzoRewarding . AsItem) <! From
-      dec n = Invalid n
 
 pattern SpendingPurpose ::
   AlonzoEraScript era => f Word32 TxIn -> PlutusPurpose f era
@@ -405,51 +412,59 @@ pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
     CertifyingPurpose c = mkCertifyingPurpose c
 
 pattern RewardingPurpose ::
-  AlonzoEraScript era => f Word32 RewardAccount -> PlutusPurpose f era
+  AlonzoEraScript era => f Word32 AccountAddress -> PlutusPurpose f era
 pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
   where
     RewardingPurpose c = mkRewardingPurpose c
 
 -- Alonzo Script ===============================================================
 
--- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
+-- | Scripts in the Alonzo Era, Either a native script or a Plutus script.
 data AlonzoScript era
-  = TimelockScript !(Timelock era)
+  = NativeScript !(NativeScript era)
   | PlutusScript !(PlutusScript era)
   deriving (Generic)
 
-instance (Era era, MemPack (PlutusScript era)) => MemPack (AlonzoScript era) where
+instance
+  ( Era era
+  , MemPack (PlutusScript era)
+  , MemPack (NativeScript era)
+  ) =>
+  MemPack (AlonzoScript era)
+  where
   packedByteCount = \case
-    TimelockScript script -> packedTagByteCount + packedByteCount script
+    NativeScript script -> packedTagByteCount + packedByteCount script
     PlutusScript script -> packedTagByteCount + packedByteCount script
   packM = \case
-    TimelockScript script -> packTagM 0 >> packM script
+    NativeScript script -> packTagM 0 >> packM script
     PlutusScript script -> packTagM 1 >> packM script
   {-# INLINE packM #-}
   unpackM =
     unpackTagM >>= \case
-      0 -> TimelockScript <$> unpackM
+      0 -> NativeScript <$> unpackM
       1 -> PlutusScript <$> unpackM
       n -> unknownTagM @(AlonzoScript era) n
   {-# INLINE unpackM #-}
 
-deriving instance Eq (PlutusScript era) => Eq (AlonzoScript era)
+deriving instance (Eq (PlutusScript era), Eq (NativeScript era)) => Eq (AlonzoScript era)
 
-instance (Era era, NoThunks (PlutusScript era)) => NoThunks (AlonzoScript era)
+instance
+  (Era era, NoThunks (PlutusScript era), NoThunks (NativeScript era)) =>
+  NoThunks (AlonzoScript era)
 
-instance NFData (PlutusScript era) => NFData (AlonzoScript era) where
+instance (NFData (PlutusScript era), NFData (NativeScript era)) => NFData (AlonzoScript era) where
   rnf = \case
-    TimelockScript ts -> rnf ts
+    NativeScript ts -> rnf ts
     PlutusScript ps -> rnf ps
 
 instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
-  show (TimelockScript x) = "TimelockScript " ++ show x
+  show (NativeScript x) = "NativeScript " ++ show x
   show s@(PlutusScript plutus) =
     "PlutusScript " ++ show (plutusScriptLanguage plutus) ++ " " ++ show (hashScript @era s)
 
 -- | Both constructors know their original bytes
-instance SafeToHash (PlutusScript era) => SafeToHash (AlonzoScript era) where
-  originalBytes (TimelockScript t) = originalBytes t
+instance (SafeToHash (PlutusScript era), SafeToHash (NativeScript era)) => SafeToHash (AlonzoScript era) where
+  originalBytes (NativeScript t) = originalBytes t
   originalBytes (PlutusScript plutus) = originalBytes plutus
 
 isPlutusScript :: AlonzoEraScript era => Script era -> Bool
@@ -459,22 +474,22 @@ instance EraScript AlonzoEra where
   type Script AlonzoEra = AlonzoScript AlonzoEra
   type NativeScript AlonzoEra = Timelock AlonzoEra
 
-  upgradeScript = TimelockScript . translateTimelock
+  upgradeScript = NativeScript . translateTimelock
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
-    TimelockScript ts -> Just ts
+    NativeScript ts -> Just ts
     _ -> Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 alonzoScriptPrefixTag ::
   (AlonzoEraScript era, AlonzoScript era ~ Script era) =>
   Script era ->
   BS.ByteString
 alonzoScriptPrefixTag = \case
-  TimelockScript _ -> nativeMultiSigTag -- "\x00"
+  NativeScript _ -> nativeMultiSigTag -- "\x00"
   PlutusScript plutusScript -> BS.singleton (withPlutusScript plutusScript plutusLanguageTag)
 
 instance ShelleyEraScript AlonzoEra where
@@ -507,8 +522,8 @@ instance AlonzoEraScript AlonzoEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ AlonzoPlutusV1 plutus
-      _ -> Nothing
+      SPlutusV1 -> pure $ AlonzoPlutusV1 plutus
+      slang -> eraUnsupportedLanguage @AlonzoEra slang
 
   withPlutusScript (AlonzoPlutusV1 plutus) f = f plutus
 
@@ -541,7 +556,12 @@ instance AlonzoEraScript AlonzoEra where
   upgradePlutusPurposeAsIx =
     error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"
 
-instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where
+instance
+  ( Eq (PlutusScript era)
+  , EqRaw (NativeScript era)
+  ) =>
+  EqRaw (AlonzoScript era)
+  where
   eqRaw = eqAlonzoScriptRaw
 
 instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
@@ -575,24 +595,22 @@ decodePlutusScript ::
   Decoder s (PlutusScript era)
 decodePlutusScript slang = do
   pb <- decCBOR
-  case mkPlutusScript $ asSLanguage slang $ Plutus pb of
-    Nothing ->
-      fail $ show (plutusLanguage slang) ++ " is not supported in " ++ eraName @era ++ " era."
-    Just plutusScript -> pure plutusScript
+  mkPlutusScript $ asSLanguage slang $ Plutus pb
 
 instance AlonzoEraScript era => EncCBOR (AlonzoScript era)
 
 instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
   toCBOR = toEraCBOR @era . encode . encodeScript
 
-encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
+encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode Open (AlonzoScript era)
 encodeScript = \case
-  TimelockScript i -> Sum TimelockScript 0 !> To i
+  NativeScript i -> Sum NativeScript 0 !> To i
   PlutusScript plutusScript -> withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
     case plutusSLanguage plutus of
       SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
       SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
       SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
+      SPlutusV4 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV4) 4 !> To pb
 
 instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)
@@ -600,27 +618,15 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
       decodeAnnPlutus slang =
         Ann (SumD PlutusScript) <*! Ann (D (decodePlutusScript slang))
       {-# INLINE decodeAnnPlutus #-}
-      decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
+      decodeScript :: Word -> Decode Open (Annotator (AlonzoScript era))
       decodeScript = \case
-        0 -> Ann (SumD TimelockScript) <*! From
+        0 -> Ann (SumD NativeScript) <*! From
         1 -> decodeAnnPlutus SPlutusV1
         2 -> decodeAnnPlutus SPlutusV2
         3 -> decodeAnnPlutus SPlutusV3
         n -> Invalid n
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}
-
-instance AlonzoEraScript era => DecCBOR (AlonzoScript era) where
-  decCBOR = decode (Summands "AlonzoScript" decodeScript)
-    where
-      decodeScript = \case
-        0 -> SumD TimelockScript <! From
-        1 -> decodePlutus SPlutusV1
-        2 -> decodePlutus SPlutusV2
-        3 -> decodePlutus SPlutusV3
-        n -> Invalid n
-      decodePlutus slang =
-        SumD PlutusScript <! D (decodePlutusScript slang)
 
 -- | Verify that every `Script` represents a valid script. Force native scripts to Normal
 -- Form, to ensure that there are no bottoms and deserialize `Plutus` scripts into a
@@ -636,13 +642,22 @@ validScript pv script =
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.
-eqAlonzoScriptRaw :: Eq (PlutusScript era) => AlonzoScript era -> AlonzoScript era -> Bool
-eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
+eqAlonzoScriptRaw ::
+  ( Eq (PlutusScript era)
+  , EqRaw (NativeScript era)
+  ) =>
+  AlonzoScript era -> AlonzoScript era -> Bool
+eqAlonzoScriptRaw (NativeScript t1) (NativeScript t2) = eqRaw t1 t2
 eqAlonzoScriptRaw (PlutusScript ps1) (PlutusScript ps2) = ps1 == ps2
 eqAlonzoScriptRaw _ _ = False
 
 eraLanguages :: forall era. AlonzoEraScript era => [Language]
 eraLanguages = [minBound .. eraMaxLanguage @era]
+
+eraUnsupportedLanguage ::
+  forall era l m proxy a. (Era era, PlutusLanguage l, MonadFail m) => proxy l -> m a
+eraUnsupportedLanguage slang =
+  fail $ show (plutusLanguage slang) <> " isn't supported in the " <> eraName @era <> " era"
 
 -- | Having a Map with scripts and a script hash, lookup the plutus script. Returns
 -- Nothing when script is missing or it is not a PlutusScript

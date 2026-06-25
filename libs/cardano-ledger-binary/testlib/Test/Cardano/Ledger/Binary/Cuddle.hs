@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,6 +14,8 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
   writeSpec,
+  huddleRoundTripGenValidate,
+  huddleRoundTripArbitraryValidate,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -22,27 +25,33 @@ import Cardano.Ledger.Binary (
   Version,
   decodeFullAnnotator,
   decodeFullDecoder,
+  serialize',
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Decoding (label)
 import qualified Codec.CBOR.Cuddle.CBOR.Gen as Cuddle
+import Codec.CBOR.Cuddle.CBOR.Validator (CBORTermResult (..), CDDLResult (..), validateCBOR)
+import Codec.CBOR.Cuddle.CDDL (Name (..))
 import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
-import Codec.CBOR.Cuddle.Pretty ()
+import Codec.CBOR.Cuddle.IndexMappable
+import Codec.CBOR.Cuddle.Pretty (PrettyStage)
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Data.Data (Proxy (..))
-import Data.Foldable (traverse_)
-import Data.Functor.Identity (Identity)
+import Data.Foldable (Foldable (..), traverse_)
 import Data.List (unfoldr)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import GHC.Stack (HasCallStack)
-import Prettyprinter (Pretty (pretty))
+import Prettyprinter (Pretty (pretty), vsep)
 import Prettyprinter.Render.Text (hPutDoc)
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (takeDirectory)
 import System.IO (IOMode (..), hPutStrLn, withFile)
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -57,16 +66,18 @@ import Test.Hspec (
   Spec,
   SpecWith,
   beforeAll,
+  describe,
   expectationFailure,
   it,
   shouldBe,
  )
 import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
-import Test.QuickCheck (Args (replay))
+import Test.QuickCheck (Arbitrary (..), Args (replay), Gen, Testable (..), forAll)
 import Test.QuickCheck.Random (QCGen, mkQCGen)
+import Text.Pretty.Simple (pShow)
 
 data CuddleData = CuddleData
-  { cddl :: !(Cuddle.CTreeRoot' Identity Cuddle.MonoRef)
+  { cddl :: !(Cuddle.CTreeRoot Cuddle.MonoReferenced)
   , numExamples :: !Int
   }
 
@@ -109,10 +120,11 @@ huddleRoundTripCborSpec ::
 huddleRoundTripCborSpec version ruleName =
   let lbl = label $ Proxy @a
       trip = cborTrip @a
-   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
-        \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $
-            roundTripExample lbl version version trip
+   in describe "Generate bytestring from CDDL and decode/encode" $
+        it (T.unpack ruleName <> ": " <> T.unpack lbl) $
+          \cddlData ->
+            withGenTerm cddlData (Cuddle.Name ruleName) $
+              roundTripExample lbl version version trip
 
 huddleRoundTripAnnCborSpec ::
   forall a.
@@ -134,7 +146,7 @@ specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
 specWithHuddle h numExamples =
   beforeAll $
     let cddl = Cuddle.toCDDL h
-        rCddl = Cuddle.fullResolveCDDL cddl
+        rCddl = Cuddle.fullResolveCDDL (mapCDDLDropExt cddl)
      in case rCddl of
           Right ct ->
             pure $
@@ -156,7 +168,7 @@ withGenTerm cd n withTerm = Seeded $ \gen ->
 -- * Decoded successfully into a Haskell type using the decoder in `Trip` and the version
 --   supplied
 --
--- * When reencoded conforms produces a valid `FlatTerm`
+-- * When reencoded produces a valid `FlatTerm`
 --
 -- * When decoded again from the bytes produced by the encoder matches the type exactly
 --   when it was decoded from random bytes
@@ -226,17 +238,68 @@ cddlFailure encoding err =
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
 
+huddleRoundTripGenValidate ::
+  forall a. (DecCBOR a, Show a, EncCBOR a) => Gen a -> Version -> T.Text -> SpecWith CuddleData
+huddleRoundTripGenValidate gen version ruleName =
+  let lbl = label $ Proxy @a
+   in describe "Encode an arbitrary value and check against CDDL"
+        . it (T.unpack ruleName <> ": " <> T.unpack lbl)
+        $ \CuddleData {cddl} -> property . forAll gen $ \(val :: a) -> do
+          let
+            bs = serialize' version val
+            res = validateCBOR bs (Name ruleName) (mapIndex cddl)
+          case res of
+            CBORTermResult _ (Valid _) -> pure ()
+            CBORTermResult term err ->
+              expectationFailure $
+                "CBOR Validation failed\nTerm:\n" <> LT.unpack (pShow term) <> "\nError:\n" <> show errMsg
+              where
+                errMsg = case err of
+                  ChoiceFail rule _ alternativeResults ->
+                    vsep $
+                      [ "ChoiceFail when trying rule:"
+                      , pretty $ pShow rule
+                      , "====="
+                      ]
+                        <> fmap prettyAlternative (toList alternativeResults)
+                    where
+                      prettyAlternative (r, s) =
+                        vsep
+                          [ "Tried rule"
+                          , pretty $ pShow r
+                          , "Result:"
+                          , pretty $ pShow s
+                          , "====="
+                          ]
+                  _ -> pretty $ pShow err
+
+huddleRoundTripArbitraryValidate ::
+  forall a.
+  ( DecCBOR a
+  , EncCBOR a
+  , Arbitrary a
+  , Show a
+  ) =>
+  Version ->
+  T.Text ->
+  SpecWith CuddleData
+huddleRoundTripArbitraryValidate = huddleRoundTripGenValidate $ arbitrary @a
+
 --------------------------------------------------------------------------------
 -- Writing specs to a file
 --------------------------------------------------------------------------------
 
 -- | Write a Huddle specification to a file at the given path
 writeSpec :: Cuddle.Huddle -> FilePath -> IO ()
-writeSpec hddl path =
-  let cddl = Cuddle.toCDDL hddl
-      preface = "; This file was auto-generated from huddle. Please do not modify it directly!"
-   in withFile path WriteMode $ \h -> do
-        hPutStrLn h preface
-        hPutDoc h (pretty cddl)
-        -- Write an empty line at the end of the file
-        hPutStrLn h ""
+writeSpec hddl path = do
+  let cddl = Cuddle.toCDDLNoRoot hddl
+  createDirectoryIfMissing True (takeDirectory path)
+  withFile path WriteMode $ \h -> do
+    hPutStrLn
+      h
+      "; This file was auto-generated using generate-cddl. Please do not modify it directly!\n"
+    hPutDoc h (pretty (mapIndex @_ @_ @PrettyStage cddl))
+    -- Write an empty line at the end of the file
+    hPutStrLn h ""
+  -- Write log to stdout
+  putStrLn $ "Generated CDDL file at: " <> path

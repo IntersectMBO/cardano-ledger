@@ -11,6 +11,9 @@
 module Cardano.Ledger.DRep (
   DRep (DRepCredential, DRepKeyHash, DRepScriptHash, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
   DRepState (..),
+  credToDRep,
+  dRepToText,
+  dRepToCred,
   drepExpiryL,
   drepAnchorL,
   drepDepositL,
@@ -28,7 +31,7 @@ import Cardano.Ledger.Binary (
   internsFromSet,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, CompactForm, partialCompactCoinL)
 import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -59,7 +62,7 @@ import NoThunks.Class (NoThunks (..))
 -- DRep and DRepState
 
 data DRep
-  = DRepKeyHash !(KeyHash 'DRepRole)
+  = DRepKeyHash !(KeyHash DRepRole)
   | DRepScriptHash !ScriptHash
   | DRepAlwaysAbstain
   | DRepAlwaysNoConfidence
@@ -91,7 +94,7 @@ instance DecCBOR DRep where
       k -> Invalid k
 
 instance DecShareCBOR DRep where
-  type Share DRep = Interns (Credential 'DRepRole)
+  type Share DRep = Interns (Credential DRepRole)
   decShareCBOR cd = do
     dRep <- decCBOR
     pure $!
@@ -99,12 +102,12 @@ instance DecShareCBOR DRep where
         Nothing -> dRep
         Just cred -> credToDRep $ interns cd cred
 
-dRepToCred :: DRep -> Maybe (Credential 'DRepRole)
+dRepToCred :: DRep -> Maybe (Credential DRepRole)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
 
-credToDRep :: Credential 'DRepRole -> DRep
+credToDRep :: Credential DRepRole -> DRep
 credToDRep (KeyHashObj kh) = DRepKeyHash kh
 credToDRep (ScriptHashObj sh) = DRepScriptHash sh
 
@@ -135,7 +138,7 @@ parseDRep t = case T.span (/= '-') t of
         DRepCredential <$> parseCredential rest
   _ -> fail $ "Invalid DRep: " <> show t
 
-pattern DRepCredential :: Credential 'DRepRole -> DRep
+pattern DRepCredential :: Credential DRepRole -> DRep
 pattern DRepCredential c <- (dRepToCred -> Just c)
   where
     DRepCredential c = case c of
@@ -147,8 +150,8 @@ pattern DRepCredential c <- (dRepToCred -> Just c)
 data DRepState = DRepState
   { drepExpiry :: !EpochNo
   , drepAnchor :: !(StrictMaybe Anchor)
-  , drepDeposit :: !Coin
-  , drepDelegs :: !(Set (Credential 'Staking))
+  , drepDeposit :: !(CompactForm Coin)
+  , drepDelegs :: !(Set (Credential Staking))
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -160,7 +163,7 @@ instance DecCBOR DRepState where
   decCBOR = decNoShareCBOR
 
 instance DecShareCBOR DRepState where
-  type Share DRepState = Interns (Credential 'Staking)
+  type Share DRepState = Interns (Credential Staking)
   getShare = internsFromSet . drepDelegs
   decShareCBOR is = do
     decode $
@@ -186,7 +189,8 @@ instance ToJSON DRepState where
           object $
             [ "expiry" .= toJSON drepExpiry
             , "deposit" .= toJSON drepDeposit
-            , "delegators" .= toJSON drepDelegs
+            -- Since the corresponding `FromJSON` instance ignores the `delegators` field,
+            -- we omit it from the `ToJSON` instance, ensuring that round-tripping behaves as expected.
             ]
               ++ ["anchor" .= toJSON anchor | SJust anchor <- [drepAnchor]]
 
@@ -196,7 +200,7 @@ instance FromJSON DRepState where
       <$> o .: "expiry"
       <*> o .:? "anchor" .!= SNothing
       <*> o .: "deposit"
-      -- Construction of DRep state with deleagations is intentionally prohibited, since
+      -- Construction of DRep state with delegations is intentionally prohibited, since
       -- there is a requirement to retain the invariant of delegations in the UMap
       <*> pure mempty
 
@@ -207,7 +211,10 @@ drepAnchorL :: Lens' DRepState (StrictMaybe Anchor)
 drepAnchorL = lens drepAnchor (\x y -> x {drepAnchor = y})
 
 drepDepositL :: Lens' DRepState Coin
-drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
+drepDepositL = drepDepositCompactL . partialCompactCoinL
 
-drepDelegsL :: Lens' DRepState (Set (Credential 'Staking))
+drepDepositCompactL :: Lens' DRepState (CompactForm Coin)
+drepDepositCompactL = lens drepDeposit (\x y -> x {drepDeposit = y})
+
+drepDelegsL :: Lens' DRepState (Set (Credential Staking))
 drepDelegsL = lens drepDelegs (\x y -> x {drepDelegs = y})

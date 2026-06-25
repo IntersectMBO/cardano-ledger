@@ -6,21 +6,24 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
   tests,
 ) where
 
-import Cardano.Ledger.Block (bbody)
+import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Block (blockBody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (witVKeyHash)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
  )
+import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.SetAlgebra (eval, (∩))
+import Control.State.Transition.Extended (BaseM, Environment, STS, Signal, State)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -35,7 +38,6 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  TestingLedger,
   forAllChainTrace,
   ledgerTraceFromBlock,
   traceLen,
@@ -58,12 +60,16 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Tx inputs are eliminated, outputs added to utxo and TxIds are unique
 tests ::
-  forall era ledger.
+  forall era.
   ( EraGen era
   , EraStake era
   , ChainProperty era
-  , TestingLedger era ledger
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , STS (EraRule "LEDGER" era)
   ) =>
   TestTree
 tests =
@@ -72,20 +78,24 @@ tests =
       let ssts = sourceSignalTargets tr
       conjoin . concat $
         [ -- collision freeness
-          map (eliminateTxInputs @era @ledger) ssts
-        , map (newEntriesAndUniqueTxIns @era @ledger) ssts
+          map (eliminateTxInputs @era) ssts
+        , map (newEntriesAndUniqueTxIns @era) ssts
         , -- no double spend
           map noDoubleSpend ssts
         , -- tx signatures
-          map (requiredMSigSignaturesSubset @era @ledger) ssts
+          map (requiredMSigSignaturesSubset @era) ssts
         ]
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , EraGen era
-  , TestingLedger era ledger
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -95,7 +105,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
       map inputsEliminated $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     inputsEliminated
       SourceSignalTarget
         { target = LedgerState (UTxOState {utxosUtxo = (UTxO u')}) _
@@ -103,15 +113,19 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
         } =
         property $
           hasFailedScripts tx
-            || Set.null (eval (txins @era (tx ^. bodyTxL) ∩ Map.keysSet u'))
+            || Set.null (Set.intersection (txins @era (tx ^. bodyTxL)) (Map.keysSet u'))
 
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , EraGen era
-  , TestingLedger era ledger
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -121,7 +135,7 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
       map newEntryPresent $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     newEntryPresent
       SourceSignalTarget
         { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) _
@@ -139,10 +153,14 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
 -- of possible signatures for a multi-sig script which is a sub-set of the
 -- signatures of the tansaction.
 requiredMSigSignaturesSubset ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
   , EraGen era
-  , TestingLedger era ledger
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -152,8 +170,8 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
       map signaturesSubset $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    signaturesSubset :: SourceSignalTarget ledger -> Property
+    (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
+    signaturesSubset :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
        in property $
@@ -161,7 +179,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
-    keyHashSet :: Tx era -> Set (KeyHash 'Witness)
+    keyHashSet :: Tx TopTx era -> Set (KeyHash Witness)
     keyHashSet tx_ =
       Set.map witVKeyHash (tx_ ^. witsTxL . addrTxWitsL)
 
@@ -171,16 +189,16 @@ noDoubleSpend ::
   (ChainProperty era, EraGen era) =>
   SourceSignalTarget (CHAIN era) ->
   Property
-noDoubleSpend SourceSignalTarget {signal} =
+noDoubleSpend SourceSignalTarget {signal = block} =
   counterexample "noDoubleSpend" $
     [] === getDoubleInputs txs
   where
-    txs = toList $ (fromTxSeq @era . bbody) signal
+    txs = toList $ blockBody block ^. txSeqBlockBodyL
 
-    getDoubleInputs :: [Tx era] -> [(Tx era, [Tx era])]
+    getDoubleInputs :: [Tx TopTx era] -> [(Tx TopTx era, [Tx TopTx era])]
     getDoubleInputs [] = []
     getDoubleInputs (t : ts) = lookForDoubleSpends t ts ++ getDoubleInputs ts
-    lookForDoubleSpends :: Tx era -> [Tx era] -> [(Tx era, [Tx era])]
+    lookForDoubleSpends :: Tx TopTx era -> [Tx TopTx era] -> [(Tx TopTx era, [Tx TopTx era])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
       [(tx_j, doubles) | not (null doubles)]

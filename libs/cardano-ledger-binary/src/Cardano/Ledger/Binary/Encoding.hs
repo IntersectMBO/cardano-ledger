@@ -19,14 +19,11 @@ module Cardano.Ledger.Binary.Encoding (
   -- * Nested CBOR-in-CBOR
   encodeNestedCbor,
   encodeNestedCborBytes,
-  nestedCborSizeExpr,
-  nestedCborBytesSizeExpr,
 
   -- * Tools
   runByteBuilder,
   encodeMemPack,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as C
 import Cardano.Ledger.Binary.Encoding.EncCBOR
@@ -79,9 +76,9 @@ hashEncCBOR version = hashWithEncoder version encCBOR
 -- https://tools.ietf.org/html/rfc7049#section-2.4.4.1
 --------------------------------------------------------------------------------
 
--- | Encode and serialise the given `a` and sorround it with the semantic tag 24
+-- | Encode and serialise the given `a` and surround it with the semantic tag 24
 --   In CBOR diagnostic notation:
---   >>> 24(h'DEADBEEF')
+--   > 24(h'DEADBEEF')
 encodeNestedCbor :: EncCBOR a => a -> Encoding
 encodeNestedCbor value =
   encodeTag 24
@@ -93,12 +90,6 @@ encodeNestedCbor value =
 --   indeed to valid, previously-serialised CBOR data.
 encodeNestedCborBytes :: BSL.ByteString -> Encoding
 encodeNestedCborBytes x = encodeTag 24 <> encCBOR x
-
-nestedCborSizeExpr :: Size -> Size
-nestedCborSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
-
-nestedCborBytesSizeExpr :: Size -> Size
-nestedCborBytesSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
 
 --------------------------------------------------------------------------------
 -- Tools

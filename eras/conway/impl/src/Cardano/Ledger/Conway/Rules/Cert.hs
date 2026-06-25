@@ -25,7 +25,6 @@ module Cardano.Ledger.Conway.Rules.Cert (
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
   ConwayCERT,
@@ -57,6 +56,7 @@ import Cardano.Ledger.Shelley.API (
   PoolEnv (PoolEnv),
  )
 import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
+import Cardano.Ledger.State (EraCertState (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed,
@@ -80,7 +80,7 @@ data CertEnv era = CertEnv
   , ceCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ceCurrentCommittee :: StrictMaybe (Committee era)
-  , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
+  , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
   }
   deriving (Generic)
 
@@ -95,6 +95,7 @@ instance EraPParams era => EncCBOR (CertEnv era) where
             !> To ceCommitteeProposals
 
 deriving instance EraPParams era => Eq (CertEnv era)
+
 deriving instance EraPParams era => Show (CertEnv era)
 
 instance EraPParams era => NFData (CertEnv era)
@@ -219,7 +220,7 @@ certTransition = do
   TRC (CertEnv pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
   let
     certPState = certState ^. certPStateL
-    pools = psStakePoolParams certPState
+    pools = psStakePools certPState
   case c of
     ConwayTxCertDeleg delegCert -> do
       trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, certState, delegCert)
@@ -264,8 +265,7 @@ instance
   wrapEvent = absurd
 
 instance
-  ( Typeable era
-  , EncCBOR (PredicateFailure (EraRule "DELEG" era))
+  ( EncCBOR (PredicateFailure (EraRule "DELEG" era))
   , EncCBOR (PredicateFailure (EraRule "POOL" era))
   , EncCBOR (PredicateFailure (EraRule "GOVCERT" era))
   ) =>

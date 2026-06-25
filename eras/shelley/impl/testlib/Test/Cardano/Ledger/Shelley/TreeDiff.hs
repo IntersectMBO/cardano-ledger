@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,10 +11,11 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Rewards
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
+import Cardano.Ledger.Shelley.BlockBody
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -27,6 +29,9 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
+import Cardano.Ledger.Shelley.UTxO
+import Data.TreeDiff.OMap as OMap
+import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.TreeDiff
 
 -- PParams
@@ -62,10 +67,15 @@ instance
 
 -- TxCert
 instance ToExpr GenesisDelegCert
+
 instance ToExpr MIRPot
+
 instance ToExpr MIRTarget
+
 instance ToExpr MIRCert
+
 instance ToExpr (ShelleyTxCert era)
+
 instance ToExpr ShelleyDelegCert
 
 -- TxWits
@@ -83,19 +93,24 @@ instance (EraTxOut era, ToExpr (Value era)) => ToExpr (ShelleyTxOut era) where
   toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]
 
 -- TxBody
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (ShelleyTxBodyRaw era)
+instance ToExpr (ShelleyTxBodyRaw TopTx ShelleyEra) where
+  toExpr ShelleyTxBodyRaw {..} =
+    Rec "ShelleyTxBodyRaw" $
+      OMap.fromList
+        [ ("inputs", toExpr stbrInputs)
+        , ("outputs", toExpr stbrOutputs)
+        , ("certs", toExpr stbrCerts)
+        , ("withdrawals", toExpr stbrWithdrawals)
+        , ("fee", toExpr stbrFee)
+        , ("ttl", toExpr stbrTtl)
+        , ("update", toExpr stbrUpdate)
+        , ("auxDataHash", toExpr stbrAuxDataHash)
+        ]
 
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (ShelleyTxBody era)
+instance ToExpr (TxBody TopTx ShelleyEra)
+
+-- BlockBody
+instance ToExpr (Tx TopTx era) => ToExpr (ShelleyBlockBody era)
 
 -- PoolRank
 instance ToExpr Likelihood
@@ -104,20 +119,20 @@ instance ToExpr LogWeight
 
 instance ToExpr NonMyopic
 
--- Tx
 instance
   ( ToExpr (TxAuxData era)
-  , ToExpr (TxBody era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   ) =>
-  ToExpr (ShelleyTxRaw era)
-
-instance
-  ( ToExpr (TxAuxData era)
-  , ToExpr (TxBody era)
-  , ToExpr (TxWits era)
-  ) =>
-  ToExpr (ShelleyTx era)
+  ToExpr (ShelleyTx TopTx era)
+  where
+  toExpr ShelleyTx {..} =
+    Rec "ShelleyTx" $
+      OMap.fromList
+        [ ("body", toExpr stBody)
+        , ("wits", toExpr stWits)
+        , ("auxData", toExpr stAuxData)
+        ]
 
 -- RewardUpdate
 
@@ -164,6 +179,8 @@ instance
   ToExpr (UTxOState era)
 
 instance ToExpr (ShelleyInstantStake era)
+
+instance ToExpr (ShelleyScriptsNeeded era)
 
 -- Rules/Utxo
 instance
@@ -215,6 +232,14 @@ instance
   , ToExpr (Event (EraRule "DELEGS" era))
   ) =>
   ToExpr (ShelleyLedgerEvent era)
+
+instance
+  ToExpr (Event (EraRule "LEDGER" era)) =>
+  ToExpr (ShelleyLedgersEvent era)
+
+instance
+  ToExpr (Event (EraRule "LEDGERS" era)) =>
+  ToExpr (ShelleyBbodyEvent era)
 
 instance
   ToExpr (Event (EraRule "UTXO" era)) =>
@@ -284,4 +309,18 @@ instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (ShelleyLedgersPredFailure era)
 
-instance EraCertState era => ToExpr (ShelleyCertState era)
+instance (EraCertState era, ToExpr (Accounts era)) => ToExpr (ShelleyCertState era)
+
+instance ToExpr (ShelleyAccountState era)
+
+instance ToExpr (ShelleyAccounts era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (ShelleyBbodyPredFailure era)
+
+instance
+  ToExpr (State (EraRule "LEDGERS" era)) =>
+  ToExpr (ShelleyBbodyState era)
+
+instance ToExpr (Tx TopTx ShelleyEra)

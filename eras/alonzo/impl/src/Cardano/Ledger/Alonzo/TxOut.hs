@@ -34,12 +34,10 @@ module Cardano.Ledger.Alonzo.TxOut (
   getAlonzoTxOutEitherAddr,
   utxoEntrySize,
   internAlonzoTxOut,
-)
-where
+) where
 
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (
-  Addr (..),
   CompactAddr,
   compactAddr,
   decompactAddr,
@@ -73,7 +71,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Shelley.Core
@@ -129,7 +127,7 @@ instance MemPack DataHash32 where
   {-# INLINE unpackM #-}
 
 decodeAddress28 ::
-  Credential 'Staking ->
+  Credential Staking ->
   Addr28Extra ->
   Addr
 decodeAddress28 stakeRef (Addr28Extra a b c d) =
@@ -154,11 +152,11 @@ data AlonzoTxOut era
       !(CompactForm (Value era))
       !DataHash
   | TxOut_AddrHash28_AdaOnly
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
@@ -261,7 +259,7 @@ deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks 
 
 encodeAddress28 ::
   Network ->
-  PaymentCredential ->
+  Credential Payment ->
   Addr28Extra
 encodeAddress28 network paymentCred = do
   let networkBit, payCredTypeBit :: Word64
@@ -341,7 +339,7 @@ instance EraTxOut AlonzoEra where
 
   mkBasicTxOut addr vl = AlonzoTxOut addr vl SNothing
 
-  upgradeTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
+  upgradeTxOut (Shelley.TxOutCompact addr value) = TxOutCompact' addr value
 
   addrEitherTxOutL =
     lens
@@ -415,7 +413,7 @@ instance (Era era, Val (Value era)) => DecCBOR (AlonzoTxOut era) where
   {-# INLINEABLE decCBOR #-}
 
 instance (Era era, Val (Value era), MemPack (CompactForm (Value era))) => DecShareCBOR (AlonzoTxOut era) where
-  type Share (AlonzoTxOut era) = Interns (Credential 'Staking)
+  type Share (AlonzoTxOut era) = Interns (Credential Staking)
   decShareCBOR credsInterns = do
     txOut <-
       peekTokenType >>= \case
@@ -426,7 +424,7 @@ instance (Era era, Val (Value era), MemPack (CompactForm (Value era))) => DecSha
   {-# INLINEABLE decShareCBOR #-}
 
 internAlonzoTxOut ::
-  (Credential 'Staking -> Credential 'Staking) ->
+  (Credential Staking -> Credential Staking) ->
   AlonzoTxOut era ->
   AlonzoTxOut era
 internAlonzoTxOut internCred = \case

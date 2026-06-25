@@ -14,43 +14,30 @@
 module Cardano.Ledger.Shelley.Rules.Mir (
   ShelleyMIR,
   PredicateFailure,
-  ShelleyMirPredFailure,
   ShelleyMirEvent (..),
   emptyInstantaneousRewards,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState)
-import Cardano.Ledger.Coin (Coin, addDeltaCoin)
+import Cardano.Ledger.Coin (Coin, addDeltaCoin, compactCoinOrError)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
-import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   EpochState,
-  InstantaneousRewards (..),
-  certDStateL,
   curPParamsEpochStateL,
-  dsIRewards,
-  dsIRewardsL,
-  dsUnifiedL,
-  esAccountState,
+  esChainAccountState,
   esLState,
   esLStateL,
   esNonMyopic,
   esSnapshots,
   lsCertStateL,
   prevPParamsEpochStateL,
-  rewards,
   pattern EpochState,
  )
-import Cardano.Ledger.UMap (compactCoinOrError)
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (eval, (∪+))
 import Control.State.Transition (
   Assertion (..),
   STS (..),
@@ -62,14 +49,9 @@ import Control.State.Transition (
 import Data.Default (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
+import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
-import NoThunks.Class (NoThunks (..))
-
-data ShelleyMirPredFailure era
-  deriving (Show, Generic, Eq)
-
-instance NFData (ShelleyMirPredFailure era)
+import Lens.Micro
 
 data ShelleyMirEvent era
   = MirTransfer InstantaneousRewards
@@ -83,8 +65,6 @@ deriving instance Eq (ShelleyMirEvent era)
 
 instance NFData (ShelleyMirEvent era)
 
-instance NoThunks (ShelleyMirPredFailure era)
-
 instance
   ( Default (EpochState era)
   , EraGov era
@@ -97,16 +77,17 @@ instance
   type Environment (ShelleyMIR era) = ()
   type BaseM (ShelleyMIR era) = ShelleyBase
   type Event (ShelleyMIR era) = ShelleyMirEvent era
-  type PredicateFailure (ShelleyMIR era) = ShelleyMirPredFailure era
+  type PredicateFailure (ShelleyMIR era) = Void
 
   transitionRules = [mirTransition]
 
   assertions =
     [ PostCondition
-        "MIR may not create or remove reward accounts"
+        "MIR may not create or remove account addresses"
         ( \(TRC (_, st, _)) st' ->
-            let r esl = rewards (esl ^. esLStateL . lsCertStateL . certDStateL)
-             in length (r st) == length (r st')
+            let accountsCount esl =
+                  Map.size (esl ^. esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL)
+             in accountsCount st == accountsCount st'
         )
     ]
 
@@ -118,7 +99,7 @@ mirTransition = do
   TRC
     ( _
       , es@EpochState
-          { esAccountState = acnt
+          { esChainAccountState = chainAccountState
           , esSnapshots = ss
           , esLState = ls
           , esNonMyopic = nm
@@ -130,28 +111,29 @@ mirTransition = do
       pp = es ^. curPParamsEpochStateL
       dpState = ls ^. lsCertStateL
       ds = dpState ^. certDStateL
-      rewards' = rewards ds
-      reserves = asReserves acnt
-      treasury = asTreasury acnt
-      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
-      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
+      accountsMap = ds ^. accountsL . accountsMapL
+      reserves = casReserves chainAccountState
+      treasury = casTreasury chainAccountState
+      irwdR = iRReserves (dsIRewards ds) `Map.intersection` accountsMap
+      irwdT = iRTreasury (dsIRewards ds) `Map.intersection` accountsMap
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
       availableTreasury = treasury `addDeltaCoin` deltaTreasury (dsIRewards ds)
-      update = eval (irwdR ∪+ irwdT) :: Map.Map (Credential 'Staking) Coin
+      update = Map.unionWith (<>) irwdR irwdT :: Map.Map (Credential Staking) Coin
 
   if totR <= availableReserves && totT <= availableTreasury
     then do
       tellEvent $ MirTransfer ((dsIRewards ds) {iRReserves = irwdR, iRTreasury = irwdT})
       pure $
         EpochState
-          acnt
-            { asReserves = availableReserves <-> totR
-            , asTreasury = availableTreasury <-> totT
+          ChainAccountState
+            { casReserves = availableReserves <-> totR
+            , casTreasury = availableTreasury <-> totT
             }
           ( ls
-              & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards' UM.∪+ Map.map compactCoinOrError update)
+              & lsCertStateL . certDStateL . accountsL
+                %~ addToBalanceAccounts (Map.map compactCoinOrError update)
               & lsCertStateL . certDStateL . dsIRewardsL .~ emptyInstantaneousRewards
           )
           ss
@@ -166,7 +148,7 @@ mirTransition = do
           availableTreasury
       pure $
         EpochState
-          acnt
+          chainAccountState
           ( ls
               & lsCertStateL . certDStateL . dsIRewardsL .~ emptyInstantaneousRewards
           )

@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Alonzo.TreeDiff (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.BlockBody
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Plutus.Context
@@ -25,17 +26,19 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import Cardano.Ledger.Shelley.Rules
 import qualified Data.TreeDiff.OMap as OMap
+import PlutusLedgerApi.Common (EvaluationError (..), ExBudget, ExCPU, ExMemory, SatInt)
 import Test.Cardano.Ledger.Mary.TreeDiff
 
 -- Scripts
 instance ToExpr (PlutusScript AlonzoEra)
 
-instance ToExpr (PlutusScript era) => ToExpr (AlonzoScript era)
+instance (ToExpr (PlutusScript era), ToExpr (NativeScript era)) => ToExpr (AlonzoScript era)
 
 instance ToExpr (AlonzoPlutusPurpose AsIx era)
 
@@ -45,13 +48,19 @@ deriving newtype instance ToExpr ix => ToExpr (AsIx ix it)
 
 deriving newtype instance ToExpr it => ToExpr (AsItem ix it)
 
+instance (ToExpr ix, ToExpr it) => ToExpr (AsIxItem ix it)
+
+instance ToExpr (PlutusPurpose AsIxItem era) => ToExpr (AlonzoScriptsNeeded era)
+
+instance ToExpr (TxCert era) => ToExpr (AlonzoPlutusPurpose AsIxItem era)
+
 -- Core
 deriving newtype instance ToExpr CoinPerWord
 
 -- TxAuxData
-instance ToExpr (AlonzoTxAuxDataRaw era)
+instance ToExpr (NativeScript era) => ToExpr (AlonzoTxAuxDataRaw era)
 
-instance ToExpr (AlonzoTxAuxData era)
+instance ToExpr (NativeScript era) => ToExpr (AlonzoTxAuxData era)
 
 -- PParams
 deriving newtype instance ToExpr OrdExUnits
@@ -93,20 +102,44 @@ instance ToExpr DataHash32
 instance ToExpr (CompactForm (Value era)) => ToExpr (AlonzoTxOut era)
 
 -- TxBody
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (AlonzoTxBodyRaw era)
+instance ToExpr (AlonzoTxBodyRaw TopTx AlonzoEra) where
+  toExpr AlonzoTxBodyRaw {..} =
+    Rec "AlonzoTxBodyRaw" $
+      OMap.fromList
+        [ ("atbrInputs", toExpr atbrInputs)
+        , ("atbrCollateral", toExpr atbrCollateral)
+        , ("atbrOutputs", toExpr atbrOutputs)
+        , ("atbrCerts", toExpr atbrCerts)
+        , ("atbrWithdrawals", toExpr atbrWithdrawals)
+        , ("atbrTxFee", toExpr atbrTxFee)
+        , ("atbrValidityInterval", toExpr atbrValidityInterval)
+        , ("atbrUpdate", toExpr atbrUpdate)
+        , ("atbrReqSignerHashes", toExpr atbrReqSignerHashes)
+        , ("atbrMint", toExpr atbrMint)
+        , ("atbrScriptIntegrityHash", toExpr atbrScriptIntegrityHash)
+        , ("atbrAuxDataHash", toExpr atbrAuxDataHash)
+        , ("atbrTxNetworkId", toExpr atbrTxNetworkId)
+        ]
 
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (AlonzoTxBody era)
+instance ToExpr (TxBody TopTx AlonzoEra)
+
+instance ToExpr (Tx TopTx era) => ToExpr (AlonzoBlockBody era)
 
 -- Tx
 instance ToExpr IsValid
 
 instance
-  (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
-  ToExpr (AlonzoTx era)
+  (ToExpr (TxBody TopTx era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
+  ToExpr (AlonzoTx TopTx era)
+  where
+  toExpr AlonzoTx {..} =
+    Rec "AlonzoTx" $
+      OMap.fromList
+        [ ("atBody", toExpr atBody)
+        , ("atWits", toExpr atWits)
+        , ("atIsValid", toExpr atIsValid)
+        , ("atAuxData", toExpr atAuxData)
+        ]
 
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)
@@ -151,11 +184,10 @@ instance
 
 instance ToExpr (Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
 
-instance ToExpr (Event (EraRule "UTXOS" era)) => ToExpr (AlonzoUtxoEvent era)
+instance (ToExpr (TxOut era), ToExpr (Event (EraRule "UTXOS" era))) => ToExpr (AlonzoUtxoEvent era)
 
 instance
   ( ToExpr (EraRuleEvent "PPUP" era)
-  , ToExpr (TxOut era)
   , ToExpr PlutusWithContext
   ) =>
   ToExpr (AlonzoUtxosEvent era)
@@ -172,3 +204,32 @@ instance
         , ("pwcExUnits", toExpr pwcExUnits)
         , ("pwcCostModel", toExpr pwcCostModel)
         ]
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (AlonzoBbodyPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "LEDGERS" era)) =>
+  ToExpr (AlonzoBbodyEvent era)
+
+instance ToExpr EvaluationError where
+  toExpr = toExpr . show
+
+instance ToExpr SatInt
+
+instance ToExpr ExCPU
+
+instance ToExpr ExMemory
+
+instance ToExpr ExBudget
+
+instance
+  ( ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (PlutusScript era)
+  , ToExpr (ContextError era)
+  ) =>
+  ToExpr (TransactionScriptFailure era)
+
+deriving newtype instance ToExpr (Tx TopTx AlonzoEra)

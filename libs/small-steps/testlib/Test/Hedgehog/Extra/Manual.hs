@@ -20,8 +20,7 @@ module Test.Hedgehog.Extra.Manual (
   -- * Auxiliary
   wrapTreeT,
   unwrapTreeT,
-)
-where
+) where
 
 import Control.Monad (ap, liftM)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT))

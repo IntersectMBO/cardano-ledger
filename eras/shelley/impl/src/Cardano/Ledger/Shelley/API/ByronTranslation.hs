@@ -11,8 +11,7 @@ module Cardano.Ledger.Shelley.API.ByronTranslation (
   -- * Exported for testing purposes
   translateCompactTxOutByronToShelley,
   translateTxIdByronToShelley,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.Common as Byron
@@ -28,10 +27,8 @@ import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules ()
-import Cardano.Ledger.Shelley.State ()
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
-import Cardano.Ledger.State (coinBalance, emptySnapShots)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default (def)
@@ -110,7 +107,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     , nesBcur = BlocksMade Map.empty
     , nesEs = epochState
     , nesRu = SNothing
-    , nesPd = PoolDistr Map.empty mempty
+    , nesPd = def
     , -- At this point, we compute the stashed AVVM addresses, while we are able
       -- to do a linear scan of the UTxO, and stash them away for use at the
       -- Shelley/Allegra boundary.
@@ -139,12 +136,16 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
 
     reserves :: Coin
     reserves =
-      word64ToCoin (fbtcMaxLovelaceSupply transCtxt) <-> coinBalance utxoShelley
+      word64ToCoin (fbtcMaxLovelaceSupply transCtxt) <-> sumCoinUTxO utxoShelley
 
     epochState :: EpochState ShelleyEra
     epochState =
       EpochState
-        { esAccountState = AccountState (Coin 0) reserves
+        { esChainAccountState =
+            ChainAccountState
+              { casTreasury = Coin 0
+              , casReserves = reserves
+              }
         , esSnapshots = emptySnapShots
         , esLState = ledgerState
         , esNonMyopic = def
@@ -167,13 +168,13 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
               , utxosInstantStake = mempty
               , utxosDonation = mempty
               }
-        , lsCertState = mkCertState def def dState
+        , lsCertState = mkShelleyCertState def dState
         }
 
     dState :: DState ShelleyEra
     dState =
       DState
-        { dsUnified = UM.empty
+        { dsAccounts = def
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = genDelegs
         , dsIRewards = def

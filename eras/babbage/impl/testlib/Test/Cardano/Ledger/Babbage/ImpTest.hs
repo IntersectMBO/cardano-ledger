@@ -1,36 +1,54 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-#if __GLASGOW_HASKELL__ < 900
-{-# LANGUAGE IncoherentInstances #-}
-#endif
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.ImpTest (
+  BabbageEraImp,
   babbageFixupTx,
+  impBabbageExpectTxSuccess,
   module Test.Cardano.Ledger.Alonzo.ImpTest,
   produceRefScript,
   produceRefScripts,
+  produceRefScriptsTx,
+  mkTxWithRefInputs,
+  submitTxWithRefInputs,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
+import Cardano.Ledger.BaseTypes (Inject, StrictMaybe (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (
+  UTxO (..),
+  curPParamsEpochStateL,
+  nesEsL,
+  utxoL,
+ )
 import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Control.Monad (forM, (>=>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Babbage.Era (BabbageEraTest)
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 
@@ -40,14 +58,19 @@ instance ShelleyEraImp BabbageEra where
       (nesEsL . curPParamsEpochStateL . ppCostModelsL <>~ testingCostModels [PlutusV2])
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = babbageFixupTx
+  expectTxSuccess = impBabbageExpectTxSuccess
+  modifyImpInitProtVer = shelleyModifyImpInitProtVer
+  genRegTxCert = shelleyGenRegTxCert
+  genUnRegTxCert = shelleyGenUnRegTxCert
+  delegStakeTxCert = shelleyDelegStakeTxCert
 
 babbageFixupTx ::
   ( HasCallStack
   , AlonzoEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 babbageFixupTx =
   addNativeScriptTxWits
     >=> fixupAuxDataHash
@@ -68,15 +91,34 @@ fixupCollateralReturn ::
   ( ShelleyEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 fixupCollateralReturn tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (ensureMinCoinTxOut pp)
 
-instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
+impBabbageExpectTxSuccess ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  , BabbageEraTxBody era
+  ) =>
+  Tx TopTx era -> ImpTestM era ()
+impBabbageExpectTxSuccess tx = do
+  impAlonzoExpectTxSuccess tx
+  -- Check that the balance of the collateral was returned
+  let returns = Map.toList . unUTxO . collOuts $ tx ^. bodyTxL
+  utxo <- getsNES utxoL
+  if tx ^. isValidTxL == IsValid True
+    then do
+      impAnn "Collateral return should not be in UTxO" $
+        expectUTxOContent utxo [(txIn, isNothing) | (txIn, _txOut) <- returns]
+    else do
+      impAnn "Collateral return should be in UTxO" $
+        expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- returns]
 
-instance ShelleyEraImp BabbageEra => AlonzoEraImp BabbageEra where
+instance MaryEraImp BabbageEra
+
+instance AlonzoEraImp BabbageEra where
   scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
 
 produceRefScript ::
@@ -92,6 +134,14 @@ produceRefScripts ::
   NonEmpty (Script era) ->
   ImpTestM era (NonEmpty TxIn)
 produceRefScripts scripts = do
+  txId <- txIdTx <$> produceRefScriptsTx scripts
+  pure $ NE.zipWith (\_ -> mkTxInPartial txId) scripts (0 :| [1 ..])
+
+produceRefScriptsTx ::
+  (ShelleyEraImp era, BabbageEraTxOut era) =>
+  NonEmpty (Script era) ->
+  ImpTestM era (Tx TopTx era)
+produceRefScriptsTx scripts = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   txOuts <- forM scripts $ \script -> do
     addr <- freshKeyAddr_
@@ -99,5 +149,33 @@ produceRefScripts scripts = do
           mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust script
     pure $ setMinCoinTxOut pp txOutZero
   let txBody = mkBasicTxBody & outputsTxBodyL .~ SSeq.fromList (NE.toList txOuts)
-  txId <- txIdTx <$> submitTx (mkBasicTx txBody)
-  pure $ NE.zipWith (\_ -> mkTxInPartial txId) scripts (0 :| [1 ..])
+  submitTx (mkBasicTx txBody)
+
+mkTxWithRefInputs ::
+  (ShelleyEraImp era, BabbageEraTxBody era) =>
+  TxIn ->
+  NonEmpty TxIn ->
+  Tx TopTx era
+mkTxWithRefInputs txIn refIns =
+  mkBasicTx $
+    mkBasicTxBody
+      & referenceInputsTxBodyL .~ Set.fromList (NE.toList refIns)
+      & inputsTxBodyL .~ [txIn]
+
+submitTxWithRefInputs ::
+  (ShelleyEraImp era, BabbageEraTxBody era) =>
+  TxIn ->
+  NonEmpty TxIn ->
+  ImpTestM era (Tx TopTx era)
+submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
+
+class
+  ( AlonzoEraImp era
+  , BabbageEraTest era
+  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , Inject (BabbageContextError era) (ContextError era)
+  ) =>
+  BabbageEraImp era
+
+instance BabbageEraImp BabbageEra

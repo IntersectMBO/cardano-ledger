@@ -68,3 +68,5 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 ## Misc
 .pre-commit-config.yaml
+/.direnv
+/.envrc

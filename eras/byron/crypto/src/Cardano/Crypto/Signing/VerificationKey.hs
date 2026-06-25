@@ -16,8 +16,7 @@ module Cardano.Crypto.Signing.VerificationKey (
   fullVerificationKeyHexF,
   shortVerificationKeyHexF,
   parseFullVerificationKey,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (
@@ -78,13 +77,13 @@ instance MonadError SchemaError m => TJC.FromJSON m VerificationKey where
 
 instance ToCBOR VerificationKey where
   toCBOR = toByronCBOR
+  encodedSizeExpr _ _ = 66
 
 instance FromCBOR VerificationKey where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR VerificationKey where
   encCBOR (VerificationKey a) = encCBORXPub a
-  encodedSizeExpr _ _ = 66
 
 instance DecCBOR VerificationKey where
   decCBOR = fmap VerificationKey decCBORXPub

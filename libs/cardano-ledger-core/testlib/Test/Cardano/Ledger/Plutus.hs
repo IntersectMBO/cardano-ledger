@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Plutus (
   PlutusArgs (..),
@@ -32,7 +31,7 @@ import Cardano.Ledger.Binary.Plain (decodeFullFromHexText)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
-  costModelParamsCount,
+  costModelInitParamCount,
   getCostModelEvaluationContext,
   mkCostModel,
   mkCostModels,
@@ -62,7 +61,7 @@ import Test.Cardano.Ledger.Plutus.ScriptTestContext (
 
 -- | Construct a test cost model where all parameters are set to the same value
 mkCostModelConst :: HasCallStack => Language -> Int64 -> CostModel
-mkCostModelConst lang = mkCostModel' lang . replicate (costModelParamsCount lang)
+mkCostModelConst lang = mkCostModel' lang . replicate (costModelInitParamCount lang)
 
 mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> CostModel
 mkCostModel' lang params =
@@ -104,6 +103,7 @@ testingCostModel = \case
   PlutusV1 -> testingCostModelV1
   PlutusV2 -> testingCostModelV2
   PlutusV3 -> testingCostModelV3
+  PlutusV4 -> testingCostModelV4
 
 testingCostModelV1 :: HasCallStack => CostModel
 testingCostModelV1 = mkCostModel' PlutusV1 $ snd <$> PV1.costModelParamsForTesting
@@ -113,6 +113,9 @@ testingCostModelV2 = mkCostModel' PlutusV2 $ snd <$> PV2.costModelParamsForTesti
 
 testingCostModelV3 :: HasCallStack => CostModel
 testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesting
+
+testingCostModelV4 :: HasCallStack => CostModel
+testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> PV3.costModelParamsForTesting
 
 testingEvaluationContext :: Language -> PV1.EvaluationContext
 testingEvaluationContext = getCostModelEvaluationContext . testingCostModel

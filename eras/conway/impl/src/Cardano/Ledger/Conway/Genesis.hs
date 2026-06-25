@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -11,11 +12,10 @@
 
 module Cardano.Ledger.Conway.Genesis (
   ConwayGenesis (..),
-  toConwayGenesisPairs,
   cgDelegsL,
-)
-where
+) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -25,19 +25,18 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams, toUpgradeConwayPParamsUpdatePairs)
+import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams)
 import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Genesis (EraGenesis (..))
+import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
   ToJSON (..),
   Value (..),
-  object,
-  pairs,
   withObject,
   (.!=),
   (.:),
@@ -53,18 +52,21 @@ data ConwayGenesis = ConwayGenesis
   { cgUpgradePParams :: !(UpgradeConwayPParams Identity)
   , cgConstitution :: !(Constitution ConwayEra)
   , cgCommittee :: !(Committee ConwayEra)
-  , cgDelegs :: ListMap (Credential 'Staking) Delegatee
-  , cgInitialDReps :: ListMap (Credential 'DRepRole) DRepState
+  , cgDelegs :: ListMap (Credential Staking) Delegatee
+  , cgInitialDReps :: ListMap (Credential DRepRole) DRepState
   }
   deriving (Eq, Generic, Show)
+  deriving (ToJSON) via KeyValuePairs ConwayGenesis
 
-cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential 'Staking) Delegatee)
+cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential Staking) Delegatee)
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
 
 instance EraGenesis ConwayEra where
   type Genesis ConwayEra = ConwayGenesis
 
 instance NoThunks ConwayGenesis
+
+instance NFData ConwayGenesis
 
 -- | Genesis are always encoded with the version of era they are defined in.
 instance FromCBOR ConwayGenesis where
@@ -85,29 +87,25 @@ instance ToCBOR ConwayGenesis where
             !> To cgInitialDReps
 
 instance DecCBOR ConwayGenesis
-instance EncCBOR ConwayGenesis
 
-instance ToJSON ConwayGenesis where
-  toJSON = object . toConwayGenesisPairs
-  toEncoding = pairs . mconcat . toConwayGenesisPairs
+instance EncCBOR ConwayGenesis
 
 instance FromJSON ConwayGenesis where
   parseJSON =
     withObject "ConwayGenesis" $ \obj -> do
-      upgradeProtocolPParams <- parseJSON (Object obj)
-      ConwayGenesis
-        <$> pure upgradeProtocolPParams
-        <*> obj .: "constitution"
-        <*> obj .: "committee"
-        <*> obj .:? "delegs" .!= mempty
-        <*> obj .:? "initialDReps" .!= mempty
+      cgUpgradePParams <- parseJSON (Object obj)
+      cgConstitution <- obj .: "constitution"
+      cgCommittee <- obj .: "committee"
+      cgDelegs <- obj .:? "delegs" .!= mempty
+      cgInitialDReps <- obj .:? "initialDReps" .!= mempty
+      pure ConwayGenesis {..}
 
-toConwayGenesisPairs :: KeyValue e a => ConwayGenesis -> [a]
-toConwayGenesisPairs cg@(ConwayGenesis _ _ _ _ _) =
-  let ConwayGenesis {..} = cg
-   in [ "constitution" .= cgConstitution
-      , "committee" .= cgCommittee
-      ]
-        ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
-        ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
-        ++ toUpgradeConwayPParamsUpdatePairs cgUpgradePParams
+instance ToKeyValuePairs ConwayGenesis where
+  toKeyValuePairs cg@(ConwayGenesis _ _ _ _ _) =
+    let ConwayGenesis {..} = cg
+     in [ "constitution" .= cgConstitution
+        , "committee" .= cgCommittee
+        ]
+          ++ toKeyValuePairs cgUpgradePParams
+          ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
+          ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]

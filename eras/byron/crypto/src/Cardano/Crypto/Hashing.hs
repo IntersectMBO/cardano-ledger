@@ -37,7 +37,6 @@ module Cardano.Crypto.Hashing (
   Hash,
 
   -- ** Hashing
-  hash,
   hashDecoded,
   hashRaw,
   serializeCborHash,
@@ -52,8 +51,7 @@ module Cardano.Crypto.Hashing (
   hashHexF,
   mediumHashF,
   shortHashF,
-)
-where
+) where
 
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.HeapWords
@@ -142,12 +140,12 @@ instance ToJSONKey (AbstractHash algo a) where
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
   toCBOR = toByronCBOR
 
-instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
-  encCBOR (AbstractHash h) = encCBOR h
-
   encodedSizeExpr _ _ =
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
      in fromInteger (toInteger (withWordSize realSz + realSz))
+
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
+  encCBOR (AbstractHash h) = encCBOR h
 
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHash algo a) where
   fromCBOR = fromByronCBOR
@@ -261,12 +259,6 @@ abstractHashToShort (AbstractHash h) = h
 -- | The type of our commonly used hash, Blake2b 256
 type Hash :: Type -> Type
 type Hash = AbstractHash Blake2b_256
-
-{-# DEPRECATED hash "Use serializeCborHash or hash the annotation instead." #-}
-
--- | The hash of a value, serialised via 'EncCBOR'.
-hash :: EncCBOR a => a -> Hash a
-hash = abstractHash
 
 -- | The hash of a value, serialised via 'EncCBOR'.
 serializeCborHash :: EncCBOR a => a -> Hash a

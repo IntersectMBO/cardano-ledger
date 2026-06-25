@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address (tests) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, sizeHash)
+import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, hashSize)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..), mkCertIxPartial, mkTxIxPartial)
@@ -94,13 +94,13 @@ goldenTests_MockCrypto =
         ("70" <> scriptHashHex)
     , golden
         "rewardAcntK"
-        putRewardAccount
-        (RewardAccount Testnet keyHash)
+        putAccountAddress
+        (AccountAddress Testnet (AccountId keyHash))
         ("e0" <> keyHashHex)
     , golden
         "rewardAcntS"
-        putRewardAccount
-        (RewardAccount Testnet scriptHash)
+        putAccountAddress
+        (AccountAddress Testnet (AccountId scriptHash))
         ("f0" <> scriptHashHex)
     ]
   where
@@ -161,8 +161,8 @@ goldenTests_ShelleyCrypto =
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     , golden
         "rewardAcntK"
-        putRewardAccount
-        (RewardAccount Testnet stakeKey)
+        putAccountAddress
+        (AccountAddress Testnet (AccountId stakeKey))
         "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
     , golden
         "bootstrapAddr for network id = 1"
@@ -185,9 +185,9 @@ goldenTests_ShelleyCrypto =
         "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
     ]
   where
-    paymentKey :: Credential 'Payment
+    paymentKey :: Credential Payment
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-    stakeKey :: Credential 'Staking
+    stakeKey :: Credential Staking
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
     ptr = Ptr (SlotNo32 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
@@ -205,7 +205,7 @@ goldenTests_ShelleyCrypto =
         vk' = invariantSize 32 vk
         hk =
           invariantSize
-            (fromIntegral $ sizeHash (Proxy :: Proxy Blake2b_224))
+            (fromIntegral $ hashSize (Proxy :: Proxy Blake2b_224))
             (hash vk')
     invariantSize :: HasCallStack => Int -> BS.ByteString -> BS.ByteString
     invariantSize expectedLength bytes

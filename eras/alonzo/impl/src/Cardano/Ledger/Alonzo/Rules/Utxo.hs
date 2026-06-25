@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -33,9 +34,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxo (
 ) where
 
 import Cardano.Ledger.Address (
-  Addr (..),
   CompactAddr,
-  RewardAccount,
   isBootstrapCompactAddr,
   isPayCredScriptCompactAddr,
  )
@@ -45,9 +44,13 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXO)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Ppup ()
-import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (
+  AlonzoUTXOS,
+  AlonzoUtxosPredFailure,
+  UtxosEnv (..),
+ )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
@@ -78,7 +81,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (unCoin), DeltaCoin, rationalToCoinViaCeiling, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -87,10 +89,15 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
-import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (ShelleyGovState, UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  updateUTxOState,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
@@ -100,19 +107,20 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable as F (foldl', sequenceA_, toList)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.MapExtras (extractKeys)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 import Validation
 
 -- ==========================================================
@@ -120,40 +128,38 @@ import Validation
 data AlonzoUtxoPredFailure era
   = -- | The bad transaction inputs
     BadInputsUTxO
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
       ValidityInterval
       -- | current slot
       SlotNo
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Integer)
+  | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
-  | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era))
+  | FeeTooSmallUTxO (Mismatch RelGTEQ Coin)
+  | ValueNotConservedUTxO (Mismatch RelEQ (Value era))
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
       Network
       -- | the set of addresses with incorrect network IDs
-      (Set Addr)
+      (NonEmptySet Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
       Network
-      -- | the set of reward addresses with incorrect network IDs
-      (Set RewardAccount)
+      -- | the set of account addresses with incorrect network IDs
+      (NonEmptySet AccountAddress)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | Subtransition Failures
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
-      [TxOut era]
-  | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
-    TriesToForgeADA
+      (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      [(Integer, Integer, TxOut era)]
+      (NonEmpty (Int, Int, TxOut era))
   | InsufficientCollateral
       -- | balance computed
       DeltaCoin
@@ -161,17 +167,17 @@ data AlonzoUtxoPredFailure era
       Coin
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
-      (UTxO era)
-  | ExUnitsTooBigUTxO (Mismatch 'RelLTEQ ExUnits)
+      (NonEmptyMap TxIn (TxOut era))
+  | ExUnitsTooBigUTxO (Mismatch RelLTEQ ExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
-    WrongNetworkInTxBody (Mismatch 'RelEQ Network)
+    WrongNetworkInTxBody (Mismatch RelEQ Network)
   | -- | slot number outside consensus forecast range
     OutsideForecast
       SlotNo
   | -- | There are too many collateral inputs
-    TooManyCollateralInputs (Mismatch 'RelLTEQ Natural)
+    TooManyCollateralInputs (Mismatch RelLTEQ Word16)
   | NoCollateralInputs
   deriving (Generic)
 
@@ -195,7 +201,7 @@ deriving stock instance
   ( Era era
   , Show (Value era)
   , Show (TxOut era)
-  , Show (TxBody era)
+  , Show (TxBody TopTx era)
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Show (AlonzoUtxoPredFailure era)
@@ -225,15 +231,37 @@ instance
   ) =>
   NFData (AlonzoUtxoPredFailure era)
 
-newtype AlonzoUtxoEvent era
+data AlonzoUtxoEvent era
   = UtxosEvent (Event (EraRule "UTXOS" era))
+  | TotalDeposits (SafeHash EraIndependentTxBody) Coin
+  | -- | The UTxOs consumed and created by a signal tx
+    TxUTxODiff
+      -- | UTxO consumed
+      (UTxO era)
+      -- | UTxO created
+      (UTxO era)
   deriving (Generic)
 
-deriving instance Show (Event (EraRule "UTXOS" era)) => Show (AlonzoUtxoEvent era)
+deriving instance
+  ( Show (TxOut era)
+  , Show
+      (Event (EraRule "UTXOS" era))
+  ) =>
+  Show (AlonzoUtxoEvent era)
 
-deriving instance Eq (Event (EraRule "UTXOS" era)) => Eq (AlonzoUtxoEvent era)
+deriving instance
+  ( Era era
+  , Eq (TxOut era)
+  , Eq (Event (EraRule "UTXOS" era))
+  ) =>
+  Eq (AlonzoUtxoEvent era)
 
-instance NFData (Event (EraRule "UTXOS" era)) => NFData (AlonzoUtxoEvent era)
+instance
+  ( Era era
+  , NFData (TxOut era)
+  , NFData (Event (EraRule "UTXOS" era))
+  ) =>
+  NFData (AlonzoUtxoEvent era)
 
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
@@ -269,14 +297,14 @@ feesOK ::
   , EraUTxO era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Test (AlonzoUtxoPredFailure era)
 feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
-      utxoCollateral = eval (collateral ◁ utxo)
+      utxoCollateral = Map.restrictKeys utxo collateral
       theFee = txBody ^. feeTxBodyL
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
@@ -294,7 +322,7 @@ validateCollateral ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateral pp txb utxoCollateral =
@@ -309,7 +337,7 @@ validateCollateral pp txb utxoCollateral =
       failureIf (null utxoCollateral) NoCollateralInputs
     ]
   where
-    bal = toDeltaCoin $ coinBalance (UTxO utxoCollateral)
+    bal = toDeltaCoin $ sumAllCoin utxoCollateral
 
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::
@@ -317,8 +345,7 @@ validateScriptsNotPaidUTxO ::
   Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateScriptsNotPaidUTxO utxoCollateral =
-  failureUnless (all vKeyLocked utxoCollateral) $
-    ScriptsNotPaidUTxO (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
+  failureOnNonEmptyMap (Map.filter (not . vKeyLocked) utxoCollateral) ScriptsNotPaidUTxO
 
 -- > balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
 validateInsufficientCollateral ::
@@ -326,7 +353,7 @@ validateInsufficientCollateral ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   DeltaCoin ->
   Test (AlonzoUtxoPredFailure era)
 validateInsufficientCollateral pp txBody bal =
@@ -361,7 +388,7 @@ validateOutsideForecast ::
   -- | Current slot number
   SlotNo ->
   SystemStart ->
-  Tx era ->
+  Tx l era ->
   Test (AlonzoUtxoPredFailure era)
 validateOutsideForecast ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
@@ -382,7 +409,7 @@ validateOutputTooSmallUTxO ::
   f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outputs =
-  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall OutputTooSmallUTxO
   where
     outputsTooSmall =
       filter
@@ -407,7 +434,7 @@ validateOutputTooBigUTxO ::
   f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateOutputTooBigUTxO pp outputs =
-  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
+  failureOnNonEmpty outputsTooBig OutputTooBigUTxO
   where
     maxValSize = pp ^. ppMaxValSizeL
     protVer = pp ^. ppProtocolVersionL
@@ -425,7 +452,7 @@ validateOutputTooBigUTxO pp outputs =
 validateWrongNetworkInTxBody ::
   AlonzoEraTxBody era =>
   Network ->
-  TxBody era ->
+  TxBody l era ->
   Test (AlonzoUtxoPredFailure era)
 validateWrongNetworkInTxBody netId txBody =
   case txBody ^. networkIdTxBodyL of
@@ -443,7 +470,7 @@ validateExUnitsTooBigUTxO ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Test (AlonzoUtxoPredFailure era)
 validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
@@ -459,13 +486,13 @@ validateExUnitsTooBigUTxO pp tx =
 validateTooManyCollateralInputs ::
   AlonzoEraTxBody era =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Test (AlonzoUtxoPredFailure era)
 validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $
     TooManyCollateralInputs Mismatch {mismatchSupplied = numColl, mismatchExpected = maxColl}
   where
-    maxColl, numColl :: Natural
+    maxColl, numColl :: Word16
     maxColl = pp ^. ppMaxCollateralInputsL
     numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
 
@@ -476,20 +503,23 @@ utxoTransition ::
   forall era.
   ( EraUTxO era
   , AlonzoEraTx era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraRule "UTXO" era ~ AlonzoUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
+  , EraStake era
+  , SafeToHash (TxWits era)
+  , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
-  TRC (UtxoEnv slot pp dpstate, utxos, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
@@ -520,7 +550,7 @@ utxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO utxo inputsAndCollateral
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
 
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
@@ -554,7 +584,30 @@ utxoTransition = do
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
 
-  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  updatedGovState <-
+    trans @(EraRule "UTXOS" era) $
+      TRC (UtxosEnv slot pp certState utxo, utxosGovState utxos, tx)
+
+  case tx ^. isValidTxL of
+    IsValid True ->
+      updateUTxOState
+        pp
+        utxos
+        txBody
+        certState
+        updatedGovState
+        (tellEvent . TotalDeposits (hashAnnotated txBody))
+        (\a b -> tellEvent (TxUTxODiff a b))
+    IsValid False ->
+      {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+      {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+      let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+       in pure $!
+            utxos
+              { utxosUtxo = UTxO utxoKeep
+              , utxosFees = (utxosFees utxos) <> sumAllCoin utxoDel
+              , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxos ^. instantStakeL)
+              }
 
 --------------------------------------------------------------------------------
 -- AlonzoUTXO STS
@@ -565,20 +618,23 @@ instance
   ( EraUTxO era
   , AlonzoEraTx era
   , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Environment (EraRule "UTXOS" era) ~ UtxosEnv era
+  , State (EraRule "UTXOS" era) ~ ShelleyGovState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraRule "UTXO" era ~ AlonzoUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraCertState era
+  , EraStake era
+  , SafeToHash (TxWits era)
+  , GovState era ~ ShelleyGovState era
   ) =>
   STS (AlonzoUTXO era)
   where
   type State (AlonzoUTXO era) = UTxOState era
-  type Signal (AlonzoUTXO era) = Tx era
+  type Signal (AlonzoUTXO era) = Tx TopTx era
   type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
   type PredicateFailure (AlonzoUTXO era) = AlonzoUtxoPredFailure era
@@ -586,6 +642,7 @@ instance
 
   initialRules = []
   transitionRules = [utxoTransition]
+  assertions = [Shelley.validSizeComputationCheck]
 
 instance
   ( Era era
@@ -614,13 +671,12 @@ instance
 
 encFail ::
   forall era.
-  ( Era era
-  , EncCBOR (TxOut era)
+  ( EncCBOR (TxOut era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   AlonzoUtxoPredFailure era ->
-  Encode 'Open (AlonzoUtxoPredFailure era)
+  Encode Open (AlonzoUtxoPredFailure era)
 encFail (BadInputsUTxO ins) =
   Sum (BadInputsUTxO @era) 0 !> To ins
 encFail (OutsideValidityIntervalUTxO a b) =
@@ -643,8 +699,6 @@ encFail (WrongNetworkWithdrawal right wrongs) =
   Sum (WrongNetworkWithdrawal @era) 9 !> To right !> To wrongs
 encFail (OutputBootAddrAttrsTooBig outs) =
   Sum (OutputBootAddrAttrsTooBig @era) 10 !> To outs
-encFail TriesToForgeADA =
-  Sum TriesToForgeADA 11
 encFail (OutputTooBigUTxO outs) =
   Sum (OutputTooBigUTxO @era) 12 !> To outs
 encFail (InsufficientCollateral a b) =
@@ -665,13 +719,12 @@ encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
 
 decFail ::
-  ( Era era
-  , DecCBOR (TxOut era)
+  ( DecCBOR (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Word ->
-  Decode 'Open (AlonzoUtxoPredFailure era)
+  Decode Open (AlonzoUtxoPredFailure era)
 decFail 0 = SumD BadInputsUTxO <! From
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
 decFail 2 = SumD MaxTxSizeUTxO <! From
@@ -683,13 +736,9 @@ decFail 7 = SumD UtxosFailure <! From
 decFail 8 = SumD WrongNetwork <! From <! From
 decFail 9 = SumD WrongNetworkWithdrawal <! From <! From
 decFail 10 = SumD OutputBootAddrAttrsTooBig <! From
-decFail 11 = SumD TriesToForgeADA
-decFail 12 =
-  let fromRestricted :: (Int, Int, TxOut era) -> (Integer, Integer, TxOut era)
-      fromRestricted (sz, mv, txOut) = (toInteger sz, toInteger mv, txOut)
-   in SumD OutputTooBigUTxO <! D (map fromRestricted <$> decCBOR)
+decFail 12 = SumD OutputTooBigUTxO <! From
 decFail 13 = SumD InsufficientCollateral <! From <! From
-decFail 14 = SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From
 decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From
@@ -730,6 +779,5 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> UtxosFailure (injectFailure @"UTXOS" @t x)
-  Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
-  Allegra.TriesToForgeADA -> TriesToForgeADA
-  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)
+  Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
+  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)

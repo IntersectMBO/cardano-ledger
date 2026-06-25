@@ -22,15 +22,13 @@ module Cardano.Ledger.Tools (
   boom,
   integralToByteStringN,
   byteStringToNum,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Class (sigSizeDSIGN, verKeySizeDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
@@ -41,6 +39,7 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Ledger.State.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
@@ -62,14 +61,14 @@ import Lens.Micro
 setMinFeeTx ::
   EraTx era =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   -- | Size in bytes of reference scripts present in this transaction
   Int ->
-  Tx era
+  Tx TopTx era
 setMinFeeTx pp tx refScriptsSize =
   setMinFeeTxInternal (\t -> getMinFeeTx pp t refScriptsSize) tx
 
-setMinFeeTxUtxo :: EraUTxO era => PParams era -> Tx era -> UTxO era -> Tx era
+setMinFeeTxUtxo :: EraUTxO era => PParams era -> Tx TopTx era -> UTxO era -> Tx TopTx era
 setMinFeeTxUtxo pp tx utxo =
   setMinFeeTxInternal (\t -> getMinFeeTxUtxo pp t utxo) tx
 
@@ -86,9 +85,9 @@ ensureMinCoinTxOut = setMinCoinTxOutWith (>=)
 
 setMinFeeTxInternal ::
   EraTx era =>
-  (Tx era -> Coin) ->
-  Tx era ->
-  Tx era
+  (Tx TopTx era -> Coin) ->
+  Tx TopTx era ->
+  Tx TopTx era
 setMinFeeTxInternal f tx =
   let curMinFee = f tx
       curFee = tx ^. bodyTxL . feeTxBodyL
@@ -110,12 +109,12 @@ calcMinFeeTxNativeScriptWits ::
   -- | The current protocol parameters.
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | KeyHash witnesses that will be supplied for satisfying native scripts. It is
   -- impossible to know how many of these is required without knowing the actual witnesses
   -- supplied and the time when the transaction will be submitted. Therefore we put this
   -- burden on the user.
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   -- | The required minimum fee.
   Coin
 calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
@@ -130,8 +129,8 @@ calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
 --
 -- ====__Example__
 --
--- >>> let relevantUtxo = txInsFilter utxo (tx ^. bodyTxL . allInputsTxBodyF)
--- >>> calcMinFeeTx relevantUtxo pp tx 5
+-- > let relevantUtxo = txInsFilter utxo (tx ^. bodyTxL . allInputsTxBodyF)
+-- > calcMinFeeTx relevantUtxo pp tx 5
 calcMinFeeTx ::
   forall era.
   (EraUTxO era, EraCertState era) =>
@@ -141,7 +140,7 @@ calcMinFeeTx ::
   -- | The current protocol parameters.
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | Number of extra KeyHash witnesses that will be supplied for satisfying native
   -- scripts. It is impossible to know how many of these is required without knowing the
   -- actual witnesses supplied and the time when the transaction will be
@@ -164,11 +163,11 @@ calcMinFeeTxInternal ::
   -- | The current protocol parameters.
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | Number of KeyHash witnesses that will be supplied for native scripts
   Int ->
   -- | KeyHash witnesses that will be supplied for native scripts
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   Coin
 calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
   setMinFeeTxUtxo pp tx' utxo ^. bodyTxL . feeTxBodyL
@@ -200,7 +199,7 @@ estimateMinFeeTx ::
   -- | The current protocol parameters.
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | The number of key witnesses still to be added to the transaction.
   Int ->
   -- | The number of Byron key witnesses still to be added to the transaction.
@@ -232,18 +231,18 @@ byteStringToNum = BS.foldr (\w i -> i `shiftL` 8 + fromIntegral w) 0
 
 -- | Create dummy witnesses and add them to the transaction
 addDummyWitsTx ::
-  forall era.
+  forall era l.
   EraTx era =>
   -- | The current protocol parameters.
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx l era ->
   -- | The number of key witnesses still to be added to the transaction.
   Int ->
   -- | List of attributes from TxOuts with Byron addresses that are being spent
   [Byron.Attributes Byron.AddrAttributes] ->
   -- | The required minimum fee.
-  Tx era
+  Tx l era
 addDummyWitsTx pp tx numKeyWits byronAttrs =
   tx
     & (witsTxL . addrTxWitsL <>~ dummyKeyWits)
@@ -260,10 +259,10 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
         . decodeFull' version
         . serialize' version
         . integralToByteStringN n
-    vKeySize = fromIntegral $ sizeVerKeyDSIGN dsign
+    vKeySize = fromIntegral $ verKeySizeDSIGN dsign
     dummyKeys = map (mkDummy "VKey" vKeySize) [0 :: Int ..]
 
-    sigSize = fromIntegral $ sizeSigDSIGN dsign
+    sigSize = fromIntegral $ sigSizeDSIGN dsign
     dummySig = mkDummy "Signature" sigSize (0 :: Int)
     dummyKeyWits =
       Set.fromList [WitVKey key dummySig | key <- take numKeyWits dummyKeys]
@@ -272,7 +271,7 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
     chainCode = ChainCode $ BS.replicate 32 0
 
     mkDummyByronKeyWit ::
-      VKey 'Witness ->
+      VKey Witness ->
       Byron.Attributes Byron.AddrAttributes ->
       BootstrapWitness
     mkDummyByronKeyWit key =

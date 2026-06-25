@@ -9,8 +9,7 @@ module Cardano.Chain.Common.AddrSpendingData (
   AddrSpendingData (..),
   AddrType (..),
   addrSpendingDataToType,
-)
-where
+) where
 
 import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
 import Cardano.HeapWords
@@ -55,6 +54,11 @@ instance B.Buildable AddrSpendingData where
 
 instance ToCBOR AddrSpendingData where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    szCases
+      [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey)
+      , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
+      ]
 
 instance FromCBOR AddrSpendingData where
   fromCBOR = fromByronCBOR
@@ -66,12 +70,6 @@ instance EncCBOR AddrSpendingData where
     RedeemASD redeemVK ->
       encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR redeemVK
 
-  encodedSizeExpr size _ =
-    szCases
-      [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey)
-      , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
-      ]
-
 instance DecCBOR AddrSpendingData where
   decCBOR = do
     len <- decodeListLenCanonical
@@ -79,7 +77,7 @@ instance DecCBOR AddrSpendingData where
     decodeWord8Canonical >>= \case
       0 -> VerKeyASD <$> decCBOR
       2 -> RedeemASD <$> decCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
+      tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" $ fromIntegral @Word8 @Word tag
 
 -- | Type of an address. It corresponds to constructors of 'AddrSpendingData'.
 --   It's separated, because 'Address' doesn't store 'AddrSpendingData', but we
@@ -95,6 +93,7 @@ instance ToJSON AddrType
 
 instance ToCBOR AddrType where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
 instance FromCBOR AddrType where
   fromCBOR = fromByronCBOR
@@ -106,14 +105,12 @@ instance EncCBOR AddrType where
       ATVerKey -> 0
       ATRedeem -> 2
 
-  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
-
 instance DecCBOR AddrType where
   decCBOR =
     decodeWord8Canonical >>= \case
       0 -> pure ATVerKey
       2 -> pure ATRedeem
-      tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag
+      tag -> cborError $ DecoderErrorUnknownTag "AddrType" $ fromIntegral @Word8 @Word tag
 
 instance HeapWords AddrType where
   heapWords = \case

@@ -26,8 +26,7 @@ module Cardano.Chain.Genesis.Generate (
   generateGenesisConfig,
   generateGenesisConfigWithEntropy,
   GenesisDataGenerationError (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Address,

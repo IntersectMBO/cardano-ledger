@@ -9,8 +9,7 @@ module Cardano.Protocol.TPraos.Rules.Updn (
   UpdnState (..),
   PredicateFailure,
   UpdnPredicateFailure,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Slot

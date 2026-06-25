@@ -17,10 +17,9 @@ module Test.Cardano.Ledger.AllegraEraGen (
   unQuantifyTL,
   someLeaf,
   genValidityInterval,
-)
-where
+) where
 
-import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra, Tx (..))
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
@@ -28,7 +27,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Allegra.TxBody (TxBody (AllegraTxBody))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
@@ -95,19 +94,18 @@ instance EraGen AllegraEra where
   genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
-  constructTx = ShelleyTx
+  constructTx x y z = MkAllegraTx $ ShelleyTx x y z
 
 genTxBody ::
-  AllegraEraTxBody era =>
   SlotNo ->
   Set.Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut AllegraEra) ->
+  StrictSeq (TxCert AllegraEra) ->
   Withdrawals ->
   Coin ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update AllegraEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (AllegraTxBody era, [Timelock era])
+  Gen (TxBody TopTx AllegraEra, [Timelock AllegraEra])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   pure
@@ -192,7 +190,7 @@ genValidityInterval cs@(SlotNo currentSlot) =
 someLeaf ::
   forall era.
   (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  KeyHash 'Witness ->
+  KeyHash Witness ->
   NativeScript era
 someLeaf x =
   let n = mod (hash (serialize' (eraProtVerLow @era) (encCBOR x))) 200

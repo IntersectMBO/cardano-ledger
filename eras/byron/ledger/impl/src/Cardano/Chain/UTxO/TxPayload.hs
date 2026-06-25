@@ -16,8 +16,7 @@ module Cardano.Chain.UTxO.TxPayload (
   txpTxs,
   txpWitnesses,
   unTxPayload,
-)
-where
+) where
 
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxAux (ATxAux (..), TxAux, taTx, taWitness)

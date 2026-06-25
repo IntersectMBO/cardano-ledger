@@ -8,8 +8,7 @@ import Paths_cardano_ledger_shelley
 
 readShelleyCddlFileNames :: IO [FilePath]
 readShelleyCddlFileNames = do
-  base <- getDataFileName "cddl-files/shelley.cddl"
-  -- extras contains the types whose restrictions cannot be expressed in CDDL
+  base <- getDataFileName "cddl/data/shelley.cddl"
   pure [base]
 
 readShelleyCddlFiles :: IO [BSL.ByteString]

@@ -10,13 +10,14 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
+import Cardano.Ledger.BaseTypes (unNonZero, unsafeNonZero)
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.State (EraCertState (..))
 import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
@@ -24,8 +25,6 @@ import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
-import Cardano.Ledger.UMap (ptrMap, rewardMap, sPoolMap, unify)
-import qualified Cardano.Ledger.UMap as UM
 import Conduit
 import Control.Foldl (Fold (..))
 import Control.Monad
@@ -42,6 +41,7 @@ import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
 import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.Conway.Era (EraTest, accountsFromAccountsMap, mkTestAccountState)
 
 -- Populate database
 
@@ -100,16 +100,18 @@ insertDState Shelley.DState {..} = do
   let irDeltaReserves = Shelley.deltaReserves dsIRewards
   let irDeltaTreasury = Shelley.deltaTreasury dsIRewards
   dstateId <- insert $ DState (Enc dsFutureGenDelegs) dsGenDelegs irDeltaReserves irDeltaTreasury
-  forM_ (Map.toList (rewardMap dsUnified)) $ \(cred, c) -> do
+  forM_ (Map.toList (dsAccounts ^. State.accountsMapL)) $ \(cred, accountState) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (Reward dstateId credId c)
-  forM_ (Map.toList (sPoolMap dsUnified)) $ \(cred, spKeyHash) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
-    insert_ (Delegation dstateId credId keyHashId)
-  forM_ (Map.toList (ptrMap dsUnified)) $ \(ptr, cred) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (Ptr dstateId credId ptr)
+    insert_ $ -- TODO: fix insertion of DRep and StakePool delegation
+      Account
+        dstateId
+        credId
+        Nothing
+        (accountState ^. State.balanceAccountStateL)
+        (accountState ^. State.depositAccountStateL)
+        Nothing
+        DRepDelegationNone
+        Nothing
   forM_ (Map.toList (Shelley.iRReserves dsIRewards)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (IRReserves dstateId credId c)
@@ -140,16 +142,14 @@ insertSnapShot ::
   ReaderT SqlBackend m ()
 insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
   snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
-  VG.forM_ (VMap.unVMap (State.unStake ssStake)) $ \(cred, c) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    insert_ (SnapShotStake snapShotId credId c)
-  VG.forM_ (VMap.unVMap ssDelegations) $ \(cred, spKeyHash) -> do
-    credId <- insertGetKey (Credential (Keys.asWitness cred))
-    keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
-    insert_ (SnapShotDelegation snapShotId credId keyHashId)
-  VG.forM_ (VMap.unVMap ssPoolParams) $ \(keyHash, pps) -> do
+  VG.forM_ (VMap.unVMap $ State.unActiveStake ssActiveStake) $ \(cred, swd) -> do
+    stakeId <- insertGetKey (Credential (Keys.asWitness cred))
+    insert_ (SnapShotStake snapShotId stakeId (unNonZero $ State.swdStake swd))
+    poolId <- insertGetKey (KeyHash (Keys.asWitness $ State.swdDelegation swd))
+    insert_ (SnapShotDelegation snapShotId stakeId poolId)
+  VG.forM_ (VMap.unVMap ssStakePoolsSnapShot) $ \(keyHash, spss) -> do
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness keyHash))
-    insert_ (SnapShotPool snapShotId keyHashId pps)
+    insert_ (SnapShotStakePool snapShotId keyHashId spss)
 
 insertSnapShots ::
   MonadIO m =>
@@ -170,8 +170,8 @@ insertEpochState es@Shelley.EpochState {..} = do
   epochStateKey <-
     insert
       EpochState
-        { epochStateTreasury = Shelley.asTreasury esAccountState
-        , epochStateReserves = Shelley.asReserves esAccountState
+        { epochStateTreasury = State.casTreasury esChainAccountState
+        , epochStateReserves = State.casReserves esChainAccountState
         , epochStatePrevPp = es ^. prevPParamsEpochStateL
         , epochStatePp = es ^. curPParamsEpochStateL
         , epochStateNonMyopic = esNonMyopic
@@ -227,15 +227,15 @@ getSnapShotNoSharingM epochStateId snapShotType = do
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
       -- TODO ^ rename snapShotDelegationKeyHashId
       pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
-  poolParams <-
-    selectMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
-      KeyHash keyHash <- getJust snapShotPoolKeyHashId
-      pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
+  stakePoolsSnapShot <-
+    selectMap [SnapShotStakePoolSnapShotId ==. snapShotId] $ \SnapShotStakePool {..} -> do
+      KeyHash keyHash <- getJust snapShotStakePoolKeyHashId
+      pure (Keys.coerceKeyRole keyHash, snapShotStakePoolSnapShot)
   pure
     SnapShotM
       { ssStake = stake
       , ssDelegations = delegations
-      , ssPoolParams = poolParams
+      , ssStakePoolsSnapShot = stakePoolsSnapShot
       }
 {-# INLINEABLE getSnapShotNoSharingM #-}
 
@@ -251,7 +251,7 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
           (foldMap (internsFromMap . ssStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
-        interns (foldMap (internsFromMap . ssPoolParams) otherSnapShots)
+        interns (foldMap (internsFromMap . ssStakePoolsSnapShot) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherDelegations =
         interns (foldMap (internsFromMap . ssDelegations) otherSnapShots)
@@ -267,11 +267,11 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
     selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
       pure (internOtherStakes credential, snapShotStakeCoin)
-  poolParams <-
-    selectMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
-      KeyHash keyHash <- getJust snapShotPoolKeyHashId
-      pure (internOtherPoolParams keyHash, snapShotPoolParams)
-  let internPoolParams = interns (internsFromMap poolParams) . Keys.coerceKeyRole
+  stakePoolParams <-
+    selectMap [SnapShotStakePoolSnapShotId ==. snapShotId] $ \SnapShotStakePool {..} -> do
+      KeyHash keyHash <- getJust snapShotStakePoolKeyHashId
+      pure (internOtherPoolParams keyHash, snapShotStakePoolSnapShot)
+  let internPoolParams = interns (internsFromMap stakePoolParams) . Keys.coerceKeyRole
   delegations <-
     selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
@@ -281,7 +281,7 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
     SnapShotM
       { ssStake = stake
       , ssDelegations = delegations
-      , ssPoolParams = poolParams
+      , ssStakePoolsSnapShot = stakePoolParams
       }
 {-# INLINEABLE getSnapShotWithSharingM #-}
 
@@ -334,25 +334,26 @@ getSnapShotNoSharing epochStateId snapShotType = do
         Nothing -> error $ "Missing a snapshot: " ++ show snapShotType
         Just (Entity snapShotId _) -> snapShotId
   stake <-
-    selectVMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
+    selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
       pure (Keys.coerceKeyRole credential, snapShotStakeCoin)
   delegations <-
-    selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
+    selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      -- TODO ^ rename snapShotDelegationKeyHashId
       pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
-  poolParams <-
-    selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
-      KeyHash keyHash <- getJust snapShotPoolKeyHashId
-      pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
-  pure
-    State.SnapShot
-      { ssStake = State.Stake stake
-      , ssDelegations = delegations
-      , ssPoolParams = poolParams
-      }
+  stakePoolSnapShot <-
+    selectVMap [SnapShotStakePoolSnapShotId ==. snapShotId] $ \SnapShotStakePool {..} -> do
+      KeyHash keyHash <- getJust snapShotStakePoolKeyHashId
+      pure (Keys.coerceKeyRole keyHash, snapShotStakePoolSnapShot)
+  let activeStake =
+        State.ActiveStake $
+          VMap.fromMap $
+            Map.intersectionWith
+              (\c -> State.StakeWithDelegation (unsafeNonZero c))
+              stake
+              delegations
+  pure $ State.mkSnapShot activeStake stakePoolSnapShot
 {-# INLINEABLE getSnapShotNoSharing #-}
 
 getSnapShotsNoSharing ::
@@ -397,15 +398,12 @@ getSnapShotWithSharing ::
   SnapShotType ->
   ReaderT SqlBackend m State.SnapShot
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
-  let internOtherStakes =
+  let internOtherCredentials =
         interns
-          (foldMap (internsFromVMap . State.unStake . State.ssStake) otherSnapShots)
+          (foldMap (internsFromVMap . State.unActiveStake . State.ssActiveStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
-        interns (foldMap (internsFromVMap . State.ssPoolParams) otherSnapShots)
-          . Keys.coerceKeyRole
-  let internOtherDelegations =
-        interns (foldMap (internsFromVMap . State.ssDelegations) otherSnapShots)
+        interns (foldMap (internsFromVMap . State.ssStakePoolsSnapShot) otherSnapShots)
           . Keys.coerceKeyRole
   snapShotId <-
     selectFirst
@@ -415,25 +413,27 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
         Nothing -> error $ "Missing a snapshot: " ++ show snapShotType
         Just (Entity snapShotId _) -> snapShotId
   stake <-
-    selectVMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
+    selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
-      pure (internOtherStakes credential, snapShotStakeCoin)
-  poolParams <-
-    selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
-      KeyHash keyHash <- getJust snapShotPoolKeyHashId
-      pure (internOtherPoolParams keyHash, snapShotPoolParams)
-  let internPoolParams = interns (internsFromVMap poolParams) . Keys.coerceKeyRole
+      pure (internOtherCredentials credential, snapShotStakeCoin)
+  stakePoolSnapShot <-
+    selectVMap [SnapShotStakePoolSnapShotId ==. snapShotId] $ \SnapShotStakePool {..} -> do
+      KeyHash keyHash <- getJust snapShotStakePoolKeyHashId
+      pure (internOtherPoolParams keyHash, snapShotStakePoolSnapShot)
+  let internStakePoolSnapShot = interns (internsFromVMap stakePoolSnapShot) . Keys.coerceKeyRole
   delegations <-
-    selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
+    selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      pure (internOtherDelegations credential, internPoolParams keyHash)
-  pure
-    State.SnapShot
-      { ssStake = State.Stake stake
-      , ssDelegations = delegations
-      , ssPoolParams = poolParams
-      }
+      pure (internOtherCredentials credential, internStakePoolSnapShot keyHash)
+  let activeStake =
+        State.ActiveStake $
+          VMap.fromMap $
+            Map.intersectionWith
+              (\c -> State.StakeWithDelegation (unsafeNonZero c))
+              stake
+              delegations
+  pure $ State.mkSnapShot activeStake stakePoolSnapShot
 {-# INLINEABLE getSnapShotWithSharing #-}
 
 getSnapShotsWithSharing ::
@@ -463,7 +463,7 @@ sourceUTxO =
 
 sourceWithSharingUTxO ::
   MonadResource m =>
-  Map.Map Credential.StakeCredential a ->
+  Map.Map (Credential.Credential Keys.Staking) a ->
   ConduitM () (TxIn.TxIn, TxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceWithSharingUTxO stakeCredentials =
   sourceUTxO .| mapC (fmap (internBabbageTxOut (`intern` stakeCredentials)))
@@ -517,44 +517,23 @@ getLedgerState utxo LedgerState {..} dstate = do
             utxoStateFees
             utxoStateGovState -- Maintain invariant
             utxoStateDonation
-      , Shelley.lsCertState = mkCertState def ledgerStatePstateBin dstate
+      , Shelley.lsCertState =
+          def
+            & certPStateL .~ ledgerStatePstateBin
+            & certDStateL .~ dstate
       }
 
 getDStateNoSharing ::
   MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState CurrentEra)
 getDStateNoSharing dstateId = do
   DState {..} <- getJust dstateId
-  rewards <-
-    Map.fromList <$> do
-      rws <- selectList [RewardDstateId ==. dstateId] []
-      forM rws $ \(Entity _ Reward {..}) -> do
-        Credential credential <- getJust rewardCredentialId
-        pure
-          (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
-  -- FIXME the deposit is not accounted for ^
-  -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the CertState data type.
-  -- https://github.com/intersectmbo/cardano-ledger/pull/3217
-  -- All the FIXME-s in this file will have to be addressed in a follow on PR
-  delegations <-
-    Map.fromList <$> do
-      ds <- selectList [DelegationDstateId ==. dstateId] []
-      forM ds $ \(Entity _ Delegation {..}) -> do
-        Credential credential <- getJust delegationCredentialId
-        KeyHash keyHash <- getJust delegationStakePoolId
-        pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
-  dreps <- pure mempty
+  accountsMap <- getAccountsMap dstateId
   -- Map.fromList <$> do
   --  ds <- selectList [DRepDstateId ==. dstateId] []
   --  forM ds $ \(Entity _ DRep {..}) -> do
   --    Credential credential <- getJust dRepCredentialId
   --    Credential dRepCredential <- getJust dRepDRepCredentialId
   --    pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole dRepCredential)
-  ptrs <-
-    Map.fromList <$> do
-      ps <- selectList [PtrDstateId ==. dstateId] []
-      forM ps $ \(Entity _ Ptr {..}) -> do
-        Credential credential <- getJust ptrCredentialId
-        pure (ptrPtr, Keys.coerceKeyRole credential)
   iRReserves <-
     Map.fromList <$> do
       ds <- selectList [IRReservesDstateId ==. dstateId] []
@@ -569,7 +548,7 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards ptrs delegations dreps
+      { dsAccounts = accountsFromAccountsMap accountsMap
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =
@@ -581,27 +560,28 @@ getDStateNoSharing dstateId = do
             }
       }
 
+getAccountsMap ::
+  (MonadIO m, EraTest era) =>
+  DStateId ->
+  ReaderT SqlBackend m (Map.Map (Credential.Credential r') (State.AccountState era))
+getAccountsMap dstateId =
+  Map.fromList <$> do
+    rws <- selectList [AccountDstateId ==. dstateId] []
+    forM rws $ \(Entity _ Account {..}) -> do
+      Credential credential <- getJust accountCredentialId
+      mStakePool <- forM accountKeyHashStakePoolId (fmap (Keys.coerceKeyRole . keyHashWitness) . getJust)
+      -- mDRep <- forM accountCredentialDRepId (fmap (Keys.coerceKeyRole . credentialWitness) . getJust)
+      pure
+        ( Keys.coerceKeyRole credential
+        , mkTestAccountState accountPtr accountDeposit mStakePool Nothing
+            & State.balanceAccountStateL .~ accountBalance
+        )
+
 getDStateWithSharing ::
   MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState CurrentEra)
 getDStateWithSharing dstateId = do
   DState {..} <- getJust dstateId
-  rewards <-
-    Map.fromList <$> do
-      rws <- selectList [RewardDstateId ==. dstateId] []
-      forM rws $ \(Entity _ Reward {..}) -> do
-        Credential credential <- getJust rewardCredentialId
-        pure
-          (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
-  -- FIXME the deposit is not accounted for ^
-  delegations <-
-    Map.fromList <$> do
-      ds <- selectList [DelegationDstateId ==. dstateId] []
-      forM ds $ \(Entity _ Delegation {..}) -> do
-        Credential credential <- getJust delegationCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
-        KeyHash keyHash <- getJust delegationStakePoolId
-        pure (cred, Keys.coerceKeyRole keyHash)
-  dreps <- pure mempty
+  accountsMap <- getAccountsMap dstateId
   -- Map.fromList <$> do
   --  ds <- selectList [DRepDstateId ==. dstateId] []
   --  forM ds $ \(Entity _ DRep {..}) -> do
@@ -609,30 +589,23 @@ getDStateWithSharing dstateId = do
   --    let !cred = intern (Keys.coerceKeyRole credential) rewards
   --    Credential dRepCredential <- getJust dRepDRepCredentialId
   --    pure (cred, Keys.coerceKeyRole dRepCredential)
-  ptrs <-
-    Map.fromList <$> do
-      ps <- selectList [PtrDstateId ==. dstateId] []
-      forM ps $ \(Entity _ Ptr {..}) -> do
-        Credential credential <- getJust ptrCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
-        pure (ptrPtr, cred)
   iRReserves <-
     Map.fromList <$> do
       ds <- selectList [IRReservesDstateId ==. dstateId] []
       forM ds $ \(Entity _ IRReserves {..}) -> do
         Credential credential <- getJust iRReservesCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
+        let !cred = intern (Keys.coerceKeyRole credential) accountsMap
         pure (cred, iRReservesCoin)
   iRTreasury <-
     Map.fromList <$> do
       ds <- selectList [IRTreasuryDstateId ==. dstateId] []
       forM ds $ \(Entity _ IRTreasury {..}) -> do
         Credential credential <- getJust iRTreasuryCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
+        let !cred = intern (Keys.coerceKeyRole credential) accountsMap
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards ptrs delegations dreps
+      { dsAccounts = accountsFromAccountsMap accountsMap
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =
@@ -731,10 +704,10 @@ loadEpochState fp = runSqlite fp $ do
   ledgerState <- getLedgerStateNoSharing ese
   pure $
     Shelley.EpochState
-      { esAccountState =
-          Shelley.AccountState
-            { asTreasury = epochStateTreasury
-            , asReserves = epochStateReserves
+      { esChainAccountState =
+          State.ChainAccountState
+            { casTreasury = epochStateTreasury
+            , casReserves = epochStateReserves
             }
       , esLState = ledgerState
       , esSnapshots = snapshots
@@ -750,10 +723,10 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
   ledgerState <- getLedgerStateWithSharing ese
   pure $
     Shelley.EpochState
-      { esAccountState =
-          Shelley.AccountState
-            { asTreasury = epochStateTreasury
-            , asReserves = epochStateReserves
+      { esChainAccountState =
+          State.ChainAccountState
+            { casTreasury = epochStateTreasury
+            , casReserves = epochStateReserves
             }
       , esLState = ledgerState
       , esSnapshots = snapshots

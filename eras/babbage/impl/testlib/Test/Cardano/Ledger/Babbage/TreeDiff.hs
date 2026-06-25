@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -23,10 +24,8 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Shelley.Rules
+import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Alonzo.TreeDiff
-
--- Core
-deriving newtype instance ToExpr CoinPerByte
 
 -- Scripts
 instance ToExpr (PlutusScript BabbageEra)
@@ -48,13 +47,29 @@ instance
   ToExpr (BabbageTxOut era)
 
 -- TxBody
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (BabbageTxBodyRaw era)
+instance ToExpr (BabbageTxBodyRaw TopTx BabbageEra) where
+  toExpr BabbageTxBodyRaw {..} =
+    Rec "BabbageTxBodyRaw" $
+      OMap.fromList
+        [ ("btbrInputs", toExpr btbrInputs)
+        , ("btbrCollateralInputs", toExpr btbrCollateralInputs)
+        , ("btbrReferenceInputs", toExpr btbrReferenceInputs)
+        , ("btbrOutputs", toExpr btbrOutputs)
+        , ("btbrCollateralReturn", toExpr btbrCollateralReturn)
+        , ("btbrTotalCollateral", toExpr btbrTotalCollateral)
+        , ("btbrCerts", toExpr btbrCerts)
+        , ("btbrWithdrawals", toExpr btbrWithdrawals)
+        , ("btbrFee", toExpr btbrFee)
+        , ("btbrValidityInterval", toExpr btbrValidityInterval)
+        , ("btbrUpdate", toExpr btbrUpdate)
+        , ("btbrReqSignerHashes", toExpr btbrReqSignerHashes)
+        , ("btbrMint", toExpr btbrMint)
+        , ("btbrScriptIntegrityHash", toExpr btbrScriptIntegrityHash)
+        , ("btbrAuxDataHash", toExpr btbrAuxDataHash)
+        , ("btbrNetworkId", toExpr btbrNetworkId)
+        ]
 
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (BabbageTxBody era)
+instance ToExpr (TxBody TopTx BabbageEra)
 
 -- Rules/Utxo
 instance
@@ -72,3 +87,5 @@ instance
   , ToExpr (TxCert era)
   ) =>
   ToExpr (BabbageUtxowPredFailure era)
+
+instance ToExpr (Tx TopTx BabbageEra)

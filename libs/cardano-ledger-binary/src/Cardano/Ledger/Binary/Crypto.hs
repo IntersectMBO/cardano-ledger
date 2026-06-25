@@ -26,8 +26,7 @@ module Cardano.Ledger.Binary.Crypto (
   decodeSignKeyVRF,
   encodeCertVRF,
   decodeCertVRF,
-)
-where
+) where
 
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C

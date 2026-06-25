@@ -5,25 +5,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Mir
--- Description : MIR Example
---
--- Example demonstrating the Move Instantaneous Rewards mechanism
+-- | Example demonstrating the Move Instantaneous Rewards mechanism
 module Test.Cardano.Ledger.Shelley.Examples.Mir (
   mirExample,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertIxPartial)
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   EpochState (..),
   NewEpochState (..),
   PulsingRewUpdate,
@@ -33,13 +27,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegPredFailure (..),
   ShelleyUtxowPredFailure (..),
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.State (UTxO (..), emptySnapShot)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -50,8 +43,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeIssuerKeys,
@@ -93,13 +86,13 @@ initStMIR :: Coin -> ChainState ShelleyEra
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @ShelleyEra initUTxO
-    as = esAccountState . nesEs $ chainNes cs
-    as' =
-      as
-        { asTreasury = asTreasury as <+> treasury
-        , asReserves = asReserves as <-> treasury
+    chainAccountState = esChainAccountState . nesEs $ chainNes cs
+    chainAccountState' =
+      ChainAccountState
+        { casTreasury = casTreasury chainAccountState <+> treasury
+        , casReserves = casReserves chainAccountState <-> treasury
         }
-    es' = (nesEs $ chainNes cs) {esAccountState = as'}
+    es' = (nesEs $ chainNes cs) {esChainAccountState = chainAccountState'}
 
 --
 -- Block 1, Slot 10, Epoch 0
@@ -114,7 +107,7 @@ ir = StakeAddressesMIR $ Map.fromList [(Cast.aliceSHK, toDeltaCoin aliceMIRCoin)
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: MIRPot -> TxBody ShelleyEra
+txbodyEx1 :: MIRPot -> TxBody TopTx ShelleyEra
 txbodyEx1 pot =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -133,16 +126,16 @@ txbodyEx1 pot =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     aliceCoinEx1 = aliceInitCoin <-> Val.inject (feeTx1 <+> Coin 7)
 
-mirWits :: [Int] -> [KeyPair 'Witness]
+mirWits :: [Int] -> [KeyPair Witness]
 mirWits = map (asWitness . aikCold . coreNodeIssuerKeys)
 
-sufficientMIRWits :: [KeyPair 'Witness]
+sufficientMIRWits :: [KeyPair Witness]
 sufficientMIRWits = mirWits [0 .. 4]
 
-insufficientMIRWits :: [KeyPair 'Witness]
+insufficientMIRWits :: [KeyPair Witness]
 insufficientMIRWits = mirWits [0 .. 3]
 
-txEx1 :: [KeyPair 'Witness] -> MIRPot -> ShelleyTx ShelleyEra
+txEx1 :: [KeyPair Witness] -> MIRPot -> ShelleyTx TopTx ShelleyEra
 txEx1 txwits pot =
   ShelleyTx
     (txbodyEx1 pot)
@@ -154,12 +147,12 @@ txEx1 txwits pot =
       }
     SNothing
 
-blockEx1' :: [KeyPair 'Witness] -> MIRPot -> Block (BHeader MockCrypto) ShelleyEra
+blockEx1' :: [KeyPair Witness] -> MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx1' txwits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1 txwits pot]
+    [MkShelleyTx $ txEx1 txwits pot]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -172,11 +165,11 @@ blockEx1' txwits pot =
 blockEx1 :: MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx1 = blockEx1' sufficientMIRWits
 
-expectedStEx1' :: [KeyPair 'Witness] -> MIRPot -> ChainState ShelleyEra
+expectedStEx1' :: [KeyPair Witness] -> MIRPot -> ChainState ShelleyEra
 expectedStEx1' txwits pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1' txwits pot))
     . C.newLab (blockEx1' txwits pot)
-    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK] []
+    . C.addFees feeTx1
     . C.newUTxO (txbodyEx1 pot)
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin
@@ -240,7 +233,7 @@ mirFailFunds pot treasury llNeeded llReceived =
 blockEx2 :: MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx2 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader (blockEx1 pot))
+    (bhHash $ blockHeader (blockEx1 pot))
     (coreNodeKeysBySchedule @ShelleyEra ppEx 50)
     []
     (SlotNo 50)
@@ -282,7 +275,7 @@ epoch1Nonce pot = chainCandidateNonce (expectedStEx2 pot)
 blockEx3 :: MIRPot -> Block (BHeader MockCrypto) ShelleyEra
 blockEx3 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader (blockEx2 pot))
+    (bhHash $ blockHeader (blockEx2 pot))
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)

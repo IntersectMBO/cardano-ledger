@@ -20,6 +20,7 @@ module Cardano.Ledger.Api.Governance (
   -- ** Constitution
   Constitution (..),
   constitutionAnchorL,
+  constitutionGuardrailsScriptHashL,
   constitutionScriptL,
 
   -- ** Governance State
@@ -45,13 +46,11 @@ module Cardano.Ledger.Api.Governance (
   -- *** Anchor
   Anchor (..),
   AnchorData (..),
-  hashAnchorData,
 ) where
 
 -- Lenses
 
 import Cardano.Ledger.Api.Era ()
-import Cardano.Ledger.BaseTypes (hashAnchorData)
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
   AnchorData (..),
@@ -73,6 +72,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   cgsProposalsL,
   constitutionAnchorL,
+  constitutionGuardrailsScriptHashL,
   constitutionScriptL,
   govActionIdToText,
   hoistGovRelation,

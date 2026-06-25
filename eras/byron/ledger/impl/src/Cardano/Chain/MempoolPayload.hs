@@ -7,8 +7,7 @@
 module Cardano.Chain.MempoolPayload (
   MempoolPayload,
   AMempoolPayload (..),
-)
-where
+) where
 
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (ATxAux)
@@ -91,4 +90,4 @@ instance DecCBOR (AMempoolPayload ByteSpan) where
       1 -> MempoolDlg <$> decCBOR
       2 -> MempoolUpdateProposal <$> decCBOR
       3 -> MempoolUpdateVote <$> decCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag
+      tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" $ fromIntegral @Word8 @Word tag

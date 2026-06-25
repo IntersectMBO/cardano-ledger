@@ -47,7 +47,7 @@ to and the amount of stake (in lovelace) that it controls.
 ### `MirTransfer mir`
 
 This event only occurs on epoch boundaries,
-it describes any credits that are being added to the reward accounts from
+it describes any credits that are being added to the account addresses from
 MIR certificates.
 The field `mir` is a record which contains:
 * A map from stake credentials to lovelace, to be taken from the reserves.

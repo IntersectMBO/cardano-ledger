@@ -12,8 +12,7 @@ module Cardano.Chain.UTxO.TxWitness (
   TxSigData (..),
   TxSig,
   recoverSigData,
-)
-where
+) where
 
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.CBOR (
@@ -87,6 +86,17 @@ instance B.Buildable TxInWitness where
 
 instance ToCBOR TxInWitness where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    2
+      + szCases
+        ( map
+            (fmap knownCborDataItemSizeExpr)
+            [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
+            , Case "RedeemWitness"
+                $ size
+                $ Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
+            ]
+        )
 
 instance FromCBOR TxInWitness where
   fromCBOR = fromByronCBOR
@@ -105,18 +115,6 @@ instance EncCBOR TxInWitness where
         <> encCBOR (2 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
 
-  encodedSizeExpr size _ =
-    2
-      + szCases
-        ( map
-            (fmap knownCborDataItemSizeExpr)
-            [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
-            , Case "RedeemWitness"
-                $ size
-                $ Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
-            ]
-        )
-
 instance DecCBOR TxInWitness where
   decCBOR = do
     len <- decodeListLen
@@ -127,7 +125,7 @@ instance DecCBOR TxInWitness where
       2 -> do
         matchSize "TxInWitness.RedeemWitness" len 2
         uncurry RedeemWitness <$> decodeKnownCborDataItem
-      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
+      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" $ fromIntegral @Word8 @Word tag
 
 -- | Data that is being signed when creating a TxSig
 newtype TxSigData = TxSigData
@@ -146,13 +144,13 @@ instance ToJSON TxSigData
 
 instance ToCBOR TxSigData where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
 
 instance FromCBOR TxSigData where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR TxSigData where
   encCBOR txSigData = encCBOR (txSigTxHash txSigData)
-  encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
 
 instance DecCBOR TxSigData where
   decCBOR = TxSigData <$> decCBOR

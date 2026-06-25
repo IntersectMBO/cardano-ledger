@@ -3,12 +3,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-#if __GLASGOW_HASKELL__ == 910
--- Broken in 9.10.1 but should be fixed on 9.10.2
--- https://gitlab.haskell.org/ghc/ghc/-/issues/25033
-{-# OPTIONS_GHC -fno-do-clever-arg-eta-expansion #-}
-#endif
-
 module Main where
 
 import Cardano.Crypto.Hash
@@ -27,7 +21,7 @@ import Test.Cardano.Ledger.Core.Address (decompactAddrOldLazy)
 
 main :: IO ()
 main = do
-  let mkPayment :: Int -> Credential 'Payment
+  let mkPayment :: Int -> Credential Payment
       mkPayment = KeyHashObj . payAddr28
       stakeRefBase :: Int -> StakeReference
       stakeRefBase = StakeRefBase . KeyHashObj . stakeAddr28
@@ -183,14 +177,14 @@ deepseqUnit x = x `deepseq` mempty
 textDigits :: Int -> T.Text
 textDigits n = let i = n `mod` 10 in T.pack (take 6 (cycle (show i)))
 
-payAddr28 :: Int -> KeyHash 'Payment
+payAddr28 :: Int -> KeyHash Payment
 payAddr28 n =
   KeyHash $
     fromMaybe "Unexpected PayAddr28" $
       hashFromTextAsHex $
         textDigits n <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e"
 
-stakeAddr28 :: Int -> KeyHash 'Staking
+stakeAddr28 :: Int -> KeyHash Staking
 stakeAddr28 n =
   KeyHash $
     fromMaybe "Unexpected StakeAddr28" $

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -24,9 +25,8 @@ module Cardano.Ledger.Shelley.TxOut (
   valueEitherShelleyTxOutL,
 ) where
 
-import qualified Cardano.Crypto.Hash as HS
-import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.Address (CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -47,12 +47,10 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
 import Control.DeepSeq (NFData (rnf))
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import qualified Data.ByteString.Short as SBS (ShortByteString, pack)
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Maybe (fromMaybe)
 import Data.MemPack
-import Data.Proxy (Proxy (..))
-import Data.Word (Word8)
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -61,6 +59,7 @@ data ShelleyTxOut era = TxOutCompact
   { txOutCompactAddr :: {-# UNPACK #-} !CompactAddr
   , txOutCompactValue :: !(CompactForm (Value era))
   }
+  deriving (Generic)
 
 -- | This instance uses a zero Tag for forward compatibility in binary representation with TxOut
 -- instances for future eras
@@ -121,11 +120,6 @@ valueEitherShelleyTxOutL =
     )
 {-# INLINE valueEitherShelleyTxOutL #-}
 
--- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
-instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (ShelleyTxOut era) where
-  heapWords (TxOutCompact _ vl) =
-    3 + heapWords packedADDRHASH + heapWords vl
-
 instance (Era era, Val (Value era)) => Show (ShelleyTxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
 
@@ -174,7 +168,7 @@ instance
   ) =>
   DecShareCBOR (ShelleyTxOut era)
   where
-  type Share (ShelleyTxOut era) = Interns (Credential 'Staking)
+  type Share (ShelleyTxOut era) = Interns (Credential Staking)
   decShareCBOR _ = do
     peekTokenType >>= \case
       TypeBytes -> decodeMemPack
@@ -187,21 +181,13 @@ instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut er
 instance (Era era, DecCBOR (CompactForm (Value era))) => FromCBOR (ShelleyTxOut era) where
   fromCBOR = fromEraCBOR @era
 
-instance (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era) where
-  toJSON = object . toTxOutPair
-  toEncoding = pairs . mconcat . toTxOutPair
+deriving via
+  KeyValuePairs (ShelleyTxOut era)
+  instance
+    (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era)
 
-toTxOutPair :: (KeyValue e a, Era era, Val (Value era)) => ShelleyTxOut era -> [a]
-toTxOutPair (ShelleyTxOut !addr !amount) =
-  [ "address" .= addr
-  , "amount" .= amount
-  ]
-
--- a ShortByteString of the same length as the ADDRHASH
--- used to calculate heapWords
-packedADDRHASH :: SBS.ShortByteString
-packedADDRHASH =
-  SBS.pack $
-    replicate
-      (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy ADDRHASH)))
-      (1 :: Word8)
+instance (Era era, Val (Value era)) => ToKeyValuePairs (ShelleyTxOut era) where
+  toKeyValuePairs (ShelleyTxOut !addr !amount) =
+    [ "address" .= addr
+    , "amount" .= amount
+    ]

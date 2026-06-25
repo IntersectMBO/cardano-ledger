@@ -43,7 +43,7 @@ import Control.State.Transition (
   wrapFailed,
   (?!),
  )
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -57,13 +57,13 @@ import Test.Control.State.Transition.Generator (
   sigGen,
  )
 
-data UTXOW deriving (Data, Typeable)
+data UTXOW deriving (Data)
 
 -- | These `PredicateFailure`s are all throwable.
 data UtxowPredicateFailure
   = UtxoFailure (PredicateFailure UTXO)
   | InsufficientWitnesses
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UTXOW where
   type Environment UTXOW = UTxOEnv

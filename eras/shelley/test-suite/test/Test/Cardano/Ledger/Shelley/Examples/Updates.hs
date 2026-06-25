@@ -4,16 +4,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Updates
--- Description : Protocol Parameter Update Example
---
+-- | Description : Protocol Parameter Update Example
 -- Example demonstrating using the protocol parameter update system.
 module Test.Cardano.Ledger.Shelley.Examples.Updates (
   updatesExample,
   updates4,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -22,15 +18,15 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromNumber,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (
@@ -50,8 +46,8 @@ import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeIssuerKeys,
@@ -122,7 +118,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -134,7 +130,7 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -156,7 +152,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -170,7 +166,7 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [] []
+    . C.addFees feeTx1
     . C.newUTxO txbodyEx1
     . C.setCurrentProposals ppVotes1
     $ initStUpdates
@@ -197,7 +193,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-txbodyEx2 :: ShelleyTxBody ShelleyEra
+txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -209,7 +205,7 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: ShelleyTx ShelleyEra
+txEx2 :: ShelleyTx TopTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -228,9 +224,9 @@ txEx2 =
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 20)
-    [txEx2]
+    [MkShelleyTx txEx2]
     (SlotNo 20)
     (BlockNo 2)
     nonce0
@@ -244,7 +240,7 @@ expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
-    . C.feesAndDeposits ppEx feeTx2 [] []
+    . C.addFees feeTx2
     . C.newUTxO txbodyEx2
     . C.setCurrentProposals (collectVotes ppVoteA [0, 1, 3, 4, 5])
     $ expectedStEx1
@@ -273,7 +269,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
-txbodyEx3 :: ShelleyTxBody ShelleyEra
+txbodyEx3 :: TxBody TopTx ShelleyEra
 txbodyEx3 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound])
@@ -285,7 +281,7 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: ShelleyTx ShelleyEra
+txEx3 :: ShelleyTx TopTx ShelleyEra
 txEx3 =
   ShelleyTx
     txbodyEx3
@@ -300,9 +296,9 @@ txEx3 =
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
+    (bhHash $ blockHeader blockEx2)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 80)
-    [txEx3]
+    [MkShelleyTx txEx3]
     (SlotNo 80)
     (BlockNo 3)
     nonce0
@@ -319,7 +315,7 @@ expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce blockEx3)
     . C.newLab blockEx3
-    . C.feesAndDeposits ppEx feeTx3 [] []
+    . C.addFees feeTx3
     . C.newUTxO txbodyEx3
     . C.pulserUpdate pulserEx3
     . C.setFutureProposals (collectVotes ppVoteB [1])
@@ -342,7 +338,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx3 ⭒ mkNonceFromNumber 123
 blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
+    (bhHash $ blockHeader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)

@@ -19,18 +19,17 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsNeeded,
   getAlonzoWitsVKeyNeeded,
  )
-import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.State ()
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
+import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, shelleyConsumed)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative
-import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -40,9 +39,12 @@ import Lens.Micro
 instance EraUTxO BabbageEra where
   type ScriptsNeeded BabbageEra = AlonzoScriptsNeeded BabbageEra
 
+  consumed = shelleyConsumed
+
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = getProducedMaryValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
 
@@ -63,7 +65,7 @@ instance AlonzoEraUTxO BabbageEra where
 getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Set.Set DataHash
 getBabbageSupplementalDataHashes (UTxO utxo) txBody =
   Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
@@ -79,7 +81,7 @@ getBabbageSpendingDatum ::
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   PlutusPurpose AsItem era ->
   Maybe (Data era)
 getBabbageSpendingDatum (UTxO utxo) tx sp = do
@@ -127,7 +129,7 @@ getBabbageScriptsProvided ::
   , BabbageEraTxBody era
   ) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   ScriptsProvided era
 getBabbageScriptsProvided utxo tx = ScriptsProvided ans
   where
@@ -150,6 +152,6 @@ getReferenceScriptsNonDistinct ::
   [(ScriptHash, Script era)]
 getReferenceScriptsNonDistinct (UTxO mp) inputs =
   [ (hashScript script, script)
-  | txOut <- Map.elems (eval (inputs ◁ mp))
+  | txOut <- Map.elems (Map.restrictKeys mp inputs)
   , SJust script <- [txOut ^. referenceScriptTxOutL]
   ]

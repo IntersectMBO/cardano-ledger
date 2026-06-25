@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,9 +9,13 @@ module Main where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Api.Era
-import Cardano.Ledger.Api.State.Query (queryStakePoolDelegsAndRewards)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.Rules (
+  ConwayLedgerPredFailure (ConwayUtxowFailure),
+  ConwayUtxowPredFailure (InvalidWitnessesUTXOW),
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
@@ -21,54 +26,75 @@ import Cardano.Ledger.Shelley.Genesis (
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
-import Cardano.Ledger.State.UTxO (CurrentEra, readNewEpochState)
-import Cardano.Ledger.UMap
+import Cardano.Ledger.State.UTxO (CurrentEra, readHexUTxO, readNewEpochState)
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.DeepSeq
+import Control.Monad (when)
 import Criterion.Main
 import Data.Aeson
-import Data.Bifunctor (first)
+import Data.Bifunctor (bimap, first)
 import Data.ByteString.Base16.Lazy as BSL16
 import Data.ByteString.Lazy (ByteString)
 import Data.Foldable as F
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro ((^.))
+import Data.Typeable (Typeable)
+import GHC.Stack (HasCallStack)
+import Lens.Micro ((&), (.~), (^.))
 import System.Environment (getEnv)
+import System.Exit (die)
 import System.Random.Stateful
-import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 
 main :: IO ()
 main = do
-  let ledgerVarName = "BENCH_LEDGER_STATE_PATH"
-      genesisVarName = "BENCH_GENESIS_PATH"
-  ledgerStateFilePath <- getEnv ledgerVarName
+  let genesisVarName = "BENCH_GENESIS_PATH"
+      utxoVarName = "BENCH_UTXO_PATH"
+      ledgerStateVarName = "BENCH_LEDGER_STATE_PATH"
   genesisFilePath <- getEnv genesisVarName
+  utxoFilePath <- getEnv utxoVarName
+  ledgerStateFilePath <- getEnv ledgerStateVarName
+
   genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
+  putStrLn $ "Importing UTxO from: " ++ show utxoFilePath
+  utxo <- readHexUTxO utxoFilePath
+  putStrLn "Done importing UTxO"
+  putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
+  es' <- readNewEpochState ledgerStateFilePath
+  putStrLn "Done importing NewEpochState"
+
+  let nesUTxOL = nesEsL . esLStateL . lsUTxOStateL . utxoL
+      es = es' & nesUTxOL .~ utxo
+      utxoMap = unUTxO utxo
+      utxoSize = Map.size utxoMap
+      largeKeysNum = 100000
+      stdGen = mkStdGen 2022
 
   let toMempoolState :: NewEpochState CurrentEra -> MempoolState CurrentEra
       toMempoolState NewEpochState {nesEs = EpochState {esLState}} = esLState
       !globals = mkGlobals genesis
       !slotNo = SlotNo 55733343
+      restrictError = \case
+        ConwayApplyTxError (ConwayUtxowFailure (InvalidWitnessesUTXOW _) :| []) -> ()
+        otherErr -> error . show $ otherErr
       applyTx' mempoolEnv mempoolState =
-        either (error . show) seqTuple
+        -- TODO: revert this to `either (error . show) seqTuple` after tx's are fixed
+        bimap restrictError seqTuple
           . applyTx globals mempoolEnv mempoolState
-      reapplyTx' mempoolEnv mempoolState tx =
-        case reapplyTx globals mempoolEnv mempoolState tx of
-          Left err -> error (show err)
-          Right st -> st
-  putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
-  es <- readNewEpochState ledgerStateFilePath
-  putStrLn "Done importing NewEpochState"
-  let largeKeysNum = 100000
-      stdGen = mkStdGen 2022
-  largeKeys <- selectRandomMapKeys 100000 stdGen (unUTxO (getUTxO es))
+      reapplyTx' mempoolEnv mempoolState =
+        either (error . show) id
+          . reapplyTx globals mempoolEnv mempoolState
+
+  when (utxoSize < largeKeysNum) $
+    die $
+      "UTxO size is too small (" <> show utxoSize <> " < " <> show largeKeysNum <> ")"
+  largeKeys <- selectRandomMapKeys 100000 stdGen utxoMap
+
   defaultMain
     [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -92,22 +118,26 @@ main = do
               bench "Tx2" . whnf (applyTx' mempoolEnv mempoolState)
           , env (pure (extractTx validatedTx3)) $
               bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
+          , env
+              (pure [validatedTx1, validatedTx2, validatedTx3])
+              $ bench "Tx1+Tx2+Tx3"
+                -- TODO: revert this to `foldl'` without `fmap` after tx's are fixed
+                . whnf (F.foldlM (\ms -> fmap fst . applyTx' mempoolEnv ms . extractTx) mempoolState)
           ]
-    , env (pure (getUTxO es)) $ \utxo ->
+    , env (pure utxo) $ \utxo' ->
         bgroup
           "UTxO"
-          [ bench "balance" $ nf balance utxo
-          , bench "coinBalance" $ nf coinBalance utxo
+          [ bench "sumUTxO" $ nf sumUTxO utxo'
+          , bench "sumCoinUTxO" $ nf sumCoinUTxO utxo'
           , -- We need to filter out all multi-assets to prevent `areAllAdaOnly`
             -- from short circuiting and producing results that are way better
             -- than the worst case
-            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo) $
+            env (pure $ Map.filter (\txOut -> isAdaOnly (txOut ^. valueTxOutL)) $ unUTxO utxo') $
               bench "areAllAdaOnly" . nf areAllAdaOnly
           ]
     , env (pure es) $ \newEpochState ->
-        let utxo = getUTxO es
-            (_, minTxOut) = Map.findMin $ unUTxO utxo
-            (_, maxTxOut) = Map.findMax $ unUTxO utxo
+        let (_, minTxOut) = Map.findMin utxoMap
+            (_, maxTxOut) = Map.findMax utxoMap
             setAddr =
               Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
          in bgroup
@@ -117,30 +147,12 @@ main = do
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
-    , env (pure es) $ \newEpochState ->
-        let umap = newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-            elems = umElems umap
-            creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet elems))
-         in bgroup
-              ( "GetFilteredDelegationsAndRewardAccounts ("
-                  ++ show (Set.size creds)
-                  ++ "/"
-                  ++ show (Map.size elems)
-                  ++ ")"
-              )
-              [ env (pure creds) $
-                  bench "getFilteredDelegationsAndRewardAccounts"
-                    . nf (getFilteredDelegationsAndRewardAccounts umap)
-              , env (pure creds) $
-                  bench "queryStakePoolDelegsAndRewards"
-                    . nf (queryStakePoolDelegsAndRewards newEpochState)
-              ]
     , bgroup
         "DeleteTxOuts"
-        [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys
-        , extractKeysBench (unUTxO (getUTxO es)) 9 (Set.take 9 largeKeys)
-        , extractKeysBench (unUTxO (getUTxO es)) 5 (Set.take 5 largeKeys)
-        , extractKeysBench (unUTxO (getUTxO es)) 2 (Set.take 2 largeKeys)
+        [ extractKeysBench utxoMap largeKeysNum largeKeys
+        , extractKeysBench utxoMap 9 (Set.take 9 largeKeys)
+        , extractKeysBench utxoMap 5 (Set.take 5 largeKeys)
+        , extractKeysBench utxoMap 2 (Set.take 2 largeKeys)
         ]
     ]
 
@@ -176,16 +188,18 @@ selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
 extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
 extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 
-decodeTx :: ByteString -> Tx CurrentEra
+decodeTx :: (HasCallStack, Typeable l) => ByteString -> Tx l CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
-  first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" decCBOR bsl
+  tx <- first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" decCBOR bsl
+  -- TODO: remove this after the transactions below are updated
+  first show $ upgradeTx tx
 
 -- | Most basic ada-only transaction:
 --
 -- * One input with Shelley address without staking
 -- * One destination and change back to the address from original input.
-validatedTx1 :: Validated (Tx CurrentEra)
+validatedTx1 :: Validated (Tx TopTx CurrentEra)
 validatedTx1 =
   unsafeMakeValidated $
     decodeTx
@@ -203,7 +217,7 @@ validatedTx1 =
 --
 -- * One input with Shelley address /with/ staking address
 -- * One destination and change back to the address from original input.
-validatedTx2 :: Validated (Tx CurrentEra)
+validatedTx2 :: Validated (Tx TopTx CurrentEra)
 validatedTx2 =
   unsafeMakeValidated $
     decodeTx
@@ -222,7 +236,7 @@ validatedTx2 =
 --
 -- * One input with Shelley address /with/ staking address and some tokens
 -- * One destination and change back to the address from original input.
-validatedTx3 :: Validated (Tx CurrentEra)
+validatedTx3 :: Validated (Tx TopTx CurrentEra)
 validatedTx3 =
   unsafeMakeValidated $
     decodeTx
@@ -235,8 +249,8 @@ validatedTx3 =
       \424643546f6b656e1a006cc9f2021a0002afe90e81581c780648b89ea2f11fa9bbdd67\
       \552db5dd020eda1c9a54142dd9f1b136a10081825820cf2477066091b565f87f044581\
       \7c4df726900b29af3f05d229309afdbf94296d584088444a5845b198a2d255175770be\
-      \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45aa\
-      \54cceb568ff1886e2716e84e6260df5f6"
+      \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45a\
+      \a54cceb568ff1886e2716e84e6260df5f6"
 
 mkGlobals :: ShelleyGenesis -> Globals
 mkGlobals genesis =

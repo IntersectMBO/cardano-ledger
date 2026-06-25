@@ -1,8 +1,7 @@
 module Cardano.Ledger.Mary.Core (
   MaryEraTxBody (..),
   module Cardano.Ledger.Allegra.Core,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Mary.Tx ()

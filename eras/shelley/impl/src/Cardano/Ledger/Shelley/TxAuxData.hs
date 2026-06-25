@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -12,24 +11,24 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxAuxData (
-  ShelleyTxAuxData (ShelleyTxAuxData),
-  ShelleyTxAuxDataRaw,
-  hashShelleyTxAuxData,
+  ShelleyTxAuxData (
+    MkShelleyTxAuxData,
+    ShelleyTxAuxData
+  ),
+  ShelleyTxAuxDataRaw (..),
 
   -- * Re-exports
   Metadatum (..),
   validMetadatum,
-)
-where
+) where
 
-import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
@@ -74,18 +73,18 @@ deriving via
   instance
     NoThunks (ShelleyTxAuxData era)
 
+newtype ShelleyTxAuxData era
+  = MkShelleyTxAuxData (MemoBytes (ShelleyTxAuxDataRaw era))
+  deriving (Eq, Show, Generic)
+  deriving newtype (NFData, Plain.ToCBOR, SafeToHash)
+
+instance Memoized (ShelleyTxAuxData era) where
+  type RawType (ShelleyTxAuxData era) = ShelleyTxAuxDataRaw era
+
 deriving via
   Mem (ShelleyTxAuxDataRaw era)
   instance
     Era era => DecCBOR (Annotator (ShelleyTxAuxData era))
-
-newtype ShelleyTxAuxData era
-  = AuxiliaryDataConstr (MemoBytes (ShelleyTxAuxDataRaw era))
-  deriving (Eq, Show, Generic)
-  deriving newtype (NFData, Plain.ToCBOR, SafeToHash, DecCBOR)
-
-instance Memoized (ShelleyTxAuxData era) where
-  type RawType (ShelleyTxAuxData era) = ShelleyTxAuxDataRaw era
 
 instance EraTxAuxData ShelleyEra where
   type TxAuxData ShelleyEra = ShelleyTxAuxData ShelleyEra
@@ -96,22 +95,12 @@ instance EraTxAuxData ShelleyEra where
     lensMemoRawType @ShelleyEra stadrMetadata $
       \txAuxDataRaw md -> txAuxDataRaw {stadrMetadata = md}
 
-  -- Calling this partial function will result in compilation error, since ByronEra has
-  -- no instance for EraTxOut type class.
-  upgradeTxAuxData = error "It is not possible to translate Byron TxOut with 'upgradeTxOut'"
-
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
 
 instance EqRaw (ShelleyTxAuxData era)
 
 instance HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
-
-hashShelleyTxAuxData ::
-  ShelleyTxAuxData era ->
-  SafeHash EraIndependentTxAuxData
-hashShelleyTxAuxData = hashAnnotated
-{-# DEPRECATED hashShelleyTxAuxData "In favor of `hashAnnotated`" #-}
 
 pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> ShelleyTxAuxData era
 pattern ShelleyTxAuxData m <-

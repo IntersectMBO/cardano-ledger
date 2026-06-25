@@ -22,6 +22,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 # Cancel running workflows when a new workflow on the same PR or branch is started,
 # but put scheduled workflows into their own group
 concurrency:
@@ -36,7 +39,7 @@ jobs:
   build:
     strategy:
       matrix:
-        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.4", "9.10.1"]
+        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.2", "9.14.1"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -56,7 +59,7 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Free up disk space
       run: |
@@ -87,19 +90,20 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.14
+        cabal-version: 3.16
 
     - name: Configure to use libsodium
       run: |
-        cat >> cabal.project <<EOF
+        cat >> cabal.project.local <<EOF
         package cardano-crypto-praos
           flags: -external-libsodium-vrf
         EOF
 
-    - name: Configure to limit the heap size for ghc 8
-      if: startsWith(${{ matrix.ghc }}, 8)
+    # Use this to debug "run canceled" build failures
+    - name: Configure to limit the ghc heap size
+      if: false
       run: |
-        cat >> cabal.project <<EOF
+        cat >> cabal.project.local <<EOF
         with-compiler: $PWD/scripts/ghc-limited
         with-hc-pkg: ghc-pkg
         EOF
@@ -125,7 +129,7 @@ jobs:
         | tee dependencies.txt
 
     - name: Restore cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       id: restore-cabal-cache
       env:
         cache-name: cache-cabal-build
@@ -142,6 +146,11 @@ jobs:
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
 
+    - name: Install build tools and helpers
+      run: |
+        cabal install doctest --flag cabal-doctest --ignore-project --overwrite-policy=always
+        cabal path --installdir >> "$GITHUB_PATH"
+
     - name: Check workflow test matrix
       run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
 
@@ -152,7 +161,7 @@ jobs:
     # Save the cache of built dependencies early, so that it is available for
     # the next GHA run if the Build step fails.
     - name: Save cache
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       id: save-cabal-cache
       # Note: cache-hit will be set to true only when cache hit occurs for the
       # exact key match. For a partial key match via restore-keys or a cache
@@ -171,9 +180,7 @@ jobs:
       # default format uses a one-second resolution for timestamps
       run: tar --use-compress-program zstdmt --format posix --exclude-vcs -cf /var/tmp/state.tzst . && mv /var/tmp/state.tzst .
     - name: Upload working directory archive
-      # upload-artifact is pinned to avoid a bug in download-artifact
-      # See https://github.com/actions/download-artifact/issues/328
-      uses: actions/upload-artifact@v4.2.0
+      uses: actions/upload-artifact@v7
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
         path: state.tzst
@@ -195,25 +202,23 @@ jobs:
         - cardano-ledger-alonzo-test
         - cardano-ledger-api
         - cardano-ledger-babbage
-        - cardano-ledger-babbage-test
         - cardano-ledger-binary
         - cardano-ledger-byron
+        - cardano-ledger-canonical-state
         - cardano-ledger-conformance
         - cardano-ledger-conway
-        - cardano-ledger-conway-test
         - cardano-ledger-core
+        - cardano-ledger-dijkstra
         - cardano-ledger-mary
         - cardano-ledger-shelley
         - cardano-ledger-shelley-ma-test
         - cardano-ledger-shelley-test
         - cardano-ledger-test
         - cardano-protocol-tpraos
-        - constrained-generators
         - non-integral
-        - set-algebra
         - small-steps
         - vector-map
-        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.4", "9.10.1"]
+        ghc: ["9.6.7", "9.8.4", "9.10.3", "9.12.2"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -229,8 +234,6 @@ jobs:
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
 
       SECP_CACHE_VERSION: "2022-12-30"
-
-      packages-with-ruby-cddl-tests: '["cardano-protocol-tpraos", "cardano-ledger-shelley", "cardano-ledger-allegra", "cardano-ledger-mary", "cardano-ledger-alonzo", "cardano-ledger-babbage", "cardano-ledger-conway"]'
 
     defaults:
       run:
@@ -266,19 +269,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.14
-
-    - name: Set up Ruby 2.7
-      if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 2.7
-
-    - name: Install cbor-diag and cddl
-      if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
-      run: |
-        gem install cddl -v 0.10.3
-        gem install cbor-diag
+        cabal-version: 3.16
 
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'
@@ -306,7 +297,7 @@ jobs:
 
     # Retrieve working directory from build jobs
     - name: Download working directory archive
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
 
@@ -324,7 +315,7 @@ jobs:
         ./scripts/file-not-null.sh dependencies.txt
 
     - name: Restore cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       id: restore-cabal-cache
       env:
         cache-name: cache-cabal-build
@@ -332,9 +323,6 @@ jobs:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
         key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        # The cache with this specific key should have been created by the build
-        # job. If the cache is missing, something is terribly wrong! We fail the
-        # test job, or otherwise we would start rebuilding all the dependencies.
         fail-on-cache-miss: true
 
     - name: Run tests
@@ -346,6 +334,9 @@ jobs:
           TRIES=3
           scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
         fi
+
+    - name: Run doctests
+      run: scripts/doctest.sh "${{ matrix.package }}"
 
   complete:
     name: Tests completed
@@ -377,18 +368,128 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install fourmolu
       run: |
-        FOURMOLU_VERSION="0.16.2.0"
-        mkdir -p "$HOME/.local/bin"
-        curl -sL "https://github.com/fourmolu/fourmolu/releases/download/v${FOURMOLU_VERSION}/fourmolu-${FOURMOLU_VERSION}-linux-x86_64" -o "$HOME/.local/bin/fourmolu"
-        chmod a+x "$HOME/.local/bin/fourmolu"
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        FOURMOLU_VERSION="0.17.0.0"
+        BINDIR=$HOME/.local/bin
+        mkdir -p "$BINDIR"
+        curl -sSfL "https://github.com/fourmolu/fourmolu/releases/download/v${FOURMOLU_VERSION}/fourmolu-${FOURMOLU_VERSION}-linux-x86_64" -o "$BINDIR/fourmolu"
+        chmod a+x "$BINDIR/fourmolu"
+        echo "$BINDIR" >> $GITHUB_PATH
 
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install shellcheck
+      run: |
+        SHELLCHECK_VERSION=0.10.0
+        BINDIR=$HOME/.local/bin
+        mkdir -p "$BINDIR"
+        curl -sSfL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" -o shellcheck.tar.xz
+        tar -xf shellcheck.tar.xz --strip-components=1 --wildcards -C "$BINDIR" '*/shellcheck'
+        rm shellcheck.tar.xz
+        echo "$BINDIR" >> $GITHUB_PATH
+
+    - name: Run shellcheck
+      run: scripts/shellcheck.sh
+
+  codegen:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2024-09-23"
+
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+      SECP_CACHE_VERSION: "2022-12-30"
+      ghc-version: "9.6.7"
+      os: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Free up disk space
+      run: |
+        # Remove software and language runtimes we're not using
+        sudo rm -rf \
+          "$AGENT_TOOLSDIRECTORY" \
+          /opt/google/chrome \
+          /opt/microsoft/msedge \
+          /opt/microsoft/powershell \
+          /opt/pipx \
+          /usr/lib/mono \
+          /usr/local/julia* \
+          /usr/local/lib/android \
+          /usr/local/lib/node_modules \
+          /usr/local/share/chromium \
+          /usr/local/share/powershell \
+          /usr/share/dotnet \
+          /usr/share/swift
+        df -h /
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: ${{ env.ghc-version }}
+        cabal-version: 3.16
+
+    # Retrieve working directory from build jobs
+    - name: Download working directory archive
+      uses: actions/download-artifact@v8
+      with:
+        name: state-${{ env.ghc-version }}-${{ env.os }}
+
+    - name: Unarchive working directory
+      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
+
+    - name: Cabal update
+      run: cabal update
+
+    # A dependencies.txt file should have been created by the build job, so we
+    # check if it exists and is not empty.
+    - name: Check dependencies to be used as cache keys
+      id: check-deps
+      run: |
+        ./scripts/file-not-null.sh dependencies.txt
+
+    - name: Restore cache
+      uses: actions/cache/restore@v5
+      id: restore-cabal-cache
+      env:
+        cache-name: cache-cabal-build
+      with:
+        path: |
+          ${{ steps.install-haskell.outputs.cabal-store }}
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ env.ghc-version }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
+        fail-on-cache-miss: true
+
+    - name: Run gen-cddl
+      run: ./scripts/gen-cddl.sh
+
+    - name: Run gen-plutus
+      run: ./scripts/gen-plutus.sh
 
   cabal-format:
     runs-on: ubuntu-latest
@@ -401,7 +502,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: tfausak/cabal-gild-setup-action@v2
         with:
           version: 1.5.0.1
@@ -411,37 +512,36 @@ jobs:
   gen-hie:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-
-    strategy:
-      fail-fast: false
-
     steps:
+    - name: Set up installation directory
+      run: |
+        BINDIR=$HOME/.local/bin
+        echo "bindir=$BINDIR" >> "$GITHUB_ENV"
+        echo "$BINDIR" >> "$GITHUB_PATH"
+
     - name: Cache implicit-hie executable (gen-hie)
       id: cache-gen-hie
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
-        path: |
-          ~/.cabal/bin/gen-hie
+        path: ${{ env.bindir }}/gen-hie
         key: ${{ runner.os }}-cache-gen-hie
 
     - name: Install Haskell
+      if: steps.cache-gen-hie.outputs.cache-hit != 'true'
       id: install-haskell
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: 9.10.1
-        cabal-version: 3.14
+        cabal-version: 3.16
 
-    - name: Install gen-hie if not cached
+    - name: Install gen-hie
       if: steps.cache-gen-hie.outputs.cache-hit != 'true'
-      run: cabal update && cabal install implicit-hie --install-method=copy --overwrite-policy=always
+      run: |
+        cabal update
+        cabal install implicit-hie \
+          --installdir=${{ env.bindir }} --install-method=copy --overwrite-policy=always
 
-    - name: Add cabal-bin to PATH
-      run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
@@ -451,7 +551,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Ensure the branch doesn't contain any merges
       run: |
         PR_TARGET=${{ github.base_ref }}
@@ -499,7 +599,7 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Check formal-ledger-specifications SRP commit hash
       run: |
         TAG=$(sed -ne \
@@ -510,9 +610,52 @@ jobs:
           echo "Error: IntersectMBO/formal-ledger-specifications SRP tag not found."
           exit 1
         fi
-        git fetch https://github.com/intersectmbo/formal-ledger-specifications.git MAlonzo-code
+        git fetch https://github.com/intersectmbo/formal-ledger-specifications.git master-artifacts
 
         git show -s "$TAG" || { \
-          echo "Commit $TAG was not found on the MAlonzo-code branch of formal-ledger-specifications."
+          echo "Commit $TAG was not found on the master-artifacts branch of formal-ledger-specifications."
           exit 1
         }
+  undefined-check:
+    name: Check that there are no additions of `undefined`s in the PR diff
+    runs-on: ubuntu-latest
+    if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Check for `undefined`s in the diffs
+      run: |
+        PR_TARGET=${{ github.base_ref }}
+        git fetch origin -n --refmap= +$PR_TARGET:pr-target
+        if git diff -U0 pr-target '*.hs' |
+            awk '
+              /^\+\+\+/ { sub(/^b\//, "", $2); FILE = $2; }
+              /^\+.*undefined/ { printf "%s: %s\n", FILE, $0; FOUND=1; }
+              END { exit !FOUND; }
+            '; then
+          echo 'The diff must not contain any `undefined` values'
+          false
+        fi
+
+  changelog-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install changelog linter
+      run: |
+        REPO=cardano-ledger-release-tool
+        RELEASE=0.1.1.0 # Should match nix/pkgs/cardano-ledger-release-tool.nix
+        curl -sSfL "https://github.com/input-output-hk/$REPO/releases/download/$RELEASE/$REPO-Linux-x86_64-$RELEASE.tgz" -o $REPO.tgz
+        BINDIR=$HOME/.local/bin
+        mkdir -p "$BINDIR"
+        tar -xvf $REPO.tgz --strip-components=1 -C "$BINDIR"
+        rm $REPO.tgz
+        echo "$BINDIR" >> ${GITHUB_PATH-/dev/null}
+
+    - name: Run linter
+      run: scripts/format-changelogs.sh || (git diff; false)
+
+    - name: Check if changelogs need a bump
+      run: scripts/bump-changelogs.sh || (git diff; false)

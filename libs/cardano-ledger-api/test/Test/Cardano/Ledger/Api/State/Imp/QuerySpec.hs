@@ -1,8 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
@@ -14,10 +16,12 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   queryCommitteeMembersState,
+  queryDRepDelegations,
   queryDRepState,
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovPurposeId (..),
@@ -27,7 +31,6 @@ import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
-import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -40,13 +43,13 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpInit (LedgerSpec era))
-spec = do
+  Spec
+spec = withEachEraVersion @era $ do
   describe "DRep" $ do
     describe "Expiries are reported correctly" $ do
       let drepStateFromQuery ::
             (HasCallStack, Monad m) =>
-            Credential 'DRepRole ->
+            Credential DRepRole ->
             NewEpochState era ->
             m DRepState
           drepStateFromQuery drep nes =
@@ -82,7 +85,7 @@ spec = do
               let tot = addEpochInterval epochNo (EpochInterval drepActivity)
               pv <- getProtVer
               pure $
-                if HF.bootstrapPhase pv
+                if hardforkConwayBootstrapPhase pv
                   then binOpEpochNo (+) tot (fromIntegral n)
                   else tot
 
@@ -183,7 +186,7 @@ spec = do
 
         initialCommitteeMembers <- getCommitteeMembers
         GovPurposeId gid <-
-          electCommittee
+          submitCommitteeElection
             SNothing
             drep
             initialCommitteeMembers
@@ -197,6 +200,39 @@ spec = do
         passEpoch
         expectQueryResult (Set.singleton c1) mempty mempty $
           [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just c1Expiry) NoChangeExpected)]
+
+  it "queryDRepDelegationState" $ do
+    (credDrep, delegator, _) <- setupSingleDRep 1_000_000
+
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    _ <- registerStakeCredential cred
+    _ <- delegateToDRep cred (Coin 2_000_000) DRepAlwaysAbstain
+
+    kh2 <- freshKeyHash
+    let cred2 = KeyHashObj kh2
+    _ <- registerStakeCredential cred2
+    _ <- delegateToDRep cred2 (Coin 3_000_000) DRepAlwaysNoConfidence
+
+    let realDRepCred = DRepCredential credDrep
+
+    nes <- getsNES id
+    let abstainDelegations =
+          Map.singleton DRepAlwaysAbstain (Set.fromList [cred])
+        noConfidenceDelegations =
+          Map.singleton DRepAlwaysNoConfidence (Set.fromList [cred2])
+        realDRepDelegations = Map.singleton realDRepCred (Set.fromList [delegator])
+        expectedAllDelegations =
+          realDRepDelegations
+            <> abstainDelegations
+            <> noConfidenceDelegations
+    queryDRepDelegations nes mempty `shouldBe` expectedAllDelegations
+    queryDRepDelegations nes (Set.singleton DRepAlwaysAbstain)
+      `shouldBe` abstainDelegations
+    queryDRepDelegations nes (Set.singleton DRepAlwaysNoConfidence)
+      `shouldBe` noConfidenceDelegations
+    queryDRepDelegations nes (Set.singleton realDRepCred)
+      `shouldBe` realDRepDelegations
 
   it "Committee queries" $ whenPostBootstrap $ do
     (drep, _, _) <- setupSingleDRep 1_000_000
@@ -224,7 +260,7 @@ spec = do
     initialMembers <- getCommitteeMembers
 
     ga1@(GovPurposeId gaid1) <-
-      electCommittee
+      submitCommitteeElection
         SNothing
         drep
         initialMembers
@@ -304,7 +340,7 @@ spec = do
         c6Expiry = offsetEpochInterval 6
         c7Expiry = offsetEpochInterval 7
     ga2@(GovPurposeId gaid2) <-
-      electCommittee
+      submitCommitteeElection
         (SJust ga1)
         drep
         [c2]
@@ -374,7 +410,7 @@ spec = do
         c4NewNewExpiry = offsetEpochInterval 9
         c6NewExpiry = offsetEpochInterval 9
     GovPurposeId gaid3 <-
-      electCommittee
+      submitCommitteeElection
         (SJust ga2)
         drep
         [c1]
@@ -416,10 +452,10 @@ spec = do
   where
     expectQueryResult ::
       HasCallStack =>
-      Set.Set (Credential 'ColdCommitteeRole) ->
-      Set.Set (Credential 'HotCommitteeRole) ->
+      Set.Set (Credential ColdCommitteeRole) ->
+      Set.Set (Credential HotCommitteeRole) ->
       Set.Set MemberStatus ->
-      Map.Map (Credential 'ColdCommitteeRole) CommitteeMemberState ->
+      Map.Map (Credential ColdCommitteeRole) CommitteeMemberState ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
       nes <- use impNESL
@@ -434,7 +470,7 @@ spec = do
 
     expectNoFilterQueryResult ::
       HasCallStack =>
-      Map.Map (Credential 'ColdCommitteeRole) CommitteeMemberState ->
+      Map.Map (Credential ColdCommitteeRole) CommitteeMemberState ->
       ImpTestM era ()
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty

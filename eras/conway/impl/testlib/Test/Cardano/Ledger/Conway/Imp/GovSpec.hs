@@ -12,9 +12,9 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Conway (hardforkConwayDisallowUnelectedCommitteeFromVoting)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
@@ -30,10 +30,12 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -43,9 +45,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   constitutionSpec
@@ -83,20 +83,18 @@ unknownCostModelsSpec =
 
 predicateFailuresSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 predicateFailuresSpec =
   describe "Predicate failures" $ do
     it "ProposalReturnAccountDoesNotExist" $ do
       mkProposal InfoAction >>= submitProposal_
-      unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
+      unregisteredAccountAddress <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
 
-      proposal <- mkProposalWithRewardAccount InfoAction unregisteredRewardAccount
+      proposal <- mkProposalWithAccountAddress InfoAction unregisteredAccountAddress
       submitBootstrapAwareFailingProposal_ proposal $
         FailPostBootstrap
-          [injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount]
+          [injectFailure $ ProposalReturnAccountDoesNotExist unregisteredAccountAddress]
 
     it "ExpirationEpochTooSmall" $ do
       committeeC <- KeyHashObj <$> freshKeyHash
@@ -109,7 +107,7 @@ predicateFailuresSpec =
               (0 %! 1)
       passEpoch
       let expectedFailure =
-            injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration
+            injectFailure $ ExpirationEpochTooSmall $ NEM.singleton committeeC expiration
       proposal <- mkProposal action
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap
@@ -119,12 +117,12 @@ predicateFailuresSpec =
             }
 
     it "ProposalDepositIncorrect" $ do
-      rewardAccount <- registerRewardAccount
+      accountAddress <- registerAccountAddress
       actionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       anchor <- arbitrary
       submitFailingProposal
         ( ProposalProcedure
-            { pProcReturnAddr = rewardAccount
+            { pProcReturnAddr = accountAddress
             , pProcGovAction = InfoAction
             , pProcDeposit = actionDeposit <-> Coin 1
             , pProcAnchor = anchor
@@ -146,7 +144,7 @@ predicateFailuresSpec =
               (Set.singleton committeeC)
               (Map.singleton committeeC (addEpochInterval curEpochNo (EpochInterval 1)))
               (1 %! 1)
-      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC
+      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ NES.singleton committeeC
       proposal <- mkProposal action
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap $
@@ -159,9 +157,7 @@ predicateFailuresSpec =
 
 hardForkSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkSpec =
   describe "HardFork" $ do
@@ -176,18 +172,16 @@ hardForkSpec =
 
 pparamUpdateSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 pparamUpdateSpec =
   describe "PParamUpdate" $ do
     describe "PPU needs to be wellformed" $ do
       let testMalformedProposal lbl lenz val = it lbl $ do
-            let ppUpdate =
+            let ppu =
                   emptyPParamsUpdate
                     & lenz .~ SJust val
-            ga <- mkParameterChangeGovAction SNothing ppUpdate
+            ga <- mkParameterChangeGovAction SNothing ppu
             mkProposal ga
               >>= flip
                 submitFailingProposal
@@ -223,7 +217,7 @@ pparamUpdateSpec =
       testMalformedProposal
         "ppuPoolDepositL cannot be 0"
         ppuPoolDepositL
-        zero
+        $ Coin 0
       testMalformedProposal
         "ppuGovActionDepositL cannot be 0"
         ppuGovActionDepositL
@@ -241,9 +235,7 @@ pparamUpdateSpec =
 
 proposalsSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 proposalsSpec = do
   describe "Proposals" $ do
@@ -286,10 +278,10 @@ proposalsSpec = do
               ]
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p1) [SJust <$> a]
-                            , SJust <$> b
-                            ]
+                             SNothing
+                             [ Node (SJust p1) [SJust <$> a]
+                             , SJust <$> b
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -302,16 +294,16 @@ proposalsSpec = do
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when proposals expire over multiple rounds" $ do
-        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 1000)
+        let ppupdate = def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 1000)
         let submitInitialProposal = submitParameterChange SNothing ppupdate
         let submitChildProposal parent = submitParameterChange (SJust parent) ppupdate
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
         p1 <- submitInitialProposal
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p1) []
-                            ]
+                             SNothing
+                             [ Node (SJust p1) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -322,10 +314,10 @@ proposalsSpec = do
         p11 <- submitChildProposal p1
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p1) [Node (SJust p11) []]
-                            , Node (SJust p2) []
-                            ]
+                             SNothing
+                             [ Node (SJust p1) [Node (SJust p11) []]
+                             , Node (SJust p2) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -342,16 +334,16 @@ proposalsSpec = do
             ]
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p1)
-                                [ Node
-                                    (SJust p11)
-                                    (fmap SJust <$> a)
-                                ]
-                            , Node (SJust p2) [Node (SJust p21) []]
-                            , Node (SJust p3) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p1)
+                                 [ Node
+                                     (SJust p11)
+                                     (fmap SJust <$> a)
+                                 ]
+                             , Node (SJust p2) [Node (SJust p21) []]
+                             , Node (SJust p3) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -363,17 +355,17 @@ proposalsSpec = do
         p211 <- submitChildProposal p21
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p1)
-                                [ Node
-                                    (SJust p11)
-                                    (fmap SJust <$> a)
-                                ]
-                            , Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
-                            , Node (SJust p3) [Node (SJust p31) []]
-                            , Node (SJust p4) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p1)
+                                 [ Node
+                                     (SJust p11)
+                                     (fmap SJust <$> a)
+                                 ]
+                             , Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
+                             , Node (SJust p3) [Node (SJust p31) []]
+                             , Node (SJust p4) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -381,11 +373,11 @@ proposalsSpec = do
         passNEpochs 3
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
-                            , Node (SJust p3) [Node (SJust p31) []]
-                            , Node (SJust p4) []
-                            ]
+                             SNothing
+                             [ Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
+                             , Node (SJust p3) [Node (SJust p31) []]
+                             , Node (SJust p4) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -396,19 +388,19 @@ proposalsSpec = do
         p212 <- submitChildProposal p21
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p2)
-                                [ Node
-                                    (SJust p21)
-                                    [ Node (SJust p211) []
-                                    , Node (SJust p212) []
-                                    ]
-                                ]
-                            , Node (SJust p3) [Node (SJust p31) [Node (SJust p311) []]]
-                            , Node (SJust p4) [Node (SJust p41) []]
-                            , Node (SJust p5) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p2)
+                                 [ Node
+                                     (SJust p21)
+                                     [ Node (SJust p211) []
+                                     , Node (SJust p212) []
+                                     ]
+                                 ]
+                             , Node (SJust p3) [Node (SJust p31) [Node (SJust p311) []]]
+                             , Node (SJust p4) [Node (SJust p41) []]
+                             , Node (SJust p5) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -420,19 +412,19 @@ proposalsSpec = do
         p312 <- submitChildProposal p31
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node
-                                (SJust p3)
-                                [ Node
-                                    (SJust p31)
-                                    [ Node (SJust p311) []
-                                    , Node (SJust p312) []
-                                    ]
-                                ]
-                            , Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
-                            , Node (SJust p5) [Node (SJust p51) []]
-                            , Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node
+                                 (SJust p3)
+                                 [ Node
+                                     (SJust p31)
+                                     [ Node (SJust p311) []
+                                     , Node (SJust p312) []
+                                     ]
+                                 ]
+                             , Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
+                             , Node (SJust p5) [Node (SJust p51) []]
+                             , Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -440,11 +432,11 @@ proposalsSpec = do
         passEpoch
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
-                            , Node (SJust p5) [Node (SJust p51) []]
-                            , Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
+                             , Node (SJust p5) [Node (SJust p51) []]
+                             , Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -452,10 +444,10 @@ proposalsSpec = do
         passEpoch
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p5) [Node (SJust p51) []]
-                            , Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node (SJust p5) [Node (SJust p51) []]
+                             , Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -463,9 +455,9 @@ proposalsSpec = do
         passNEpochs 3
         getProposalsForest
           `shouldReturn` [ Node
-                            SNothing
-                            [ Node (SJust p6) []
-                            ]
+                             SNothing
+                             [ Node (SJust p6) []
+                             ]
                          , Node SNothing []
                          , Node SNothing []
                          , Node SNothing []
@@ -604,7 +596,9 @@ proposalsSpec = do
           `shouldReturn` Node (SJust p212) []
         props <- getProposals
         proposalsSize props `shouldBe` 0
-      it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ whenPostBootstrap $ do
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+      -- TODO: Re-enable after issues are resolved, by removing this override
+      disableInConformanceIt "Subtrees are pruned for both enactment and expiry over multiple rounds" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -709,7 +703,7 @@ proposalsSpec = do
       it "Proposals are stored in the expected order" $ whenPostBootstrap $ do
         modifyPParams $ ppMaxValSizeL .~ 1_000_000_000
         ens <- getEnactState
-        returnAddr <- registerRewardAccount
+        returnAddr <- registerAccountAddress
         withdrawal <-
           (: []) . (returnAddr,) . Coin . getPositive
             <$> (arbitrary :: ImpTestM era (Positive Integer))
@@ -730,7 +724,7 @@ proposalsSpec = do
           checkProps l = do
             props <-
               getsNES $
-                nesEsL . epochStateGovStateL @era . cgsProposalsL . pPropsL
+                nesEsL . epochStateGovStateL @era . proposalsGovStateL . pPropsL
             fmap (pProcAnchor . gasProposalProcedure . snd) (OMap.assocList props)
               `shouldBe` fmap pProcAnchor l
         checkProps [prop0, prop1]
@@ -741,28 +735,41 @@ proposalsSpec = do
     submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
     submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 500))
+    paramAction p = mkParameterChangeGovAction p (def & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 500))
 
 votingSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
     it "VotersDoNotExist" $ do
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      let ProtVer major minor = pp ^. ppProtocolVersionL
+      let pv@(ProtVer major minor) = pp ^. ppProtocolVersionL
       gaId <- submitGovAction $ HardForkInitiation SNothing $ ProtVer major (succ minor)
       hotCred <- KeyHashObj <$> freshKeyHash
-      submitFailingVote (CommitteeVoter hotCred) gaId $
-        [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
+      if hardforkConwayDisallowUnelectedCommitteeFromVoting pv
+        then
+          submitFailingVote
+            (CommitteeVoter hotCred)
+            gaId
+            [ injectFailure $ UnelectedCommitteeVoters [hotCred]
+            , injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]
+            ]
+        else
+          submitFailingVote
+            (CommitteeVoter hotCred)
+            gaId
+            [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
       poolId <- freshKeyHash
-      submitFailingVote (StakePoolVoter poolId) gaId $
+      submitFailingVote
+        (StakePoolVoter poolId)
+        gaId
         [injectFailure $ VotersDoNotExist [StakePoolVoter poolId]]
       dRepCred <- KeyHashObj <$> freshKeyHash
-      submitFailingVote (DRepVoter dRepCred) gaId $
+      submitFailingVote
+        (DRepVoter dRepCred)
+        gaId
         [injectFailure $ VotersDoNotExist [DRepVoter dRepCred]]
     it "DRep votes are removed" $ do
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -775,7 +782,10 @@ votingSpec =
       submitTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
       gasAfterRemoval <- getGovActionState gaId
       gasDRepVotes gasAfterRemoval `shouldBe` []
-    it "expired gov-actions" $ do
+
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+    -- TODO: Re-enable after issues are resolved, by removing this override
+    disableInConformanceIt "expired gov-actions" $ do
       -- Voting for expired actions should fail
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
@@ -818,7 +828,9 @@ votingSpec =
           ]
     it "committee member mixed with other voters can not vote on UpdateCommittee action" $
       whenPostBootstrap ccVoteOnConstitutionFailsWithMultipleVotes
-    it "CC cannot ratify if below threshold" $ whenPostBootstrap $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
+    -- TODO: Re-enable after issues are resolved, by removing this override
+    disableInConformanceIt "CC cannot ratify if below threshold" $ whenPostBootstrap $ do
       modifyPParams $ \pp ->
         pp
           & ppGovActionLifetimeL .~ EpochInterval 3
@@ -848,7 +860,7 @@ votingSpec =
           NewConstitution
             SNothing
             Constitution
-              { constitutionScript = SNothing
+              { constitutionGuardrailsScriptHash = SNothing
               , constitutionAnchor = anchor
               }
       submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
@@ -865,7 +877,7 @@ votingSpec =
             . esLStateL
             . lsUTxOStateL
             . utxosGovStateL
-            . cgsConstitutionL
+            . constitutionGovStateL
             . constitutionAnchorL
       expectNoCurrentProposals
       conAnchor `shouldNotBe` anchor
@@ -876,14 +888,12 @@ votingSpec =
       gaId <-
         submitParameterChange SNothing $
           def
-            & ppuMinFeeAL .~ SJust (Coin 100)
+            & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 100)
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
 constitutionSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   describe "Constitution proposals" $ do
@@ -964,9 +974,7 @@ constitutionSpec =
 
 policySpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 policySpec =
   describe "Policy" $ do
@@ -991,8 +999,8 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust scriptHash)) >>= submitProposal_
 
       impAnn "TreasuryWithdrawals with correct policy succeeds" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust scriptHash)) >>= submitProposal_
 
       impAnn "ParameterChange with invalid policy fails" $ do
@@ -1000,69 +1008,65 @@ policySpec =
         mkProposal (ParameterChange SNothing pparamsUpdate (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
-            [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
+            [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
       impAnn "TreasuryWithdrawals with invalid policy fails" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         mkProposal (TreasuryWithdrawals withdrawals (SJust wrongScriptHash))
           >>= flip
             submitFailingProposal
-            [injectFailure $ InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)]
+            [injectFailure $ InvalidGuardrailsScriptHash (SJust wrongScriptHash) (SJust scriptHash)]
 
 networkIdSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 networkIdSpec =
   describe "Network ID" $ do
     it "Fails with invalid network ID in proposal return address" $ do
-      rewardCredential <- KeyHashObj <$> freshKeyHash
-      let badRewardAccount =
-            RewardAccount
-              { raNetwork = Mainnet -- Our network is Testnet
-              , raCredential = rewardCredential
+      accountCredential <- KeyHashObj <$> freshKeyHash
+      let badAccountAddress =
+            AccountAddress
+              { aaNetworkId = Mainnet -- Our network is Testnet
+              , aaId = AccountId accountCredential
               }
-      proposal <- mkProposalWithRewardAccount InfoAction badRewardAccount
+      proposal <- mkProposalWithAccountAddress InfoAction badAccountAddress
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap $
           FailBoth
             { bootstrapFailures =
                 [ injectFailure $
                     ProposalProcedureNetworkIdMismatch
-                      badRewardAccount
+                      badAccountAddress
                       Testnet
                 ]
             , postBootstrapFailures =
                 [ injectFailure $
                     ProposalReturnAccountDoesNotExist
-                      badRewardAccount
+                      badAccountAddress
                 , injectFailure $
                     ProposalProcedureNetworkIdMismatch
-                      badRewardAccount
+                      badAccountAddress
                       Testnet
                 ]
             }
 
 withdrawalsSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 withdrawalsSpec =
   describe "Withdrawals" $ do
     it "Fails predicate when treasury withdrawal has nonexistent return address" $ do
       policy <- getGovPolicy
-      unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      registeredRewardAccount <- registerRewardAccount
+      unregisteredAccountAddress <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+      registeredAccountAddress <- registerAccountAddress
       let genPositiveCoin = Coin . getPositive <$> arbitrary
       withdrawals <-
         sequence
-          [ (unregisteredRewardAccount,) <$> genPositiveCoin
-          , (registeredRewardAccount,) <$> genPositiveCoin
+          [ (unregisteredAccountAddress,) <$> genPositiveCoin
+          , (registeredAccountAddress,) <$> genPositiveCoin
           ]
       proposal <- mkProposal $ TreasuryWithdrawals (Map.fromList withdrawals) policy
       void $
@@ -1072,25 +1076,25 @@ withdrawalsSpec =
               { bootstrapFailures = [injectFailure $ DisallowedProposalDuringBootstrap proposal]
               , postBootstrapFailures =
                   [ injectFailure $
-                      TreasuryWithdrawalReturnAccountsDoNotExist [unregisteredRewardAccount]
+                      TreasuryWithdrawalReturnAccountsDoNotExist [unregisteredAccountAddress]
                   ]
               }
 
     it "Fails with invalid network ID in withdrawal addresses" $ do
-      rewardCredential <- KeyHashObj <$> freshKeyHash
-      let badRewardAccount =
-            RewardAccount
-              { raNetwork = Mainnet -- Our network is Testnet
-              , raCredential = rewardCredential
+      accountCredential <- KeyHashObj <$> freshKeyHash
+      let badAccountAddress =
+            AccountAddress
+              { aaNetworkId = Mainnet -- Our network is Testnet
+              , aaId = AccountId accountCredential
               }
       proposal <-
-        mkTreasuryWithdrawalsGovAction [(badRewardAccount, Coin 100_000_000)] >>= mkProposal
+        mkTreasuryWithdrawalsGovAction [(badAccountAddress, Coin 100_000_000)] >>= mkProposal
       let idMismatch =
             injectFailure $
-              TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
+              TreasuryWithdrawalsNetworkIdMismatch (NES.singleton badAccountAddress) Testnet
           returnAddress =
             injectFailure $
-              TreasuryWithdrawalReturnAccountsDoNotExist [badRewardAccount]
+              TreasuryWithdrawalReturnAccountsDoNotExist [badAccountAddress]
       void $
         submitBootstrapAwareFailingProposal proposal $
           FailBootstrapAndPostBootstrap $
@@ -1102,15 +1106,15 @@ withdrawalsSpec =
     it "Fails for empty withdrawals" $ do
       mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount1 <- registerRewardAccount
-      mkTreasuryWithdrawalsGovAction [(rwdAccount1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
+      accountAddress1 <- registerAccountAddress
+      mkTreasuryWithdrawalsGovAction [(accountAddress1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
 
-      rwdAccount2 <- registerRewardAccount
-      let withdrawals = [(rwdAccount1, zero), (rwdAccount2, zero)]
+      accountAddress2 <- registerAccountAddress
+      let withdrawals = [(accountAddress1, zero), (accountAddress2, zero)]
 
       mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
 
-      wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(rwdAccount2, Coin 100_000)]
+      wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(accountAddress2, Coin 100_000)]
       proposal <- mkProposal wdrls
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrap [disallowedProposalFailure proposal]
@@ -1134,7 +1138,7 @@ withdrawalsSpec =
 -- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
   forall era.
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  (HasCallStack, ConwayEraImp era) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 firstHardForkFollows computeNewFromOld = do
@@ -1144,30 +1148,26 @@ firstHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkCantFollow ::
   forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   ImpTestM era ()
 firstHardForkCantFollow = do
-  protver0 <- getProtVer
-  let protver1 = minorFollow protver0
-      protver2 = cantFollow protver1
-  proposal <- mkProposal $ HardForkInitiation SNothing protver2
+  curProtVer <- getProtVer
+  nextProtVer <- genCantFollow curProtVer
+  proposal <- mkProposal $ HardForkInitiation SNothing nextProtVer
   submitFailingProposal
     proposal
     [ injectFailure $
         ProposalCantFollow SNothing $
           Mismatch
-            { mismatchSupplied = protver2
-            , mismatchExpected = protver0
+            { mismatchSupplied = nextProtVer
+            , mismatchExpected = curProtVer
             }
     ]
 
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
   forall era.
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  (HasCallStack, ConwayEraImp era) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
@@ -1180,32 +1180,42 @@ secondHardForkFollows computeNewFromOld = do
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
   forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   ImpTestM era ()
 secondHardForkCantFollow = do
-  protver0 <- getProtVer
-  let protver1 = minorFollow protver0
-      protver2 = cantFollow protver1
-  gaid1 <- mkProposal (HardForkInitiation SNothing protver1) >>= submitProposal
-  mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) protver2)
+  curProtVer <- getProtVer
+  let nextProtVer = minorFollow curProtVer
+  gaid1 <- mkProposal (HardForkInitiation SNothing nextProtVer) >>= submitProposal
+  badProtVer <- genCantFollow nextProtVer
+  mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) badProtVer)
     >>= flip
       submitFailingProposal
       [ injectFailure $
           ProposalCantFollow (SJust (GovPurposeId gaid1)) $
             Mismatch
-              { mismatchSupplied = protver2
-              , mismatchExpected = protver1
+              { mismatchSupplied = badProtVer
+              , mismatchExpected = nextProtVer
               }
       ]
+  genCantFollowCurrent >>= \case
+    Nothing ->
+      -- This is the end of the line. Next era is not even defined yet
+      pvMajor curProtVer `shouldBe` eraProtVerHigh @era
+    Just protVerMajorTooHigh -> do
+      mkProposal (HardForkInitiation (SJust (GovPurposeId gaid1)) protVerMajorTooHigh)
+        >>= flip
+          submitFailingProposal
+          [ injectFailure $
+              ProposalCantFollow (SJust (GovPurposeId gaid1)) $
+                Mismatch
+                  { mismatchSupplied = protVerMajorTooHigh
+                  , mismatchExpected = curProtVer
+                  }
+          ]
 
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  (HasCallStack, ConwayEraImp era) =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
   (ccCred :| _) <- registerInitialCommittee
@@ -1244,9 +1254,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
 
 bootstrapPhaseSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 bootstrapPhaseSpec =
   describe "Proposing and voting" $ do
@@ -1279,9 +1287,9 @@ bootstrapPhaseSpec =
       submitYesVote_ (StakePoolVoter spo) gid
       submitYesVote_ (CommitteeVoter committee) gid
     it "Treasury withdrawal" $ do
-      rewardAccount <- registerRewardAccount
-      action <- mkTreasuryWithdrawalsGovAction [(rewardAccount, Coin 1000)]
-      proposal <- mkProposalWithRewardAccount action rewardAccount
+      accountAddress <- registerAccountAddress
+      action <- mkTreasuryWithdrawalsGovAction [(accountAddress, Coin 1000)]
+      proposal <- mkProposalWithAccountAddress action accountAddress
       checkProposalFailure proposal
     it "NoConfidence" $ do
       proposal <- mkProposal $ NoConfidence SNothing

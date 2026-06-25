@@ -38,12 +38,12 @@ import Control.State.Transition (
   (?!),
  )
 import Data.Bimap (keys)
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Set (fromList)
 import Data.Word (Word8)
 import Lens.Micro ((^.))
 
-data BBODY deriving (Data, Typeable)
+data BBODY deriving (Data)
 
 -- | These `PredicateFailure`s are all throwable.
 data BbodyPredicateFailure
@@ -54,7 +54,7 @@ data BbodyPredicateFailure
   | BUPIFailure (PredicateFailure BUPI)
   | DelegationFailure (PredicateFailure DELEG)
   | UTXOWSFailure (PredicateFailure UTXOWS)
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS BBODY where
   type

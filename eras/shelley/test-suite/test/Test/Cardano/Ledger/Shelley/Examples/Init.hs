@@ -5,21 +5,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Init
--- Description : Initial State for Shelley ledger examples
---
--- The initial state for Shelley Ledger Examples.
+-- | The initial state for Shelley Ledger Examples.
 module Test.Cardano.Ledger.Shelley.Examples.Init (
   ppEx,
   initSt,
   nonce0,
   lastByronHeaderHash,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Nonce (..))
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
@@ -30,9 +24,7 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (
-  HashHeader (..),
   LastAppliedBlock (..),
   hashHeaderToNonce,
  )
@@ -47,7 +39,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
 import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash, unsafeBoundRational)
 
 -- | Initial Protocol Parameters
-ppEx :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
+ppEx :: (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) => PParams era
 ppEx =
   emptyPParams
     & ppMaxBBSizeL .~ 50000
@@ -88,8 +80,8 @@ initSt ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   UTxO era ->
@@ -99,7 +91,7 @@ initSt utxo =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply <-> Val.coin (balance utxo))
+    (maxLLSupply <-> sumCoinUTxO utxo)
     genDelegs
     (ppEx @era)
     nonce0

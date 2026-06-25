@@ -19,7 +19,7 @@ import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Seed
 import Cardano.Protocol.Crypto
 import Data.Proxy
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
+import Test.Cardano.Base.Bytes (genByteString)
 import Test.Cardano.Ledger.Common
 
 data KESKeyPair c = KESKeyPair

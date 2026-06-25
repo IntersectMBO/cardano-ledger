@@ -15,41 +15,23 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
   Delta (..),
   encodedLen,
   pickRandomFromMap,
-)
-where
+) where
 
-import Cardano.Ledger.Address (
-  Addr (..),
-  RewardAccount (..),
- )
 import Cardano.Ledger.BaseTypes (
   Network (..),
   inject,
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (EncCBOR, serialize)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
-  LedgerState (..),
-  UTxOState (..),
-  ptrsMap,
-  rewards,
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
-import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
-import Cardano.Ledger.State (
-  EraUTxO,
-  UTxO (..),
-  getMinFeeTxUtxo,
-  sumAllValue,
- )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad (when)
@@ -68,6 +50,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import Lens.Micro
+import Lens.Micro.Extras
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (tracedDiscard)
@@ -124,6 +107,7 @@ genTx ::
   forall era c.
   ( EraGen era
   , EraUTxO era
+  , ShelleyEraAccounts era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
@@ -133,22 +117,22 @@ genTx ::
   GenEnv c era ->
   LedgerEnv era ->
   LedgerState era ->
-  Gen (Tx era)
+  Gen (Tx TopTx era)
 genTx
   ge@( GenEnv
-        keySpace@KeySpace_
-          { ksKeyPairs
-          , ksCoreNodes
-          , ksMSigScripts
-          , ksIndexedGenDelegates
-          , ksIndexedPaymentKeys
-          , ksIndexedStakingKeys
-          , ksIndexedPayScripts
-          , ksIndexedStakeScripts
-          }
-        scriptspace
-        constants
-      )
+         keySpace@KeySpace_
+           { ksKeyPairs
+           , ksCoreNodes
+           , ksMSigScripts
+           , ksIndexedGenDelegates
+           , ksIndexedPaymentKeys
+           , ksIndexedStakingKeys
+           , ksIndexedPayScripts
+           , ksIndexedStakeScripts
+           }
+         scriptspace
+         constants
+       )
   (LedgerEnv slot _ txIx pparams reserves)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _) dpState) =
     do
@@ -167,7 +151,9 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards) $ dpState ^. certDStateL)
+          ( Map.map (fromCompact . view balanceAccountStateL) $
+              dpState ^. certDStateL . accountsL . accountsMapL
+          )
       (update, updateWits) <-
         genUpdate
           constants
@@ -288,7 +274,7 @@ data Delta era = Delta
   , extraInputs :: Set.Set TxIn
   , extraWitnesses :: TxWits era
   , change :: TxOut era
-  , deltaVKeys :: [KeyPair 'Witness]
+  , deltaVKeys :: [KeyPair Witness]
   , deltaScripts :: [(Script era, Script era)]
   }
 
@@ -366,7 +352,7 @@ genNextDelta ::
   UTxO era ->
   PParams era ->
   KeySpace c era ->
-  Tx era ->
+  Tx TopTx era ->
   Int ->
   Delta era ->
   Gen (Delta era)
@@ -399,7 +385,7 @@ genNextDelta
         deltaScriptCost = foldr accum (Coin 0) extraScripts
           where
             accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
-        deltaFee = draftSize <×> pparams ^. ppMinFeeAL <+> deltaScriptCost
+        deltaFee = draftSize <×> fromCompact (unCoinPerByte (pparams ^. ppTxFeePerByteL)) <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
         changeAmount = getChangeAmount change
@@ -487,7 +473,7 @@ genNextDeltaTilFixPoint ::
   UTxO era ->
   PParams era ->
   KeySpace c era ->
-  Tx era ->
+  Tx TopTx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
   addrs <- genRecipients @era 1 keys scripts
@@ -503,12 +489,12 @@ applyDelta ::
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Map ScriptHash (Script era) ->
   KeySpace c era ->
-  Tx era ->
+  Tx TopTx era ->
   Delta era ->
-  Tx era
+  Tx TopTx era
 applyDelta
   utxo
   scriptinfo
@@ -558,15 +544,15 @@ converge ::
   (EraGen era, EraUTxO era) =>
   ScriptInfo era ->
   Coin ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Map ScriptHash (Script era) ->
   KeyPairs ->
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
   KeySpace c era ->
-  Tx era ->
-  Gen (Tx era)
+  Tx TopTx era ->
+  Gen (Tx TopTx era)
 converge
   scriptinfo
   initialfee
@@ -654,10 +640,10 @@ mkScriptWits payScripts stakeScripts =
 mkTxWits ::
   forall era.
   EraGen era =>
-  (UTxO era, TxBody era, ScriptInfo era) ->
-  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) ->
-  [KeyPair 'Witness] ->
+  (UTxO era, TxBody TopTx era, ScriptInfo era) ->
+  Map (KeyHash Payment) (KeyPair Payment) ->
+  Map (KeyHash Staking) (KeyPair Staking) ->
+  [KeyPair Witness] ->
   Map ScriptHash (Script era) ->
   SafeHash EraIndependentTxBody ->
   TxWits era
@@ -734,13 +720,13 @@ genInputs ::
   forall era.
   EraTxOut era =>
   (Int, Int) ->
-  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
+  Map (KeyHash Payment) (KeyPair Payment) ->
   Map ScriptHash (Script era, Script era) ->
   UTxO era ->
   Gen
     ( [TxIn]
     , Value era
-    , ([KeyPair 'Witness], [(Script era, Script era)])
+    , ([KeyPair Witness], [(Script era, Script era)])
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -760,16 +746,16 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
           Right $ findPayScriptFromAddr @era addr payScriptMap
         _ -> error "unsupported address"
 
--- | Select a subset of the reward accounts to use for reward withdrawals.
+-- | Select a subset of the account addresses to use for reward withdrawals.
 genWithdrawals ::
   forall era.
   Constants ->
   Map ScriptHash (Script era, Script era) ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) ->
-  Map (Credential 'Staking) Coin ->
+  Map (KeyHash Staking) (KeyPair Staking) ->
+  Map (Credential Staking) Coin ->
   Gen
-    ( [(RewardAccount, Coin)]
-    , ([KeyPair 'Witness], [(Script era, Script era)])
+    ( [(AccountAddress, Coin)]
+    , ([KeyPair Witness], [(Script era, Script era)])
     )
 genWithdrawals
   Constants
@@ -798,12 +784,13 @@ genWithdrawals
         ]
     pure (a, b)
     where
-      toRewardAccount (rwd, coinx) = (RewardAccount Testnet rwd, coinx)
+      toAccountAddress (rwd, coinx) = (AccountAddress Testnet (AccountId rwd), coinx)
       genWrdls withdrawals_ = do
-        selectedWrdls <- map toRewardAccount <$> QC.sublistOf withdrawals_
+        selectedWrdls <- map toAccountAddress <$> QC.sublistOf withdrawals_
         let txwits =
               mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
-                . raCredential
+                . unAccountId
+                . aaId
                 . fst
                 <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers txwits)
@@ -812,9 +799,9 @@ genWithdrawals
 mkWithdrawalsWits ::
   forall era.
   Map ScriptHash (Script era, Script era) ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) ->
-  Credential 'Staking ->
-  Either (KeyPair 'Witness) (Script era, Script era)
+  Map (KeyHash Staking) (KeyPair Staking) ->
+  Credential Staking ->
+  Either (KeyPair Witness) (Script era, Script era)
 mkWithdrawalsWits scriptsByStakeHash _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred @era (asWitness c) scriptsByStakeHash
@@ -854,16 +841,16 @@ genRecipients nRecipients' keys scripts = do
       stakeScripts = mkCredential . hashScript . snd <$> recipientScripts
 
   -- zip keys and scripts together as base addresses
-  let payCreds :: [Credential 'Payment]
+  let payCreds :: [Credential Payment]
       payCreds = payKeys ++ payScripts
-      stakeCreds :: [Credential 'Staking]
+      stakeCreds :: [Credential Staking]
       stakeCreds = stakeKeys ++ stakeScripts
 
   return (zipWith mkAddr payCreds stakeCreds)
 
-genPtrAddrs :: DState era -> [Addr] -> Gen [Addr]
+genPtrAddrs :: ShelleyEraAccounts era => DState era -> [Addr] -> Gen [Addr]
 genPtrAddrs ds addrs = do
-  let pointers = ptrsMap ds
+  let pointers = ds ^. accountsL . accountsPtrsMapG
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
   pointerList <- map fst <$> pickRandomFromMap n pointers
 

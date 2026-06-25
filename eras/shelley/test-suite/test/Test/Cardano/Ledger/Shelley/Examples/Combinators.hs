@@ -1,30 +1,25 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.Combinators
--- Description : Chain State Combinators
---
--- A collection of combinators for manipulating Chain State.
+-- | A collection of combinators for manipulating Chain State.
 -- The idea is to provide a clear way of describing the
 -- changes to the chain state when a block is processed.
 module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   evolveNonceFrozen,
   evolveNonceUnfrozen,
   newLab,
-  feesAndKeyRefund,
-  feesAndDeposits,
+  addFees,
   newUTxO,
   newStakeCred,
   deregStakeCred,
   delegation,
-  newPool,
-  reregPool,
+  regPool,
   updatePoolParams,
   stageRetirement,
   reapPool,
@@ -45,53 +40,47 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   setPrevPParams,
   setFutureGenDeleg,
   adoptFutureGenDeleg,
-)
-where
+) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  Network,
   Nonce (..),
   StrictMaybe (..),
   quorum,
   (⭒),
  )
-import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Coin (
+  Coin (..),
+  compactCoinOrError,
+ )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
-  FutureGenDeleg (..),
-  InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   PulsingRewUpdate (..),
   RewardUpdate (..),
   UTxOState (..),
   applyRUpd,
   curPParamsEpochStateL,
-  delegations,
+  esLStateL,
   futurePParamsEpochStateL,
+  lsCertStateL,
+  lsUTxOStateL,
+  nesEsL,
   prevPParamsEpochStateL,
-  rewards,
+  utxosDepositedL,
+  utxosFeesL,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.UMap (
-  RDPair (..),
-  UView (PtrUView, RewDepUView, SPoolUView),
-  fromCompact,
-  unUView,
- )
-import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.Val ((<+>), (<->), (<×>))
+import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader,
@@ -102,13 +91,14 @@ import Cardano.Protocol.TPraos.BHeader (
   prevHashToNonce,
  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Data.Default (Default (..))
-import Data.Foldable as F (fold, foldl')
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Lens.Micro ((%~), (&), (.~), (^.))
+import GHC.Stack (HasCallStack)
+import Lens.Micro
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
@@ -150,90 +140,18 @@ newLab ::
 newLab b cs =
   cs {chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)}
   where
-    bh = bheader b
+    bh = blockHeader b
     bn = bheaderBlockNo $ bhbody bh
     sn = bheaderSlotNo $ bhbody bh
 
--- | = Update Fees and Deposits
---
--- Update the fee pot and deposit pot with the new fees and deposits
--- adjust the deposit tables in the UTxOState and the CertState.
--- Notes
---   1) do not give this function duplicates in the 'stakes' or 'pools' inputs.
---   2) do not use this function when crossing the epoch boundary,
--- instead use 'newEpoch'.
-feesAndDeposits ::
-  forall era.
-  (EraPParams era, EraCertState era) =>
-  PParams era ->
+addFees ::
   Coin ->
-  [Credential 'Staking] ->
-  [PoolParams] ->
   ChainState era ->
   ChainState era
-feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
+addFees newFees cs = cs {chainNes = nes}
   where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    certState = lsCertState ls
-    vstate = certState ^. certVStateL
-    pstate = certState ^. certPStateL
-    dstate = certState ^. certDStateL
-    utxoSt = lsUTxOState ls
-    utxoSt' =
-      utxoSt
-        { utxosDeposited =
-            utxosDeposited utxoSt
-              <+> (length stakes <×> ppEx ^. ppKeyDepositL)
-              <+> (newcount <×> ppEx ^. ppPoolDepositL)
-        , utxosFees = utxosFees utxoSt <+> newFees
-        }
-    ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
-    -- Count the number of new pools, because we don't take a deposit for existing pools
-    -- This strategy DOES NOT WORK if there are duplicate PoolParams in one call
-    newcount = F.foldl' accum 0 pools
-    accum n x = if Map.member (ppId x) (psDeposits pstate) then (n :: Integer) else n + 1
-    newDeposits =
-      Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
-    newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositL)) pools)
-    dpstate' =
-      mkCertState
-        vstate
-        pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
-        dstate {dsUnified = UM.unionKeyDeposits (RewDepUView (dsUnified dstate)) newDeposits}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
-
-feesAndKeyRefund ::
-  forall era.
-  EraCertState era =>
-  Coin ->
-  Credential 'Staking ->
-  ChainState era ->
-  ChainState era
-feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
-  where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    certState = lsCertState ls
-    pstate = certState ^. certPStateL
-    dstate = certState ^. certDStateL
-    refund = case UM.lookup key (RewDepUView (dsUnified dstate)) of
-      Nothing -> Coin 0
-      Just (RDPair _ ccoin) -> fromCompact ccoin
-    utxoSt = lsUTxOState ls
-    utxoSt' =
-      utxoSt
-        { utxosDeposited = utxosDeposited utxoSt <-> refund
-        , utxosFees = utxosFees utxoSt <+> newFees
-        }
-    ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
-    dpstate' = mkCertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewDepUView (dsUnified dstate))}
-    zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
+    nes =
+      chainNes cs & nesEsL . esLStateL . lsUTxOStateL . utxosFeesL <>~ newFees
 
 -- | = Update the UTxO
 --
@@ -241,7 +159,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
 newUTxO ::
   forall era.
   (EraTx era, EraStake era) =>
-  TxBody era ->
+  TxBody TopTx era ->
   ChainState era ->
   ChainState era
 newUTxO txb cs = cs {chainNes = nes'}
@@ -264,151 +182,124 @@ newUTxO txb cs = cs {chainNes = nes'}
 
 -- | = New Stake Credential
 --
---   Add a newly registered stake credential, initialize the rdRewards component of the RDPair.
---   The rdDeposit component of the RDPair is set by 'feesAndDeposits'
+--   Add a newly registered stake credential.
 newStakeCred ::
-  forall era.
-  EraCertState era =>
-  Credential 'Staking ->
+  (EraCertState era, EraGov era, ShelleyEraAccounts era) =>
+  Credential Staking ->
   Ptr ->
   ChainState era ->
   ChainState era
-newStakeCred cred ptr cs = cs {chainNes = nes'}
+newStakeCred cred ptr cs = cs {chainNes = nes}
   where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    dps = lsCertState ls
-    ds = dps ^. certDStateL
-    ds' =
-      ds
-        { dsUnified =
-            let um0 = dsUnified ds
-                um1 = UM.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0)) (RewDepUView um0)
-                um2 = (PtrUView um1 UM.∪ (ptr, cred))
-             in um2
-        }
-    dps' = dps & certDStateL .~ ds'
-    ls' = ls {lsCertState = dps'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
+    deposit = chainNes cs ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
+    nes =
+      chainNes cs
+        & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+          %~ registerShelleyAccount cred ptr (compactCoinOrError deposit) Nothing
+        & nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL <>~ deposit
 
 -- | = De-Register Stake Credential
 --
 -- De-register a stake credential and all associated data.
--- Be sure to run 'feesAndKeyRefund' before you run this
--- because this throws away the stored refund, which then
--- can't be used to balance the utxosDeposited field in 'feesAndKeyRefund'
 deregStakeCred ::
-  forall era.
-  EraCertState era =>
-  Credential 'Staking ->
+  (HasCallStack, EraCertState era, ShelleyEraAccounts era) =>
+  Credential Staking ->
   ChainState era ->
   ChainState era
-deregStakeCred cred cs = cs {chainNes = nes'}
+deregStakeCred cred cs = cs {chainNes = nes}
   where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    dps = lsCertState ls
-    ds = dps ^. certDStateL
-    ds' =
-      ds
-        { dsUnified =
-            let um0 = dsUnified ds
-                um1 = UM.delete cred (RewDepUView um0)
-                um2 = PtrUView um1 UM.⋫ Set.singleton cred
-                um3 = UM.delete cred (SPoolUView um2)
-             in um3
-        }
-    dps' = dps & certDStateL .~ ds'
-    ls' = ls {lsCertState = dps'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
+    nes =
+      chainNes cs
+        & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ accounts'
+        & nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL %~ (<-> refund)
+        & nesEsL . esLStateL . lsCertStateL . certPStateL %~ adjustPState
+    accounts =
+      chainNes cs
+        ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+    (mAccountState, accounts') =
+      unregisterShelleyAccount cred accounts
+    refund = fromCompact (fromJust mAccountState ^. depositAccountStateL)
+    currentDeleg = Map.lookup cred (accounts ^. accountsMapL) >>= (^. stakePoolDelegationAccountStateL)
+    adjustPState =
+      maybe
+        id
+        (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.delete cred) oldPool)
+        currentDeleg
 
 -- | = New Delegation
 --
 -- Create a delegation from the given stake credential to the given
 -- stake pool.
 delegation ::
-  forall era.
   EraCertState era =>
-  Credential 'Staking ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   ChainState era ->
   ChainState era
-delegation cred pool cs = cs {chainNes = nes'}
+delegation cred poolId cs = cs {chainNes = nes}
   where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    dps = lsCertState ls
-    ds = dps ^. certDStateL
-    ds' =
-      ds
-        { dsUnified = UM.insert cred pool (delegations ds)
-        }
-    dps' = dps & certDStateL .~ ds'
-    ls' = ls {lsCertState = dps'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
+    nes =
+      chainNes cs
+        & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+          %~ Map.adjust (stakePoolDelegationAccountStateL .~ Just poolId) cred
+        & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+          %~ Map.adjust (spsDelegatorsL %~ Set.insert cred) poolId
 
--- | = New Stake Pool
---
--- Add a newly registered stake pool
-newPool ::
+-- | Register a stake pool.
+regPool ::
   forall era.
-  EraCertState era =>
-  PoolParams ->
+  ( EraCertState era
+  , EraGov era
+  ) =>
+  StakePoolParams ->
   ChainState era ->
   ChainState era
-newPool pool cs = cs {chainNes = nes'}
+regPool pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
     ps = dps ^. certPStateL
+    poolDeposit = es ^. curPParamsEpochStateL . ppPoolDepositCompactL
     ps' =
-      ps
-        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
-        }
+      case Map.lookup (sppId pool) $ psStakePools ps of
+        Nothing ->
+          ps
+            { psStakePools =
+                Map.insert
+                  (sppId pool)
+                  (mkStakePoolState poolDeposit mempty pool)
+                  (psStakePools ps)
+            }
+        Just _ ->
+          ps
+            { psFutureStakePoolParams =
+                Map.insert
+                  (sppId pool)
+                  pool
+                  (psFutureStakePoolParams ps)
+            }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
-    es' = es {esLState = ls'}
-    nes' = nes {nesEs = es'}
-
--- | = Re-Register Stake Pool
-reregPool ::
-  forall era.
-  EraCertState era =>
-  PoolParams ->
-  ChainState era ->
-  ChainState era
-reregPool pool cs = cs {chainNes = nes'}
-  where
-    nes = chainNes cs
-    es = nesEs nes
-    ls = esLState es
-    dps = lsCertState ls
-    ps = dps ^. certPStateL
-    ps' =
-      ps
-        { psFutureStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
-        }
-    dps' = dps & certPStateL .~ ps'
-    ls' = ls {lsCertState = dps'}
-    es' = es {esLState = ls'}
+    ls'' =
+      ls'
+        & lsUTxOStateL . utxosDepositedL
+          <>~ maybe (fromCompact poolDeposit) (const $ Coin 0) (Map.lookup (sppId pool) (psStakePools ps))
+    es' = es {esLState = ls''}
     nes' = nes {nesEs = es'}
 
 -- | = Re-Register Stake Pool
 updatePoolParams ::
   forall era.
-  EraCertState era =>
-  PoolParams ->
+  ( EraCertState era
+  , EraGov era
+  ) =>
+  Network ->
+  StakePoolParams ->
   ChainState era ->
   ChainState era
-updatePoolParams pool cs = cs {chainNes = nes'}
+updatePoolParams network pool cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es = nesEs nes
@@ -417,8 +308,19 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     ps = dps ^. certPStateL
     ps' =
       ps
-        { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
-        , psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
+        { psStakePools =
+            Map.insert
+              (sppId pool)
+              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
+              (psStakePools ps)
+        , psFutureStakePoolParams =
+            Map.mapMaybeWithKey
+              ( \k sps ->
+                  if k == sppId pool
+                    then Nothing
+                    else Just $ stakePoolStateToStakePoolParams network k sps
+              )
+              (psStakePools ps)
         }
     dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
@@ -431,7 +333,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
 stageRetirement ::
   forall era.
   EraCertState era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   EpochNo ->
   ChainState era ->
   ChainState era
@@ -454,42 +356,42 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 reapPool ::
   forall era.
   (EraGov era, EraCertState era) =>
-  PoolParams ->
+  StakePoolParams ->
   ChainState era ->
   ChainState era
 reapPool pool cs = cs {chainNes = nes'}
   where
-    kh = ppId pool
+    poolId = sppId pool
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
     ps = dps ^. certPStateL
+    poolDeposit = spsDeposit $ fromJust $ Map.lookup poolId (psStakePools ps)
     ps' =
       ps
-        { psRetiring = Map.delete kh (psRetiring ps)
-        , psStakePoolParams = Map.delete kh (psStakePoolParams ps)
-        , psDeposits = Map.delete kh (psDeposits ps)
+        { psRetiring = Map.delete poolId (psRetiring ps)
+        , psStakePools = Map.delete poolId (psStakePools ps)
+        , psVRFKeyHashes = Map.delete (sppVrf pool) (psVRFKeyHashes ps)
         }
     pp = es ^. curPParamsEpochStateL
     ds = dps ^. certDStateL
-    RewardAccount _ rewardAddr = ppRewardAccount pool
-    (rewards', unclaimed) =
-      case UM.lookup rewardAddr (rewards ds) of
-        Nothing -> (rewards ds, pp ^. ppPoolDepositL)
-        Just (UM.RDPair ccoin dep) ->
-          ( UM.insert'
-              rewardAddr
-              (UM.RDPair (UM.addCompact ccoin (UM.compactCoinOrError (pp ^. ppPoolDepositL))) dep)
-              (rewards ds)
-          , Coin 0
-          )
-    -- FIXME shouldn't we look up the pooldeposit here?
-    umap1 = unUView rewards'
-    umap2 = UM.SPoolUView umap1 UM.⋫ Set.singleton kh
-    ds' = ds {dsUnified = umap2}
-    as = esAccountState es
-    as' = as {asTreasury = asTreasury as <+> unclaimed}
+    AccountAddress _ (AccountId poolAccountCred) = sppAccountAddress pool
+    accounts = ds ^. accountsL
+    (accounts', unclaimed) =
+      case lookupAccountState poolAccountCred accounts of
+        Nothing -> (accounts, poolDeposit)
+        Just accountState ->
+          let accountState' = accountState & balanceAccountStateL <>~ poolDeposit
+           in ( accounts & accountsMapL %~ Map.insert poolAccountCred accountState'
+              , mempty
+              )
+    delegsToClear =
+      foldMap spsDelegators $
+        Map.lookup poolId (dps ^. certPStateL . psStakePoolsL)
+    ds' = ds {dsAccounts = removeStakePoolDelegations delegsToClear accounts'}
+    chainAccountState = esChainAccountState es
+    chainAccountState' = chainAccountState {casTreasury = casTreasury chainAccountState <+> fromCompact unclaimed}
     utxoSt = lsUTxOState ls
     utxoSt' = utxoSt {utxosDeposited = utxosDeposited utxoSt <-> (pp ^. ppPoolDepositL)}
     dps' =
@@ -497,7 +399,7 @@ reapPool pool cs = cs {chainNes = nes'}
         & certPStateL .~ ps'
         & certDStateL .~ ds'
     ls' = ls {lsCertState = dps', lsUTxOState = utxoSt'}
-    es' = es {esLState = ls', esAccountState = as'}
+    es' = es {esLState = ls', esChainAccountState = chainAccountState'}
     nes' = nes {nesEs = es'}
 
 -- | = MIR
@@ -506,7 +408,7 @@ reapPool pool cs = cs {chainNes = nes'}
 mir ::
   forall era.
   EraCertState era =>
-  Credential 'Staking ->
+  Credential Staking ->
   MIRPot ->
   Coin ->
   ChainState era ->
@@ -540,12 +442,12 @@ applyMIR ::
   forall era.
   EraCertState era =>
   MIRPot ->
-  Map (Credential 'Staking) Coin ->
+  Map (Credential Staking) Coin ->
   ChainState era ->
   ChainState era
-applyMIR pot newrewards cs = cs {chainNes = nes'}
+applyMIR pot addBalances cs = cs {chainNes = nes'}
   where
-    tot = fold newrewards
+    tot = fold addBalances
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
@@ -553,17 +455,17 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     ds = dps ^. certDStateL
     ds' =
       ds
-        { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards
-        , dsIRewards = emptyInstantaneousRewards
+        { dsIRewards = emptyInstantaneousRewards
         }
+        & accountsL %~ addToBalanceAccounts (Map.map compactCoinOrError addBalances)
     dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
-    as = esAccountState es
-    as' =
+    chainAccountState = esChainAccountState es
+    chainAccountState' =
       if pot == ReservesMIR
-        then as {asReserves = asReserves as <-> tot}
-        else as {asTreasury = asTreasury as <-> tot}
-    es' = es {esAccountState = as', esLState = ls'}
+        then chainAccountState {casReserves = casReserves chainAccountState <-> tot}
+        else chainAccountState {casTreasury = casTreasury chainAccountState <-> tot}
+    es' = es {esChainAccountState = chainAccountState', esLState = ls'}
     nes' = nes {nesEs = es'}
 
 -- | = Reward Update
@@ -650,7 +552,7 @@ setPoolDistr pd cs = cs {chainNes = nes'}
 -- Set the operational certificates counter for a given stake pool.
 setOCertCounter ::
   forall era.
-  KeyHash 'BlockIssuer ->
+  KeyHash BlockIssuer ->
   Word64 ->
   ChainState era ->
   ChainState era
@@ -663,7 +565,7 @@ setOCertCounter kh n cs = cs {chainOCertIssue = counters}
 -- Record that the given stake pool (non-core node) produced a block.
 incrBlockCount ::
   forall era.
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   ChainState era ->
   ChainState era
 incrBlockCount kh cs = cs {chainNes = nes'}
@@ -682,11 +584,11 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
-  (ProtVerAtMost era 6, EraGov era) =>
+  (AtMostEra "Alonzo" era, EraGov era) =>
   Block (BHeader MockCrypto) era ->
   ChainState era ->
   ChainState era
-newEpoch b cs = cs'
+newEpoch block@(Block {blockHeader}) cs = cs'
   where
     ChainState
       { chainNes = nes
@@ -695,18 +597,17 @@ newEpoch b cs = cs'
       , chainPrevEpochNonce = pNonce
       , chainLastAppliedBlock = lab
       } = cs
-    bh = bheader b
-    bn = bheaderBlockNo . bhbody $ bh
-    sn = bheaderSlotNo . bhbody $ bh
+    bn = bheaderBlockNo $ bhbody blockHeader
+    sn = bheaderSlotNo $ bhbody blockHeader
     pp = view curPParamsEpochStateL . nesEs $ nes
-    e = epochFromSlotNo . bheaderSlotNo . bhbody . bheader $ b
+    e = epochFromSlotNo . bheaderSlotNo $ bhbody blockHeader
     nes' =
       nes
         { nesEL = e
         , nesBprev = nesBcur nes
         , nesBcur = BlocksMade Map.empty
         }
-    n = getBlockNonce b
+    n = getBlockNonce block
     cs' =
       cs
         { chainNes = nes'
@@ -714,7 +615,7 @@ newEpoch b cs = cs'
         , chainEvolvingNonce = evNonce ⭒ n
         , chainCandidateNonce = evNonce ⭒ n
         , chainPrevEpochNonce = prevHashToNonce . lastAppliedHash $ lab
-        , chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)
+        , chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash blockHeader)
         }
 
 -- | = Set Current Proposals

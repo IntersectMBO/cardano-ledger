@@ -18,9 +18,7 @@ module Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
   MultiAsset (..),
-  insert,
   insertMultiAsset,
-  lookup,
   lookupMultiAsset,
   multiAssetFromList,
   policies,
@@ -35,14 +33,10 @@ module Cardano.Ledger.Mary.Value (
   CompactForm (CompactValue),
   isMultiAssetSmallEnough,
   assetNameToTextAsHex,
-
-  -- * Deprecated
-  prune,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.BaseTypes (Inject (..), KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -73,13 +67,13 @@ import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)
 import Control.Monad (forM_, guard, unless, when)
 import Control.Monad.ST (runST)
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), object, (.=))
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
+import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
-import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.CanonicalMaps (
   canonicalMap,
   canonicalMapUnion,
@@ -95,6 +89,7 @@ import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.MemPack
+import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import qualified Data.Monoid as M (Sum (Sum, getSum))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -103,7 +98,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1)
-import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
@@ -185,6 +179,7 @@ instance DecCBOR MultiAsset where
 -- | The Value representing MultiAssets
 data MaryValue = MaryValue !Coin !MultiAsset
   deriving (Show, Generic)
+  deriving (ToJSON) via KeyValuePairs MaryValue
 
 instance Eq MaryValue where
   x == y = pointwise (==) x y
@@ -317,19 +312,24 @@ decodeMultiAsset :: (forall t. Decoder t Integer) -> Decoder s MultiAsset
 decodeMultiAsset decodeAmount = do
   ma <-
     ifDecoderVersionAtLeast
-      (natVersion @9)
-      decodeWithEnforcing
-      decodeWithPrunning
+      (natVersion @12)
+      decodeDijkstra
+      $ ifDecoderVersionAtLeast
+        (natVersion @9)
+        decodeConway
+        decodeWithPrunning
   ma <$ unless (isMultiAssetSmallEnough ma) (fail "MultiAsset is too big to compact")
   where
-    decodeWithEnforcing =
-      fmap MultiAsset $ decodeMap decCBOR $ do
-        m <- decodeMap decCBOR $ do
-          amount <- decodeAmount
-          amount <$ when (amount == 0) (fail "MultiAsset cannot contain zeros")
-        m <$ when (Map.null m) (fail "Empty Assets are not allowed")
+    decodeConway = MultiAsset <$> decodeMap decCBOR (decodeNonEmptyMap decodeNonZeroAmount)
+    decodeDijkstra = MultiAsset <$> decodeNonEmptyMap (decodeNonEmptyMap decodeNonZeroAmount)
     decodeWithPrunning =
       pruneZeroMultiAsset . MultiAsset <$> decodeMap decCBOR (decodeMap decCBOR decodeAmount)
+    decodeNonZeroAmount = do
+      amount <- decodeAmount
+      amount <$ when (amount == 0) (fail "MultiAsset cannot contain zeros")
+    decodeNonEmptyMap valueDecoder = do
+      m <- decodeMap decCBOR valueDecoder
+      m <$ when (Map.null m) (fail "Empty Assets are not allowed")
 
 instance EncCBOR MaryValue where
   encCBOR (MaryValue c ma@(MultiAsset m)) =
@@ -375,15 +375,11 @@ decodeIntegerBounded64 = do
 -- ========================================================================
 -- JSON
 
-instance ToJSON MaryValue where
-  toJSON = object . toMaryValuePairs
-  toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
-
-toMaryValuePairs :: Aeson.KeyValue e a => MaryValue -> [a]
-toMaryValuePairs (MaryValue l ps) =
-  [ "lovelace" .= l
-  , "policies" .= ps
-  ]
+instance ToKeyValuePairs MaryValue where
+  toKeyValuePairs (MaryValue l ps) =
+    [ "lovelace" .= l
+    , "policies" .= ps
+    ]
 
 instance ToJSON AssetName where
   toJSON = Aeson.String . assetNameToTextAsHex
@@ -397,7 +393,7 @@ instance ToJSONKey AssetName where
 
 instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
-    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
+    deriving (Eq, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -419,7 +415,7 @@ data CompactValue
       {-# UNPACK #-} !(CompactForm Coin) -- ada
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
-  deriving (Generic, Show, Typeable)
+  deriving (Generic, Show)
 
 -- | We need to manually pack/unpack `CompactForm Coin` here because its MemPack instance can't be
 -- used due to the requirement of it being compatible with the first case of
@@ -631,7 +627,7 @@ to v@(MaryValue _ ma) = do
              in BA.copyByteArray
                   byteArray
                   (fromIntegral offset)
-                  (sbsToByteArray pidBytes)
+                  (byteArrayFromShortByteString pidBytes)
                   0
                   pidSize
 
@@ -642,10 +638,10 @@ to v@(MaryValue _ ma) = do
              in BA.copyByteArray
                   byteArray
                   (fromIntegral offset)
-                  (sbsToByteArray anameBytes)
+                  (byteArrayFromShortByteString anameBytes)
                   0
                   anameLen
-        byteArrayToSbs <$> BA.unsafeFreezeByteArray byteArray
+        byteArrayToShortByteString <$> BA.unsafeFreezeByteArray byteArray
   where
     (ada, triples) = gettriples v
     numTriples = length triples
@@ -653,7 +649,7 @@ to v@(MaryValue _ ma) = do
     -- abcRegionSize is the combined size of regions A, B, and C
     abcRegionSize = numTriples * 12
 
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy ADDRHASH))
+    pidSize = fromIntegral (Hash.hashSize (Proxy :: Proxy ADDRHASH))
 
     -- pids is the collection of all distinct pids
     pids = Set.fromList $ (\(pid, _, _) -> pid) <$> triples
@@ -716,7 +712,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     abcRegionSize = len * 12
 
     numPids = Set.size . Set.fromList $ (\(pid, _, _) -> pid) <$> xs
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy ADDRHASH))
+    pidSize = fromIntegral (Hash.hashSize (Proxy :: Proxy ADDRHASH))
     pidBlockSize = numPids * pidSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
@@ -731,7 +727,7 @@ from (CompactValueMultiAsset c numAssets rep) =
   where
     n = fromIntegral numAssets
 
-    ba = sbsToByteArray rep
+    ba = byteArrayFromShortByteString rep
 
     getTripleForIndex :: Int -> (Word16, Word16, Word64)
     getTripleForIndex i =
@@ -775,7 +771,7 @@ from (CompactValueMultiAsset c numAssets rep) =
               readShortByteString
                 rep
                 (fromIntegral p)
-                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH]))
+                (fromIntegral $ Hash.hashSize ([] :: [ADDRHASH]))
       , AssetName $ readShortByteString rep (fromIntegral a) (assetLen a)
       , fromIntegral i
       )
@@ -791,15 +787,9 @@ nubOrd =
       | otherwise =
           let s' = Set.insert a s in s' `seq` a : loop s' as
 
-sbsToByteArray :: ShortByteString -> BA.ByteArray
-sbsToByteArray (SBS bah) = BA.ByteArray bah
-
-byteArrayToSbs :: BA.ByteArray -> ShortByteString
-byteArrayToSbs (BA.ByteArray bah) = SBS bah
-
 readShortByteString :: ShortByteString -> Int -> Int -> ShortByteString
 readShortByteString sbs start len =
-  byteArrayToSbs $ BA.cloneByteArray (sbsToByteArray sbs) start len
+  byteArrayToShortByteString $ BA.cloneByteArray (byteArrayFromShortByteString sbs) start len
 
 -- ========================================================================
 -- Operations on Values
@@ -811,29 +801,11 @@ readShortByteString sbs start len =
 policies :: MultiAsset -> Set PolicyID
 policies (MultiAsset m) = Map.keysSet m
 
-lookup :: PolicyID -> AssetName -> MaryValue -> Integer
-lookup = lookupMultiAsset
-{-# DEPRECATED lookup "In favor of `lookupMultiAsset`" #-}
-
 lookupMultiAsset :: PolicyID -> AssetName -> MaryValue -> Integer
 lookupMultiAsset pid aid (MaryValue _ (MultiAsset m)) =
   case Map.lookup pid m of
     Nothing -> 0
     Just m2 -> Map.findWithDefault 0 aid m2
-
--- | insert comb policy asset n v,
---   if comb = \ old new -> old, the integer in the MultiAsset is prefered over n
---   if comb = \ old new -> new, then n is prefered over the integer in the MultiAsset
---   if (comb old new) == 0, then that value should not be stored in the MultiAsset
-insert ::
-  (Integer -> Integer -> Integer) ->
-  PolicyID ->
-  AssetName ->
-  Integer ->
-  MultiAsset ->
-  MultiAsset
-insert = insertMultiAsset
-{-# DEPRECATED insert "In favor of `insertMultiAsset`" #-}
 
 -- | insertMultiAsset comb policy asset n v,
 --   if comb = \ old new -> old, the integer in the MultiAsset is prefered over n
@@ -879,14 +851,6 @@ insertMultiAsset combine pid aid new (MultiAsset m1) =
         )
 
 -- ========================================================
-
--- | Remove 0 assets from a `MultiAsset`
-prune ::
-  Map PolicyID (Map AssetName Integer) ->
-  Map PolicyID (Map AssetName Integer)
-prune assets =
-  Map.filter (not . null) $ Map.filter (/= 0) <$> assets
-{-# DEPRECATED prune "In favor of `pruneZeroMultiAsset`" #-}
 
 -- | Remove all assets with that have zero amount specified
 pruneZeroMultiAsset :: MultiAsset -> MultiAsset

@@ -1,55 +1,73 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (nameTxCert) where
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (
+  ConwayCertExecContext (..),
+) where
 
-import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
-import Constrained
-import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg (nameDelegCert)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert (nameGovCert)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool (namePoolCert)
-import Test.Cardano.Ledger.Constrained.Conway
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+import Cardano.Ledger.Address (AccountAddress)
+import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (Era)
+import Cardano.Ledger.Conway.Governance (VotingProcedures)
+import Control.DeepSeq (NFData)
+import Data.Map.Strict (Map)
+import GHC.Generics (Generic)
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr)
+import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), runFromAgdaFunction)
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 
-instance
-  IsConwayUniv fn =>
-  ExecSpecRule fn "CERT" ConwayEra
-  where
-  type ExecContext fn "CERT" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
+data ConwayCertExecContext era
+  = ConwayCertExecContext
+  { ccecWithdrawals :: !(Map AccountAddress Coin)
+  , ccecVotes :: !(VotingProcedures era)
+  }
+  deriving (Generic, Eq, Show)
 
-  genExecContext = do
-    univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ 5)
-    pure (univ, ccec)
+instance Era era => NFData (ConwayCertExecContext era)
 
-  environmentSpec (univ, _) = certEnvSpec @fn @ConwayEra univ
+instance Inject (ConwayCertExecContext era) (Map AccountAddress Coin) where
+  inject = ccecWithdrawals
 
-  stateSpec (univ, ccec) _ =
-    certStateSpec @ConwayEra @fn univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
+  inject = ccecVotes
 
-  signalSpec (univ, _) env state = conwayTxCertSpec @fn @ConwayEra univ env state
+instance Era era => Arbitrary (ConwayCertExecContext era) where
+  arbitrary =
+    ConwayCertExecContext
+      <$> arbitrary
+      <*> arbitrary
 
-  runAgdaRule env st sig =
-    unComputationResult $
-      Agda.certStep env st sig
+instance Era era => EncCBOR (ConwayCertExecContext era) where
+  encCBOR x@(ConwayCertExecContext _ _) =
+    let ConwayCertExecContext {..} = x
+     in encode $
+          Rec ConwayCertExecContext
+            !> To ccecWithdrawals
+            !> To ccecVotes
 
-  classOf = Just . nameTxCert
+instance Era era => DecCBOR (ConwayCertExecContext era) where
+  decCBOR =
+    decode $
+      RecD ConwayCertExecContext
+        <! From
+        <! From
 
-nameTxCert :: ConwayTxCert ConwayEra -> String
-nameTxCert (ConwayTxCertDeleg x) = nameDelegCert x
-nameTxCert (ConwayTxCertPool x) = namePoolCert x
-nameTxCert (ConwayTxCertGov x) = nameGovCert x
+instance Era era => ToExpr (ConwayCertExecContext era)
+
+instance ExecSpecRule "CERT" ConwayEra where
+  type ExecContext "CERT" ConwayEra = ConwayCertExecContext ConwayEra
+
+  runAgdaRule = runFromAgdaFunction Agda.certStep

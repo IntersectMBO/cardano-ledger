@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.Validation.Endorsement (
   Environment (..),
@@ -12,8 +13,7 @@ module Cardano.Chain.Update.Validation.Endorsement (
   CandidateProtocolUpdate (..),
   register,
   Error (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
@@ -141,7 +141,7 @@ instance DecCBOR Error where
     tag <- decodeWord8
     case tag of
       0 -> MultipleProposalsForProtocolVersion <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "Endorsement.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Endorsement.Error" $ fromIntegral @Word8 @Word tag
 
 -- | Register an endorsement.
 --

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,7 +14,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Data.OMap.Strict (
-  HasOKey (okeyL),
+  HasOKey (toOKey),
   OMap (Empty, (:<|:), (:|>:)),
   null,
   size,
@@ -45,8 +46,7 @@ module Data.OMap.Strict (
   adjust,
   filter,
   decodeOMap,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR,
@@ -61,6 +61,7 @@ import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import Data.Default (Default (..))
 import Data.Foldable qualified as F
+import Data.Functor ((<&>))
 import Data.Map.Strict qualified as Map
 import Data.MapExtras qualified as MapE
 import Data.Maybe (isJust)
@@ -69,7 +70,6 @@ import Data.Set qualified as Set
 import Data.Typeable (Typeable)
 import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
-import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (elem, filter, lookup, null, seq)
 
@@ -78,7 +78,7 @@ import Prelude hiding (elem, filter, lookup, null, seq)
 --
 -- For a type @V@, defines a lens from @V@ to and Ord type @K@.
 class Ord k => HasOKey k v | v -> k where
-  okeyL :: Lens' v k
+  toOKey :: v -> k
 
 -- | A general-purpose finite, insert-ordered, map that is strict in its
 -- keys and values.
@@ -130,7 +130,7 @@ size (OMap sseq _) = SSeq.length sseq
 -- | \(O(1)\). Strict in its arguments.
 singleton :: HasOKey k v => v -> OMap k v
 singleton !v =
-  let k = v ^. okeyL
+  let k = toOKey v
    in OMap (SSeq.singleton k) (Map.singleton k v)
 
 -- | \(O(\log n)\). If the key is not present 'lookup' returns
@@ -148,7 +148,7 @@ cons v omap@(OMap sseq kv)
   | Map.member k kv = omap
   | otherwise = OMap (k SSeq.<| sseq) (Map.insert k v kv)
   where
-    k = v ^. okeyL
+    k = toOKey v
 
 -- | \(O(\log n)\). Checks membership before cons'ing.
 (<|) :: HasOKey k v => v -> OMap k v -> OMap k v
@@ -163,7 +163,7 @@ cons' v (OMap sseq kv)
   | Map.member k kv = OMap sseq kv'
   | otherwise = OMap (k SSeq.<| sseq) kv'
   where
-    k = v ^. okeyL
+    k = toOKey v
     kv' = Map.insert k v kv
 
 -- | \(O(\log n)\). Checks membership before cons'ing. Overwrites a
@@ -181,7 +181,7 @@ snoc omap@(OMap sseq kv) v
   | Map.member k kv = omap
   | otherwise = OMap (sseq SSeq.|> k) (Map.insert k v kv)
   where
-    k = v ^. okeyL
+    k = toOKey v
 
 -- | \(O(\log n)\). Checks membership before snoc'ing.
 (|>) :: HasOKey k v => OMap k v -> v -> OMap k v
@@ -196,7 +196,7 @@ snoc' (OMap sseq kv) v
   | Map.member k kv = OMap sseq kv'
   | otherwise = OMap (sseq SSeq.|> k) kv'
   where
-    k = v ^. okeyL
+    k = toOKey v
     kv' = Map.insert k v kv
 
 -- | \(O(\log n)\). Checks membership before snoc'ing. Overwrites a
@@ -238,7 +238,7 @@ fromFoldableDuplicates = F.foldl' snoc_ (Set.empty, empty)
   where
     snoc_ :: (HasOKey k v, Ord v) => (Set.Set v, OMap k v) -> v -> (Set.Set v, OMap k v)
     snoc_ (duplicates, omap@(OMap sseq kv)) v =
-      let k = v ^. okeyL
+      let k = toOKey v
        in if Map.member k kv
             then (Set.insert v duplicates, omap)
             else (duplicates, OMap (sseq SSeq.|> k) (Map.insert k v kv))
@@ -269,7 +269,7 @@ member k (OMap _sseq kv) = Map.member k kv
 
 -- | \(O(\log n)\). Value membership check.
 elem :: (HasOKey k v, Eq v) => v -> OMap k v -> Bool
-elem v = (Just v ==) . lookup (v ^. okeyL)
+elem v = (Just v ==) . lookup (toOKey v)
 
 -- | \(O(n)\). Given a `Set` of @k@s, and an `OMap` @k@ @v@ return
 -- a pair of `Map` and `OMap` where the @k@s in the `Set` have been
@@ -302,14 +302,14 @@ extractKeys ks (OMap sseq kv) =
 --
 -- Examples:
 --
+-- >>> :set -XFlexibleInstances -XMultiParamTypeClasses
 -- >>> import Data.OMap.Strict
--- >>> import Lens.Micro
--- >>> instance HasOKey Int (Int, Char) where okeyL = _1
+-- >>> instance HasOKey Int (Int, Char) where toOKey = fst
 -- >>> let m = fromFoldable $ zip [1,2] ['a','b'] :: OMap Int (Int, Char)
 -- >>> m
 -- StrictSeq {fromStrict = fromList [(1,(1,'a')),(2,(2,'b'))]}
 -- >>> let adjustingFn (k, v) = (k, succ v) -- Changes the value
--- >>> let overwritingAdjustingFn (k,v) = (succ k, v) -- Changes the `okeyL`.
+-- >>> let overwritingAdjustingFn (k,v) = (succ k, v) -- Modify the key.
 -- >>> adjust adjustingFn 1 m
 -- StrictSeq {fromStrict = fromList [(1,(1,'b')),(2,(2,'b'))]}
 -- >>> adjust overwritingAdjustingFn  1 m
@@ -320,7 +320,7 @@ adjust f k omap@(OMap sseq kv) =
     Nothing -> omap
     Just v ->
       let v' = f v
-          k' = v' ^. okeyL
+          k' = toOKey v'
        in if k' == k
             then OMap sseq (Map.insert k v' kv)
             else
@@ -360,6 +360,7 @@ pattern xs :|>: x <- (unsnoc -> Just (xs, x))
 infixl 5 :|>:
 
 {-# COMPLETE Empty, (:|>:) #-}
+
 {-# COMPLETE Empty, (:<|:) #-}
 
 -- | \( O(n \log m) \). For every uncons-ed element from the sequence on the right,
@@ -419,7 +420,7 @@ instance Ord k => Foldable (OMap k) where
   null = Map.null . omMap
   {-# INLINE null #-}
 
-instance (Typeable k, EncCBOR v, Ord k) => EncCBOR (OMap k v) where
+instance (EncCBOR v, Ord k) => EncCBOR (OMap k v) where
   encCBOR omap = encodeStrictSeq encCBOR (toStrictSeq omap)
 
 instance (Typeable k, HasOKey k v, DecCBOR v, Eq v) => DecCBOR (OMap k v) where

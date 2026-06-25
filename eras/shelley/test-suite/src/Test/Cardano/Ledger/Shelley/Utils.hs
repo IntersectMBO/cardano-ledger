@@ -37,8 +37,7 @@ module Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   Split (..),
   module CoreUtils,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (hashToBytes)
@@ -66,7 +65,7 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromOutputVRF,
  )
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock)
@@ -86,7 +85,6 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
@@ -136,11 +134,7 @@ instance Split Coin where
     | m <= 0 = error "must split coins into positive parts"
     | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
-type GenesisKeyPair c = KeyPair 'Genesis
-
-instance EncCBOR RawSeed where
-  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
-  encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
+type GenesisKeyPair c = KeyPair GenesisRole
 
 -- | Construct a seed from a bunch of Word64s
 --
@@ -272,4 +266,4 @@ mkHash i = coerce (hashWithEncoder @h shelleyProtVer encCBOR i)
 
 getBlockNonce :: forall era. Block (BHeader MockCrypto) era -> Nonce
 getBlockNonce =
-  mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader
+  mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . blockHeader

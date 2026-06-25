@@ -2,8 +2,7 @@
 
 module Test.Cardano.Crypto.Signing.Redeem (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto.Signing (SignTag (..))
 import Cardano.Crypto.Signing.Redeem (
@@ -46,9 +45,9 @@ prop_redeemSign = property $ do
   (vk, sk) <- forAll genRedeemKeypair
   a <- forAll genData
 
-  assert $
-    verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk a $
-      redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
+  assert
+    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk a
+    $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when the wrong 'RedeemVerificationKey' is used
 prop_redeemSignDifferentKey :: Property

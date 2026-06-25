@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: small-steps
-version: 1.1.1.0
+version: 1.1.3.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -39,7 +39,8 @@ library
 
   build-depends:
     aeson,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
+    cardano-data >=1.3,
     cardano-strict-containers,
     containers,
     data-default,
@@ -74,17 +75,17 @@ library testlib
 
   build-depends:
     QuickCheck,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     cardano-ledger-binary:testlib >=1.4,
     cardano-strict-containers,
     deepseq,
     hedgehog >=1.0.4,
+    hspec,
     microlens,
     microlens-th,
     mtl,
     nothunks,
     small-steps >=1.0,
-    tasty-hunit,
     transformers >=0.5,
 
 test-suite tests

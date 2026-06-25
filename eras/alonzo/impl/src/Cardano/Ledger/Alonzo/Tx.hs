@@ -7,9 +7,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -40,32 +41,28 @@ module Cardano.Ledger.Alonzo.Tx (
   ScriptIntegrity (ScriptIntegrity),
   ScriptIntegrityHash,
   -- Figure 3
-  AlonzoTx (AlonzoTx, body, wits, isValid, auxiliaryData),
+  AlonzoTx (AlonzoTx, atBody, atWits, atIsValid, atAuxData),
+  Tx (..),
   AlonzoEraTx (..),
   mkBasicAlonzoTx,
   bodyAlonzoTxL,
   witsAlonzoTxL,
   auxDataAlonzoTxL,
   sizeAlonzoTxF,
-  wireSizeAlonzoTxF,
   isValidAlonzoTxL,
-  txdats',
-  txscripts',
   txrdmrs,
-  AlonzoTxBody (..),
+  TxBody (AlonzoTxBody),
   -- Figure 4
   totExUnits,
   alonzoMinFeeTx,
   --  Figure 5
   Shelley.txouts,
-  -- Segwit
-  alonzoSegwitTx,
   -- Other
   toCBORForSizeComputation,
   toCBORForMempoolSubmission,
-  alonzoEqTxRaw,
-)
-where
+  alonzoTxEqRaw,
+  mkScriptIntegrity,
+) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -77,16 +74,16 @@ import Cardano.Ledger.Alonzo.PParams (
   ppPricesL,
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
+  AlonzoEraScript (..),
   CostModel,
   ExUnits (..),
+  plutusScriptLanguage,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
-  AlonzoTxBody (..),
-  AlonzoTxBodyUpgradeError,
   ScriptIntegrityHash,
+  TxBody (AlonzoTxBody),
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
@@ -97,43 +94,47 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
  )
+import Cardano.Ledger.BaseTypes (integralToBounded)
 import Cardano.Ledger.Binary (
-  Annotator (..),
+  Annotator,
   DecCBOR (..),
   EncCBOR (encCBOR),
   Encoding,
   ToCBOR (..),
-  decodeNullMaybe,
   decodeNullStrictMaybe,
   encodeListLen,
-  encodeNullMaybe,
+  encodeNullStrictMaybe,
   serialize,
   serialize',
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
+import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
+import Cardano.Ledger.State (EraUTxO, ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
-import Control.Arrow (left)
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
-import Data.Maybe.Strict (
-  StrictMaybe (..),
-  maybeToStrictMaybe,
-  strictMaybeToMaybe,
- )
+import Data.Int (Int64)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Lens.Micro hiding (set)
-import NoThunks.Class (NoThunks)
+import NoThunks.Class (InspectHeap (..), NoThunks)
 
 -- ===================================================
 
@@ -143,37 +144,36 @@ newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON)
 
-data AlonzoTx era = AlonzoTx
-  { body :: !(TxBody era)
-  , wits :: !(TxWits era)
-  , isValid :: !IsValid
-  , auxiliaryData :: !(StrictMaybe (TxAuxData era))
-  }
-  deriving (Generic)
+data AlonzoTx l era where
+  AlonzoTx ::
+    { atBody :: !(TxBody TopTx era)
+    , atWits :: !(TxWits era)
+    , atIsValid :: !IsValid
+    , atAuxData :: !(StrictMaybe (TxAuxData era))
+    } ->
+    AlonzoTx TopTx era
 
-newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
-  deriving (Show)
+instance HasEraTxLevel Tx AlonzoEra where
+  toSTxLevel (MkAlonzoTx AlonzoTx {}) = STopTxOnly @AlonzoEra
 
 instance EraTx AlonzoEra where
-  type Tx AlonzoEra = AlonzoTx AlonzoEra
-  type TxUpgradeError AlonzoEra = AlonzoTxUpgradeError
+  newtype Tx l AlonzoEra = MkAlonzoTx {unAlonzoTx :: AlonzoTx l AlonzoEra}
+    deriving newtype (Eq, NFData, EncCBOR, ToCBOR, NoThunks, Show)
+    deriving (Generic)
 
-  mkBasicTx = mkBasicAlonzoTx
+  mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
 
-  bodyTxL = bodyAlonzoTxL
+  bodyTxL = alonzoTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsAlonzoTxL
+  witsTxL = alonzoTxL . witsAlonzoTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataAlonzoTxL
+  auxDataTxL = alonzoTxL . auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeAlonzoTxF
+  sizeTxF = alonzoTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
-
-  wireSizeTxF = wireSizeAlonzoTxF
-  {-# INLINE wireSizeTxF #-}
 
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
@@ -181,95 +181,112 @@ instance EraTx AlonzoEra where
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
   {-# INLINE getMinFeeTx #-}
 
-  upgradeTx (ShelleyTx body wits aux) =
-    AlonzoTx
-      <$> left ATUEBodyUpgradeError (upgradeTxBody body)
-      <*> pure (upgradeTxWits wits)
-      <*> pure (IsValid True)
-      <*> pure (fmap upgradeTxAuxData aux)
+alonzoTxEqRaw ::
+  ( AlonzoEraTx era
+  , STxLevel l era ~ STxTopLevel l era
+  ) =>
+  Tx l era -> Tx l era -> Bool
+alonzoTxEqRaw tx1 tx2 =
+  withTopTxLevelOnly tx1 $ \tx1' ->
+    withTopTxLevelOnly tx2 $ \tx2' ->
+      shelleyTxEqRaw tx1 tx2 && (tx1' ^. isValidTxL == tx2' ^. isValidTxL)
 
-instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
-  eqRaw = alonzoEqTxRaw
+instance EqRaw (Tx l AlonzoEra) where
+  eqRaw = alonzoTxEqRaw
+
+alonzoTxL :: Lens' (Tx l AlonzoEra) (AlonzoTx l AlonzoEra)
+alonzoTxL = lens unAlonzoTx $ const MkAlonzoTx
 
 class
   (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era, AlonzoEraScript era) =>
   AlonzoEraTx era
   where
-  isValidTxL :: Lens' (Tx era) IsValid
+  isValidTxL :: Lens' (Tx TopTx era) IsValid
+
+instance Typeable l => DecCBOR (Annotator (Tx l AlonzoEra)) where
+  decCBOR = fmap MkAlonzoTx <$> decCBOR
 
 instance AlonzoEraTx AlonzoEra where
-  isValidTxL = isValidAlonzoTxL
+  isValidTxL = alonzoTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-mkBasicAlonzoTx :: Monoid (TxWits era) => TxBody era -> AlonzoTx era
-mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
+mkBasicAlonzoTx ::
+  ( EraTx era
+  , STxLevel l era ~ STxTopLevel l era
+  ) =>
+  TxBody l era -> AlonzoTx l era
+mkBasicAlonzoTx txBody =
+  case toSTxLevel txBody of
+    STopTxOnly ->
+      AlonzoTx txBody mempty (IsValid True) SNothing
 
 -- | `TxBody` setter and getter for `AlonzoTx`.
-bodyAlonzoTxL :: Lens' (AlonzoTx era) (TxBody era)
-bodyAlonzoTxL = lens body (\tx txBody -> tx {body = txBody})
+bodyAlonzoTxL :: Lens' (AlonzoTx l era) (TxBody l era)
+bodyAlonzoTxL =
+  lens (\AlonzoTx {atBody} -> atBody) $ \tx txBody ->
+    case tx of
+      AlonzoTx {} -> tx {atBody = txBody}
 {-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `TxWits` setter and getter for `AlonzoTx`.
-witsAlonzoTxL :: Lens' (AlonzoTx era) (TxWits era)
-witsAlonzoTxL = lens wits (\tx txWits -> tx {wits = txWits})
+witsAlonzoTxL :: Lens' (AlonzoTx l era) (TxWits era)
+witsAlonzoTxL =
+  lens (\AlonzoTx {atWits} -> atWits) $ \tx txWits ->
+    case tx of
+      AlonzoTx {} -> tx {atWits = txWits}
 {-# INLINEABLE witsAlonzoTxL #-}
 
 -- | `TxAuxData` setter and getter for `AlonzoTx`.
-auxDataAlonzoTxL :: Lens' (AlonzoTx era) (StrictMaybe (TxAuxData era))
-auxDataAlonzoTxL = lens auxiliaryData (\tx txTxAuxData -> tx {auxiliaryData = txTxAuxData})
+auxDataAlonzoTxL :: Lens' (AlonzoTx l era) (StrictMaybe (TxAuxData era))
+auxDataAlonzoTxL =
+  lens (\AlonzoTx {atAuxData} -> atAuxData) $ \tx txAuxData ->
+    case tx of
+      AlonzoTx {} -> tx {atAuxData = txAuxData}
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Integer
+sizeAlonzoTxF :: forall era l. (HasCallStack, EraTx era) => SimpleGetter (AlonzoTx l era) Word32
 sizeAlonzoTxF =
   to $
-    fromIntegral
+    errorFail
+      . integralToBounded @Int64 @Word32
       . LBS.length
       . serialize (eraProtVerLow @era)
       . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
--- | txsize computes the length of the serialised bytes (actual size)
-wireSizeAlonzoTxF :: forall era. EraTx era => SimpleGetter (AlonzoTx era) Word32
-wireSizeAlonzoTxF =
-  to $
-    checkedFromIntegral
-      . LBS.length
-      . serialize (eraProtVerLow @era)
-      . encCBOR
-  where
-    checkedFromIntegral n =
-      if n <= fromIntegral (maxBound :: Word32)
-        then fromIntegral n
-        else error $ "Impossible: Size of the transaction is too big: " ++ show n
-{-# INLINEABLE wireSizeAlonzoTxF #-}
-
-isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
-isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
+isValidAlonzoTxL :: Lens' (AlonzoTx l era) IsValid
+isValidAlonzoTxL =
+  lens (\AlonzoTx {atIsValid} -> atIsValid) $ \tx txIsValid ->
+    case tx of
+      AlonzoTx {} -> tx {atIsValid = txIsValid}
 {-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
-  (Era era, Eq (TxBody era), Eq (TxWits era), Eq (TxAuxData era)) => Eq (AlonzoTx era)
+  (Era era, Eq (TxBody l era), Eq (TxWits era), Eq (TxAuxData era)) => Eq (AlonzoTx l era)
 
 deriving instance
-  (Era era, Show (TxBody era), Show (TxAuxData era), Show (Script era), Show (TxWits era)) =>
-  Show (AlonzoTx era)
+  (Era era, Show (TxBody l era), Show (TxAuxData era), Show (Script era), Show (TxWits era)) =>
+  Show (AlonzoTx l era)
 
-instance
-  ( Era era
-  , NoThunks (TxWits era)
-  , NoThunks (TxAuxData era)
-  , NoThunks (TxBody era)
-  ) =>
-  NoThunks (AlonzoTx era)
+deriving via
+  InspectHeap (AlonzoTx l era)
+  instance
+    (Typeable era, Typeable l) => NoThunks (AlonzoTx l era)
 
 instance
   ( Era era
   , NFData (TxWits era)
   , NFData (TxAuxData era)
-  , NFData (TxBody era)
+  , NFData (TxBody l era)
   ) =>
-  NFData (AlonzoTx era)
+  NFData (AlonzoTx l era)
+  where
+  rnf AlonzoTx {..} =
+    atBody `deepseq`
+      atWits `deepseq`
+        atAuxData `deepseq`
+          rnf atIsValid
 
 -- | A ScriptIntegrityHash is the hash of three things.  The first two come
 -- from the witnesses and the last comes from the Protocol Parameters.
@@ -278,7 +295,7 @@ data ScriptIntegrity era
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
       !(Set LangDepView) -- From the Protocol parameters
-  deriving (Eq, Generic, Typeable)
+  deriving (Eq, Generic)
 
 deriving instance AlonzoEraScript era => Show (ScriptIntegrity era)
 
@@ -297,17 +314,32 @@ instance
   Era era =>
   HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity
 
-hashScriptIntegrity ::
-  forall era.
-  AlonzoEraScript era =>
-  Set LangDepView ->
-  Redeemers era ->
-  TxDats era ->
-  StrictMaybe ScriptIntegrityHash
-hashScriptIntegrity langViews rdmrs dats =
-  if null (rdmrs ^. unRedeemersL) && null langViews && null (dats ^. unTxDatsL)
-    then SNothing
-    else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
+hashScriptIntegrity :: Era era => ScriptIntegrity era -> ScriptIntegrityHash
+hashScriptIntegrity = hashAnnotated
+
+mkScriptIntegrity ::
+  ( AlonzoEraPParams era
+  , AlonzoEraTxWits era
+  , EraUTxO era
+  ) =>
+  PParams era ->
+  Tx l era ->
+  ScriptsProvided era ->
+  Set ScriptHash ->
+  StrictMaybe (ScriptIntegrity era)
+mkScriptIntegrity pp tx (ScriptsProvided scriptsProvided) scriptsNeeded
+  | null (txRedeemers ^. unRedeemersL)
+  , null langViews
+  , null (txDats ^. unTxDatsL) =
+      SNothing
+  | otherwise = SJust $ ScriptIntegrity txRedeemers txDats langViews
+  where
+    scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
+    langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
+    langViews = Set.map (getLanguageView pp) langs
+    txWits = tx ^. witsTxL
+    txRedeemers = txWits ^. rdmrsTxWitsL
+    txDats = txWits ^. datsTxWitsL
 
 -- ===============================================================
 -- From the specification, Figure 4 "Functions related to fees"
@@ -317,17 +349,17 @@ hashScriptIntegrity langViews rdmrs dats =
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
 toCBORForSizeComputation ::
-  ( EncCBOR (TxBody era)
+  ( EncCBOR (TxBody l era)
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
-  AlonzoTx era ->
+  AlonzoTx l era ->
   Encoding
-toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
+toCBORForSizeComputation AlonzoTx {atBody, atWits, atAuxData} =
   encodeListLen 3
-    <> encCBOR body
-    <> encCBOR wits
-    <> encodeNullMaybe encCBOR (strictMaybeToMaybe auxiliaryData)
+    <> encCBOR atBody
+    <> encCBOR atWits
+    <> encodeNullStrictMaybe encCBOR atAuxData
 
 alonzoMinFeeTx ::
   ( EraTx era
@@ -335,41 +367,24 @@ alonzoMinFeeTx ::
   , AlonzoEraPParams era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Coin
 alonzoMinFeeTx pp tx =
-  (tx ^. sizeTxF <×> pp ^. ppMinFeeAL)
-    <+> (pp ^. ppMinFeeBL)
+  (tx ^. sizeTxF <×> (fromCompact . unCoinPerByte) (pp ^. ppTxFeePerByteL))
+    <+> (pp ^. ppTxFeeFixedL)
     <+> txscriptfee (pp ^. ppPricesL) allExunits
   where
     allExunits = totExUnits tx
 
 totExUnits ::
   (EraTx era, AlonzoEraTxWits era) =>
-  Tx era ->
+  Tx l era ->
   ExUnits
 totExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
 
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
-
--- | Construct an annotated Alonzo style transaction.
-alonzoSegwitTx ::
-  AlonzoEraTx era =>
-  Annotator (TxBody era) ->
-  Annotator (TxWits era) ->
-  IsValid ->
-  Maybe (Annotator (TxAuxData era)) ->
-  Annotator (Tx era)
-alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
-  let txBody = runAnnotator txBodyAnn bytes
-      txWits = runAnnotator txWitsAnn bytes
-      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
-   in mkBasicTx txBody
-        & witsTxL .~ txWits
-        & auxDataTxL .~ txAuxData
-        & isValidTxL .~ isValid
 
 --------------------------------------------------------------------------------
 -- Mempool Serialisation
@@ -391,81 +406,61 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 -- computing the transaction size (which omits the `IsValid` field for
 -- compatibility with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
-  ( EncCBOR (TxBody era)
+  ( EncCBOR (TxBody l era)
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
-  AlonzoTx era ->
+  AlonzoTx l era ->
   Encoding
 toCBORForMempoolSubmission
-  AlonzoTx {body, wits, auxiliaryData, isValid} =
+  AlonzoTx {atBody, atWits, atAuxData, atIsValid} =
     encode $
       Rec AlonzoTx
-        !> To body
-        !> To wits
-        !> To isValid
-        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) auxiliaryData
+        !> To atBody
+        !> To atWits
+        !> To atIsValid
+        !> E (encodeNullStrictMaybe encCBOR) atAuxData
 
 instance
   ( Era era
-  , EncCBOR (TxBody era)
+  , EncCBOR (TxBody l era)
   , EncCBOR (TxAuxData era)
   , EncCBOR (TxWits era)
   ) =>
-  EncCBOR (AlonzoTx era)
+  EncCBOR (AlonzoTx l era)
   where
   encCBOR = toCBORForMempoolSubmission
 
 instance
   ( Era era
-  , EncCBOR (TxBody era)
+  , EncCBOR (TxBody l era)
   , EncCBOR (TxAuxData era)
   , EncCBOR (TxWits era)
+  , Typeable l
   ) =>
-  ToCBOR (AlonzoTx era)
+  ToCBOR (AlonzoTx l era)
   where
   toCBOR = toEraCBOR @era
 
 instance
-  ( Typeable era
-  , Typeable (TxBody era)
+  ( Typeable l
+  , Era era
+  , Typeable (TxBody l era)
   , Typeable (TxWits era)
   , Typeable (TxAuxData era)
-  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxBody l era))
   , DecCBOR (Annotator (TxWits era))
   , DecCBOR (Annotator (TxAuxData era))
   ) =>
-  DecCBOR (Annotator (AlonzoTx era))
+  DecCBOR (Annotator (AlonzoTx l era))
   where
   decCBOR =
-    decode $
-      Ann (RecD AlonzoTx)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
+    withSTxTopLevelM @l @era $ \case
+      STopTxOnly ->
+        decode $
+          Ann (RecD AlonzoTx)
+            <*! From
+            <*! From
+            <*! Ann From
+            <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
   {-# INLINE decCBOR #-}
-
-instance
-  ( Typeable era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (AlonzoTx era)
-  where
-  decCBOR =
-    decode $
-      RecD AlonzoTx
-        <! From
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
-  {-# INLINE decCBOR #-}
-
-alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool
-alonzoEqTxRaw tx1 tx2 =
-  shelleyEqTxRaw tx1 tx2 && (tx1 ^. isValidTxL == tx2 ^. isValidTxL)

@@ -5,14 +5,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.SoftwareVersion (
   SoftwareVersion (..),
   SoftwareVersionError (..),
   NumSoftwareVersion,
   checkSoftwareVersion,
-)
-where
+) where
 
 import Cardano.Chain.Update.ApplicationName
 import Cardano.Ledger.Binary (
@@ -59,17 +59,16 @@ instance ToJSON SoftwareVersion
 
 instance ToCBOR SoftwareVersion where
   toCBOR = toByronCBOR
+  encodedSizeExpr f sv =
+    1
+      + encodedSizeExpr f (svAppName <$> sv)
+      + encodedSizeExpr f (svNumber <$> sv)
 
 instance FromCBOR SoftwareVersion where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR SoftwareVersion where
   encCBOR sv = encodeListLen 2 <> encCBOR (svAppName sv) <> encCBOR (svNumber sv)
-
-  encodedSizeExpr f sv =
-    1
-      + encodedSizeExpr f (svAppName <$> sv)
-      + encodedSizeExpr f (svNumber <$> sv)
 
 instance DecCBOR SoftwareVersion where
   decCBOR = do
@@ -98,7 +97,7 @@ instance DecCBOR SoftwareVersionError where
     tag <- decodeWord8
     case tag of
       0 -> SoftwareVersionApplicationNameError <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" $ fromIntegral @Word8 @Word tag
 
 instance B.Buildable SoftwareVersionError where
   build = \case

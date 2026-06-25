@@ -21,8 +21,7 @@ module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Utxo,
   module Cardano.Ledger.Conway.Rules.Utxos,
   module Cardano.Ledger.Conway.Rules.Utxow,
-)
-where
+) where
 
 import Cardano.Ledger.Conway.Core (EraRuleEvent, InjectRuleEvent (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -50,4 +49,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
 type instance EraRuleEvent "TICK" ConwayEra = ShelleyTickEvent ConwayEra
 
 instance InjectRuleEvent "TICK" ConwayEpochEvent ConwayEra where
-  injectEvent = TickNewEpochEvent . EpochEvent
+  injectEvent = TickNewEpochEvent . injectEvent
+
+instance InjectRuleEvent "TICK" ConwayHardForkEvent ConwayEra where
+  injectEvent = TickNewEpochEvent . injectEvent

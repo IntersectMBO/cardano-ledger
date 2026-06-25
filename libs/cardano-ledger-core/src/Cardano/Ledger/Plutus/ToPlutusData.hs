@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,13 +13,16 @@ import Cardano.Ledger.BaseTypes (
   HasZero,
   NonNegativeInterval,
   NonZero (..),
+  Nonce,
+  PositiveInterval,
   ProtVer (..),
   UnitInterval,
   nonZero,
   (%.),
  )
 import Cardano.Ledger.Binary.Version (Version, getVersion, mkVersion)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModels,
   flattenCostModels,
@@ -66,19 +70,22 @@ instance ToPlutusData ProtVer where
   fromPlutusData (List [major, minor]) = ProtVer <$> fromPlutusData major <*> fromPlutusData minor
   fromPlutusData _ = Nothing
 
-instance ToPlutusData UnitInterval where
-  toPlutusData x = List [I num, I denom]
-    where
-      (num :% denom) = unboundRational x
-  fromPlutusData (List [I num, I denom]) = boundRational . (num %.) =<< nonZero denom
+instance ToPlutusData Rational where
+  toPlutusData (num :% denom) = List [I num, I denom]
+  fromPlutusData (List [I num, I denom]) = (num %.) <$> nonZero denom
   fromPlutusData _ = Nothing
 
+instance ToPlutusData UnitInterval where
+  toPlutusData = toPlutusData . unboundRational
+  fromPlutusData x = boundRational =<< fromPlutusData x
+
 instance ToPlutusData NonNegativeInterval where
-  toPlutusData x = List [I num, I denom]
-    where
-      (num :% denom) = unboundRational x
-  fromPlutusData (List [I num, I denom]) = boundRational . (num %.) =<< nonZero denom
-  fromPlutusData _ = Nothing
+  toPlutusData = toPlutusData . unboundRational
+  fromPlutusData x = boundRational =<< fromPlutusData x
+
+instance ToPlutusData PositiveInterval where
+  toPlutusData = toPlutusData . unboundRational
+  fromPlutusData x = boundRational =<< fromPlutusData x
 
 instance ToPlutusData CostModels where
   toPlutusData costModels = toPlutusData $ fmap toInteger <$> flattenCostModels costModels
@@ -97,6 +104,15 @@ instance ToPlutusData Prices where
   fromPlutusData _ = Nothing
 
 deriving instance ToPlutusData Coin
+
+instance ToPlutusData (CompactForm Coin) where
+  toPlutusData = toPlutusData . fromCompact
+  fromPlutusData (I i) = toCompact (Coin i)
+  fromPlutusData _ = Nothing
+
+instance ToPlutusData CoinPerByte where
+  toPlutusData (CoinPerByte c) = toPlutusData @(CompactForm Coin) c
+  fromPlutusData x = CoinPerByte <$> fromPlutusData @(CompactForm Coin) x
 
 instance ToPlutusData Word32 where
   toPlutusData w32 = I (toInteger @Word32 w32)
@@ -135,3 +151,7 @@ instance ToPlutusData Word where
 instance (ToPlutusData a, HasZero a) => ToPlutusData (NonZero a) where
   toPlutusData = toPlutusData . unNonZero
   fromPlutusData x = nonZero =<< fromPlutusData x
+
+instance ToPlutusData Nonce where
+  toPlutusData = error "unsupported"
+  fromPlutusData = error "unsupported"

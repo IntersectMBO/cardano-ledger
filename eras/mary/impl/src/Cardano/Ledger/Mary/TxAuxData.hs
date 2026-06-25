@@ -9,14 +9,13 @@
 
 module Cardano.Ledger.Mary.TxAuxData (
   module Cardano.Ledger.Allegra.TxAuxData,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.TxAuxData (
   AllegraEraTxAuxData (..),
   AllegraTxAuxData (..),
   metadataAllegraTxAuxDataL,
-  timelockScriptsAllegraTxAuxDataL,
+  nativeScriptsAllegraTxAuxDataL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -33,9 +32,7 @@ instance EraTxAuxData MaryEra where
 
   metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
-  upgradeTxAuxData (AllegraTxAuxData md scripts) = AllegraTxAuxData md $ upgradeScript <$> scripts
-
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
 instance AllegraEraTxAuxData MaryEra where
-  timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL
+  nativeScriptsTxAuxDataL = nativeScriptsAllegraTxAuxDataL

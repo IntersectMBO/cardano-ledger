@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,7 +14,6 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -27,6 +27,7 @@ import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity
+import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.TreeDiff
 
@@ -46,6 +47,12 @@ instance
   , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   ToExpr (ConwayPlutusPurpose AsItem era)
+
+instance
+  ( ToExpr (TxCert era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (ConwayPlutusPurpose AsIxItem era)
 
 -- PlutusContext
 instance
@@ -76,7 +83,7 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (ProposalProcedure era)
 
 instance ToExpr (Committee era)
 
-instance ToExpr (GovPurposeId purpose era)
+instance ToExpr (GovPurposeId purpose)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovAction era)
 
@@ -88,8 +95,8 @@ instance ToExpr a => ToExpr (PEdges a)
 instance ToExpr a => ToExpr (PGraph a)
 
 instance
-  (forall p. ToExpr (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  ToExpr (GovRelation f era)
+  (forall p. ToExpr (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  ToExpr (GovRelation f)
 
 instance (Era era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (Proposals era)
 
@@ -116,11 +123,21 @@ instance
   ToExpr (RatifyState era)
 
 instance
-  (EraStake era, EraPParams era, ToExpr (PParams era), ToExpr (PParamsHKD StrictMaybe era)) =>
+  ( EraStake era
+  , EraPParams era
+  , ConwayEraAccounts era
+  , ToExpr (PParams era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
   ToExpr (ConwayGovState era)
 
 instance
-  (EraStake era, EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParams era)) =>
+  ( EraStake era
+  , EraPParams era
+  , ConwayEraAccounts era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (PParams era)
+  ) =>
   ToExpr (DRepPulsingState era)
   where
   toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
@@ -128,7 +145,19 @@ instance
     where
       (a, b) = finishDRepPulser x
 
-instance ToExpr (InstantStake era) => ToExpr (RatifyEnv era) where
+instance
+  ( EraStake era
+  , EraPParams era
+  , ConwayEraAccounts era
+  , ToExpr (DRepPulsingState era)
+  , ToExpr (RatifyState era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (DRepPulser era Identity (RatifyState era))
+  where
+  toExpr = toExpr . finishDRepPulser . DRPulsing
+
+instance (ToExpr (InstantStake era), ToExpr (Accounts era)) => ToExpr (RatifyEnv era) where
   toExpr (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     App
       "RatifyEnv"
@@ -167,13 +196,32 @@ instance
   ToExpr (ConwayUtxosPredFailure era)
 
 -- TxBody
-instance
-  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era), ToExpr (TxCert era)) =>
-  ToExpr (ConwayTxBodyRaw era)
+instance ToExpr (ConwayTxBodyRaw TopTx ConwayEra) where
+  toExpr ConwayTxBodyRaw {..} =
+    Rec "ConwayTxBodyRaw" $
+      OMap.fromList
+        [ ("ctbrSpendInputs", toExpr ctbrSpendInputs)
+        , ("ctbrCollateralInputs", toExpr ctbrCollateralInputs)
+        , ("ctbrReferenceInputs", toExpr ctbrReferenceInputs)
+        , ("ctbrOutputs", toExpr ctbrOutputs)
+        , ("ctbrCollateralReturn", toExpr ctbrCollateralReturn)
+        , ("ctbrTotalCollateral", toExpr ctbrTotalCollateral)
+        , ("ctbrCerts", toExpr ctbrCerts)
+        , ("ctbrWithdrawals", toExpr ctbrWithdrawals)
+        , ("ctbrFee", toExpr ctbrFee)
+        , ("ctbrVldt", toExpr ctbrVldt)
+        , ("ctbrReqSignerHashes", toExpr ctbrReqSignerHashes)
+        , ("ctbrMint", toExpr ctbrMint)
+        , ("ctbrScriptIntegrityHash", toExpr ctbrScriptIntegrityHash)
+        , ("ctbrAuxDataHash", toExpr ctbrAuxDataHash)
+        , ("ctbrNetworkId", toExpr ctbrNetworkId)
+        , ("ctbrVotingProcedures", toExpr ctbrVotingProcedures)
+        , ("ctbrProposalProcedures", toExpr ctbrProposalProcedures)
+        , ("ctbrCurrentTreasuryValue", toExpr ctbrCurrentTreasuryValue)
+        , ("ctbrTreasuryDonation", toExpr ctbrTreasuryDonation)
+        ]
 
-instance
-  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era), ToExpr (TxCert era)) =>
-  ToExpr (ConwayTxBody era)
+instance ToExpr (TxBody TopTx ConwayEra)
 
 -- Rules/Cert
 instance
@@ -286,11 +334,23 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (RatifySignal era)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (EnactSignal era)
 
-instance ToExpr (ConwayNewEpochPredFailure era)
-
 instance
   ( ToExpr (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
-  , ToExpr (Tx era)
+  , ToExpr (Tx TopTx era)
   ) =>
   ToExpr (CertsEnv era)
+
+instance ToExpr (VState era)
+
+instance (ConwayEraCertState era, ToExpr (Accounts era)) => ToExpr (ConwayCertState era)
+
+instance ToExpr (ConwayAccounts era)
+
+instance ToExpr (ConwayAccountState era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ToExpr (ConwayBbodyPredFailure era)
+
+instance ToExpr (Tx TopTx ConwayEra)

@@ -1,8 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,9 +11,9 @@ module Cardano.Ledger.Shelley.Translation (
   FromByronTranslationContext (..),
   emptyFromByronTranslationContext,
   toFromByronTranslationContext,
-)
-where
+) where
 
+import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -27,6 +28,7 @@ import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
@@ -35,11 +37,12 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Required data to translate a Byron ledger into a Shelley ledger.
 data FromByronTranslationContext = FromByronTranslationContext
-  { fbtcGenDelegs :: !(Map (KeyHash 'Genesis) GenDelegPair)
+  { fbtcGenDelegs :: !(Map (KeyHash GenesisRole) GenDelegPair)
   , fbtcProtocolParams :: !(PParams ShelleyEra)
   , fbtcMaxLovelaceSupply :: !Word64
   }
   deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs FromByronTranslationContext
 
 instance ToCBOR FromByronTranslationContext where
   toCBOR x@(FromByronTranslationContext _ _ _) =
@@ -63,6 +66,21 @@ instance FromCBOR FromByronTranslationContext where
 instance EncCBOR FromByronTranslationContext
 
 instance DecCBOR FromByronTranslationContext
+
+instance FromJSON FromByronTranslationContext where
+  parseJSON = withObject "FromByronTranslationContext" $ \o -> do
+    fbtcGenDelegs <- o .: "genDelegs"
+    fbtcProtocolParams <- o .: "protocolParams"
+    fbtcMaxLovelaceSupply <- o .: "maxLovelaceSupply"
+    pure FromByronTranslationContext {..}
+
+instance ToKeyValuePairs FromByronTranslationContext where
+  toKeyValuePairs fbtc@(FromByronTranslationContext _ _ _) =
+    let FromByronTranslationContext {..} = fbtc
+     in [ "genDelegs" .= fbtcGenDelegs
+        , "protocolParams" .= fbtcProtocolParams
+        , "maxLovelaceSupply" .= fbtcMaxLovelaceSupply
+        ]
 
 -- | Trivial FromByronTranslationContext value, for use in cases where we do not need
 -- to translate from Byron to Shelley.

@@ -1,69 +1,48 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import Data.Default (Default (def))
 import System.Environment (lookupEnv)
-import System.IO (hSetEncoding, stdout, utf8)
-import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
-import Test.Cardano.Ledger.Common (hspec)
+import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests as LedgerTypes
-import Test.Cardano.Ledger.Constrained.Examples (allExampleTests)
-import Test.Cardano.Ledger.Constrained.Preds.Tx (predsTests)
-import Test.Cardano.Ledger.Constrained.Spec (allSpecTests)
-import Test.Cardano.Ledger.Constrained.Trace.Tests (conwayTrace, conwayTxwithDRepCertsTraceTests)
+import qualified Test.Cardano.Ledger.Constrained.Conway.MiniTrace as MiniTrace
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
-import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
-import qualified Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW as AlonzoValidTxUTXOW (tests)
-import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
-import qualified Test.Cardano.Ledger.Generic.PrettyTest as Pretty
+import Test.Cardano.Ledger.Generic.GenState (defaultGenSize)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import qualified Test.Cardano.Ledger.STS as ConstraintSTS
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
-import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
 main = do
-  hSetEncoding stdout utf8
   nightly <- lookupEnv "NIGHTLY"
-  case nightly of
-    Nothing -> defaultMain $ testGroup "cardano-core" defaultTests
-    Just _ -> do
-      hspec LedgerTypes.spec
-      defaultMain $ testGroup "cardano-core - nightly" nightlyTests
+  ledgerTestMain $ do
+    MiniTrace.spec
+    case nightly of
+      Nothing ->
+        describe "cardano-core" defaultTests
+      Just _ -> do
+        LedgerTypes.spec
+        describe "cardano-core - nightly" nightlyTests
 
-defaultTests :: [TestTree]
-defaultTests =
-  [ Pretty.prettyTest
-  , allSpecTests
-  , allExampleTests
-  , conwayTrace
-  , predsTests
-  , depositTests
-  , calcPoolDistOldEqualsNew
-  , Tools.tests
-  , testGroup
-      "STS Tests"
-      [ babbageFeatures
-      , AlonzoValidTxUTXOW.tests
-      , AlonzoBBODY.tests
-      , AlonzoAPI.tests
-      , AlonzoCollectInputs.tests
-      ]
-  , genericProperties def
-  , aggTests
-  , ConstraintSTS.tests_STS
-  , conwayTxwithDRepCertsTraceTests
-  ]
+defaultTests :: Spec
+defaultTests = do
+  depositTests
+  calcPoolDistOldEqualsNew
+  describe "STS Tests" $ do
+    AlonzoAPI.tests
+    AlonzoCollectInputs.tests
+  genericProperties defaultGenSize
+  aggTests
+  ConstraintSTS.tests_STS
 
-nightlyTests :: [TestTree]
-nightlyTests =
-  defaultTests <> [NoThunks.test]
+nightlyTests :: Spec
+nightlyTests = do
+  defaultTests
+  NoThunks.test

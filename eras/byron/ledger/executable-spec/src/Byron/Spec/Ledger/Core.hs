@@ -43,7 +43,7 @@ import Numeric.Natural (Natural)
 newtype Hash = Hash
   { unHash :: Maybe Int
   }
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -65,7 +65,7 @@ class HasHash a where
 newtype Owner = Owner
   { unOwner :: Natural
   }
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, DecCBOR, EncCBOR, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -74,7 +74,7 @@ class HasOwner a where
 
 -- | Signing Key.
 newtype SKey = SKey Owner
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, EncCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -83,7 +83,7 @@ instance HasOwner SKey where
 
 -- | Verification Key.
 newtype VKey = VKey Owner
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, DecCBOR, EncCBOR, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -95,7 +95,7 @@ instance HasOwner VKey where
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis {unVKeyGenesis :: VKey}
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, HasHash, DecCBOR, EncCBOR, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -128,7 +128,7 @@ keyPair o = KeyPair (SKey o) (VKey o)
 
 -- | A digital signature.
 data Sig a = Sig a Owner
-  deriving (Show, Eq, Ord, Generic, Hashable, Typeable, Data, NoThunks)
+  deriving (Show, Eq, Ord, Generic, Hashable, Data, NoThunks)
 
 -- | We need a custom instance here that returns only the top level type.
 --   A generic instance would have recursed into type 'a' and since we use
@@ -151,12 +151,12 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch {unEpoch :: Word64}
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, Num, EncCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot {unSlot :: Word64}
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, EncCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -166,7 +166,7 @@ newtype Slot = Slot {unSlot :: Word64}
 --  period of slots, and also to distinguish between number of slots and number
 --  of blocks.
 newtype SlotCount = SlotCount {unSlotCount :: Word64}
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Num, Hashable, EncCBOR, ToCBOR, NoThunks)
 
 instance HasTypeReps SlotCount
@@ -223,7 +223,7 @@ instance HasTypeReps BlockCount
 
 -- | The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, HasOwner, EncCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -238,7 +238,7 @@ instance HasHash Addr where
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
   }
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, EncCBOR, ToCBOR, NoThunks)
   deriving (Semigroup, Monoid) via (Sum Integer)
   deriving anyclass (HasTypeReps)

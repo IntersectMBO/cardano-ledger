@@ -4,8 +4,7 @@
 -- | Examples of the application of the delegation rules.
 module Test.Byron.Spec.Ledger.Delegation.Examples (
   deleg,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (
   BlockCount (BlockCount),

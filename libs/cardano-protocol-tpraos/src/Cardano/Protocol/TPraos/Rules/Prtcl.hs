@@ -19,8 +19,7 @@ module Cardano.Protocol.TPraos.Rules.Prtcl (
   PredicateFailure,
   PrtlSeqFailure (..),
   prtlSeqChecks,
-)
-where
+) where
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
@@ -67,7 +66,7 @@ data PRTCL c
 data PrtclState
   = PrtclState
       -- | Operation Certificate counters
-      !(Map (KeyHash 'BlockIssuer) Word64)
+      !(Map (KeyHash BlockIssuer) Word64)
       -- | Evolving nonce
       !Nonce
       -- | Candidate nonce

@@ -4,8 +4,7 @@ module Cardano.Ledger.Api.Scripts.ExUnits (
   RedeemerReport,
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   RedeemerReport,

@@ -68,15 +68,11 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-ledger-alonzo/1.6.0.0"' \
    '.#"ghc96/cardano-ledger-alonzo-test/1.2.0.0"' \
    '.#"ghc96/cardano-ledger-babbage/1.6.0.0"' \
-   '.#"ghc96/cardano-ledger-babbage-test/1.2.0.0"' \
    '.#"ghc96/byron-spec-chain/1.0.0.2"' \
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
-   '.#"ghc96/cardano-ledger-byron-test/1.5.0.1"' \
    '.#"ghc96/cardano-crypto-wrapper/1.5.1.1"' \
-   '.#"ghc96/cardano-crypto-test/1.5.0.1"' \
    '.#"ghc96/cardano-ledger-conway/1.12.0.0"' \
-   '.#"ghc96/cardano-ledger-conway-test/1.2.1.3"' \
    '.#"ghc96/cardano-ledger-mary/1.5.0.0"' \
    '.#"ghc96/cardano-ledger-shelley/1.9.0.0"' \
    '.#"ghc96/cardano-ledger-shelley-test/1.3.0.1"' \
@@ -88,7 +84,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/non-integral/1.0.0.0"' \
    '.#"ghc96/small-steps/1.0.1.0"' \
    '.#"ghc96/cardano-data/1.2.0.0"' \
-   '.#"ghc96/set-algebra/1.1.0.2"' \
    '.#"ghc96/vector-map/1.1.0.0"'
    ```
    You could also run `nix build --override-input CHaP path:/home/lucsanszky/cardano-haskell-packages/_repo .#allSmokeTestPackages`
@@ -116,15 +111,11 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-ledger-alonzo/1.6.0.0"' \
    '.#"ghc96/cardano-ledger-alonzo-test/1.2.0.0"' \
    '.#"ghc96/cardano-ledger-babbage/1.6.0.0"' \
-   '.#"ghc96/cardano-ledger-babbage-test/1.2.0.0"' \
    '.#"ghc96/byron-spec-chain/1.0.0.2"' \
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
-   '.#"ghc96/cardano-ledger-byron-test/1.5.0.1"' \
    '.#"ghc96/cardano-crypto-wrapper/1.5.1.1"' \
-   '.#"ghc96/cardano-crypto-test/1.5.0.1"' \
    '.#"ghc96/cardano-ledger-conway/1.12.0.0"' \
-   '.#"ghc96/cardano-ledger-conway-test/1.2.1.3"' \
    '.#"ghc96/cardano-ledger-mary/1.5.0.0"' \
    '.#"ghc96/cardano-ledger-shelley/1.9.0.0"' \
    '.#"ghc96/cardano-ledger-shelley-test/1.3.0.1"' \
@@ -136,7 +127,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/non-integral/1.0.0.0"' \
    '.#"ghc96/small-steps/1.0.1.0"' \
    '.#"ghc96/cardano-data/1.2.0.0"' \
-   '.#"ghc96/set-algebra/1.1.0.2"' \
    '.#"ghc96/vector-map/1.1.0.0"'
    ```
    In our case, it should succeed this time. In general however, you might run into some more failures.
@@ -165,15 +155,11 @@ extra-packages:
   cardano-ledger-alonzo-1.6.0.0,
   cardano-ledger-alonzo-test-1.2.0.0,
   cardano-ledger-babbage-1.6.0.0,
-  cardano-ledger-babbage-test-1.2.0.0,
   byron-spec-chain-1.0.0.2,
   byron-spec-ledger-1.0.0.2,
   cardano-ledger-byron-1.0.0.4,
-  cardano-ledger-byron-test-1.5.0.1,
   cardano-crypto-wrapper-1.5.1.1,
-  cardano-crypto-test-1.5.0.1,
   cardano-ledger-conway-1.12.0.0,
-  cardano-ledger-conway-test-1.2.1.3,
   cardano-ledger-mary-1.5.0.0,
   cardano-ledger-shelley-1.9.0.0,
   cardano-ledger-shelley-test-1.3.0.1,
@@ -185,7 +171,6 @@ extra-packages:
   non-integral-1.0.0.0,
   small-steps-1.0.1.0,
   cardano-data-1.2.0.0,
-  set-algebra-1.1.0.2,
   vector-map-1.1.0.0
 ```
 
@@ -207,15 +192,11 @@ library
    cardano-ledger-alonzo \
    cardano-ledger-alonzo-test \
    cardano-ledger-babbage \
-   cardano-ledger-babbage-test \
    byron-spec-chain \
    byron-spec-ledger \
    cardano-ledger-byron \
-   cardano-ledger-byron-test \
    cardano-crypto-wrapper \
-   cardano-crypto-test \
    cardano-ledger-conway \
-   cardano-ledger-conway-test \
    cardano-ledger-mary \
    cardano-ledger-shelley \
    cardano-ledger-shelley-test \
@@ -227,7 +208,6 @@ library
    non-integral \
    small-steps \
    cardano-data \
-   set-algebra \
    vector-map
    ```
 2. If all is right, the above should fail for `cardano-ledger-shelley-1.9.0.0` (or another version for that package), so you will have to add a revision for it in `cardano-haskell-packages` by running:
@@ -256,15 +236,11 @@ library
    cardano-ledger-alonzo \
    cardano-ledger-alonzo-test \
    cardano-ledger-babbage \
-   cardano-ledger-babbage-test \
    byron-spec-chain \
    byron-spec-ledger \
    cardano-ledger-byron \
-   cardano-ledger-byron-test \
    cardano-crypto-wrapper \
-   cardano-crypto-test \
    cardano-ledger-conway \
-   cardano-ledger-conway-test \
    cardano-ledger-mary \
    cardano-ledger-shelley \
    cardano-ledger-shelley-test \
@@ -276,7 +252,6 @@ library
    non-integral \
    small-steps \
    cardano-data \
-   set-algebra \
    vector-map
    ```
    In our case, it should succeed this time. In general however, you might run into some more failures.

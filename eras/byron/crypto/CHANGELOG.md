@@ -1,5 +1,15 @@
 # Revision history for `cardano-crypto-wrapper`
 
+## 1.7.0.0
+
+* Remove deprecated function `hash`
+
+## 1.6.1.0
+
+### `testlib`
+
+* Added `testlib` sublibrary as replacement of `cardano-crypto-test` package
+
 ## 1.6.0.0
 
 * Switch from cryptonite library (deprecated) to crypton (a drop in replacement)

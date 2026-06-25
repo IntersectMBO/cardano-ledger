@@ -61,8 +61,7 @@ of the Cardano Engineering Handbook for more detailed information on this topic.
 
 ### `CHANGELOG.md`
 
-Every package, that [is subject to the release
-process](packages-excluded-from-release-process), will always have the top most entry in
+Every package that [is subject to the release process](#packages-excluded-from-release-process) will always have the top most entry in
 the `CHANGELOG.md` set to an unreleased version. That top most section will have either
 the patch, minor or the major versions bumped, but not all three, when compared to the
 latest released version. Which one it will be depends on the recent changes that were
@@ -180,20 +179,17 @@ released. Therefore, it safe to use this command to release all packages from th
 from a sepecific `<SHA>` that had a version bump when compared to CHaP:
 
 ```shell
-$ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <SHA> \
+$ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <COMMIT_HASH> \
   eras/allegra/impl \
   eras/alonzo/impl \
   eras/alonzo/test-suite \
   eras/babbage/impl \
-  eras/babbage/test-suite \
   eras/byron/chain/executable-spec \
   eras/byron/crypto \
-  eras/byron/crypto/test \
   eras/byron/ledger/executable-spec \
   eras/byron/ledger/impl \
-  eras/byron/ledger/impl/test \
   eras/conway/impl \
-  eras/conway/test-suite \
+  eras/dijkstra/impl \
   eras/mary/impl \
   eras/shelley-ma/test-suite \
   eras/shelley/impl \
@@ -204,7 +200,6 @@ $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <S
   libs/cardano-ledger-core \
   libs/cardano-protocol-tpraos \
   libs/non-integral \
-  libs/set-algebra \
   libs/small-steps \
   libs/vector-map
 ```
@@ -238,16 +233,19 @@ More on that command in the section below.
    ```
 
 4. Create a PR to `master` that updates `CHANGELOG.md` files for all of the packages that
-   have just been released. The only addition to the file should be a markdown header
-   section with the next patch version bumped, which must bring the `CHANGELOG.md` to the
-   state of the top level section containing a version higher than the highest one ever
-   released. Due to concurrent nature of editing the repository it is possible that
+   have just been released. When done manually, the only addition to the file should be a markdown header
+   section with the next patch version bumped but prefer to use the provided convenience script `./scripts/bump-changelogs.sh`
+   to do this automatically. This will fetch a shallow copy of [CHaP](https://github.com/intersectmbo/cardano-haskell-packages)
+   and check if any of our most recent package versions had a release. If so, the script
+   will bump the corresponding `CHANGELOG`s with the next patch version, which brings
+   the state of the top level section containing a version higher than the highest one ever released.
+   Due to concurrent nature of editing the repository it is possible that
    `CHANGELOG.md` have already received a version bump with a section that fits the
-   higher version criteria, in which case nothing needs to be added. The body of the
-   section, if added, must be empty with just one single asterisk `*`.
+   higher version criteria, in which case nothing will be nor should be added. The body of the
+   section, when added, should be empty with just one single asterisk `*`.
 
    For example, if `cardano-ledger-core-1.20.1.1` was just released, then a new empty
-   `1.20.1.2` section in the `CHANGELOG.md` must be added:
+   `1.20.1.2` section in the `CHANGELOG.md` will be added by the script:
 
    ```markdown
    # Version history for `cardano-ledger-core`
@@ -332,15 +330,11 @@ but the changelog _only_ needs to indicate if breaking changes have been made:
 * `cardano-ledger-shelley-test`
 * `cardano-ledger-shelley-ma-test`
 * `cardano-ledger-alonzo-test`
-* `cardano-ledger-babbage-test`
-* `cardano-ledger-conway-test`
-* `cardano-crypto-test`
-* `cardano-ledger-byron-test`
 
 A changelog which indicates that no changes have been made will have the form:
 
 ```
-# Version history for `cardano-ledger-conway-test`
+# Version history for `cardano-ledger-conway`
 
 ## 1.2.0.1
 
@@ -350,7 +344,7 @@ A changelog which indicates that no changes have been made will have the form:
 A changelog which indicates that changes have been made will have the form:
 
 ```
-# Version history for `cardano-ledger-conway-test`
+# Version history for `cardano-ledger-conway`
 
 ## 1.3.0.0
 

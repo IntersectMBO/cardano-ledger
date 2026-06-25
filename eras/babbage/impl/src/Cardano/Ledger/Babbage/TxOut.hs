@@ -20,9 +20,13 @@ module Cardano.Ledger.Babbage.TxOut (
   BabbageTxOut (
     BabbageTxOut,
     TxOutCompact,
+    TxOutCompact',
     TxOutCompactDH,
+    TxOutCompactDH',
     TxOutCompactDatum,
-    TxOutCompactRefScript
+    TxOutCompactRefScript,
+    TxOut_AddrHash28_AdaOnly,
+    TxOut_AddrHash28_AdaOnly_DataHash32
   ),
   BabbageEraTxOut (..),
   TxOut,
@@ -35,23 +39,19 @@ module Cardano.Ledger.Babbage.TxOut (
   getDatumBabbageTxOut,
   babbageMinUTxOValue,
   getEitherAddrBabbageTxOut,
-  txOutData,
-  txOutDataHash,
-  txOutScript,
   internBabbageTxOut,
 ) where
 
 import Cardano.Ledger.Address (
-  Addr (..),
   CompactAddr,
   compactAddr,
   decompactAddr,
   fromCborBothAddr,
  )
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
-  AlonzoTxOut (AlonzoTxOut),
   DataHash32,
   decodeAddress28,
   decodeDataHash32,
@@ -63,16 +63,16 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (
   BabbageEraPParams (..),
-  CoinPerByte (..),
   ppCoinsPerUTxOByteL,
  )
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
   StrictMaybe (..),
-  strictMaybeToMaybe,
+  ToKeyValuePairs (..),
  )
 import Cardano.Ledger.Binary (
-  Annotator (..),
+  Annotator,
   DecCBOR (..),
   DecShareCBOR (..),
   Decoder,
@@ -97,7 +97,7 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus.Data (
@@ -109,7 +109,7 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.MemPack
@@ -145,11 +145,11 @@ data BabbageTxOut era
       !(Datum era)
       !(Script era)
   | TxOut_AddrHash28_AdaOnly
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
-      !(Credential 'Staking)
+      !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
@@ -216,11 +216,7 @@ instance EraTxOut BabbageEra where
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
-  upgradeTxOut (AlonzoTxOut addr value mDatumHash) = BabbageTxOut addr value datum SNothing
-    where
-      datum = case mDatumHash of
-        SNothing -> NoDatum
-        SJust datumHash -> DatumHash datumHash
+  upgradeTxOut = upgradeAlonzoTxOut
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}
@@ -229,6 +225,13 @@ instance EraTxOut BabbageEra where
   {-# INLINE valueEitherTxOutL #-}
 
   getMinCoinSizedTxOut = babbageMinUTxOValue
+
+upgradeAlonzoTxOut :: Alonzo.AlonzoTxOut AlonzoEra -> BabbageTxOut BabbageEra
+upgradeAlonzoTxOut = \case
+  Alonzo.TxOutCompact' ca cv -> TxOutCompact' ca cv
+  Alonzo.TxOutCompactDH' ca cv dh -> TxOutCompactDH' ca cv dh
+  Alonzo.TxOut_AddrHash28_AdaOnly c a28e cc -> TxOut_AddrHash28_AdaOnly c a28e cc
+  Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 c a28e cc dh32 -> TxOut_AddrHash28_AdaOnly_DataHash32 c a28e cc dh32
 
 dataHashBabbageTxOutL ::
   EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe DataHash)
@@ -317,27 +320,18 @@ deriving stock instance
 instance NFData (BabbageTxOut era) where
   rnf = rwhnf
 
-instance
-  (Era era, ToJSON (Datum era), ToJSON (Script era), Val (Value era)) =>
-  ToJSON (BabbageTxOut era)
-  where
-  toJSON = object . toBabbageTxOutPairs
-  toEncoding = pairs . mconcat . toBabbageTxOutPairs
+deriving via
+  KeyValuePairs (BabbageTxOut era)
+  instance
+    (Era era, Val (Value era), ToJSON (Script era)) => ToJSON (BabbageTxOut era)
 
-toBabbageTxOutPairs ::
-  ( Era era
-  , KeyValue e a
-  , Val (Value era)
-  , ToJSON (Script era)
-  ) =>
-  BabbageTxOut era ->
-  [a]
-toBabbageTxOutPairs (BabbageTxOut !addr !val !dat !mRefScript) =
-  [ "address" .= addr
-  , "value" .= val
-  , "datum" .= dat
-  , "referenceScript" .= mRefScript
-  ]
+instance (Era era, Val (Value era), ToJSON (Script era)) => ToKeyValuePairs (BabbageTxOut era) where
+  toKeyValuePairs (BabbageTxOut !addr !val !dat !mRefScript) =
+    [ "address" .= addr
+    , "value" .= val
+    , "datum" .= dat
+    , "referenceScript" .= mRefScript
+    ]
 
 viewCompactTxOut ::
   forall era.
@@ -528,7 +522,7 @@ instance
   ) =>
   DecShareCBOR (BabbageTxOut era)
   where
-  type Share (BabbageTxOut era) = Interns (Credential 'Staking)
+  type Share (BabbageTxOut era) = Interns (Credential Staking)
   decShareCBOR credsInterns = do
     txOut <-
       peekTokenType >>= \case
@@ -539,7 +533,7 @@ instance
   {-# INLINEABLE decShareCBOR #-}
 
 internBabbageTxOut ::
-  (Credential 'Staking -> Credential 'Staking) ->
+  (Credential Staking -> Credential Staking) ->
   BabbageTxOut era ->
   BabbageTxOut era
 internBabbageTxOut internCred = \case
@@ -659,9 +653,9 @@ babbageMinUTxOValue ::
   Sized a ->
   Coin
 babbageMinUTxOValue pp sizedTxOut =
-  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * cpb
+  Coin $ fromIntegral (constantOverhead + sizedSize sizedTxOut) * fromIntegral cpb
   where
-    CoinPerByte (Coin cpb) = pp ^. ppCoinsPerUTxOByteL
+    CoinPerByte (CompactCoin cpb) = pp ^. ppCoinsPerUTxOByteL
     -- This constant is an approximation of the memory overhead that comes
     -- from TxIn and an entry in the Map data structure:
     --
@@ -752,18 +746,6 @@ getCompactValueBabbageTxOut =
     TxOut_AddrHash28_AdaOnly _ _ cc -> injectCompact cc
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> injectCompact cc
 {-# INLINE getCompactValueBabbageTxOut #-}
-
-txOutData :: Era era => BabbageTxOut era -> Maybe (Data era)
-txOutData = strictMaybeToMaybe . getDataBabbageTxOut
-{-# DEPRECATED txOutData "In favor of `dataTxOutL` or `getDataBabbageTxOut`" #-}
-
-txOutDataHash :: BabbageTxOut era -> Maybe DataHash
-txOutDataHash = strictMaybeToMaybe . getDataHashBabbageTxOut
-{-# DEPRECATED txOutDataHash "In favor of `dataHashTxOutL` or `getDataHashBabbageTxOut`" #-}
-
-txOutScript :: BabbageTxOut era -> Maybe (Script era)
-txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
-{-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getScriptBabbageTxOut`" #-}
 
 decodeCIC :: DecCBOR (Annotator b) => T.Text -> Decoder s b
 decodeCIC s = do

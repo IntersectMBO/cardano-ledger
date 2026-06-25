@@ -1,5 +1,14 @@
 # Version history for `cardano-ledger-alonzo-test`
 
+## 1.4.0.1
+
+*
+
+## 1.4.0.0
+
+* Removed `Test.Cardano.Ledger.Alonzo.Serialisation.Generators`
+* Removed `Test.Cardano.Ledger.Alonzo.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
+
 ## 1.3.1.0
 
 * Account for removal of crypto parametrization
@@ -60,3 +69,4 @@
 ## 1.1.2.1
 
 *
+

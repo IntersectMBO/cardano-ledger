@@ -26,8 +26,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
-  Withdrawals (..),
+  TxBody (..),
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
@@ -99,19 +98,16 @@ instance ScriptClass ShelleyEra where
  -----------------------------------------------------------------------------}
 
 genTxBody ::
-  ( EraTxOut era
-  , EraTxCert era
-  ) =>
-  PParams era ->
+  PParams ShelleyEra ->
   SlotNo ->
   Set TxIn ->
-  StrictSeq (TxOut era) ->
-  StrictSeq (TxCert era) ->
+  StrictSeq (TxOut ShelleyEra) ->
+  StrictSeq (TxCert ShelleyEra) ->
   Withdrawals ->
   Coin ->
-  StrictMaybe (Update era) ->
+  StrictMaybe (Update ShelleyEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (ShelleyTxBody era, [MultiSig era])
+  Gen (TxBody TopTx ShelleyEra, [MultiSig ShelleyEra])
 genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot
   return

@@ -4,7 +4,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -35,11 +34,16 @@ module Data.OSet.Strict (
   (|><),
   (><|),
   filter,
-)
-where
+  mapL,
+  mapR,
+  mapMaybeR,
+  mapMaybeL,
+  decodeOSet,
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  Decoder,
   EncCBOR (encCBOR),
   decodeSetLikeEnforceNoDuplicates,
   encodeStrictSeq,
@@ -102,11 +106,14 @@ instance Foldable OSet where
   null = F.null . SSeq.fromStrict . osSSeq
   {-# INLINE null #-}
 
+decodeOSet :: Ord a => Decoder s a -> Decoder s (OSet a)
+decodeOSet = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, oset))
+
 instance EncCBOR a => EncCBOR (OSet a) where
   encCBOR (OSet seq _set) = encodeTag setTag <> encodeStrictSeq encCBOR seq
 
 instance (Show a, Ord a, DecCBOR a) => DecCBOR (OSet a) where
-  decCBOR = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, oset)) decCBOR
+  decCBOR = decodeOSet decCBOR
 
 instance ToJSON a => ToJSON (OSet a) where
   toJSON = toJSON . F.toList
@@ -257,6 +264,7 @@ pattern xs :|>: x <- (unsnoc -> Just (xs, x))
 infixl 5 :|>:
 
 {-# COMPLETE Empty, (:|>:) #-}
+
 {-# COMPLETE Empty, (:<|:) #-}
 
 -- | \( O(n\log(m*n)) \). For every uncons-ed element from the sequence on the right,
@@ -278,3 +286,27 @@ osetl ><| osetr = case osetl of
   ls :|>: l -> ls ><| (l <| osetr)
 
 infixr 5 ><|
+
+-- | Map over the elements, preferring the leftmost element in case there are
+-- duplicates
+mapR :: Ord b => (a -> b) -> OSet a -> OSet b
+mapR f = F.foldr' ((:<|:) . f) Empty
+
+-- | Map over the elements, preferring the rightmost element in case there are
+-- duplicates
+mapL :: Ord b => (a -> b) -> OSet a -> OSet b
+mapL f = F.foldl' (\x y -> x :|>: f y) Empty
+
+-- | Map a function over the elements, discarding elements on which the
+-- function returns `Nothing`. Right-biased.
+mapMaybeR :: Ord b => (a -> Maybe b) -> OSet a -> OSet b
+mapMaybeR f = F.foldr' helper Empty
+  where
+    helper x s = maybe s (:<|: s) $ f x
+
+-- | Map a function over the elements, discarding elements on which the
+-- function returns `Nothing`. Left-biased.
+mapMaybeL :: Ord b => (a -> Maybe b) -> OSet a -> OSet b
+mapMaybeL f = F.foldl' helper Empty
+  where
+    helper s x = maybe s (s :|>:) $ f x

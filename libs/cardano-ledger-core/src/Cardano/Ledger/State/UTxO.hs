@@ -30,17 +30,15 @@ module Cardano.Ledger.State.UTxO (
   txinLookup,
   txInsFilter,
   txouts,
-  balance,
-  coinBalance,
+  sumUTxO,
+  sumCoinUTxO,
   sumAllValue,
   sumAllCoin,
   areAllAdaOnly,
   verifyWitVKey,
   getScriptHash,
-)
-where
+) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (Share, decShareCBOR),
@@ -51,13 +49,13 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
   decodeMap,
  )
-import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (verifySignedDSIGN)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.State.CertState (CertState)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
@@ -69,7 +67,6 @@ import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -87,6 +84,7 @@ class CanGetUTxO t => CanSetUTxO t where
   utxoL :: Lens' (t era) (UTxO era)
 
 instance CanGetUTxO UTxO
+
 instance CanSetUTxO UTxO where
   utxoL = id
 
@@ -114,11 +112,11 @@ deriving newtype instance (Era era, DecCBOR (TxOut era)) => DecCBOR (UTxO era)
 
 instance
   ( DecShareCBOR (TxOut era)
-  , Share (TxOut era) ~ Interns (Credential 'Staking)
+  , Share (TxOut era) ~ Interns (Credential Staking)
   ) =>
   DecShareCBOR (UTxO era)
   where
-  type Share (UTxO era) = Interns (Credential 'Staking)
+  type Share (UTxO era) = Interns (Credential Staking)
   decShareCBOR credsInterns =
     UTxO <$!> decodeMap decNoShareCBOR (decShareCBOR credsInterns)
 
@@ -133,15 +131,15 @@ deriving newtype instance ToJSON (TxOut era) => ToJSON (UTxO era)
 -- txins has the same problems as txouts, see notes below.
 txins ::
   EraTxBody era =>
-  TxBody era ->
+  TxBody t era ->
   Set TxIn
 txins = (^. inputsTxBodyL)
 
 -- | Compute the transaction outputs of a transaction.
 txouts ::
-  forall era.
+  forall era l.
   EraTxBody era =>
-  TxBody era ->
+  TxBody l era ->
   UTxO era
 txouts txBody =
   UTxO $
@@ -170,7 +168,6 @@ txInsFilter (UTxO utxo') txIns = UTxO (utxo' `Map.restrictKeys` txIns)
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
-  Typeable kr =>
   Hash HASH EraIndependentTxBody ->
   WitVKey kr ->
   Bool
@@ -178,24 +175,28 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 {-# INLINE verifyWitVKey #-}
 
 -- | Determine the total balance contained in the UTxO.
-balance :: EraTxOut era => UTxO era -> Value era
-balance = sumAllValue . unUTxO
-{-# INLINE balance #-}
+sumUTxO :: EraTxOut era => UTxO era -> Value era
+sumUTxO = sumAllValue . unUTxO
+{-# INLINE sumUTxO #-}
 
 -- | Determine the total Ada only balance contained in the UTxO. This is
--- equivalent to `coin . balance`, but it will be more efficient
-coinBalance :: EraTxOut era => UTxO era -> Coin
-coinBalance = sumAllCoin . unUTxO
-{-# INLINE coinBalance #-}
+-- equivalent to `coin` . `sumUTxO`, but it will be more efficient.
+--
+-- /Warning/ - This function cannot be applied to an untrusted `UTxO`, since it is susceptible to
+-- overflow
+sumCoinUTxO :: EraTxOut era => UTxO era -> Coin
+sumCoinUTxO = sumAllCoin . unUTxO
+{-# INLINE sumCoinUTxO #-}
 
 -- | Sum all the value in any Foldable with 'TxOut's
 sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era
 sumAllValue = foldMap' (^. valueTxOutL)
 {-# INLINE sumAllValue #-}
 
--- | Sum all the 'Coin's in any Foldable with with 'TxOut's. Care should be
--- taken since it is susceptible to integer overflow, therefore make sure this
--- function is not applied to unvalidated 'TxOut's
+-- | Sum all the 'Coin's in any Foldable with with 'TxOut's.
+--
+-- /Warning/ - Care should be taken since it is susceptible to integer overflow, therefore make sure
+-- this function is not applied to unvalidated 'TxOut's
 sumAllCoin :: (EraTxOut era, Foldable f) => f (TxOut era) -> Coin
 sumAllCoin = fromCompact . CompactCoin . getSum . foldMap' getCoinWord64
   where
@@ -224,8 +225,11 @@ newtype ScriptsProvided era = ScriptsProvided
   deriving (Generic)
 
 deriving instance (Era era, Eq (Script era)) => Eq (ScriptsProvided era)
+
 deriving instance (Era era, Ord (Script era)) => Ord (ScriptsProvided era)
+
 deriving instance (Era era, Show (Script era)) => Show (ScriptsProvided era)
+
 deriving instance (Era era, NFData (Script era)) => NFData (ScriptsProvided era)
 
 class EraTx era => EraUTxO era where
@@ -233,22 +237,24 @@ class EraTx era => EraUTxO era where
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
 
+  consumed :: PParams era -> CertState era -> UTxO era -> TxBody t era -> Value era
+
   -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue ::
     PParams era ->
     -- | Function that can lookup current delegation deposits
-    (Credential 'Staking -> Maybe Coin) ->
+    (Credential Staking -> Maybe Coin) ->
     -- | Function that can lookup current drep deposits
-    (Credential 'DRepRole -> Maybe Coin) ->
+    (Credential DRepRole -> Maybe Coin) ->
     UTxO era ->
-    TxBody era ->
+    TxBody t era ->
     Value era
 
   getProducedValue ::
     PParams era ->
     -- | Check whether a pool with a supplied PoolStakeId is already registered.
-    (KeyHash 'StakePool -> Bool) ->
-    TxBody era ->
+    (KeyHash StakePool -> Bool) ->
+    TxBody t era ->
     Value era
 
   -- | Initial eras will look into witness set to find all of the available scripts, but
@@ -258,19 +264,19 @@ class EraTx era => EraUTxO era where
     -- | For some era it is necessary to look into the UTxO to find all of the available
     -- scripts for the transaction
     UTxO era ->
-    Tx era ->
+    Tx t era ->
     ScriptsProvided era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated
-  getScriptsNeeded :: UTxO era -> TxBody era -> ScriptsNeeded era
+  getScriptsNeeded :: UTxO era -> TxBody t era -> ScriptsNeeded era
 
   -- | Extract the set of all script hashes that are needed for script validation.
   getScriptsHashesNeeded :: ScriptsNeeded era -> Set ScriptHash
 
   -- | Extract all of the KeyHash witnesses that are required for validating the transaction
   getWitsVKeyNeeded ::
-    CertState era -> UTxO era -> TxBody era -> Set (KeyHash 'Witness)
+    CertState era -> UTxO era -> TxBody t era -> Set (KeyHash Witness)
 
   -- | Minimum fee computation, excluding witnesses and including ref scripts size
-  getMinFeeTxUtxo :: PParams era -> Tx era -> UTxO era -> Coin
+  getMinFeeTxUtxo :: PParams era -> Tx t era -> UTxO era -> Coin

@@ -8,7 +8,7 @@
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.Address (BootstrapAddress (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -20,18 +20,13 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec ::
-  forall era.
-  ( ShelleyEraImp era
-  , Arbitrary (TxAuxData era)
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   describe "Bootstrap Witness" $ do
     it "Valid Witnesses" $ do
@@ -60,7 +55,7 @@ spec = describe "UTXOW" $ do
       submitFailingTx txBad [injectFailure $ InvalidWitnessesUTXOW [aliceVKey]]
 
   it "MissingVKeyWitnessesUTXOW" $ do
-    aliceKh <- freshKeyHash @'Payment
+    aliceKh <- freshKeyHash @Payment
     txIn <- sendCoinTo (mkAddr aliceKh StakeRefNull) mempty
     let tx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ [txIn]
     let isAliceWitness wit = witVKeyHash wit == asWitness aliceKh
@@ -68,7 +63,9 @@ spec = describe "UTXOW" $ do
       submitFailingTx
         tx
         [ injectFailure $
-            MissingVKeyWitnessesUTXOW [asWitness aliceKh]
+            MissingVKeyWitnessesUTXOW $
+              NES.singleton $
+                asWitness aliceKh
         ]
 
   it "MissingScriptWitnessesUTXOW" $ do
@@ -79,7 +76,8 @@ spec = describe "UTXOW" $ do
     submitFailingTx
       tx
       [ injectFailure $
-          MissingScriptWitnessesUTXOW [scriptHash]
+          MissingScriptWitnessesUTXOW $
+            NES.singleton scriptHash
       ]
 
   it "MissingTxBodyMetadataHash" $ do
@@ -131,9 +129,9 @@ spec = describe "UTXOW" $ do
       -- We dropped validating scripts when they are not needed, starting with Babbage
       if eraProtVerLow @era >= natVersion @6
         then
-          [ injectFailure $ ExtraneousScriptWitnessesUTXOW [scriptHash]
+          [ injectFailure $ ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash
           ]
         else
-          [ injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]
-          , injectFailure $ ExtraneousScriptWitnessesUTXOW [scriptHash]
+          [ injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash
+          , injectFailure $ ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash
           ]

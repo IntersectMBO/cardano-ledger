@@ -17,8 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Update (
   genShelleyPParamsUpdate,
   genM,
   genDecentralisationParam,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational,
@@ -37,8 +36,7 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   unsafeNonZero,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -60,6 +58,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Cardano.Ledger.State (EraCertState (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -104,14 +103,14 @@ genIntervalInThousands lower upper =
 
 genPParams ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) =>
   Constants ->
   Gen (PParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
+genPParams c@Constants {maxTxFeePerByte, maxTxFeeFixed} = do
   let lowMajorPV = eraProtVerLow @era
       highMajorPV = eraProtVerHigh @era
-  minFeeA <- genInteger 0 (unCoin maxMinFeeA)
-  minFeeB <- genInteger 0 (unCoin maxMinFeeB)
+  minFeeFactor <- genInteger 0 (unCoin maxTxFeePerByte)
+  minFeeConstant <- genInteger 0 (unCoin maxTxFeeFixed)
   (maxBBSize, maxTxSize, maxBHSize) <- szGen
   keyDeposit <- genKeyDeposit
   poolDeposit <- genPoolDeposit
@@ -127,8 +126,8 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
   minPoolCost <- genMinPoolCost
   pure $
     emptyPParams
-      & ppMinFeeAL .~ Coin minFeeA
-      & ppMinFeeBL .~ Coin minFeeB
+      & ppTxFeePerByteL .~ CoinPerByte (CompactCoin $ fromIntegral minFeeFactor)
+      & ppTxFeeFixedL .~ Coin minFeeConstant
       & ppMaxBBSizeL .~ maxBBSize
       & ppMaxTxSizeL .~ maxTxSize
       & ppMaxBHSizeL .~ maxBHSize
@@ -155,8 +154,8 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
 -- Note: we keep the lower bound high enough so that we can more likely
 -- generate valid transactions and blocks
 low, hi :: Word32
-low = 50000
-hi = 200000
+low = 70000 -- Using the EraGen machinery, we have found that at least one block had a size of 59271
+hi = 200000 -- This caused a rare, but annoying failure, Since these are arbitrary we set `low` to 70000
 
 -- poolDeposit
 -- NOTE: we need to keep these deposits small, otherwise
@@ -239,15 +238,15 @@ genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
 -- | This is only good in the Shelley Era, used to define the genShelleyEraPParamsUpdate method for (EraGen (ShelleyEra c))
 genShelleyPParamsUpdate ::
   forall era.
-  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, EraPParams era) =>
+  (AtMostEra "Mary" era, AtMostEra "Alonzo" era, AtMostEra "Babbage" era, EraPParams era) =>
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)
-genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
+genShelleyPParamsUpdate c@Constants {maxTxFeePerByte, maxTxFeeFixed} pp = do
   let highMajorPV = succ (eraProtVerHigh @era)
   -- TODO generate Maybe types so not all updates are full
-  minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
-  minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
+  minFeeFactor <- genM $ genInteger 0 (unCoin maxTxFeePerByte)
+  minFeeConstant <- genM $ genInteger 0 (unCoin maxTxFeeFixed)
   maxBBSize <- genM $ choose (low, hi)
   maxTxSize <- genM $ choose (low, hi)
   -- Must stay in the range of Word16, but can't be too small
@@ -266,8 +265,8 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   minPoolCost <- genM genMinPoolCost
   pure $
     emptyPParamsUpdate
-      & ppuMinFeeAL .~ fmap Coin minFeeA
-      & ppuMinFeeBL .~ fmap Coin minFeeB
+      & ppuTxFeePerByteL .~ fmap (CoinPerByte . CompactCoin . fromIntegral) minFeeFactor
+      & ppuTxFeeFixedL .~ fmap Coin minFeeConstant
       & ppuMaxBBSizeL .~ maxBBSize
       & ppuMaxTxSizeL .~ maxTxSize
       & ppuMaxBHSizeL .~ maxBHSize
@@ -291,7 +290,7 @@ genPPUpdate ::
   EraGen era =>
   Constants ->
   PParams era ->
-  [KeyHash 'Genesis] ->
+  [KeyHash GenesisRole] ->
   Gen (ProposedPPUpdates era)
 genPPUpdate constants pp genesisKeys = do
   pps <- genEraPParamsUpdate @era constants pp
@@ -305,7 +304,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [KeyPair 'Genesis] ->
+  [KeyPair GenesisRole] ->
   PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
@@ -320,11 +319,11 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)] ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
   (UTxOState era, CertState era) ->
-  Gen (Maybe (Update era), [KeyPair 'Witness])
+  Gen (Maybe (Update era), [KeyPair Witness])
 genUpdate
   c@Constants {frequencyTxUpdates}
   s

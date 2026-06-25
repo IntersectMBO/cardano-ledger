@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-binary
-version: 1.6.0.0
+version: 1.8.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -51,18 +51,18 @@ library
   build-depends:
     FailT,
     aeson,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base16-bytestring,
     binary,
     bytestring,
-    cardano-binary >=1.7,
-    cardano-crypto-class ^>=2.2,
-    cardano-crypto-praos >=2.2,
+    cardano-base >=0.1.1.0,
+    cardano-binary >=1.7.3,
+    cardano-crypto-class ^>=2.3,
+    cardano-crypto-praos >=2.2.2,
     cardano-slotting >=0.2,
     cardano-strict-containers >=0.1.2,
     cborg >=0.2.10,
     containers,
-    data-fix,
     deepseq,
     formatting,
     iproute,
@@ -73,21 +73,21 @@ library
     nothunks,
     plutus-ledger-api >=1.27.0,
     primitive,
-    recursion-schemes,
+    random >=1.3,
     serialise,
     tagged,
     text,
     time,
     transformers >=0.5,
     vector,
-    vector-map ^>=1.1,
+    vector-map >=1.1,
 
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Binary
     Test.Cardano.Ledger.Binary.Arbitrary
-    Test.Cardano.Ledger.Binary.Cddl
     Test.Cardano.Ledger.Binary.Cuddle
+    Test.Cardano.Ledger.Binary.Golden
     Test.Cardano.Ledger.Binary.Plain.Golden
     Test.Cardano.Ledger.Binary.Plain.RoundTrip
     Test.Cardano.Ledger.Binary.Random
@@ -105,25 +105,31 @@ library testlib
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
   build-depends:
     ImpSpec,
     QuickCheck,
     base,
     base16-bytestring,
     bytestring,
+    cardano-base:testlib,
     cardano-binary,
     cardano-crypto-class,
-    cardano-crypto-tests,
     cardano-ledger-binary,
     cardano-prelude-test,
-    cardano-slotting:{cardano-slotting, testlib} >=0.1.2,
+    cardano-slotting:testlib,
     cardano-strict-containers,
     cborg,
     containers,
-    cuddle >=0.3.2,
+    cuddle >=1.1 && <1.1.2,
+    directory,
+    filepath,
     formatting,
     half,
     hedgehog,
@@ -131,17 +137,15 @@ library testlib
     hspec-core,
     iproute,
     pretty-show,
+    pretty-simple,
     prettyprinter,
     prettyprinter-ansi-terminal,
     primitive,
     quickcheck-instances >=0.3.32,
     random >=1.2,
-    tasty-hunit,
     text,
     tree-diff,
-    typed-process,
-    unliftio,
-    vector-map,
+    vector-map:testlib,
 
 test-suite tests
   type: exitcode-stdio-1.0
@@ -157,7 +161,6 @@ test-suite tests
     Test.Cardano.Ledger.Binary.Vintage.Failure
     Test.Cardano.Ledger.Binary.Vintage.RoundTrip
     Test.Cardano.Ledger.Binary.Vintage.Serialization
-    Test.Cardano.Ledger.Binary.Vintage.SizeBounds
 
   default-language: Haskell2010
   ghc-options:
@@ -175,12 +178,12 @@ test-suite tests
     QuickCheck,
     base,
     bytestring,
-    cardano-crypto-class,
-    cardano-crypto-praos,
+    cardano-crypto-class:{cardano-crypto-class, testlib},
+    cardano-crypto-praos:{cardano-crypto-praos, testlib},
     cardano-ledger-binary,
     cardano-prelude-test,
-    cardano-slotting,
-    cardano-strict-containers,
+    cardano-slotting:{cardano-slotting, testlib},
+    cardano-strict-containers:{cardano-strict-containers, testlib},
     cborg,
     containers,
     hedgehog,

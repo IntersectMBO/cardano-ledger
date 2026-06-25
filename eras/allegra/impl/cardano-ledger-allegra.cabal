@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-allegra
-version: 1.7.0.0
+version: 1.9.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -11,7 +11,7 @@ description:
 
 category: Network
 build-type: Simple
-data-files: cddl-files/allegra.cddl
+data-files: cddl/data/allegra.cddl
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -31,11 +31,10 @@ library
     Cardano.Ledger.Allegra.Tx
     Cardano.Ledger.Allegra.TxAuxData
     Cardano.Ledger.Allegra.TxBody
-    Cardano.Ledger.Allegra.TxBody.Internal
 
   hs-source-dirs: src
   other-modules:
-    Cardano.Ledger.Allegra.CertState
+    Cardano.Ledger.Allegra.BlockBody
     Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.PParams
     Cardano.Ledger.Allegra.Rules.Bbody
@@ -48,10 +47,11 @@ library
     Cardano.Ledger.Allegra.Rules.Ppup
     Cardano.Ledger.Allegra.Rules.Utxo
     Cardano.Ledger.Allegra.Rules.Utxow
+    Cardano.Ledger.Allegra.State.Account
+    Cardano.Ledger.Allegra.State.CertState
     Cardano.Ledger.Allegra.State.Stake
     Cardano.Ledger.Allegra.TxCert
     Cardano.Ledger.Allegra.TxOut
-    Cardano.Ledger.Allegra.TxSeq
     Cardano.Ledger.Allegra.TxWits
     Cardano.Ledger.Allegra.UTxO
 
@@ -65,13 +65,18 @@ library
     -Wpartial-fields
     -Wunused-packages
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     aeson,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     bytestring,
+    cardano-data,
     cardano-ledger-binary >=1.4,
-    cardano-ledger-core >=1.17 && <1.18,
-    cardano-ledger-shelley ^>=1.16,
+    cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
+    cardano-ledger-shelley ^>=1.18,
     cardano-slotting,
     cardano-strict-containers,
     cborg,
@@ -84,11 +89,55 @@ library
     transformers,
     validation-selective,
 
+library cddl
+  exposed-modules:
+    Cardano.Ledger.Allegra.HuddleSpec
+
+  visibility: public
+  hs-source-dirs: cddl/lib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-allegra,
+    cardano-ledger-shelley:cddl,
+    heredoc,
+
+executable generate-cddl
+  main-is: Main.hs
+  hs-source-dirs: cddl/exe
+  other-modules: Paths_cardano_ledger_allegra
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.4,
+    cddl,
+
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Allegra.Arbitrary
+    Test.Cardano.Ledger.Allegra.Binary.Annotator
     Test.Cardano.Ledger.Allegra.Binary.Cddl
-    Test.Cardano.Ledger.Allegra.CDDL
+    Test.Cardano.Ledger.Allegra.Binary.Golden
+    Test.Cardano.Ledger.Allegra.Era
+    Test.Cardano.Ledger.Allegra.Examples
     Test.Cardano.Ledger.Allegra.Imp
     Test.Cardano.Ledger.Allegra.Imp.UtxowSpec
     Test.Cardano.Ledger.Allegra.ImpTest
@@ -103,48 +152,35 @@ library testlib
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wpartial-fields
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck,
     base,
     bytestring,
     cardano-ledger-allegra,
+    cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-slotting,
     cardano-strict-containers,
     containers,
-    cuddle,
     generic-random,
-    heredoc,
     microlens,
-    mtl,
     small-steps,
     text,
-
-executable huddle-cddl
-  main-is: Main.hs
-  hs-source-dirs: huddle-cddl
-  other-modules: Paths_cardano_ledger_allegra
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
-  build-depends:
-    base,
-    cardano-ledger-binary:testlib >=1.3.4.0,
-    testlib,
+    tree-diff,
 
 test-suite tests
   type: exitcode-stdio-1.0
@@ -170,8 +206,8 @@ test-suite tests
   build-depends:
     base,
     cardano-ledger-allegra,
+    cardano-ledger-allegra:cddl,
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
-    data-default,
     testlib,

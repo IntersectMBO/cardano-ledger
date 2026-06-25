@@ -23,8 +23,7 @@
 module Cardano.Ledger.Binary.Coders (
   module Cardano.Ledger.Binary.Encoding.Coders,
   module Cardano.Ledger.Binary.Decoding.Coders,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Coders
 import Cardano.Ledger.Binary.Encoding.Coders

@@ -29,20 +29,19 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
 
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (EncCBOR)
+import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  ApplyTxError (ApplyTxError),
+  ApplyTx (..),
+  ApplyTxError (..),
   MultiSig,
-  NominalDiffTimeMicro (..),
   ShelleyDelegCert,
-  ShelleyGenesis (..),
-  ShelleyGenesisStaking (ShelleyGenesisStaking),
   ShelleyTx (ShelleyTx),
-  ShelleyTxBody (ShelleyTxBody),
+  TxBody (ShelleyTxBody),
  )
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
+import Cardano.Ledger.Shelley.BlockBody
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.PoolRank
@@ -73,6 +72,9 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.Transition
+import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext)
+import Cardano.Ledger.Shelley.Tx (Tx (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -91,6 +93,7 @@ import qualified Data.Text.Encoding as T (encodeUtf8)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
+import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
@@ -301,7 +304,6 @@ instance Arbitrary FreeVars where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------
@@ -489,16 +491,7 @@ instance Arbitrary StakeProportion where
 newtype StakeProportion = StakeProportion Rational
   deriving (Show)
 
-instance
-  ( EraTxOut era
-  , ShelleyEraScript era
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxCert era)
-  , EncCBOR (TxCert era)
-  ) =>
-  Arbitrary (ShelleyTxBody era)
-  where
+instance Arbitrary (TxBody TopTx ShelleyEra) where
   arbitrary =
     ShelleyTxBody
       <$> arbitrary
@@ -511,12 +504,11 @@ instance
       <*> arbitrary
 
 genTx ::
-  ( EraTx era
-  , Arbitrary (TxBody era)
+  ( Arbitrary (TxBody TopTx era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (TxWits era)
   ) =>
-  Gen (ShelleyTx era)
+  Gen (ShelleyTx TopTx era)
 genTx =
   ShelleyTx
     <$> arbitrary
@@ -545,7 +537,7 @@ sizedMetadatum 0 =
   oneof
     [ I <$> arbitrary
     , B <$> arbitrary
-    , S <$> (T.pack <$> arbitrary)
+    , S . T.pack <$> arbitrary
     ]
 sizedMetadatum n =
   let xsGen = listOf (sizedMetadatum (n - 1))
@@ -554,7 +546,7 @@ sizedMetadatum n =
         , List <$> resize maxMetadatumListLens xsGen
         , I <$> arbitrary
         , B <$> arbitrary
-        , S <$> (T.pack <$> arbitrary)
+        , S . T.pack <$> arbitrary
         ]
 
 instance Arbitrary VotingPeriod where
@@ -708,24 +700,19 @@ instance
 
 instance
   ( EraTx era
-  , Arbitrary (TxBody era)
+  , Arbitrary (TxBody TopTx era)
   , Arbitrary (Value era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
   , Arbitrary (TxWits era)
   ) =>
-  Arbitrary (ShelleyTx era)
+  Arbitrary (ShelleyTx TopTx era)
   where
   arbitrary = genTx
 
-instance
-  ( Era era
-  , Arbitrary (PredicateFailure (EraRule "LEDGER" era))
-  ) =>
-  Arbitrary (ApplyTxError era)
-  where
-  arbitrary = ApplyTxError <$> arbitrary
-  shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
+deriving newtype instance Arbitrary (Tx TopTx ShelleyEra)
+
+deriving newtype instance Arbitrary (ApplyTxError ShelleyEra)
 
 instance
   ( Era era
@@ -750,6 +737,33 @@ instance Arbitrary RawSeed where
       <*> chooseAny
       <*> chooseAny
 
-instance Era era => Arbitrary (ShelleyCertState era) where
-  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary <*> arbitrary
+instance (Era era, Arbitrary (Accounts era)) => Arbitrary (ShelleyCertState era) where
+  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary
   shrink = genericShrink
+
+instance Arbitrary (ShelleyAccountState era) where
+  arbitrary = ShelleyAccountState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary (ShelleyAccounts era) where
+  arbitrary = ShelleyAccounts <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary FromByronTranslationContext where
+  arbitrary = genericArbitraryU
+  shrink _ = []
+
+deriving newtype instance Arbitrary (TransitionConfig ShelleyEra)
+
+instance EncCBOR RawSeed where
+  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
+
+instance
+  ( EraBlockBody era
+  , BlockBody era ~ ShelleyBlockBody era
+  , Arbitrary (Tx TopTx era)
+  , SafeToHash (TxWits era)
+  ) =>
+  Arbitrary (ShelleyBlockBody era)
+  where
+  arbitrary = ShelleyBlockBody <$> arbitrary

@@ -24,10 +24,9 @@ module BenchValidation (
 
 import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
-import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
+import Cardano.Ledger.Shelley.BlockBody (slotToNonce)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
@@ -94,7 +93,7 @@ benchValidate ::
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
-  let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
+  let block = Block (makeHeaderView bh Nothing) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
         Right x -> pure x
         Left x -> error (show x)
@@ -112,7 +111,7 @@ applyBlock ::
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
-  let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
+  let block = Block (makeHeaderView bh Nothing) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
         Right x -> seq (rnf x) (n + 1)
         Left x -> error (show x)
@@ -122,7 +121,7 @@ benchreValidate ::
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
-  API.applyBlockNoValidaton globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
+  API.applyBlockNoValidaton globals state (Block (makeHeaderView bh Nothing) txs)
 
 -- ==============================================================
 

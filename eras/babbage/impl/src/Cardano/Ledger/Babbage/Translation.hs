@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,29 +11,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Translation where
+module Cardano.Ledger.Babbage.Translation () where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Babbage.CertState ()
-import Cardano.Ledger.Babbage.Core hiding (Tx)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.State
-import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
-import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Data.Coerce (coerce)
@@ -67,21 +58,24 @@ instance TranslateEra BabbageEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
-instance TranslateEra BabbageEra Tx where
-  type TranslationError BabbageEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
-    -- Note that this does not preserve the hidden bytes field of the transaction.
-    -- This is under the premise that this is irrelevant for TxInBlocks, which are
-    -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
-    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
-    auxData <- case tx ^. auxDataTxL of
-      SNothing -> pure SNothing
-      SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-    let validating = tx ^. Alonzo.isValidTxL
-    pure $ Tx $ AlonzoTx txBody txWits validating auxData
+instance TranslateEra BabbageEra (Tx TopTx) where
+  type TranslationError BabbageEra (Tx TopTx) = DecoderError
+  translateEra _ctxt tx =
+    withTopTxLevelOnly tx $ \tx' -> do
+      -- Note that this does not preserve the hidden bytes field of the transaction.
+      -- This is under the premise that this is irrelevant for TxInBlocks, which are
+      -- not transmitted as contiguous chunks.
+      txBody <- translateEraThroughCBOR "TxBody" $ tx' ^. bodyTxL
+      txWits <- translateEraThroughCBOR "TxWitness" $ tx' ^. witsTxL
+      auxData <- case tx' ^. auxDataTxL of
+        SNothing -> pure SNothing
+        SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
+      let validating = tx' ^. isValidTxL
+      pure . asSTxTopLevel $
+        mkBasicTx txBody
+          & witsTxL .~ txWits
+          & auxDataTxL .~ auxData
+          & isValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -100,27 +94,33 @@ instance TranslateEra BabbageEra EpochState where
   translateEra ctxt es =
     pure
       EpochState
-        { esAccountState = esAccountState es
+        { esChainAccountState = esChainAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
+instance TranslateEra BabbageEra ShelleyAccounts where
+  translateEra _ = pure . coerce
+
 instance TranslateEra BabbageEra DState where
-  translateEra _ DState {..} = pure DState {..}
+  translateEra ctx DState {dsAccounts = accountsShelley, ..} = do
+    dsAccounts <- translateEra ctx accountsShelley
+    pure DState {..}
 
 instance TranslateEra BabbageEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra BabbageEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra BabbageEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra BabbageEra ShelleyCertState
+instance TranslateEra BabbageEra ShelleyCertState where
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =
@@ -147,7 +147,7 @@ instance TranslateEra BabbageEra ShelleyInstantStake where
 
 instance TranslateEra BabbageEra UTxO where
   translateEra _ctxt utxo =
-    pure $ UTxO $ translateTxOut `Map.map` unUTxO utxo
+    pure $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
 
 instance TranslateEra BabbageEra ShelleyGovState where
   translateEra ctxt ps =
@@ -163,9 +163,3 @@ instance TranslateEra BabbageEra ShelleyGovState where
 instance TranslateEra BabbageEra ProposedPPUpdates where
   translateEra _ctxt (ProposedPPUpdates ppup) =
     pure $ ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
-
-translateTxOut ::
-  TxOut AlonzoEra ->
-  TxOut BabbageEra
-translateTxOut = upgradeTxOut
-{-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}

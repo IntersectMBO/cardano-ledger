@@ -54,10 +54,9 @@ module Cardano.Ledger.Binary.Plain (
   C.decodeSignKeyVRF,
   C.encodeCertVRF,
   C.decodeCertVRF,
-)
-where
+) where
 
-import Cardano.Binary hiding (encodedSizeExpr)
+import Cardano.Binary
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
 import qualified Cardano.Crypto.VRF.Class as C

@@ -1,13 +1,14 @@
-{-# LANGUAGE DataKinds #-}
-
 module Main (main) where
 
-import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Conformance.ConformanceSpec as ConformanceSpec
-import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as Conway
+import Test.Cardano.Ledger.Common (describe, ledgerTestMain)
+import qualified Test.Cardano.Ledger.Conformance.Imp.Conway as ImpConway
+import qualified Test.Cardano.Ledger.Conformance.Spec.Base as SpecBase
+import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as SpecConway
 
 main :: IO ()
 main =
   ledgerTestMain $ do
-    describe "ConformanceSpec" $ ConformanceSpec.spec
-    describe "Conway" $ Conway.spec
+    describe "Conformance" $ do
+      describe "Base" $ SpecBase.spec
+      SpecConway.spec
+      ImpConway.spec

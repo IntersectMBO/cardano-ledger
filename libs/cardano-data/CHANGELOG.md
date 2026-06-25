@@ -1,5 +1,19 @@
 # Version history for `cardano-data`
 
+## 1.3.0.0
+
+* Add `Data.Map.NonEmpty`
+* Add `Data.Set.NonEmpty`
+* Add `lookupInternMap`
+* Add `Data.MapExtras.boundedEnumMap`
+* Add `Data.MapExtras.lookupMapFail`
+* Replace `okeyL` with `toOKey`
+
+## 1.2.4.1
+
+* Add `mapMaybeR`, `mapMaybeL`
+* Add `decodeOSet`
+
 ## 1.2.4.0
 
 * Add `decodeOMap`
@@ -52,7 +66,6 @@
   The bug manifested by creating an unbalanced tree in the `Data.Map` internals of the
   'CanonicalMap', which can result in a crash.
   This was the root cause of https://github.com/input-output-hk/cardano-node/issues/4826.
-
 * Added New module Data.Universe, reusable code for defining closed singleton types.
 
 ## 1.0.0.0

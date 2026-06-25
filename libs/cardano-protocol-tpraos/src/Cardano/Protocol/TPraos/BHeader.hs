@@ -19,7 +19,8 @@
 module Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
   PrevHash (..),
-  BHeader (BHeader),
+  BHeader (BHeader, ..),
+  BHeaderRaw (..),
   BHBody (..),
   LastAppliedBlock (..),
   BoundedNatural (bvValue, bvMaxValue),
@@ -31,7 +32,6 @@ module Cardano.Protocol.TPraos.BHeader (
   bhHash,
   hashHeaderToNonce,
   prevHashToNonce,
-  bHeaderSize,
   bhbody,
   hBbsize,
   seedEta,
@@ -39,9 +39,9 @@ module Cardano.Protocol.TPraos.BHeader (
   mkSeed,
   bnonce,
   makeHeaderView,
-)
-where
+) where
 
+import Cardano.Base.Proxy (asProxy)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -60,8 +60,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.BaseTypes.NonZero (nonZero, (%.))
 import Cardano.Ledger.Binary (
-  Annotator (..),
-  Case (..),
+  Annotator,
   DecCBOR (decCBOR),
   DecCBORGroup (..),
   EncCBOR (..),
@@ -71,13 +70,10 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   encodeListLen,
   encodeNull,
-  encodedVerKeyVRFSizeExpr,
   listLenInt,
   peekTokenType,
   runByteBuilder,
   serialize',
-  szCases,
-  withWordSize,
  )
 import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -87,6 +83,7 @@ import Cardano.Ledger.Hashes (
   HASH,
   Hash,
   HashAnnotated (..),
+  HashHeader (..),
   KeyHash,
   KeyRole (..),
   SafeToHash,
@@ -112,18 +109,10 @@ import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
-import Data.Typeable
-import Data.Word (Word32, Word64)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-
--- | The hash of a Block Header
-newtype HashHeader = HashHeader {unHashHeader :: Hash HASH EraIndependentBlockHeader}
-  deriving stock (Show, Eq, Generic, Ord)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance EncCBOR HashHeader
 
 -- | The previous hash of a block
 data PrevHash = GenesisHash | BlockHash !HashHeader
@@ -134,13 +123,6 @@ instance NoThunks PrevHash
 instance EncCBOR PrevHash where
   encCBOR GenesisHash = encodeNull
   encCBOR (BlockHash h) = encCBOR h
-  encodedSizeExpr size _ =
-    szCases
-      [ Case "GenesisHash" 1
-      , Case "BlockHash" (encodedSizeExpr size p)
-      ]
-    where
-      p = Proxy :: Proxy HashHeader
 
 instance DecCBOR PrevHash where
   decCBOR = do
@@ -150,8 +132,6 @@ instance DecCBOR PrevHash where
         pure GenesisHash
       _ -> BlockHash <$> decCBOR
 
-deriving newtype instance DecCBOR HashHeader
-
 data BHBody c = BHBody
   { bheaderBlockNo :: !BlockNo
   -- ^ block number
@@ -159,7 +139,7 @@ data BHBody c = BHBody
   -- ^ block slot
   , bheaderPrev :: !PrevHash
   -- ^ Hash of the previous block header
-  , bheaderVk :: !(VKey 'BlockIssuer)
+  , bheaderVk :: !(VKey BlockIssuer)
   -- ^ verification key of block issuer
   , bheaderVrfVk :: !(VRF.VerKeyVRF (VRF c))
   -- ^ VRF verification key for block issuer
@@ -189,7 +169,7 @@ instance Crypto c => NoThunks (BHBody c)
 
 instance Crypto c => EncCBOR (BHBody c) where
   encCBOR bhBody =
-    encodeListLen (9 + listLen oc + listLen pv)
+    encodeListLen (9 + listLen (asProxy oc) + listLen (asProxy pv))
       <> encCBOR (bheaderBlockNo bhBody)
       <> encCBOR (bheaderSlotNo bhBody)
       <> encCBOR (bheaderPrev bhBody)
@@ -204,25 +184,6 @@ instance Crypto c => EncCBOR (BHBody c) where
     where
       oc = bheaderOCert bhBody
       pv = bprotver bhBody
-
-  encodedSizeExpr size proxy =
-    fromInteger (withWordSize $ 9 + listLenBound oc + listLenBound pv)
-      + encodedSizeExpr size (bheaderBlockNo <$> proxy)
-      + encodedSizeExpr size (bheaderSlotNo <$> proxy)
-      + encodedSizeExpr size (bheaderPrev <$> proxy)
-      + encodedSizeExpr size (bheaderVk <$> proxy)
-      + encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
-      + encodedSizeExpr size (bheaderEta <$> proxy)
-      + encodedSizeExpr size (bheaderL <$> proxy)
-      + encodedSizeExpr size (toWord64 . bsize <$> proxy)
-      + encodedSizeExpr size (bhash <$> proxy)
-      + encodedSizeExpr size (bheaderOCert <$> proxy)
-      + encodedSizeExpr size (bprotver <$> proxy)
-    where
-      oc = bheaderOCert <$> proxy
-      pv = bprotver <$> proxy
-      toWord64 :: Word32 -> Word64
-      toWord64 = fromIntegral
 
 instance Crypto c => DecCBOR (BHBody c) where
   decCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
@@ -252,7 +213,7 @@ instance Crypto c => DecCBOR (BHBody c) where
         , bprotver
         }
     where
-      bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
+      bhBodySize body = 9 + listLenInt (Just $ bheaderOCert body) + listLenInt (Just $ bprotver body)
 
 data BHeaderRaw c = BHeaderRaw
   { bhrBody :: !(BHBody c)
@@ -279,9 +240,10 @@ instance Crypto c => DecCBOR (Annotator (BHeaderRaw c)) where
 
 newtype BHeader c = BHeaderConstr (MemoBytes (BHeaderRaw c))
   deriving (Generic)
-  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, DecCBOR, SafeToHash)
+  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, SafeToHash)
 
 type instance MemoHashIndex (BHeaderRaw c) = EraIndependentBlockHeader
+
 instance HashAnnotated (BHeader c) EraIndependentBlockHeader where
   hashAnnotated = getMemoSafeHash
 
@@ -305,6 +267,7 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
   where
     BHeader bHeaderBody bHeaderSig =
       mkMemoized (pvMajor (bprotver bHeaderBody)) $ BHeaderRaw bHeaderBody bHeaderSig
+
 {-# COMPLETE BHeader #-}
 
 -- | Hash a given block header
@@ -327,12 +290,8 @@ prevHashToNonce = \case
 
 -- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
 -- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: BHBody c -> KeyHash 'BlockIssuer
+issuerIDfromBHBody :: BHBody c -> KeyHash BlockIssuer
 issuerIDfromBHBody = hashKey . bheaderVk
-
-{-# DEPRECATED bHeaderSize "In favor of `originalBytesSize`" #-}
-bHeaderSize :: BHeader c -> Int
-bHeaderSize = originalBytesSize
 
 bhbody ::
   Crypto c =>
@@ -362,6 +321,11 @@ assertBoundedNatural maxVal val =
   if val <= maxVal
     then UnsafeBoundedNatural maxVal val
     else error $ show val <> " is greater than max value " <> show maxVal
+
+{- Note [Background on leadership checks]
+See docs/LeadershipCheck.md for detailed explanation of the Praos leadership
+lottery and VRF-based slot leader election mechanism.
+-}
 
 -- | Check that the certified VRF output, when used as a natural, is valid for
 -- being slot leader.
@@ -457,8 +421,8 @@ mkSeed ucNonce (SlotNo slot) eNonce =
     . runByteBuilder (8 + 32)
     $ BS.word64BE slot
       <> ( case eNonce of
-            NeutralNonce -> mempty
-            Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
+             NeutralNonce -> mempty
+             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
 data LastAppliedBlock = LastAppliedBlock
@@ -495,11 +459,13 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
-makeHeaderView :: Crypto c => BHeader c -> BHeaderView
-makeHeaderView bh@(BHeader bhb _) =
+makeHeaderView :: Crypto c => BHeader c -> Maybe Nonce -> BHeaderView
+makeHeaderView bh@(BHeader bhb _) nonce =
   BHeaderView
     (hashKey . bheaderVk $ bhb)
     (bsize bhb)
     (originalBytesSize bh)
     (bhash bhb)
     (bheaderSlotNo bhb)
+    nonce
+    (bprotver bhb)

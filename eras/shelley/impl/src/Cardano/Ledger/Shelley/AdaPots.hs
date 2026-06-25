@@ -19,17 +19,7 @@ module Cardano.Ledger.Shelley.AdaPots (
   sumAdaPots,
 ) where
 
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  Obligations (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
-  obligationCertState,
-  rewards,
-  sumObligation,
- )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (
   EpochState (..),
@@ -39,9 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   lsUTxOStateL,
   utxosGovStateL,
  )
-import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (sumRewardsUView)
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)
 import GHC.Generics (Generic)
@@ -67,10 +55,10 @@ totalAdaPotsES ::
   ) =>
   EpochState era ->
   AdaPots
-totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
+totalAdaPotsES (EpochState (ChainAccountState {casTreasury, casReserves}) ls _ _) =
   AdaPots
-    { treasuryAdaPot = treasury_
-    , reservesAdaPot = reserves_
+    { treasuryAdaPot = casTreasury
+    , reservesAdaPot = casReserves
     , rewardsAdaPot = rewards_
     , utxoAdaPot = coins
     , feesAdaPot = fees_
@@ -79,8 +67,8 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
   where
     UTxOState u _ fees_ _ _ _ = lsUTxOState ls
     certState = ls ^. lsCertStateL
-    rewards_ = fromCompact $ sumRewardsUView (rewards $ certState ^. certDStateL)
-    coins = coinBalance u
+    rewards_ = sumBalancesAccounts (certState ^. certDStateL . accountsL)
+    coins = sumCoinUTxO u
     govStateObligations = obligationGovState (ls ^. lsUTxOStateL . utxosGovStateL)
 
 sumAdaPots :: AdaPots -> Coin
@@ -146,7 +134,7 @@ instance Show Produced where
 -- | Compute the Coin part of what is consumed by a TxBody, itemized as a 'Consume'
 consumedTxBody ::
   (EraTxBody era, EraCertState era) =>
-  TxBody era ->
+  TxBody l era ->
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -154,7 +142,7 @@ consumedTxBody ::
 consumedTxBody txBody pp dpstate utxo =
   Consumed
     { conInputs =
-        coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+        sumCoinUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
     , conRefunds = certsTotalRefundsTxBody pp dpstate txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
@@ -162,13 +150,13 @@ consumedTxBody txBody pp dpstate utxo =
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::
   (EraTxBody era, EraCertState era) =>
-  TxBody era ->
+  TxBody TopTx era ->
   PParams era ->
   CertState era ->
   Produced
 producedTxBody txBody pp dpstate =
   Produced
-    { proOutputs = coinBalance (txouts txBody)
+    { proOutputs = sumCoinUTxO (txouts txBody)
     , proFees = txBody ^. feeTxBodyL
     , proDeposits = certsTotalDepositsTxBody pp dpstate txBody
     }

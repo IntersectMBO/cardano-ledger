@@ -11,23 +11,21 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
-  Timelock (..),
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Allegra.TxBody (TxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Cardano.Ledger.Binary (DecCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary.TxBody (TxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.PParams (
   Update,
@@ -53,6 +51,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
@@ -90,7 +89,7 @@ assetName3 = "a3"
 -- == Test Values for Building Transactions ==
 -- ===========================================
 
-testGKeyHash :: KeyHash 'Genesis
+testGKeyHash :: KeyHash GenesisRole
 testGKeyHash = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0
 
 testAddrE :: Addr
@@ -100,10 +99,10 @@ testAddrE =
     (KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 1))
     StakeRefNull
 
-testKeyHash :: KeyHash 'Staking
+testKeyHash :: KeyHash Staking
 testKeyHash = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
 
-testStakeCred :: Credential 'Staking
+testStakeCred :: Credential Staking
 testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 3)
 
 testUpdate ::
@@ -127,13 +126,12 @@ testUpdate =
 scriptGoldenTest ::
   forall era.
   ( AllegraEraScript era
-  , ToCBOR (NativeScript era)
   , DecCBOR (NativeScript era)
   ) =>
   TestTree
 scriptGoldenTest =
-  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness
-      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness
+  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash Witness
+      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash Witness
    in checkEncodingCBORAnnotated
         (eraProtVerHigh @era)
         "timelock_script"
@@ -172,7 +170,8 @@ scriptGoldenTest =
               )
         )
 
-metadataNoScriptsGoldenTest :: forall era. Era era => TestTree
+metadataNoScriptsGoldenTest ::
+  forall era. (AllegraEraScript era, DecCBOR (NativeScript era)) => TestTree
 metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)
@@ -190,7 +189,7 @@ metadataNoScriptsGoldenTest =
 -- CONTINUE also Scripts
 metadataWithScriptsGoldenTest ::
   forall era.
-  (ShelleyEraScript era, NativeScript era ~ Timelock era) =>
+  (AllegraEraScript era, DecCBOR (NativeScript era)) =>
   TestTree
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
@@ -253,7 +252,7 @@ goldenEncodingTestsAllegra =
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @AllegraEra testAddrE (Coin 2)
           reg = RegTxCert testStakeCred
-          ras = Map.singleton (RewardAccount Testnet (KeyHashObj testKeyHash)) (Coin 123)
+          ras = Map.singleton (AccountAddress Testnet (AccountId (KeyHashObj testKeyHash))) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @AllegraEra $ AllegraTxAuxData Map.empty StrictSeq.empty
        in checkEncodingCBORAnnotated
@@ -409,7 +408,7 @@ goldenEncodingTestsMary =
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @MaryEra testAddrE (Val.inject $ Coin 2)
           reg = RegTxCert testStakeCred
-          ras = Map.singleton (RewardAccount Testnet (KeyHashObj testKeyHash)) (Coin 123)
+          ras = Map.singleton (AccountAddress Testnet (AccountId (KeyHashObj testKeyHash))) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @AllegraEra $ AllegraTxAuxData Map.empty StrictSeq.empty
           mint = Map.singleton policyID1 $ Map.singleton (AssetName assetName1) 13

@@ -9,11 +9,12 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
-import Cardano.Ledger.CertState
+import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Rules
-import qualified Lib as Agda
+import Cardano.Ledger.State
+import qualified Data.Map.Strict as Map
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
@@ -27,23 +28,19 @@ instance
 
   toSpecRep (PoolEnv _ pp) = toSpecRep pp
 
-instance SpecTranslate ctx (ShelleyPoolPredFailure era) where
-  type SpecRep (ShelleyPoolPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
-
 instance SpecTranslate ctx (PState era) where
   type SpecRep (PState era) = Agda.PState
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep psStakePoolParams
+      <$> toSpecRep (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
+      <*> toSpecRep psFutureStakePoolParams
       <*> toSpecRep psRetiring
 
 instance SpecTranslate ctx PoolCert where
   type SpecRep PoolCert = Agda.DCert
 
-  toSpecRep (RegPool p@PoolParams {ppId = KeyHash ppHash}) =
+  toSpecRep (RegPool p@StakePoolParams {sppId = KeyHash ppHash}) =
     Agda.Regpool
       <$> toSpecRep ppHash
       <*> toSpecRep p

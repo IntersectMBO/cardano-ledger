@@ -1,5 +1,20 @@
 # Version history for `cardano-ledger-shelley-test`
 
+## 1.8.0.0
+
+* Rename `alicePoolParams` and `bobPoolParams` to `aliceStakePoolParams` and `bobStakePoolParams` respectively.
+* Remove deprecated modules:
+  - `Test.Cardano.Ledger.Shelley.Generator.Constants`
+  - `Test.Cardano.Ledger.Shelley.Generator.Trace.DCert`
+  - `Test.Cardano.Ledger.Shelley.Generator.Delegation`
+
+## 1.7.0.0
+
+* Removed `MockChainFromTickFailure` constructor from `MockChainFailure`
+* Removed `Test.Cardano.Ledger.Shelley.Examples.Consensus` (moved to `cardano-ledger-api` testlib)
+* Remove `EncCBOR` instance for `RawSeed` (moved to `cardano-ledger-shelley` testlib)
+* Remove `Test.Cardano.Ledger.Shelley.LaxBlock` as unused
+
 ## 1.6.0.0
 
 * Add crypto type-parameter to `KeySpace` and `GenEnv` #4908

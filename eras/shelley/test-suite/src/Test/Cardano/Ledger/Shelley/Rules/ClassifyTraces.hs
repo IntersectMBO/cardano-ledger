@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -16,17 +17,12 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
   relevantCasesAreCovered,
   propAbstractSizeBoundsBytes,
   propAbstractSizeNotTooBig,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
-import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.Shelley.API (
-  Addr (..),
-  Credential (..),
-  ShelleyLEDGER,
- )
+import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.PParams (
@@ -34,6 +30,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern ProposedPPUpdates,
   pattern Update,
  )
+import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (
   isDelegation,
@@ -136,10 +133,10 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block (BHeader MockCrypto) era -> [Tx era]
-      blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
+  let blockTxs :: Block (BHeader MockCrypto) era -> [Tx TopTx era]
+      blockTxs Block {blockBody} = toList $ blockBody ^. txSeqBlockBodyL
       bs = traceSignals OldestFirst tr
-      txs = concat (blockTxs <$> bs)
+      txs = concatMap blockTxs bs
       certsByTx_ = certsByTx @era txs
       certs_ = concat certsByTx_
 
@@ -258,7 +255,7 @@ certsByTx ::
   ( ShelleyEraTxBody era
   , EraTx era
   ) =>
-  [Tx era] ->
+  [Tx TopTx era] ->
   [[TxCert era]]
 certsByTx txs = toList . view certsTxBodyL . view bodyTxL <$> txs
 
@@ -286,16 +283,16 @@ txScriptOutputsRatio txoutsList =
               _ -> Sum 0
           )
 
-hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
+hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx TopTx era -> Bool
 hasWithdrawal tx = not . null $ unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
 
-hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
+hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era) => Tx TopTx era -> Bool
 hasPParamUpdate tx = ppUpdates (tx ^. bodyTxL . updateTxBodyL)
   where
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetadata :: EraTx era => Tx era -> Bool
+hasMetadata :: EraTx era => Tx TopTx era -> Bool
 hasMetadata tx = f (tx ^. bodyTxL . auxDataHashTxBodyL)
   where
     f SNothing = False
@@ -348,7 +345,7 @@ propAbstractSizeBoundsBytes = property $ do
     (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [Tx era]
+      let txs :: [Tx TopTx era]
           txs = traceSignals OldestFirst tr
       all (\tx -> txSizeBound tx >= numBytes tx) txs
   where
@@ -382,7 +379,7 @@ propAbstractSizeNotTooBig = property $ do
     (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [Tx era]
+      let txs :: [Tx TopTx era]
           txs = traceSignals OldestFirst tr
       all notTooBig txs
   where
@@ -422,7 +419,7 @@ epochsInTrace bs'
         EpochSize slotsPerEpoch =
           epochInfoSize (epochInfoPure testGlobals) $
             error "Impossible: Fixed epoch size does not care about current epoch number"
-        blockSlot = bheaderSlotNo . bhbody . bheader
+        blockSlot = bheaderSlotNo . bhbody . blockHeader
         atEpoch (SlotNo s) = s `div` slotsPerEpoch
        in
         fromIntegral $ toEpoch - fromEpoch + 1
@@ -433,9 +430,9 @@ epochsInTrace bs'
 txSizeBound ::
   forall era.
   EraTx era =>
-  Tx era ->
+  Tx TopTx era ->
   Integer
-txSizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
+txSizeBound tx = numInputs * inputSize + numOutputs * outputSize + toInteger rest
   where
     uint = 5
     smallArray = 1

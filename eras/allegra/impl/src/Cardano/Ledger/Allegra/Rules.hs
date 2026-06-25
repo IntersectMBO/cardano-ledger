@@ -5,8 +5,7 @@
 module Cardano.Ledger.Allegra.Rules (
   module Cardano.Ledger.Allegra.Rules.Utxo,
   module Cardano.Ledger.Allegra.Rules.Utxow,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Core (EraRuleEvent)
 import Cardano.Ledger.Allegra.Era (AllegraEra)

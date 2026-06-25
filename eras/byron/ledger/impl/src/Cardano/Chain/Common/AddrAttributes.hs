@@ -8,8 +8,7 @@
 module Cardano.Chain.Common.AddrAttributes (
   AddrAttributes (..),
   HDAddressPayload (..),
-)
-where
+) where
 
 import Cardano.Chain.Common.Attributes (
   Attributes (..),

@@ -1,7 +1,6 @@
 module Cardano.Chain.UTxO.GenesisUTxO (
   genesisUtxo,
-)
-where
+) where
 
 import Cardano.Chain.Common (Address, Lovelace, makeRedeemAddress)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic, makeNetworkMagic)

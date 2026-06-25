@@ -7,8 +7,7 @@ module Cardano.Chain.Block.Boundary (
   dropBoundaryExtraHeaderDataRetainGenesisTag,
   dropBoundaryBody,
   dropBoundaryExtraBodyData,
-)
-where
+) where
 
 import Cardano.Chain.Common (
   ChainDifficulty,

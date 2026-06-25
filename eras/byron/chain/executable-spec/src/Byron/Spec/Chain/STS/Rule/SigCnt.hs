@@ -10,7 +10,7 @@ import Control.Arrow ((|||))
 import Control.State.Transition
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
 import Data.Word (Word8)
@@ -19,7 +19,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Lens.Micro ((^.))
 
-data SIGCNT deriving (Data, Typeable)
+data SIGCNT deriving (Data)
 
 -- | These `PredicateFailure`s are all throwable.
 data SigcntPredicateFailure
@@ -27,7 +27,7 @@ data SigcntPredicateFailure
     TooManyIssuedBlocks VKeyGenesis
   | -- | The key signing the block is not a delegate of a genesis key.
     NotADelegate
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS SIGCNT where
   type

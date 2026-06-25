@@ -5,8 +5,7 @@ module Cardano.Chain.Genesis.Initializer (
   GenesisInitializer (..),
   TestnetBalanceOptions (..),
   FakeAvvmOptions (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (Lovelace)
 import Cardano.Prelude

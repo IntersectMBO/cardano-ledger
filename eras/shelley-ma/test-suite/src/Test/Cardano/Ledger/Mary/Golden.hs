@@ -15,8 +15,7 @@ module Test.Cardano.Ledger.Mary.Golden (
   realName,
   minUTxO,
   largestName,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,

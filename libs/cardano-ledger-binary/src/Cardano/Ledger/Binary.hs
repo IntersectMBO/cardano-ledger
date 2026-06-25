@@ -9,17 +9,39 @@ module Cardano.Ledger.Binary (
   Term (..),
   C.DeserialiseFailure (..),
   translateViaCBORAnnotator,
-)
-where
+  toLazyByteString,
+) where
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Binary.Group
-import Cardano.Ledger.Binary.Plain (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Ledger.Binary.Plain (
+  Case (..),
+  FromCBOR (fromCBOR),
+  LengthOf (..),
+  Range (..),
+  Size,
+  SizeOverride (..),
+  ToCBOR (..),
+  apMono,
+  caseValue,
+  isTodo,
+  szBounds,
+  szCases,
+  szEval,
+  szForce,
+  szGreedy,
+  szLazy,
+  szSimplify,
+  szWithCtx,
+  toCBORMaybe,
+  withWordSize,
+ )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import qualified Codec.CBOR.Read as C (DeserialiseFailure (..))
 import Codec.CBOR.Term (Term (..))
+import Codec.CBOR.Write (toLazyByteString)
 import Control.Monad.Except (Except, MonadError (throwError))
 import Data.Text (Text)
 

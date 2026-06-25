@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -21,20 +22,12 @@ module Cardano.Ledger.Conway.Rules.Epoch (
   ConwayEPOCH,
   PredicateFailure,
   ConwayEpochEvent (..),
-)
-where
+) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
-import Cardano.Ledger.CertState (
-  CommitteeState (..),
-  EraCertState (..),
-  VState,
-  dsUnifiedL,
-  vsCommitteeStateL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayHARDFORK, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
@@ -72,15 +65,10 @@ import Cardano.Ledger.Conway.Rules.HardFork (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
-  PState (..),
   UTxOState (..),
-  asTreasuryL,
   curPParamsEpochStateL,
-  esAccountState,
-  esAccountStateL,
   esLStateL,
   esSnapshotsL,
   lsCertStateL,
@@ -94,22 +82,16 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPOOLREAP,
-  ShelleyPoolreapEnv (..),
   ShelleyPoolreapEvent,
-  ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
   ShelleySNAP,
-  ShelleySnapPredFailure,
   SnapEnv (..),
-  UpecPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
-import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (eval, (⨃))
+import Control.Monad (guard)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -141,7 +123,7 @@ data ConwayEpochEvent era
       (Set (GovActionState era))
       -- | Actions that were removed due to expiration together with their dependees
       (Set (GovActionState era))
-      -- | Map of removed governance action ids that had an unregistered reward account to their unclaimed deposits so they can be transferred to the treasury.
+      -- | Map of removed governance action ids that had an unregistered account address to their unclaimed deposits so they can be transferred to the treasury.
       (Map.Map GovActionId Coin)
   | HardForkEvent (Event (EraRule "HARDFORK" era))
   deriving (Generic)
@@ -167,6 +149,7 @@ instance
 instance
   ( EraTxOut era
   , RunConwayRatify era
+  , ConwayEraCertState era
   , ConwayEraGov era
   , EraStake era
   , EraCertState era
@@ -175,11 +158,9 @@ instance
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
-  , Eq (UpecPredFailure era)
-  , Show (UpecPredFailure era)
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
   , GovState era ~ ConwayGovState era
@@ -203,25 +184,20 @@ instance
   transitionRules = [epochTransition]
 
 returnProposalDeposits ::
-  Foldable f =>
+  (Foldable f, EraAccounts era) =>
   f (GovActionState era) ->
-  UMap ->
-  (UMap, Map.Map GovActionId Coin)
-returnProposalDeposits removedProposals oldUMap =
-  foldr' processProposal (oldUMap, mempty) removedProposals
+  Accounts era ->
+  (Accounts era, Map.Map GovActionId Coin)
+returnProposalDeposits removedProposals oldAccounts =
+  foldr' processProposal (oldAccounts, mempty) removedProposals
   where
-    processProposal gas (um, unclaimed)
-      | UMap.member (raCredential (gasReturnAddr gas)) (RewDepUView um) =
-          ( UMap.adjust
-              (addReward (gasDeposit gas))
-              (raCredential (gasReturnAddr gas))
-              (RewDepUView um)
-          , unclaimed
-          )
-      | otherwise = (um, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
-    addReward c rd =
-      -- Deposits have been validated at this point
-      rd {rdReward = rdReward rd <> compactCoinOrError c}
+    processProposal gas (!accounts, !unclaimed)
+      | (Just _accountState, newAccounts) <- updateLookupAccountState addRefund cred accounts =
+          (newAccounts, unclaimed)
+      | otherwise = (accounts, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
+      where
+        addRefund = balanceAccountStateL <>~ compactCoinOrError (gasDeposit gas)
+        cred = gasReturnAddr gas ^. accountAddressCredentialL
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.
@@ -238,51 +214,51 @@ updateNumDormantEpochs currentEpoch ps vState =
 --
 -- The utxo fees and donations are applied in the remaining body of EPOCH transition
 applyEnactedWithdrawals ::
-  AccountState ->
+  EraAccounts era =>
+  ChainAccountState ->
   DState era ->
   EnactState era ->
-  (AccountState, DState era, EnactState era)
-applyEnactedWithdrawals accountState dState enactedState =
+  (ChainAccountState, DState era, EnactState era)
+applyEnactedWithdrawals chainAccountState dState enactedState =
   let enactedWithdrawals = enactedState ^. ensWithdrawalsL
-      rewardsUView = RewDepUView $ dState ^. dsUnifiedL
-      successfulWithdrawls = rewardsUView ◁ enactedWithdrawals
-      accountState' =
-        accountState
+      accounts = dState ^. accountsL
+      -- The use of the partial function `compactCoinOrError` is justified here because
+      -- 1. the decoder for coin at the proposal-submission boundary has already
+      --    confirmed we have a compactible value
+      -- 2. the refunds and unsuccessful refunds together do not exceed the
+      --    current treasury value, as enforced by the `ENACT` rule.
+      successfulWithdrawls =
+        Map.mapMaybeWithKey
+          (\cred w -> compactCoinOrError w <$ guard (isAccountRegistered cred accounts))
+          enactedWithdrawals
+      chainAccountState' =
+        chainAccountState
           -- Subtract `successfulWithdrawals` from the treasury, and add them to the rewards UMap
           -- `unclaimed` withdrawals remain in the treasury.
           -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
           --   + unclaimed - totWithdrawals
           -- we just subtract the `refunds`
           --   - refunds
-          & asTreasuryL %~ (<-> fold successfulWithdrawls)
-      -- The use of the partial function `compactCoinOrError` is justified here because
-      -- 1. the decoder for coin at the proposal-submission boundary has already
-      --    confirmed we have a compactible value
-      -- 2. the refunds and unsuccessful refunds together do not exceed the
-      --    current treasury value, as enforced by the `ENACT` rule.
-      dState' =
-        dState
-          & dsUnifiedL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulWithdrawls))
+          & casTreasuryL %~ (<-> fromCompact (fold successfulWithdrawls))
+      dState' = dState & accountsL %~ addToBalanceAccounts successfulWithdrawls
       -- Reset enacted withdrawals:
       enactedState' =
         enactedState
           & ensWithdrawalsL .~ Map.empty
           & ensTreasuryL .~ mempty
-   in (accountState', dState', enactedState')
+   in (chainAccountState', dState', enactedState')
 
 epochTransition ::
   forall era.
   ( RunConwayRatify era
+  , ConwayEraCertState era
   , EraTxOut era
-  , EraCertState era
-  , Eq (UpecPredFailure era)
-  , Show (UpecPredFailure era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
@@ -301,33 +277,24 @@ epochTransition = do
   TRC
     ( ()
       , epochState0@EpochState
-          { esAccountState = accountState0
-          , esSnapshots = snapshots0
+          { esSnapshots = snapshots0
           , esLState = ledgerState0
           }
       , eNo
       ) <-
     judgmentContext
-  let govState0 = utxosGovState utxoState0
+  let chainAccountState0 = epochState0 ^. chainAccountStateL
+      govState0 = utxosGovState utxoState0
       curPParams = govState0 ^. curPParamsGovStateL
       utxoState0 = lsUTxOState ledgerState0
       certState0 = ledgerState0 ^. lsCertStateL
       vState = certState0 ^. certVStateL
-      pState0 = certState0 ^. certPStateL
-      dState0 = certState0 ^. certDStateL
   snapshots1 <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
 
-  -- Activate future StakePools
-  let newStakePoolParams = eval (psStakePoolParams pState0 ⨃ psFutureStakePoolParams pState0)
-      pState1 =
-        pState0
-          { psStakePoolParams = newStakePoolParams
-          , psFutureStakePoolParams = Map.empty
-          }
-  PoolreapState utxoState1 accountState1 dState1 pState2 <-
+  PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (ShelleyPoolreapEnv vState, PoolreapState utxoState0 accountState0 dState0 pState1, eNo)
+      TRC ((), PoolreapState utxoState0 chainAccountState0 certState0, eNo)
 
   let
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
@@ -336,8 +303,8 @@ epochTransition = do
     ratifyState@RatifyState {rsEnactState, rsEnacted, rsExpired} =
       extractDRepPulsingState pulsingState
 
-    (accountState2, dState2, EnactState {..}) =
-      applyEnactedWithdrawals accountState1 dState1 rsEnactState
+    (chainAccountState2, dState2, EnactState {..}) =
+      applyEnactedWithdrawals chainAccountState1 (certState1 ^. certDStateL) rsEnactState
 
     -- NOTE: It is important that we apply the results of ratification
     -- and enactment from the pulser to the working copy of proposals.
@@ -365,10 +332,8 @@ epochTransition = do
         & cgsFuturePParamsL .~ PotentialPParamsUpdate Nothing
 
     allRemovedGovActions = Map.unions [expiredActions, enactedActions, removedDueToEnactment]
-    (newUMap, unclaimed) =
-      returnProposalDeposits allRemovedGovActions $
-        dState2 ^. dsUnifiedL
-
+    (newAccounts, unclaimed) =
+      returnProposalDeposits allRemovedGovActions $ dState2 ^. accountsL
   tellEvent $
     GovInfoEvent
       (Set.fromList $ Map.elems enactedActions)
@@ -377,32 +342,32 @@ epochTransition = do
       unclaimed
 
   let
-    certState1 =
-      mkCertState
+    certState2 =
+      mkConwayCertState
         -- Increment the dormant epoch counter
         ( updateNumDormantEpochs eNo newProposals vState
             -- Remove cold credentials of committee members that were removed or were invalid
             & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
         )
-        pState2
-        (dState2 & dsUnifiedL .~ newUMap)
-    accountState3 =
-      accountState2
+        (certState1 ^. certPStateL)
+        (dState2 & accountsL .~ newAccounts)
+    chainAccountState3 =
+      chainAccountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
-        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
+        & casTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
       utxoState1
-        & utxosDepositedL .~ totalObligation certState1 govState1
+        & utxosDepositedL .~ totalObligation certState2 govState1
         -- Clear the donations field:
         & utxosDonationL .~ zero
         & utxosGovStateL .~ govState1
     ledgerState1 =
       ledgerState0
-        & lsCertStateL .~ certState1
+        & lsCertStateL .~ certState2
         & lsUTxOStateL .~ utxoState2
     epochState1 =
       epochState0
-        & esAccountStateL .~ accountState3
+        & chainAccountStateL .~ chainAccountState3
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
   tellEvent $ EpochBoundaryRatifyState ratifyState
@@ -416,7 +381,6 @@ epochTransition = do
 instance
   ( Era era
   , STS (ShelleyPOOLREAP era)
-  , PredicateFailure (EraRule "POOLREAP" era) ~ ShelleyPoolreapPredFailure era
   , Event (EraRule "POOLREAP" era) ~ ShelleyPoolreapEvent era
   ) =>
   Embed (ShelleyPOOLREAP era) (ConwayEPOCH era)
@@ -428,7 +392,6 @@ instance
   ( EraTxOut era
   , EraStake era
   , EraCertState era
-  , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)
@@ -465,3 +428,6 @@ updateCommitteeState committee (CommitteeState creds) =
   CommitteeState $ Map.intersection creds members
   where
     members = foldMap' committeeMembers committee
+
+instance InjectRuleEvent "EPOCH" ConwayHardForkEvent ConwayEra where
+  injectEvent = HardForkEvent

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,8 +8,7 @@ module Test.Cardano.Ledger.Binary.Random (
   QC (..),
   mkDummyHash,
   mkHashStdGen,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashToBytesShort)
 import Cardano.Crypto.Hash.Short (Blake2bPrefix)
@@ -34,9 +34,15 @@ instance StatefulGen QC Gen where
   {-# INLINE uniformWord32 #-}
   uniformWord64 QC = MkGen (\r _n -> runStateGen_ r uniformWord64)
   {-# INLINE uniformWord64 #-}
+#if MIN_VERSION_random(1,3,0)
+  uniformByteArrayM isPinned k QC =
+    MkGen (\r _n -> runStateGen_ r (uniformByteArrayM isPinned k))
+  {-# INLINE uniformByteArrayM #-}
+#else
   uniformShortByteString k QC =
     MkGen (\r _n -> runStateGen_ r (uniformShortByteString k))
   {-# INLINE uniformShortByteString #-}
+#endif
 
 -- | It is possible to use a hash of a binary representation of any type as a source of
 -- randomness, since hash value by its definiteion is uniformly distributed.

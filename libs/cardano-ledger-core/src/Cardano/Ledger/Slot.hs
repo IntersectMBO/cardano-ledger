@@ -21,8 +21,7 @@ module Cardano.Ledger.Slot (
   epochInfoEpoch,
   epochInfoFirst,
   epochInfoSize,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Globals (Globals, stabilityWindow), ShelleyBase, epochInfoPure)
 import Cardano.Slotting.Block (BlockNo (..))

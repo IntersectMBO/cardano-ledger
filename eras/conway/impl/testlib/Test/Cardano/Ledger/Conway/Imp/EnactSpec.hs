@@ -17,13 +17,12 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
+import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
-import Control.Monad.Writer (listen)
-import Control.State.Transition.Extended (STS (..))
 import Data.Default (def)
 import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -40,20 +39,13 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
-import Type.Reflection (Typeable)
 
 spec ::
   forall era.
   ( ConwayEraImp era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
@@ -67,19 +59,12 @@ spec = do
   pparamPredictionSpec
 
 treasuryWithdrawalsSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
     it "Modify EnactState as expected" $ whenPostBootstrap $ do
-      rewardAcount1 <- registerRewardAccount
+      rewardAcount1 <- registerAccountAddress
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
       let govAction = gasAction gas
@@ -94,9 +79,10 @@ treasuryWithdrawalsSpec =
               { ensTreasury = Coin 1000
               }
       enactState' <- runImpRule @"ENACT" () enactState signal
-      ensWithdrawals enactState' `shouldBe` [(raCredential rewardAcount1, Coin 666)]
+      ensWithdrawals enactState'
+        `shouldBe` [(rewardAcount1 ^. accountAddressCredentialL, Coin 666)]
 
-      rewardAcount2 <- registerRewardAccount
+      rewardAcount2 <- registerAccountAddress
       let withdrawals' =
             [ (rewardAcount1, Coin 111)
             , (rewardAcount2, Coin 222)
@@ -113,8 +99,8 @@ treasuryWithdrawalsSpec =
       enactState'' <- runImpRule @"ENACT" () enactState' signal'
 
       ensWithdrawals enactState''
-        `shouldBe` [ (raCredential rewardAcount1, Coin 777)
-                   , (raCredential rewardAcount2, Coin 222)
+        `shouldBe` [ (rewardAcount1 ^. accountAddressCredentialL, Coin 777)
+                   , (rewardAcount2 ^. accountAddressCredentialL, Coin 222)
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
 
@@ -122,7 +108,7 @@ treasuryWithdrawalsSpec =
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      initialTreasury <- getTreasury
+      initialTreasury <- getsNES treasuryL
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
@@ -137,61 +123,61 @@ treasuryWithdrawalsSpec =
                 & bodyTxL . treasuryDonationTxBodyL .~ (sumRequested <-> initialTreasury)
         submitTx_ tx
       passNEpochs 2
-      getTreasury `shouldReturn` zero
-      sumRewardAccounts withdrawals `shouldReturn` sumRequested
+      getsNES treasuryL `shouldReturn` zero
+      sumAccountBalances withdrawals `shouldReturn` sumRequested
 
     it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      initialTreasury <- getTreasury
+      initialTreasury <- getsNES treasuryL
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding (Coin (fromIntegral (maxBound :: Word64))) numWithdrawals
       void $ enactTreasuryWithdrawals withdrawals drepC committeeCs
       checkNoWithdrawal initialTreasury withdrawals
 
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $
-      whenPostBootstrap $ do
-        disableTreasuryExpansion
-        committeeCs <- registerInitialCommittee
-        (drepC, _, _) <- setupSingleDRep 1_000_000
-        donateToTreasury $ Coin 5_000_000
-        initialTreasury <- getTreasury
-        numWithdrawals <- choose (1, 10)
-        withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
+      whenPostBootstrap $
+        do
+          disableTreasuryExpansion
+          committeeCs <- registerInitialCommittee
+          (drepC, _, _) <- setupSingleDRep 1_000_000
+          donateToTreasury $ Coin 5_000_000
+          initialTreasury <- getsNES treasuryL
+          numWithdrawals <- choose (1, 10)
+          withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
-        impAnn "submit in individual proposals in the same epoch" $ do
-          traverse_
-            ( \w -> do
-                gaId <- submitTreasuryWithdrawals @era [w]
-                submitYesVote_ (DRepVoter drepC) gaId
-                submitYesVoteCCs_ committeeCs gaId
-            )
-            withdrawals
-          passNEpochs 2
+          impAnn "submit in individual proposals in the same epoch" $ do
+            traverse_
+              ( \w -> do
+                  gaId <- submitTreasuryWithdrawals @era [w]
+                  submitYesVote_ (DRepVoter drepC) gaId
+                  submitYesVoteCCs_ committeeCs gaId
+              )
+              withdrawals
+            passNEpochs 2
 
-          let expectedTreasury =
-                F.foldl'
-                  ( \acc (_, x) ->
-                      if acc >= x
-                        then acc <-> x
-                        else acc
-                  )
-                  initialTreasury
-                  withdrawals
+            let expectedTreasury =
+                  F.foldl'
+                    ( \acc (_, x) ->
+                        if acc >= x
+                          then acc <-> x
+                          else acc
+                    )
+                    initialTreasury
+                    withdrawals
 
-          getTreasury `shouldReturn` expectedTreasury
-          -- check that the sum of the rewards matches what was spent from the treasury
-          sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
+            getsNES treasuryL `shouldReturn` expectedTreasury
+            -- check that the sum of the rewards matches what was spent from the treasury
+            sumAccountBalances withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
-    getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
-    sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
+    sumAccountBalances withdrawals = mconcat <$> traverse (getAccountBalance . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
-      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
+      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerAccountAddress
     checkNoWithdrawal initialTreasury withdrawals = do
-      getTreasury `shouldReturn` initialTreasury
-      sumRewardAccounts withdrawals `shouldReturn` zero
+      getsNES treasuryL `shouldReturn` initialTreasury
+      sumAccountBalances withdrawals `shouldReturn` zero
     genValuesExceeding val n = do
       pcts <- replicateM (n - 1) $ choose (1, 100)
       let tot = sum pcts
@@ -204,9 +190,8 @@ hardForkInitiationSpec ::
   forall era.
   ( ConwayEraImp era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationSpec =
@@ -229,21 +214,20 @@ hardForkInitiationSpec =
     submitYesVote_ (DRepVoter dRep1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (DRepVoter dRep2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd
+      & impEventsFrom
+      >>= expectHardForkEvents
         <*> pure
-          [ SomeSTSEvent @era @"TICK" . injectEvent $
-              HardForkEvent (ConwayHardForkEvent nextProtVer)
+          [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
 
     getProtVer `shouldReturn` nextProtVer
@@ -252,9 +236,8 @@ hardForkInitiationNoDRepsSpec ::
   forall era.
   ( ConwayEraImp era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationNoDRepsSpec =
@@ -272,20 +255,20 @@ hardForkInitiationNoDRepsSpec =
     submitYesVoteCCs_ committeeMembers' govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd <*> pure []
+      & impEventsFrom
+      >>= expectHardForkEvents <*> pure []
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-      & listen
-      >>= expectHardForkEvents . snd
+      & impEventsFrom
+      >>= expectHardForkEvents
         <*> pure
-          [ SomeSTSEvent @era @"TICK" . injectEvent $
-              HardForkEvent (ConwayHardForkEvent nextProtVer)
+          [ SomeSTSEvent @era @"TICK" . injectEvent $ ConwayHardForkEvent nextProtVer
           ]
     getProtVer `shouldReturn` nextProtVer
 
-pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+pparamPredictionSpec ::
+  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 pparamPredictionSpec =
   it "futurePParams" $ do
     committeeMembers' <- registerInitialCommittee
@@ -306,7 +289,8 @@ pparamPredictionSpec =
     passEpoch
     getProtVer `shouldReturn` nextProtVer
 
-noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+noConfidenceSpec ::
+  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 noConfidenceSpec =
   it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
@@ -315,9 +299,6 @@ noConfidenceSpec =
         & ppPoolVotingThresholdsL . pvtCommitteeNoConfidenceL .~ 1 %! 2
         & ppCommitteeMaxTermLengthL .~ EpochInterval 200
     let
-      getCommittee =
-        getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
       assertNoCommittee :: HasCallStack => ImpTestM era ()
       assertNoCommittee =
         do
@@ -333,7 +314,7 @@ noConfidenceSpec =
             [ (KeyHashObj khCC, addEpochInterval startEpochNo (EpochInterval 50))
             ]
     prevGaidCommittee@(GovPurposeId gaidCommittee) <-
-      electCommittee
+      submitCommitteeElection
         SNothing
         drep
         initialCommitteeMembers
@@ -352,9 +333,7 @@ noConfidenceSpec =
     assertNoCommittee
 
 constitutionSpec ::
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   it "Constitution" $ do
@@ -423,12 +402,7 @@ constitutionSpec =
         enactState <- getEnactState
         rsEnactState pulserRatifyState `shouldBe` enactState
 
-actionPrioritySpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+actionPrioritySpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 actionPrioritySpec =
   describe "Competing proposals" $ do
     it "higher action priority wins" $ do
@@ -462,94 +436,86 @@ actionPrioritySpec =
 
     -- distinct constitutional values for minFee
     let genMinFeeVals =
-          (\x y z -> (Coin x, Coin y, Coin z))
+          (\x y z -> (CoinPerByte $ CompactCoin x, CoinPerByte $ CompactCoin y, CoinPerByte $ CompactCoin z))
             <$> uniformRM (30, 330)
             <*> uniformRM (330, 660)
             <*> uniformRM (660, 1000)
 
-    disableImpInitExpectLedgerRuleConformance $
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/642
-      -- TODO: Remove this override once the issue is fixed
-      it "proposals of same priority are enacted in order of submission" $ do
-        modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
-        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
-        (val1, val2, val3) <- genMinFeeVals
+    it "proposals of same priority are enacted in order of submission" $ do
+      modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+      (val1, val2, val3) <- genMinFeeVals
 
-        committeeCs <- registerInitialCommittee
-        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-        pGai0 <-
-          submitParameterChange
-            SNothing
-            $ def & ppuMinFeeAL .~ SJust val1
-        pGai1 <-
-          submitParameterChange
-            (SJust pGai0)
-            $ def & ppuMinFeeAL .~ SJust val2
-        pGai2 <-
-          submitParameterChange
-            (SJust pGai1)
-            $ def & ppuMinFeeAL .~ SJust val3
-        traverse_ @[]
-          ( \gaid -> do
-              submitYesVote_ (StakePoolVoter spoC) gaid
-              submitYesVoteCCs_ committeeCs gaid
-          )
-          [pGai0, pGai1, pGai2]
-        passNEpochs 2
-        getLastEnactedParameterChange
-          `shouldReturn` SJust (GovPurposeId pGai2)
-        expectNoCurrentProposals
-        getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
-          `shouldReturn` val3
+      committeeCs <- registerInitialCommittee
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      pGai0 <-
+        submitParameterChange
+          SNothing
+          $ def & ppuTxFeePerByteL .~ SJust val1
+      pGai1 <-
+        submitParameterChange
+          (SJust pGai0)
+          $ def & ppuTxFeePerByteL .~ SJust val2
+      pGai2 <-
+        submitParameterChange
+          (SJust pGai1)
+          $ def & ppuTxFeePerByteL .~ SJust val3
+      traverse_ @[]
+        ( \gaid -> do
+            submitYesVote_ (StakePoolVoter spoC) gaid
+            submitYesVoteCCs_ committeeCs gaid
+        )
+        [pGai0, pGai1, pGai2]
+      passNEpochs 2
+      getLastEnactedParameterChange
+        `shouldReturn` SJust (GovPurposeId pGai2)
+      expectNoCurrentProposals
+      getsNES (nesEsL . curPParamsEpochStateL . ppTxFeePerByteL)
+        `shouldReturn` val3
 
-    disableImpInitExpectLedgerRuleConformance $
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/642
-      -- TODO: Remove this override once the issue is fixed
-      it "only the first action of a transaction gets enacted" $ do
-        modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
-        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
-        (val1, val2, val3) <- genMinFeeVals
+    it "only the first action of a transaction gets enacted" $ do
+      modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+      (val1, val2, val3) <- genMinFeeVals
 
-        committeeCs <- registerInitialCommittee
-        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-        policy <- getGovPolicy
-        gaids <-
-          submitGovActions $
-            NE.fromList
-              [ ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust val1)
-                  policy
-              , ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust val2)
-                  policy
-              , ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust val3)
-                  policy
-              ]
-        traverse_
-          ( \gaid -> do
-              submitYesVote_ (StakePoolVoter spoC) gaid
-              submitYesVoteCCs_ committeeCs gaid
-          )
-          gaids
-        passNEpochs 2
-        getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
-          `shouldReturn` val1
-        expectNoCurrentProposals
+      committeeCs <- registerInitialCommittee
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      policy <- getGovPolicy
+      gaids <-
+        submitGovActions $
+          NE.fromList
+            [ ParameterChange
+                SNothing
+                (def & ppuTxFeePerByteL .~ SJust val1)
+                policy
+            , ParameterChange
+                SNothing
+                (def & ppuTxFeePerByteL .~ SJust val2)
+                policy
+            , ParameterChange
+                SNothing
+                (def & ppuTxFeePerByteL .~ SJust val3)
+                policy
+            ]
+      traverse_
+        ( \gaid -> do
+            submitYesVote_ (StakePoolVoter spoC) gaid
+            submitYesVoteCCs_ committeeCs gaid
+        )
+        gaids
+      passNEpochs 2
+      getsNES (nesEsL . curPParamsEpochStateL . ppTxFeePerByteL)
+        `shouldReturn` val1
+      expectNoCurrentProposals
 
 expectHardForkEvents ::
   forall era.
   ( ConwayEraImp era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   ) =>
-  [SomeSTSEvent era] ->
-  [SomeSTSEvent era] ->
-  ImpTestM era ()
+  [SomeSTSEvent era] -> [SomeSTSEvent era] -> ImpTestM era ()
 expectHardForkEvents actual expected =
   filter isHardForkEvent actual `shouldBeExpr` expected
   where
@@ -560,11 +526,7 @@ expectHardForkEvents actual expected =
           True
       | otherwise = False
 
-committeeSpec ::
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+committeeSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 committeeSpec =
   describe "Committee enactment" $ do
     it "Enact UpdateCommitee with lengthy lifetime" $ do

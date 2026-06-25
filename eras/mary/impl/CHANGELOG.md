@@ -1,5 +1,47 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.10.0.0
+
+* Add `Generic` instance for `ApplyTxError`
+* Add `MaryApplyTxError` constructor for `ApplyTxError era`
+* Add `cddl` sub-library, and `generate-cddl` executable.
+* Remove deprecated functions `insert`, `lookup`, `prune`
+* Remove deprecated type `Mary`
+* Add `burnedMultiAssets`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
+
+### `cddl`
+
+* Move `cddl-files` to `cddl/data`.
+* Export `assetNameRule` for reuse.
+* Rename 'multiasset' to `maryMultiasset`
+* Add full `HuddleSpec`.
+
+### `testlib`
+
+* Remove `huddle-cddl` and the `CDDL` modules.
+* Use fixed-sized `uint .size 8` for `slot` in CDDL for transaction validity intervals
+
+## 1.9.0.0
+
+* Hide `Cardano.Ledger.Mary.Translation` module
+* Added `COMPLETE` pragma for `TxCert MaryEra`
+* Added `COMPLETE` pragma for `NativeScript MaryEra`
+* Move to `testlib` the `DecCBOR` instance for `TxBody MaryEra`
+* Remove `MaryTxBody`
+* Converted `MaryTxBodyRaw` into a type synonym
+* Expose constructor `MkMaryTxBody`
+* Add default implementation for `mintValueTxBodyF`
+
+### `testlib`
+
+* Added `EraSpecificSpec MaryEra` instance
+* Added `Examples` module with: `ledgerExamples`, `exampleMultiAssetValue`
+* Added `Arbitrary` instance for `TransitionConfig MaryEra`
+* Added `Era` module with `MaryEraTest` class
+
 ## 1.8.0.0
 
 * Add `DecCBOR` instance for `MaryTxBody`
@@ -81,9 +123,9 @@
 ## 1.3.4.0
 
 * Add `ToExpr` instance for:
-  * `MaryTxBody`
-  * `CompactForm (MaryValue)`
-  * `CompactValue`
+  - `MaryTxBody`
+  - `CompactForm (MaryValue)`
+  - `CompactValue`
 * Add `Generic` instance for `CompactValue`
 * Add `EraTransition` instance.
 
@@ -119,9 +161,9 @@
 ## 1.1.1.0
 
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 * Add `EraDCert`, `ShelleyEraDCert` instances to `MaryEra`
 
 ## 1.1.0.0

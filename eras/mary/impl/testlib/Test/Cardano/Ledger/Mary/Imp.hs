@@ -4,28 +4,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Mary.Imp (spec) where
 
-import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Mary (MaryEra)
 import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as Utxo
-import Test.Cardano.Ledger.Mary.ImpTest (MaryEraImp)
-import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec)
+import Test.Cardano.Ledger.Mary.ImpTest
+import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
-spec ::
-  forall era.
-  ( Arbitrary (TxAuxData era)
-  , MaryEraImp era
-  , AllegraEraScript era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
-  Spec
+spec :: forall era. (MaryEraImp era, EraSpecificSpec era) => Spec
 spec = do
   AllegraImp.spec @era
-  describe "MaryImpSpec" $ withImpInit @(LedgerSpec era) $ do
-    Utxo.spec
+  describe "MaryImpSpec" $
+    withEachEraVersion @era $
+      Utxo.spec
+
+instance EraSpecificSpec MaryEra where
+  eraSpecificSpec = ShelleyImp.shelleyEraSpecificSpec

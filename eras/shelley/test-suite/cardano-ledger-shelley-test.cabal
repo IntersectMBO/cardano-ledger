@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley-test
-version: 1.6.0.0
+version: 1.8.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -23,25 +23,20 @@ library
     Test.Cardano.Ledger.Shelley.ByronTranslation
     Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
     Test.Cardano.Ledger.Shelley.Examples.Cast
-    Test.Cardano.Ledger.Shelley.Examples.Consensus
     Test.Cardano.Ledger.Shelley.Examples.Federation
     Test.Cardano.Ledger.Shelley.Generator.Block
-    Test.Cardano.Ledger.Shelley.Generator.Constants
     Test.Cardano.Ledger.Shelley.Generator.Core
-    Test.Cardano.Ledger.Shelley.Generator.Delegation
     Test.Cardano.Ledger.Shelley.Generator.EraGen
     Test.Cardano.Ledger.Shelley.Generator.Presets
     Test.Cardano.Ledger.Shelley.Generator.ScriptClass
     Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
     Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
-    Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
     Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
     Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert
     Test.Cardano.Ledger.Shelley.Generator.TxAuxData
     Test.Cardano.Ledger.Shelley.Generator.TxCert
     Test.Cardano.Ledger.Shelley.Generator.Update
     Test.Cardano.Ledger.Shelley.Generator.Utxo
-    Test.Cardano.Ledger.Shelley.LaxBlock
     Test.Cardano.Ledger.Shelley.PropertyTests
     Test.Cardano.Ledger.Shelley.Rewards
     Test.Cardano.Ledger.Shelley.Rules.AdaPreservation
@@ -69,21 +64,30 @@ library
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck >=2.13.2,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     bytestring,
     cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-data >=1.2,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.6,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.7,
     cardano-ledger-byron,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
-    cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.14,
+    cardano-ledger-core:{cardano-ledger-core, tasty-compat, testlib} >=1.19,
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.18,
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.4,
     cardano-slotting:{cardano-slotting, testlib},
     cardano-strict-containers,
@@ -91,19 +95,15 @@ library
     containers,
     data-default,
     deepseq,
+    mempack,
     microlens,
     mtl,
     nothunks,
     plutus-ledger-api,
     prettyprinter,
     serialise,
-    set-algebra,
     small-steps:{small-steps, testlib} >=1.1,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,
     text,
-    time,
     transformers,
     tree-diff,
     vector,
@@ -115,7 +115,7 @@ test-suite cardano-ledger-shelley-test
   hs-source-dirs: test
   other-modules:
     Paths_cardano_ledger_shelley_test
-    Test.Cardano.Ledger.Shelley.Examples
+    Test.Cardano.Ledger.Shelley.Examples.Chain
     Test.Cardano.Ledger.Shelley.Examples.Combinators
     Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
     Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
@@ -127,7 +127,6 @@ test-suite cardano-ledger-shelley-test
     Test.Cardano.Ledger.Shelley.Examples.PoolReReg
     Test.Cardano.Ledger.Shelley.Examples.TwoPools
     Test.Cardano.Ledger.Shelley.Examples.Updates
-    Test.Cardano.Ledger.Shelley.Fees
     Test.Cardano.Ledger.Shelley.MultiSigExamples
     Test.Cardano.Ledger.Shelley.RulesTests
     Test.Cardano.Ledger.Shelley.SafeHash
@@ -152,6 +151,10 @@ test-suite cardano-ledger-shelley-test
     -with-rtsopts=-N
     "-with-rtsopts=-K4m -M300m"
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck,
     aeson >=2,
@@ -163,7 +166,7 @@ test-suite cardano-ledger-shelley-test
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
-    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-core:{cardano-ledger-core, tasty-compat, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-test,
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
@@ -175,21 +178,19 @@ test-suite cardano-ledger-shelley-test
     deepseq,
     groups,
     iproute,
+    mempack,
     microlens,
     prettyprinter,
     scientific,
     small-steps:{small-steps, testlib} >=1.1,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,
     time,
+    vector-map,
 
 benchmark mainbench
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: bench
   other-modules:
-    BenchUTxOAggregate
     BenchValidation
     Cardano.Ledger.Shelley.Bench.Gen
     Cardano.Ledger.Shelley.Bench.Rewards
@@ -210,8 +211,7 @@ benchmark mainbench
     QuickCheck,
     base,
     cardano-data,
-    cardano-ledger-binary:testlib,
-    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-core,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-test,
     cardano-protocol-tpraos,
@@ -221,5 +221,4 @@ benchmark mainbench
     criterion,
     deepseq,
     mtl,
-    set-algebra,
     small-steps:{small-steps, testlib} >=1.1,

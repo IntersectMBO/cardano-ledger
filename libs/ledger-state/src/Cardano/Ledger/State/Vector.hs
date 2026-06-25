@@ -1,14 +1,8 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.State.Vector where
@@ -16,14 +10,14 @@ module Cardano.Ledger.State.Vector where
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys as Keys
-import Cardano.Ledger.PoolParams
+import Cardano.Ledger.State (StakePoolSnapShot)
 import Control.DeepSeq
 import Data.Map.Strict as Map
 
 data SnapShotM = SnapShotM
-  { ssStake :: !(Map (Credential 'Staking) (CompactForm Coin))
-  , ssDelegations :: !(Map (Credential 'Staking) (KeyHash 'StakePool))
-  , ssPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  { ssStake :: !(Map (Credential Staking) (CompactForm Coin))
+  , ssDelegations :: !(Map (Credential Staking) (KeyHash StakePool))
+  , ssStakePoolsSnapShot :: !(Map (KeyHash StakePool) StakePoolSnapShot)
   }
 
 instance NFData SnapShotM where

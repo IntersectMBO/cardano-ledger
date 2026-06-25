@@ -2,13 +2,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -20,7 +18,6 @@
 module Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesisStaking (..),
   ShelleyGenesis (..),
-  toShelleyGenesisPairs,
   ValidationErr (..),
   NominalDiffTimeMicro (..),
   emptyGenesisStaking,
@@ -38,23 +35,24 @@ module Cardano.Ledger.Shelley.Genesis (
   secondsToNominalDiffTimeMicro,
   sgInitialFundsL,
   sgStakingL,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Blake2b_256)
 import qualified Cardano.Crypto.Hash.Class as H
 import Cardano.Crypto.KES (Sum6KES, totalPeriodsKES)
-import Cardano.Ledger.Address (Addr, serialiseAddr)
+import Cardano.Ledger.Address (serialiseAddr)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BoundedRational (boundRational, unboundRational),
   EpochSize (..),
   Globals (..),
+  KeyValuePairs (..),
   Network,
   NonZero (..),
   Nonce (..),
   PositiveUnitInterval,
+  ToKeyValuePairs (..),
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Binary (
@@ -77,18 +75,18 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Genesis (EraGenesis (..))
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
-import Cardano.Ledger.Keys
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Keys (GenDelegPair (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
-import Cardano.Ledger.State (UTxO (UTxO))
+import Cardano.Ledger.State (StakePoolParams (..), UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
+import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -122,13 +120,13 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
 data ShelleyGenesisStaking = ShelleyGenesisStaking
-  { sgsPools :: LM.ListMap (KeyHash 'StakePool) PoolParams
+  { sgsPools :: LM.ListMap (KeyHash StakePool) StakePoolParams
   -- ^ Pools to register
   --
   --   The key in this map is the hash of the public key of the _pool_. This
   --   need not correspond to any payment or staking key, but must correspond
   --   to the cold key held by 'TPraosIsCoreNode'.
-  , sgsStake :: LM.ListMap (KeyHash 'Staking) (KeyHash 'StakePool)
+  , sgsStake :: LM.ListMap (KeyHash Staking) (KeyHash StakePool)
   -- ^ Stake-holding key hash credentials and the pools to delegate that stake
   -- to. We require the raw staking key hash in order to:
   --
@@ -137,6 +135,9 @@ data ShelleyGenesisStaking = ShelleyGenesisStaking
   -- - Avoid script credentials.
   }
   deriving stock (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs ShelleyGenesisStaking
+
+instance NFData ShelleyGenesisStaking
 
 instance NoThunks ShelleyGenesisStaking
 
@@ -167,7 +168,7 @@ emptyGenesisStaking = mempty
 newtype NominalDiffTimeMicro = NominalDiffTimeMicro Micro
   deriving (Show, Eq, Generic)
   deriving anyclass (NoThunks)
-  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, EncCBOR, DecCBOR, NFData)
 
 -- | There is no loss of resolution in this conversion
 microToPico :: Micro -> Pico
@@ -220,7 +221,7 @@ data ShelleyGenesis = ShelleyGenesis
   , sgUpdateQuorum :: !Word64
   , sgMaxLovelaceSupply :: !Word64
   , sgProtocolParams :: !(PParams ShelleyEra)
-  , sgGenDelegs :: !(Map (KeyHash 'Genesis) GenDelegPair)
+  , sgGenDelegs :: !(Map (KeyHash GenesisRole) GenDelegPair)
   , sgInitialFunds :: LM.ListMap Addr Coin
   -- ^ 'sgInitialFunds' is intentionally kept lazy, as it can otherwise cause
   --   out-of-memory problems in testing and benchmarking.
@@ -229,6 +230,9 @@ data ShelleyGenesis = ShelleyGenesis
   --   out-of-memory problems in testing and benchmarking.
   }
   deriving stock (Generic, Show, Eq)
+  deriving (ToJSON) via KeyValuePairs ShelleyGenesis
+
+instance NFData ShelleyGenesis
 
 sgInitialFundsL :: Lens' ShelleyGenesis (LM.ListMap Addr Coin)
 sgInitialFundsL = lens sgInitialFunds (\sg x -> sg {sgInitialFunds = x})
@@ -244,9 +248,43 @@ deriving via
 sgActiveSlotCoeff :: ShelleyGenesis -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
-instance ToJSON ShelleyGenesis where
-  toJSON = Aeson.object . toShelleyGenesisPairs
-  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
+instance ToKeyValuePairs ShelleyGenesis where
+  toKeyValuePairs
+    ShelleyGenesis
+      { sgSystemStart
+      , sgNetworkMagic
+      , sgNetworkId
+      , sgActiveSlotsCoeff
+      , sgSecurityParam
+      , sgEpochLength
+      , sgSlotsPerKESPeriod
+      , sgMaxKESEvolutions
+      , sgSlotLength
+      , sgUpdateQuorum
+      , sgMaxLovelaceSupply
+      , sgProtocolParams
+      , sgGenDelegs
+      , sgInitialFunds
+      , sgStaking
+      } =
+      let !strictSgInitialFunds = sgInitialFunds
+          !strictSgStaking = sgStaking
+       in [ "systemStart" .= sgSystemStart
+          , "networkMagic" .= sgNetworkMagic
+          , "networkId" .= sgNetworkId
+          , "activeSlotsCoeff" .= sgActiveSlotsCoeff
+          , "securityParam" .= sgSecurityParam
+          , "epochLength" .= sgEpochLength
+          , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod
+          , "maxKESEvolutions" .= sgMaxKESEvolutions
+          , "slotLength" .= sgSlotLength
+          , "updateQuorum" .= sgUpdateQuorum
+          , "maxLovelaceSupply" .= sgMaxLovelaceSupply
+          , "protocolParams" .= legacyToJSONPParams sgProtocolParams
+          , "genDelegs" .= sgGenDelegs
+          , "initialFunds" .= strictSgInitialFunds
+          , "staking" .= strictSgStaking
+          ]
 
 instance EraGenesis ShelleyEra where
   type Genesis ShelleyEra = ShelleyGenesis
@@ -302,8 +340,8 @@ instance ToJSON LegacyJSONPParams where
   toJSON
     ( LegacyJSONPParams
         ( ShelleyPParams
-            { sppMinFeeA
-            , sppMinFeeB
+            { sppTxFeePerByte
+            , sppTxFeeFixed
             , sppMaxBBSize
             , sppMaxTxSize
             , sppMaxBHSize
@@ -323,8 +361,8 @@ instance ToJSON LegacyJSONPParams where
           )
       ) =
       Aeson.object
-        [ "minFeeA" .= sppMinFeeA
-        , "minFeeB" .= sppMinFeeB
+        [ "minFeeA" .= sppTxFeePerByte
+        , "minFeeB" .= sppTxFeeFixed
         , "maxBlockBodySize" .= sppMaxBBSize
         , "maxTxSize" .= sppMaxTxSize
         , "maxBlockHeaderSize" .= sppMaxBHSize
@@ -348,44 +386,6 @@ instance ToJSON LegacyJSONPParams where
         , "protocolVersion" .= sppProtocolVersion
         , "minUTxOValue" .= sppMinUTxOValue
         , "minPoolCost" .= sppMinPoolCost
-        ]
-
-toShelleyGenesisPairs :: Aeson.KeyValue e a => ShelleyGenesis -> [a]
-toShelleyGenesisPairs
-  ShelleyGenesis
-    { sgSystemStart
-    , sgNetworkMagic
-    , sgNetworkId
-    , sgActiveSlotsCoeff
-    , sgSecurityParam
-    , sgEpochLength
-    , sgSlotsPerKESPeriod
-    , sgMaxKESEvolutions
-    , sgSlotLength
-    , sgUpdateQuorum
-    , sgMaxLovelaceSupply
-    , sgProtocolParams
-    , sgGenDelegs
-    , sgInitialFunds
-    , sgStaking
-    } =
-    let !strictSgInitialFunds = sgInitialFunds
-        !strictSgStaking = sgStaking
-     in [ "systemStart" .= sgSystemStart
-        , "networkMagic" .= sgNetworkMagic
-        , "networkId" .= sgNetworkId
-        , "activeSlotsCoeff" .= sgActiveSlotsCoeff
-        , "securityParam" .= sgSecurityParam
-        , "epochLength" .= sgEpochLength
-        , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod
-        , "maxKESEvolutions" .= sgMaxKESEvolutions
-        , "slotLength" .= sgSlotLength
-        , "updateQuorum" .= sgUpdateQuorum
-        , "maxLovelaceSupply" .= sgMaxLovelaceSupply
-        , "protocolParams" .= legacyToJSONPParams sgProtocolParams
-        , "genDelegs" .= sgGenDelegs
-        , "initialFunds" .= strictSgInitialFunds
-        , "staking" .= strictSgStaking
         ]
 
 instance FromJSON ShelleyGenesis where
@@ -413,18 +413,11 @@ instance FromJSON ShelleyGenesis where
             !time = utctDayTime date
          in UTCTime day time
 
-instance ToJSON ShelleyGenesisStaking where
-  toJSON = Aeson.object . toShelleyGenesisStakingPairs
-  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
-
-toShelleyGenesisStakingPairs ::
-  Aeson.KeyValue e a =>
-  ShelleyGenesisStaking ->
-  [a]
-toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
-  [ "pools" .= sgsPools
-  , "stake" .= sgsStake
-  ]
+instance ToKeyValuePairs ShelleyGenesisStaking where
+  toKeyValuePairs ShelleyGenesisStaking {sgsPools, sgsStake} =
+    [ "pools" .= sgsPools
+    , "stake" .= sgsStake
+    ]
 
 instance FromJSON ShelleyGenesisStaking where
   parseJSON =

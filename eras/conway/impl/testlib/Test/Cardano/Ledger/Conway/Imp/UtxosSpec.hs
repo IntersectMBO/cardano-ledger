@@ -10,13 +10,14 @@
 
 module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
@@ -32,11 +33,13 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default (def)
+import Data.Foldable (for_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -51,14 +54,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   govPolicySpec
@@ -78,126 +74,91 @@ spec = do
           else
             submitFailingTx
               tx
-              [ injectFailure $ UnspendableUTxONoDatumHash [txIn]
+              [ injectFailure $ UnspendableUTxONoDatumHash $ NES.singleton txIn
               ]
 
 datumAndReferenceInputsSpec ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , ConwayEraImp era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 datumAndReferenceInputsSpec = do
-  it "can use reference scripts" $ do
-    producingTx <- setupRefTx
-    referringTx <-
-      submitTxAnn "Transaction that refers to the script" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 1)
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
-  it "can use regular inputs for reference" $ do
-    producingTx <- setupRefTx
-    referringTx <-
-      submitTxAnn "Consuming transaction" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-    (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
-  it "fails with same txIn in regular inputs and reference inputs" $ do
-    producingTx <- setupRefTx
-    let
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    submitFailingTx
-      consumingTx
-      ( pure . injectFailure . BabbageNonDisjointRefInputs $
-          mkTxInPartial producingTx 0 :| []
-      )
-  it "fails when using inline datums for PlutusV1" $ do
-    let shSpending = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
-    refTxOut <- mkRefTxOut shSpending
-    let producingTx =
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . outputsTxBodyL
-              .~ SSeq.fromList
-                [ refTxOut
-                , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
+  for_ (eraLanguages @era) $ \lang ->
+    withSLanguage lang $ \slang ->
+      describe (show lang) $ do
+        it "can use reference scripts" $ do
+          producingTx <- setupRefTx slang
+          referringTx <-
+            submitTxAnn "Transaction that refers to the script" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 1)
+                & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
+          (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
+        it "can use regular inputs for reference" $ do
+          producingTx <- setupRefTx slang
+          referringTx <-
+            submitTxAnn "Consuming transaction" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL
+                  .~ Set.fromList
+                    [ mkTxInPartial producingTx 0
+                    , mkTxInPartial producingTx 1
+                    ]
+          (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
+        it "fails with same txIn in regular inputs and reference inputs" $ do
+          -- Note: the success cases are tested in Babbage.Imp.UtxosSpec
+          producingTx <- setupRefTx slang
+          let
+            consumingTx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL
+                  .~ Set.fromList
+                    [ mkTxInPartial producingTx 0
+                    , mkTxInPartial producingTx 1
+                    ]
+                & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
+          let badTxIns = mkTxInPartial producingTx 0 :| []
+          whenMajorVersionAtMost @10 $
+            submitFailingTx
+              consumingTx
+              (pure . injectFailure $ BabbageNonDisjointRefInputs badTxIns)
+          whenMajorVersionAtLeast @11 $
+            when (lang > eraMaxLanguage @BabbageEra) $
+              submitFailingTx @era
+                consumingTx
+                [ injectFailure $
+                    CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era badTxIns]
                 ]
-    logToExpr producingTx
-    producingTxId <- txIdTx <$> submitTxAnn "Producing transaction" producingTx
-    let
-      lockedTxIn = mkTxInPartial producingTxId 1
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
-    impAnn "Consuming transaction" $
-      submitFailingTx
-        consumingTx
-        ( pure . injectFailure $
-            CollectErrors
-              [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-        )
-  it "fails with same txIn in regular inputs and reference inputs" $ do
-    producingTx <- setupRefTx
-    let
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    submitFailingTx
-      consumingTx
-      ( pure . injectFailure . BabbageNonDisjointRefInputs $
-          mkTxInPartial producingTx 0 :| []
-      )
-  it "fails when using inline datums for PlutusV1" $ do
-    let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
-    refTxOut <- mkRefTxOut shSpending
-    producingTx <-
-      fmap txIdTx . submitTxAnn "Producing transaction" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL
-            .~ SSeq.fromList
-              [ refTxOut
-              , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
-              ]
-    let
-      lockedTxIn = mkTxInPartial producingTx 1
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    impAnn "Consuming transaction" $
-      submitFailingTx
-        consumingTx
-        ( pure . injectFailure $
-            CollectErrors
-              [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-        )
+        it "using inline datums" $ do
+          let shSpending = hashPlutusScript $ redeemerSameAsDatum slang
+          refTxOut <- mkRefTxOut shSpending
+          producingTxId <-
+            fmap txIdTx . submitTxAnn "Producing transaction" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL
+                  .~ SSeq.fromList
+                    [ refTxOut
+                    , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
+                    ]
+          let
+            lockedTxIn = mkTxInPartial producingTxId 1
+            consumingTx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
+                & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
+          if lang < PlutusV2
+            then
+              submitFailingTx
+                consumingTx
+                ( pure . injectFailure $
+                    CollectErrors
+                      [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
+                )
+            else
+              submitTxAnn_ "Consuming transaction" consumingTx
 
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , Inject (ConwayContextError era) (ContextError era)
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayFeaturesPlutusV1V2FailureSpec = do
   describe "Conway features fail in Plutusdescribe v1 and v2" $ do
@@ -257,8 +218,8 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "ProposalProcedures" $ do
         it "V1" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
-          let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
+          accountAddress <- registerAccountAddress
+          let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
             badField
@@ -267,8 +228,8 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ ProposalProceduresFieldNotSupported badField
         it "V2" $ do
           deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          rewardAccount <- registerRewardAccount
-          let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
+          accountAddress <- registerAccountAddress
+          let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
             badField
@@ -440,10 +401,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
 
 govPolicySpec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 govPolicySpec = do
   describe "Gov policy scripts" $ do
@@ -464,18 +422,18 @@ govPolicySpec = do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
-        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
         proposal <- mkProposal govAction
         let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
-        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
     it "alwaysSucceeds Plutus govPolicy validates" $ whenPostBootstrap $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
@@ -488,14 +446,14 @@ govPolicySpec = do
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
           committeeMembers'
-      rewardAccount <- registerRewardAccount
+      accountAddress <- registerAccountAddress
 
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
         mkProposal govAction >>= submitProposal_
       impAnn "TreasuryWithdrawals" $ do
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
         mkProposal govAction >>= submitProposal_
 
@@ -515,20 +473,14 @@ govPolicySpec = do
         submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
-        rewardAccount <- registerRewardAccount
-        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        accountAddress <- registerAccountAddress
+        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
         proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
-costModelsSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+costModelsSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap
@@ -646,13 +598,15 @@ mkRefTxOut sh = do
       & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
 
 setupRefTx ::
-  forall era.
+  forall era l.
   ( BabbageEraTxOut era
   , AlonzoEraImp era
+  , PlutusLanguage l
   ) =>
+  SLanguage l ->
   ImpTestM era TxId
-setupRefTx = do
-  let shSpending = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
+setupRefTx lang = do
+  let shSpending = hashPlutusScript (redeemerSameAsDatum lang)
   refTxOut <- mkRefTxOut shSpending
   fmap txIdTx . submitTxAnn "Producing transaction" $
     mkBasicTx mkBasicTxBody
@@ -665,13 +619,12 @@ setupRefTx = do
 
 testPlutusV1V2Failure ::
   forall era a.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , HasCallStack
+  ( HasCallStack
+  , ConwayEraImp era
   ) =>
   ScriptHash ->
   a ->
-  Lens' (TxBody era) a ->
+  Lens' (TxBody TopTx era) a ->
   ContextError era ->
   ImpTestM era ()
 testPlutusV1V2Failure sh badField lenz errorField = do
@@ -687,11 +640,11 @@ testPlutusV1V2Failure sh badField lenz errorField = do
 
 enactCostModels ::
   ConwayEraImp era =>
-  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   CostModels ->
-  Credential 'DRepRole ->
-  NonEmpty (Credential 'HotCommitteeRole) ->
-  ImpTestM era (GovPurposeId 'PParamUpdatePurpose era)
+  Credential DRepRole ->
+  NonEmpty (Credential HotCommitteeRole) ->
+  ImpTestM era (GovPurposeId 'PParamUpdatePurpose)
 enactCostModels prevGovId cms dRep committeeMembers' = do
   initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   let pparamsUpdate = def & ppuCostModelsL .~ SJust cms

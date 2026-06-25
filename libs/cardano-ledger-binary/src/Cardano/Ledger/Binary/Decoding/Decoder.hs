@@ -163,8 +163,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekAvailable,
   peekByteOffset,
   peekTokenType,
-)
-where
+  liftST,
+) where
 
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
@@ -174,7 +174,7 @@ import Cardano.Ledger.Binary.Plain (
   toCborError,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeTagMaybe)
-import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
+import Cardano.Ledger.Binary.Version (Version, mkVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray (..))
 import qualified Codec.CBOR.Decoding as C (
@@ -247,12 +247,14 @@ import qualified Codec.CBOR.Decoding as C (
   decodeWordCanonical,
   decodeWordCanonicalOf,
   decodeWordOf,
+  liftST,
   peekAvailable,
   peekByteOffset,
   peekTokenType,
  )
 import qualified Codec.CBOR.Term as C (Term (..), decodeTerm)
 import Control.Monad
+import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
@@ -359,9 +361,10 @@ originalBytesExpectedFailureMessage =
 
 -- | Extract current version of the decoder
 --
--- >>> import Cardano.Ledger.Decoding
--- >>> decodeFullDecoder 3 "Version" getDecoderVersion ""
--- Right 3
+-- >>> :set -XOverloadedStrings -XTypeApplications -XDataKinds
+-- >>> import Cardano.Ledger.Binary.Decoding
+-- >>> decodeFullDecoder (natVersion @3) "Version" getDecoderVersion ""
+-- Right (Version 3)
 getDecoderVersion :: Decoder s Version
 getDecoderVersion = Decoder $ \_ -> pure
 {-# INLINE getDecoderVersion #-}
@@ -377,8 +380,9 @@ getDecoderVersion = Decoder $ \_ -> pure
 -- we change the type, but we also use this condition to keep backwards compatibility of
 -- the decoder:
 --
+-- >>> :set -XTypeApplications -XDataKinds
 -- >>> newtype Foo = Foo Word32
--- >>> decFoo = Foo <$> ifDecoderVersionAtLeast 2 decodeWord32 (fromIntegral <$> decodeWord16)
+-- >>> decFoo = Foo <$> ifDecoderVersionAtLeast (natVersion @2) decodeWord32 (fromIntegral <$> decodeWord16)
 ifDecoderVersionAtLeast ::
   Version ->
   -- | Use this decoder if current decoder version is larger or equal to the supplied
@@ -421,7 +425,7 @@ unlessDecoderVersionAtLeast atLeast decoder = do
 --------------------------------------------------------------------------------
 
 decodeVersion :: Decoder s Version
-decodeVersion = decodeWord64 >>= mkVersion64
+decodeVersion = decodeWord32 >>= mkVersion32
 {-# INLINE decodeVersion #-}
 
 -- | `Decoder` for `Rational`. Versions variance:
@@ -467,8 +471,8 @@ decodeRational =
 _decodeRationalFuture :: Decoder s Rational
 _decodeRationalFuture = do
   -- We are not using `natVersion` because these versions aren't yet supported.
-  v9 <- mkVersion64 9
-  v10 <- mkVersion64 10
+  v9 <- mkVersion32 9
+  v10 <- mkVersion32 10
   ifDecoderVersionAtLeast
     v10
     decodeRationalWithTag
@@ -609,7 +613,7 @@ decodeEither decodeLeft decodeRight = do
   case t of
     0 -> Left <$> decodeLeft
     1 -> Right <$> decodeRight
-    _ -> cborError $ DecoderErrorUnknownTag "Either" (fromIntegral t)
+    _ -> cborError $ DecoderErrorUnknownTag "Either" t
 {-# INLINE decodeEither #-}
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
@@ -751,13 +755,13 @@ decodeCollectionWithLen lenOrIndef decodeElement =
 --
 -- An example of how to use versioning
 --
--- >>> :set -XOverloadedStrings
+-- >>> :set -XOverloadedStrings -XTypeApplications -XDataKinds
 -- >>> import Codec.CBOR.FlatTerm
--- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder Nothing (natVersion @1) (decodeMap decodeInt decodeBytes)) [TkMapLen 2,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
--- >>> fromFlatTerm (toPlainDecoder 1 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
+-- >>> fromFlatTerm (toPlainDecoder Nothing (natVersion @1) (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar"]
 -- Left "decodeMapLen: unexpected token TkMapBegin"
--- >>> fromFlatTerm (toPlainDecoder 2 (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
+-- >>> fromFlatTerm (toPlainDecoder Nothing (natVersion @2) (decodeMap decodeInt decodeBytes)) [TkMapBegin,TkInt 1,TkBytes "Foo",TkInt 2,TkBytes "Bar",TkBreak]
 -- Right (fromList [(1,"Foo"),(2,"Bar")])
 decodeMap ::
   Ord k =>
@@ -867,7 +871,7 @@ setTag = 258
 decodeSetTag :: Decoder s ()
 decodeSetTag = do
   t <- decodeTag
-  when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" (fromIntegral t)
+  when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" t
 {-# INLINE decodeSetTag #-}
 
 decodeSetSkel ::
@@ -1521,3 +1525,6 @@ peekByteOffset = fromPlainDecoder C.peekByteOffset
 peekTokenType :: Decoder s C.TokenType
 peekTokenType = fromPlainDecoder C.peekTokenType
 {-# INLINE peekTokenType #-}
+
+liftST :: ST s a -> Decoder s a
+liftST st = Decoder $ \_ _ -> C.liftST st

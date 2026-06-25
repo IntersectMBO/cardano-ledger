@@ -7,8 +7,7 @@ module Cardano.Chain.Epoch.File (
   parseEpochFileWithBoundary,
   parseEpochFilesWithBoundary,
   ParseError (..),
-)
-where
+) where
 
 import Cardano.Chain.Block.Block (
   ABlockOrBoundary (..),

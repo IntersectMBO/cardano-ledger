@@ -6,15 +6,16 @@
 
 module Cardano.Ledger.Allegra.UTxO () where
 
-import Cardano.Ledger.Allegra.CertState ()
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getConsumedCoin,
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
+  shelleyConsumed,
   shelleyProducedValue,
  )
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
@@ -23,9 +24,12 @@ import Lens.Micro
 instance EraUTxO AllegraEra where
   type ScriptsNeeded AllegraEra = ShelleyScriptsNeeded AllegraEra
 
+  consumed = shelleyConsumed
+
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
-  getProducedValue = shelleyProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 

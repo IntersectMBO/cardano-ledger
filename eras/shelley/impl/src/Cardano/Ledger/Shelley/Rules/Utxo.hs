@@ -23,6 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUtxoPredFailure (..),
   UtxoEvent (..),
   PredicateFailure,
+  validSizeComputationCheck,
   updateUTxOState,
 
   -- * Validations
@@ -37,15 +38,9 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   utxoEnvSlotL,
   utxoEnvPParamsL,
   utxoEnvCertStateL,
-)
-where
+) where
 
-import Cardano.Ledger.Address (
-  Addr (..),
-  bootstrapAddressAttrsSize,
-  getNetwork,
-  raNetwork,
- )
+import Cardano.Ledger.Address (bootstrapAddressAttrsSize, getNetwork)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
@@ -56,12 +51,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
-  dsGenDelegs,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
@@ -76,8 +65,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.TxBody (RewardAccount)
-import Cardano.Ledger.Shelley.UTxO (consumed, produced)
+import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -92,6 +80,8 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
+  failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
   tellEvent,
@@ -100,10 +90,14 @@ import Control.State.Transition (
   wrapFailed,
  )
 import Data.Foldable as F (foldl', toList)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Typeable
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -126,7 +120,7 @@ instance (EraPParams era, EraCertState era) => EncCBOR (UtxoEnv era) where
             !> To uePParams
             !> To ueCertState
 
-instance (EraPParams era, EraCertState era) => DecCBOR (UtxoEnv era) where
+instance (EraPParams era, EraCertState era, Typeable (CertState era)) => DecCBOR (UtxoEnv era) where
   decCBOR =
     decode $
       RecD UtxoEnv
@@ -144,6 +138,7 @@ utxoEnvCertStateL :: Lens' (UtxoEnv era) (CertState era)
 utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
 
 deriving instance (Show (PParams era), Show (CertState era)) => Show (UtxoEnv era)
+
 deriving instance (Eq (PParams era), Eq (CertState era)) => Eq (UtxoEnv era)
 
 instance (Era era, NFData (PParams era), NFData (CertState era)) => NFData (UtxoEnv era)
@@ -170,27 +165,27 @@ instance (Era era, NFData (Event (EraRule "PPUP" era)), NFData (TxOut era)) => N
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
-      (Set TxIn) -- The bad transaction inputs
+      (NonEmptySet TxIn) -- The bad transaction inputs
   | ExpiredUTxO
-      (Mismatch 'RelLTEQ SlotNo)
+      (Mismatch RelLTEQ SlotNo)
   | MaxTxSizeUTxO
-      (Mismatch 'RelLTEQ Integer)
+      (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      (Mismatch 'RelGTEQ Coin)
+      (Mismatch RelGTEQ Coin)
   | ValueNotConservedUTxO
-      (Mismatch 'RelEQ (Value era))
+      (Mismatch RelEQ (Value era))
   | WrongNetwork
       Network -- the expected network id
-      (Set Addr) -- the set of addresses with incorrect network IDs
+      (NonEmptySet Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       Network -- the expected network id
-      (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
+      (NonEmptySet AccountAddress) -- the set of account addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      [TxOut era] -- list of supplied transaction outputs that are too small
+      (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      [TxOut era] -- list of supplied bad transaction outputs
+      (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" ShelleyEra = ShelleyUtxoPredFailure ShelleyEra
@@ -288,11 +283,12 @@ instance
   , EraRule "UTXO" era ~ ShelleyUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , EraCertState era
+  , SafeToHash (TxWits era)
   ) =>
   STS (ShelleyUTXO era)
   where
   type State (ShelleyUTXO era) = UTxOState era
-  type Signal (ShelleyUTXO era) = Tx era
+  type Signal (ShelleyUTXO era) = Tx TopTx era
   type Environment (ShelleyUTXO era) = UtxoEnv era
   type BaseM (ShelleyUTXO era) = ShelleyBase
   type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era
@@ -331,14 +327,15 @@ instance
     , PostCondition
         "Deposit pot must not be negative (post)"
         (\_ st' -> utxosDeposited st' >= mempty)
-    , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
-          withdrawals :: TxBody era -> Value era
+    , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> sumUTxO (utxosUtxo us)
+          withdrawals :: TxBody TopTx era -> Value era
           withdrawals txb = Val.inject $ F.foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->
                 utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
             )
+    , validSizeComputationCheck @era
     ]
 
 utxoInductive ::
@@ -353,7 +350,7 @@ utxoInductive ::
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Event (EraRule "UTXO" era) ~ UtxoEvent era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -421,7 +418,7 @@ utxoInductive = do
 -- > txttl txb ≥ slot
 validateTimeToLive ::
   (ShelleyEraTxBody era, ExactEra ShelleyEra era) =>
-  TxBody era ->
+  TxBody TopTx era ->
   SlotNo ->
   Test (ShelleyUtxoPredFailure era)
 validateTimeToLive txb slot =
@@ -435,7 +432,7 @@ validateTimeToLive txb slot =
 -- > txins txb ≠ ∅
 validateInputSetEmptyUTxO ::
   EraTxBody era =>
-  TxBody era ->
+  TxBody t era ->
   Test (ShelleyUtxoPredFailure era)
 validateInputSetEmptyUTxO txb =
   failureUnless (inputs /= Set.empty) InputSetEmptyUTxO
@@ -448,7 +445,7 @@ validateInputSetEmptyUTxO txb =
 validateFeeTooSmallUTxO ::
   EraUTxO era =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Test (ShelleyUtxoPredFailure era)
 validateFeeTooSmallUTxO pp tx utxo =
@@ -471,7 +468,7 @@ validateBadInputsUTxO ::
   Set TxIn ->
   Test (ShelleyUtxoPredFailure era)
 validateBadInputsUTxO utxo inputs =
-  failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
+  failureOnNonEmptySet badInputs BadInputsUTxO
   where
     {- inputs ➖ dom utxo -}
     badInputs = Set.filter (`Map.notMember` unUTxO utxo) inputs
@@ -485,7 +482,7 @@ validateWrongNetwork ::
   f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateWrongNetwork netId outputs =
-  failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
+  failureOnNonEmptySet addrsWrongNetwork (WrongNetwork netId)
   where
     addrsWrongNetwork =
       filter
@@ -498,15 +495,14 @@ validateWrongNetwork netId outputs =
 validateWrongNetworkWithdrawal ::
   EraTxBody era =>
   Network ->
-  TxBody era ->
+  TxBody t era ->
   Test (ShelleyUtxoPredFailure era)
 validateWrongNetworkWithdrawal netId txb =
-  failureUnless (null withdrawalsWrongNetwork) $
-    WrongNetworkWithdrawal netId (Set.fromList withdrawalsWrongNetwork)
+  failureOnNonEmptySet withdrawalsWrongNetwork (WrongNetworkWithdrawal netId)
   where
     withdrawalsWrongNetwork =
       filter
-        (\a -> raNetwork a /= netId)
+        (\a -> aaNetworkId a /= netId)
         (Map.keys . unWithdrawals $ txb ^. withdrawalsTxBodyL)
 
 -- | Ensure that value consumed and produced matches up exactly
@@ -517,7 +513,7 @@ validateValueNotConservedUTxO ::
   PParams era ->
   UTxO era ->
   CertState era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo certState txBody =
   failureUnless (consumedValue == producedValue) $
@@ -535,7 +531,7 @@ validateOutputTooSmallUTxO ::
   f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outputs =
-  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall OutputTooSmallUTxO
   where
     -- minUTxOValue deposit comparison done as Coin because this rule is correct
     -- strictly in the Shelley era (in ShelleyMA we additionally check that all
@@ -554,7 +550,7 @@ validateOutputBootAddrAttrsTooBig ::
   f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateOutputBootAddrAttrsTooBig outputs =
-  failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  failureOnNonEmpty outputsAttrsTooBig OutputBootAddrAttrsTooBig
   where
     outputsAttrsTooBig =
       filter
@@ -571,7 +567,7 @@ validateOutputBootAddrAttrsTooBig outputs =
 validateMaxTxSizeUTxO ::
   EraTx era =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Test (ShelleyUtxoPredFailure era)
 validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $
@@ -581,7 +577,7 @@ validateMaxTxSizeUTxO pp tx =
         , mismatchExpected = maxTxSize
         }
   where
-    maxTxSize = toInteger (pp ^. ppMaxTxSizeL)
+    maxTxSize = pp ^. ppMaxTxSizeL
     txSize = tx ^. sizeTxF
 
 -- | This monadic action captures the final stages of the UTXO(S) rule. In particular it
@@ -593,7 +589,7 @@ updateUTxOState ::
   (EraTxBody era, EraStake era, EraCertState era, Monad m) =>
   PParams era ->
   UTxOState era ->
-  TxBody era ->
+  TxBody TopTx era ->
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
@@ -634,3 +630,16 @@ instance
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
+
+validSizeComputationCheck ::
+  ( EraTx era
+  , SafeToHash (TxWits era)
+  , Signal (rule era) ~ Tx TopTx era
+  ) =>
+  Assertion (rule era)
+validSizeComputationCheck =
+  PreCondition
+    "Tx size should be the length of the serialization bytestring"
+    ( \(TRC (_, _, tx)) ->
+        tx ^. sizeTxF == sizeTxForFeeCalculation tx
+    )

@@ -1,5 +1,24 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.5.0.0
+
+* Remove deprecated function `bHeaderSize`
+
+### `testlib`
+
+* Remove `cddlBlockSpec`, `praosBlockCddlSpec`
+
+## 1.4.1.0
+
+* Remove `HashHeader` definition (move to `cardano-ledger-core`)
+* Re-export `HashHeader` from `API`
+* Add `GetLedgerView` instance for `DijkstraEra`
+
+### `testlib`
+
+* Added `Examples` module with: `ProtocolLedgerExamples` type, `mkProtocolLedgerExamples`, `ledgerExamplesShelley`, `ledgerExamplesAllegra`, `ledgerExamplesMary`, `ledgerExamplesAlonzo`, `ledgerExamplesTPraos`
+* Add `Arbitrary` instance for `ChainDepState`
+
 ## 1.4.0.0
 
 * Deprecated `bHeaderSize`
@@ -11,11 +30,11 @@
 * Move `Crypto` and `StandardCrypto` definitions from `cardano-ledger-core` into new
   `Cardano.Protocol.Crypto` module.
 * Remove crypto parametrization from types:
-  * `LedgerView`, `ChainDepState`
-  * `HashHeader` `PrevHash`, `LastAppliedBlock`
-  * `OCertEnv`, `OcertPredicateFailure`
-  * `OverlayEnv`, `OBftSlot`
-  * `PrtclState`, `PrtclEnv`, `PrtlSeqFailure`
+  - `LedgerView`, `ChainDepState`
+  - `HashHeader` `PrevHash`, `LastAppliedBlock`
+  - `OCertEnv`, `OcertPredicateFailure`
+  - `OverlayEnv`, `OBftSlot`
+  - `PrtclState`, `PrtclEnv`, `PrtlSeqFailure`
 
 ### `testlib`
 
@@ -39,6 +58,7 @@
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 
 ## 1.1.0.0
+
 * Change the type of `bsize` and `hBbsize` to `Word32`
 
 ## 1.0.3.7
@@ -91,10 +111,10 @@
 * Add `mkBHeader`
 * Move from `cardano-ledger-shelley-test`: `mkOCert`, `mkBHBody`, `mkBlock`
 * Move `AllIssuerKeys` from `cardano-ledegr-shelley-test`. Rename its fields:
-  *  `cold` - > `aikCold`
-  *  `hot` - > `aikHot`
-  *  `vrf` - > `aikVrf`
-  *  `hk` - > `aikColdKeyHash`
+  - `cold` - > `aikCold`
+  - `hot` - > `aikHot`
+  - `vrf` - > `aikVrf`
+  - `hk` - > `aikColdKeyHash`
 * Bring back `genBlock`
 * Move `genCoherentBlock` from `cardano-ledegr-shelley-test` and change it to accept
   `AllIssuerKeys` as an argument.

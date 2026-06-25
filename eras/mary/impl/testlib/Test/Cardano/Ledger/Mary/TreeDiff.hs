@@ -12,9 +12,8 @@ module Test.Cardano.Ledger.Mary.TreeDiff (
 ) where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary.TxBody
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.Shelley.PParams
 import Test.Cardano.Ledger.Allegra.TreeDiff
 
 -- Value
@@ -31,17 +30,6 @@ instance ToExpr AssetName where
 
 deriving newtype instance ToExpr (CompactForm MaryValue)
 
--- TxBody
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (MaryTxBodyRaw era)
+instance ToExpr (TxBody TopTx MaryEra)
 
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (MaryTxBody era)
+instance ToExpr (Tx TopTx MaryEra)

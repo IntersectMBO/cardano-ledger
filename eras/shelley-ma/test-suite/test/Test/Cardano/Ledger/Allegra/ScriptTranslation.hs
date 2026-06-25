@@ -3,10 +3,10 @@
 
 module Test.Cardano.Ledger.Allegra.ScriptTranslation (
   testScriptPostTranslation,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
@@ -31,7 +31,7 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 
 bootstrapTxId :: S.TxId
-bootstrapTxId = txIdTxBody @ShelleyEra mkBasicTxBody
+bootstrapTxId = txIdTxBody $ mkBasicTxBody @ShelleyEra @TopTx
 
 fromRight :: HasCallStack => Either e a -> a
 fromRight (Right x) = x
@@ -63,7 +63,7 @@ testScriptPostTranslation =
               Nothing
               minBound
               emptyPParams
-              (S.AccountState (S.Coin 0) (S.Coin 0))
+              (ChainAccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @AllegraEra NoGenesis utxoStShelley
           txb =
@@ -77,7 +77,7 @@ testScriptPostTranslation =
               S.SNothing
               S.SNothing
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
-          txs = S.ShelleyTx txb wits S.SNothing
+          txs = mkBasicTx txb & witsTxL .~ wits
           txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs
           result =
             runShelleyBase $

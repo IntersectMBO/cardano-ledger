@@ -8,14 +8,15 @@ module Main where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
+import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
 import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
+import Test.Cardano.Ledger.Mary.ImpTest ()
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Cardano.Ledger.MaryEraGen ()
@@ -25,6 +26,7 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTra
   onlyValidChainSignalsAreGenerated,
   relevantCasesAreCovered,
  )
+import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
@@ -63,7 +65,7 @@ allegraTests =
           (TQC.QuickCheckMaxRatio 50)
           (ClassifyTraces.relevantCasesAreCovered @AllegraEra (maxSuccess stdArgs))
       )
-    , AdaPreservation.tests @AllegraEra @(ShelleyLEDGER AllegraEra) (maxSuccess stdArgs)
+    , AdaPreservation.tests @AllegraEra (maxSuccess stdArgs)
     , ClassifyTraces.onlyValidChainSignalsAreGenerated @AllegraEra
     , WitVKeys.tests
     , testScriptPostTranslation
@@ -85,8 +87,12 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        (Shelley.commonTests @AllegraEra @(ShelleyLEDGER AllegraEra))
+        ( Shelley.commonTests @AllegraEra
+            ++ [IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AllegraEra)]
+        )
     , testGroup
         "Mary Ledger - nightly"
-        (Shelley.commonTests @MaryEra @(ShelleyLEDGER MaryEra))
+        ( Shelley.commonTests @MaryEra
+            ++ [IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy MaryEra)]
+        )
     ]

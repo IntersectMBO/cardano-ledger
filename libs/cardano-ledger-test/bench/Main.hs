@@ -1,7 +1,6 @@
 module Main where
 
 import qualified Bench.Cardano.Ledger.ApplyTx as ApplyTx
-
 -- TODO: re-enable, once the benchmark is fixed
 -- import qualified Bench.Cardano.Ledger.Balance as Balance
 import qualified Bench.Cardano.Ledger.EpochBoundary as Epoch

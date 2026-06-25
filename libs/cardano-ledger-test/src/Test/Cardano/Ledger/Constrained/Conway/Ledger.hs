@@ -4,15 +4,12 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.Ledger where
 
-import Constrained
-
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Constrained.API
 import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 ledgerTxSpec ::
-  IsConwayUniv fn =>
   UtxoExecContext ConwayEra ->
-  Specification fn (Tx ConwayEra)
+  Specification (Tx TopTx ConwayEra)
 ledgerTxSpec = utxoTxSpec

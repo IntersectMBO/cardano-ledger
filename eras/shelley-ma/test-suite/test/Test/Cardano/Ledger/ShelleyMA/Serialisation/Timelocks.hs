@@ -5,13 +5,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (
   timelockTests,
   MultiSig,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
@@ -39,6 +37,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
  )
 import Test.Cardano.Ledger.Binary.TreeDiff (HexBytes (HexBytes), expectExprEqual)
 import Test.Cardano.Ledger.Mary.Arbitrary ()
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
@@ -66,39 +65,39 @@ timelockTests =
           <$> [s1 @AllegraEra, s2 @AllegraEra, s3 @AllegraEra]
       )
       ++ ( testCase "Timelock examples roundtrip - Allegra"
-            . roundTripCborRangeExpectation (natVersion @2) maxBound
-            <$> [s1 @AllegraEra, s2 @AllegraEra, s3 @AllegraEra]
+             . roundTripCborRangeExpectation (natVersion @2) maxBound
+             <$> [s1 @AllegraEra, s2 @AllegraEra, s3 @AllegraEra]
          )
       ++ ( testCase "Timelock examples roundtrip - Mary (Annotator)" . roundTripAnnExpectation
-            <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
+             <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
          )
       ++ ( testCase "Timelock examples roundtrip - Mary"
-            . roundTripCborRangeExpectation (natVersion @2) maxBound
-            <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
+             . roundTripCborRangeExpectation (natVersion @2) maxBound
+             <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
          )
       ++ [ testProperty "roundtripTimelock prop - Allegra (Annotator)" $
-            roundTripAnnExpectation @(Timelock AllegraEra)
+             roundTripAnnExpectation @(Timelock AllegraEra)
          , testProperty "roundtripTimelock prop - Allegra" $
-            roundTripCborRangeExpectation @(Timelock AllegraEra) (natVersion @2) maxBound
+             roundTripCborRangeExpectation @(Timelock AllegraEra) (natVersion @2) maxBound
          , testProperty "roundtripTimelock prop - Mary (Annotator)" $
-            roundTripAnnExpectation @(Timelock MaryEra)
+             roundTripAnnExpectation @(Timelock MaryEra)
          , testProperty "roundtripTimelock prop - Mary" $
-            roundTripCborRangeExpectation @(Timelock MaryEra) (natVersion @2) maxBound
+             roundTripCborRangeExpectation @(Timelock MaryEra) (natVersion @2) maxBound
          , testProperty "MultiSig deserialises as Timelock (Annotator)" $
-            embedTripAnnExpectation @(MultiSig ShelleyEra)
-              @(Timelock AllegraEra)
-              (eraProtVerHigh @ShelleyEra)
-              (eraProtVerLow @AllegraEra)
-              ( \timelock multiSig ->
-                  expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
-              )
+             embedTripAnnExpectation @(MultiSig ShelleyEra)
+               @(Timelock AllegraEra)
+               (eraProtVerHigh @ShelleyEra)
+               (eraProtVerLow @AllegraEra)
+               ( \timelock multiSig ->
+                   expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
+               )
          , testProperty "MultiSig deserialises as Timelock" $
-            embedTripExpectation @(MultiSig ShelleyEra)
-              @(Timelock AllegraEra)
-              (eraProtVerHigh @ShelleyEra)
-              (eraProtVerLow @AllegraEra)
-              cborTrip
-              ( \timelock multiSig ->
-                  expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
-              )
+             embedTripExpectation @(MultiSig ShelleyEra)
+               @(Timelock AllegraEra)
+               (eraProtVerHigh @ShelleyEra)
+               (eraProtVerLow @AllegraEra)
+               cborTrip
+               ( \timelock multiSig ->
+                   expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
+               )
          ]

@@ -7,8 +7,12 @@ module Cardano.Ledger.Babbage.Rules.Pool () where
 
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPoolPredFailure)
 
 type instance EraRuleFailure "POOL" BabbageEra = ShelleyPoolPredFailure BabbageEra
 
 instance InjectRuleFailure "POOL" ShelleyPoolPredFailure BabbageEra
+
+type instance EraRuleEvent "POOL" BabbageEra = PoolEvent BabbageEra
+
+instance InjectRuleEvent "POOL" PoolEvent BabbageEra

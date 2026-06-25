@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
@@ -25,12 +26,17 @@ module Cardano.Ledger.Credential (
   SlotNo32 (..),
   StakeCredential,
   StakeReference (..),
-  normalizePtr,
-)
-where
+) where
 
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
-import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), integralToBounded)
+import Cardano.Ledger.BaseTypes (
+  CertIx (..),
+  KeyValuePairs (..),
+  SlotNo (..),
+  ToKeyValuePairs (..),
+  TxIx (..),
+  integralToBounded,
+ )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (..),
@@ -43,7 +49,7 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (ADDRHASH, Hash, ScriptHash (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash (..),
@@ -56,16 +62,14 @@ import Data.Aeson (
   FromJSON (..),
   FromJSONKey (..),
   FromJSONKeyFunction (..),
-  KeyValue,
   ToJSON,
   ToJSONKey (..),
-  object,
-  pairs,
   (.:),
   (.=),
  )
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (toJSONKeyText)
+import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.Maybe (fromMaybe)
@@ -73,8 +77,11 @@ import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
+import Foreign.Ptr (castPtr)
+import Foreign.Storable (Storable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
 
 -- | Script hash or key hash for a payment or a staking object.
 --
@@ -104,6 +111,29 @@ instance Typeable kr => MemPack (Credential kr) where
       n -> unknownTagM @(Credential kr) n
   {-# INLINE unpackM #-}
 
+-- Format: [8:8:8:4 - Hash, 1: tag (0/1)]
+--
+-- Tag goes after the hash, because that will work better for alignment of reading first 8 byte
+-- chunks
+instance Storable (Credential r) where
+  sizeOf _ = sizeOf (undefined :: Hash ADDRHASH ()) + 1
+  alignment _ = 32 -- ADDRHASH is 28 bytes + 1 byte for the Tag. Next power of 2 is 32
+  poke ptr = \case
+    ScriptHashObj hash -> do
+      poke (castPtr ptr) hash
+      pokeByteOff (castPtr ptr) (sizeOf hash) (0 :: Word8)
+    KeyHashObj hash -> do
+      poke (castPtr ptr) hash
+      pokeByteOff (castPtr ptr) (sizeOf hash) (1 :: Word8)
+  {-# INLINE poke #-}
+  peek ptr = do
+    hash :: Hash ADDRHASH () <- peek (castPtr ptr)
+    t :: Word8 <- peekByteOff (castPtr ptr) (sizeOf hash)
+    pure $! case t of
+      0 -> ScriptHashObj $ ScriptHash $ coerce hash
+      _ -> KeyHashObj $ KeyHash $ coerce hash
+  {-# INLINE peek #-}
+
 instance Default (Credential r) where
   def = KeyHashObj def
 
@@ -114,14 +144,11 @@ instance HasKeyRole Credential where
 instance NoThunks (Credential kr)
 
 instance ToJSON (Credential kr) where
-  toJSON (ScriptHashObj hash) =
-    Aeson.object
-      [ "scriptHash" .= hash
-      ]
-  toJSON (KeyHashObj hash) =
-    Aeson.object
-      [ "keyHash" .= hash
-      ]
+  toJSON = \case
+    ScriptHashObj hash ->
+      Aeson.object ["scriptHash" .= hash]
+    KeyHashObj hash ->
+      Aeson.object ["keyHash" .= hash]
 
 instance FromJSON (Credential kr) where
   parseJSON =
@@ -160,9 +187,13 @@ credToText :: Credential kr -> T.Text
 credToText (ScriptHashObj (ScriptHash hash)) = "scriptHash-" <> hashToTextAsHex hash
 credToText (KeyHashObj (KeyHash has)) = "keyHash-" <> hashToTextAsHex has
 
-type PaymentCredential = Credential 'Payment
+{-# DEPRECATED PaymentCredential "In favor of `Credential Payment`" #-}
 
-type StakeCredential = Credential 'Staking
+type PaymentCredential = Credential Payment
+
+{-# DEPRECATED StakeCredential "In favor of `Credential Staking`" #-}
+
+type StakeCredential = Credential Staking
 
 credKeyHash :: Credential r -> Maybe (KeyHash r)
 credKeyHash = \case
@@ -170,7 +201,7 @@ credKeyHash = \case
   ScriptHashObj _ -> Nothing
 
 -- | Convert a KeyHash into a Witness KeyHash. Does nothing for Script credentials.
-credKeyHashWitness :: Credential r -> Maybe (KeyHash 'Witness)
+credKeyHashWitness :: Credential r -> Maybe (KeyHash Witness)
 credKeyHashWitness = credKeyHash . asWitness
 
 -- | Extract ScriptHash from a Credential. Returns Nothing for KeyHashes
@@ -180,13 +211,15 @@ credScriptHash = \case
   KeyHashObj _ -> Nothing
 
 data StakeReference
-  = StakeRefBase !StakeCredential
+  = StakeRefBase !(Credential Staking)
   | StakeRefPtr !Ptr
   | StakeRefNull
   deriving (Show, Eq, Generic, Ord)
 
 instance ToJSON StakeReference
+
 instance NFData StakeReference
+
 instance NoThunks StakeReference
 
 -- | Pointers have been deprecated and aren't used anymore. For this reason we can safely use
@@ -196,28 +229,27 @@ newtype SlotNo32 = SlotNo32 Word32
   deriving newtype
     (Eq, Ord, Num, Bounded, NFData, NoThunks, EncCBOR, DecCBOR, FromCBOR, ToCBOR, FromJSON, ToJSON)
 
+instance Random SlotNo32
+
+instance Uniform SlotNo32 where
+  uniformM g = SlotNo32 <$> uniformM g
+
+instance UniformRange SlotNo32 where
+  uniformRM r g = SlotNo32 <$> uniformRM (coerce r) g
+
 -- | Pointer to a slot number, transaction index and an index in certificate
 -- list.
 data Ptr = Ptr {-# UNPACK #-} !SlotNo32 {-# UNPACK #-} !TxIx {-# UNPACK #-} !CertIx
   deriving (Eq, Ord, Generic)
   deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
+  deriving (ToJSON) via KeyValuePairs Ptr
+
+instance Uniform Ptr where
+  uniformM g = Ptr <$> uniformM g <*> (TxIx <$> uniformM g) <*> (CertIx <$> uniformM g)
 
 instance NFData Ptr
-instance NoThunks Ptr
 
--- | Convert any invalid `Ptr` to a `Ptr` that contains all zeros for its fields. Any
--- pointer that contains a `SlotNo`, `TxIx` or `CertIx` that is too large to fit into
--- `Word32`, `Word16` and `Word16` respectively is considered to be an invalid
--- `Ptr`. Valid `Ptr`s will be returned unmodified.
---
--- /Note/ - This is in no way related to dangling pointers, with an exception that any
--- invalid `Ptr` is guarateed to be a dangling `Ptr`.
-normalizePtr :: Ptr -> Ptr
-normalizePtr ptr = ptr
-{-# DEPRECATED
-  normalizePtr
-  "Starting with Conway era all Pointers are now normalized and this logic has been moved into the decoder"
-  #-}
+instance NoThunks Ptr
 
 -- | Construct a valid `Ptr`, while protecting against overflow. Constructs a `Ptr` with
 -- all zeros for its fields, whenever either one of them doesn't fit in without overflowing. Any
@@ -244,18 +276,14 @@ instance FromCBOR Ptr where
     (slotNo, txIx, certIx) <- fromCBOR
     pure $ Ptr slotNo txIx certIx
 
-instance ToJSON Ptr where
-  toJSON = object . toPtrPair
-  toEncoding = pairs . mconcat . toPtrPair
-
 instance ToJSONKey Ptr
 
-toPtrPair :: KeyValue e a => Ptr -> [a]
-toPtrPair (Ptr slotNo txIndex certIndex) =
-  [ "slot" .= slotNo
-  , "txIndex" .= txIndex
-  , "certIndex" .= certIndex
-  ]
+instance ToKeyValuePairs Ptr where
+  toKeyValuePairs (Ptr slotNo txIndex certIndex) =
+    [ "slot" .= slotNo
+    , "txIndex" .= txIndex
+    , "certIndex" .= certIndex
+    ]
 
 instance Show Ptr where
   showsPrec n (Ptr slotNo txIx certIx)
@@ -308,13 +336,7 @@ instance EncCBORGroup Ptr where
     encCBOR sl
       <> encCBOR txIx
       <> encCBOR certIx
-  encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (ptrSlotNo <$> proxy)
-      + encodedSizeExpr size_ (ptrTxIx <$> proxy)
-      + encodedSizeExpr size_ (ptrCertIx <$> proxy)
-
   listLen _ = 3
-  listLenBound _ = 3
 
 instance DecCBORGroup Ptr where
   decCBORGroup = do

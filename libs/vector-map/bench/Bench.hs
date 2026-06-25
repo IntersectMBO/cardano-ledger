@@ -60,6 +60,12 @@ main = do
         , foldlWithKeyBench "prefixed" (prefixList std1)
         , foldlWithKeyBench "sequential" (sequentialList std1)
         ]
+    , bgroup
+        "mapMaybeWithKey"
+        [ mapMaybeWithKeyBench "uniform" (randList std1)
+        , mapMaybeWithKeyBench "prefixed" (prefixList std1)
+        , mapMaybeWithKeyBench "sequential" (sequentialList std1)
+        ]
     ]
 
 fromMapBench :: String -> [(Key, Int)] -> Benchmark
@@ -129,3 +135,15 @@ foldlWithKeyBench name xs =
     , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
         bench "VMap" . nf (VMap.foldlWithKey (\a !_ -> (a +)) 0)
     ]
+
+mapMaybeWithKeyBench :: String -> [(Key, Int)] -> Benchmark
+mapMaybeWithKeyBench name xs =
+  bgroup
+    name
+    [ env (pure (Map.fromList xs)) $
+        bench "Map" . nf (Map.mapMaybeWithKey f)
+    , env (pure (VMap.fromList xs :: VMap VB VP Key Int)) $
+        bench "VMap" . nf (VMap.mapMaybeWithKey f)
+    ]
+  where
+    f key val = if even key then Just (key + val) else Nothing

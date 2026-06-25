@@ -22,7 +22,7 @@ import Control.State.Transition (
   transitionRules,
   wrapFailed,
  )
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 
 type UpdatePayload =
   ( Maybe UProp
@@ -30,13 +30,13 @@ type UpdatePayload =
   , (ProtVer, VKey)
   )
 
-data BUPI deriving (Data, Typeable)
+data BUPI deriving (Data)
 
 data BupiPredicateFailure
   = UPIREGFailure (PredicateFailure UPIREG)
   | UPIVOTESFailure (PredicateFailure UPIVOTES)
   | UPIENDFailure (PredicateFailure UPIEND)
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS BUPI where
   type Environment BUPI = UPIEnv

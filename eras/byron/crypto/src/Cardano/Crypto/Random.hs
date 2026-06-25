@@ -10,8 +10,7 @@ module Cardano.Crypto.Random (
   deterministic,
   randomNumber,
   randomNumberInRange,
-)
-where
+) where
 
 import Cardano.Prelude
 import Crypto.Number.Basic (numBytes)

@@ -1,6 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -8,82 +13,78 @@
 module Cardano.Ledger.Conway.Tx (
   module BabbageTxReExport,
   tierRefScriptFee,
-  refScriptCostStride,
-  refScriptCostMultiplier,
-)
-where
+  getConwayMinFeeTx,
+  Tx (..),
+) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
+  alonzoTxEqRaw,
   auxDataAlonzoTxL,
   bodyAlonzoTxL,
   isValidAlonzoTxL,
   mkBasicAlonzoTx,
   sizeAlonzoTxF,
-  wireSizeAlonzoTxF,
   witsAlonzoTxL,
- )
-import Cardano.Ledger.Alonzo.TxSeq (
-  AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-  hashAlonzoTxSeq,
  )
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
   AlonzoTx (..),
+  Tx (..),
  )
-import Cardano.Ledger.BaseTypes (unboundRational)
+import Cardano.Ledger.BaseTypes (NonZero (..), unboundRational)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.DeepSeq (NFData)
+import Data.Typeable (Typeable)
+import Data.Word (Word32)
+import GHC.Generics (Generic)
 import GHC.Stack
-import Lens.Micro ((^.))
+import Lens.Micro (Lens', lens, (^.))
+import NoThunks.Class (NoThunks)
+
+instance HasEraTxLevel Tx ConwayEra where
+  toSTxLevel (MkConwayTx AlonzoTx {}) = STopTxOnly @ConwayEra
 
 instance EraTx ConwayEra where
-  type Tx ConwayEra = AlonzoTx ConwayEra
-  type TxUpgradeError ConwayEra = TxBodyUpgradeError ConwayEra
+  newtype Tx l ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx l ConwayEra}
+    deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
+    deriving (Generic)
 
-  mkBasicTx = mkBasicAlonzoTx
+  mkBasicTx = MkConwayTx . mkBasicAlonzoTx
 
-  bodyTxL = bodyAlonzoTxL
+  bodyTxL = conwayTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
 
-  witsTxL = witsAlonzoTxL
+  witsTxL = conwayTxL . witsAlonzoTxL
   {-# INLINE witsTxL #-}
 
-  auxDataTxL = auxDataAlonzoTxL
+  auxDataTxL = conwayTxL . auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  sizeTxF = sizeAlonzoTxF
+  sizeTxF = conwayTxL . sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
-
-  wireSizeTxF = wireSizeAlonzoTxF
-  {-# INLINE wireSizeTxF #-}
 
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
 
-  upgradeTx (AlonzoTx b w valid aux) =
-    AlonzoTx
-      <$> upgradeTxBody b
-      <*> pure (upgradeTxWits w)
-      <*> pure valid
-      <*> pure (fmap upgradeTxAuxData aux)
+instance EqRaw (Tx l ConwayEra) where
+  eqRaw = alonzoTxEqRaw
 
--- | 25 KiB
-refScriptCostStride :: Int
-refScriptCostStride = 25_600
-
-refScriptCostMultiplier :: Rational
-refScriptCostMultiplier = 1.2
+conwayTxL :: Lens' (Tx l ConwayEra) (AlonzoTx l ConwayEra)
+conwayTxL = lens unConwayTx (\x y -> x {unConwayTx = y})
 
 getConwayMinFeeTx ::
   ( EraTx era
@@ -91,7 +92,7 @@ getConwayMinFeeTx ::
   , ConwayEraPParams era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   Int ->
   Coin
 getConwayMinFeeTx pp tx refScriptsSize =
@@ -100,12 +101,12 @@ getConwayMinFeeTx pp tx refScriptsSize =
     refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
     refScriptsFee =
       tierRefScriptFee
-        refScriptCostMultiplier
-        refScriptCostStride
+        (unboundRational $ pp ^. ppRefScriptCostMultiplierG)
+        (fromIntegral @Word32 @Int . unNonZero $ pp ^. ppRefScriptCostStrideG)
         refScriptCostPerByte
         refScriptsSize
 
--- | Calculate the fee for reference scripts using an expoential growth of the price per
+-- | Calculate the fee for reference scripts using an exponential growth of the price per
 -- byte with linear increments
 tierRefScriptFee ::
   HasCallStack =>
@@ -130,12 +131,8 @@ tierRefScriptFee multiplier sizeIncrement
     sizeIncrementRational = toRational sizeIncrement
 
 instance AlonzoEraTx ConwayEra where
-  isValidTxL = isValidAlonzoTxL
+  isValidTxL = conwayTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance EraSegWits ConwayEra where
-  type TxSeq ConwayEra = AlonzoTxSeq ConwayEra
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
-  numSegComponents = 4
+instance Typeable l => DecCBOR (Annotator (Tx l ConwayEra)) where
+  decCBOR = fmap MkConwayTx <$> decCBOR

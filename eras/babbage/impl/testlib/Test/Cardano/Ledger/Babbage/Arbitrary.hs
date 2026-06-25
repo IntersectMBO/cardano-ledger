@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -14,11 +15,10 @@ import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.Tx
+import Cardano.Ledger.Babbage.Transition (TransitionConfig (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Plutus
 import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
@@ -26,8 +26,6 @@ import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.QuickCheck
-
-deriving instance Arbitrary CoinPerByte
 
 instance Arbitrary (BabbagePParams Identity era) where
   arbitrary =
@@ -90,17 +88,7 @@ instance
   ) =>
   Arbitrary (BabbageContextError era)
   where
-  -- Switch to this implementation once #4110 is taken care of
-  -- arbitrary = genericArbitraryU
-  arbitrary =
-    oneof
-      [ AlonzoContextError <$> arbitrary
-      , ByronTxOutInContext <$> arbitrary
-      , -- , RedeemerPointerPointsToNothing <$> arbitrary -- see #4110
-        InlineDatumsNotSupported <$> arbitrary
-      , ReferenceScriptsNotSupported <$> arbitrary
-      , ReferenceInputsNotSupported <$> arbitrary
-      ]
+  arbitrary = genericArbitraryU
 
 instance
   ( EraTxOut era
@@ -137,17 +125,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance
-  ( BabbageEraTxBody era
-  , Arbitrary (Sized (TxOut era))
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (Script era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (BabbageTxBody era)
-  where
+instance Arbitrary (TxBody TopTx BabbageEra) where
   arbitrary =
     BabbageTxBody
       <$> arbitrary
@@ -166,3 +144,9 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
+
+deriving newtype instance Arbitrary (Tx TopTx BabbageEra)
+
+deriving newtype instance Arbitrary (ApplyTxError BabbageEra)

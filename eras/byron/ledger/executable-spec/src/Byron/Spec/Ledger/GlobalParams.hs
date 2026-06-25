@@ -5,8 +5,7 @@ module Byron.Spec.Ledger.GlobalParams (
   slotsPerEpoch,
   slotsPerEpochToK,
   c,
-)
-where
+) where
 
 import Byron.Spec.Ledger.Core (BlockCount (BlockCount), Epoch (..), Slot (..), lovelaceCap)
 import Data.Word (Word64)

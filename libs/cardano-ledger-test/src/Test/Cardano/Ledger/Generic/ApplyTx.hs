@@ -1,126 +1,129 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
-import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (ExUnits))
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, natVersion)
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, compactCoinOrError)
+import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language (PlutusV1))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Control.Iterate.Exp (dom, (∈))
-import Control.Iterate.SetAlgebra (eval)
-import Data.Foldable (fold, toList)
-import qualified Data.List as List
+import Cardano.Slotting.Slot (EpochNo (..))
+import Data.Foldable (Foldable (..), fold, toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Stack (HasCallStack)
+import Data.Word (Word32)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  initUTxO,
+  EraModel (..),
   mkGenesisTxIn,
   mkTxDats,
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
-  TxBodyField (..),
-  TxField (..),
-  TxOutField (..),
-  WitnessesField (..),
-  abstractTx,
-  abstractTxBody,
- )
 import Test.Cardano.Ledger.Generic.Functions (
   createRUpdNonPulsing',
-  getBody,
-  getOutputs,
   txInBalance,
  )
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemersFromTags)
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.ModelState (
   Model,
   ModelNewEpochState (..),
-  mNewEpochStateZero,
-  pcModelNewEpochState,
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
-import Test.Cardano.Ledger.Generic.Updaters (
-  newPParams,
-  newScriptIntegrityHash,
-  newTx,
-  newTxBody,
-  newTxOut,
- )
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
+
+applyTxSimple :: forall era. EraModel era => Int -> Model era -> Tx TopTx era -> Model era
+applyTxSimple count model tx = applyTxBody count model $ tx ^. bodyTxL
+
+applyTxFail ::
+  (Reflect era, AlonzoEraTxBody era, EraModel era) =>
+  Int ->
+  TxIx ->
+  Model era ->
+  Tx TopTx era ->
+  Model era
+applyTxFail count nextTxIx model tx = updateInfo info model
+  where
+    info = collInfo count nextTxIx model emptyCollInfo $ tx ^. bodyTxL
+
+collInfo ::
+  (HasCallStack, AlonzoEraTxBody era, EraModel era) =>
+  Int ->
+  TxIx ->
+  Model era ->
+  CollInfo era ->
+  TxBody TopTx era ->
+  CollInfo era
+collInfo count firstTxIx model info txbody =
+  afterColReturn
+    { ciDelset = inputs
+    , ciBal = txInBalance inputs $ mUTxO model
+    }
+  where
+    inputs = txbody ^. collateralInputsTxBodyL
+    afterColReturn =
+      case txbody ^. collateralReturnTxBodyT of
+        SNothing -> info
+        SJust txOut ->
+          case Map.lookup count (mIndex model) of
+            Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
+            Just (TxId hash) ->
+              info
+                { ciRet = txOut ^. coinTxOutL
+                , ciAddmap = newstuff
+                }
+              where
+                newstuff = additions hash firstTxIx [txOut]
 
 -- ========================================================================
 
-defaultPPs :: [PParamsField era]
-defaultPPs =
-  [ Costmdls $ zeroTestingCostModels [PlutusV1]
-  , MaxValSize 1000000000
-  , MaxTxExUnits $ ExUnits 1000000 1000000
-  , MaxBlockExUnits $ ExUnits 1000000 1000000
-  , ProtocolVersion $ ProtVer (natVersion @5) 0
-  , KeyDeposit (Coin 2)
-  , PoolDeposit (Coin 5)
-  , CollateralPercentage 100
-  ]
+defaultPPs :: AlonzoEraPParams era => PParams era -> PParams era
+defaultPPs pp =
+  pp
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
+    & ppMaxValSizeL .~ 1000000000
+    & ppMaxTxExUnitsL .~ ExUnits 1000000 1000000
+    & ppMaxBlockExUnitsL .~ ExUnits 1000000 1000000
+    & ppProtocolVersionL .~ ProtVer (natVersion @5) 0
+    & ppKeyDepositL .~ Coin 2
+    & ppPoolDepositL .~ Coin 5
+    & ppCollateralPercentageL .~ 100
 
-pparams :: EraPParams era => Proof era -> PParams era
-pparams pf = newPParams pf defaultPPs
+pparams :: AlonzoEraPParams era => PParams era
+pparams = defaultPPs emptyPParams
 
-hasValid :: [TxField era] -> Maybe Bool
-hasValid [] = Nothing
-hasValid (Valid (IsValid b) : _) = Just b
-hasValid (_ : fs) = hasValid fs
-
-applyTx :: Reflect era => Proof era -> Int -> SlotNo -> Model era -> Tx era -> Model era
-applyTx proof count slot model tx = ans
-  where
-    transactionEpoch = epochFromSlotNo slot
-    modelEpoch = mEL model
-    epochAccurateModel = epochBoundary proof transactionEpoch modelEpoch model
-    txbody = getBody proof tx
-    outputs = getOutputs proof txbody
-    fields = abstractTx proof tx
-    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
-    ans = case hasValid fields of
-      Nothing -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
-      Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
-      Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
-
-epochBoundary :: forall era. Proof era -> EpochNo -> EpochNo -> Model era -> Model era
-epochBoundary proof transactionEpoch modelEpoch model =
+epochBoundary ::
+  forall era. (EraPParams era, EraStake era) => EpochNo -> EpochNo -> Model era -> Model era
+epochBoundary transactionEpoch modelEpoch model =
   if transactionEpoch > modelEpoch
     then
       applyRUpd ru $
@@ -129,94 +132,35 @@ epochBoundary proof transactionEpoch modelEpoch model =
           }
     else model
   where
-    ru = createRUpdNonPulsing' proof model
+    ru = createRUpdNonPulsing' @era model
 
-applyTxSimple :: Reflect era => Proof era -> Int -> Model era -> TxField era -> Model era
-applyTxSimple proof count model field = case field of
-  Body body1 -> applyTxBody proof count model body1
-  BodyI fs -> List.foldl' (applyField proof count) model fs
-  TxWits _ -> model
-  WitnessesI _ -> model
-  AuxData _ -> model
-  Valid _ -> model
-
-applyTxBody :: Reflect era => Proof era -> Int -> Model era -> TxBody era -> Model era
-applyTxBody proof count model tx = List.foldl' (applyField proof count) model (abstractTxBody proof tx)
-
-applyField :: Reflect era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
-applyField proof count model field = case field of
-  Inputs txins -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
-  Outputs seqo -> case Map.lookup count (mIndex model) of
-    Nothing -> error ("Output not found phase1: " ++ show (mIndex model))
-    Just (TxId hash) -> model {mUTxO = Map.union newstuff (mUTxO model)}
-      where
-        newstuff = additions hash minBound (toList seqo)
-  Txfee coin -> model {mFees = coin <+> mFees model}
-  Certs seqc -> List.foldl' applyCert model (toList seqc)
-  Withdrawals' (Withdrawals m) -> Map.foldlWithKey' (applyWithdrawals proof) model m
-  _other -> model
-
-applyWithdrawals :: Proof era -> Model era -> RewardAccount -> Coin -> Model era
-applyWithdrawals _proof model (RewardAccount _network cred) coin =
-  model {mRewards = Map.adjust (<-> coin) cred (mRewards model)}
-
-applyCert :: forall era. Reflect era => Model era -> TxCert era -> Model era
-applyCert = case reify @era of
-  Shelley -> applyShelleyCert
-  Mary -> applyShelleyCert
-  Allegra -> applyShelleyCert
-  Alonzo -> applyShelleyCert
-  Babbage -> applyShelleyCert
-  Conway -> error "applyCert, not yet in Conway"
-
-applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
-applyShelleyCert model dcert = case dcert of
-  ShelleyTxCertDelegCert (ShelleyRegCert x) ->
-    model
-      { mRewards = Map.insert x (Coin 0) (mRewards model)
-      , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
-      , mDeposited = mDeposited model <+> pp ^. ppKeyDepositL
-      }
-    where
-      pp = mPParams model
-  ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
-    Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
-    Just (Coin 0) ->
+applyTxBody :: EraModel era => Int -> Model era -> TxBody TopTx era -> Model era
+applyTxBody count model txbody =
+  Map.foldlWithKey' applyWithdrawals (foldl' applyCert model' $ txbody ^. certsTxBodyL)
+    . unWithdrawals
+    $ txbody ^. withdrawalsTxBodyL
+  where
+    mUTxOInputs = Map.withoutKeys (mUTxO model) $ txbody ^. inputsTxBodyL
+    mUTxOOutputs = case Map.lookup count (mIndex model) of
+      Nothing -> error ("Output not found phase1: " ++ show (mIndex model))
+      Just (TxId hash) -> Map.union newstuff mUTxOInputs
+        where
+          newstuff = additions hash minBound . toList $ txbody ^. outputsTxBodyL
+    model' =
       model
-        { mRewards = Map.delete x (mRewards model)
-        , mKeyDeposits = Map.delete x (mKeyDeposits model)
-        , mDeposited = mDeposited model <-> keyDeposit
+        { mUTxO = mUTxOOutputs
+        , mFees = mFees model <+> (txbody ^. feeTxBodyL)
         }
-      where
-        keyDeposit = Map.findWithDefault mempty x (mKeyDeposits model)
-    Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  ShelleyTxCertDelegCert (ShelleyDelegCert cred hash) ->
-    model {mDelegations = Map.insert cred hash (mDelegations model)}
-  ShelleyTxCertPool (RegPool poolparams) ->
-    model
-      { mPoolParams = Map.insert hk poolparams (mPoolParams model)
-      , mDeposited =
-          if Map.member hk (mPoolDeposits model)
-            then mDeposited model
-            else mDeposited model <+> pp ^. ppPoolDepositL
-      , mPoolDeposits -- Only add if it isn't already there
-        =
-          if Map.member hk (mPoolDeposits model)
-            then mPoolDeposits model
-            else Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
-      }
-    where
-      hk = ppId poolparams
-      pp = mPParams model
-  ShelleyTxCertPool (RetirePool keyhash epoch) ->
-    model
-      { mRetiring = Map.insert keyhash epoch (mRetiring model)
-      , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
-      }
-    where
-      pp = mPParams model
-  ShelleyTxCertGenesisDeleg _ -> model
-  ShelleyTxCertMir _ -> model
+
+applyWithdrawals :: EraAccounts era => Model era -> AccountAddress -> Coin -> Model era
+applyWithdrawals model (AccountAddress _network (AccountId cred)) coin =
+  model
+    { mAccounts =
+        adjustAccountState
+          (balanceAccountStateL %~ (\balance -> compactCoinOrError (fromCompact balance <-> coin)))
+          cred
+          (mAccounts model)
+    }
 
 -- =========================================================
 -- What to do if the second phase does not validatate.
@@ -232,53 +176,12 @@ data CollInfo era = CollInfo
 emptyCollInfo :: CollInfo era
 emptyCollInfo = CollInfo (Coin 0) (Coin 0) Set.empty Map.empty
 
--- | Collect information about how to process Collateral, in a second phase failure.
-collInfo ::
-  (Reflect era, HasCallStack) =>
-  Int ->
-  TxIx ->
-  Model era ->
-  CollInfo era ->
-  TxBodyField era ->
-  CollInfo era
-collInfo count firstTxIx model info field = case field of
-  CollateralReturn SNothing -> info
-  CollateralReturn (SJust txout) ->
-    case Map.lookup count (mIndex model) of
-      Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
-      Just (TxId hash) ->
-        info
-          { ciRet = txout ^. coinTxOutL
-          , ciAddmap = newstuff
-          }
-        where
-          newstuff = additions hash firstTxIx [txout]
-  Collateral inputs ->
-    info
-      { ciDelset = inputs
-      , ciBal = txInBalance inputs (mUTxO model)
-      }
-  _ -> info
-
 updateInfo :: CollInfo era -> Model era -> Model era
 updateInfo info m =
   m
     { mUTxO = Map.union (ciAddmap info) (Map.withoutKeys (mUTxO m) (ciDelset info))
     , mFees = mFees m <+> ciBal info <-> ciRet info
     }
-
-applyTxFail :: Reflect era => Proof era -> Int -> TxIx -> Model era -> TxField era -> Model era
-applyTxFail proof count nextTxIx model field = case field of
-  Body body2 -> updateInfo info model
-    where
-      info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo (abstractTxBody proof body2)
-  BodyI fs -> updateInfo info model
-    where
-      info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo fs
-  TxWits _ -> model
-  WitnessesI _ -> model
-  AuxData _ -> model
-  Valid _ -> model
 
 -- =======================================
 
@@ -293,34 +196,12 @@ additions bodyhash firstTxIx outputs =
     | (out, idx) <- zip outputs [firstTxIx ..]
     ]
 
--- | This is a template of how we might create unit tests that run both the real STS rules
---   and the model to see that they agree. 'collateralOutputTx' and 'initUTxO' are from
---   the BabbageFeatures.hs unit test file.
-go :: IO ()
-go = do
-  let proof = Babbage
-      tx = (notValidatingTx proof) {isValid = IsValid False}
-      allinputs = txbody ^. allInputsTxBodyF
-      txbody = body tx
-      doc = pcTx proof tx
-      model1 =
-        (mNewEpochStateZero @BabbageEra)
-          { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs
-          , mCount = 0
-          , mFees = Coin 10
-          , mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
-          }
-      model2 = applyTx proof 0 (SlotNo 0) model1 tx
-  print (pcModelNewEpochState proof model1)
-  print doc
-  print (pcModelNewEpochState proof model2)
-
 filterRewards ::
   EraPParams era =>
   PParams era ->
-  Map (Credential 'Staking) (Set Reward) ->
-  ( Map (Credential 'Staking) (Set Reward)
-  , Map (Credential 'Staking) (Set Reward)
+  Map (Credential Staking) (Set Reward) ->
+  ( Map (Credential Staking) (Set Reward)
+  , Map (Credential Staking) (Set Reward)
   )
 filterRewards pp rewards =
   if pvMajor (pp ^. ppProtocolVersionL) > natVersion @2
@@ -330,12 +211,12 @@ filterRewards pp rewards =
        in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 filterAllRewards ::
-  EraPParams era =>
-  Map (Credential 'Staking) (Set Reward) ->
+  (EraPParams era, EraAccounts era) =>
+  Map (Credential Staking) (Set Reward) ->
   Model era ->
-  ( Map (Credential 'Staking) (Set Reward)
-  , Map (Credential 'Staking) (Set Reward)
-  , Set (Credential 'Staking)
+  ( Map (Credential Staking) (Set Reward)
+  , Map (Credential Staking) (Set Reward)
+  , Set (Credential Staking)
   , Coin
   )
 filterAllRewards rs' m =
@@ -344,7 +225,7 @@ filterAllRewards rs' m =
     pp = mPParams m
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\k _ -> eval (k ∈ dom (mRewards m)))
+        (\cred _ -> isAccountRegistered cred (mAccounts m))
         rs'
     totalUnregistered = fold $ aggregateRewards (pp ^. ppProtocolVersionL) unregRU
     unregistered = Map.keysSet unregRU
@@ -353,41 +234,63 @@ filterAllRewards rs' m =
 
 applyRUpd ::
   forall era.
+  EraAccounts era =>
   RewardUpdateOld ->
   Model era ->
   Model era
 applyRUpd ru m =
   m
     { mFees = mFees m `addDeltaCoin` deltaFOld ru
-    , mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
+    , mAccounts = addToBalanceAccounts (Map.map compactCoinOrError $ rsOld ru) (mAccounts m)
     }
 
 notValidatingTx ::
-  ( Scriptic era
-  , EraTx era
+  forall era.
+  ( AlonzoEraTxWits era
+  , EraPlutusTxInfo PlutusV1 era
+  , AlonzoEraTxBody era
+  , EraModel era
   ) =>
-  Proof era ->
-  Tx era
-notValidatingTx pf =
-  newTx
-    pf
-    [ Body notValidatingBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notValidatingBody) (someKeys pf)]
-        , ScriptWits' [never 0 pf]
-        , DataWits' [Data (PV1.I 0)]
-        , RdmrWits redeemers
-        ]
-    ]
+  Tx TopTx era
+notValidatingTx =
+  let s = alwaysFails @PlutusV1 1
+      dat = Data (PV1.I 0)
+   in mkBasicTx notValidatingBody
+        & witsTxL . addrTxWitsL .~ [mkWitnessVKey (hashAnnotated notValidatingBody) someKeys]
+        & witsTxL . scriptTxWitsL .~ [(hashScript s, s)]
+        & witsTxL . datsTxWitsL .~ TxDats [(hashData dat, dat)]
+        & witsTxL . rdmrsTxWitsL .~ redeemers
   where
     notValidatingBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 2]
-        , Collateral' [mkGenesisTxIn 12]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]]
-        , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
-        ]
-    redeemers =
-      mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 1), ExUnits 5000 5000))]
+      mkBasicTxBody
+        & inputsTxBodyL .~ [mkGenesisTxIn 2]
+        & collateralInputsTxBodyL .~ [mkGenesisTxIn 12]
+        & outputsTxBodyL .~ [mkBasicTxOut someAddr (inject $ Coin 2995)]
+        & feeTxBodyL .~ Coin 5
+        & scriptIntegrityHashTxBodyL
+          .~ newScriptIntegrityHash pparams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0)))
+    redeemers = mkRedeemersFromTags [((Spending, 0), (Data (PV1.I 1), ExUnits 5000 5000))]
+
+mkAlonzoPlutusPurposePointer ::
+  forall era.
+  Era era =>
+  PlutusPurposeTag ->
+  Word32 ->
+  AlonzoPlutusPurpose AsIx era
+mkAlonzoPlutusPurposePointer tag i =
+  case tag of
+    Spending -> AlonzoSpending (AsIx i)
+    Minting -> AlonzoMinting (AsIx i)
+    Certifying -> AlonzoCertifying (AsIx i)
+    Rewarding -> AlonzoRewarding (AsIx i)
+    _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
+
+mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIx era
+mkConwayPlutusPurposePointer tag i =
+  case tag of
+    Spending -> ConwaySpending (AsIx i)
+    Minting -> ConwayMinting (AsIx i)
+    Certifying -> ConwayCertifying (AsIx i)
+    Rewarding -> ConwayRewarding (AsIx i)
+    Voting -> ConwayVoting (AsIx i)
+    Proposing -> ConwayProposing (AsIx i)

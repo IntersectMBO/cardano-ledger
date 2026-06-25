@@ -7,8 +7,7 @@ module Cardano.Ledger.Conway.Rules.Tickf (
   ConwayTICKF,
   ConwayTickfPredFailure,
   ConwayTickfEvent,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
 import Cardano.Ledger.Conway.Era

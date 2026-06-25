@@ -5,8 +5,7 @@
 
 module Cardano.Chain.Slotting.SlotCount (
   SlotCount (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Prelude

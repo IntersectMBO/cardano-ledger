@@ -21,9 +21,8 @@ import Cardano.Ledger.Alonzo.Rules.Delegs ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
@@ -44,6 +43,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
   shelleyLedgerAssertions,
+  testIncompleteAndMissingWithdrawals,
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   LedgerEnv (..),
@@ -54,6 +54,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   renderDepositEqualsObligationViolation,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
+import Cardano.Ledger.State (EraCertState, accountsL, certDStateL, drainAccounts)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -113,7 +114,7 @@ ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( STS (someLEDGER era)
   , BaseM (someLEDGER era) ~ ShelleyBase
-  , Signal (someLEDGER era) ~ Tx era
+  , Signal (someLEDGER era) ~ Tx TopTx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -123,8 +124,11 @@ ledgerTransition ::
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , AlonzoEraTx era
+  , EraCertState era
+  , EraRule "LEDGER" era ~ someLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -136,11 +140,13 @@ ledgerTransition = do
 
   certState' <-
     if tx ^. isValidTxL == IsValid True
-      then
+      then do
+        let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+        testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
         trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot curEpochNo txIx pp tx account
-            , certState
+            , certState & certDStateL . accountsL %~ drainAccounts withdrawals
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
       else pure certState
@@ -157,22 +163,24 @@ ledgerTransition = do
 instance
   ( AlonzoEraTx era
   , EraGov era
-  , Tx era ~ AlonzoTx era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ AlonzoTx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
+  , EraRule "LEDGER" era ~ AlonzoLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , EraCertState era
   ) =>
   STS (AlonzoLEDGER era)
   where
   type State (AlonzoLEDGER era) = LedgerState era
-  type Signal (AlonzoLEDGER era) = AlonzoTx era
+  type Signal (AlonzoLEDGER era) = Tx TopTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = ShelleyLedgerPredFailure era

@@ -18,7 +18,7 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
+import Cardano.Ledger.Binary (DecCBOR (decCBOR), decodeFull, decodeFullAnnotator)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -37,6 +37,7 @@ import Criterion
 import Data.Proxy (Proxy (..))
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -63,7 +64,7 @@ benchWithGenState ::
   , EraGen era
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraStake era
@@ -82,7 +83,7 @@ benchApplyTx ::
   , ApplyTx era
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraStake era
@@ -115,16 +116,35 @@ deserialiseTxEra ::
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , NFData (Tx era)
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , EraStake era
   , EraGov era
+  , DecCBOR (Tx TopTx era)
   ) =>
   Proxy era ->
   Benchmark
 deserialiseTxEra px =
   benchWithGenState px (pure . Plain.serialize . ateTx) $
-    nf (either (error . show) (id @(Tx era)) . decodeFullAnnotator v "tx" decCBOR)
+    nf (either (error . show) (id @(Tx TopTx era)) . decodeFull v)
+  where
+    v = eraProtVerHigh @era
+
+deserialiseAnnTxEra ::
+  forall era.
+  ( EraGen era
+  , BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
+  , EraStake era
+  , EraGov era
+  ) =>
+  Proxy era ->
+  Benchmark
+deserialiseAnnTxEra px =
+  benchWithGenState px (pure . Plain.serialize . ateTx) $
+    nf (either (error . show) (id @(Tx TopTx era)) . decodeFullAnnotator v "tx" decCBOR)
   where
     v = eraProtVerHigh @era
 
@@ -144,10 +164,17 @@ applyTxBenchmarks =
         , benchApplyTx (Proxy @AlonzoEra)
         ]
     , bgroup
-        "Deserialise Shelley Tx"
+        "Deserialise Tx"
         [ deserialiseTxEra (Proxy @ShelleyEra)
         , deserialiseTxEra (Proxy @AllegraEra)
         , deserialiseTxEra (Proxy @MaryEra)
         , deserialiseTxEra (Proxy @AlonzoEra)
+        ]
+    , bgroup
+        "Deserialise Ann Tx"
+        [ deserialiseAnnTxEra (Proxy @ShelleyEra)
+        , deserialiseAnnTxEra (Proxy @AllegraEra)
+        , deserialiseAnnTxEra (Proxy @MaryEra)
+        , deserialiseAnnTxEra (Proxy @AlonzoEra)
         ]
     ]

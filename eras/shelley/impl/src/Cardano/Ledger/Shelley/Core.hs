@@ -1,8 +1,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.Shelley.Core (
+  ShelleyBlockBody (..),
   ShelleyEraTxBody (..),
-  Withdrawals (..),
   ShelleyEraTxCert (..),
   pattern MirTxCert,
   MIRCert (..),
@@ -14,10 +14,8 @@ module Cardano.Ledger.Shelley.Core (
   pattern DelegStakeTxCert,
   module Cardano.Ledger.Core,
   module Cardano.Ledger.Shelley.Governance,
-)
-where
+) where
 
-import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Core (
   EraPParams (
     DowngradePParams,
@@ -30,6 +28,7 @@ import Cardano.Ledger.Core (
   ),
  )
 import Cardano.Ledger.Core hiding (EraPParams (..))
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBody (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))

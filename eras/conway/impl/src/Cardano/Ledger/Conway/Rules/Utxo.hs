@@ -15,29 +15,31 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Utxo (
+  ConwayUTXO,
   allegraToConwayUtxoPredFailure,
   babbageToConwayUtxoPredFailure,
   alonzoToConwayUtxoPredFailure,
   ConwayUtxoPredFailure (..),
+  UtxoEnv (..),
 ) where
 
-import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoEvent,
+  AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
-  AlonzoUtxoEvent (UtxosEvent),
   AlonzoUtxoPredFailure (..),
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Babbage.Rules (
+  BabbageUtxoPredFailure,
+  babbageUtxoValidation,
+  updateUTxOStateByTxValidity,
+ )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxoPredFailure (..),
-  utxoTransition,
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -58,7 +60,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOS)
@@ -66,17 +67,21 @@ import Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUtxosPredFailure (..),
  )
 import Cardano.Ledger.Plutus (ExUnits)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv)
-import Cardano.Ledger.State (EraUTxO, UTxO (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyUtxoPredFailure,
+  UtxoEnv (..),
+  validSizeComputationCheck,
+ )
+import Cardano.Ledger.State (EraCertState (..), EraStake, EraUTxO)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (Embed (..), STS (..))
+import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import Data.Set (Set)
+import Data.Map.NonEmpty (NonEmptyMap)
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import GHC.Natural (Natural)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
@@ -87,39 +92,38 @@ data ConwayUtxoPredFailure era
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | The bad transaction inputs
     BadInputsUTxO
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
       ValidityInterval
       -- | current slot
       SlotNo
-  | MaxTxSizeUTxO
-      (Mismatch 'RelLTEQ Integer)
+  | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      (Mismatch 'RelGTEQ Coin) -- The values are serialised in reverse order
+      (Mismatch RelGTEQ Coin) -- The values are serialised in reverse order
   | ValueNotConservedUTxO
-      (Mismatch 'RelEQ (Value era)) -- Serialise consumed first, then produced
+      (Mismatch RelEQ (Value era)) -- Serialise consumed first, then produced
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
       Network
       -- | the set of addresses with incorrect network IDs
-      (Set Addr)
+      (NonEmptySet Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
       Network
       -- | the set of reward addresses with incorrect network IDs
-      (Set RewardAccount)
+      (NonEmptySet AccountAddress)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
-      [TxOut era]
+      (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      [(Int, Int, TxOut era)]
+      (NonEmpty (Int, Int, TxOut era))
   | InsufficientCollateral
       -- | balance computed
       DeltaCoin
@@ -127,20 +131,20 @@ data ConwayUtxoPredFailure era
       Coin
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
-      (UTxO era)
+      (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
-      (Mismatch 'RelLTEQ ExUnits) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ ExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
-      (Mismatch 'RelEQ Network) -- The values are serialised in reverse order
+      (Mismatch RelEQ Network) -- The values are serialised in reverse order
   | -- | slot number outside consensus forecast range
     OutsideForecast
       SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      (Mismatch 'RelLTEQ Natural) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ Word16) -- The values are serialised in reverse order
   | NoCollateralInputs
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
@@ -151,7 +155,7 @@ data ConwayUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
-      [(TxOut era, Coin)]
+      (NonEmpty (TxOut era, Coin))
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
       (NonEmpty TxIn)
@@ -174,11 +178,8 @@ instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure ConwayEra where
     allegraToConwayUtxoPredFailure
       . shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure ConwayEra where
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure ConwayEra where
   injectFailure = allegraToConwayUtxoPredFailure
-
-instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where
-  injectFailure = UtxosFailure
 
 instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure ConwayEra where
   injectFailure =
@@ -219,6 +220,36 @@ instance
   ) =>
   NFData (ConwayUtxoPredFailure era)
 
+conwayUtxoTransition ::
+  forall era.
+  ( EraUTxO era
+  , EraCertState era
+  , BabbageEraTxBody era
+  , AlonzoEraTx era
+  , EraStake era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
+  , -- In this function we we call the UTXOS rule, so we need some assumptions
+    Environment (EraRule "UTXOS" era) ~ PParams era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
+  , Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
+  ) =>
+  TransitionRule (EraRule "UTXO" era)
+conwayUtxoTransition = do
+  TRC (UtxoEnv _ pp certState, utxos, tx) <- judgmentContext
+  babbageUtxoValidation
+  updatedUtxos <- trans @(EraRule "UTXOS" era) $ TRC (pp, utxos, tx)
+  updateUTxOStateByTxValidity pp certState (utxosGovState utxos) tx updatedUtxos
+
 --------------------------------------------------------------------------------
 -- ConwayUTXO STS
 --------------------------------------------------------------------------------
@@ -228,8 +259,8 @@ instance
   ( EraTx era
   , EraUTxO era
   , ConwayEraTxBody era
-  , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
+  , AlonzoEraTx era
+  , EraStake era
   , EraRule "UTXO" era ~ ConwayUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -237,24 +268,27 @@ instance
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" ConwayUtxoPredFailure era
   , Embed (EraRule "UTXOS" era) (ConwayUTXO era)
-  , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Environment (EraRule "UTXOS" era) ~ PParams era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , EraCertState era
+  , SafeToHash (TxWits era)
   ) =>
   STS (ConwayUTXO era)
   where
-  type State (ConwayUTXO era) = Shelley.UTxOState era
-  type Signal (ConwayUTXO era) = AlonzoTx era
-  type Environment (ConwayUTXO era) = Shelley.UtxoEnv era
+  type State (ConwayUTXO era) = UTxOState era
+  type Signal (ConwayUTXO era) = Tx TopTx era
+  type Environment (ConwayUTXO era) = UtxoEnv era
   type BaseM (ConwayUTXO era) = ShelleyBase
   type PredicateFailure (ConwayUTXO era) = ConwayUtxoPredFailure era
   type Event (ConwayUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
 
-  transitionRules = [Babbage.utxoTransition @era]
+  transitionRules = [conwayUtxoTransition]
+
+  assertions = [validSizeComputationCheck]
 
 instance
   ( Era era
@@ -265,7 +299,7 @@ instance
   Embed (ConwayUTXOS era) (ConwayUTXO era)
   where
   wrapFailed = UtxosFailure
-  wrapEvent = Alonzo.UtxosEvent
+  wrapEvent = UtxosEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -328,7 +362,7 @@ instance
     10 -> SumD OutputBootAddrAttrsTooBig <! From
     11 -> SumD OutputTooBigUTxO <! From
     12 -> SumD InsufficientCollateral <! From <! From
-    13 -> SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+    13 -> SumD ScriptsNotPaidUTxO <! From
     14 -> SumD ExUnitsTooBigUTxO <! mapCoder unswapMismatch FromGroup
     15 -> SumD CollateralContainsNonADA <! From
     16 -> SumD WrongNetworkInTxBody <! mapCoder unswapMismatch FromGroup
@@ -369,18 +403,7 @@ alonzoToConwayUtxoPredFailure = \case
   Alonzo.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Alonzo.UtxosFailure x -> UtxosFailure x
   Alonzo.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
-  Alonzo.TriesToForgeADA ->
-    error
-      "Impossible case, soon to be removed. See: https://github.com/IntersectMBO/cardano-ledger/issues/4085"
-  Alonzo.OutputTooBigUTxO xs ->
-    let
-      -- TODO: Remove this once the other eras will make the switch from Integer to Int
-      -- as per #4015.
-      -- https://github.com/IntersectMBO/cardano-ledger/issues/4085
-      toRestricted :: (Integer, Integer, TxOut era) -> (Int, Int, TxOut era)
-      toRestricted (sz, mv, out) = (fromIntegral sz, fromIntegral mv, out)
-     in
-      OutputTooBigUTxO $ map toRestricted xs
+  Alonzo.OutputTooBigUTxO xs -> OutputTooBigUTxO xs
   Alonzo.InsufficientCollateral c1 c2 -> InsufficientCollateral c1 c2
   Alonzo.ScriptsNotPaidUTxO u -> ScriptsNotPaidUTxO u
   Alonzo.ExUnitsTooBigUTxO m -> ExUnitsTooBigUTxO m
@@ -393,7 +416,7 @@ alonzoToConwayUtxoPredFailure = \case
 allegraToConwayUtxoPredFailure ::
   forall era.
   EraRuleFailure "PPUP" era ~ VoidEraRule "PPUP" era =>
-  Allegra.AllegraUtxoPredFailure era ->
+  AllegraUtxoPredFailure era ->
   ConwayUtxoPredFailure era
 allegraToConwayUtxoPredFailure = \case
   Allegra.BadInputsUTxO x -> BadInputsUTxO x
@@ -407,7 +430,7 @@ allegraToConwayUtxoPredFailure = \case
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> absurdEraRule @"PPUP" @era x
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
-  Allegra.TriesToForgeADA ->
-    error
-      "Impossible case, soon to be removed. See: https://github.com/IntersectMBO/cardano-ledger/issues/4085"
-  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)
+  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)
+
+instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where
+  injectFailure = UtxosFailure

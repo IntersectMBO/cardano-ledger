@@ -1,7 +1,9 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.Alonzo.Core (
+  AlonzoBlockBody (..),
   AlonzoEraTx (..),
+  IsValid (..),
   AlonzoEraTxOut (..),
   AlonzoEraScript (..),
   AsIx (..),
@@ -34,9 +36,9 @@ module Cardano.Ledger.Alonzo.Core (
   ppuMaxCollateralInputsL,
   AlonzoEraTxAuxData (..),
   module Cardano.Ledger.Mary.Core,
-)
-where
+) where
 
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBody (..))
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoEraPParams,
   CoinPerWord (..),
@@ -67,7 +69,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   pattern RewardingPurpose,
   pattern SpendingPurpose,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))

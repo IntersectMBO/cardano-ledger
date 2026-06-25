@@ -3,8 +3,7 @@
 
 module Test.Cardano.Crypto.Signing.Safe (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto.Signing (
   noPassSafeSigner,

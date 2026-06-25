@@ -17,14 +17,12 @@ module Test.Cardano.Ledger.Shelley.MultiSigExamples (
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (Addr))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
   maybeToStrictMaybe,
   mkTxIxPartial,
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
   pattern KeyHashObj,
@@ -49,9 +47,8 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
@@ -124,11 +121,8 @@ aliceAndBobOrCarlOrDaria =
       ]
 
 initTxBody ::
-  ( EraTxOut era
-  , EraTxCert era
-  ) =>
-  [(Addr, Value era)] ->
-  ShelleyTxBody era
+  [(Addr, Value ShelleyEra)] ->
+  TxBody TopTx ShelleyEra
 initTxBody addrs =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
@@ -141,13 +135,10 @@ initTxBody addrs =
     SNothing
 
 makeTxBody ::
-  ( EraTxOut era
-  , EraTxCert era
-  ) =>
   [TxIn] ->
-  [(Addr, Value era)] ->
+  [(Addr, Value ShelleyEra)] ->
   Withdrawals ->
-  ShelleyTxBody era
+  TxBody TopTx ShelleyEra
 makeTxBody inp addrCs wdrl =
   ShelleyTxBody
     (Set.fromList inp)
@@ -160,12 +151,15 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
-  TxBody ShelleyEra ->
-  [KeyPair 'Witness] ->
+  TxBody TopTx ShelleyEra ->
+  [KeyPair Witness] ->
   Map ScriptHash (MultiSig ShelleyEra) ->
   Maybe (ShelleyTxAuxData ShelleyEra) ->
-  ShelleyTx ShelleyEra
-makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
+  Tx TopTx ShelleyEra
+makeTx txBody keyPairs msigs auxData =
+  mkBasicTx txBody
+    & witsTxL .~ txWits
+    & auxDataTxL .~ maybeToStrictMaybe auxData
   where
     txWits :: ShelleyTxWits ShelleyEra
     txWits =
@@ -259,7 +253,7 @@ applyTxWithScript ::
   [MultiSig ShelleyEra] ->
   Withdrawals ->
   Coin ->
-  [KeyPair 'Witness] ->
+  [KeyPair Witness] ->
   Either (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra))) (UTxOState ShelleyEra)
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where

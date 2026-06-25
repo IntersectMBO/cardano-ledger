@@ -17,10 +17,8 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState,
   LedgerState (..),
   UTxOState,
   genesisState,
@@ -65,9 +63,9 @@ import Test.QuickCheck (Gen)
 
 -- ======================================================
 
-genAccountState :: Constants -> Gen AccountState
+genAccountState :: Constants -> Gen ChainAccountState
 genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
-  AccountState
+  ChainAccountState
     <$> genCoin minTreasury maxTreasury
     <*> genCoin minReserves maxReserves
 
@@ -77,6 +75,8 @@ instance
   ( EraGen era
   , EraGov era
   , EraUTxO era
+  , EraCertState era
+  , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -87,12 +87,12 @@ instance
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , ProtVerAtMost era 8
-  , EraCertState era
+  , AtMostEra "Babbage" era
+  , EraRule "LEDGER" era ~ ShelleyLEDGER era
   , Crypto c
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv c era)
@@ -102,7 +102,7 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen genenv env state = genTx genenv env state
+  sigGen = genTx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
@@ -116,6 +116,7 @@ instance
   , EraUTxO era
   , EraStake era
   , EraCertState era
+  , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -124,7 +125,7 @@ instance
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv c era)
   where
@@ -148,9 +149,9 @@ instance
       where
         genAndApplyTx ::
           HasCallStack =>
-          (LedgerState era, [Tx era]) ->
+          (LedgerState era, [Tx TopTx era]) ->
           TxIx ->
-          Gen (LedgerState era, [Tx era])
+          Gen (LedgerState era, [Tx TopTx era])
         genAndApplyTx (ls', txs) txIx = do
           let ledgerEnv = LedgerEnv slotNo (Just epochNo) txIx pParams reserves
           tx <- genTx ge ledgerEnv ls'

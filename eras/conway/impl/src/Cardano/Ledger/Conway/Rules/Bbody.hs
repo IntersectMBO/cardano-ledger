@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -18,7 +19,10 @@
 module Cardano.Ledger.Conway.Rules.Bbody (
   ConwayBBODY,
   ConwayBbodyPredFailure (..),
-  maxRefScriptSizePerBlock,
+  alonzoToConwayBbodyPredFailure,
+  shelleyToConwayBbodyPredFailure,
+  totalRefScriptSizeInBlock,
+  conwayBbodyTransition,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -33,17 +37,27 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  ProtVer,
+  Relation (..),
+  ShelleyBase,
+  Version,
+  natVersion,
+  pvMajor,
+  succVersion,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
@@ -69,34 +83,38 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailure (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
+import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.State.Transition (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   (?!),
  )
 import Data.Foldable (Foldable (foldMap'))
+import qualified Data.Foldable as F (foldl')
+import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (getSum))
 import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
+import Data.Sequence.Strict (StrictSeq (..))
+import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
--- | In the next era this will become a proper protocol parameter.
--- For now this is a hard coded limit on the total number of bytes of all reference scripts
--- combined from all transactions within a block.
-maxRefScriptSizePerBlock :: Int
-maxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
-
 data ConwayBbodyPredFailure era
-  = WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
-  | InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash HASH EraIndependentBlockBody))
+  = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
+  | InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits (Mismatch 'RelLTEQ ExUnits)
-  | BodyRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
+  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
+  | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
+  | HeaderProtVerTooHigh (Mismatch RelLTEQ Version)
   deriving (Generic)
 
 deriving instance
@@ -106,6 +124,10 @@ deriving instance
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (ConwayBbodyPredFailure era)
+
+deriving anyclass instance
+  (Era era, NFData (PredicateFailure (EraRule "LEDGERS" era))) =>
+  NFData (ConwayBbodyPredFailure era)
 
 deriving anyclass instance
   (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
@@ -124,6 +146,7 @@ instance
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
       TooManyExUnits mm -> Sum TooManyExUnits 3 !> ToGroup mm
       BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> ToGroup mm
+      HeaderProtVerTooHigh mm -> Sum HeaderProtVerTooHigh 5 !> To mm
 
 instance
   ( Era era
@@ -137,6 +160,7 @@ instance
     2 -> SumD LedgersFailure <! From
     3 -> SumD TooManyExUnits <! FromGroup
     4 -> SumD BodyRefScriptsSizeTooBig <! FromGroup
+    5 -> SumD HeaderProtVerTooHigh <! From
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" ConwayEra = ConwayBbodyPredFailure ConwayEra
@@ -231,17 +255,16 @@ instance
   ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
-  , TxSeq era ~ AlonzoTxSeq era
-  , EraSegWits era
+  , EraBlockBody era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , EraRule "BBODY" era ~ ConwayBBODY era
-  , EraTx era
+  , AlonzoEraTx era
   , BabbageEraTxBody era
+  , ConwayEraPParams era
   ) =>
   STS (ConwayBBODY era)
   where
@@ -264,27 +287,42 @@ conwayBbodyTransition ::
   forall era.
   ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , EraTx era
+  , AlonzoEraTx era
+  , EraBlockBody era
   , BabbageEraTxBody era
+  , ConwayEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
 conwayBbodyTransition = do
   judgmentContext
     >>= \( TRC
-            ( _
-              , state@(BbodyState ls _)
-              , UnserialisedBlock _ txsSeq
-              )
-          ) -> do
+             ( BbodyEnv pp _
+               , state@(BbodyState ls _)
+               , Block bhView txsSeq
+               )
+           ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
-            txs = txSeqTxns txsSeq
-            totalRefScriptSize =
-              getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize utxo) txs
+            txs = txsSeq ^. txSeqBlockBodyL
+            totalRefScriptSize = totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs utxo
+            maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+            checkHeaderMajorProtVerTooHigh = do
+              let
+                curMajorVer = pvMajor (pp ^. ppProtocolVersionL)
+                headerMajorVer = pvMajor (bhviewProtVer bhView)
+              -- There is always next version higher than the current one used
+              nextMajorVer <- succVersion curMajorVer
+              -- If header version is less then or equal to the next version, then we are OK.
+              guard (headerMajorVer > nextMajorVer)
+              Just $
+                Mismatch
+                  { mismatchSupplied = headerMajorVer
+                  , mismatchExpected = nextMajorVer
+                  }
+        failOnJust checkHeaderMajorProtVerTooHigh $ injectFailure . HeaderProtVerTooHigh @era
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure
@@ -306,3 +344,18 @@ instance
   where
   wrapFailed = LedgersFailure
   wrapEvent = ShelleyInAlonzoEvent . LedgersEvent
+
+totalRefScriptSizeInBlock ::
+  (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int
+totalRefScriptSizeInBlock protVer txs (UTxO utxo)
+  | pvMajor protVer <= natVersion @10 =
+      getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize (UTxO utxo)) txs
+  | otherwise =
+      snd $ F.foldl' accum (utxo, 0) txs
+  where
+    accum (!accUtxo, !accSum) tx =
+      let updatedUtxo = accUtxo `Map.union` unUTxO toAdd
+          toAdd
+            | IsValid True <- tx ^. isValidTxL = txouts $ tx ^. bodyTxL
+            | otherwise = collOuts $ tx ^. bodyTxL
+       in (updatedUtxo, accSum + txNonDistinctRefScriptsSize (UTxO accUtxo) tx)

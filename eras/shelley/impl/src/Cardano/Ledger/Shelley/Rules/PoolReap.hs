@@ -16,37 +16,27 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
   ShelleyPoolreapEvent (..),
   ShelleyPoolreapState (..),
-  ShelleyPoolreapEnv (..),
+  prCertStateL,
+  prChainAccountStateL,
+  prUTxOStateL,
   PredicateFailure,
-  ShelleyPoolreapPredFailure,
-)
-where
+) where
 
-import Cardano.Ledger.Address (RewardAccount, raCredential)
-import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState (..), VState)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.PoolParams (ppRewardAccount)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
-import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  DState (..),
-  PState (..),
   UTxOState (..),
   allObligations,
-  rewards,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
-import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.State
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition (
   Assertion (..),
   AssertionViolation (..),
@@ -58,41 +48,40 @@ import Control.State.Transition (
  )
 import Data.Default (Default, def)
 import Data.Foldable (fold)
+import Data.Foldable as F (foldl')
+import qualified Data.Map.Merge.Strict as Map
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set (member)
+import qualified Data.Set as Set
+import Data.Void (Void)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era
-  , prAccountState :: AccountState
-  , prDState :: DState era
-  , prPState :: PState era
+  , prChainAccountState :: ChainAccountState
+  , prCertState :: CertState era
   }
 
-newtype ShelleyPoolreapEnv era = ShelleyPoolreapEnv
-  { speVState :: VState era
-  -- ^ This enviroment field is only needed for assertions.
-  }
+deriving stock instance
+  (Show (UTxOState era), Show (CertState era)) => Show (ShelleyPoolreapState era)
 
-deriving stock instance Eq (PParams era) => Eq (ShelleyPoolreapEnv era)
+prUTxOStateL :: Lens' (ShelleyPoolreapState era) (UTxOState era)
+prUTxOStateL = lens prUTxOSt $ \sprs x -> sprs {prUTxOSt = x}
 
-deriving stock instance Show (PParams era) => Show (ShelleyPoolreapEnv era)
+prChainAccountStateL :: Lens' (ShelleyPoolreapState era) ChainAccountState
+prChainAccountStateL = lens prChainAccountState $ \sprs x -> sprs {prChainAccountState = x}
 
-deriving stock instance Show (UTxOState era) => Show (ShelleyPoolreapState era)
-
-data ShelleyPoolreapPredFailure era -- No predicate failures
-  deriving (Show, Eq, Generic)
-
-instance NFData (ShelleyPoolreapPredFailure era)
+prCertStateL :: Lens' (ShelleyPoolreapState era) (CertState era)
+prCertStateL = lens prCertState $ \sprs x -> sprs {prCertState = x}
 
 data ShelleyPoolreapEvent era = RetiredPools
   { refundPools ::
-      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) Coin)
+      Map.Map (Credential Staking) (Map.Map (KeyHash StakePool) (CompactForm Coin))
   , unclaimedPools ::
-      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) Coin)
+      Map.Map (Credential Staking) (Map.Map (KeyHash StakePool) (CompactForm Coin))
   , epochNo :: EpochNo
   }
   deriving (Generic)
@@ -101,10 +90,8 @@ deriving instance Eq (ShelleyPoolreapEvent era)
 
 instance NFData (ShelleyPoolreapEvent era)
 
-instance NoThunks (ShelleyPoolreapPredFailure era)
-
-instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
-  def = PoolreapState def def def def
+instance (Default (UTxOState era), Default (CertState era)) => Default (ShelleyPoolreapState era) where
+  def = PoolreapState def def def
 
 type instance EraRuleEvent "POOLREAP" ShelleyEra = ShelleyPoolreapEvent ShelleyEra
 
@@ -118,9 +105,9 @@ instance
   where
   type State (ShelleyPOOLREAP era) = ShelleyPoolreapState era
   type Signal (ShelleyPOOLREAP era) = EpochNo
-  type Environment (ShelleyPOOLREAP era) = ShelleyPoolreapEnv era
+  type Environment (ShelleyPOOLREAP era) = ()
   type BaseM (ShelleyPOOLREAP era) = ShelleyBase
-  type PredicateFailure (ShelleyPOOLREAP era) = ShelleyPoolreapPredFailure era
+  type PredicateFailure (ShelleyPOOLREAP era) = Void
   type Event (ShelleyPOOLREAP era) = ShelleyPoolreapEvent era
   transitionRules = [poolReapTransition]
 
@@ -128,61 +115,97 @@ instance
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation (PoolReap)"
-        ( \(TRC (env, _, _)) st ->
+        ( \_trc st ->
             potEqualsObligation
-              (mkCertState (speVState env) (prPState st) (prDState st))
+              (prCertState st)
               (prUTxOSt st)
         )
     , PostCondition
-        "PoolReap may not create or remove reward accounts"
+        "PoolReap may not create or remove account addresses"
         ( \(TRC (_, st, _)) st' ->
-            let r = rewards . prDState
-             in length (r st) == length (r st')
+            let accountsCount prState =
+                  Map.size (prCertState prState ^. certDStateL . accountsL . accountsMapL)
+             in accountsCount st == accountsCount st'
         )
     ]
 
-poolReapTransition :: forall era. TransitionRule (ShelleyPOOLREAP era)
+poolReapTransition :: forall era. EraCertState era => TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
-  TRC (_, PoolreapState us a ds ps, e) <- judgmentContext
-
+  TRC (_, PoolreapState us a cs0, e) <- judgmentContext
   let
+    ps0 = cs0 ^. certPStateL
+    -- find the set of VRF key hashes that are no longer relevant, since they have been overwritten
+    -- via pool re-registration
+    danglingVRFKeyHashes =
+      Set.fromList $
+        Map.elems $
+          Map.merge
+            Map.dropMissing
+            Map.dropMissing
+            ( Map.zipWithMaybeMatched $ \_ sps sppF ->
+                if sps ^. spsVrfL /= sppF ^. sppVrfL then Just (sps ^. spsVrfL) else Nothing
+            )
+            (ps0 ^. psStakePoolsL)
+            (ps0 ^. psFutureStakePoolParamsL)
+
+    -- activate future stakePools
+    ps =
+      ps0
+        { psStakePools =
+            Map.merge
+              Map.dropMissing
+              Map.preserveMissing
+              ( Map.zipWithMatched $ \_ futureParams currentState ->
+                  mkStakePoolState
+                    (currentState ^. spsDepositL)
+                    (currentState ^. spsDelegatorsL)
+                    futureParams
+              )
+              (ps0 ^. psFutureStakePoolParamsL)
+              (ps0 ^. psStakePoolsL)
+        , psFutureStakePoolParams = Map.empty
+        }
+    cs = cs0 & certPStateL .~ ps
+
+    ds = cs ^. certDStateL
     -- The set of pools retiring this epoch
-    retired :: Set (KeyHash 'StakePool)
-    retired = eval (dom (psRetiring ps ▷ setSingleton e))
-    -- The Map of pools (retiring this epoch) to their deposits
-    retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) Coin
-    (retiringDeposits, remainingDeposits) =
-      Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
-    rewardAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
-    rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
-    rewardAccounts_ ::
-      Map.Map (KeyHash 'StakePool) (RewardAccount, Coin)
-    rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
-    rewardAccounts' :: Map.Map RewardAccount Coin
-    rewardAccounts' =
-      Map.fromListWith (<+>)
-        . Map.elems
-        $ rewardAccounts_
-    refunds :: Map.Map (Credential 'Staking) Coin
-    mRefunds :: Map.Map (Credential 'Staking) Coin
-    (refunds, mRefunds) =
+    retired :: Set (KeyHash StakePool)
+    retired = Set.fromDistinctAscList [k | (k, v) <- Map.toAscList (psRetiring ps), v == e]
+    -- The Map of pools retiring this epoch
+    retiringPools :: Map.Map (KeyHash StakePool) StakePoolState
+    retiringPools = Map.restrictKeys (psStakePools ps) retired
+    -- collect all accounts for stake pools that will retire
+    retiredVRFKeyHashes = spsVrf <$> Map.elems retiringPools
+
+    -- collect all of the potential refunds
+    accountRefunds :: Map.Map (Credential Staking) (CompactForm Coin)
+    accountRefunds =
+      Map.fromListWith
+        (<>)
+        [(unAccountId $ spsAccountId sps, spsDeposit sps) | sps <- Map.elems retiringPools]
+    accounts = ds ^. accountsL
+    -- Deposits that can be refunded and those that are unclaimed (to be deposited into the treasury).
+    refunds, unclaimedDeposits :: Map.Map (Credential Staking) (CompactForm Coin)
+    (refunds, unclaimedDeposits) =
       Map.partitionWithKey
-        (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-        (Map.mapKeys raCredential rewardAccounts')
+        (\stakeCred _ -> isAccountRegistered stakeCred accounts) -- (k ∈ dom (rewards ds))
+        accountRefunds
+
     refunded = fold refunds
-    unclaimed = fold mRefunds
+    unclaimed = fold unclaimedDeposits
 
   tellEvent $
     let rewardAccountsWithPool =
-          Map.foldlWithKey'
-            ( \acc sp (ra, coin) ->
-                Map.insertWith (Map.unionWith (<>)) (raCredential ra) (Map.singleton sp coin) acc
+          Map.foldrWithKey'
+            ( \poolId sps ->
+                let cred = unAccountId $ spsAccountId sps
+                 in Map.insertWith (Map.unionWith (<>)) cred (Map.singleton poolId (spsDeposit sps))
             )
             Map.empty
-            rewardAccounts_
+            retiringPools
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
-            (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
+            (\cred _ -> isAccountRegistered cred accounts)
             rewardAccountsWithPool
      in RetiredPools
           { refundPools = refundPools'
@@ -191,33 +214,43 @@ poolReapTransition = do
           }
   pure $
     PoolreapState
-      us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
-      a {asTreasury = asTreasury a <+> unclaimed}
-      ( let u0 = dsUnified ds
-            u1 = RewDepUView u0 UM.∪+ Map.map compactCoinOrError refunds
-            u2 = SPoolUView u1 UM.⋫ retired
-         in ds {dsUnified = u2}
+      us {utxosDeposited = utxosDeposited us <-> fromCompact (unclaimed <> refunded)}
+      a {casTreasury = casTreasury a <+> fromCompact unclaimed}
+      ( cs
+          & certDStateL . accountsL
+            %~ removeStakePoolDelegations (delegsToClear cs retired)
+              . addToBalanceAccounts refunds
+          & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
+          & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
+          & certPStateL . psVRFKeyHashesL
+            %~ ( removeVRFKeyHashOccurrences retiredVRFKeyHashes
+                   . (`Map.withoutKeys` danglingVRFKeyHashes)
+               )
       )
-      ps
-        { psStakePoolParams = eval (retired ⋪ psStakePoolParams ps)
-        , -- TODO: redundant
-          psFutureStakePoolParams = eval (retired ⋪ psFutureStakePoolParams ps)
-        , psRetiring = eval (retired ⋪ psRetiring ps)
-        , psDeposits = remainingDeposits
-        }
+  where
+    removeVRFKeyHashOccurrences ::
+      [VRFVerKeyHash StakePoolVRF] ->
+      Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+      Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
+    removeVRFKeyHashOccurrences vrfs vrfsMap = F.foldl' (flip removeVRFKeyHashOccurrence) vrfsMap vrfs
+    removeVRFKeyHashOccurrence =
+      -- Removes the key from the map if the value drops to 0
+      Map.update (mapNonZero (\n -> n - 1))
+    delegsToClear cState pools =
+      foldMap spsDelegators $
+        Map.restrictKeys (cState ^. certPStateL . psStakePoolsL) pools
 
 renderPoolReapViolation ::
   ( EraGov era
-  , Environment t ~ ShelleyPoolreapEnv era
   , State t ~ ShelleyPoolreapState era
   , EraCertState era
   ) =>
   AssertionViolation t ->
   String
 renderPoolReapViolation
-  AssertionViolation {avSTS, avMsg, avCtx = TRC (ShelleyPoolreapEnv vs, poolreapst, _)} =
-    let certst = mkCertState vs (prPState poolreapst) (prDState poolreapst)
-        obligations = allObligations certst (prUTxOSt poolreapst ^. utxosGovStateL)
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (_, poolreapst, _)} =
+    let obligations =
+          allObligations (prCertState poolreapst) (prUTxOSt poolreapst ^. utxosGovStateL)
      in "\n\nAssertionViolation ("
           <> avSTS
           <> ")\n   "

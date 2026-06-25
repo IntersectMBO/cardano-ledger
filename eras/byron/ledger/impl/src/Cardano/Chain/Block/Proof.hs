@@ -8,8 +8,7 @@ module Cardano.Chain.Block.Proof (
   ProofValidationError (..),
   mkProof,
   recoverProof,
-)
-where
+) where
 
 import Cardano.Chain.Block.Body (
   ABody (..),
@@ -59,6 +58,12 @@ instance B.Buildable Proof where
 
 instance ToCBOR Proof where
   toCBOR = toByronCBOR
+  encodedSizeExpr size bc =
+    1
+      + encodedSizeExpr size (proofUTxO <$> bc)
+      + encodedSizeExpr size (proofSsc <$> bc)
+      + encodedSizeExpr size (proofDelegation <$> bc)
+      + encodedSizeExpr size (proofUpdate <$> bc)
 
 instance FromCBOR Proof where
   fromCBOR = fromByronCBOR
@@ -73,13 +78,6 @@ instance EncCBOR Proof where
       <> encCBOR (proofSsc bc)
       <> encCBOR (proofDelegation bc)
       <> encCBOR (proofUpdate bc)
-
-  encodedSizeExpr size bc =
-    1
-      + encodedSizeExpr size (proofUTxO <$> bc)
-      + encodedSizeExpr size (proofSsc <$> bc)
-      + encodedSizeExpr size (proofDelegation <$> bc)
-      + encodedSizeExpr size (proofUpdate <$> bc)
 
 instance DecCBOR Proof where
   decCBOR = do

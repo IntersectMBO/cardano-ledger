@@ -26,8 +26,7 @@ module Cardano.Crypto.Signing.Signature (
   verifySignature,
   verifySignatureDecoded,
   verifySignatureRaw,
-)
-where
+) where
 
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Raw (Raw (..))
@@ -132,13 +131,13 @@ decCBORXSignature = toCborError . CC.xsignature =<< decCBOR
 
 instance Typeable a => ToCBOR (Signature a) where
   toCBOR = toByronCBOR
+  encodedSizeExpr _ _ = 66
 
 instance Typeable a => FromCBOR (Signature a) where
   fromCBOR = fromByronCBOR
 
 instance Typeable a => EncCBOR (Signature a) where
   encCBOR (Signature a) = encCBORXSignature a
-  encodedSizeExpr _ _ = 66
 
 instance Typeable a => DecCBOR (Signature a) where
   decCBOR = fmap Signature decCBORXSignature

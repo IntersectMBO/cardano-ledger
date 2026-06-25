@@ -72,8 +72,7 @@ module Cardano.Chain.Block.Block (
   abobHdrChainDifficulty,
   abobHdrHash,
   abobHdrPrevHash,
-)
-where
+) where
 
 -- TODO `contramap` should be in `Cardano.Prelude`
 
@@ -418,7 +417,7 @@ decCBORABlockOrBoundary epochSlots = do
   decCBOR @Word >>= \case
     0 -> ABOBBoundary <$> decCBORABoundaryBlock
     1 -> ABOBBlock <$> decCBORABlock epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
+    t -> cborError $ DecoderErrorUnknownTag "Block" t
 
 encCBORABlockOrBoundary ::
   ProtocolMagicId -> EpochSlots -> ABlockOrBoundary a -> Encoding
@@ -456,7 +455,7 @@ encCBORABoundaryBody :: ABoundaryBody a -> Encoding
 encCBORABoundaryBody _ =
   (encodeListLenIndef <> encodeBreak)
     <> ( encodeListLen 1
-          <> encCBOR (mempty :: Map Word8 LByteString)
+           <> encCBOR (mempty :: Map Word8 LByteString)
        )
 
 -- | For a boundary block, we keep the header, body, and an annotation for
@@ -563,7 +562,7 @@ decCBORABlockOrBoundaryHdr epochSlots = do
 --
 -- TODO: add a round trip test, e.g.
 --
--- prop> decCBORABlockOrBoundaryHdr . encCBORABlockOrBoundaryHdr = id
+-- > decCBORABlockOrBoundaryHdr . encCBORABlockOrBoundaryHdr = id
 --
 -- which does not type check, but convey the meaning.
 encCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Encoding

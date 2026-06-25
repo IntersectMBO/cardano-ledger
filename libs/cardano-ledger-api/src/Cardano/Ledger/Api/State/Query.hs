@@ -1,11 +1,19 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
-  filterStakePoolDelegsAndRewards,
   queryStakePoolDelegsAndRewards,
 
   -- * @GetGovState@
@@ -20,6 +28,9 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetDRepState@
   queryDRepState,
 
+  -- * @GetDRepDelegations@
+  queryDRepDelegations,
+
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
 
@@ -29,14 +40,11 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetSPOStakeDistr@
   querySPOStakeDistr,
 
-  -- * @GetCommitteeState@
-  queryCommitteeState,
-
   -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
 
-  -- * @GetAccountState@
-  queryAccountState,
+  -- * @GetChainAccountState@
+  queryChainAccountState,
   CommitteeMemberState (..),
   CommitteeMembersState (..),
   HotCredAuthStatus (..),
@@ -55,9 +63,20 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetRatifyState@
   queryRatifyState,
 
-  -- * @GetStakePoolDefaultVote
+  -- * @GetStakePoolDefaultVote@
   queryStakePoolDefaultVote,
   DefaultVote (..),
+
+  -- * @GetPoolState@
+  queryPoolParameters,
+  queryPoolState,
+  QueryPoolStateResult (..),
+  mkQueryPoolStateResult,
+
+  -- * @GetStakeSnapshots@
+  queryStakeSnapshots,
+  StakeSnapshot (..),
+  StakeSnapshots (..),
 
   -- * For testing
   getNextEpochCommitteeMembers,
@@ -70,8 +89,8 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
-import Cardano.Ledger.CertState
+import Cardano.Ledger.BaseTypes (EpochNo, Network, NonZero, ProtVer (..), strictMaybeToMaybe)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -96,18 +115,14 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
  )
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State
-import Cardano.Ledger.UMap (
-  StakeCredentials (scRewards, scSPools),
-  UMap,
-  dRepMap,
-  domRestrictedStakeCredentials,
- )
+import Control.DeepSeq
 import Control.Monad (guard)
-import Data.Foldable (foldMap')
+import Data.Foldable (fold, foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -116,33 +131,25 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
+import GHC.Generics
 import Lens.Micro
 import Lens.Micro.Extras (view)
 
--- | Filter out stake pool delegations and rewards for a set of stake credentials
-filterStakePoolDelegsAndRewards ::
-  UMap ->
-  Set (Credential 'Staking) ->
-  (Map (Credential 'Staking) (KeyHash 'StakePool), Map (Credential 'Staking) Coin)
-filterStakePoolDelegsAndRewards umap creds =
-  (scSPools stakeCredentials, scRewards stakeCredentials)
-  where
-    stakeCredentials = domRestrictedStakeCredentials creds umap
-
--- | Uses `filterStakePoolDelegsAndRewards` to get the same information from the `NewEpochState`
---
--- Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
+-- | Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
   EraCertState era =>
   NewEpochState era ->
-  Set (Credential 'Staking) ->
-  ( Map (Credential 'Staking) (KeyHash 'StakePool)
-  , Map (Credential 'Staking) Coin
+  Set (Credential Staking) ->
+  ( Map (Credential Staking) (KeyHash StakePool)
+  , Map (Credential Staking) Coin
   )
-queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified (getDState nes))
-
-getDState :: EraCertState era => NewEpochState era -> DState era
-getDState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
+queryStakePoolDelegsAndRewards nes creds =
+  let accountsMap = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      accountsMapFiltered = accountsMap `Map.restrictKeys` creds
+   in ( Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMapFiltered
+      , Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
+      )
 
 queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
 queryConstitution = (^. constitutionGovStateL) . queryGovState
@@ -160,12 +167,12 @@ queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
 
 -- | Query DRep state.
 queryDRepState ::
-  EraCertState era =>
+  ConwayEraCertState era =>
   NewEpochState era ->
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
-  Set (Credential 'DRepRole) ->
-  Map (Credential 'DRepRole) DRepState
+  Set (Credential DRepRole) ->
+  Map (Credential DRepRole) DRepState
 queryDRepState nes creds
   | null creds = updateDormantDRepExpiry' vState ^. vsDRepsL
   | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
@@ -173,6 +180,45 @@ queryDRepState nes creds
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
     vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
     updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
+
+-- | Query the delegators delegated to each DRep, including
+-- @AlwaysAbstain@ and @NoConfidence@.
+queryDRepDelegations ::
+  forall era.
+  ConwayEraCertState era =>
+  NewEpochState era ->
+  -- | Specify a set of DReps whose state should be returned. When this set is
+  -- empty, states for all of the DReps will be returned.
+  Set DRep ->
+  Map DRep (Set (Credential Staking))
+queryDRepDelegations nes dreps =
+  case getDRepCreds dreps of
+    Just creds ->
+      Map.map drepDelegs $
+        Map.mapKeys credToDRep ((vState ^. vsDRepsL) `Map.restrictKeys` creds)
+    Nothing ->
+      -- Whenever predefined `AlwaysAbstain` or `AlwaysNoConfidence` are
+      -- requested we are forced to iterate over all accounts and find those
+      -- delegations.
+      Map.foldlWithKey'
+        ( \m cred cas ->
+            case cas ^. dRepDelegationAccountStateL of
+              Just drep
+                | Set.null dreps || drep `Set.member` dreps ->
+                    Map.insertWith (<>) drep (Set.singleton cred) m
+              _ ->
+                m
+        )
+        Map.empty
+        (dState ^. accountsL . accountsMapL)
+  where
+    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
+    vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
+    -- Find all credentials for requested DReps, but only when we don't care
+    -- about predefined DReps
+    getDRepCreds ds = do
+      guard $ not $ Set.null ds
+      Set.fromList <$> traverse dRepToCred (Set.elems ds)
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
@@ -192,12 +238,12 @@ queryDRepStakeDistr nes creds
 -- | Query the stake distribution of the registered DReps. This does not
 -- include the @AlwaysAbstain@ and @NoConfidence@ DReps.
 queryRegisteredDRepStakeDistr ::
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the registered DReps will be returned.
-  Set (Credential 'DRepRole) ->
-  Map (Credential 'DRepRole) Coin
+  Set (Credential DRepRole) ->
+  Map (Credential DRepRole) Coin
 queryRegisteredDRepStakeDistr nes creds =
   Map.foldlWithKey' computeDistr mempty selectedDReps
   where
@@ -219,30 +265,25 @@ queryRegisteredDRepStakeDistr nes creds =
 querySPOStakeDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool) ->
+  Set (KeyHash StakePool) ->
   -- | Specify pool key hashes whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the pools will be returned.
-  Map (KeyHash 'StakePool) Coin
+  Map (KeyHash StakePool) Coin
 querySPOStakeDistr nes keys
   | null keys = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
   where
     distr = psPoolDistr . fst $ finishedPulserState nes
 
--- | Query committee members
-queryCommitteeState :: EraCertState era => NewEpochState era -> CommitteeState era
-queryCommitteeState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-{-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
-
 -- | Query committee members. Whenever the system is in No Confidence mode this query will
 -- return `Nothing`.
 queryCommitteeMembersState ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   -- | filter by cold credentials (don't filter when empty)
-  Set (Credential 'ColdCommitteeRole) ->
+  Set (Credential ColdCommitteeRole) ->
   -- | filter by hot credentials (don't filter when empty)
-  Set (Credential 'HotCommitteeRole) ->
+  Set (Credential HotCommitteeRole) ->
   -- | filter by status (don't filter when empty)
   -- (useful, for discovering, for example, only active members)
   Set MemberStatus ->
@@ -286,7 +327,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
     currentEpoch = nes ^. nesELL
 
     mkMaybeMemberState ::
-      Credential 'ColdCommitteeRole ->
+      Credential ColdCommitteeRole ->
       Maybe CommitteeMemberState
     mkMaybeMemberState coldCred = do
       let mbExpiry = Map.lookup coldCred comMembers
@@ -303,7 +344,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
               Just (CommitteeHotCredential hk) -> MemberAuthorized hk
       pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 
-    nextEpochChange :: Credential 'ColdCommitteeRole -> NextEpochChange
+    nextEpochChange :: Credential ColdCommitteeRole -> NextEpochChange
     nextEpochChange ck
       | not inCurrent && inNext = ToBeEnacted
       | not inNext = ToBeRemoved
@@ -330,15 +371,15 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       , csEpochNo = currentEpoch
       }
 
-queryAccountState ::
+queryChainAccountState ::
   NewEpochState era ->
-  AccountState
-queryAccountState = view $ nesEsL . esAccountStateL
+  ChainAccountState
+queryChainAccountState = view chainAccountStateL
 
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Map (Credential 'ColdCommitteeRole) EpochNo
+  Map (Credential ColdCommitteeRole) EpochNo
 getNextEpochCommitteeMembers nes =
   let ratifyState = queryRatifyState nes
       committee = ratifyState ^. rsEnactStateL . ensCommitteeL
@@ -388,14 +429,217 @@ finishedPulserState ::
   (PulsingSnapshot era, RatifyState era)
 finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
--- | Query a stake pool's reward account delegatee which determines the pool's default vote
+-- | Query a stake pool's account address delegatee which determines the pool's default vote
 -- in absence of an explicit vote. Note that this is different from the delegatee determined
 -- by the credential of the stake pool itself.
 queryStakePoolDefaultVote ::
-  EraCertState era =>
+  (EraCertState era, ConwayEraAccounts era) =>
   NewEpochState era ->
   -- | Specify the key hash of the pool whose default vote should be returned.
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   DefaultVote
 queryStakePoolDefaultVote nes poolId =
-  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) (dRepMap $ nes ^. unifiedL)
+  defaultStakePoolVote poolId (nes ^. nesEsL . epochStateStakePoolsL) $
+    nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+
+-- | Used only for the `queryPoolState` query. This resembles the older way of
+-- representing StakePoolState in Ledger.
+data QueryPoolStateResult = QueryPoolStateResult
+  { qpsrStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+  , qpsrFutureStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+  , qpsrRetiring :: !(Map (KeyHash StakePool) EpochNo)
+  , qpsrDeposits :: !(Map (KeyHash StakePool) Coin)
+  }
+  deriving (Show, Eq)
+
+instance EncCBOR QueryPoolStateResult where
+  encCBOR (QueryPoolStateResult a b c d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+
+instance DecCBOR QueryPoolStateResult where
+  decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 4) $ do
+    qpsrStakePoolParams <- decCBOR
+    qpsrFutureStakePoolParams <- decCBOR
+    qpsrRetiring <- decCBOR
+    qpsrDeposits <- decCBOR
+    pure
+      QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
+
+mkQueryPoolStateResult ::
+  (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
+  PState era ->
+  Network ->
+  QueryPoolStateResult
+mkQueryPoolStateResult f ps network =
+  QueryPoolStateResult
+    { qpsrStakePoolParams =
+        Map.mapWithKey (stakePoolStateToStakePoolParams network) restrictedStakePools
+    , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
+    , qpsrRetiring = f $ psRetiring ps
+    , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
+    }
+  where
+    restrictedStakePools = f $ psStakePools ps
+
+-- | Query the QueryPoolStateResult. This is slightly different from the internal
+-- representation used by Ledger and is intended to resemble how the internal
+-- representation used to be.
+queryPoolState ::
+  EraCertState era =>
+  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> Network -> QueryPoolStateResult
+queryPoolState nes mPoolKeys network =
+  let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+      f :: forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x
+      f = case mPoolKeys of
+        Nothing -> id
+        Just keys -> (`Map.restrictKeys` keys)
+   in mkQueryPoolStateResult f pstate network
+
+-- | Query the current StakePoolParams.
+queryPoolParameters ::
+  EraCertState era =>
+  Network ->
+  NewEpochState era ->
+  Set (KeyHash StakePool) ->
+  Map (KeyHash StakePool) StakePoolParams
+queryPoolParameters network nes poolKeys =
+  let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+   in Map.mapWithKey (stakePoolStateToStakePoolParams network) $ Map.restrictKeys pools poolKeys
+
+-- | The stake snapshot returns information about the mark, set, go ledger snapshots for a pool,
+-- plus the total active stake for each snapshot that can be used in a 'sigma' calculation.
+--
+-- Each snapshot is taken at the end of a different era. The go snapshot is the current one and
+-- was taken two epochs earlier, set was taken one epoch ago, and mark was taken immediately
+-- before the start of the current epoch.
+data StakeSnapshot = StakeSnapshot
+  { ssMarkPool :: !Coin
+  , ssSetPool :: !Coin
+  , ssGoPool :: !Coin
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData StakeSnapshot
+
+instance EncCBOR StakeSnapshot where
+  encCBOR
+    StakeSnapshot
+      { ssMarkPool
+      , ssSetPool
+      , ssGoPool
+      } =
+      encodeListLen 3
+        <> encCBOR ssMarkPool
+        <> encCBOR ssSetPool
+        <> encCBOR ssGoPool
+
+instance DecCBOR StakeSnapshot where
+  decCBOR = do
+    enforceSize "StakeSnapshot" 3
+    StakeSnapshot
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+
+data StakeSnapshots = StakeSnapshots
+  { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
+  , ssMarkTotal :: !(NonZero Coin)
+  , ssSetTotal :: !(NonZero Coin)
+  , ssGoTotal :: !(NonZero Coin)
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData StakeSnapshots
+
+instance EncCBOR StakeSnapshots where
+  encCBOR
+    StakeSnapshots
+      { ssStakeSnapshots
+      , ssMarkTotal
+      , ssSetTotal
+      , ssGoTotal
+      } =
+      encodeListLen 4
+        <> encCBOR ssStakeSnapshots
+        <> encCBOR ssMarkTotal
+        <> encCBOR ssSetTotal
+        <> encCBOR ssGoTotal
+
+instance DecCBOR StakeSnapshots where
+  decCBOR = do
+    enforceSize "StakeSnapshots" 4
+    StakeSnapshots
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+
+-- | Report stake per pool per snapshot as well as total active stake per snapshot.
+--
+-- /Note/ - Whenever poolIds are not supplied, we collect all of the pools, even if they don't have
+-- any delegations. Otherwise we filter out for exact poolIds that were supplied. In both cases it
+-- means that there can be pools that have zero stake in all three snapshot, but the meaning of that
+-- can be very different:
+--
+-- * either the pool has no delegations, or
+-- * it was explicitly requested even though it has no stake or not even registered
+--
+-- However, starting with Protocol Version 11 we remove this strange inconsistency and only ever
+-- report stake pools with non-zero stake, which means pools without delegations (hence without any stake in any of the three snapshots) are no longer included in the results.
+queryStakeSnapshots ::
+  EraGov era =>
+  NewEpochState era ->
+  Maybe (Set (KeyHash StakePool)) ->
+  StakeSnapshots
+queryStakeSnapshots nes mPoolIds =
+  let SnapShots
+        { ssStakeMark
+        , ssStakeSet
+        , ssStakeGo
+        } = esSnapshots $ nesEs nes
+
+      mkStakeSnapshotMaybe poolId = do
+        let
+          markPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeMark)
+          setPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeSet)
+          goPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeGo)
+        -- Non-registered stake pools or ones that have no stake are of no interest to us.
+        guard (fold [markPoolStake, setPoolStake, goPoolStake] > Just mempty)
+        Just
+          StakeSnapshot
+            { ssMarkPool = maybe mempty fromCompact markPoolStake
+            , ssSetPool = maybe mempty fromCompact setPoolStake
+            , ssGoPool = maybe mempty fromCompact goPoolStake
+            }
+      mkStakeSnapshot poolId =
+        let
+          lookupStake =
+            maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
+         in
+          StakeSnapshot
+            { ssMarkPool = lookupStake ssStakeMark
+            , ssSetPool = lookupStake ssStakeSet
+            , ssGoPool = lookupStake ssStakeGo
+            }
+      version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
+      poolIds =
+        case mPoolIds of
+          Nothing
+            | version < natVersion @11 ->
+                foldMap
+                  (VMap.keysSet . VMap.filter (\_ -> (> 0) . spssNumDelegators) . ssStakePoolsSnapShot)
+                  [ssStakeMark, ssStakeSet, ssStakeGo]
+            | otherwise ->
+                foldMap
+                  (VMap.keysSet . VMap.filter (\_ -> (> mempty) . spssStake) . ssStakePoolsSnapShot)
+                  [ssStakeMark, ssStakeSet, ssStakeGo]
+          Just ids -> ids
+   in StakeSnapshots
+        { ssStakeSnapshots =
+            if version < natVersion @11
+              then Map.fromSet mkStakeSnapshot poolIds
+              else Map.mapMaybe id $ Map.fromSet mkStakeSnapshotMaybe poolIds
+        , ssMarkTotal = ssTotalActiveStake ssStakeMark
+        , ssSetTotal = ssTotalActiveStake ssStakeSet
+        , ssGoTotal = ssTotalActiveStake ssStakeGo
+        }

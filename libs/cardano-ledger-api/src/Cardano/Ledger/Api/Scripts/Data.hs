@@ -15,8 +15,7 @@ module Cardano.Ledger.Api.Scripts.Data (
   hashBinaryData,
   binaryDataToData,
   dataToBinaryData,
-)
-where
+) where
 
 import Cardano.Ledger.Plutus.Data (
   BinaryData,

@@ -1,19 +1,23 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -35,6 +39,11 @@ module Cardano.Ledger.BaseTypes (
   PositiveUnitInterval,
   PositiveInterval,
   NonNegativeInterval,
+  positiveUnitIntervalRelaxToUnitInterval,
+  positiveUnitIntervalRelaxToPositiveInterval,
+  positiveIntervalRelaxToNonNegativeInterval,
+  Inclusive (..),
+  Exclusive (..),
   BoundedRational (..),
   fpPrecision,
   integralToBounded,
@@ -61,16 +70,13 @@ module Cardano.Ledger.BaseTypes (
   TxIx (..),
   txIxToInt,
   txIxFromIntegral,
-  mkTxIx,
   mkTxIxPartial,
   CertIx (..),
   certIxToInt,
   certIxFromIntegral,
-  mkCertIx,
   mkCertIxPartial,
   Anchor (..),
   AnchorData (..),
-  hashAnchorData,
 
   -- * STS Base
   Globals (..),
@@ -84,8 +90,19 @@ module Cardano.Ledger.BaseTypes (
   -- * Injection
   Inject (..),
   positiveUnitIntervalNonZeroRational,
-)
-where
+
+  -- * Aeson helpers
+  KeyValuePairs (..),
+  ToKeyValuePairs (..),
+
+  -- * Peras-specific types
+  PerasCert (..),
+  PerasKey (..),
+  validatePerasCert,
+
+  -- * Leios-specific types
+  LeiosCert (..),
+) where
 
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -102,9 +119,10 @@ import Cardano.Ledger.Binary (
   FromCBOR,
   ToCBOR,
   cborError,
-  encodedSizeExpr,
+  enforceSize,
   ifDecoderVersionAtLeast,
  )
+import qualified Cardano.Ledger.Binary as Binary (encodeListLen)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -123,7 +141,7 @@ import Cardano.Ledger.Binary.Plain (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (decodeRationalWithTag, encodeRatioWithTag)
 import Cardano.Ledger.Binary.Version
-import Cardano.Ledger.Hashes (HashAnnotated (hashAnnotated), SafeHash, SafeToHash)
+import Cardano.Ledger.Hashes (HashAnnotated, SafeHash, SafeToHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
@@ -157,6 +175,7 @@ import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity (Identity)
@@ -176,13 +195,18 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Typeable (Typeable)
-import Data.Word (Word16, Word64, Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet (Quiet (Quiet))
+import System.Random.Stateful (Random, Uniform (..), UniformRange (..))
+import Type.Reflection (typeRep)
+#if MIN_VERSION_random(1,3,0)
+import System.Random.Stateful (isInRangeOrd)
+#endif
 
 maxDecimalsWord64 :: Int
 maxDecimalsWord64 = 19
@@ -203,31 +227,30 @@ instance NoThunks ProtVer
 instance ToJSON ProtVer where
   toJSON (ProtVer major minor) =
     object
-      [ "major" .= getVersion64 major
+      [ "major" .= getVersion32 major
       , "minor" .= minor
       ]
 
 instance FromJSON ProtVer where
   parseJSON =
     withObject "ProtVer" $ \obj -> do
-      pvMajor <- mkVersion64 =<< obj .: "major"
+      pvMajor <- mkVersion32 =<< obj .: "major"
       pvMinor <- obj .: "minor"
       pure ProtVer {..}
 
 instance EncCBORGroup ProtVer where
   encCBORGroup (ProtVer x y) = encCBOR x <> encCBOR y
-  encodedGroupSizeExpr l proxy =
-    encodedSizeExpr l (pvMajor <$> proxy)
-      + encodedSizeExpr l (toWord . pvMinor <$> proxy)
-    where
-      toWord :: Natural -> Word
-      toWord = fromIntegral
 
   listLen _ = 2
-  listLenBound _ = 2
 
 instance DecCBORGroup ProtVer where
-  decCBORGroup = ProtVer <$> decCBOR <*> decCBOR
+  decCBORGroup =
+    ProtVer
+      <$> decCBOR
+      <*> ifDecoderVersionAtLeast
+        (natVersion @12)
+        (fromIntegral @Word32 @Natural <$> decCBOR @Word32)
+        (decCBOR @Natural)
 
 data E34
 
@@ -259,7 +282,7 @@ integralToBounded i
 -- interval that is controlled by phantom type variable @b@ as well as by
 -- the bounds of underlying type @a@.
 newtype BoundedRatio b a = BoundedRatio (Ratio a)
-  deriving (Eq, Generic)
+  deriving (Eq)
   deriving newtype (Show, NoThunks, NFData)
 
 -- Deriving Ord instance can lead to integer overflow. We must go through Rational.
@@ -344,11 +367,21 @@ fromRatioBoundedRatio ratio
     lowerBound = minBound :: BoundedRatio b a
     upperBound = maxBound :: BoundedRatio b a
 
-instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
+instance
+  (ToCBOR a, Integral a, Bounded a, Typeable b, Typeable (BoundedRatio b a)) =>
+  ToCBOR (BoundedRatio b a)
+  where
   toCBOR (BoundedRatio u) = Plain.encodeRatioWithTag toCBOR u
 
 instance
-  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
+  ( FromCBOR a
+  , Bounded (BoundedRatio b a)
+  , Bounded a
+  , Integral a
+  , Typeable b
+  , Show a
+  , Typeable (BoundedRatio b a)
+  ) =>
   FromCBOR (BoundedRatio b a)
   where
   fromCBOR = do
@@ -360,7 +393,9 @@ instance
 
 instance (ToCBOR (BoundedRatio b a), Typeable b, Typeable a) => EncCBOR (BoundedRatio b a)
 
-instance (FromCBOR (BoundedRatio b a), Typeable b, Typeable a) => DecCBOR (BoundedRatio b a)
+instance
+  (FromCBOR (BoundedRatio b a), Typeable b, Typeable a, Typeable (BoundedRatio b a)) =>
+  DecCBOR (BoundedRatio b a)
 
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
   toJSON :: BoundedRatio b Word64 -> Value
@@ -465,6 +500,15 @@ newtype PositiveUnitInterval
 instance Bounded (BoundedRatio PositiveUnitInterval Word64) where
   minBound = positiveIntervalEpsilon
   maxBound = BoundedRatio (1 % 1)
+
+positiveUnitIntervalRelaxToUnitInterval :: PositiveUnitInterval -> UnitInterval
+positiveUnitIntervalRelaxToUnitInterval = coerce
+
+positiveUnitIntervalRelaxToPositiveInterval :: PositiveUnitInterval -> PositiveInterval
+positiveUnitIntervalRelaxToPositiveInterval = coerce
+
+positiveIntervalRelaxToNonNegativeInterval :: PositiveInterval -> NonNegativeInterval
+positiveIntervalRelaxToNonNegativeInterval = coerce
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval
@@ -726,8 +770,14 @@ deriving instance Show EpochErr
 
 instance Exception EpochErr
 
+newtype Inclusive a = Inclusive {unInclusive :: a}
+  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR)
+
+newtype Exclusive a = Exclusive {unExclusive :: a}
+  deriving newtype (Generic, Show, Eq, Ord, NoThunks, NFData, EncCBOR, DecCBOR)
+
 -- | Relationship descriptor for the expectation in the 'Mismatch' type.
-data Relation
+type data Relation
   = -- | Equal
     RelEQ
   | -- | Less then
@@ -740,7 +790,6 @@ data Relation
     RelGTEQ
   | -- | Is subset of
     RelSubset
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks, Typeable)
 
 -- | This is intended to help clarify supplied and expected values reported by
 -- predicate-failures in all eras.
@@ -748,7 +797,14 @@ data Mismatch (r :: Relation) a = Mismatch
   { mismatchSupplied :: !a
   , mismatchExpected :: !a
   }
-  deriving (Eq, Ord, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
+  deriving (Eq, Ord, Generic, NFData, ToJSON, FromJSON, NoThunks)
+
+instance (Typeable r, Show a) => Show (Mismatch (r :: Relation) a) where
+  show (Mismatch {mismatchSupplied, mismatchExpected}) =
+    let headerLine = "Mismatch (" <> show (typeRep @r) <> ")"
+        suppliedLine = "supplied: " <> show mismatchSupplied
+        expectedLine = "expected: " <> show mismatchExpected
+     in headerLine <> " {" <> suppliedLine <> ", " <> expectedLine <> "}"
 
 -- | Convert a `Mismatch` to a tuple that has "supplied" and "expected" swapped places
 swapMismatch :: Mismatch r a -> (a, a)
@@ -758,7 +814,7 @@ swapMismatch Mismatch {mismatchSupplied, mismatchExpected} = (mismatchExpected, 
 unswapMismatch :: (a, a) -> Mismatch r a
 unswapMismatch (mismatchExpected, mismatchSupplied) = Mismatch {mismatchSupplied, mismatchExpected}
 
-instance (EncCBOR a, Typeable r) => EncCBOR (Mismatch r a) where
+instance EncCBOR a => EncCBOR (Mismatch r a) where
   encCBOR (Mismatch supplied expected) =
     encode $
       Rec Mismatch
@@ -772,13 +828,9 @@ instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
         <! From
         <! From
 
-instance (Typeable r, EncCBOR a) => EncCBORGroup (Mismatch r a) where
+instance EncCBOR a => EncCBORGroup (Mismatch r a) where
   encCBORGroup Mismatch {..} = encCBOR mismatchSupplied <> encCBOR mismatchExpected
-  encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (mismatchSupplied <$> proxy)
-      + encodedSizeExpr size_ (mismatchExpected <$> proxy)
   listLen _ = 2
-  listLenBound _ = 2
 
 instance (Typeable r, DecCBOR a) => DecCBORGroup (Mismatch r a) where
   decCBORGroup = do
@@ -817,11 +869,11 @@ instance DecCBOR Network
 
 -- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool) Natural
+  { unBlocksMade :: Map (KeyHash StakePool) Natural
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet BlocksMade
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, Default)
 
 -- | Transaction index.
 newtype TxIx = TxIx {unTxIx :: Word16}
@@ -829,10 +881,13 @@ newtype TxIx = TxIx {unTxIx :: Word16}
   deriving newtype
     (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, DecCBOR, ToJSON, MemPack)
 
--- | Construct a `TxIx` from a 16 bit unsigned integer
-mkTxIx :: Word16 -> TxIx
-mkTxIx = TxIx . fromIntegral
-{-# DEPRECATED mkTxIx "In favor of `TxIx`" #-}
+instance Random TxIx
+
+instance Uniform TxIx where
+  uniformM g = TxIx <$> uniformM g
+
+instance UniformRange TxIx where
+  uniformRM r g = TxIx <$> uniformRM (coerce r) g
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -854,10 +909,16 @@ newtype CertIx = CertIx {unCertIx :: Word16}
   deriving stock (Eq, Ord, Show)
   deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
 
--- | Construct a `CertIx` from a 16 bit unsigned integer
-mkCertIx :: Word16 -> CertIx
-mkCertIx = CertIx . fromIntegral
-{-# DEPRECATED mkCertIx "In favor of `CertIx`" #-}
+instance Random CertIx
+
+instance Uniform CertIx where
+  uniformM g = CertIx <$> uniformM g
+
+instance UniformRange CertIx where
+  uniformRM r g = CertIx <$> uniformRM (coerce r) g
+#if MIN_VERSION_random(1,3,0)
+  isInRange = isInRangeOrd
+#endif
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
@@ -881,16 +942,12 @@ newtype AnchorData = AnchorData ByteString
 
 instance HashAnnotated AnchorData AnchorData
 
--- | Hash `AnchorData`
-hashAnchorData :: AnchorData -> SafeHash AnchorData
-hashAnchorData = hashAnnotated
-{-# DEPRECATED hashAnchorData "In favor of `hashAnnotated`" #-}
-
 data Anchor = Anchor
   { anchorUrl :: !Url
   , anchorDataHash :: !(SafeHash AnchorData)
   }
   deriving (Eq, Ord, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs Anchor
 
 instance NoThunks Anchor
 
@@ -911,25 +968,21 @@ instance EncCBOR Anchor where
         !> To anchorUrl
         !> To anchorDataHash
 
-instance ToJSON Anchor where
-  toJSON = object . toAnchorPairs
-  toEncoding = pairs . mconcat . toAnchorPairs
-
 instance FromJSON Anchor where
   parseJSON = withObject "Anchor" $ \o -> do
     anchorUrl <- o .: "url"
     anchorDataHash <- o .: "dataHash"
     pure $ Anchor {..}
 
+instance ToKeyValuePairs Anchor where
+  toKeyValuePairs vote@(Anchor _ _) =
+    let Anchor {..} = vote
+     in [ "url" .= anchorUrl
+        , "dataHash" .= anchorDataHash
+        ]
+
 instance Default Anchor where
   def = Anchor (Url "") def
-
-toAnchorPairs :: KeyValue e a => Anchor -> [a]
-toAnchorPairs vote@(Anchor _ _) =
-  let Anchor {..} = vote
-   in [ "url" .= anchorUrl
-      , "dataHash" .= anchorDataHash
-      ]
 
 instance Default Network where
   def = Mainnet
@@ -946,3 +999,68 @@ kindObject name obj = object $ ("kind" .= name) : obj
 
 positiveUnitIntervalNonZeroRational :: PositiveUnitInterval -> NonZero Rational
 positiveUnitIntervalNonZeroRational = unsafeNonZero . unboundRational
+
+class ToKeyValuePairs a where
+  toKeyValuePairs :: KeyValue e kv => a -> [kv]
+
+newtype KeyValuePairs a = KeyValuePairs {unKeyValuePairs :: a}
+
+instance ToKeyValuePairs a => ToJSON (KeyValuePairs a) where
+  toJSON = object . toKeyValuePairs . unKeyValuePairs
+  toEncoding = pairs . mconcat . toKeyValuePairs . unKeyValuePairs
+
+--------------------------------------------------------------------------------
+-- Peras-related types
+--------------------------------------------------------------------------------
+
+-- | Placeholder for Peras certificates
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasCert = PerasCert
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance NFData PerasCert
+
+-- | Encode as CBOR empty list (0x80), NOT as @encCBOR ()@. The unit
+-- instance encodes as @encodeNull@ (0xf6), which is also what
+-- 'encodeNullStrictMaybe' emits for 'SNothing' — making 'SJust
+-- PerasCert' indistinguishable from 'SNothing' on the wire when
+-- wrapped in a null-tagged @StrictMaybe@.
+instance EncCBOR PerasCert where
+  encCBOR PerasCert = Binary.encodeListLen 0
+
+instance DecCBOR PerasCert where
+  decCBOR = do
+    enforceSize "PerasCert" 0
+    pure PerasCert
+
+-- | Placeholder for Leios certificates.
+--
+-- NOTE: The real type will be brought from elsewhere once it's ready.
+data LeiosCert = LeiosCert
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance NFData LeiosCert
+
+-- | See note on the 'PerasCert' instance: encode as CBOR empty list
+-- (0x80), NOT as @encCBOR ()@.
+instance EncCBOR LeiosCert where
+  encCBOR LeiosCert = Binary.encodeListLen 0
+
+instance DecCBOR LeiosCert where
+  decCBOR = do
+    enforceSize "LeiosCert" 0
+    pure LeiosCert
+
+-- | Placeholder for Peras public keys
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasKey = PerasKey
+  deriving (Eq, Show, Generic, NoThunks)
+
+-- | Mocked-up Peras certificate validation routine
+--
+-- NOTE: this function will be replaced with the real implementation from
+-- 'cardano-base' once it's ready.
+validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
+validatePerasCert _ _ _ = True

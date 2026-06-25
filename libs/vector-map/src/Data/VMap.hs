@@ -13,10 +13,12 @@ module Data.VMap (
   size,
   lookup,
   findWithDefault,
+  elemAt,
   member,
   notMember,
   map,
   mapMaybe,
+  mapMaybeWithKey,
   mapWithKey,
   filter,
   fold,
@@ -24,6 +26,9 @@ module Data.VMap (
   foldlWithKey,
   foldMap,
   foldMapWithKey,
+  union,
+  unionWith,
+  unionWithKey,
   fromMap,
   toMap,
   fromList,
@@ -31,6 +36,7 @@ module Data.VMap (
   toList,
   toAscList,
   keys,
+  keysSet,
   elems,
   fromAscList,
   fromAscListN,
@@ -46,13 +52,13 @@ module Data.VMap (
   KV.KVVector,
   KV.normalize,
   KV.normalizeM,
-)
-where
+) where
 
 import Control.DeepSeq
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
+import qualified Data.Set as Set
 import Data.VMap.KVVector (KVVector (..))
 import qualified Data.VMap.KVVector as KV
 import qualified Data.Vector as V
@@ -106,14 +112,19 @@ instance
 empty :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v
 empty = VMap VG.empty
 
-size :: VG.Vector kv k => VMap kv vv k v -> Int
-size = VG.length . KV.keysVector . unVMap
+size :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> Int
+size = VG.length . unVMap
 {-# INLINE size #-}
 
 lookup ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> VMap kv vv k v -> Maybe v
 lookup k = KV.lookupKVVector k . unVMap
 {-# INLINE lookup #-}
+
+elemAt ::
+  (VG.Vector kv k, VG.Vector vv v) => Int -> VMap kv vv k v -> (k, v)
+elemAt ix = KV.elemAtKVVector ix . unVMap
+{-# INLINE elemAt #-}
 
 member ::
   (Ord k, VG.Vector kv k) => k -> VMap kv vv k v -> Bool
@@ -137,6 +148,32 @@ findWithDefault ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => v -> k -> VMap kv vv k v -> v
 findWithDefault a k = fromMaybe a . lookup k
 {-# INLINE findWithDefault #-}
+
+union ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+union = unionWithKey KV.keepFirstDuplicate
+{-# INLINE union #-}
+
+unionWith ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  (v -> v -> v) ->
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+unionWith f = unionWithKey (const f)
+{-# INLINE unionWith #-}
+
+unionWithKey ::
+  (Ord k, VG.Vector kv k, VG.Vector vv v) =>
+  (k -> v -> v -> v) ->
+  VMap kv vv k v ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+unionWithKey f (VMap kv1) (VMap kv2) = VMap (KV.unionWithKey f kv1 kv2)
+{-# INLINE unionWithKey #-}
 
 fromMap :: (VG.Vector kv k, VG.Vector vv v) => Map.Map k v -> VMap kv vv k v
 fromMap = VMap . KV.fromMap
@@ -195,27 +232,43 @@ fromDistinctAscListN n = VMap . KV.fromDistinctAscListN n
 {-# INLINE fromDistinctAscListN #-}
 
 map ::
-  (VG.Vector vv a, VG.Vector vv b) =>
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
   (a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-map f (VMap vec) = VMap (KV.mapValsKVVector f vec)
-{-# INLINE map #-}
+map f (VMap vec) = VMap (VG.map (\(k, v) -> let v' = f v in v' `seq` (k, v')) vec)
+-- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
+-- VMap (KV.mapValsKVVector f vec)
+--
+-- This is marked as NOINLINE because there is some strange issue in `vector`, likely due to stream
+-- fusion, that prevents elements from being forced. This needs further investigation, but for now
+-- we can get away with NOINLINE. FTR. `Data.Vector.Strict` is also susceptible to this problem.
+{-# NOINLINE map #-}
 
 mapMaybe ::
   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
   (a -> Maybe b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-mapMaybe f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f x) vec)
+mapMaybe f = mapMaybeWithKey (const f)
 {-# INLINE mapMaybe #-}
+
+mapMaybeWithKey ::
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+  (k -> a -> Maybe b) ->
+  VMap kv vv k a ->
+  VMap kv vv k b
+mapMaybeWithKey f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f k x) vec)
+{-# INLINE mapMaybeWithKey #-}
 
 mapWithKey ::
   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
   (k -> a -> b) ->
   VMap kv vv k a ->
   VMap kv vv k b
-mapWithKey f (VMap vec) = VMap (KV.mapWithKeyKVVector f vec)
+mapWithKey f (VMap vec) = VMap (VG.map (\(k, v) -> (k, f k v)) vec)
+-- TODO: benchmark and switch to this implementation when we switch to Data.Vector.Strict
+-- VMap (KV.mapWithKeyKVVector f vec)
 {-# INLINE mapWithKey #-}
 
 foldMapWithKey ::
@@ -256,6 +309,10 @@ fold = VG.foldMap' id . valsVector . unVMap
 keys :: VG.Vector kv k => VMap kv vv k v -> [k]
 keys = VG.toList . keysVector . unVMap
 {-# INLINE keys #-}
+
+keysSet :: VG.Vector kv k => VMap kv vv k v -> Set.Set k
+keysSet = Set.fromDistinctAscList . VG.toList . keysVector . unVMap
+{-# INLINE keysSet #-}
 
 elems :: VG.Vector vv v => VMap kv vv k v -> [v]
 elems = VG.toList . valsVector . unVMap

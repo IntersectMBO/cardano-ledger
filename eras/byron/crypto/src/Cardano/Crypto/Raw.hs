@@ -2,8 +2,7 @@
 
 module Cardano.Crypto.Raw (
   Raw (..),
-)
-where
+) where
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Control.DeepSeq (NFData)

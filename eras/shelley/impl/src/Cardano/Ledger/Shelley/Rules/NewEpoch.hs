@@ -2,8 +2,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -15,7 +17,6 @@
 
 module Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
-  ShelleyNewEpochPredFailure (..),
   ShelleyNewEpochEvent (..),
   PredicateFailure,
   updateRewards,
@@ -30,66 +31,37 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
-import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMirPredFailure)
+import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
+import Control.Exception (assert)
 import Control.State.Transition
 import Data.Default (Default, def)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks (..))
-
-data ShelleyNewEpochPredFailure era
-  = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
-  | CorruptRewardUpdate
-      RewardUpdate -- The reward update which violates an invariant
-  | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
-  deriving (Generic)
-
-deriving stock instance
-  ( Show (PredicateFailure (EraRule "EPOCH" era))
-  , Show (PredicateFailure (EraRule "MIR" era))
-  ) =>
-  Show (ShelleyNewEpochPredFailure era)
-
-deriving stock instance
-  ( Eq (PredicateFailure (EraRule "EPOCH" era))
-  , Eq (PredicateFailure (EraRule "MIR" era))
-  ) =>
-  Eq (ShelleyNewEpochPredFailure era)
-
-instance
-  ( NoThunks (PredicateFailure (EraRule "EPOCH" era))
-  , NoThunks (PredicateFailure (EraRule "MIR" era))
-  ) =>
-  NoThunks (ShelleyNewEpochPredFailure era)
-
-instance
-  ( NFData (PredicateFailure (EraRule "EPOCH" era))
-  , NFData (PredicateFailure (EraRule "MIR" era))
-  ) =>
-  NFData (ShelleyNewEpochPredFailure era)
 
 data ShelleyNewEpochEvent era
   = DeltaRewardEvent (Event (EraRule "RUPD" era))
   | RestrainedRewards
       EpochNo
-      (Map.Map (Credential 'Staking) (Set Reward))
-      (Set (Credential 'Staking))
+      (Map.Map (Credential Staking) (Set Reward))
+      (Set (Credential Staking))
   | TotalRewardEvent
       EpochNo
-      (Map.Map (Credential 'Staking) (Set Reward))
+      (Map.Map (Credential Staking) (Set Reward))
   | EpochEvent (Event (EraRule "EPOCH" era))
   | MirEvent (Event (EraRule "MIR" era))
   | TotalAdaPotsEvent AdaPots
@@ -139,7 +111,7 @@ instance
   type Environment (ShelleyNEWEPOCH era) = ()
 
   type BaseM (ShelleyNEWEPOCH era) = ShelleyBase
-  type PredicateFailure (ShelleyNEWEPOCH era) = ShelleyNewEpochPredFailure era
+  type PredicateFailure (ShelleyNEWEPOCH era) = Void
   type Event (ShelleyNEWEPOCH era) = ShelleyNewEpochEvent era
 
   initialRules =
@@ -150,7 +122,7 @@ instance
           (BlocksMade Map.empty)
           def
           SNothing
-          (PoolDistr Map.empty mempty)
+          def
           def
     ]
 
@@ -235,24 +207,22 @@ tellReward x = tellEvent x
 
 instance
   ( STS (ShelleyEPOCH era)
-  , PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
   , Event (EraRule "EPOCH" era) ~ ShelleyEpochEvent era
   ) =>
   Embed (ShelleyEPOCH era) (ShelleyNEWEPOCH era)
   where
-  wrapFailed = EpochFailure
+  wrapFailed = \case {}
   wrapEvent = EpochEvent
 
 instance
   ( EraGov era
   , EraCertState era
   , Default (EpochState era)
-  , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
   ) =>
   Embed (ShelleyMIR era) (ShelleyNEWEPOCH era)
   where
-  wrapFailed = MirFailure
+  wrapFailed = \case {}
   wrapEvent = MirEvent
 
 -- ===========================================
@@ -265,7 +235,7 @@ updateRewards ::
   Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
-  Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
+   in assert (Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df))) (pure ())
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the

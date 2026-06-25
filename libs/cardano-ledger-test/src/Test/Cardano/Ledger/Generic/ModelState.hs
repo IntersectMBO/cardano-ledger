@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -8,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | The data types in this file constitute a Model of the NewEpochState
 --   sufficient for generating transactions that can run in the
@@ -33,23 +36,16 @@
 module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Coin (Coin (..), knownNonZeroCoin)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Hashes (GenDelegs (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  DState (..),
   EpochState (..),
-  InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
-  VState (..),
   completeRupd,
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
@@ -58,72 +54,38 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.State (
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  SnapShots,
-  UTxO (..),
-  emptySnapShots,
- )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Trans ()
 import Data.Default (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Text (Text)
+import Data.TreeDiff (Expr, ToExpr (toExpr))
+import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  credSummary,
-  keyHashSummary,
-  pcAccountState,
-  pcCoin,
-  pcCredential,
-  pcIndividualPoolStake,
-  pcKeyHash,
-  pcPoolParams,
-  pcTxId,
-  pcTxIn,
-  pcTxOut,
-  ppEpochNo,
-  ppInt,
-  ppMap,
-  ppNatural,
-  ppRecord,
-  ppString,
- )
 import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
+  CertStateWit (..),
   Proof (..),
   Reflect (..),
+  whichCertState,
  )
+import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
-
--- =============================================
 
 -- | MUtxo = Model UTxO. In the Model we represent the
 --   UTxO as a Map (not a newtype around a Map)
 type MUtxo era = Map TxIn (TxOut era)
 
-pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
-pcMUtxo proof = ppMap pcTxIn (pcTxOut proof)
-
 -- ===========================================================
 
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
-    mPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
-  , mPoolDeposits :: !(Map (KeyHash 'StakePool) Coin)
+    mStakePools :: !(Map (KeyHash StakePool) StakePoolState)
   , -- DState state fields
-    mRewards :: !(Map (Credential 'Staking) Coin)
-  , mDelegations :: !(Map (Credential 'Staking) (KeyHash 'StakePool))
-  , mKeyDeposits :: !(Map (Credential 'Staking) Coin)
+    mAccounts :: !(Accounts era)
   , --  _fGenDelegs,  _genDelegs, and _irwd, are for
     --  changing the PParams and are abstracted away
 
@@ -135,26 +97,29 @@ data ModelNewEpochState era = ModelNewEpochState
     -- and are abstracted away.
 
     -- EpochState fields
-    mAccountState :: !AccountState
+    mChainAccountState :: !ChainAccountState
   , -- esPrevPp and esPp are for changing PParams
     -- esNonMyopic is for efficiency, and all are abstracted away
 
     -- Model NewEpochState fields
-    mPoolDistr :: !(Map (KeyHash 'StakePool) IndividualPoolStake)
+    mPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
   , mPParams :: !(PParams era)
   , mDeposited :: !Coin
   , mFees :: !Coin
   , mCount :: !Int
   , mIndex :: !(Map Int TxId)
   , -- below here NO EFFECT until we model EpochBoundary
-    mFPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
-  , mRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
+    mFStakePools :: !(Map (KeyHash StakePool) StakePoolParams)
+  , mRetiring :: !(Map (KeyHash StakePool) EpochNo)
   , mSnapshots :: !SnapShots
   , mEL :: !EpochNo -- The current epoch,
-  , mBprev :: !(Map (KeyHash 'StakePool) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
-  , mBcur :: !(Map (KeyHash 'StakePool) Natural)
+  , mBprev :: !(Map (KeyHash StakePool) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
+  , mBcur :: !(Map (KeyHash StakePool) Natural)
   , mRu :: !(StrictMaybe RewardUpdate) -- Possible reward update
   }
+  deriving (Generic)
+
+instance ShelleyEraTest era => ToExpr (ModelNewEpochState era)
 
 type UtxoEntry era = (TxIn, TxOut era)
 
@@ -168,10 +133,10 @@ blocksMadeZero :: BlocksMade
 blocksMadeZero = BlocksMade Map.empty
 
 poolDistrZero :: PoolDistr
-poolDistrZero = PoolDistr Map.empty $ CompactCoin 1
+poolDistrZero = def
 
-accountStateZero :: AccountState
-accountStateZero = AccountState (Coin 0) (Coin 0)
+accountStateZero :: ChainAccountState
+accountStateZero = ChainAccountState (Coin 0) (Coin 0)
 
 utxoZero :: UTxO era
 utxoZero = UTxO Map.empty
@@ -182,50 +147,42 @@ genDelegsZero = GenDelegs Map.empty
 instantaneousRewardsZero :: InstantaneousRewards
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
 
-dStateZero :: DState c
+dStateZero :: EraCertState era => DState era
 dStateZero =
   DState
-    { dsUnified = UM.empty
+    { dsAccounts = def
     , dsFutureGenDelegs = Map.empty
     , dsGenDelegs = genDelegsZero
     , dsIRewards = instantaneousRewardsZero
     }
 
-pStateZero :: PState c
+pStateZero :: PState era
 pStateZero =
   PState
-    { psStakePoolParams = Map.empty
+    { psVRFKeyHashes = Map.empty
+    , psStakePools = Map.empty
     , psFutureStakePoolParams = Map.empty
     , psRetiring = Map.empty
-    , psDeposits = Map.empty
     }
 
 dPStateZero :: EraCertState era => CertState era
-dPStateZero = mkCertState def pStateZero dStateZero
+dPStateZero =
+  def
+    & certPStateL .~ pStateZero
+    & certDStateL .~ dStateZero
 
 nonMyopicZero :: NonMyopic
-nonMyopicZero = NonMyopic Map.empty mempty
-
-pParamsZeroByProof :: Proof era -> PParams era
-pParamsZeroByProof Conway = def
-pParamsZeroByProof Babbage = def
-pParamsZeroByProof Alonzo = def
-pParamsZeroByProof Mary = def
-pParamsZeroByProof Allegra = def
-pParamsZeroByProof Shelley = def
+nonMyopicZero = NonMyopic mempty mempty
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
 uTxOStateZero =
   smartUTxOState
-    pParamsZero
+    def
     utxoZero
     mempty
     mempty
     emptyGovState
     mempty
-
-pParamsZero :: Reflect era => PParams era
-pParamsZero = lift pParamsZeroByProof
 
 ledgerStateZero :: forall era. Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
@@ -237,8 +194,8 @@ epochStateZero =
     ledgerStateZero
     emptySnapShots
     nonMyopicZero
-    & curPParamsEpochStateL .~ pParamsZero
-    & prevPParamsEpochStateL .~ pParamsZero
+    & curPParamsEpochStateL .~ def
+    & prevPParamsEpochStateL .~ def
 
 newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
@@ -259,25 +216,22 @@ stashedAVVMAddressesZero Alonzo = ()
 stashedAVVMAddressesZero Mary = ()
 stashedAVVMAddressesZero Allegra = ()
 
-mNewEpochStateZero :: Reflect era => ModelNewEpochState era
+mNewEpochStateZero :: (EraPParams era, EraAccounts era) => ModelNewEpochState era
 mNewEpochStateZero =
   ModelNewEpochState
-    { mPoolParams = Map.empty
-    , mPoolDeposits = Map.empty
-    , mRewards = Map.empty
-    , mDelegations = Map.empty
-    , mKeyDeposits = Map.empty
+    { mStakePools = Map.empty
+    , mAccounts = def
     , mUTxO = Map.empty
     , mMutFee = Map.empty
-    , mAccountState = accountStateZero
+    , mChainAccountState = accountStateZero
     , mPoolDistr = Map.empty
-    , mPParams = pParamsZero
+    , mPParams = def
     , mDeposited = Coin 0
     , mFees = Coin 0
     , mCount = 0
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = Map.empty
+      mFStakePools = Map.empty
     , mRetiring = Map.empty
     , mSnapshots = emptySnapShots
     , mEL = EpochNo 0
@@ -300,22 +254,18 @@ class Extract t era where
 instance Extract (DState era) era where
   extract x =
     DState
-      (UM.unify (makeRewards x) Map.empty (mDelegations x) Map.empty)
+      (mAccounts x)
       Map.empty
       genDelegsZero
       instantaneousRewardsZero
 
-makeRewards :: ModelNewEpochState era -> Map.Map (Credential 'Staking) UM.RDPair
-makeRewards mnes = Map.mapWithKey f credRewMap
-  where
-    credRewMap = mRewards mnes
-    credDepMap = mKeyDeposits mnes
-    f cred rew = case Map.lookup cred credDepMap of
-      Just dep -> UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError dep)
-      Nothing -> error ("In makeRewards the reward and deposit maps are not in synch " ++ show cred)
-
 instance Extract (PState era) era where
-  extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
+  extract x =
+    PState
+      Map.empty
+      (mStakePools x)
+      (mFStakePools x)
+      (mRetiring x)
 
 instance Extract (VState era) era where
   extract _ = VState def def (EpochNo 0)
@@ -330,17 +280,18 @@ instance Reflect era => Extract (UTxOState era) era where
       emptyGovState
       mempty
 
-extractCertState :: forall era. Reflect era => ModelNewEpochState era -> CertState era
-extractCertState x = case reify @era of
-  Shelley -> cs
-  Mary -> cs
-  Allegra -> cs
-  Alonzo -> cs
-  Babbage -> cs
-  Conway -> cs -- TODO: add `conwayCertState`
-  where
-    cs :: CertState era
-    cs = mkCertState (extract x) (extract x) (extract x)
+extractCertState ::
+  forall era. Reflect era => ModelNewEpochState era -> CertState era
+extractCertState x = case whichCertState (reify @era) of
+  CertStateShelleyToBabbage ->
+    def
+      & (certPStateL .~ extract x)
+      & (certDStateL .~ extract x)
+  CertStateConwayToConway ->
+    def
+      & (certPStateL .~ extract x)
+      & (certDStateL .~ extract x)
+      & (certVStateL .~ extract x)
 
 instance Reflect era => Extract (LedgerState era) era where
   extract x = LedgerState (extract x) (extractCertState x)
@@ -348,7 +299,7 @@ instance Reflect era => Extract (LedgerState era) era where
 instance Reflect era => Extract (EpochState era) era where
   extract x =
     EpochState
-      (mAccountState x)
+      (mChainAccountState x)
       (extract x)
       (mSnapshots x)
       nonMyopicZero
@@ -363,20 +314,24 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (BlocksMade (mBcur x))
       (extract x)
       (Complete <$> mRu x)
-      (PoolDistr (mPoolDistr x) (CompactCoin 1))
+      (PoolDistr (mPoolDistr x) (knownNonZeroCoin @1))
       (stashedAVVMAddressesZero (reify :: Proof era))
 
 abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
-    { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
-    , mPoolDeposits = (psDeposits . certPState . lsCertState . esLState . nesEs) x
-    , mRewards = (UM.rewardMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
-    , mDelegations = (UM.sPoolMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
-    , mKeyDeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    { mStakePools =
+        ( psStakePools
+            . certPState
+            . lsCertState
+            . esLState
+            . nesEs
+        )
+          x
+    , mAccounts = (dsAccounts . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
     , mMutFee = Map.empty
-    , mAccountState = (esAccountState . nesEs) x
+    , mChainAccountState = (esChainAccountState . nesEs) x
     , mPoolDistr = (unPoolDistr . nesPd) x
     , mPParams = (view curPParamsEpochStateL . nesEs) x
     , mDeposited = (utxosDeposited . lsUTxOState . esLState . nesEs) x
@@ -384,9 +339,16 @@ abstract x =
     , mCount = 0
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = (psFutureStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+      mFStakePools =
+        ( psFutureStakePoolParams
+            . certPState
+            . lsCertState
+            . esLState
+            . nesEs
+        )
+          x
     , mRetiring = (psRetiring . certPState . lsCertState . esLState . nesEs) x
-    , mSnapshots = (esSnapshots . nesEs) x
+    , mSnapshots = esSnapshots (nesEs x)
     , mEL = nesEL x
     , mBprev = unBlocksMade (nesBprev x)
     , mBcur = unBlocksMade (nesBcur x)
@@ -404,47 +366,10 @@ complete (Pulsing rewsnap pulser) = fst $ runShelleyBase (completeRupd (Pulsing 
 
 -- =====================================================================
 
-pcModelNewEpochState :: Reflect era => Proof era -> ModelNewEpochState era -> PDoc
-pcModelNewEpochState proof x =
-  ppRecord "ModelNewEpochState" $
-    [ ("poolparams", ppMap keyHashSummary pcPoolParams (mPoolParams x))
-    , ("pool deposits", ppMap keyHashSummary pcCoin (mPoolDeposits x))
-    , ("rewards", ppMap credSummary pcCoin (mRewards x))
-    , ("delegations", ppMap pcCredential pcKeyHash (mDelegations x))
-    , ("key deposits", ppMap credSummary pcCoin (mKeyDeposits x))
-    , ("utxo", ppMap pcTxIn (pcTxOut proof) (mUTxO x))
-    , ("mutFees", ppMap pcTxIn (pcTxOut proof) (mMutFee x))
-    , ("account", pcAccountState (mAccountState x))
-    , ("pool distr", ppMap pcKeyHash pcIndividualPoolStake (mPoolDistr x))
-    , ("protocol params", ppString "PParams ...")
-    , ("deposited", pcCoin (mDeposited x))
-    , ("fees", pcCoin (mFees x))
-    , ("count", ppInt (mCount x))
-    , ("index", ppMap ppInt pcTxId (mIndex x))
-    -- Add additional EpochBoundary fields here
-    ]
-      ++ Maybe.catMaybes (epochBoundaryPDoc proof x)
-
-epochBoundaryPDoc :: Proof era -> ModelNewEpochState era -> [Maybe (Text, PDoc)]
-epochBoundaryPDoc _proof x =
-  [ if Map.null futurepp
-      then Nothing
-      else Just ("future pparams", ppMap pcKeyHash pcPoolParams futurepp)
-  , if Map.null retiring then Nothing else Just ("retiring", ppMap pcKeyHash ppEpochNo retiring)
-  , if lastepoch == EpochNo 0 then Nothing else Just ("last epoch", ppEpochNo lastepoch)
-  , if Map.null prevBlocks then Nothing else Just ("prev blocks", ppMap pcKeyHash ppNatural prevBlocks)
-  , if Map.null curBlocks then Nothing else Just ("current blocks", ppMap pcKeyHash ppNatural curBlocks)
-  ]
-  where
-    futurepp = mFPoolParams x
-    retiring = mRetiring x
-    lastepoch = mEL x
-    prevBlocks = (mBprev x)
-    curBlocks = (mBcur x)
+pcModelNewEpochState :: ShelleyEraTest era => ModelNewEpochState era -> Expr
+pcModelNewEpochState = toExpr
 
 -- SnapShots and PulsingRewUdate delberately ommitted from pretty printer
 
-instance Reflect era => PrettyA (ModelNewEpochState era) where prettyA = pcModelNewEpochState reify
-
-instance Reflect era => Show (ModelNewEpochState era) where
-  show x = show (prettyA x)
+instance (Reflect era, ShelleyEraTest era) => Show (ModelNewEpochState era) where
+  show = show . toExpr

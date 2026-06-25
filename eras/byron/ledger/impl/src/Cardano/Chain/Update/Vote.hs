@@ -31,8 +31,7 @@ module Cardano.Chain.Update.Vote (
   -- * Vote Formatting
   formatVoteShort,
   shortVoteF,
-)
-where
+) where
 
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)

@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Cardano.Ledger.Api.Tx.Address (
   -- * Address
   Addr (..),
@@ -23,12 +25,17 @@ module Cardano.Ledger.Api.Tx.Address (
   decodeAddrLenient,
   decodeAddrLenientEither,
 
-  -- * Reward Account
-  RewardAccount (..),
+  -- * Account Address
+  AccountAddress (..),
+  AccountId (..),
+  serialiseAccountAddress,
+  deserialiseAccountAddress,
+
+  -- * Deprecated - Reward Account (use Account Address instead)
+  pattern RewardAccount,
   serialiseRewardAccount,
   deserialiseRewardAccount,
-)
-where
+) where
 
 import Cardano.Ledger.Address
 import Control.Applicative ((<|>))

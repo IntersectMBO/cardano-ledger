@@ -13,20 +13,16 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledgers () where
 
 import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Conway.Core (EraPParams (..), EraRule)
+import Cardano.Ledger.Conway.Core (EraPParams (..))
 import Cardano.Ledger.Conway.Governance (Constitution (..), EnactState (..))
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
-import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv (..), ShelleyLedgersPredFailure)
-import Control.State.Transition.Extended (STS (..))
-import qualified Lib as Agda
+import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv (..))
+import Cardano.Ledger.Shelley.State (ChainAccountState (..))
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
-  OpaqueErrorString (..),
   SpecTranslate (..),
   askCtx,
-  showOpaqueErrorString,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 
 instance
   ( EraPParams era
@@ -41,18 +37,10 @@ instance
   toSpecRep LedgersEnv {..} = do
     enactState <- askCtx @(EnactState era)
     let
-      pPolicy = constitutionScript $ ensConstitution enactState
+      guardrailsScriptHash = constitutionGuardrailsScriptHash $ ensConstitution enactState
     Agda.MkLEnv
       <$> toSpecRep ledgersSlotNo
-      <*> toSpecRep pPolicy
+      <*> toSpecRep guardrailsScriptHash
       <*> toSpecRep ledgersPp
       <*> toSpecRep enactState
-      <*> toSpecRep (asTreasury ledgersAccount)
-
-instance
-  ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
-  SpecTranslate ctx (ShelleyLedgersPredFailure era)
-  where
-  type SpecRep (ShelleyLedgersPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
+      <*> toSpecRep (casTreasury ledgersAccount)

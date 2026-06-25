@@ -19,8 +19,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Presets (
   someKeyPairs,
   keyPairs,
   scriptSpace,
-)
-where
+) where
 
 import Cardano.Ledger.Core (EraScript, hashScript)
 import Cardano.Ledger.Keys (
@@ -100,25 +99,25 @@ keySpace c =
 coreNodeKeys ::
   Crypto c =>
   Constants ->
-  [(KeyPair 'Genesis, AllIssuerKeys c 'GenesisDelegate)]
+  [(KeyPair GenesisRole, AllIssuerKeys c GenesisDelegate)]
 coreNodeKeys = runGen 1000 30 . genCoreNodeKeys
 
 genCoreNodeKeys ::
   Crypto c =>
   Constants ->
-  Gen [(KeyPair 'Genesis, AllIssuerKeys c 'GenesisDelegate)]
+  Gen [(KeyPair GenesisRole, AllIssuerKeys c GenesisDelegate)]
 genCoreNodeKeys c@Constants {numCoreNodes} =
   replicateM (fromIntegral numCoreNodes) $ (,) <$> arbitrary <*> genIssuerKeys c
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
+genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
   | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
+stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
   | x <- [0 .. 50]
@@ -142,7 +141,7 @@ genIssuerKeys Constants {maxSlotTrace} =
 
 genesisDelegs0 ::
   Constants ->
-  Map (KeyHash 'Genesis) GenDelegPair
+  Map (KeyHash GenesisRole) GenDelegPair
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey

@@ -1,13 +1,9 @@
 import Cardano.Ledger.UMap (UMap)
 import qualified Cardano.Ledger.UMap as UMap
-
 import Control.Monad (replicateM)
-
 import Criterion (Benchmark, bench, env, nf)
 import Criterion.Main (defaultMain)
-
 import qualified Data.Map.Strict as Map
-
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck (arbitrary, generate)
 

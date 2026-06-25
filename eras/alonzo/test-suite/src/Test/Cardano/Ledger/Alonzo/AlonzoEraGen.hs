@@ -13,7 +13,6 @@
 -- |  AlonzoEra instances for EraGen and ScriptClass
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -22,9 +21,10 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, Tx (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo, mkSupportedPlutusScript)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   AlonzoPlutusPurpose (..),
@@ -39,15 +39,14 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
  )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
-  IsValid (..),
+  ScriptIntegrity (..),
   hashScriptIntegrity,
   totExUnits,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoTxBody (..),
   AlonzoTxOut (..),
-  inputs',
+  TxBody (..),
   utxoEntrySize,
  )
 import Cardano.Ledger.Alonzo.TxWits (
@@ -59,7 +58,8 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (
@@ -76,13 +76,14 @@ import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.State (
   EraUTxO (..),
   UTxO (..),
-  coinBalance,
   getScriptsNeeded,
+  sumCoinUTxO,
   txInsFilter,
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
+import Data.Foldable as F
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -98,11 +99,12 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (Data (..))
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlutusScript')
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.ImpTest (computeScriptIntegrity)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
+import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus, zeroTestingCostModel)
 import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -120,7 +122,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Update (genM, genShelleyPParamsUpda
 import qualified Test.Cardano.Ledger.Shelley.Generator.Update as Shelley (genPParams)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (encodedLen)
 import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
-import Test.QuickCheck hiding ((><))
+import Test.QuickCheck hiding (Witness, (><))
 
 -- ============================================================
 
@@ -128,63 +130,98 @@ import Test.QuickCheck hiding ((><))
 vKeyLockedAdaOnly :: TxOut AlonzoEra -> Bool
 vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 
-phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
+phase2scripts3Arg :: EraPlutusTxInfo 'PlutusV1 era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
-  [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
+  [ mkTwoPhase3ArgInfo
+      (mkSupportedPlutusScript (alwaysSucceedsPlutus @'PlutusV1 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (redeemerSameAsDatum SPlutusV1))
+      (mkSupportedPlutusScript (redeemerSameAsDatum SPlutusV1))
       (P.I 9)
       (P.I 9, bigMem, bigStep)
       True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (evenDatum SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (purposeIsWellformedWithDatum SPlutusV1))
+      (mkSupportedPlutusScript (evenDatum SPlutusV1))
+      (P.I 8)
+      (P.I 8, bigMem, bigStep)
+      True
+  , mkTwoPhase3ArgInfo
+      (mkSupportedPlutusScript (alwaysFailsPlutus @'PlutusV1 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      False
+  , mkTwoPhase3ArgInfo
+      (mkSupportedPlutusScript (purposeIsWellformedWithDatum SPlutusV1))
       (P.I 3)
       (P.I 4, bigMem, bigStep)
       True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (datumIsWellformed SPlutusV1))
+      (mkSupportedPlutusScript (datumIsWellformed SPlutusV1))
       (P.I 5)
       (P.I 6, bigMem, bigStep)
       True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (inputsOutputsAreNotEmptyWithDatum SPlutusV1))
+      (mkSupportedPlutusScript (inputsOutputsAreNotEmptyWithDatum SPlutusV1))
       (P.I 7)
       (P.I 9, bigMem, bigStep)
       True
   ]
   where
-    mkTwoPhase3ArgInfo script = TwoPhase3ArgInfo script (hashScript @era script)
+    mkTwoPhase3ArgInfo plutusScript =
+      let script = fromPlutusScript plutusScript
+       in TwoPhase3ArgInfo script (hashScript script)
 
-phase2scripts2Arg :: forall era. AlonzoEraScript era => [TwoPhase2ArgInfo era]
+phase2scripts2Arg :: EraPlutusTxInfo 'PlutusV1 era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
-  [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemerNoDatum SPlutusV1)) (P.I 14, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
+  [ mkTwoPhase2ArgInfo
+      (mkSupportedPlutusScript (alwaysSucceedsPlutus @'PlutusV1 2))
+      (P.I 1, bigMem, bigStep)
+      True
   , mkTwoPhase2ArgInfo
-      (mkPlutusScript' (purposeIsWellformedNoDatum SPlutusV1))
+      (mkSupportedPlutusScript (evenRedeemerNoDatum SPlutusV1))
       (P.I 14, bigMem, bigStep)
       True
   , mkTwoPhase2ArgInfo
-      (mkPlutusScript' (inputsOutputsAreNotEmptyNoDatum SPlutusV1))
+      (mkSupportedPlutusScript (alwaysFailsPlutus @'PlutusV1 2))
+      (P.I 1, bigMem, bigStep)
+      False
+  , mkTwoPhase2ArgInfo
+      (mkSupportedPlutusScript (purposeIsWellformedNoDatum SPlutusV1))
+      (P.I 14, bigMem, bigStep)
+      True
+  , mkTwoPhase2ArgInfo
+      (mkSupportedPlutusScript (inputsOutputsAreNotEmptyNoDatum SPlutusV1))
       (P.I 15, bigMem, bigStep)
       True
   ]
   where
-    mkTwoPhase2ArgInfo script = TwoPhase2ArgInfo script (hashScript @era script)
+    mkTwoPhase2ArgInfo plutusScript =
+      let script = fromPlutusScript plutusScript
+       in TwoPhase2ArgInfo script (hashScript script)
 
-phase2scripts3ArgSucceeds :: forall era. AlonzoEraScript era => Script era -> Bool
+phase2scripts3ArgSucceeds ::
+  forall era.
+  EraPlutusTxInfo 'PlutusV1 era =>
+  Script era ->
+  Bool
 phase2scripts3ArgSucceeds script =
   maybe True getSucceeds3 $
     List.find (\info -> getScript3 info == script) phase2scripts3Arg
 
-phase2scripts2ArgSucceeds :: forall era. AlonzoEraScript era => Script era -> Bool
+phase2scripts2ArgSucceeds ::
+  forall era.
+  EraPlutusTxInfo 'PlutusV1 era =>
+  Script era ->
+  Bool
 phase2scripts2ArgSucceeds script =
   maybe True getSucceeds2 $
     List.find (\info -> getScript2 info == script) phase2scripts2Arg
 
-genPlutus2Arg :: AlonzoEraScript era => Gen (Maybe (TwoPhase2ArgInfo era))
+genPlutus2Arg ::
+  EraPlutusTxInfo 'PlutusV1 era =>
+  Gen (Maybe (TwoPhase2ArgInfo era))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
 -- | Gen a Mint value in the Alonzo Era, with a 10% chance that it includes an AlonzoScript
@@ -228,23 +265,23 @@ genAux constants = do
   maybeAux <- genEraAuxiliaryData @MaryEra constants
   pure $
     fmap
-      (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
+      (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (NativeScript . translateTimelock <$> y))
       maybeAux
 
 instance ScriptClass AlonzoEra where
   basescript = someLeaf
-  isKey _ (TimelockScript x) = isKey (Proxy @MaryEra) $ translateTimelock x
+  isKey _ (NativeScript x) = isKey (Proxy @MaryEra) $ translateTimelock x
   isKey _ (PlutusScript _) = Nothing
-  isOnePhase _ (TimelockScript _) = True
+  isOnePhase _ (NativeScript _) = True
   isOnePhase _ (PlutusScript _) = False
-  quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @MaryEra) (translateTimelock x))
+  quantify _ (NativeScript x) = fmap (NativeScript . translateTimelock) (quantify (Proxy @MaryEra) (translateTimelock x))
   quantify _ x = Leaf x
   unQuantify _ quant =
-    TimelockScript . translateTimelock $
+    NativeScript . translateTimelock $
       unQuantify (Proxy @MaryEra) (fmap (translateTimelock . unTime) quant)
 
-unTime :: AlonzoScript era -> Timelock era
-unTime (TimelockScript x) = x
+unTime :: AlonzoScript era -> NativeScript era
+unTime (NativeScript x) = x
 unTime (PlutusScript _) = error "Plutus in Timelock"
 
 okAsCollateral :: UTxO AlonzoEra -> TxIn -> Bool
@@ -263,7 +300,7 @@ genAlonzoTxBody ::
   Coin ->
   StrictMaybe (Update AlonzoEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (TxBody AlonzoEra, [Script AlonzoEra])
+  Gen (TxBody TopTx AlonzoEra, [Script AlonzoEra])
 genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals fee updates auxDHash = do
   netid <- genM $ pure Testnet -- frequency [(2, pure Mainnet), (1, pure Testnet)]
   startvalue <- genMint
@@ -289,10 +326,12 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals 
         minted2
         -- scriptIntegrityHash starts out with empty Redeemers,
         -- as Remdeemers are added it is recomputed in updateEraTxBody
-        (hashScriptIntegrity @AlonzoEra Set.empty (Redeemers Map.empty) (TxDats Map.empty))
+        ( SJust . hashScriptIntegrity @AlonzoEra $
+            ScriptIntegrity (Redeemers Map.empty) (TxDats Map.empty) Set.empty
+        )
         auxDHash
         netid
-    , List.map TimelockScript scriptsFromPolicies <> plutusScripts
+    , List.map NativeScript scriptsFromPolicies <> plutusScripts
     )
 
 genSlotAfter :: SlotNo -> Gen SlotNo
@@ -308,7 +347,7 @@ genAlonzoPParamsUpdate ::
 genAlonzoPParamsUpdate constants pp = do
   maryPPUpdate <-
     genShelleyPParamsUpdate @MaryEra constants $
-      downgradePParams (DowngradeAlonzoPParams {dappMinUTxOValue = Coin 100}) pp
+      downgradePParams (DowngradeAlonzoPParams {dappMinUTxOValue = CompactCoin 100}) pp
   coinPerWord <- genM (CoinPerWord . Coin <$> choose (1, 5))
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
   prices <- genM (Prices <$> genPrice <*> genPrice)
@@ -316,11 +355,11 @@ genAlonzoPParamsUpdate constants pp = do
   maxBlockExUnits <- genM genMaxBlockExUnits
   -- Not too small for maxValSize, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
-  maxValSize <- genM (genNatural 4000 5000)
+  maxValSize <- genM (choose (4000, 5000))
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = SJust $ zeroTestingCostModels [PlutusV1]
+          , uappPlutusV1CostModel = SJust $ zeroTestingCostModel PlutusV1
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
@@ -344,11 +383,11 @@ genAlonzoPParams constants = do
   -- prices <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
   maxTxExUnits <- genMaxTxExUnits
   maxBlockExUnits <- genMaxBlockExUnits
-  maxValSize <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
+  maxValSize <- choose (4000, 10000) -- This can't be too small. Shelley uses Hard coded 4000
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = zeroTestingCostModels [PlutusV1]
+          , uappPlutusV1CostModel = zeroTestingCostModel PlutusV1
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
@@ -367,16 +406,16 @@ bigStep = 99999
 genMaxTxExUnits :: Gen ExUnits
 genMaxTxExUnits =
   ExUnits
-    -- Accommodate the maximum number of scripts in a transaction
-    <$> genNatural (10 * bigMem + 1) (20 * bigMem + 1)
-    <*> genNatural (10 * bigStep + 1) (20 * bigStep + 1)
+    -- Accommodate at least 20 of our scripts in a transaction
+    <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
+    <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
 
 genMaxBlockExUnits :: Gen ExUnits
 genMaxBlockExUnits =
   ExUnits
-    -- Accommodate the maximum number of scripts in all transactions in a block
-    <$> genNatural (60 * bigMem + 1) (100 * bigMem + 1)
-    <*> genNatural (60 * bigStep + 1) (100 * bigStep + 1)
+    -- Accommodate at least 20 of our transactions in a block
+    <$> genNatural (20 * 20 * bigMem + 1) (20 * 30 * bigMem + 1)
+    <*> genNatural (20 * 20 * bigStep + 1) (20 * 30 * bigStep + 1)
 
 instance EraGen AlonzoEra where
   genEraAuxiliaryData = genAux
@@ -394,13 +433,12 @@ instance EraGen AlonzoEra where
       , -- The wits may have changed, recompute the scriptIntegrityHash.
         atbScriptIntegrityHash =
           hashScriptIntegrity
-            langViews
-            (wits ^. rdmrsTxWitsL)
-            (wits ^. datsTxWitsL)
+            <$> computeScriptIntegrity
+              pp
+              utxo
+              (mkBasicTx txb & witsTxL .~ wits)
       }
     where
-      langs = langsUsed @AlonzoEra (wits ^. scriptTxWitsL)
-      langViews = Set.map (getLanguageView pp) langs
       requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
       potentialCollateral = Set.filter (okAsCollateral utxo) txin
       txInAmounts = List.sortOn snd . Map.toList . Map.map (unCoin . view coinTxOutL) . unUTxO . txInsFilter utxo
@@ -428,7 +466,7 @@ instance EraGen AlonzoEra where
           (dataMapFromTxOut smallUtxo (TxDats (getDataMap scriptinfo mapScriptWit)))
           -- The data hashes come from two places
           (Redeemers rdmrMap)
-      txinputs = inputs' txbody
+      txinputs = txbody ^. inputsTxBodyL
       smallUtxo :: [TxOut AlonzoEra]
       smallUtxo = Map.elems (unUTxO (txInsFilter utxo txinputs))
       AlonzoScriptsNeeded purposeHashPairs = getScriptsNeeded @AlonzoEra utxo txbody
@@ -445,9 +483,9 @@ instance EraGen AlonzoEra where
                   Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
-  constructTx bod wit auxdata = AlonzoTx bod wit (IsValid v) auxdata
+  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (IsValid v) auxdata
     where
-      v = all twoPhaseValidates (txscripts' wit)
+      v = all twoPhaseValidates (txscripts wit)
       twoPhaseValidates script =
         isNativeScript @AlonzoEra script
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)
@@ -505,12 +543,12 @@ instance EraGen AlonzoEra where
       IsValid True -> tx ^. bodyTxL . feeTxBodyL
       IsValid False -> sumCollateral tx utxo
 
-sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx era -> UTxO era -> Coin
+sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx TopTx era -> UTxO era -> Coin
 sumCollateral tx utxo =
-  coinBalance $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
+  sumCoinUTxO $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams era -> t -> Coin
-storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL
+storageCost extra pp x = (extra + encodedLen @era x) <×> fromCompact (unCoinPerByte $ pp ^. ppTxFeePerByteL)
 
 addRedeemMap ::
   (P.Data, Natural, Natural) ->
@@ -564,11 +602,11 @@ dataMapFromTxOut ::
   [TxOut AlonzoEra] ->
   TxDats AlonzoEra ->
   TxDats AlonzoEra
-dataMapFromTxOut txouts datahashmap = Prelude.foldl accum datahashmap txouts
+dataMapFromTxOut txouts datahashmap = F.foldl' accum datahashmap txouts
   where
     f dhash info = hashData (getData3 info) == dhash
     accum !ans (AlonzoTxOut _ _ SNothing) = ans
-    accum ans@(TxDats' m) (AlonzoTxOut _ _ (SJust dhash)) =
+    accum ans@(TxDats m) (AlonzoTxOut _ _ (SJust dhash)) =
       case List.find (f dhash) (genEraTwoPhase3Arg @AlonzoEra) of
         Just info -> TxDats (Map.insert dhash (Data (getData3 info)) m)
         Nothing -> ans
@@ -582,7 +620,7 @@ someLeaf ::
   , NativeScript era ~ Timelock era
   ) =>
   Proxy era ->
-  KeyHash 'Witness ->
+  KeyHash Witness ->
   AlonzoScript era
 someLeaf _proxy keyHash =
   let
@@ -594,9 +632,9 @@ someLeaf _proxy keyHash =
    in
     case mode of
       0 ->
-        TimelockScript $
+        NativeScript $
           (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
-      _ -> TimelockScript $ RequireSignature keyHash
+      _ -> NativeScript $ RequireSignature keyHash
 
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::

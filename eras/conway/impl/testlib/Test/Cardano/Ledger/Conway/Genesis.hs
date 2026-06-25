@@ -8,8 +8,7 @@
 module Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), textToUrl)
-import Cardano.Ledger.CertState (DRep (..), DRepState (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (Anchor (..), Committee (..))
@@ -18,6 +17,7 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State (DRep (..), DRepState (..))
 import Data.Default (Default (def))
 import qualified Data.ListMap as ListMap
 import Data.Map as Map
@@ -28,10 +28,10 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV3)
 
-credMember :: Credential 'ColdCommitteeRole
+credMember :: Credential ColdCommitteeRole
 credMember = KeyHashObj (KeyHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
 
-scriptMember :: Credential 'ColdCommitteeRole
+scriptMember :: Credential ColdCommitteeRole
 scriptMember = ScriptHashObj (ScriptHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
 
 comm :: Committee ConwayEra
@@ -62,7 +62,7 @@ expectedConwayGenesis =
             , DRepState
                 { drepExpiry = EpochNo 1000
                 , drepAnchor = SNothing
-                , drepDeposit = Coin 5000
+                , drepDeposit = CompactCoin 5000
                 , drepDelegs = mempty
                 }
             )
@@ -77,7 +77,7 @@ expectedConwayGenesis =
                         { anchorUrl = fromJust $ textToUrl 99 "example.com"
                         , anchorDataHash = def
                         }
-                , drepDeposit = Coin 6000
+                , drepDeposit = CompactCoin 6000
                 , drepDelegs = mempty
                 }
             )

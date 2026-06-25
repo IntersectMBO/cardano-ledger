@@ -1,7 +1,6 @@
 module Cardano.Chain.Update (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.Update.ApplicationName as X
 import Cardano.Chain.Update.InstallerHash as X

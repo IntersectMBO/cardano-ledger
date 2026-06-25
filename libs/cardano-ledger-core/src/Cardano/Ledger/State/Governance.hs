@@ -17,8 +17,7 @@ module Cardano.Ledger.State.Governance (
   nextEpochPParams,
   nextEpochUpdatedPParams,
   knownFuturePParams,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe, maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
@@ -30,9 +29,9 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.State.CertState (Obligations)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import Data.Default (Default (..))
@@ -52,10 +51,10 @@ class
   , DecCBOR (GovState era)
   , DecShareCBOR (GovState era)
   , Share (GovState era)
-      ~ ( Interns (Credential 'Staking)
-        , Interns (KeyHash 'StakePool)
-        , Interns (Credential 'DRepRole)
-        , Interns (Credential 'HotCommitteeRole)
+      ~ ( Interns (Credential Staking)
+        , Interns (KeyHash StakePool)
+        , Interns (Credential DRepRole)
+        , Interns (Credential HotCommitteeRole)
         )
   , ToCBOR (GovState era)
   , FromCBOR (GovState era)
@@ -141,9 +140,12 @@ solidifyFuturePParams = \case
   fpp -> fpp
 
 deriving stock instance Eq (PParams era) => Eq (FuturePParams era)
+
 deriving stock instance Show (PParams era) => Show (FuturePParams era)
+
 deriving via AllowThunk (FuturePParams era) instance NoThunks (FuturePParams era)
-instance (Typeable era, EncCBOR (PParams era)) => EncCBOR (FuturePParams era) where
+
+instance EncCBOR (PParams era) => EncCBOR (FuturePParams era) where
   encCBOR =
     encode . \case
       NoPParamsUpdate -> Sum NoPParamsUpdate 0

@@ -15,15 +15,13 @@ module Test.Cardano.Ledger.Core.KeyPair (
   MakeCredential (..),
   MakeStakeReference (..),
   mkAddr,
-  mkScriptAddr,
-  mkCred,
   KeyPair (..),
   KeyPairs,
   mkWitnessVKey,
   mkWitnessesVKey,
   makeWitnessesFromScriptKeys,
   mkKeyHashWitFunPair,
-  mkVKeyRewardAccount,
+  mkVKeyAccountAddress,
   mkKeyPair,
   mkKeyPairWithSeed,
   mkKeyHash,
@@ -31,8 +29,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkBootKeyPairWithSeed,
   genByronVKeyAddr,
   genByronAddrFromVKey,
-)
-where
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -82,7 +79,7 @@ import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.TreeDiff ()
-import Test.QuickCheck
+import Test.QuickCheck hiding (Witness)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
 data KeyPair (kd :: KeyRole) = KeyPair
@@ -92,7 +89,7 @@ data KeyPair (kd :: KeyRole) = KeyPair
   deriving (Generic, Show)
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs = [(KeyPair 'Payment, KeyPair 'Staking)]
+type KeyPairs = [(KeyPair Payment, KeyPair Staking)]
 
 instance NFData (KeyPair kd)
 
@@ -108,7 +105,7 @@ instance Uniform (KeyPair kd) where
     mkKeyPairWithSeed
       <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN))) g
 
-instance Typeable r => EncCBOR (KeyPair r) where
+instance EncCBOR (KeyPair r) where
   encCBOR (KeyPair x y) = encode $ Coders.Rec KeyPair !> To x !> To y
 
 deriving instance Typeable r => Eq (KeyPair r)
@@ -118,35 +115,50 @@ instance ToExpr (KeyPair r) where
 
 class MakeCredential c r where
   mkCredential :: c -> Credential r
+
 instance MakeCredential (Credential r) r where
   mkCredential = id
+
 instance MakeCredential (KeyPair r) r where
   mkCredential = KeyHashObj . hashKey . vKey
+
 instance MakeCredential (KeyHash r) r where
   mkCredential = KeyHashObj
+
 instance MakeCredential ScriptHash r where
   mkCredential = ScriptHashObj
 
 class MakeStakeReference c where
   mkStakeRef :: c -> StakeReference
-  default mkStakeRef :: MakeCredential c 'Staking => c -> StakeReference
+  default mkStakeRef :: MakeCredential c Staking => c -> StakeReference
   mkStakeRef = StakeRefBase . mkCredential
+
 instance MakeStakeReference StakeReference where
   mkStakeRef = id
-instance MakeStakeReference (Credential 'Staking)
-instance MakeStakeReference (KeyPair 'Staking)
-instance MakeStakeReference (KeyHash 'Staking)
+
+instance MakeStakeReference (Credential Staking)
+
+instance MakeStakeReference (KeyPair Staking)
+
+instance MakeStakeReference (KeyHash Staking)
+
 instance MakeStakeReference ScriptHash
+
 instance MakeStakeReference Ptr where
   mkStakeRef = StakeRefPtr
+
 instance MakeStakeReference (Maybe StakeReference) where
   mkStakeRef = mkStakeRefMaybe
-instance MakeStakeReference (Maybe (Credential 'Staking)) where
+
+instance MakeStakeReference (Maybe (Credential Staking)) where
   mkStakeRef = mkStakeRefMaybe
-instance MakeStakeReference (Maybe (KeyPair 'Staking)) where
+
+instance MakeStakeReference (Maybe (KeyPair Staking)) where
   mkStakeRef = mkStakeRefMaybe
-instance MakeStakeReference (Maybe (KeyHash 'Staking)) where
+
+instance MakeStakeReference (Maybe (KeyHash Staking)) where
   mkStakeRef = mkStakeRefMaybe
+
 instance MakeStakeReference (Maybe ScriptHash) where
   mkStakeRef = mkStakeRefMaybe
 
@@ -156,22 +168,14 @@ mkStakeRefMaybe = \case
   Just c -> mkStakeRef c
 
 -- | Construct a `Testnet` address from payment and staking components
-mkAddr :: (MakeCredential p 'Payment, MakeStakeReference s) => p -> s -> Addr
+mkAddr :: (MakeCredential p Payment, MakeStakeReference s) => p -> s -> Addr
 mkAddr pay stake = Addr Testnet (mkCredential pay) (mkStakeRef stake)
-
-mkCred :: KeyPair kr -> Credential kr
-mkCred = mkCredential
-{-# DEPRECATED mkCred "In favor of `mkCredential`" #-}
-
-mkScriptAddr :: ScriptHash -> KeyPair 'Staking -> Addr
-mkScriptAddr = mkAddr
-{-# DEPRECATED mkScriptAddr "In favor of `mkAddr`" #-}
 
 -- | Create a witness for transaction
 mkWitnessVKey ::
   SafeHash EraIndependentTxBody ->
   KeyPair kr ->
-  WitVKey 'Witness
+  WitVKey Witness
 mkWitnessVKey safe keys =
   WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN (sKey keys) (extractHash safe))
 
@@ -179,7 +183,7 @@ mkWitnessVKey safe keys =
 mkWitnessesVKey ::
   SafeHash EraIndependentTxBody ->
   [KeyPair kr] ->
-  Set (WitVKey 'Witness)
+  Set (WitVKey Witness)
 mkWitnessesVKey safe xs = Set.fromList (fmap (mkWitnessVKey safe) xs)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
@@ -188,7 +192,7 @@ makeWitnessesFromScriptKeys ::
   SafeHash EraIndependentTxBody ->
   Map (KeyHash kr) (KeyPair kr) ->
   Set (KeyHash kr) ->
-  Set (WitVKey 'Witness)
+  Set (WitVKey Witness)
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in mkWitnessesVKey txbodyHash (Map.elems witKeys)
@@ -203,16 +207,16 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 --          tx = ... txbody ... (witfun safehash) ...
 mkKeyHashWitFunPair ::
   forall kr.
-  Gen (KeyHash kr, SafeHash EraIndependentTxBody -> WitVKey 'Witness)
+  Gen (KeyHash kr, SafeHash EraIndependentTxBody -> WitVKey Witness)
 mkKeyHashWitFunPair = do
   keyPair@(KeyPair vk _) <- arbitrary @(KeyPair kr)
   pure (hashKey vk, \safeHash -> mkWitnessVKey safeHash keyPair)
 
-mkVKeyRewardAccount ::
+mkVKeyAccountAddress ::
   Network ->
-  KeyPair 'Staking ->
-  RewardAccount
-mkVKeyRewardAccount network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
+  KeyPair Staking ->
+  AccountAddress
+mkVKeyAccountAddress network keys = AccountAddress network $ AccountId $ KeyHashObj (hashKey $ vKey keys)
 
 mkKeyHash :: Int -> KeyHash kd
 mkKeyHash = hashKey . vKey . mkKeyPair
@@ -243,11 +247,11 @@ mkBootKeyPairWithSeed = uncurry ByronKeyPair . Byron.deterministicKeyGen . ensur
 
 ensure32ByteSeed :: BS.ByteString -> BS.ByteString
 ensure32ByteSeed inputSeed
-  | BS.length inputSeed /= seedSize =
+  | BS.length inputSeed /= expectedSeedSize =
       hashToBytes $ Hash.hashWith @Hash.Blake2b_256 id inputSeed
   | otherwise = inputSeed
   where
-    seedSize = 32
+    expectedSeedSize = 32
 
 genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)
 genByronVKeyAddr = do

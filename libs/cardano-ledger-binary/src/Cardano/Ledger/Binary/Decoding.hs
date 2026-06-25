@@ -10,6 +10,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFull',
   decodeFullDecoder,
   decodeFullDecoder',
+  decodeFullFromHexText,
   decodeFullAnnotator,
   decodeFullAnnotatedBytes,
   decodeFullAnnotatorFromHexText,
@@ -37,8 +38,7 @@ module Cardano.Ledger.Binary.Decoding (
   -- * Helpers
   toStrictByteString,
   decodeMemPack,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.DecCBOR
@@ -46,7 +46,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder hiding (getOriginalBytes)
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
-import Cardano.Ledger.Binary.Plain (withHexText)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
@@ -99,6 +99,10 @@ decodeFull version = decodeFullDecoder version (label $ Proxy @a) decCBOR
 decodeFull' :: forall a. DecCBOR a => Version -> BS.ByteString -> Either DecoderError a
 decodeFull' version = decodeFull version . BSL.fromStrict
 {-# INLINE decodeFull' #-}
+
+-- | Try decoding base16 encoded bytes and then try decoding them as CBOR
+decodeFullFromHexText :: DecCBOR a => Version -> Text -> Either DecoderError a
+decodeFullFromHexText v = Plain.withHexText (decodeFull' v)
 
 -- | Same as `decodeFull`, except instead of relying on the `DecCBOR` instance
 -- the `Decoder` must be suplied manually.
@@ -171,7 +175,7 @@ decodeFullAnnotator ::
   BSL.ByteString ->
   Either DecoderError a
 decodeFullAnnotator v lbl decoder bytes =
-  (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v lbl decoder bytes
+  (`runAnnotator` Full bytes) =<< decodeFullDecoder v lbl decoder bytes
 {-# INLINE decodeFullAnnotator #-}
 
 -- | Same as `decodeFullDecoder`, decodes a Haskell value from a lazy
@@ -196,7 +200,7 @@ decodeFullAnnotatorFromHexText ::
   Text ->
   Either DecoderError a
 decodeFullAnnotatorFromHexText v desc dec =
-  withHexText $ decodeFullAnnotator v desc dec . BSL.fromStrict
+  Plain.withHexText $ decodeFullAnnotator v desc dec . BSL.fromStrict
 {-# INLINE decodeFullAnnotatorFromHexText #-}
 
 --------------------------------------------------------------------------------
@@ -209,11 +213,7 @@ decodeFullAnnotatorFromHexText v desc dec =
 decodeNestedCborTag :: Decoder s ()
 decodeNestedCborTag = do
   t <- decodeTag
-  when (t /= 24) $
-    cborError $
-      DecoderErrorUnknownTag
-        "decodeNestedCborTag"
-        (fromIntegral t)
+  when (t /= 24) $ cborError $ DecoderErrorUnknownTag "decodeNestedCborTag" t
 {-# INLINE decodeNestedCborTag #-}
 
 -- | Remove the the semantic tag 24 from the enclosed CBOR data item,
@@ -232,7 +232,7 @@ decodeNestedCbor = do
 --
 -- In CBOR notation, if the data was serialised as:
 --
--- >>> 24(h'DEADBEEF')
+-- > 24(h'DEADBEEF')
 --
 -- then `decodeNestedCborBytes` yields the inner 'DEADBEEF', unchanged.
 decodeNestedCborBytes :: Decoder s BS.ByteString

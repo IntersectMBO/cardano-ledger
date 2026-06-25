@@ -20,7 +20,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Scripts (
-  MultiSig,
+  MultiSig (..),
   ShelleyEraScript (..),
   pattern RequireSignature,
   pattern RequireAllOf,
@@ -30,12 +30,11 @@ module Cardano.Ledger.Shelley.Scripts (
   validateMultiSig,
   nativeMultiSigTag,
   eqMultiSigRaw,
-  MultiSigRaw,
-)
-where
+  MultiSigRaw (..),
+) where
 
 import Cardano.Ledger.Binary (
-  Annotator (..),
+  Annotator,
   DecCBOR (decCBOR),
   EncCBOR (..),
   ToCBOR,
@@ -53,11 +52,10 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
-  decodeMemoized,
   getMemoRawType,
-  memoBytesEra,
   pattern Memo,
  )
+import Cardano.Ledger.MemoBytes.Internal (memoBytesEra)
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
@@ -85,19 +83,19 @@ import NoThunks.Class (NoThunks (..))
 data MultiSigRaw era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness)
+    MultiSigSignature !(KeyHash Witness)
   | -- | Require all the sub-terms to be satisfied.
-    RequireAllOf' !(StrictSeq (MultiSig era))
+    MultiSigAllOf !(StrictSeq (MultiSig era))
   | -- | Require any one of the sub-terms to be satisfied.
-    RequireAnyOf' !(StrictSeq (MultiSig era))
+    MultiSigAnyOf !(StrictSeq (MultiSig era))
   | -- | Require M of the given sub-terms to be satisfied.
-    RequireMOf' !Int !(StrictSeq (MultiSig era))
+    MultiSigMOf !Int !(StrictSeq (MultiSig era))
   deriving (Eq, Show, Generic)
   deriving anyclass (NoThunks)
 
 class EraScript era => ShelleyEraScript era where
-  mkRequireSignature :: KeyHash 'Witness -> NativeScript era
-  getRequireSignature :: NativeScript era -> Maybe (KeyHash 'Witness)
+  mkRequireSignature :: KeyHash Witness -> NativeScript era
+  getRequireSignature :: NativeScript era -> Maybe (KeyHash Witness)
 
   mkRequireAllOf :: StrictSeq (NativeScript era) -> NativeScript era
   getRequireAllOf :: NativeScript era -> Maybe (StrictSeq (NativeScript era))
@@ -110,12 +108,17 @@ class EraScript era => ShelleyEraScript era where
 
 instance NFData (MultiSigRaw era)
 
-newtype MultiSig era = MultiSigConstr (MemoBytes (MultiSigRaw era))
+newtype MultiSig era = MkMultiSig (MemoBytes (MultiSigRaw era))
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
 instance Memoized (MultiSig era) where
   type RawType (MultiSig era) = MultiSigRaw era
+
+deriving via
+  Mem (MultiSigRaw era)
+  instance
+    Era era => DecCBOR (Annotator (MultiSig era))
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
@@ -139,36 +142,31 @@ instance EraScript ShelleyEra where
 
 instance ShelleyEraScript ShelleyEra where
   mkRequireSignature kh =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireSignature' 0 !> To kh)
-  getRequireSignature (MultiSigConstr (Memo (RequireSignature' kh) _)) = Just kh
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigSignature 0 !> To kh)
+  getRequireSignature (MkMultiSig (Memo (MultiSigSignature kh) _)) = Just kh
   getRequireSignature _ = Nothing
 
   mkRequireAllOf ms =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireAllOf' 1 !> To ms)
-  getRequireAllOf (MultiSigConstr (Memo (RequireAllOf' ms) _)) = Just ms
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigAllOf 1 !> To ms)
+  getRequireAllOf (MkMultiSig (Memo (MultiSigAllOf ms) _)) = Just ms
   getRequireAllOf _ = Nothing
 
   mkRequireAnyOf ms =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireAnyOf' 2 !> To ms)
-  getRequireAnyOf (MultiSigConstr (Memo (RequireAnyOf' ms) _)) = Just ms
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigAnyOf 2 !> To ms)
+  getRequireAnyOf (MkMultiSig (Memo (MultiSigAnyOf ms) _)) = Just ms
   getRequireAnyOf _ = Nothing
 
   mkRequireMOf n ms =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireMOf' 3 !> To n !> To ms)
-  getRequireMOf (MultiSigConstr (Memo (RequireMOf' n ms) _)) = Just (n, ms)
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum MultiSigMOf 3 !> To n !> To ms)
+  getRequireMOf (MkMultiSig (Memo (MultiSigMOf n ms) _)) = Just (n, ms)
   getRequireMOf _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
 
-deriving via
-  Mem (MultiSigRaw era)
-  instance
-    Era era => DecCBOR (Annotator (MultiSig era))
-
 instance EqRaw (MultiSig era) where
   eqRaw = eqMultiSigRaw
 
-pattern RequireSignature :: ShelleyEraScript era => KeyHash 'Witness -> NativeScript era
+pattern RequireSignature :: ShelleyEraScript era => KeyHash Witness -> NativeScript era
 pattern RequireSignature akh <- (getRequireSignature -> Just akh)
   where
     RequireSignature akh = mkRequireSignature akh
@@ -189,35 +187,31 @@ pattern RequireMOf n ms <- (getRequireMOf -> Just (n, ms))
   where
     RequireMOf n ms = mkRequireMOf n ms
 
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf ::
+    ShelleyEra
+  #-}
+
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (MultiSig era)
-
-instance Era era => DecCBOR (MultiSig era) where
-  decCBOR = MultiSigConstr <$> decodeMemoized decCBOR
-
-instance Era era => DecCBOR (MultiSigRaw era) where
-  decCBOR = decodeRecordSum "MultiSig" $ do
-    \case
-      0 -> (,) 2 . RequireSignature' . KeyHash <$> decCBOR
-      1 -> (,) 2 . RequireAllOf' <$> decCBOR
-      2 -> (,) 2 . RequireAnyOf' <$> decCBOR
-      3 -> (,) 3 <$> (RequireMOf' <$> decCBOR <*> decCBOR)
-      k -> invalidKey k
 
 instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
   decCBOR = decodeRecordSum "MultiSig" $
     \case
-      0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> decCBOR
+      0 -> (,) 2 . pure . MultiSigSignature . KeyHash <$> decCBOR
       1 -> do
         multiSigs <- sequence <$> decCBOR
-        pure (2, RequireAllOf' <$> multiSigs)
+        pure (2, MultiSigAllOf <$> multiSigs)
       2 -> do
         multiSigs <- sequence <$> decCBOR
-        pure (2, RequireAnyOf' <$> multiSigs)
+        pure (2, MultiSigAnyOf <$> multiSigs)
       3 -> do
         m <- decCBOR
         multiSigs <- sequence <$> decCBOR
-        pure (3, RequireMOf' m <$> multiSigs)
+        pure (3, MultiSigMOf m <$> multiSigs)
       k -> invalidKey k
 
 -- | Check the equality of two underlying types, while ignoring their binary
@@ -228,17 +222,17 @@ eqMultiSigRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
     seqEq Empty Empty = True
     seqEq (x :<| xs) (y :<| ys) = eqMultiSigRaw x y && seqEq xs ys
     seqEq _ _ = False
-    go (RequireSignature' kh1) (RequireSignature' kh2) = kh1 == kh2
-    go (RequireAllOf' ts1) (RequireAllOf' ts2) = seqEq ts1 ts2
-    go (RequireAnyOf' ts1) (RequireAnyOf' ts2) = seqEq ts1 ts2
-    go (RequireMOf' n1 ts1) (RequireMOf' n2 ts2) = n1 == n2 && seqEq ts1 ts2
+    go (MultiSigSignature kh1) (MultiSigSignature kh2) = kh1 == kh2
+    go (MultiSigAllOf ts1) (MultiSigAllOf ts2) = seqEq ts1 ts2
+    go (MultiSigAnyOf ts1) (MultiSigAnyOf ts2) = seqEq ts1 ts2
+    go (MultiSigMOf n1 ts1) (MultiSigMOf n2 ts2) = n1 == n2 && seqEq ts1 ts2
     go _ _ = False
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalMultiSig ::
   (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
-  Set.Set (KeyHash 'Witness) ->
+  Set.Set (KeyHash Witness) ->
   NativeScript era ->
   Bool
 evalMultiSig vhks = go
@@ -258,7 +252,7 @@ evalMultiSig vhks = go
 -- | Script validator for native multi-signature scheme.
 validateMultiSig ::
   (ShelleyEraScript era, EraTx era, NativeScript era ~ MultiSig era) =>
-  Tx era ->
+  Tx t era ->
   NativeScript era ->
   Bool
 validateMultiSig tx =

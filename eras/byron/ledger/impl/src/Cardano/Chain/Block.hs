@@ -1,7 +1,6 @@
 module Cardano.Chain.Block (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.Block.Block as X
 import Cardano.Chain.Block.Body as X

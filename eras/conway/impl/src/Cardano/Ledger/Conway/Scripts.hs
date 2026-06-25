@@ -23,15 +23,14 @@ module Cardano.Ledger.Conway.Scripts (
   ConwayPlutusPurpose (..),
   pattern VotingPurpose,
   pattern ProposingPurpose,
-)
-where
+) where
 
-import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
   alonzoScriptPrefixTag,
+  eraUnsupportedLanguage,
   isPlutusScript,
  )
 import Cardano.Ledger.Babbage.Core
@@ -57,7 +56,7 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.MemPack
 import Data.Typeable
-import Data.Word (Word16, Word32, Word8)
+import Data.Word (Word32)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
@@ -75,17 +74,17 @@ instance EraScript ConwayEra where
   type NativeScript ConwayEra = Timelock ConwayEra
 
   upgradeScript = \case
-    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ translateTimelock ts
     PlutusScript (BabbagePlutusV1 ps) -> PlutusScript $ ConwayPlutusV1 ps
     PlutusScript (BabbagePlutusV2 ps) -> PlutusScript $ ConwayPlutusV2 ps
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
-    TimelockScript ts -> Just ts
+    NativeScript ts -> Just ts
     _ -> Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 instance AlonzoEraScript ConwayEra where
   data PlutusScript ConwayEra
@@ -100,9 +99,10 @@ instance AlonzoEraScript ConwayEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ ConwayPlutusV1 plutus
-      SPlutusV2 -> Just $ ConwayPlutusV2 plutus
-      SPlutusV3 -> Just $ ConwayPlutusV3 plutus
+      SPlutusV1 -> pure $ ConwayPlutusV1 plutus
+      SPlutusV2 -> pure $ ConwayPlutusV2 plutus
+      SPlutusV3 -> pure $ ConwayPlutusV3 plutus
+      slang -> eraUnsupportedLanguage @ConwayEra slang
 
   withPlutusScript (ConwayPlutusV1 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
@@ -175,7 +175,9 @@ instance AllegraEraScript ConwayEra where
 
 instance NFData (PlutusScript ConwayEra) where
   rnf = rwhnf
+
 instance NoThunks (PlutusScript ConwayEra)
+
 instance SafeToHash (PlutusScript ConwayEra) where
   originalBytes ps = withPlutusScript ps originalBytes
 
@@ -201,28 +203,34 @@ data ConwayPlutusPurpose f era
   = ConwaySpending !(f Word32 TxIn)
   | ConwayMinting !(f Word32 PolicyID)
   | ConwayCertifying !(f Word32 (TxCert era))
-  | ConwayRewarding !(f Word32 RewardAccount)
+  | ConwayRewarding !(f Word32 AccountAddress)
   | ConwayVoting !(f Word32 Voter)
   | ConwayProposing !(f Word32 (ProposalProcedure era))
   deriving (Generic)
 
 deriving instance Eq (ConwayPlutusPurpose AsIx era)
+
 deriving instance Ord (ConwayPlutusPurpose AsIx era)
+
 deriving instance Show (ConwayPlutusPurpose AsIx era)
+
 instance NoThunks (ConwayPlutusPurpose AsIx era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsItem era)
+
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsItem era)
+
 instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsItem era)
+
 deriving via
   (CBORGroup (ConwayPlutusPurpose f era))
   instance
     ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
     , EraPParams era
-    , Typeable f
     , EncCBOR (TxCert era)
     ) =>
     EncCBOR (ConwayPlutusPurpose f era)
+
 deriving via
   (CBORGroup (ConwayPlutusPurpose f era))
   instance
@@ -236,7 +244,9 @@ deriving via
     DecCBOR (ConwayPlutusPurpose f era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsIxItem era)
+
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsIxItem era)
+
 instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsIxItem era)
 
 instance
@@ -254,13 +264,11 @@ instance
 instance
   ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
   , EraPParams era
-  , Typeable f
   , EncCBOR (TxCert era)
   ) =>
   EncCBORGroup (ConwayPlutusPurpose f era)
   where
   listLen _ = 2
-  listLenBound _ = 2
   encCBORGroup = \case
     ConwaySpending p -> encodeWord8 0 <> encCBOR p
     ConwayMinting p -> encodeWord8 1 <> encCBOR p
@@ -268,9 +276,6 @@ instance
     ConwayRewarding p -> encodeWord8 3 <> encCBOR p
     ConwayVoting p -> encodeWord8 4 <> encCBOR p
     ConwayProposing p -> encodeWord8 5 <> encCBOR p
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy :: Proxy Word8)
-      + encodedSizeExpr size_ (Proxy :: Proxy Word16)
 
 instance
   ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)

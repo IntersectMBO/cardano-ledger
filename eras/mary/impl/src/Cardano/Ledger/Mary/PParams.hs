@@ -29,13 +29,13 @@ instance EraPParams MaryEra where
   upgradePParamsHKD () = coerce
   downgradePParamsHKD () = coerce
 
-  hkdMinFeeAL = lens sppMinFeeA $ \pp x -> pp {sppMinFeeA = x}
-  hkdMinFeeBL = lens sppMinFeeB $ \pp x -> pp {sppMinFeeB = x}
+  hkdTxFeePerByteL = lens sppTxFeePerByte $ \pp x -> pp {sppTxFeePerByte = x}
+  hkdTxFeeFixedCompactL = lens sppTxFeeFixed $ \pp x -> pp {sppTxFeeFixed = x}
   hkdMaxBBSizeL = lens sppMaxBBSize $ \pp x -> pp {sppMaxBBSize = x}
   hkdMaxTxSizeL = lens sppMaxTxSize $ \pp x -> pp {sppMaxTxSize = x}
   hkdMaxBHSizeL = lens sppMaxBHSize $ \pp x -> pp {sppMaxBHSize = x}
-  hkdKeyDepositL = lens sppKeyDeposit $ \pp x -> pp {sppKeyDeposit = x}
-  hkdPoolDepositL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
+  hkdKeyDepositCompactL = lens sppKeyDeposit $ \pp x -> pp {sppKeyDeposit = x}
+  hkdPoolDepositCompactL = lens sppPoolDeposit $ \pp x -> pp {sppPoolDeposit = x}
   hkdEMaxL = lens sppEMax $ \pp x -> pp {sppEMax = x}
   hkdNOptL = lens sppNOpt $ \pp x -> pp {sppNOpt = x}
   hkdA0L = lens sppA0 $ \pp x -> pp {sppA0 = x}
@@ -44,8 +44,10 @@ instance EraPParams MaryEra where
   hkdDL = lens sppD $ \pp x -> pp {sppD = x}
   hkdExtraEntropyL = lens sppExtraEntropy $ \pp x -> pp {sppExtraEntropy = x}
   hkdProtocolVersionL = lens sppProtocolVersion $ \pp x -> pp {sppProtocolVersion = x}
-  hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
-  hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
+  hkdMinUTxOValueCompactL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
+  hkdMinPoolCostCompactL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
+
+  eraPParams = shelleyPParams
 
 instance EraGov MaryEra where
   type GovState MaryEra = ShelleyGovState MaryEra

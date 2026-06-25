@@ -14,7 +14,7 @@ import System.IO
 -- | Insight into options:
 --
 -- * `optsNewEpochStateBinaryFile` is for reading a previously serialized
--- * `NewEpochState` produced by cadano-cli` and is used to populate sqlite
+-- * `NewEpochState` produced by cardano-cli` and is used to populate sqlite
 -- * database
 --
 -- * `optsEpochStateBinaryFile` is used for grabbing data from sqlite,
@@ -26,7 +26,7 @@ data Opts = Opts
   -- load into sqlite database
   , optsEpochStateBinaryFile :: Maybe FilePath
   -- ^ Path to the CBOR encoded EpochState data type, which will have data
-  -- from sqlite database written into.
+  -- from sqlite database written into it.
   , optsSqliteDbFile :: Maybe FilePath
   -- ^ Path to Sqlite database file.
   }
@@ -62,7 +62,7 @@ optsParser =
           <> value Nothing
           <> help
             ( "Path to Sqlite database file. When supplied then new-epoch-state "
-                <> "will be loaded into the databse. Requires --new-epoch-state-cbor"
+                <> "will be loaded into the database. Requires --new-epoch-state-cbor"
             )
       )
 
@@ -92,7 +92,7 @@ main = do
       epochState <- loadEpochState dbFp
       putStrLn "Loaded EpochState from the database"
       writeEpochState binFp epochState
-      putStrLn $ "Written EpochState into: " ++ dbFpStr
+      putStrLn $ "Written EpochState into: " ++ binFp
 
 -- forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
 --   let dbFp = T.pack dbFpStr
