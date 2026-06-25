@@ -17,11 +17,13 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraUtxoPredFailure (..),
   EntitiesPredFailure (..),
  )
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NE
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "CERTS" $ do
@@ -83,22 +85,32 @@ spec = describe "CERTS" $ do
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         , injectFailure $
-            IncompleteWithdrawals @era $
+            WithdrawalAmountsExceedAccountBalances @era $
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         ]
 
+      -- in legacy mode, we produce `IncompleteWithdrawals` failure
+      txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
       submitFailingTx
         ( mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
                 .~ Withdrawals
                   [(accountAddress1, zero)]
+              & inputsTxBodyL .~ [txIn]
         )
         [ injectFailure . IncompleteWithdrawals @era $
             NE.singleton accountAddress1 $
               Mismatch zero reward1
         ]
+
+      submitTx_ $
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals
+                [(accountAddress1, zero)]
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
     setupAccountAddress = do
