@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `withdrawalsThatExceedAccountBalance` and `applyWithdrawals`
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
