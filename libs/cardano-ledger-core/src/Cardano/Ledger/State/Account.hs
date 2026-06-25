@@ -24,7 +24,9 @@ module Cardano.Ledger.State.Account (
   sumDepositsAccounts,
   addToBalanceAccounts,
   withdrawalsThatDoNotDrainAccounts,
+  withdrawalsThatExceedAccountBalance,
   drainAccounts,
+  applyWithdrawals,
   removeStakePoolDelegations,
 ) where
 
@@ -34,6 +36,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
+import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Data.Aeson (ToJSON)
@@ -230,6 +233,39 @@ withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
       | aaNetworkId == networkId = lookupAccountState credential accounts
       | otherwise = Nothing
 
+withdrawalsThatExceedAccountBalance ::
+  EraAccounts era =>
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  Maybe (Withdrawals, Map AccountAddress (Mismatch RelLTEQ Coin))
+withdrawalsThatExceedAccountBalance (Withdrawals withdrawals) networkId accounts
+  | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
+  | otherwise =
+      Just $
+        first Withdrawals $
+          Map.foldrWithKey collectBadWithdrawals (Map.empty, Map.empty) withdrawals
+  where
+    checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
+      noBadWithdrawals && isGoodWithdrawal accountAddress withdrawalAmount
+    collectBadWithdrawals accountAddress withdrawalAmount accum@(!_, !_) =
+      case lookupAccount accountAddress of
+        Nothing -> first (Map.insert accountAddress withdrawalAmount) accum
+        Just account
+          | withdrawalAmount <= balanceOf account -> accum
+          | otherwise ->
+              second
+                ( Map.insert accountAddress $
+                    Mismatch withdrawalAmount (balanceOf account)
+                )
+                accum
+    isGoodWithdrawal accountAddress withdrawalAmount =
+      maybe False (\account -> withdrawalAmount <= balanceOf account) (lookupAccount accountAddress)
+    balanceOf accountState = fromCompact (accountState ^. balanceAccountStateL)
+    lookupAccount (AccountAddress aaNetworkId (AccountId credential))
+      | aaNetworkId == networkId = lookupAccountState credential accounts
+      | otherwise = Nothing
+
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
 --
 -- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
@@ -247,6 +283,26 @@ drainAccounts (Withdrawals withdrawalsMap) accounts =
       Map.foldrWithKey'
         ( \(AccountAddress _ (AccountId credential)) _withdrawalAmount ->
             Map.adjust (balanceAccountStateL .~ mempty) credential
+        )
+        accountsMap
+        withdrawalsMap
+
+-- | Subtract each withdrawal amount from the matching account balance.
+applyWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Accounts era
+applyWithdrawals (Withdrawals withdrawalsMap) accounts =
+  accounts
+    & accountsMapL %~ \accountsMap ->
+      Map.foldrWithKey'
+        ( \(AccountAddress _ (AccountId credential)) withdrawalAmount ->
+            Map.adjust
+              ( balanceAccountStateL
+                  %~ \balance -> compactCoinOrError (fromCompact balance <-> withdrawalAmount)
+              )
+              credential
         )
         accountsMap
         withdrawalsMap
