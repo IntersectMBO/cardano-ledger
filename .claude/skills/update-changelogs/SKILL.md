@@ -1,8 +1,12 @@
 ---
 name: update-changelogs
-description: Update CHANGELOG.md files and cabal version numbers for all packages changed since origin/master, following PVP and project RELEASING.md rules. Use when preparing a PR or when asked to update changelogs or version numbers.
+description: |
+  Update CHANGELOG.md files and cabal version numbers for cardano-ledger packages changed since origin/master, following PVP and project RELEASING.md rules.
+
+  TRIGGER when: about to add, modify, or remove an entry in any `CHANGELOG.md` under this repository; about to bump a `version:` field in any `*.cabal`; user asks to update changelogs, bump versions, or prepare a release/PR; finishing a task that modified Haskell source under `eras/<era>/impl`, `eras/<era>/test-suite`, or `libs/<lib>` (so a changelog entry is likely warranted).
+
+  SKIP: read-only inspection (no edits planned); only test scenarios changed (no API changes); only value/default changes; user is explicitly hand-editing a CHANGELOG and has not asked the agent to do it; the changed file is in an excluded package per RELEASING.md.
 argument-hint: "[package-root]"
-disable-model-invocation: true
 allowed-tools: Bash(git *), Read, Grep, Glob, Edit
 model: opus
 effort: max
