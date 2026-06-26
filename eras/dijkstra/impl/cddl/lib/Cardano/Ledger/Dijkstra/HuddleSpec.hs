@@ -30,10 +30,15 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   scriptRequireGuardGroup,
   dijkstraRedeemerTagRule,
   auxiliaryDataMapRule,
+  poolParamsGroup,
 ) where
 
+import Cardano.Crypto.DSIGN (
+  DSIGNAggregatable (rawSerialisePossessionProofDSIGN),
+  DSIGNAlgorithm (rawSerialiseVerKeyDSIGN),
+ )
 import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
-import Cardano.Ledger.Conway.HuddleSpec hiding ()
+import Cardano.Ledger.Conway.HuddleSpec hiding (poolParamsGroup)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Huddle.Gen (
   CBORGen,
@@ -52,6 +57,11 @@ import Cardano.Ledger.Huddle.Gen (
   withAntiGen,
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
+import Cardano.Ledger.State (
+  LeiosKey (..),
+  LeiosPossessionProof (..),
+  LeiosPubKey (..),
+ )
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless, zipWithM)
 import Data.Foldable (traverse_)
@@ -64,6 +74,7 @@ import Data.Text qualified as T
 import Data.Word (Word16, Word64)
 import Test.AntiGen (withAnnotation, (|!))
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
+import Test.Cardano.Ledger.Core.Arbitrary ()
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -460,6 +471,33 @@ dijkstraCertificateRule pname p =
     / arr [a $ huddleGroup @"drep_unregistration_cert" p]
     / arr [a $ huddleGroup @"drep_update_cert" p]
 
+poolParamsGroup ::
+  forall era.
+  ( HuddleRule "relay" era
+  , HuddleRule "pool_metadata" era
+  , HuddleRule "leios_key" era
+  , HuddleRule1 "set" era
+  ) =>
+  Proxy "pool_params" ->
+  Proxy era ->
+  GroupDef
+poolParamsGroup pname p =
+  ( pname
+      =.~ grp
+        [ "operator" ==> huddleRule @"pool_keyhash" p
+        , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
+        , opt ("leios_key" ==> huddleRule @"leios_key" p / VNil)
+        , "pledge" ==> huddleRule @"coin" p
+        , "cost" ==> huddleRule @"coin" p
+        , "margin" ==> huddleRule @"unit_interval" p
+        , "reward_account" ==> huddleRule @"reward_account" p
+        , "pool_owners" ==> huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
+        , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
+        , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
+        ]
+  )
+    //- "Pool parameters for stake pool registration"
+
 instance HuddleRule "bounded_bytes" DijkstraEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
 
@@ -587,8 +625,43 @@ instance HuddleRule "relay" DijkstraEra where
 instance HuddleRule "pool_metadata" DijkstraEra where
   huddleRuleNamed = poolMetadataRule
 
+instance HuddleRule "leios_key" DijkstraEra where
+  huddleRuleNamed pname _p =
+    withCBORGen leiosKeyGen $
+      ( pname
+          =.= arr
+            [ "leios_pubkey" ==> VBytes `sized` (96 :: Word64)
+            , "leios_possessionproof" ==> VBytes `sized` (48 :: Word64)
+            ]
+      )
+        //- "Leios key"
+    where
+      leiosKeyGen = do
+        lk <- liftGen Gen.arbitrary
+        pure $
+          SingleTerm $
+            TList
+              [ TBytes (rawSerialiseVerKeyDSIGN $ unLeiosPubKey $ leiosPubKey lk)
+              , TBytes (rawSerialisePossessionProofDSIGN $ unLeiosPossessionProof $ leiosPossessionProof lk)
+              ]
+
 instance HuddleGroup "pool_params" DijkstraEra where
-  huddleGroupNamed = poolParamsGroup
+  huddleGroupNamed pname p =
+    ( pname
+        =.~ grp
+          [ "operator" ==> huddleRule @"pool_keyhash" p
+          , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
+          , opt ("leios_key" ==> huddleRule @"leios_key" p / VNil)
+          , "pledge" ==> huddleRule @"coin" p
+          , "cost" ==> huddleRule @"coin" p
+          , "margin" ==> huddleRule @"unit_interval" p
+          , "reward_account" ==> huddleRule @"reward_account" p
+          , "pool_owners" ==> huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
+          , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
+          , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
+          ]
+    )
+      //- "Pool parameters for stake pool registration"
 
 instance HuddleGroup "account_registration_cert" DijkstraEra where
   huddleGroupNamed = accountRegistrationCertGroup
@@ -857,12 +930,12 @@ instance HuddleRule "transaction_mempool" DijkstraEra where
   huddleRuleNamed pname p =
     comment
       [str| In Dijkstra we're deprecating the `is_valid` flag, but for backwards
-          | compatibility we still allow this flag to be present in incoming 
+          | compatibility we still allow this flag to be present in incoming
           | transactions. Once the transaction is added to a block, the flag will
           | be stripped, so the `is_valid` flag cannot appear in transactions that
           | are in a block.
           |
-          | In the next era `is_valid` flags will not be allowed even in mempool 
+          | In the next era `is_valid` flags will not be allowed even in mempool
           | transactions, so it's strongly recommended to encode transactions
           | according to the `transaction` rule.
           |]

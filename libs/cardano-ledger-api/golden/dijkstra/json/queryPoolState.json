@@ -19,6 +19,7 @@
                     "network": "Testnet"
                 },
                 "cost": 5,
+                "leiosKey": null,
                 "margin": 0.1,
                 "metadata": {
                     "hash": "7b7d",
@@ -64,6 +65,7 @@
                     "network": "Testnet"
                 },
                 "cost": 5,
+                "leiosKey": null,
                 "margin": 0.1,
                 "metadata": {
                     "hash": "7b7d",
@@ -104,6 +106,7 @@
                     "network": "Testnet"
                 },
                 "cost": 5,
+                "leiosKey": null,
                 "margin": 0.1,
                 "metadata": {
                     "hash": "7b7d",

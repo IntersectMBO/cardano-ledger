@@ -2038,6 +2038,7 @@ freshPoolParams khPool accountAddress = do
       , sppMargin = def
       , sppId = khPool
       , sppCost = minCost <> poolCostExtra
+      , sppLeiosKey = SNothing
       }
 
 registerPool ::

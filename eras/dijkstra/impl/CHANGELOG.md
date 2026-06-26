@@ -122,6 +122,8 @@
 * Add `transaction_mempool` rule
 * Add `peras_certificate`, `block_body`
 * Extend `constr` CDDL rule to include tags 1280–1400 for Plutus `Data` constructor indexes
+* Add optional `leios_key` field to `pool_params`
+* Add `leios_key` rule with `leios_pubkey` (96 bytes) and `leios_possessionproof` (48 bytes)
 
 ### testlib
 

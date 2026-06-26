@@ -701,6 +701,32 @@ instance HasSimpleRep PoolCert
 
 instance HasSpec PoolCert
 
+instance HasSpec LeiosPubKey where
+  type TypeSpec LeiosPubKey = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
+instance HasSpec LeiosPossessionProof where
+  type TypeSpec LeiosPossessionProof = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
+instance HasSimpleRep LeiosKey
+
+instance HasSpec LeiosKey
+
 instance HasSimpleRep StakePoolParams
 
 instance HasSpec StakePoolParams

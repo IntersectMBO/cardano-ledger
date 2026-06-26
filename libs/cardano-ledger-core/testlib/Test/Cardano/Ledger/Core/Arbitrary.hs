@@ -38,6 +38,13 @@ module Test.Cardano.Ledger.Core.Arbitrary (
 ) where
 
 import qualified Cardano.Chain.Common as Byron
+import Cardano.Crypto.DSIGN (
+  BLS12381MinSigDSIGN,
+  DSIGNAggregatable (PossessionProofDSIGN, createPossessionProofDSIGN),
+  DSIGNAlgorithm (genKeyDSIGNWithContext),
+  seedSizeDSIGN,
+ )
+import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (
@@ -123,6 +130,7 @@ import Test.Cardano.Slotting.Arbitrary ()
 import Test.Cardano.StrictContainers.Instances ()
 import Test.Crypto.Hash ()
 import Test.Crypto.KES ()
+import Test.Crypto.Util (arbitrarySeedOfSize)
 import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
@@ -459,6 +467,7 @@ instance Arbitrary StakePoolParams where
     StakePoolParams
       <$> arbitrary
       <*> arbitrary
+      <*> pure BaseTypes.SNothing -- sppLeiosKey: only encoded in PV12+
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -483,6 +492,23 @@ instance Arbitrary StakePoolState where
 
 instance Arbitrary PoolMetadata where
   arbitrary = PoolMetadata <$> arbitrary <*> arbitrary
+
+instance Arbitrary LeiosKey where
+  arbitrary = LeiosKey <$> arbitrary <*> arbitrary
+
+instance Arbitrary LeiosPubKey where
+  arbitrary = LeiosPubKey <$> arbitrary
+
+instance Arbitrary LeiosPossessionProof where
+  arbitrary = LeiosPossessionProof <$> genLeiosPossessionProof
+
+-- TODO: Replace with `defaultPossessionProofGen` once cardano-crypto-class
+-- exports it from the public API.
+genLeiosPossessionProof :: Gen (PossessionProofDSIGN BLS12381MinSigDSIGN)
+genLeiosPossessionProof = do
+  seed <- arbitrarySeedOfSize (seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN))
+  let sk = genKeyDSIGNWithContext @BLS12381MinSigDSIGN Nothing seed
+  pure $ createPossessionProofDSIGN minSigPoPDST sk
 
 instance Arbitrary StakePoolRelay where
   arbitrary = genericArbitraryU
