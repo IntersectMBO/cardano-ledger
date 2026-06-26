@@ -74,14 +74,11 @@ module Cardano.Ledger.Shelley.TxCert (
   isUnRegStakeTxCert,
 ) where
 
-import Cardano.Base.Proxy (asProxy)
 import Cardano.Ledger.BaseTypes (invalidKey, kindObjectValue)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
-  DecCBORGroup (..),
   Decoder,
   EncCBOR (..),
-  EncCBORGroup (..),
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
@@ -91,7 +88,6 @@ import Cardano.Ledger.Binary (
   decodeWord,
   encodeListLen,
   encodeWord8,
-  listLenInt,
   peekTokenType,
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
@@ -105,7 +101,11 @@ import Cardano.Ledger.Internal.Era (AllegraEra, AlonzoEra, BabbageEra, MaryEra)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
-import Cardano.Ledger.State (StakePoolParams (..))
+import Cardano.Ledger.State (
+  StakePoolParams (..),
+  decodeStakePoolParamsFlat,
+  withStakePoolParamsFlatEncoding,
+ )
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
@@ -437,9 +437,10 @@ encodeShelleyDelegCert = \case
 encodePoolCert :: PoolCert -> Encoding
 encodePoolCert = \case
   RegPool poolParams ->
-    encodeListLen (1 + listLen (asProxy poolParams))
-      <> encodeWord8 3
-      <> encCBORGroup poolParams
+    withStakePoolParamsFlatEncoding poolParams $ \stakePoolParamsListLen stakePoolParamsEncoding ->
+      encodeListLen (1 + fromIntegral stakePoolParamsListLen)
+        <> encodeWord8 3
+        <> stakePoolParamsEncoding
   RetirePool vk epoch ->
     encodeListLen 3
       <> encodeWord8 4
@@ -507,8 +508,8 @@ shelleyTxCertDelegDecoder = \case
 poolTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
 poolTxCertDecoder = \case
   3 -> do
-    group <- decCBORGroup
-    pure (1 + listLenInt (Just group), RegPoolTxCert group)
+    (stakePoolParamLen, stakePoolParams) <- decodeStakePoolParamsFlat
+    pure (1 + stakePoolParamLen, RegPoolTxCert stakePoolParams)
   4 -> do
     a <- decCBOR
     b <- decCBOR

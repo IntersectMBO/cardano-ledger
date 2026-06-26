@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -60,6 +61,8 @@ module Cardano.Ledger.State.StakePool (
     ppRelays,
     ppMetadata
   ),
+  withStakePoolParamsFlatEncoding,
+  decodeStakePoolParamsFlat,
   PoolMetadata (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
@@ -81,12 +84,11 @@ import Cardano.Ledger.BaseTypes (
   invalidKey,
  )
 import Cardano.Ledger.Binary (
-  CBORGroup (..),
   DecCBOR (..),
-  DecCBORGroup (..),
   DecShareCBOR (..),
+  Decoder,
   EncCBOR (..),
-  EncCBORGroup (..),
+  Encoding,
   Interns,
   decodeNullStrictMaybe,
   decodeRecordNamed,
@@ -94,6 +96,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
   encodeNullStrictMaybe,
+  withCurrentEncodingVersion,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -430,8 +433,6 @@ data StakePoolParams = StakePoolParams
   , sppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (EncCBOR) via CBORGroup StakePoolParams
-  deriving (DecCBOR) via CBORGroup StakePoolParams
 
 sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
@@ -536,39 +537,53 @@ data SizeOfPoolRelays = SizeOfPoolRelays
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance EncCBORGroup StakePoolParams where
-  encCBORGroup poolParams =
-    encCBOR (sppId poolParams)
-      <> encCBOR (sppVrf poolParams)
-      <> encCBOR (sppPledge poolParams)
-      <> encCBOR (sppCost poolParams)
-      <> encCBOR (sppMargin poolParams)
-      <> encCBOR (sppAccountAddress poolParams)
-      <> encCBOR (sppOwners poolParams)
-      <> encCBOR (sppRelays poolParams)
-      <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
-  listLen _ = 9
+instance EncCBOR StakePoolParams where
+  encCBOR poolParams =
+    withStakePoolParamsFlatEncoding poolParams $ \stakePoolParamsListLen stakePoolParamsEncoding ->
+      encodeListLen (fromIntegral stakePoolParamsListLen)
+        <> stakePoolParamsEncoding
 
-instance DecCBORGroup StakePoolParams where
-  decCBORGroup = do
-    hk <- decCBOR
-    vrf <- decCBOR
-    pledge <- decCBOR
-    cost <- decCBOR
-    margin <- decCBOR
-    ra <- decCBOR
-    owners <- decCBOR
-    relays <- decCBOR
-    md <- decodeNullStrictMaybe decCBOR
-    pure $
-      StakePoolParams
-        { sppId = hk
-        , sppVrf = vrf
-        , sppPledge = pledge
-        , sppCost = cost
-        , sppMargin = margin
-        , sppAccountAddress = ra
-        , sppOwners = owners
-        , sppRelays = relays
-        , sppMetadata = md
-        }
+-- | Returns the 'StakePoolParams' in a flat structure such as `[operator, vrf,
+-- pledge, ...]`. Useful for combining with other encoding functions like
+-- 'encodePoolCert' so that those functions end up with a flat list encoding
+-- instead of a nested list.
+--
+-- We could have used 'EncCBORGroup' to achieve something similar. However, the
+-- `listLen` function is static and can't depend on the Encoding version.
+-- Instead, we want `StakePoolParams` to have a dynamic list length based on the
+-- protocol version.
+withStakePoolParamsFlatEncoding ::
+  StakePoolParams ->
+  -- | Function with stake pool params flat encoded list length and actual flat
+  -- encoded stake pool params
+  (Int -> Encoding -> Encoding) ->
+  Encoding
+withStakePoolParamsFlatEncoding poolParams f =
+  withCurrentEncodingVersion $ \_v ->
+    f 9 $
+      encCBOR (sppId poolParams)
+        <> encCBOR (sppVrf poolParams)
+        <> encCBOR (sppPledge poolParams)
+        <> encCBOR (sppCost poolParams)
+        <> encCBOR (sppMargin poolParams)
+        <> encCBOR (sppAccountAddress poolParams)
+        <> encCBOR (sppOwners poolParams)
+        <> encCBOR (sppRelays poolParams)
+        <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
+
+instance DecCBOR StakePoolParams where
+  decCBOR = do
+    snd <$> decodeRecordNamed "StakePoolParams" fst decodeStakePoolParamsFlat
+
+decodeStakePoolParamsFlat :: Decoder s (Int, StakePoolParams)
+decodeStakePoolParamsFlat = do
+  sppId <- decCBOR
+  sppVrf <- decCBOR
+  sppPledge <- decCBOR
+  sppCost <- decCBOR
+  sppMargin <- decCBOR
+  sppAccountAddress <- decCBOR
+  sppOwners <- decCBOR
+  sppRelays <- decCBOR
+  sppMetadata <- decodeNullStrictMaybe decCBOR
+  pure (9, StakePoolParams {..})
