@@ -45,6 +45,7 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State (
+  LeiosKey,
   PoolMetadata,
   StakePoolParams (..),
   StakePoolRelay,
@@ -228,6 +229,7 @@ data CanonicalStakePoolParams = CanonicalStakePoolParams
   , csppOwners :: !(Set (KeyHash Staking))
   , csppRelays :: !(StrictSeq StakePoolRelay)
   , csppMetadata :: !(StrictMaybe PoolMetadata)
+  , csppLeiosKey :: !(StrictMaybe LeiosKey)
   }
   deriving (Show, Eq, Generic)
 
@@ -243,11 +245,12 @@ instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalStakePool
       , mkEncodablePair v ("relays" :: Text) csppRelays
       , mkEncodablePair v ("metadata" :: Text) csppMetadata
       , mkEncodablePair v ("account_address" :: Text) csppAccountAddress
+      , mkEncodablePair v ("leios_key" :: Text) csppLeiosKey
       ]
 
 instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePoolParams where
   fromCanonicalCBOR = do
-    decodeMapLenCanonicalOf 9
+    decodeMapLenCanonicalOf 10
     Versioned csppId <- decodeNamespacedField @v "id"
     Versioned csppVrf <- decodeNamespacedField @v "vrf"
     Versioned csppCost <- decodeNamespacedField @v "cost"
@@ -257,6 +260,7 @@ instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePo
     Versioned csppRelays <- decodeNamespacedField @v "relays"
     Versioned csppMetadata <- decodeNamespacedField @v "metadata"
     Versioned csppAccountAddress <- decodeNamespacedField @v "account_address"
+    Versioned csppLeiosKey <- decodeNamespacedField @v "leios_key"
     pure $ Versioned CanonicalStakePoolParams {..}
 
 mkCanonicalStakePoolParams :: StakePoolParams -> CanonicalStakePoolParams
@@ -271,6 +275,7 @@ mkCanonicalStakePoolParams (StakePoolParams {..}) =
     , csppRelays = sppRelays
     , csppMetadata = sppMetadata
     , csppAccountAddress = sppAccountAddress
+    , csppLeiosKey = sppLeiosKey
     }
 
 fromCanonicalStakePoolParams :: CanonicalStakePoolParams -> StakePoolParams
@@ -285,4 +290,5 @@ fromCanonicalStakePoolParams (CanonicalStakePoolParams {..}) =
     , sppRelays = csppRelays
     , sppMetadata = csppMetadata
     , sppAccountAddress = csppAccountAddress
+    , sppLeiosKey = csppLeiosKey
     }

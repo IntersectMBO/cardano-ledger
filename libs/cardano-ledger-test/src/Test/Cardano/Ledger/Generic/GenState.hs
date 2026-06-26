@@ -971,6 +971,7 @@ genStakePoolParams sppId = do
   let sppOwners = mempty
   let sppRelays = mempty
   let sppMetadata = SNothing
+  let sppLeiosKey = SNothing
   pure StakePoolParams {..}
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,

@@ -10,6 +10,8 @@ module Cardano.Ledger.Binary.Crypto (
   decodeSigDSIGN,
   encodeSignedDSIGN,
   decodeSignedDSIGN,
+  encodePossessionProofDSIGN,
+  decodePossessionProofDSIGN,
 
   -- * KES
   encodeVerKeyKES,
@@ -32,6 +34,7 @@ module Cardano.Ledger.Binary.Crypto (
   decodeLeiosCert,
 ) where
 
+import Cardano.Crypto.DSIGN.Class (DSIGNAggregatable)
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
 import qualified Cardano.Crypto.Leios as C
@@ -74,6 +77,14 @@ encodeSignedDSIGN = fromPlainEncoding . C.encodeSignedDSIGN
 decodeSignedDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SignedDSIGN v a)
 decodeSignedDSIGN = fromPlainDecoder C.decodeSignedDSIGN
 {-# INLINE decodeSignedDSIGN #-}
+
+encodePossessionProofDSIGN :: DSIGNAggregatable v => C.PossessionProofDSIGN v -> Encoding
+encodePossessionProofDSIGN = fromPlainEncoding . C.encodePossessionProofDSIGN
+{-# INLINE encodePossessionProofDSIGN #-}
+
+decodePossessionProofDSIGN :: DSIGNAggregatable v => Decoder s (C.PossessionProofDSIGN v)
+decodePossessionProofDSIGN = fromPlainDecoder C.decodePossessionProofDSIGN
+{-# INLINE decodePossessionProofDSIGN #-}
 
 --------------------------------------------------------------------------------
 -- KES
