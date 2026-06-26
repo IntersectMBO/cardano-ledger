@@ -135,6 +135,10 @@ data PoolCert
     RetirePool !(KeyHash StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)
 
+-- | This instance is only used for conformance testing (e.g. @ExecSpecRule@).
+-- This instance uses arbitrary tags (0 and 1) that don't match the CDDL spec.
+--
+-- The actual spec-compliant CBOR encoding that follows the CDDL is handled by 'encodePoolCert'.
 instance EncCBOR PoolCert where
   encCBOR =
     encode . \case

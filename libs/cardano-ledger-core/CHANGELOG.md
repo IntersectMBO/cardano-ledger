@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Replace `CBORGroup`-derived `EncCBOR`/`DecCBOR` instances for `StakePoolParams` with manual instances
+* Add `encodeStakePoolParamsFlat` and `decodeStakePoolParamsFlat` for flat (non-nested) CBOR encoding/decoding
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class
