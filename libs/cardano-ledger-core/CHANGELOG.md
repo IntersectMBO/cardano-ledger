@@ -31,6 +31,7 @@
 * Rename `kindObject` (which returned `Value`) to `kindObjectValue`
 * Add `kindObject :: Text -> [Pair] -> Object` returning an `Aeson.Object`
 * Add `NFData (Script era)`, `ToJSON (Script era)`, `FromJSON (Script era)`, `ToJSON (NativeScript era)`, and `FromJSON (NativeScript era)` as superclass constraints to `EraScript`
+* Move `EncCBOR PoolCert` instance to `cardano-ledger-conformance`
 
 ### `cddl`
 
