@@ -238,4 +238,15 @@ allTestScripts =
         PlutusV4 -> Just V3.inputsOverlapsWithRefInputsBytes
     , "Script that succeeds only if any the inputs also appears in the reference inputs" :| []
     )
+  ,
+    ( "txInfoTranslationSpecScript"
+    , \case
+        PlutusV1 -> Just V1.txInfoTranslationSpecScriptBytes
+        PlutusV2 -> Just V2.txInfoTranslationSpecScriptBytes
+        PlutusV3 -> Just V3.txInfoTranslationSpecScriptBytes
+        PlutusV4 -> Just V3.txInfoTranslationSpecScriptBytes
+    , "Script that validates TxInfo translation by comparing expected values passed via the redeemer"
+        :| [ "Redeemer is Constr tag [payload]: tag 0 checks txInfoInputs outRefs, tag 1 checks txInfoOutputs"
+           ]
+    )
   ]
