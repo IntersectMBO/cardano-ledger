@@ -35,6 +35,8 @@
 * Add `kindObject :: Text -> [Pair] -> Object` returning an `Aeson.Object`
 * Add `NFData (Script era)`, `ToJSON (Script era)`, `FromJSON (Script era)`, `ToJSON (NativeScript era)`, and `FromJSON (NativeScript era)` as superclass constraints to `EraScript`
 * Move `EncCBOR PoolCert` instance to `cardano-ledger-conformance`
+* Remove `[Enc|Dec]CBORGRoup` instances for `StakePoolParams`
+* Add `withStakePoolParamsFlatEncoding` and `decodeStakePoolParamsFlat` for flat (non-nested) CBOR encoding/decoding
 
 ### `cddl`
 

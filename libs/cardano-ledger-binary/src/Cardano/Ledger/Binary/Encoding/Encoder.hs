@@ -149,7 +149,7 @@ withCurrentEncodingVersion f =
 enforceEncodingVersion :: Version -> Encoding -> Encoding
 enforceEncodingVersion version encoding = fromPlainEncoding (toPlainEncoding version encoding)
 
--- | Conditionoly choose the encoder newer or older deceder, depending on the current
+-- | Conditionally choose the encoder newer or older deceder, depending on the current
 -- version. Supplied version acts as a pivot.
 --
 -- =====__Example__
