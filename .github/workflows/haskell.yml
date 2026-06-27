@@ -132,7 +132,7 @@ jobs:
         | tee dependencies.txt
 
     - name: Restore cache
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       id: restore-cabal-cache
       env:
         cache-name: cache-cabal-build
@@ -159,7 +159,7 @@ jobs:
     # Save the cache of built dependencies early, so that it is available for
     # the next GHA run if the Build step fails.
     - name: Save cache
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       id: save-cabal-cache
       # Note: cache-hit will be set to true only when cache hit occurs for the
       # exact key match. For a partial key match via restore-keys or a cache
@@ -461,7 +461,7 @@ jobs:
 
     - name: Cache implicit-hie executable (gen-hie)
       id: cache-gen-hie
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ${{ env.bindir }}/gen-hie
         key: ${{ runner.os }}-cache-gen-hie
