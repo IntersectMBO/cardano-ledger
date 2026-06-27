@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
@@ -26,7 +27,14 @@ import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  EraAccounts,
+  EraStake,
+  addToBalanceAccounts,
+  adjustAccountState,
+  balanceAccountStateL,
+  isAccountRegistered,
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..))
