@@ -108,6 +108,7 @@
   - `ShelleyPpupPredFailure`
 * Add protocol version validation to `createInitialState`:
   - Validate that current protocol version is within the era's bounds
+* Add `ToJSON` and `FromJSON` instances for `ShelleyTxAuxData era`
 * Add `ToJSON` and `FromJSON` instances for `MultiSig era`
 * Export `shelleyBasedEraNativeScriptToJSON` and `shelleyBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Shelley.Scripts`
 * Change `shelleyBasedEraNativeScriptToJSON` to accept a `(NativeScript era -> Aeson.Object)` continuation as its first argument for recursive child serialisation
