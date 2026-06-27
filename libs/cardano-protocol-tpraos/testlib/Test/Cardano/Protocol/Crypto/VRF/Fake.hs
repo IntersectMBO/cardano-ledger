@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -95,6 +96,9 @@ instance SneakilyContainResult Seed where
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
+  type CertSizeVRF FakeVRF = 32
+  type SignKeySizeVRF FakeVRF = 8
+  type VerKeySizeVRF FakeVRF = 8
   algorithmNameVRF _ = "fakeVRF"
   seedSizeVRF _ = 8
 
@@ -125,9 +129,6 @@ instance VRFAlgorithm FakeVRF where
       (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
       recomputedProof = fromIntegral . byteArrayToNatural $ recomputedProofBytes
 
-  sizeVerKeyVRF _ = 8
-  sizeSignKeyVRF _ = 8
-  sizeCertVRF _ = 26
   sizeOutputVRF _ = hashSize (Proxy :: Proxy Blake2b_224)
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k

@@ -22,10 +22,6 @@ module Cardano.Ledger.Keys.Internal (
   KeyRole (..),
   HasKeyRole (..),
   asWitness,
-
-  -- * Re-exports from cardano-crypto-class
-  decodeSignedDSIGN,
-  encodeSignedDSIGN,
 ) where
 
 import Cardano.Crypto.DSIGN hiding (
@@ -41,7 +37,6 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
  )
-import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Coerce (Coercible, coerce)

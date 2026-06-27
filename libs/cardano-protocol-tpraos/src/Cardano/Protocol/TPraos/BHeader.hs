@@ -76,7 +76,6 @@ import Cardano.Ledger.Binary (
   runByteBuilder,
   serialize',
  )
-import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Core (Era)
@@ -178,7 +177,7 @@ instance Crypto c => EncCBOR (BHBody c) where
       <> encCBOR (bheaderSlotNo bhBody)
       <> encCBOR (bheaderPrev bhBody)
       <> encCBOR (bheaderVk bhBody)
-      <> encodeVerKeyVRF (bheaderVrfVk bhBody)
+      <> encCBOR (bheaderVrfVk bhBody)
       <> encCBOR (bheaderEta bhBody)
       <> encCBOR (bheaderL bhBody)
       <> encCBOR (bsize bhBody)
@@ -195,7 +194,7 @@ instance Crypto c => DecCBOR (BHBody c) where
     bheaderSlotNo <- decCBOR
     bheaderPrev <- decCBOR
     bheaderVk <- decCBOR
-    bheaderVrfVk <- decodeVerKeyVRF
+    bheaderVrfVk <- decCBOR
     bheaderEta <- decCBOR
     bheaderL <- decCBOR
     bsize <- decCBOR
@@ -232,12 +231,12 @@ instance Crypto c => EncCBOR (BHeaderRaw c) where
     let BHeaderRaw {..} = bh
      in encodeListLen 2
           <> encCBOR bhrBody
-          <> encodeSignedKES bhrSignature
+          <> encCBOR bhrSignature
 
 instance Crypto c => DecCBOR (BHeaderRaw c) where
   decCBOR =
     decodeRecordNamed "BHeaderRaw" (const 2) $
-      BHeaderRaw <$> decCBOR <*> decodeSignedKES
+      BHeaderRaw <$> decCBOR <*> decCBOR
 
 instance Crypto c => DecCBOR (Annotator (BHeaderRaw c)) where
   decCBOR = pure <$> decCBOR

@@ -1,66 +1,28 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Binary.Crypto (
-  -- * DSIGN
-  encodeVerKeyDSIGN,
-  decodeVerKeyDSIGN,
-  encodeSignKeyDSIGN,
-  decodeSignKeyDSIGN,
-  encodeSigDSIGN,
-  decodeSigDSIGN,
-  encodeSignedDSIGN,
+  encFixed,
+  decFixed,
   decodeSignedDSIGN,
-
-  -- * KES
-  encodeVerKeyKES,
-  decodeVerKeyKES,
-  encodeSigKES,
-  decodeSigKES,
-  encodeSignedKES,
-  decodeSignedKES,
-
-  -- * VRF
-  encodeVerKeyVRF,
-  decodeVerKeyVRF,
-  encodeSignKeyVRF,
-  decodeSignKeyVRF,
-  encodeCertVRF,
-  decodeCertVRF,
+  encodeSignedDSIGN,
 ) where
 
 import qualified Cardano.Crypto.DSIGN.Class as C
-import qualified Cardano.Crypto.KES.Class as C
-import qualified Cardano.Crypto.VRF.Class as C
-import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, fromPlainDecoder)
+import Cardano.Crypto.FixedSizeBytes (FixedSizeBytes (..))
+import Cardano.Ledger.Binary.Decoding.Decoder (
+  Decoder,
+  DecoderError (..),
+  cborError,
+  decodeBytes,
+  fromPlainDecoder,
+ )
 import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, fromPlainEncoding)
-
---------------------------------------------------------------------------------
--- DSIGN
---------------------------------------------------------------------------------
-
-encodeVerKeyDSIGN :: C.DSIGNAlgorithm v => C.VerKeyDSIGN v -> Encoding
-encodeVerKeyDSIGN = fromPlainEncoding . C.encodeVerKeyDSIGN
-{-# INLINE encodeVerKeyDSIGN #-}
-
-decodeVerKeyDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.VerKeyDSIGN v)
-decodeVerKeyDSIGN = fromPlainDecoder C.decodeVerKeyDSIGN
-{-# INLINE decodeVerKeyDSIGN #-}
-
-encodeSignKeyDSIGN :: C.DSIGNAlgorithm v => C.SignKeyDSIGN v -> Encoding
-encodeSignKeyDSIGN = fromPlainEncoding . C.encodeSignKeyDSIGN
-{-# INLINE encodeSignKeyDSIGN #-}
-
-decodeSignKeyDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SignKeyDSIGN v)
-decodeSignKeyDSIGN = fromPlainDecoder C.decodeSignKeyDSIGN
-{-# INLINE decodeSignKeyDSIGN #-}
-
-encodeSigDSIGN :: C.DSIGNAlgorithm v => C.SigDSIGN v -> Encoding
-encodeSigDSIGN = fromPlainEncoding . C.encodeSigDSIGN
-{-# INLINE encodeSigDSIGN #-}
-
-decodeSigDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SigDSIGN v)
-decodeSigDSIGN = fromPlainDecoder C.decodeSigDSIGN
-{-# INLINE decodeSigDSIGN #-}
+import qualified Data.ByteString as BS
+import Data.Proxy (Proxy (..))
+import qualified Data.Text as T
+import Data.Typeable (typeRep)
+import GHC.TypeLits (natVal)
 
 encodeSignedDSIGN :: C.DSIGNAlgorithm v => C.SignedDSIGN v a -> Encoding
 encodeSignedDSIGN = fromPlainEncoding . C.encodeSignedDSIGN
@@ -70,58 +32,18 @@ decodeSignedDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SignedDSIGN v a)
 decodeSignedDSIGN = fromPlainDecoder C.decodeSignedDSIGN
 {-# INLINE decodeSignedDSIGN #-}
 
---------------------------------------------------------------------------------
--- KES
---------------------------------------------------------------------------------
+encFixed :: FixedSizeBytes a => a -> Encoding
+encFixed = fromPlainEncoding . encodeFixed
 
-encodeVerKeyKES :: C.KESAlgorithm v => C.VerKeyKES v -> Encoding
-encodeVerKeyKES = fromPlainEncoding . C.encodeVerKeyKES
-{-# INLINE encodeVerKeyKES #-}
-
-decodeVerKeyKES :: C.KESAlgorithm v => Decoder s (C.VerKeyKES v)
-decodeVerKeyKES = fromPlainDecoder C.decodeVerKeyKES
-{-# INLINE decodeVerKeyKES #-}
-
-encodeSigKES :: C.KESAlgorithm v => C.SigKES v -> Encoding
-encodeSigKES = fromPlainEncoding . C.encodeSigKES
-{-# INLINE encodeSigKES #-}
-
-decodeSigKES :: C.KESAlgorithm v => Decoder s (C.SigKES v)
-decodeSigKES = fromPlainDecoder C.decodeSigKES
-{-# INLINE decodeSigKES #-}
-
-encodeSignedKES :: C.KESAlgorithm v => C.SignedKES v a -> Encoding
-encodeSignedKES = fromPlainEncoding . C.encodeSignedKES
-{-# INLINE encodeSignedKES #-}
-
-decodeSignedKES :: C.KESAlgorithm v => Decoder s (C.SignedKES v a)
-decodeSignedKES = fromPlainDecoder C.decodeSignedKES
-{-# INLINE decodeSignedKES #-}
-
---------------------------------------------------------------------------------
--- VRF
---------------------------------------------------------------------------------
-
-encodeVerKeyVRF :: C.VRFAlgorithm v => C.VerKeyVRF v -> Encoding
-encodeVerKeyVRF = fromPlainEncoding . C.encodeVerKeyVRF
-{-# INLINE encodeVerKeyVRF #-}
-
-decodeVerKeyVRF :: C.VRFAlgorithm v => Decoder s (C.VerKeyVRF v)
-decodeVerKeyVRF = fromPlainDecoder C.decodeVerKeyVRF
-{-# INLINE decodeVerKeyVRF #-}
-
-encodeSignKeyVRF :: C.VRFAlgorithm v => C.SignKeyVRF v -> Encoding
-encodeSignKeyVRF = fromPlainEncoding . C.encodeSignKeyVRF
-{-# INLINE encodeSignKeyVRF #-}
-
-decodeSignKeyVRF :: C.VRFAlgorithm v => Decoder s (C.SignKeyVRF v)
-decodeSignKeyVRF = fromPlainDecoder C.decodeSignKeyVRF
-{-# INLINE decodeSignKeyVRF #-}
-
-encodeCertVRF :: C.VRFAlgorithm v => C.CertVRF v -> Encoding
-encodeCertVRF = fromPlainEncoding . C.encodeCertVRF
-{-# INLINE encodeCertVRF #-}
-
-decodeCertVRF :: C.VRFAlgorithm v => Decoder s (C.CertVRF v)
-decodeCertVRF = fromPlainDecoder C.decodeCertVRF
-{-# INLINE decodeCertVRF #-}
+decFixed :: forall a s. FixedSizeBytes a => Decoder s a
+decFixed = do
+  let p = Proxy @a
+  bs <- decodeBytes
+  case rawDecodeFixed bs of
+    Just vk -> pure vk
+    Nothing ->
+      cborError $
+        DecoderErrorSizeMismatch
+          (T.pack . show $ typeRep p)
+          (fromIntegral . natVal $ Proxy @(FixedSize a))
+          (BS.length bs)
