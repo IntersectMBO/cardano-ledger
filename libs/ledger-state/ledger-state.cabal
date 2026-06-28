@@ -52,7 +52,7 @@ library
     deepseq,
     foldl,
     microlens,
-    persistent ^>=2.18,
+    persistent,
     persistent-sqlite,
     prettyprinter,
     text,
