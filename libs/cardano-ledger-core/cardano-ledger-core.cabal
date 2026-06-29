@@ -110,7 +110,7 @@ library
   default-language: Haskell2010
   build-depends:
     FailT,
-    aeson >=2,
+    aeson >=2.3,
     base >=4.18 && <5,
     base-deriving-via,
     base16-bytestring,

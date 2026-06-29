@@ -156,7 +156,7 @@ test-suite cardano-ledger-shelley-test
       -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck,
-    aeson >=2,
+    aeson >=2.3,
     base,
     base16-bytestring,
     binary,

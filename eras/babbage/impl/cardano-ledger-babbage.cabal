@@ -86,7 +86,7 @@ library
     ghc-options:
       -Wno-pattern-namespace-specifier
   build-depends:
-    aeson >=2.2,
+    aeson >=2.3,
     base >=4.18 && <5,
     bytestring,
     cardano-base >=0.1.4,

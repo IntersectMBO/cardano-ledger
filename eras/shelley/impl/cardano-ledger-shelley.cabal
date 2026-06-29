@@ -114,7 +114,7 @@ library
       -Wno-pattern-namespace-specifier
   build-depends:
     FailT,
-    aeson >=2,
+    aeson >=2.3,
     base >=4.18 && <5,
     bytestring,
     cardano-base >=0.1.1.0,
