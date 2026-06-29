@@ -633,8 +633,6 @@ decodeRecordNamedT ::
   m (Decoder s) a
 decodeRecordNamedT name getRecordSize decoder =
   decodeListLikeT name decoder $ \result n ->
-    -- REVIEW: Is n really the requested/expected? It's the one we decode and
-    -- thus n is rather the actual/found.
     lift $ matchSize ("Record " <> name) n (getRecordSize result)
 {-# INLINE decodeRecordNamedT #-}
 
