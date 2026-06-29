@@ -61,16 +61,17 @@ certificate =
 header = [header_body, body_signature : kes_signature]
 
 header_body = 
-  [ block_number      : block_number
-  , slot              : slot        
-  , prev_hash         : hash32/ nil 
-  , issuer_vkey       : vkey        
-  , vrf_vkey          : vrf_vkey    
-  , vrf_result        : vrf_cert    
-  , block_body_size   : uint .size 4
-  , block_body_hash   : hash32       ; merkle triple root
-  , operational_cert
-  , protocol_version
+  [   block_number        : block_number
+  ,   slot                : slot        
+  ,   prev_hash           : hash32/ nil 
+  ,   issuer_vkey         : vkey        
+  ,   vrf_vkey            : vrf_vkey    
+  ,   vrf_result          : vrf_cert    
+  ,   block_body_size     : uint .size 4
+  ,   block_body_hash     : hash32       ; merkle triple root
+  ,   operational_cert  
+  ,   protocol_version  
+  , ? leios_announcement
   ]
 
 
@@ -105,6 +106,8 @@ signature = bytes .size 64
 protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
+
+leios_announcement = (announced_eb : hash32, announced_eb_size : uint .size 4)
 
 transaction_body = 
   {   0  : set<transaction_input>         
