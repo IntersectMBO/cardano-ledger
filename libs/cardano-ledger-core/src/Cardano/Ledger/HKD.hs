@@ -16,11 +16,8 @@ module Cardano.Ledger.HKD (
   HKDFunctor (..),
   NoUpdate (..),
   HKDApplicative (..),
-)
-where
-#if __GLASGOW_HASKELL__ < 906
-import Control.Applicative (liftA2)
-#endif
+) where
+
 import Control.DeepSeq (NFData)
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe (..))

@@ -1,7 +1,6 @@
 module Cardano.Crypto (
   module X,
-)
-where
+) where
 
 import Cardano.Crypto.Hashing as X
 import Cardano.Crypto.ProtocolMagic as X

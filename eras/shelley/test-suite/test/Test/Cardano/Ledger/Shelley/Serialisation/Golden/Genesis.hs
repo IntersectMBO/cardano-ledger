@@ -11,25 +11,23 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
   -- * Individual properties
   golden_json_ShelleyGenesis,
   golden_cbor_ShelleyGenesis,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (knownNonZeroBounded, textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
-import Cardano.Ledger.Keys (KeyRoleVRF (..), VRFVerKeyHash (..), hashKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad
 import Data.Aeson hiding (Encoding)
-import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.MemPack.Buffer (byteArrayFromShortByteString)
 import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -53,7 +51,7 @@ goldenTestJSON :: ToJSON a => a -> FilePath -> Assertion
 goldenTestJSON actual expectedFile =
   case eitherDecode' (encode actual) of
     Left err -> error err
-    Right (val :: Value) -> do
+    Right (val :: ShelleyGenesis) -> do
       expected <- either error id <$> eitherDecodeFileStrict expectedFile
       val @?= expected
 
@@ -94,7 +92,7 @@ golden_cbor_ShelleyGenesis =
         . TkInt 8000000 -- sgSlotLength
         . TkInt 16991 -- sgUpdateQuorum
         . TkInt 71 -- sgMaxLovelaceSupply
-        . TkListLen 18 -- sgProtocolParams
+        . TkListLen 17 -- sgProtocolParams
         . TkInt 0
         . TkInt 0
         . TkInt 239857
@@ -122,6 +120,7 @@ golden_cbor_ShelleyGenesis =
         . TkInt 1000
         . TkListLen 1
         . TkInt 0
+        . TkListLen 2
         . TkInt 2
         . TkInt 0
         . TkInt 0
@@ -213,17 +212,17 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis
+    genesisVerKeyHash :: L.KeyHash L.GenesisRole
     genesisVerKeyHash = L.KeyHash "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate
+    delegVerKeyHash :: L.KeyHash L.GenesisDelegate
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
+    delegVrfKeyHash :: VRFVerKeyHash GenDelegVRF
     delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
-    initialFundedAddress :: L.Addr
+    initialFundedAddress :: Addr
     initialFundedAddress =
-      L.Addr
+      Addr
         L.Testnet
         paymentCredential
         (L.StakeRefBase stakingCredential)
@@ -247,30 +246,30 @@ exampleShelleyGenesis =
         , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
         , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
-    poolParams :: L.PoolParams
-    poolParams =
-      L.PoolParams
-        { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
-        , L.ppVrf =
+    stakePoolParams :: L.StakePoolParams
+    stakePoolParams =
+      L.StakePoolParams
+        { L.sppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
+        , L.sppVrf =
             hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)
-        , L.ppPledge = L.Coin 1
-        , L.ppCost = L.Coin 5
-        , L.ppMargin = unsafeBoundRational 0.25
-        , L.ppRewardAccount = L.RewardAccount L.Testnet Cast.aliceSHK
-        , L.ppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
-        , L.ppRelays = relays
-        , L.ppMetadata =
+        , L.sppPledge = L.Coin 1
+        , L.sppCost = L.Coin 5
+        , L.sppMargin = unsafeBoundRational 0.25
+        , L.sppAccountAddress = AccountAddress L.Testnet (AccountId Cast.aliceSHK)
+        , L.sppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
+        , L.sppRelays = relays
+        , L.sppMetadata =
             L.SJust $
               L.PoolMetadata
                 { L.pmUrl = fromJust $ textToUrl 64 "best.pool.com"
-                , L.pmHash = BS.pack "100ab{}100ab{}"
+                , L.pmHash = byteArrayFromShortByteString "100ab{}100ab{}"
                 }
         }
     staking =
       ShelleyGenesisStaking
         { sgsPools =
             LM.ListMap
-              [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", poolParams)
+              [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", stakePoolParams)
               ]
         , sgsStake =
             LM.ListMap

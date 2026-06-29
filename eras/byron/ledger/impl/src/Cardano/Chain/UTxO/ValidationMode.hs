@@ -1,7 +1,6 @@
 module Cardano.Chain.UTxO.ValidationMode (
   TxValidationMode (..),
-)
-where
+) where
 
 import Cardano.Prelude
 

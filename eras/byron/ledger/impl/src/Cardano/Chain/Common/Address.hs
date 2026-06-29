@@ -17,7 +17,6 @@ module Cardano.Chain.Common.Address (
   -- * Formatting
   addressF,
   addressDetailedF,
-  decCBORTextAddress,
 
   -- * Spending data checks
   checkAddrSpendingData,
@@ -43,9 +42,11 @@ module Cardano.Chain.Common.Address (
   makeVerKeyAddress,
   makeVerKeyHdwAddress,
   makeRedeemAddress,
-)
-where
+) where
 
+import qualified Cardano.Binary as Plain (
+  Encoding,
+ )
 import Cardano.Chain.Common.AddrAttributes (
   AddrAttributes (..),
   HDAddressPayload,
@@ -154,21 +155,19 @@ data Address = Address
 instance Aeson.ToJSON Address
 
 instance ToCBOR Address where
-  toCBOR = toByronCBOR
-
-instance FromCBOR Address where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Address where
-  encCBOR addr =
+  toCBOR addr =
     encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
-
   encodedSizeExpr size pxy =
     encodedCrcProtectedSizeExpr size
       $ (,,)
       <$> (addrRoot <$> pxy)
       <*> (addrAttributes <$> pxy)
       <*> (addrType <$> pxy)
+
+instance FromCBOR Address where
+  fromCBOR = fromByronCBOR
+
+instance EncCBOR Address
 
 instance DecCBOR Address where
   decCBOR = do
@@ -187,13 +186,13 @@ instance Monad m => ToObjectKey m Address where
   toObjectKey = pure . toJSString . formatToString addressF
 
 instance MonadError SchemaError m => FromObjectKey m Address where
-  fromObjectKey = fmap Just . parseJSString decCBORTextAddress . JSString
+  fromObjectKey = fmap Just . parseJSString decodeAddressBase58 . JSString
 
 instance Monad m => ToJSON m Address where
   toJSON = fmap JSString . toObjectKey
 
 instance MonadError SchemaError m => FromJSON m Address where
-  fromJSON = parseJSString decCBORTextAddress
+  fromJSON = parseJSString decodeAddressBase58
 
 instance HeapWords Address where
   heapWords (Address root attrs typ) = heapWords3 root attrs typ
@@ -230,10 +229,9 @@ instance B.Buildable Address where
 addressF :: Format r (Address -> r)
 addressF = build
 
--- | A function which decodes base58-encoded 'Address'
-{-# DEPRECATED decCBORTextAddress "Use decodeAddressBase58 instead" #-}
-decCBORTextAddress :: Text -> Either DecoderError Address
-decCBORTextAddress = decCBORAddress . encodeUtf8
+-- | Decode an address from Base58 encoded Text.
+decodeAddressBase58 :: Text -> Either DecoderError Address
+decodeAddressBase58 = decCBORAddress . encodeUtf8
   where
     decCBORAddress :: ByteString -> Either DecoderError Address
     decCBORAddress bs = do
@@ -243,10 +241,6 @@ decCBORTextAddress = decCBORAddress . encodeUtf8
               "Invalid base58 representation of address"
       dbs <- maybeToRight base58Err $ decodeBase58 addrAlphabet bs
       decodeFull' byronProtVer dbs
-
--- | Decode an address from Base58 encoded Text.
-decodeAddressBase58 :: Text -> Either DecoderError Address
-decodeAddressBase58 = decCBORTextAddress
 
 -- | Encode an address to Text.
 -- `decodeAddressBase58 (encodeAddressBase58 x) === Right x`
@@ -360,6 +354,6 @@ encCBORAddr addr =
     <> encCBOR
       (addrType addr)
 
-encCBORAddrCRC32 :: Address -> Encoding
+encCBORAddrCRC32 :: Address -> Plain.Encoding
 encCBORAddrCRC32 addr =
   encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)

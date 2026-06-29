@@ -30,7 +30,7 @@ benchTxOut :: Benchmark
 benchTxOut =
   let ada :: MaryValue
       ada = inject (Coin 100)
-      key :: Int -> Credential 'Payment
+      key :: Int -> Credential Payment
       key = KeyHashObj . payAddr28
       stake :: StakeReference
       stake = StakeRefBase (KeyHashObj stakeAddr28)
@@ -136,7 +136,7 @@ serializeTxOutAlonzoBench count name mkTxOuts =
   where
     v = eraProtVerHigh @AlonzoEra
 
-payAddr28 :: Int -> KeyHash 'Payment
+payAddr28 :: Int -> KeyHash Payment
 payAddr28 n =
   let i = n `mod` 10
       prefix = T.pack (take 6 (cycle (show i)))
@@ -145,7 +145,7 @@ payAddr28 n =
           hashFromTextAsHex
             (prefix <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e")
 
-stakeAddr28 :: KeyHash 'Staking
+stakeAddr28 :: KeyHash Staking
 stakeAddr28 =
   KeyHash $
     fromJust $

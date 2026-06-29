@@ -40,9 +40,9 @@ prop_sign = property $ do
   (vk, sk) <- forAll genKeypair
   a <- forAll genData
 
-  assert $
-    verifySignature encCBOR Dummy.protocolMagicId SignForTestingOnly vk a $
-      sign Dummy.protocolMagicId SignForTestingOnly sk a
+  assert
+    $ verifySignature encCBOR Dummy.protocolMagicId SignForTestingOnly vk a
+    $ sign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when the wrong 'VerificationKey' is used
 prop_signDifferentKey :: Property

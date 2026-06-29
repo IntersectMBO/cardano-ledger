@@ -20,15 +20,14 @@ module Cardano.Ledger.Shelley.Rules.Ledgers (
   ShelleyLedgersPredFailure (..),
   ShelleyLedgersEvent (..),
   PredicateFailure,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
-import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -64,7 +63,7 @@ data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo
   , ledgersEpochNo :: EpochNo
   , ledgersPp :: PParams era
-  , ledgersAccount :: AccountState
+  , ledgersAccount :: ChainAccountState
   }
   deriving (Generic)
 
@@ -74,12 +73,7 @@ deriving instance Show (PParamsHKD Identity era) => Show (ShelleyLedgersEnv era)
 
 instance NFData (PParamsHKD Identity era) => NFData (ShelleyLedgersEnv era)
 
-instance
-  ( Era era
-  , EncCBOR (PParamsHKD Identity era)
-  ) =>
-  EncCBOR (ShelleyLedgersEnv era)
-  where
+instance EraPParams era => EncCBOR (ShelleyLedgersEnv era) where
   encCBOR x@(LedgersEnv _ _ _ _) =
     let LedgersEnv {..} = x
      in encode $
@@ -129,6 +123,11 @@ instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure ShelleyEra where
 
 newtype ShelleyLedgersEvent era
   = LedgerEvent (Event (EraRule "LEDGER" era))
+  deriving (Generic)
+
+deriving instance
+  Eq (Event (EraRule "LEDGER" era)) =>
+  Eq (ShelleyLedgersEvent era)
 
 deriving stock instance
   ( Era era
@@ -169,13 +168,13 @@ instance
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)
   where
   type State (ShelleyLEDGERS era) = LedgerState era
-  type Signal (ShelleyLEDGERS era) = Seq (Tx era)
+  type Signal (ShelleyLEDGERS era) = Seq (Tx TopTx era)
   type Environment (ShelleyLEDGERS era) = ShelleyLedgersEnv era
   type BaseM (ShelleyLEDGERS era) = ShelleyBase
   type PredicateFailure (ShelleyLEDGERS era) = ShelleyLedgersPredFailure era
@@ -188,7 +187,7 @@ ledgersTransition ::
   ( Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   TransitionRule (ShelleyLEDGERS era)
 ledgersTransition = do

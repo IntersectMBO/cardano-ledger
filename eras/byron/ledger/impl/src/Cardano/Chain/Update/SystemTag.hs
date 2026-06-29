@@ -6,16 +6,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Update.SystemTag (
   SystemTag (..),
   SystemTagError (..),
   checkSystemTag,
   systemTagMaxLength,
-  osHelper,
-  archHelper,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -36,8 +34,6 @@ import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON, ToJSONKey)
 import Data.Data (Data)
 import qualified Data.Text as T
-import Distribution.System (Arch (..), OS (..))
-import Distribution.Text (display)
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
@@ -102,7 +98,7 @@ instance DecCBOR SystemTagError where
     case tag of
       0 -> checkSize 2 >> SystemTagNotAscii <$> decCBOR
       1 -> checkSize 2 >> SystemTagTooLong <$> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "SystemTagError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "SystemTagError" $ fromIntegral @Word8 @Word tag
 
 instance B.Buildable SystemTagError where
   build = \case
@@ -119,20 +115,3 @@ checkSystemTag (SystemTag tag)
   | T.length tag > systemTagMaxLength = throwError $ SystemTagTooLong tag
   | T.any (not . isAscii) tag = throwError $ SystemTagNotAscii tag
   | otherwise = pure ()
-
--- | Helper to turn an @OS@ into a @Text@ compatible with the @systemTag@
---   previously used in 'configuration.yaml'
-osHelper :: OS -> Text
-osHelper sys = case sys of
-  Windows -> "win"
-  OSX -> "macos"
-  Linux -> "linux"
-  _ -> toS $ display sys
-
--- | Helper to turn an @Arch@ into a @Text@ compatible with the @systemTag@
---   previously used in 'configuration.yaml'
-archHelper :: Arch -> Text
-archHelper archt = case archt of
-  I386 -> "32"
-  X86_64 -> "64"
-  _ -> toS $ display archt

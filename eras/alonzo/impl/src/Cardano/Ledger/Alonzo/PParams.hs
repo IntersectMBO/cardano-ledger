@@ -56,10 +56,19 @@ module Cardano.Ledger.Alonzo.PParams (
   OrdExUnits (..),
   CoinPerWord (..),
 
-  -- * JSON helpers
-  alonzoCommonPParamsHKDPairs,
-)
-where
+  -- * PParam
+  ppCollateralPercentage,
+  ppCostModels,
+  ppMaxBlockExUnits,
+  ppMaxCollateralInputs,
+  ppMaxTxExUnits,
+  ppMaxValSize,
+  ppPrices,
+
+  -- * Deprecated
+  appMinFeeA,
+  appMinFeeB,
+) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.BaseTypes (
@@ -68,42 +77,22 @@ import Cardano.Ledger.BaseTypes (
   Nonce (NeutralNonce),
   StrictMaybe (..),
   UnitInterval,
-  isSNothing,
  )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
-  decCBORGroup,
-  decodeRecordNamed,
-  encCBORGroup,
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
-  encodeListLen,
   encodeMapLen,
   encodeNull,
   encodePreEncoded,
-  listLen,
   serialize',
  )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Density (..),
-  Encode (..),
-  Field (..),
-  Wrapped (..),
-  decode,
-  encode,
-  field,
-  invalidField,
-  (!>),
- )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
@@ -112,6 +101,7 @@ import Cardano.Ledger.Plutus.CostModels (
   emptyCostModels,
   getCostModelLanguage,
   getCostModelParams,
+  mkCostModels,
  )
 import Cardano.Ledger.Plutus.ExUnits (
   ExUnits (..),
@@ -119,25 +109,10 @@ import Cardano.Ledger.Plutus.ExUnits (
   zipSemiExUnits,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.PParams (
-  ShelleyPParams (..),
-  shelleyCommonPParamsHKDPairs,
-  shelleyCommonPParamsHKDPairsV6,
-  shelleyCommonPParamsHKDPairsV8,
- )
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import Cardano.Ledger.Shelley.PParams
 import Control.DeepSeq (NFData)
-import Data.Aeson as Aeson (
-  FromJSON (parseJSON),
-  Key,
-  KeyValue ((.=)),
-  ToJSON (..),
-  object,
-  pairs,
-  withObject,
-  (.!=),
-  (.:),
- )
-import qualified Data.Aeson.Types as Aeson
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -153,7 +128,6 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 class EraPParams era => AlonzoEraPParams era where
   hkdCoinsPerUTxOWordL ::
@@ -168,93 +142,93 @@ class EraPParams era => AlonzoEraPParams era where
 
   hkdMaxBlockExUnitsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f ExUnits)
 
-  hkdMaxValSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxValSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
 
-  hkdCollateralPercentageL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdCollateralPercentageL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
-  hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
 ppCoinsPerUTxOWordL ::
   forall era.
   (AlonzoEraPParams era, ExactEra AlonzoEra era) =>
   Lens' (PParams era) CoinPerWord
-ppCoinsPerUTxOWordL = ppLens . hkdCoinsPerUTxOWordL @era @Identity
+ppCoinsPerUTxOWordL = ppLensHKD . hkdCoinsPerUTxOWordL @era @Identity
 
 ppCostModelsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) CostModels
-ppCostModelsL = ppLens . hkdCostModelsL @era @Identity
+ppCostModelsL = ppLensHKD . hkdCostModelsL @era @Identity
 
 ppPricesL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Prices
-ppPricesL = ppLens . hkdPricesL @era @Identity
+ppPricesL = ppLensHKD . hkdPricesL @era @Identity
 
 ppMaxTxExUnitsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) ExUnits
-ppMaxTxExUnitsL = ppLens . hkdMaxTxExUnitsL @era @Identity
+ppMaxTxExUnitsL = ppLensHKD . hkdMaxTxExUnitsL @era @Identity
 
 ppMaxBlockExUnitsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) ExUnits
-ppMaxBlockExUnitsL = ppLens . hkdMaxBlockExUnitsL @era @Identity
+ppMaxBlockExUnitsL = ppLensHKD . hkdMaxBlockExUnitsL @era @Identity
 
-ppMaxValSizeL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
-ppMaxValSizeL = ppLens . hkdMaxValSizeL @era @Identity
+ppMaxValSizeL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Word32
+ppMaxValSizeL = ppLensHKD . hkdMaxValSizeL @era @Identity
 
-ppCollateralPercentageL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
-ppCollateralPercentageL = ppLens . hkdCollateralPercentageL @era @Identity
+ppCollateralPercentageL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Word16
+ppCollateralPercentageL = ppLensHKD . hkdCollateralPercentageL @era @Identity
 
-ppMaxCollateralInputsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
-ppMaxCollateralInputsL = ppLens . hkdMaxCollateralInputsL @era @Identity
+ppMaxCollateralInputsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Word16
+ppMaxCollateralInputsL = ppLensHKD . hkdMaxCollateralInputsL @era @Identity
 
 ppuCoinsPerUTxOWordL ::
   forall era.
   (AlonzoEraPParams era, ExactEra AlonzoEra era) =>
   Lens' (PParamsUpdate era) (StrictMaybe CoinPerWord)
-ppuCoinsPerUTxOWordL = ppuLens . hkdCoinsPerUTxOWordL @era @StrictMaybe
+ppuCoinsPerUTxOWordL = ppuLensHKD . hkdCoinsPerUTxOWordL @era @StrictMaybe
 
 ppuCostModelsL ::
   forall era.
   AlonzoEraPParams era =>
   Lens' (PParamsUpdate era) (StrictMaybe CostModels)
-ppuCostModelsL = ppuLens . hkdCostModelsL @era @StrictMaybe
+ppuCostModelsL = ppuLensHKD . hkdCostModelsL @era @StrictMaybe
 
 ppuPricesL ::
   forall era.
   AlonzoEraPParams era =>
   Lens' (PParamsUpdate era) (StrictMaybe Prices)
-ppuPricesL = ppuLens . hkdPricesL @era @StrictMaybe
+ppuPricesL = ppuLensHKD . hkdPricesL @era @StrictMaybe
 
 ppuMaxTxExUnitsL ::
   forall era.
   AlonzoEraPParams era =>
   Lens' (PParamsUpdate era) (StrictMaybe ExUnits)
-ppuMaxTxExUnitsL = ppuLens . hkdMaxTxExUnitsL @era @StrictMaybe
+ppuMaxTxExUnitsL = ppuLensHKD . hkdMaxTxExUnitsL @era @StrictMaybe
 
 ppuMaxBlockExUnitsL ::
   forall era.
   AlonzoEraPParams era =>
   Lens' (PParamsUpdate era) (StrictMaybe ExUnits)
-ppuMaxBlockExUnitsL = ppuLens . hkdMaxBlockExUnitsL @era @StrictMaybe
+ppuMaxBlockExUnitsL = ppuLensHKD . hkdMaxBlockExUnitsL @era @StrictMaybe
 
 ppuMaxValSizeL ::
   forall era.
   AlonzoEraPParams era =>
-  Lens' (PParamsUpdate era) (StrictMaybe Natural)
-ppuMaxValSizeL = ppuLens . hkdMaxValSizeL @era @StrictMaybe
+  Lens' (PParamsUpdate era) (StrictMaybe Word32)
+ppuMaxValSizeL = ppuLensHKD . hkdMaxValSizeL @era @StrictMaybe
 
 ppuCollateralPercentageL ::
   forall era.
   AlonzoEraPParams era =>
-  Lens' (PParamsUpdate era) (StrictMaybe Natural)
-ppuCollateralPercentageL = ppuLens . hkdCollateralPercentageL @era @StrictMaybe
+  Lens' (PParamsUpdate era) (StrictMaybe Word16)
+ppuCollateralPercentageL = ppuLensHKD . hkdCollateralPercentageL @era @StrictMaybe
 
 ppuMaxCollateralInputsL ::
   forall era.
   AlonzoEraPParams era =>
-  Lens' (PParamsUpdate era) (StrictMaybe Natural)
-ppuMaxCollateralInputsL = ppuLens . hkdMaxCollateralInputsL @era @StrictMaybe
+  Lens' (PParamsUpdate era) (StrictMaybe Word16)
+ppuMaxCollateralInputsL = ppuLensHKD . hkdMaxCollateralInputsL @era @StrictMaybe
 
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
 data AlonzoPParams f era = AlonzoPParams
-  { appMinFeeA :: !(HKD f Coin)
+  { appTxFeePerByte :: !(HKD f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
-  , appMinFeeB :: !(HKD f Coin)
+  , appTxFeeFixed :: !(HKD f (CompactForm Coin))
   -- ^ The constant factor for the minimum fee calculation
   , appMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
@@ -262,9 +236,9 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Maximal transaction size
   , appMaxBHSize :: !(HKD f Word16)
   -- ^ Maximal block header size
-  , appKeyDeposit :: !(HKD f Coin)
+  , appKeyDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a key registration deposit
-  , appPoolDeposit :: !(HKD f Coin)
+  , appPoolDeposit :: !(HKD f (CompactForm Coin))
   -- ^ The amount of a pool registration deposit
   , appEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
@@ -285,7 +259,7 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Extra entropy
   , appProtocolVersion :: !(HKD f BT.ProtVer)
   -- ^ Protocol version
-  , appMinPoolCost :: !(HKD f Coin)
+  , appMinPoolCost :: !(HKD f (CompactForm Coin))
   -- ^ Minimum Stake Pool Cost
   , -- new/updated for alonzo
 
@@ -299,15 +273,23 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ Max total script execution resources units allowed per tx
   , appMaxBlockExUnits :: !(HKD f OrdExUnits)
   -- ^ Max total script execution resources units allowed per block
-  , appMaxValSize :: !(HKD f Natural)
+  , appMaxValSize :: !(HKD f Word32)
   -- ^ Max size of a Value in an output
-  , appCollateralPercentage :: !(HKD f Natural)
+  , appCollateralPercentage :: !(HKD f Word16)
   -- ^ Percentage of the txfee which must be provided as collateral when
   -- including non-native scripts.
-  , appMaxCollateralInputs :: !(HKD f Natural)
+  , appMaxCollateralInputs :: !(HKD f Word16)
   -- ^ Maximum number of collateral inputs allowed in a transaction
   }
   deriving (Generic)
+
+appMinFeeA :: forall era f. HKDFunctor f => AlonzoPParams f era -> HKD f Coin
+appMinFeeA p = appTxFeePerByte p ^. hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
+{-# DEPRECATED appMinFeeA "In favor of `appTxFeePerByte`" #-}
+
+appMinFeeB :: forall era f. HKDFunctor f => AlonzoPParams f era -> HKD f Coin
+appMinFeeB p = appTxFeeFixed p ^. hkdPartialCompactCoinL @f
+{-# DEPRECATED appMinFeeB "In favor of `appTxFeeFixed`" #-}
 
 deriving instance Eq (AlonzoPParams Identity era)
 
@@ -339,14 +321,15 @@ instance EraPParams AlonzoEra where
 
   upgradePParamsHKD = upgradeAlonzoPParams
   downgradePParamsHKD = downgradeAlonzoPParams
+  emptyUpgradePParamsUpdate = emptyAlonzoUpgradePParamsUpdate
 
-  hkdMinFeeAL = lens appMinFeeA $ \pp x -> pp {appMinFeeA = x}
-  hkdMinFeeBL = lens appMinFeeB $ \pp x -> pp {appMinFeeB = x}
+  hkdTxFeePerByteL = lens appTxFeePerByte $ \pp x -> pp {appTxFeePerByte = x}
+  hkdTxFeeFixedCompactL = lens appTxFeeFixed $ \pp x -> pp {appTxFeeFixed = x}
   hkdMaxBBSizeL = lens appMaxBBSize $ \pp x -> pp {appMaxBBSize = x}
   hkdMaxTxSizeL = lens appMaxTxSize $ \pp x -> pp {appMaxTxSize = x}
   hkdMaxBHSizeL = lens appMaxBHSize $ \pp x -> pp {appMaxBHSize = x}
-  hkdKeyDepositL = lens appKeyDeposit $ \pp x -> pp {appKeyDeposit = x}
-  hkdPoolDepositL = lens appPoolDeposit $ \pp x -> pp {appPoolDeposit = x}
+  hkdKeyDepositCompactL = lens appKeyDeposit $ \pp x -> pp {appKeyDeposit = x}
+  hkdPoolDepositCompactL = lens appPoolDeposit $ \pp x -> pp {appPoolDeposit = x}
   hkdEMaxL = lens appEMax $ \pp x -> pp {appEMax = x}
   hkdNOptL = lens appNOpt $ \pp x -> pp {appNOpt = x}
   hkdA0L = lens appA0 $ \pp x -> pp {appA0 = x}
@@ -355,8 +338,35 @@ instance EraPParams AlonzoEra where
   hkdDL = lens appD $ \pp x -> pp {appD = x}
   hkdExtraEntropyL = lens appExtraEntropy $ \pp x -> pp {appExtraEntropy = x}
   hkdProtocolVersionL = lens appProtocolVersion $ \pp x -> pp {appProtocolVersion = x}
-  hkdMinUTxOValueL = notSupportedInThisEraL
-  hkdMinPoolCostL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
+  hkdMinUTxOValueCompactL = notSupportedInThisEraL
+  hkdMinPoolCostCompactL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
+
+  eraPParams =
+    [ ppTxFeePerByte
+    , ppTxFeeFixed
+    , ppMaxBBSize
+    , ppMaxTxSize
+    , ppMaxBHSize
+    , ppKeyDeposit
+    , ppPoolDeposit
+    , ppEMax
+    , ppNOpt
+    , ppA0
+    , ppRho
+    , ppTau
+    , ppD
+    , ppExtraEntropy
+    , ppProtocolVersion
+    , ppMinPoolCost
+    , ppCoinsPerUTxOWord
+    , ppCostModels
+    , ppPrices
+    , ppMaxTxExUnits
+    , ppMaxBlockExUnits
+    , ppMaxValSize
+    , ppCollateralPercentage
+    , ppMaxCollateralInputs
+    ]
 
 instance AlonzoEraPParams AlonzoEra where
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
@@ -388,115 +398,13 @@ instance EraGov AlonzoEra where
 
   obligationGovState = const mempty
 
-instance Era era => EncCBOR (AlonzoPParams Identity era) where
-  encCBOR AlonzoPParams {..} =
-    encodeListLen (23 + listLen appProtocolVersion)
-      <> encCBOR appMinFeeA
-      <> encCBOR appMinFeeB
-      <> encCBOR appMaxBBSize
-      <> encCBOR appMaxTxSize
-      <> encCBOR appMaxBHSize
-      <> encCBOR appKeyDeposit
-      <> encCBOR appPoolDeposit
-      <> encCBOR appEMax
-      <> encCBOR appNOpt
-      <> encCBOR appA0
-      <> encCBOR appRho
-      <> encCBOR appTau
-      <> encCBOR appD
-      <> encCBOR appExtraEntropy
-      <> encCBORGroup appProtocolVersion
-      <> encCBOR appMinPoolCost
-      -- new/updated for alonzo
-      <> encCBOR appCoinsPerUTxOWord
-      <> encCBOR appCostModels
-      <> encCBOR appPrices
-      <> encCBOR appMaxTxExUnits
-      <> encCBOR appMaxBlockExUnits
-      <> encCBOR appMaxValSize
-      <> encCBOR appCollateralPercentage
-      <> encCBOR appMaxCollateralInputs
-
-instance Era era => DecCBOR (AlonzoPParams Identity era) where
-  decCBOR =
-    decodeRecordNamed "PParams" (\pp -> 23 + fromIntegral (listLen (appProtocolVersion pp))) $ do
-      appMinFeeA <- decCBOR
-      appMinFeeB <- decCBOR
-      appMaxBBSize <- decCBOR
-      appMaxTxSize <- decCBOR
-      appMaxBHSize <- decCBOR
-      appKeyDeposit <- decCBOR
-      appPoolDeposit <- decCBOR
-      appEMax <- decCBOR
-      appNOpt <- decCBOR
-      appA0 <- decCBOR
-      appRho <- decCBOR
-      appTau <- decCBOR
-      appD <- decCBOR
-      appExtraEntropy <- decCBOR
-      appProtocolVersion <- decCBORGroup
-      appMinPoolCost <- decCBOR
-      -- new/updated for alonzo
-      appCoinsPerUTxOWord <- decCBOR
-      appCostModels <- decCBOR
-      appPrices <- decCBOR
-      appMaxTxExUnits <- decCBOR
-      appMaxBlockExUnits <- decCBOR
-      appMaxValSize <- decCBOR
-      appCollateralPercentage <- decCBOR
-      appMaxCollateralInputs <- decCBOR
-      pure AlonzoPParams {..}
-
-instance Era era => ToCBOR (AlonzoPParams Identity era) where
-  toCBOR = toEraCBOR @era
-
-instance Era era => FromCBOR (AlonzoPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
-
-instance ToJSON (AlonzoPParams Identity AlonzoEra) where
-  toJSON = object . alonzoPParamsPairs
-  toEncoding = pairs . mconcat . alonzoPParamsPairs
-
-alonzoPParamsPairs ::
-  forall a e.
-  KeyValue e a =>
-  PParamsHKD Identity AlonzoEra ->
-  [a]
-alonzoPParamsPairs pp =
-  uncurry (.=) <$> alonzoPParamsHKDPairs (Proxy @Identity) pp
-
-instance FromJSON (AlonzoPParams Identity era) where
-  parseJSON =
-    Aeson.withObject "PParams" $ \obj ->
-      AlonzoPParams
-        <$> obj .: "txFeePerByte"
-        <*> obj .: "txFeeFixed"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "stakeAddressDeposit"
-        <*> obj .: "stakePoolDeposit"
-        <*> obj .: "poolRetireMaxEpoch"
-        <*> obj .: "stakePoolTargetNum"
-        <*> obj .: "poolPledgeInfluence"
-        <*> obj .: "monetaryExpansion"
-        <*> obj .: "treasuryCut"
-        <*> obj .: "decentralization"
-        <*> obj .: "extraPraosEntropy"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "utxoCostPerByte"
-        <*> obj .: "costModels"
-        <*> obj .: "executionUnitPrices"
-        <*> obj .: "maxTxExecutionUnits"
-        <*> obj .: "maxBlockExecutionUnits"
-        <*> obj .: "maxValueSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
-
 newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
+instance ToPlutusData CoinPerWord where
+  toPlutusData = error "unsupported"
+  fromPlutusData = error "unsupported"
 
 -- | This is a helper type that allows us to define an `Ord` instance for executions units
 -- without affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance`
@@ -512,15 +420,27 @@ instance Ord OrdExUnits where
 -- | Parameters that were added in Alonzo
 data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   { uappCoinsPerUTxOWord :: !(HKD f CoinPerWord)
-  , uappCostModels :: !(HKD f CostModels)
+  , uappPlutusV1CostModel :: !(HKD f CostModel)
   , uappPrices :: !(HKD f Prices)
   , uappMaxTxExUnits :: !(HKD f ExUnits)
   , uappMaxBlockExUnits :: !(HKD f ExUnits)
-  , uappMaxValSize :: !(HKD f Natural)
-  , uappCollateralPercentage :: !(HKD f Natural)
-  , uappMaxCollateralInputs :: !(HKD f Natural)
+  , uappMaxValSize :: !(HKD f Word32)
+  , uappCollateralPercentage :: !(HKD f Word16)
+  , uappMaxCollateralInputs :: !(HKD f Word16)
   }
   deriving (Generic)
+
+emptyAlonzoUpgradePParamsUpdate :: UpgradeAlonzoPParams StrictMaybe
+emptyAlonzoUpgradePParamsUpdate =
+  UpgradeAlonzoPParams
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
 
 deriving instance Eq (UpgradeAlonzoPParams Identity)
 
@@ -534,7 +454,7 @@ instance Default (UpgradeAlonzoPParams StrictMaybe) where
   def =
     UpgradeAlonzoPParams
       { uappCoinsPerUTxOWord = SNothing
-      , uappCostModels = SNothing
+      , uappPlutusV1CostModel = SNothing
       , uappPrices = SNothing
       , uappMaxTxExUnits = SNothing
       , uappMaxBlockExUnits = SNothing
@@ -545,7 +465,7 @@ instance Default (UpgradeAlonzoPParams StrictMaybe) where
 
 -- | Parameters that were removed in Alonzo
 newtype DowngradeAlonzoPParams f = DowngradeAlonzoPParams
-  { dappMinUTxOValue :: HKD f Coin
+  { dappMinUTxOValue :: HKD f (CompactForm Coin)
   }
   deriving (Generic)
 
@@ -561,13 +481,13 @@ instance NFData (DowngradeAlonzoPParams Identity)
 emptyAlonzoPParams :: forall era. Era era => AlonzoPParams Identity era
 emptyAlonzoPParams =
   AlonzoPParams
-    { appMinFeeA = Coin 0
-    , appMinFeeB = Coin 0
+    { appTxFeePerByte = CoinPerByte $ CompactCoin 0
+    , appTxFeeFixed = CompactCoin 0
     , appMaxBBSize = 0
     , appMaxTxSize = 2048
     , appMaxBHSize = 0
-    , appKeyDeposit = Coin 0
-    , appPoolDeposit = Coin 0
+    , appKeyDeposit = CompactCoin 0
+    , appPoolDeposit = CompactCoin 0
     , appEMax = EpochInterval 0
     , appNOpt = 100
     , appA0 = minBound
@@ -591,8 +511,8 @@ emptyAlonzoPParams =
 emptyAlonzoPParamsUpdate :: AlonzoPParams StrictMaybe era
 emptyAlonzoPParamsUpdate =
   AlonzoPParams
-    { appMinFeeA = SNothing
-    , appMinFeeB = SNothing
+    { appTxFeePerByte = SNothing
+    , appTxFeeFixed = SNothing
     , appMaxBBSize = SNothing
     , appMaxTxSize = SNothing
     , appMaxBHSize = SNothing
@@ -618,134 +538,6 @@ emptyAlonzoPParamsUpdate =
     , appMaxCollateralInputs = SNothing
     }
 
--- =======================================================
--- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
--- writing only those fields where the field is (SJust x), that is the role of
--- the local function (omitStrictMaybe key x)
-
-encodePParamsUpdate ::
-  AlonzoPParams StrictMaybe era ->
-  Encode ('Closed 'Sparse) (AlonzoPParams StrictMaybe era)
-encodePParamsUpdate ppup =
-  Keyed AlonzoPParams
-    !> omitStrictMaybe 0 (appMinFeeA ppup) encCBOR
-    !> omitStrictMaybe 1 (appMinFeeB ppup) encCBOR
-    !> omitStrictMaybe 2 (appMaxBBSize ppup) encCBOR
-    !> omitStrictMaybe 3 (appMaxTxSize ppup) encCBOR
-    !> omitStrictMaybe 4 (appMaxBHSize ppup) encCBOR
-    !> omitStrictMaybe 5 (appKeyDeposit ppup) encCBOR
-    !> omitStrictMaybe 6 (appPoolDeposit ppup) encCBOR
-    !> omitStrictMaybe 7 (appEMax ppup) encCBOR
-    !> omitStrictMaybe 8 (appNOpt ppup) encCBOR
-    !> omitStrictMaybe 9 (appA0 ppup) encCBOR
-    !> omitStrictMaybe 10 (appRho ppup) encCBOR
-    !> omitStrictMaybe 11 (appTau ppup) encCBOR
-    !> omitStrictMaybe 12 (appD ppup) encCBOR
-    !> omitStrictMaybe 13 (appExtraEntropy ppup) encCBOR
-    !> omitStrictMaybe 14 (appProtocolVersion ppup) encCBOR
-    !> omitStrictMaybe 16 (appMinPoolCost ppup) encCBOR
-    !> omitStrictMaybe 17 (appCoinsPerUTxOWord ppup) encCBOR
-    !> omitStrictMaybe 18 (appCostModels ppup) encCBOR
-    !> omitStrictMaybe 19 (appPrices ppup) encCBOR
-    !> omitStrictMaybe 20 (appMaxTxExUnits ppup) encCBOR
-    !> omitStrictMaybe 21 (appMaxBlockExUnits ppup) encCBOR
-    !> omitStrictMaybe 22 (appMaxValSize ppup) encCBOR
-    !> omitStrictMaybe 23 (appCollateralPercentage ppup) encCBOR
-    !> omitStrictMaybe 24 (appMaxCollateralInputs ppup) encCBOR
-  where
-    omitStrictMaybe ::
-      Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
-    omitStrictMaybe key x enc = Omit isSNothing (Key key (E (enc . fromSJust) x))
-
-    fromSJust :: StrictMaybe a -> a
-    fromSJust (SJust x) = x
-    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
-
-instance Era era => EncCBOR (AlonzoPParams StrictMaybe era) where
-  encCBOR ppup = encode (encodePParamsUpdate ppup)
-
-updateField :: Word -> Field (AlonzoPParams StrictMaybe era)
-updateField = \case
-  0 -> field (\x up -> up {appMinFeeA = SJust x}) From
-  1 -> field (\x up -> up {appMinFeeB = SJust x}) From
-  2 -> field (\x up -> up {appMaxBBSize = SJust x}) From
-  3 -> field (\x up -> up {appMaxTxSize = SJust x}) From
-  4 -> field (\x up -> up {appMaxBHSize = SJust x}) From
-  5 -> field (\x up -> up {appKeyDeposit = SJust x}) From
-  6 -> field (\x up -> up {appPoolDeposit = SJust x}) From
-  7 -> field (\x up -> up {appEMax = SJust x}) From
-  8 -> field (\x up -> up {appNOpt = SJust x}) From
-  9 -> field (\x up -> up {appA0 = SJust x}) From
-  10 -> field (\x up -> up {appRho = SJust x}) From
-  11 -> field (\x up -> up {appTau = SJust x}) From
-  12 -> field (\x up -> up {appD = SJust x}) From
-  13 -> field (\x up -> up {appExtraEntropy = SJust x}) From
-  14 -> field (\x up -> up {appProtocolVersion = SJust x}) From
-  16 -> field (\x up -> up {appMinPoolCost = SJust x}) From
-  17 -> field (\x up -> up {appCoinsPerUTxOWord = SJust x}) From
-  18 -> field (\x up -> up {appCostModels = SJust x}) From
-  19 -> field (\x up -> up {appPrices = SJust x}) From
-  20 -> field (\x up -> up {appMaxTxExUnits = SJust x}) From
-  21 -> field (\x up -> up {appMaxBlockExUnits = SJust x}) From
-  22 -> field (\x up -> up {appMaxValSize = SJust x}) From
-  23 -> field (\x up -> up {appCollateralPercentage = SJust x}) From
-  24 -> field (\x up -> up {appMaxCollateralInputs = SJust x}) From
-  k -> invalidField k
-
-instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
-  decCBOR =
-    decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
-
-instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
-  toCBOR = toEraCBOR @era
-
-instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
-
-instance ToJSON (AlonzoPParams StrictMaybe AlonzoEra) where
-  toJSON = object . alonzoPParamsUpdatePairs
-  toEncoding = pairs . mconcat . alonzoPParamsUpdatePairs
-
-alonzoPParamsUpdatePairs ::
-  forall a e.
-  KeyValue e a =>
-  PParamsHKD StrictMaybe AlonzoEra ->
-  [a]
-alonzoPParamsUpdatePairs pp =
-  [ k .= v
-  | (k, SJust v) <- alonzoPParamsHKDPairs (Proxy @StrictMaybe) pp
-  ]
-
-alonzoPParamsHKDPairs ::
-  forall f.
-  HKDFunctor f =>
-  Proxy f ->
-  PParamsHKD f AlonzoEra ->
-  [(Key, HKD f Aeson.Value)]
-alonzoPParamsHKDPairs px pp =
-  alonzoCommonPParamsHKDPairs px pp
-    ++ shelleyCommonPParamsHKDPairsV8 px pp
-    ++ shelleyCommonPParamsHKDPairsV6 px pp
-    ++ [("utxoCostPerByte", hkdMap px (toJSON @CoinPerWord) (pp ^. hkdCoinsPerUTxOWordL @_ @f))]
-
--- | These are the fields that are common across all eras starting with Alonzo.
-alonzoCommonPParamsHKDPairs ::
-  forall f era.
-  (HKDFunctor f, AlonzoEraPParams era) =>
-  Proxy f ->
-  PParamsHKD f era ->
-  [(Key, HKD f Aeson.Value)]
-alonzoCommonPParamsHKDPairs px pp =
-  shelleyCommonPParamsHKDPairs px pp
-    ++ [ ("costModels", hkdMap px (toJSON @CostModels) (pp ^. hkdCostModelsL @era @f))
-       , ("executionUnitPrices", hkdMap px (toJSON @Prices) (pp ^. hkdPricesL @era @f))
-       , ("maxTxExecutionUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxTxExUnitsL @era @f))
-       , ("maxBlockExecutionUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxBlockExUnitsL @era @f))
-       , ("maxValueSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxValSizeL @era @f))
-       , ("collateralPercentage", hkdMap px (toJSON @Natural) (pp ^. hkdCollateralPercentageL @era @f))
-       , ("maxCollateralInputs", hkdMap px (toJSON @Natural) (pp ^. hkdMaxCollateralInputsL @era @f))
-       ]
-
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
 
@@ -769,6 +561,7 @@ encodeCostModel cm =
     -- we use the 'canonical' serialization with definite list length.
     PlutusV2 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
     PlutusV3 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
+    PlutusV4 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
 
 getLanguageView ::
   AlonzoEraPParams era =>
@@ -783,6 +576,7 @@ getLanguageView pp lang =
         (serialize' version costModelEncoding)
     PlutusV2 -> latestLangDepView
     PlutusV3 -> latestLangDepView
+    PlutusV4 -> latestLangDepView
   where
     -- LangDepView for PlutusV1 differs from the rest
     latestLangDepView = LangDepView (serialize' version lang) costModelEncoding
@@ -811,8 +605,8 @@ upgradeAlonzoPParams ::
   AlonzoPParams f era2
 upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
   AlonzoPParams
-    { appMinFeeA = sppMinFeeA
-    , appMinFeeB = sppMinFeeB
+    { appTxFeePerByte = sppTxFeePerByte
+    , appTxFeeFixed = sppTxFeeFixed
     , appMaxBBSize = sppMaxBBSize
     , appMaxTxSize = sppMaxTxSize
     , appMaxBHSize = sppMaxBHSize
@@ -829,7 +623,7 @@ upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
     , appMinPoolCost = sppMinPoolCost
     , -- new in alonzo
       appCoinsPerUTxOWord = uappCoinsPerUTxOWord
-    , appCostModels = uappCostModels
+    , appCostModels = hkdMap (Proxy @f) (mkCostModels . Map.singleton PlutusV1) uappPlutusV1CostModel
     , appPrices = uappPrices
     , appMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxTxExUnits
     , appMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits uappMaxBlockExUnits
@@ -842,8 +636,8 @@ upgradeAlonzoPParams UpgradeAlonzoPParams {..} ShelleyPParams {..} =
 downgradeAlonzoPParams :: DowngradeAlonzoPParams f -> AlonzoPParams f era2 -> ShelleyPParams f era1
 downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {..} =
   ShelleyPParams
-    { sppMinFeeA = appMinFeeA
-    , sppMinFeeB = appMinFeeB
+    { sppTxFeePerByte = appTxFeePerByte
+    , sppTxFeeFixed = appTxFeeFixed
     , sppMaxBBSize = appMaxBBSize
     , sppMaxTxSize = appMaxTxSize
     , sppMaxBHSize = appMaxBHSize
@@ -859,4 +653,68 @@ downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {
     , sppProtocolVersion = appProtocolVersion
     , sppMinUTxOValue = dappMinUTxOValue -- <- parameter that was dropped in Alonzo
     , sppMinPoolCost = appMinPoolCost
+    }
+
+ppCoinsPerUTxOWord :: (AlonzoEraPParams era, ExactEra AlonzoEra era) => PParam era
+ppCoinsPerUTxOWord =
+  PParam
+    { ppName = "utxoCostPerByte"
+    , ppLens = ppCoinsPerUTxOWordL
+    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOWordL
+    }
+
+ppCostModels :: AlonzoEraPParams era => PParam era
+ppCostModels =
+  PParam
+    { ppName = "costModels"
+    , ppLens = ppCostModelsL
+    , ppUpdate = Just $ PParamUpdate 18 ppuCostModelsL
+    }
+
+ppPrices :: AlonzoEraPParams era => PParam era
+ppPrices =
+  PParam
+    { ppName = "executionUnitPrices"
+    , ppLens = ppPricesL
+    , ppUpdate = Just $ PParamUpdate 19 ppuPricesL
+    }
+
+ppMaxTxExUnits :: AlonzoEraPParams era => PParam era
+ppMaxTxExUnits =
+  PParam
+    { ppName = "maxTxExecutionUnits"
+    , ppLens = ppMaxTxExUnitsL
+    , ppUpdate = Just $ PParamUpdate 20 ppuMaxTxExUnitsL
+    }
+
+ppMaxBlockExUnits :: AlonzoEraPParams era => PParam era
+ppMaxBlockExUnits =
+  PParam
+    { ppName = "maxBlockExecutionUnits"
+    , ppLens = ppMaxBlockExUnitsL
+    , ppUpdate = Just $ PParamUpdate 21 ppuMaxBlockExUnitsL
+    }
+
+ppMaxValSize :: AlonzoEraPParams era => PParam era
+ppMaxValSize =
+  PParam
+    { ppName = "maxValueSize"
+    , ppLens = ppMaxValSizeL
+    , ppUpdate = Just $ PParamUpdate 22 ppuMaxValSizeL
+    }
+
+ppCollateralPercentage :: AlonzoEraPParams era => PParam era
+ppCollateralPercentage =
+  PParam
+    { ppName = "collateralPercentage"
+    , ppLens = ppCollateralPercentageL
+    , ppUpdate = Just $ PParamUpdate 23 ppuCollateralPercentageL
+    }
+
+ppMaxCollateralInputs :: AlonzoEraPParams era => PParam era
+ppMaxCollateralInputs =
+  PParam
+    { ppName = "maxCollateralInputs"
+    , ppLens = ppMaxCollateralInputsL
+    , ppUpdate = Just $ PParamUpdate 24 ppuMaxCollateralInputsL
     }

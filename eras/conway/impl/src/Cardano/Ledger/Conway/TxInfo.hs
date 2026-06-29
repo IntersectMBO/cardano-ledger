@@ -12,10 +12,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
+  ConwayEraPlutusTxInfo (..),
   transTxBodyWithdrawals,
   transTxCert,
   transDRepCred,
@@ -23,11 +25,21 @@ module Cardano.Ledger.Conway.TxInfo (
   transHotCommitteeCred,
   transDelegatee,
   transDRep,
-  transScriptPurpose,
   transMap,
   transTxInInfoV1,
   transTxOutV1,
+  transMintValue,
+  transTxBodyId,
+  transValidityInterval,
+  transVotingProcedures,
+  transProposal,
   toPlutusV3Args,
+  transTxCertV1V2,
+  transPlutusPurposeV1V2,
+  transPlutusPurposeV3,
+  guardConwayFeaturesForPlutusV1V2,
+  transTxInInfoV3,
+  scriptPurposeToScriptInfo,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -37,6 +49,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusTxCert,
   PlutusTxInfo,
+  SupportedLanguage (..),
+  lookupTxInfoResultImpossible,
   toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
@@ -48,13 +62,13 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   ProtVer (..),
   StrictMaybe (..),
-  getVersion64,
+  getVersion32,
   isSJust,
   kindObject,
   strictMaybe,
   txIxToInt,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), natVersion)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -65,7 +79,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Constitution (..),
   GovAction (..),
@@ -78,24 +92,20 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   unGovActionIx,
  )
-import Cardano.Ledger.Conway.Plutus.Context (
-  ConwayEraPlutusTxInfo (toPlutusChangedParameters),
-  conwayPParamMap,
-  pparamUpdateFromData,
-  pparamUpdateToData,
- )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
+  slotToPOSIXTime,
+  transAccountAddress,
   transBoundedRational,
   transCoinToLovelace,
   transCoinToValue,
@@ -103,23 +113,23 @@ import Cardano.Ledger.Plutus.TxInfo (
   transDatum,
   transEpochNo,
   transKeyHash,
-  transRewardAccount,
   transSafeHash,
   transScriptHash,
  )
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
-import Cardano.Ledger.PoolParams
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import Cardano.Ledger.State (UTxO)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Slotting.EpochInfo (EpochInfo)
+import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..))
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Generics hiding (to)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
@@ -137,6 +147,12 @@ instance EraPlutusContext ConwayEra where
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV2))
         (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV3))
 
+  mkSupportedLanguage = \case
+    PlutusV1 -> Just $ SupportedLanguage SPlutusV1
+    PlutusV2 -> Just $ SupportedLanguage SPlutusV2
+    PlutusV3 -> Just $ SupportedLanguage SPlutusV3
+    _ -> Nothing
+
   mkTxInfoResult lti =
     ConwayTxInfoResult
       (toPlutusTxInfo SPlutusV1 lti)
@@ -146,6 +162,7 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult SPlutusV1 (ConwayTxInfoResult tirPlutusV1 _ _) = tirPlutusV1
   lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
+  lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
 
   mkPlutusWithContext = \case
     ConwayPlutusV1 p -> toPlutusWithContext $ Left p
@@ -160,6 +177,7 @@ data ConwayContextError era
   | VotingProceduresFieldNotSupported !(VotingProcedures era)
   | ProposalProceduresFieldNotSupported !(OSet.OSet (ProposalProcedure era))
   | TreasuryDonationFieldNotSupported !Coin
+  | ReferenceInputsNotDisjointFromInputs !(NonEmpty TxIn)
   deriving (Generic)
 
 deriving instance
@@ -226,6 +244,8 @@ instance
       encode $ Sum ProposalProceduresFieldNotSupported 13 !> To proposalProcedures
     TreasuryDonationFieldNotSupported coin ->
       encode $ Sum TreasuryDonationFieldNotSupported 14 !> To coin
+    ReferenceInputsNotDisjointFromInputs common ->
+      encode $ Sum ReferenceInputsNotDisjointFromInputs 15 !> To common
 
 instance
   ( EraPParams era
@@ -243,6 +263,7 @@ instance
     12 -> SumD VotingProceduresFieldNotSupported <! From
     13 -> SumD ProposalProceduresFieldNotSupported <! From
     14 -> SumD TreasuryDonationFieldNotSupported <! From
+    15 -> SumD ReferenceInputsNotDisjointFromInputs <! From
     n -> Invalid n
 
 instance
@@ -275,6 +296,10 @@ instance
       kindObject
         "TreasuryDonationFieldNotSupported"
         ["treasury_donation" .= toJSON coin]
+    ReferenceInputsNotDisjointFromInputs common ->
+      kindObject
+        "ReferenceInputsNotDisjointFromInputs"
+        ["common" .= toJSON common]
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation).
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
@@ -325,12 +350,12 @@ transTxInInfoV3 utxo txIn = do
   Right (PV3.TxInInfo (transTxIn txIn) plutusTxOut)
 
 guardConwayFeaturesForPlutusV1V2 ::
-  forall era.
+  forall era l.
   ( EraTx era
   , ConwayEraTxBody era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
-  Tx era ->
+  Tx l era ->
   Either (ContextError era) ()
 guardConwayFeaturesForPlutusV1V2 tx = do
   let txBody = tx ^. bodyTxL
@@ -356,7 +381,8 @@ guardConwayFeaturesForPlutusV1V2 tx = do
       Left $ inject $ CurrentTreasuryFieldNotSupported @era treasury
 
 transTxCertV1V2 ::
-  ( ConwayEraTxCert era
+  ( ShelleyEraTxCert era
+  , ConwayEraTxCert era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
   TxCert era ->
@@ -378,7 +404,7 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     mapM_ (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -405,6 +431,8 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
+  toPlutusTxInInfo _ = transTxInInfoV1
+
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
@@ -413,7 +441,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -443,16 +471,26 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
+  toPlutusTxInInfo _ = Babbage.transTxInInfoV2
+
 instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
-  toPlutusScriptPurpose = transScriptPurpose
+  toPlutusScriptPurpose = transPlutusPurposeV3
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    let
+      txInputs = txBody ^. inputsTxBodyL
+      refInputs = txBody ^. referenceInputsTxBodyL
+    inputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
+    refInputsInfo <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
+    let
+      commonInputs = txInputs `Set.intersection` refInputs
+    unless (pvMajor ltiProtVer < natVersion @11) $ case toList commonInputs of
+      (x : xs) -> Left $ ReferenceInputsNotDisjointFromInputs $ x :| xs
+      _ -> Right ()
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
@@ -462,9 +500,9 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
     plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx
     pure
       PV3.TxInfo
-        { PV3.txInfoInputs = inputs
+        { PV3.txInfoInputs = inputsInfo
         , PV3.txInfoOutputs = outputs
-        , PV3.txInfoReferenceInputs = refInputs
+        , PV3.txInfoReferenceInputs = refInputsInfo
         , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
         , PV3.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
         , PV3.txInfoTxCerts = txCerts
@@ -489,11 +527,13 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
 
   toPlutusArgs = toPlutusV3Args
 
+  toPlutusTxInInfo _ = transTxInInfoV3
+
 transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
 
-transTxBodyId :: EraTxBody era => TxBody era -> PV3.TxId
-transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated txBody))
+transTxBodyId :: EraTxBody era => TxBody l era -> PV3.TxId
+transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))
 
 transTxIn :: TxIn -> PV3.TxOutRef
 transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
@@ -502,9 +542,9 @@ transMintValue :: MultiAsset -> PV3.MintValue
 transMintValue = PV3.UnsafeMintValue . PV1.getValue . Alonzo.transMultiAsset
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
-transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential PV3.Lovelace
+transTxBodyWithdrawals :: EraTxBody era => TxBody l era -> PV3.Map PV3.Credential PV3.Lovelace
 transTxBodyWithdrawals txBody =
-  transMap transRewardAccount transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
+  transMap transAccountAddress transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 
 -- | In protocol version 9, a bug in `RegTxCert` and `UnRegTxCert` pattern definitions was causing
 -- the deposit in `RegDepositTxCert` and `UnRegDepositTxCert` to be omitted.  We need to keep this
@@ -512,12 +552,14 @@ transTxBodyWithdrawals txBody =
 -- omitting the deposit in these cases. It has been confirmed that this buggy behavior for protocol
 -- version 9 has been exercised on Mainnet, therefore this conditional translation can never be
 -- removed for Conway era (#4863)
-transTxCert :: ConwayEraTxCert era => ProtVer -> TxCert era -> PV3.TxCert
+transTxCert ::
+  (ShelleyEraTxCert era, ConwayEraTxCert era, TxCert era ~ ConwayTxCert era) =>
+  ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
-  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+  RegPoolTxCert StakePoolParams {sppId, sppVrf} ->
     PV3.TxCertPoolRegister
-      (transKeyHash ppId)
-      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+      (transKeyHash sppId)
+      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   RegTxCert stakeCred ->
@@ -526,12 +568,12 @@ transTxCert pv = \case
     PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   RegDepositTxCert stakeCred deposit ->
     let transDeposit
-          | HF.bootstrapPhase pv = Nothing
+          | hardforkConwayBootstrapPhase pv = Nothing
           | otherwise = Just (transCoinToLovelace deposit)
      in PV3.TxCertRegStaking (transCred stakeCred) transDeposit
   UnRegDepositTxCert stakeCred refund ->
     let transRefund
-          | HF.bootstrapPhase pv = Nothing
+          | hardforkConwayBootstrapPhase pv = Nothing
           | otherwise = Just (transCoinToLovelace refund)
      in PV3.TxCertUnRegStaking (transCred stakeCred) transRefund
   DelegTxCert stakeCred delegatee ->
@@ -548,14 +590,15 @@ transTxCert pv = \case
     PV3.TxCertUnRegDRep (transDRepCred drepCred) (transCoinToLovelace refund)
   UpdateDRepTxCert drepCred _anchor ->
     PV3.TxCertUpdateDRep (transDRepCred drepCred)
+  _ -> error "Impossible: All TxCerts should have been accounted for"
 
-transDRepCred :: Credential 'DRepRole -> PV3.DRepCredential
+transDRepCred :: Credential DRepRole -> PV3.DRepCredential
 transDRepCred = PV3.DRepCredential . transCred
 
-transColdCommitteeCred :: Credential 'ColdCommitteeRole -> PV3.ColdCommitteeCredential
+transColdCommitteeCred :: Credential ColdCommitteeRole -> PV3.ColdCommitteeCredential
 transColdCommitteeCred = PV3.ColdCommitteeCredential . transCred
 
-transHotCommitteeCred :: Credential 'HotCommitteeRole -> PV3.HotCommitteeCredential
+transHotCommitteeCred :: Credential HotCommitteeRole -> PV3.HotCommitteeCredential
 transHotCommitteeCred = PV3.HotCommitteeCredential . transCred
 
 transDelegatee :: Delegatee -> PV3.Delegatee
@@ -577,18 +620,20 @@ transDRep = \case
 -- and `PV3.Proposing` also have an index. Moreover, other script purposes rely on Ledger
 -- `Ord` instances for types that dictate the order, so it might not be a good idea to pass
 -- that information to Plutus for those purposes.
-transScriptPurpose ::
-  (ConwayEraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
+transPlutusPurposeV3 ::
+  ( ConwayEraPlutusTxInfo l era
+  , PlutusTxCert l ~ PV3.TxCert
+  ) =>
   proxy l ->
   ProtVer ->
   ConwayPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
-transScriptPurpose proxy pv = \case
+transPlutusPurposeV3 proxy pv = \case
   ConwaySpending (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
   ConwayMinting (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   ConwayCertifying (AsIxItem ix txCert) ->
     PV3.Certifying (toInteger ix) <$> toPlutusTxCert proxy pv txCert
-  ConwayRewarding (AsIxItem _ rewardAccount) -> pure $ PV3.Rewarding (transRewardAccount rewardAccount)
+  ConwayRewarding (AsIxItem _ accountAddress) -> pure $ PV3.Rewarding (transAccountAddress accountAddress)
   ConwayVoting (AsIxItem _ voter) -> pure $ PV3.Voting (transVoter voter)
   ConwayProposing (AsIxItem ix proposal) ->
     pure $ PV3.Proposing (toInteger ix) (transProposal proxy proposal)
@@ -619,7 +664,7 @@ transGovAction proxy = \case
       (transProtVer protVer)
   TreasuryWithdrawals withdrawals govPolicy ->
     PV3.TreasuryWithdrawals
-      (transMap transRewardAccount transCoinToLovelace withdrawals)
+      (transMap transAccountAddress transCoinToLovelace withdrawals)
       (transGovPolicy govPolicy)
   NoConfidence pGovActionId -> PV3.NoConfidence (transPrevGovActionId pGovActionId)
   UpdateCommittee pGovActionId ccToRemove ccToAdd threshold ->
@@ -666,15 +711,16 @@ transProposal ::
 transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
   PV3.ProposalProcedure
     { PV3.ppDeposit = transCoinToLovelace pProcDeposit
-    , PV3.ppReturnAddr = transRewardAccount pProcReturnAddr
+    , PV3.ppReturnAddr = transAccountAddress pProcReturnAddr
     , PV3.ppGovernanceAction = transGovAction proxy pProcGovAction
     }
 
 transPlutusPurposeV1V2 ::
+  forall l era proxy.
   ( PlutusTxCert l ~ PV2.DCert
-  , PlutusPurpose AsItem era ~ ConwayPlutusPurpose AsItem era
   , EraPlutusTxInfo l era
   , Inject (ConwayContextError era) (ContextError era)
+  , Inject (ConwayPlutusPurpose AsItem era) (PlutusPurpose AsItem era)
   ) =>
   proxy l ->
   ProtVer ->
@@ -684,12 +730,12 @@ transPlutusPurposeV1V2 proxy pv = \case
   ConwaySpending txIn -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending txIn
   ConwayMinting policyId -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting policyId
   ConwayCertifying txCert -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying txCert
-  ConwayRewarding rewardAccount -> Alonzo.transPlutusPurpose proxy pv $ AlonzoRewarding rewardAccount
-  purpose -> Left $ inject $ PlutusPurposeNotSupported purpose
+  ConwayRewarding accountAddress -> Alonzo.transPlutusPurpose proxy pv $ AlonzoRewarding accountAddress
+  purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ inject purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =
-  PV3.ProtocolVersion (toInteger (getVersion64 major)) (toInteger minor)
+  PV3.ProtocolVersion (toInteger (getVersion32 major)) (toInteger minor)
 
 toPlutusV3Args ::
   EraPlutusTxInfo 'PlutusV3 era =>
@@ -720,16 +766,44 @@ scriptPurposeToScriptInfo sp maybeSpendingData =
     PV3.Spending txIn -> PV3.SpendingScript txIn maybeSpendingData
     PV3.Minting policyId -> PV3.MintingScript policyId
     PV3.Certifying ix txCert -> PV3.CertifyingScript ix txCert
-    PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount
+    PV3.Rewarding accountAddress -> PV3.RewardingScript accountAddress
     PV3.Voting voter -> PV3.VotingScript voter
     PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal
 
--- ==========================
--- Instances
-
-instance ToPlutusData (PParamsUpdate ConwayEra) where
-  toPlutusData = pparamUpdateToData conwayPParamMap
-  fromPlutusData = pparamUpdateFromData conwayPParamMap
+-- | A class to compute the changed parameters in the TxInfo
+-- given a ToPlutusData instance for PParamsUpdate
+class
+  EraPlutusTxInfo l era =>
+  ConwayEraPlutusTxInfo (l :: Language) era
+  where
+  toPlutusChangedParameters :: proxy l -> PParamsUpdate era -> PV3.ChangedParameters
 
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
+
+-- | Translate a validity interval to POSIX time
+transValidityInterval ::
+  forall proxy era a.
+  Inject (AlonzoContextError era) a =>
+  proxy era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  ValidityInterval ->
+  Either a PV1.POSIXTimeRange
+transValidityInterval _ epochInfo systemStart = \case
+  ValidityInterval SNothing SNothing -> pure PV1.always
+  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
+  ValidityInterval SNothing (SJust i) -> do
+    t <- transSlotToPOSIXTime i
+    pure $ PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.strictUpperBound t)
+  ValidityInterval (SJust i) (SJust j) -> do
+    t1 <- transSlotToPOSIXTime i
+    t2 <- transSlotToPOSIXTime j
+    pure $
+      PV1.Interval
+        (PV1.lowerBound t1)
+        (PV1.strictUpperBound t2)
+  where
+    transSlotToPOSIXTime =
+      left (inject . TimeTranslationPastHorizon @era)
+        . slotToPOSIXTime epochInfo systemStart

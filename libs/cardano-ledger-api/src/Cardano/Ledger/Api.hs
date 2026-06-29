@@ -19,8 +19,7 @@ module Cardano.Ledger.Api (
   module Cardano.Ledger.Api.Scripts,
   -- | Governance
   module Cardano.Ledger.Api.Governance,
-)
-where
+) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Governance

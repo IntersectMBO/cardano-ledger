@@ -40,8 +40,7 @@ module Cardano.Ledger.Conway.Core (
   pattern UnRegDRepTxCert,
   pattern UpdateDRepTxCert,
   module Cardano.Ledger.Babbage.Core,
-)
-where
+) where
 
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Conway.PParams (

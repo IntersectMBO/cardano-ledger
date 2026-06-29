@@ -13,43 +13,46 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg () where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Rules (
   ConwayDelegEnv (..),
-  ConwayDelegPredFailure,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
+  getDRepDelegatee,
   getStakePoolDelegatee,
-  getVoteDelegatee,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules
-import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Lib as Agda
+import Lens.Micro
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (Set (Credential 'DRepRole))
+  , Inject ctx (Set (Credential DRepRole))
   ) =>
   SpecTranslate ctx (ConwayDelegEnv era)
   where
   type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
 
   toSpecRep ConwayDelegEnv {..} = do
-    delegatees <- askCtx @(Set (Credential 'DRepRole))
+    delegatees <- askCtx @(Set (Credential DRepRole))
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
-      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
+      <*> toSpecRep
+        ( Map.mapKeys (hashToInteger . unKeyHash) $
+            Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
+        )
       <*> toSpecRep delegatees
 
 instance SpecTranslate ctx ConwayDelegCert where
@@ -66,30 +69,32 @@ instance SpecTranslate ctx ConwayDelegCert where
   toSpecRep (ConwayDelegCert c d) =
     Agda.Delegate
       <$> toSpecRep c
-      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (getDRepDelegatee d)
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> pure 0
   toSpecRep (ConwayRegDelegCert s d c) =
     Agda.Delegate
       <$> toSpecRep s
-      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (getDRepDelegatee d)
       <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
 
-instance SpecTranslate ctx (ConwayDelegPredFailure era) where
-  type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . showOpaqueErrorString
-
-instance SpecTranslate ctx (DState era) where
+instance ConwayEraAccounts era => SpecTranslate ctx (DState era) where
   type SpecRep (DState era) = Agda.DState
 
-  toSpecRep DState {..} =
+  toSpecRep dState =
     Agda.MkDState
-      <$> toSpecRep (UMap.dRepMap dsUnified)
-      <*> toSpecRep (UMap.sPoolMap dsUnified)
-      <*> toSpecRep (UMap.rewardMap dsUnified)
-      <*> toSpecRep deposits
+      <$> toSpecRep (Map.mapMaybe (^. dRepDelegationAccountStateL) accountsMap)
+      <*> toSpecRep (Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMap)
+      <*> toSpecRep (Map.map (fromCompact . (^. balanceAccountStateL)) accountsMap)
+      <*> deposits
     where
-      deposits =
-        Map.mapKeys CredentialDeposit (UMap.depositMap dsUnified)
+      accountsMap = dState ^. accountsL . accountsMapL
+      deposits = do
+        let
+          m = Map.map (fromCompact . (^. depositAccountStateL)) accountsMap
+          transEntry (cred, val) =
+            (,)
+              <$> (Agda.CredentialDeposit <$> toSpecRep cred)
+              <*> toSpecRep val
+        Agda.MkHSMap <$> traverse transEntry (Map.toList m)

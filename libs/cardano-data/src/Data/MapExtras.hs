@@ -24,12 +24,14 @@ module Data.MapExtras (
   intersectDomPLeft,
   intersectMapSetFold,
   disjointMapSetFold,
+  boundedEnumMap,
+  lookupMapFail,
   extractKeys,
   extractKeysSmallSet,
   fromKeys,
   fromElems,
-)
-where
+  lookupInternMap,
+) where
 
 import Data.Foldable (toList)
 import Data.Map.Internal (Map (..), balanceL, balanceR, glue, link, link2)
@@ -271,3 +273,26 @@ fromElems f vs =
   -- a nice optimization for already sorted keys and with list fusion there should be no overhead
   Map.fromList [(f v, v) | v <- toList vs]
 {-# INLINE fromElems #-}
+
+-- | Look up a key in a map and return the interned key together with its value, if present.
+-- The returned key is exactly the one stored in the map.
+-- Useful for maximizing sharing by avoiding duplicate-but-equal keys.
+lookupInternMap :: Ord k => k -> Map k v -> Maybe (k, v)
+lookupInternMap k = go
+  where
+    go Tip = Nothing
+    go (Bin _ kx v l r) =
+      case compare k kx of
+        LT -> go l
+        GT -> go r
+        EQ -> Just (kx, v)
+
+boundedEnumMap :: (Ord k, Bounded a, Enum a) => (a -> k) -> Map k a
+boundedEnumMap toTxt = Map.fromList [(toTxt t, t) | t <- [minBound .. maxBound]]
+
+lookupMapFail ::
+  (Ord k, Show k, MonadFail m) => String -> Map k v -> k -> m v
+lookupMapFail name m key =
+  case Map.lookup key m of
+    Just t -> pure t
+    Nothing -> fail $ "Unrecognized " <> name <> ": " ++ show key

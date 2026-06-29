@@ -1,9 +1,16 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Cardano.Ledger.Shelley.API.Types (
   module X,
-)
-where
+) where
 
-import Cardano.Ledger.Address as X (Addr (..), RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.Address as X (
+  Addr (..),
+  Withdrawals (..),
+  raCredential,
+  raNetwork,
+  pattern RewardAccount,
+ )
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X (
   CertIx,
@@ -22,8 +29,6 @@ import Cardano.Ledger.BaseTypes as X (
  )
 import Cardano.Ledger.Block as X (
   Block (..),
-  bbody,
-  bheader,
  )
 import Cardano.Ledger.Coin as X (
   Coin (..),
@@ -38,38 +43,23 @@ import Cardano.Ledger.Hashes as X (
   ScriptHash (..),
  )
 import Cardano.Ledger.Keys as X (
-  CertifiedVRF,
   GenDelegPair (..),
   GenDelegs (..),
-  Hash,
-  KESignable,
   KeyHash (..),
   KeyRole (..),
-  SignKeyDSIGN,
-  SignKeyKES,
-  SignKeyVRF,
-  SignedDSIGN,
-  SignedKES,
   VKey (..),
-  VerKeyKES,
-  VerKeyVRF,
   WitVKey (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.Keys.Bootstrap as X (
   BootstrapWitness (..),
  )
-import Cardano.Ledger.PoolParams as X (
-  PoolMetadata (..),
-  PoolParams (..),
-  StakePoolRelay (..),
- )
-import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
+import Cardano.Ledger.Shelley.BlockBody as X
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
-  AccountState (..),
+  AccountState,
+  ChainAccountState,
   DState (..),
   EpochState (..),
   EraCertState (..),
@@ -80,7 +70,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   RewardUpdate (..),
   ShelleyGovState (..),
   UTxOState (..),
-  VState (..),
+  mkShelleyCertState,
  )
 import Cardano.Ledger.Shelley.PParams as X (
   ProposedPPUpdates (..),
@@ -119,7 +109,7 @@ import Cardano.Ledger.Shelley.TxAuxData as X (
   Metadatum (..),
   ShelleyTxAuxData (..),
  )
-import Cardano.Ledger.Shelley.TxBody as X (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody as X (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxCert as X (
   GenesisDelegCert (..),
   MIRCert (..),
@@ -134,11 +124,13 @@ import Cardano.Ledger.Shelley.TxWits as X (
  )
 import Cardano.Ledger.State as X (
   PoolDistr (..),
+  PoolMetadata (..),
   SnapShot (..),
   SnapShots (..),
   Stake (..),
+  StakePoolParams (..),
+  StakePoolRelay (..),
   UTxO (..),
-  balance,
   individualPoolStake,
  )
 import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))

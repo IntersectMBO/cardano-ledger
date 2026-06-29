@@ -1,8 +1,7 @@
 -- | API to the Shelley ledger
 module Cardano.Ledger.Shelley.API (
   module X,
-)
-where
+) where
 
 import Cardano.Ledger.Shelley.API.ByronTranslation as X
 import Cardano.Ledger.Shelley.API.Mempool as X

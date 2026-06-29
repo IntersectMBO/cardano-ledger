@@ -13,55 +13,41 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow () where
 
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (EraTx (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
-import Cardano.Ledger.Core (EraTx (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.TxIn (TxId)
+import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Coerce (coerce)
 import qualified Data.Text as T
 import Lens.Micro ((^.))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
-  SpecTranslate,
+  SpecTranslate (..),
+  runFromAgdaFunction,
   runSpecTransM,
-  showOpaqueErrorString,
-  toSpecRep,
-  unComputationResult,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
-  ConwayTxBodyTransContext,
- )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxow ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo ()
 import Test.Cardano.Ledger.Constrained.Conway (
-  IsConwayUniv,
   UtxoExecContext,
-  utxoEnvSpec,
-  utxoStateSpec,
-  utxoTxSpec,
  )
-import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
+import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)
-import Test.Cardano.Ledger.TreeDiff (showExpr)
 
 instance
-  ( IsConwayUniv fn
-  , SpecTranslate ConwayTxBodyTransContext (ConwayTxCert ConwayEra)
-  ) =>
-  ExecSpecRule fn "UTXOW" ConwayEra
+  SpecTranslate TxId (ConwayTxCert ConwayEra) =>
+  ExecSpecRule "UTXOW" ConwayEra
   where
-  type ExecContext fn "UTXOW" ConwayEra = UtxoExecContext ConwayEra
+  type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
-  genExecContext = genUtxoExecContext
-  environmentSpec = utxoEnvSpec
-  stateSpec = utxoStateSpec
-  signalSpec ctx _ _ = utxoTxSpec ctx
-  runAgdaRule env st sig =
-    unComputationResult $ Agda.utxowStep externalFunctions env st sig
-  extraInfo globals ctx env st sig _ =
+  runAgdaRule = runFromAgdaFunction (Agda.utxowStep externalFunctions)
+
+  extraInfo globals ctx trc@(TRC (env, st, sig)) _ =
     let
       result =
         either show T.unpack . runSpecTransM ctx $
@@ -69,18 +55,18 @@ instance
             <$> toSpecRep env
             <*> toSpecRep st
             <*> toSpecRep sig
-      stFinal = first showOpaqueErrorString $ runSTS @"UTXO" @ConwayEra globals env st sig
-      utxoInfo = extraInfo @fn @"UTXO" @ConwayEra globals ctx env st sig stFinal
+      stFinal = first (T.pack . show) $ runSTS @"UTXO" @ConwayEra globals env st sig
+      utxoInfo = extraInfo @"UTXO" @ConwayEra globals ctx (coerce trc) stFinal
      in
       PP.vcat
         [ "UTXOW"
         , "Impl:"
         , "witsVKeyNeeded"
-        , PP.ppString . showExpr $
+        , PP.pretty . showExpr $
             getConwayWitsVKeyNeeded @ConwayEra (utxosUtxo st) (sig ^. bodyTxL)
         , "witsVKeyHashes"
         , "Spec:"
-        , PP.ppString result
+        , PP.pretty result
         , mempty
         , "UTXO"
         , utxoInfo

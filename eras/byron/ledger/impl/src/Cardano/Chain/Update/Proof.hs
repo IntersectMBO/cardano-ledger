@@ -2,8 +2,7 @@ module Cardano.Chain.Update.Proof (
   Proof,
   mkProof,
   recoverProof,
-)
-where
+) where
 
 import Cardano.Chain.Update.Payload (APayload (..), Payload)
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)

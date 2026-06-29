@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,21 +11,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Translation where
+module Cardano.Ledger.Alonzo.Translation () where
 
-import Cardano.Ledger.Alonzo.CertState ()
-import Cardano.Ledger.Alonzo.Core hiding (Tx)
-import qualified Cardano.Ledger.Alonzo.Core as Core
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..), PState (..), VState (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -34,7 +29,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Data.Coerce (coerce)
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 
 --------------------------------------------------------------------------------
 -- Translation from Mary to Alonzo
@@ -67,7 +62,7 @@ instance TranslateEra AlonzoEra NewEpochState where
         }
 
 instance TranslateEra AlonzoEra PParams where
-  translateEra (AlonzoGenesisWrapper upgradeArgs) = pure . upgradePParams upgradeArgs
+  translateEra (AlonzoGenesisWrapper upgradeArgs _) = pure . upgradePParams upgradeArgs
 
 instance TranslateEra AlonzoEra FuturePParams where
   translateEra ctxt = \case
@@ -75,11 +70,9 @@ instance TranslateEra AlonzoEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
-instance TranslateEra AlonzoEra Tx where
-  type TranslationError AlonzoEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
+instance TranslateEra AlonzoEra (Tx TopTx) where
+  type TranslationError AlonzoEra (Tx TopTx) = DecoderError
+  translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -88,7 +81,11 @@ instance TranslateEra AlonzoEra Tx where
     txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
     let validating = IsValid True
-    pure $ Tx $ AlonzoTx txBody txWits validating txAuxData
+    pure $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ txAuxData
+        & isValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -98,28 +95,33 @@ instance TranslateEra AlonzoEra EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es
+        { esChainAccountState = esChainAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
+instance TranslateEra AlonzoEra ShelleyAccounts where
+  translateEra _ = pure . coerce
+
 instance TranslateEra AlonzoEra DState where
-  translateEra _ DState {..} = pure DState {..}
+  translateEra ctx DState {dsAccounts = accountsShelley, ..} = do
+    dsAccounts <- translateEra ctx accountsShelley
+    pure DState {..}
 
 instance TranslateEra AlonzoEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
-
-instance TranslateEra AlonzoEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
 
 instance TranslateEra AlonzoEra PState where
   translateEra _ PState {..} = pure PState {..}
 
 instance TranslateEra AlonzoEra ShelleyCertState where
-  translateEra (AlonzoGenesisWrapper _scs) = pure . upgradeCertState
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra AlonzoEra LedgerState where
   translateEra ctxt ls =

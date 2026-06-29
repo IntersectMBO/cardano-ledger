@@ -1,10 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -16,6 +19,7 @@ module Test.Cardano.Ledger.Allegra.Arbitrary (
   maxTimelockDepth,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraEra, ApplyTxError (..), Tx (..))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
@@ -24,15 +28,14 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Allegra.Transition
+import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.TxBody (pattern AllegraTxBody)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
-
-import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (AllegraTxBody))
-import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
-import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata', sizedNativeScriptGens)
@@ -65,7 +68,7 @@ sizedTimelock n =
 instance
   forall era.
   ( AllegraEraScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   , Arbitrary (Script era)
   , Era era
   ) =>
@@ -102,15 +105,7 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  , Arbitrary (TxOut era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (AllegraTxBody era)
-  where
+instance Arbitrary (TxBody TopTx AllegraEra) where
   arbitrary =
     AllegraTxBody
       <$> arbitrary
@@ -133,3 +128,9 @@ instance
 instance Arbitrary ValidityInterval where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+deriving newtype instance Arbitrary (TransitionConfig AllegraEra)
+
+deriving newtype instance Arbitrary (Tx TopTx AllegraEra)
+
+deriving newtype instance Arbitrary (ApplyTxError AllegraEra)

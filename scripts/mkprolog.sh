@@ -2,23 +2,28 @@
 
 set -euo pipefail
 
-HADDOCKS_DIR=${1:-"./haddocks"}
-PROLOG_FILE=${2:-"./scripts/prolog"}
+HADDOCKS_DIR=${1:-haddocks}
+PROLOG_FILE=${2:-scripts/prolog}
 
-> ${PROLOG_FILE}
+exec >"$PROLOG_FILE" # Write all stdout to $PROLOG_FILE from here on
 
-cat > ${PROLOG_FILE} << EOF
-= Cardano Ledger Repository Hackage Documentation
+cd "$HADDOCKS_DIR"
 
-[skip to module list](#module-list)
+cat << EOF
+= Cardano Ledger Repository Documentation
 
-This site contains Haskell documentation of:
+== Benchmarks
+
+* [Charts](dev/bench/) showing historical trends
+
+== Package Documentation
+
+[Skip to module list](#module-list)
+
+This page contains Haskell documentation of:
 
 EOF
 
-for dir in $(ls ${HADDOCKS_DIR}); do
-  if [[ -d ${HADDOCKS_DIR}/${dir} ]]; then
-    link=$(echo "${dir}" | sed "s/:/%3A/g")
-    echo "* __[${dir}](${link}/index.html)__" >> ${PROLOG_FILE}
-  fi
+find -- * -maxdepth 0 -type d | while read -r dir; do
+  echo "* __[$dir](${dir//:/%3A}/index.html)__"
 done

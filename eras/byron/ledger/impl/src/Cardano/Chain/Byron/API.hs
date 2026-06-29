@@ -20,8 +20,7 @@ module Cardano.Chain.Byron.API (
 
   -- * Headers
   abobMatchesBody,
-)
-where
+) where
 
 import Cardano.Chain.Byron.API.Common
 import Cardano.Chain.Byron.API.Mempool

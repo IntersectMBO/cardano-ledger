@@ -9,8 +9,7 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -23,6 +22,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Protocol.Binary.Annotator ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -39,7 +39,7 @@ testCoreTypes =
     , testProperty "Header" $
         roundTripCborRangeExpectation @(TP.BHeader StandardCrypto) minBound maxBound
     , testProperty "Block Header Hash" $
-        roundTripExpectation @TP.HashHeader cborTrip
+        roundTripExpectation @HashHeader cborTrip
     , testProperty "Protocol State" $
         roundTripExpectation @STS.PrtclState cborTrip
     ]

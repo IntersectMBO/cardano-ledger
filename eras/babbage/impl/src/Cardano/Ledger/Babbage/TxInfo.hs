@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusScriptPurpose,
   PlutusTxInfo,
+  SupportedLanguage (..),
   lookupTxInfoResultImpossible,
   toPlutusWithContext,
  )
@@ -185,14 +186,14 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  forall proxy l era.
+  forall proxy l era t.
   ( EraPlutusTxInfo l era
   , AlonzoEraTxBody era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
   ProtVer ->
-  TxBody era ->
+  TxBody t era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPtr proxy pv txBody (ptr, (d, _)) =
@@ -213,7 +214,7 @@ transTxRedeemers ::
   ) =>
   proxy l ->
   ProtVer ->
-  Tx era ->
+  Tx t era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
 transTxRedeemers proxy pv tx =
   PV2.unsafeFromList
@@ -227,6 +228,11 @@ instance EraPlutusContext BabbageEra where
     = BabbageTxInfoResult -- Fields must be kept lazy
         (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV1))
         (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV2))
+
+  mkSupportedLanguage = \case
+    PlutusV1 -> Just $ SupportedLanguage SPlutusV1
+    PlutusV2 -> Just $ SupportedLanguage SPlutusV2
+    _lang -> Nothing
 
   mkTxInfoResult lti = BabbageTxInfoResult (toPlutusTxInfo SPlutusV1 lti) (toPlutusTxInfo SPlutusV2 lti)
 
@@ -316,7 +322,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
     unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
 
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     outputs <-
       zipWithM
@@ -342,6 +348,8 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
+  toPlutusTxInInfo _ = transTxInInfoV1
+
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
@@ -349,7 +357,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+      Alonzo.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
@@ -378,6 +386,8 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV2Args
+
+  toPlutusTxInInfo _ = transTxInInfoV2
 
 toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>

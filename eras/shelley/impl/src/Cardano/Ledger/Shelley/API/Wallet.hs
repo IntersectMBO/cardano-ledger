@@ -3,7 +3,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -19,7 +21,6 @@ module Cardano.Ledger.Shelley.API.Wallet (
 
   -- * Stake Pools
   getPools,
-  getPoolParameters,
   getTotalStake,
   poolsByTotalStakeFraction,
   RewardInfoPool (..),
@@ -35,15 +36,16 @@ module Cardano.Ledger.Shelley.API.Wallet (
   AdaPots (..),
   totalAdaES,
   totalAdaPotsES,
-)
-where
+  getStakePools,
+) where
 
-import Cardano.Ledger.Address (Addr (..), compactAddr)
+import Cardano.Ledger.Address (compactAddr)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   NonNegativeInterval,
   UnitInterval,
   epochInfoPure,
+  unNonZero,
   (%?),
  )
 import Cardano.Ledger.Binary (
@@ -60,12 +62,10 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (WitVKey (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   totalAdaES,
@@ -84,13 +84,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   lsCertStateL,
   nesEsL,
-  psStakePoolParamsL,
  )
 import Cardano.Ledger.Shelley.PoolRank (
   NonMyopic (..),
   PerformanceEstimate (..),
-  getTopRankedPoolsVMap,
-  nonMyopicMemberRew,
+  calcNonMyopicMemberReward,
+  getTopRankedPools,
   percentile',
  )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
@@ -104,7 +103,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
-import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -156,22 +154,22 @@ getUTxOSubset nes = txInsFilter (getUTxO nes)
 getPools ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool)
+  Set (KeyHash StakePool)
 getPools = Map.keysSet . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
--- | Get the /current/ registered stake pool parameters for a given set of
+-- | Get the /current/ registered stake pool state for a given set of
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
-getPoolParameters ::
+getStakePools ::
   EraCertState era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool) ->
-  Map (KeyHash 'StakePool) PoolParams
-getPoolParameters = Map.restrictKeys . f
+  Set (KeyHash StakePool) ->
+  Map (KeyHash StakePool) StakePoolState
+getStakePools = Map.restrictKeys . f
   where
-    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+    f nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -185,16 +183,16 @@ getPoolParameters = Map.restrictKeys . f
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
-  (EraGov era, EraStake era, EraCertState era) =>
+  (EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   PoolDistr
-poolsByTotalStakeFraction globals ss =
+poolsByTotalStakeFraction globals nes =
   PoolDistr poolsByTotalStake totalActiveStake
   where
-    snap = currentSnapshot ss
-    Coin totalStake = getTotalStake globals ss
-    stakeRatio = unCoin (fromCompact totalActiveStake) %? totalStake
+    snap = currentSnapshot nes
+    Coin totalStake = getTotalStake globals nes
+    stakeRatio = unCoin (unNonZero totalActiveStake) %? totalStake
     PoolDistr poolsByActiveStake totalActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
@@ -220,69 +218,51 @@ getNonMyopicMemberRewards ::
   (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
-  Set (Either Coin (Credential 'Staking)) ->
+  Set (Either Coin (Credential Staking)) ->
   Map
-    (Either Coin (Credential 'Staking))
-    (Map (KeyHash 'StakePool) Coin)
-getNonMyopicMemberRewards globals ss =
-  Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData)
+    (Either Coin (Credential Staking))
+    (Map (KeyHash StakePool) Coin)
+getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
   where
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
     totalStakeCoin@(Coin totalStake) = circulation es maxSupply
     toShare (Coin x) = StakeShare $ x %? totalStake
     memShare (Right cred) =
-      toShare $ maybe mempty fromCompact $ VMap.lookup cred (EB.unStake stake)
+      toShare $
+        maybe mempty (fromCompact . unNonZero . EB.swdStake) $
+          VMap.lookup cred (EB.unActiveStake activeStake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
     pp = es ^. curPParamsEpochStateL
     NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
-    EB.SnapShot stake delegs poolParams = currentSnapshot ss
-    poolData =
-      Map.fromDistinctAscList
-        [ ( k
-          ,
-            ( percentile' (histLookup k)
-            , p
-            , toShare . EB.sumAllStake $ EB.poolStake k delegs stake
-            )
-          )
-        | (k, p) <- VMap.toAscList poolParams
-        ]
-    histLookup k = Map.findWithDefault mempty k ls
-    topPools =
-      getTopRankedPoolsVMap
-        rPot
-        totalStakeCoin
-        pp
-        poolParams
-        (fmap percentile' ls)
-    mkNMMRewards t (hitRateEst, poolp, sigma) =
-      if checkPledge poolp
-        then nonMyopicMemberRew pp rPot poolp s sigma t topPools hitRateEst
-        else mempty
+    EB.SnapShot activeStake _ stakePoolsSnapShot = currentSnapshot ss
+    calcNMMRewards t poolId spss
+      | spssPledge <= spssSelfDelegatedOwnersStake =
+          calcNonMyopicMemberReward pp rPot poolId spssCost spssMargin s sigma t topPools hitRateEst
+      | otherwise = mempty
       where
-        s = (toShare . ppPledge) poolp
-        checkPledge pool =
-          let ostake = sumPoolOwnersStake pool stake
-           in ppPledge poolp <= ostake
+        StakePoolSnapShot {spssSelfDelegatedOwnersStake, spssPledge, spssCost, spssMargin} = spss
+        s = toShare spssPledge
+        hitRateEst = percentile' (histLookup poolId)
+        sigma = toShare (fromCompact (spssStake spss))
 
-sumPoolOwnersStake :: PoolParams -> EB.Stake -> Coin
-sumPoolOwnersStake pool stake =
-  let getStakeFor o =
-        maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)
-   in foldMap' getStakeFor (ppOwners pool)
+    nmmRewards cred = VMap.toMap $ VMap.mapWithKey (calcNMMRewards $ memShare cred) stakePoolsSnapShot
+    histLookup k = VMap.findWithDefault mempty k ls
+    topPools =
+      getTopRankedPools rPot totalStakeCoin pp $
+        Map.intersectionWith (,) (VMap.toMap (VMap.map percentile' ls)) $
+          VMap.toMap stakePoolsSnapShot
 
 -- | Create a current snapshot of the ledger state.
 --
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: (EraGov era, EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
-currentSnapshot ss =
+currentSnapshot :: (EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
+currentSnapshot nes =
   snapShotFromInstantStake instantStake dstate pstate
   where
-    _pp = nesEs ss ^. curPParamsEpochStateL
-    ledgerState = esLState $ nesEs ss
+    ledgerState = esLState $ nesEs nes
     instantStake = ledgerState ^. instantStakeG
     dstate = ledgerState ^. lsCertStateL . certDStateL
     pstate = ledgerState ^. lsCertStateL . certPStateL
@@ -348,40 +328,37 @@ getRewardInfoPools ::
   (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
-  (RewardParams, Map (KeyHash 'StakePool) RewardInfoPool)
-getRewardInfoPools globals ss =
-  (mkRewardParams, VMap.toMap (VMap.mapWithKey mkRewardInfoPool poolParams))
+  (RewardParams, Map (KeyHash StakePool) RewardInfoPool)
+getRewardInfoPools globals nes =
+  (rewardParams, VMap.toMap $ VMap.mapWithKey mkRewardInfoPool ssStakePoolsSnapShot)
   where
-    es = nesEs ss
+    es = nesEs nes
     pp = es ^. curPParamsEpochStateL
     NonMyopic
       { likelihoodsNM = ls
       , rewardPotNM = rPot
       } = esNonMyopic es
-    histLookup key = Map.findWithDefault mempty key ls
+    histLookup poolId = VMap.findWithDefault mempty poolId ls
 
-    EB.SnapShot stakes delegs poolParams = currentSnapshot ss
+    EB.SnapShot {ssStakePoolsSnapShot} = currentSnapshot nes
 
-    mkRewardParams =
+    rewardParams =
       RewardParams
         { a0 = pp ^. ppA0L
         , nOpt = pp ^. ppNOptL
-        , totalStake = getTotalStake globals ss
+        , totalStake = getTotalStake globals nes
         , rPot = rPot
         }
-    mkRewardInfoPool key poolp =
+    mkRewardInfoPool poolId StakePoolSnapShot {..} =
       RewardInfoPool
-        { stake = pstake
-        , ownerStake = ostake
-        , ownerPledge = ppPledge poolp
-        , margin = ppMargin poolp
-        , cost = ppCost poolp
+        { stake = fromCompact spssStake
+        , ownerStake = spssSelfDelegatedOwnersStake
+        , ownerPledge = spssPledge
+        , margin = spssMargin
+        , cost = spssCost
         , performanceEstimate =
-            unPerformanceEstimate $ percentile' $ histLookup key
+            unPerformanceEstimate $ percentile' $ histLookup poolId
         }
-      where
-        pstake = EB.sumAllStake $ EB.poolStake key delegs stakes
-        ostake = sumPoolOwnersStake poolp stakes
 
 -- | Calculate stake pool rewards from the snapshot labeled `go`.
 -- Also includes information on how the rewards were calculated
@@ -419,7 +396,7 @@ getRewardProvenance globals newEpochState =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
-addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness) -> Tx era
+addKeyWitnesses :: EraTx era => Tx t era -> Set (WitVKey Witness) -> Tx t era
 addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
 
 --------------------------------------------------------------------------------

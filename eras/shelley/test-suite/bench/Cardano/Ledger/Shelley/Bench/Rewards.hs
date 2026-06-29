@@ -10,10 +10,9 @@ module Cardano.Ledger.Shelley.Bench.Rewards (
   createRUpd,
   createRUpdWithProv,
   genChainInEpoch,
-)
-where
+) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr (..))
 import Cardano.Ledger.BaseTypes (
   Globals (activeSlotCoeff, securityParameter),
   Network (Testnet),
@@ -23,12 +22,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
@@ -138,19 +136,19 @@ genChainInEpoch epoch = do
       ShelleyGenesisStaking
         { sgsPools =
             LM.ListMap
-              [ (aikColdKeyHash, pp)
+              [ (aikColdKeyHash, spp)
               | (AllIssuerKeys {aikVrf, aikColdKeyHash}, (owner : _)) <- stakeMap
-              , let pp =
-                      PoolParams
-                        { ppId = aikColdKeyHash
-                        , ppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
-                        , ppPledge = Coin 1
-                        , ppCost = Coin 1
-                        , ppMargin = minBound
-                        , ppRewardAccount = RewardAccount Testnet $ KeyHashObj owner
-                        , ppOwners = Set.singleton owner
-                        , ppRelays = StrictSeq.empty
-                        , ppMetadata = SNothing
+              , let spp =
+                      StakePoolParams
+                        { sppId = aikColdKeyHash
+                        , sppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
+                        , sppPledge = Coin 1
+                        , sppCost = Coin 1
+                        , sppMargin = minBound
+                        , sppAccountAddress = AccountAddress Testnet $ AccountId $ KeyHashObj owner
+                        , sppOwners = Set.singleton owner
+                        , sppRelays = StrictSeq.empty
+                        , sppMetadata = SNothing
                         }
               ]
         , sgsStake =
@@ -168,7 +166,7 @@ genChainInEpoch epoch = do
         go !acc [] = acc
         go !acc xs' = let (a, b) = splitAt n xs' in go (a : acc) b
 
-    addrToKeyHash :: Addr -> Maybe (KeyHash 'Staking)
+    addrToKeyHash :: Addr -> Maybe (KeyHash Staking)
     addrToKeyHash (Addr _ _ (StakeRefBase (KeyHashObj kh))) = Just kh
     addrToKeyHash _ = Nothing
 

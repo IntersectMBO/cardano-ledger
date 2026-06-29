@@ -13,14 +13,11 @@
 -- | Benchmark the TickF rule. and its major sub-computations and rules, to discover where the time is spent
 module Bench.Cardano.Ledger.StakeDistr (
   tickfRuleBench,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
+import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
@@ -39,7 +36,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   filterAllRewards,
   lsCertStateL,
   nesEsL,
-  rewards,
  )
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
 import Cardano.Ledger.Shelley.Rules (
@@ -52,16 +48,8 @@ import Cardano.Ledger.Shelley.Rules (
   validatingTickTransitionFORECAST,
  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
-import Cardano.Ledger.State (
-  PoolDistr (..),
-  SnapShot (..),
-  SnapShots (..),
-  calculatePoolDistr,
-  calculatePoolStake,
- )
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad.Reader (Reader, runReader)
 import Control.State.Transition.Extended (
@@ -77,7 +65,6 @@ import Criterion (Benchmark, bench, bgroup, env, nf, whnf)
 import qualified Data.Aeson as Aeson (eitherDecode)
 import Data.ByteString.Lazy as Lazy (readFile)
 import Data.Default (Default (def))
-import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (pack)
 import Lens.Micro
@@ -127,15 +114,7 @@ readNewEpochState = do
             ]
 
 bogusNewEpochState :: NewEpochState CurrentEra
-bogusNewEpochState =
-  NewEpochState
-    (EpochNo 0)
-    (BlocksMade Map.empty)
-    (BlocksMade Map.empty)
-    def
-    (SJust (Complete (RewardUpdate (DeltaCoin 0) (DeltaCoin 0) def (DeltaCoin 0) def)))
-    (PoolDistr Map.empty $ CompactCoin 1)
-    def
+bogusNewEpochState = def
 
 mkGlobals :: ShelleyGenesis -> Globals
 mkGlobals genesis =
@@ -182,14 +161,14 @@ updateRewardsX globals newepochstate =
 
 adoptGenesisDelegsR ::
   EraCertState era =>
-  Cardano.Slotting.Slot.SlotNo ->
+  SlotNo ->
   NewEpochState era ->
   EpochState era
 adoptGenesisDelegsR slot nes = adoptGenesisDelegs (nesEs nes) slot
 
 tickfR2 ::
   Globals ->
-  Cardano.Slotting.Slot.SlotNo ->
+  SlotNo ->
   NewEpochState CurrentEra ->
   NewEpochState CurrentEra
 tickfR2 globals slot nes = liftRule globals (TRC ((), nes, slot)) (validatingTickTransitionFORECAST @ShelleyTICKF nes slot)
@@ -243,8 +222,9 @@ tickfRuleBench =
                                 )
                                 ( \registeredAggregated ->
                                     bench "union+" $
-                                      let dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
-                                       in whnf (rewards dState UM.∪+) registeredAggregated
+                                      whnf
+                                        (addToBalanceAccounts registeredAggregated)
+                                        (nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL)
                                 )
                             ]
                         ]
@@ -254,7 +234,7 @@ tickfRuleBench =
                     , bgroup
                         "calculatePoolDistr subparts"
                         [ bench "poolStake" $
-                            whnf (calculatePoolStake (const True) (ssDelegations (getSnap nes))) (ssStake (getSnap nes))
+                            whnf (calculatePoolStake (const True)) (ssActiveStake (getSnap nes))
                         , bench "old calculatePoolDistr" $
                             whnf (oldCalculatePoolDistr (const True)) (getSnap nes)
                         ]
@@ -298,8 +278,8 @@ shelleyGenesis =
       \    \"maxTxSize\": 16384,\
       \    \"maxBlockBodySize\": 65536,\
       \    \"maxBlockHeaderSize\": 1100,\
-      \    \"minFeeA\": 44,\
-      \    \"minFeeB\": 155381,\
+      \    \"txFeePerByte\": 44,\
+      \    \"txFeeFixed\": 155381,\
       \    \"minUTxOValue\": 1000000,\
       \    \"poolDeposit\": 500000000,\
       \    \"minPoolCost\": 340000000,\

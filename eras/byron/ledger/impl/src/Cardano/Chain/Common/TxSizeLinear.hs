@@ -9,8 +9,7 @@ module Cardano.Chain.Common.TxSizeLinear (
   TxSizeLinear (..),
   txSizeLinearMinValue,
   calculateTxSizeLinear,
-)
-where
+) where
 
 import Cardano.Chain.Common.Lovelace (
   Lovelace,

@@ -3,14 +3,14 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Byron.API.Mempool (
   ApplyMempoolPayloadErr (..),
   applyMempoolPayload,
   mempoolPayloadRecoverBytes,
   mempoolPayloadReencode,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common
@@ -71,7 +71,7 @@ instance DecCBOR ApplyMempoolPayloadErr where
       1 -> MempoolDlgErr <$> decCBOR
       2 -> MempoolUpdateProposalErr <$> decCBOR
       3 -> MempoolUpdateVoteErr <$> decCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
+      tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" $ fromIntegral @Word8 @Word tag
 
 applyMempoolPayload ::
   MonadError ApplyMempoolPayloadErr m =>

@@ -14,8 +14,7 @@ module Cardano.Chain.Genesis.Delegation (
   GenesisDelegation (..),
   GenesisDelegationError,
   mkGenesisDelegation,
-)
-where
+) where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (

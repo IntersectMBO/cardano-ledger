@@ -3,7 +3,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,8 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
   ShelleyBbodyEvent (..),
   PredicateFailure,
   State,
-)
-where
+) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (
@@ -31,12 +33,21 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   epochInfoPure,
  )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (
+  Decode (From, FromGroup, Invalid, SumD, Summands),
+  Encode (Sum, To, ToGroup),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (AccountState)
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -47,6 +58,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -66,6 +78,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
   = BbodyState !(State (EraRule "LEDGERS" era)) !BlocksMade
+  deriving (Generic)
 
 deriving stock instance Show (State (EraRule "LEDGERS" era)) => Show (ShelleyBbodyState era)
 
@@ -73,18 +86,20 @@ deriving stock instance Eq (State (EraRule "LEDGERS" era)) => Eq (ShelleyBbodySt
 
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era
-  , bbodyAccount :: AccountState
+  , bbodyAccount :: ChainAccountState
   }
 
 data ShelleyBbodyPredFailure era
   = -- | `mismatchSupplied` ~ Actual body size.
     --   `mismatchExpected` ~ Claimed body size in the header.
-    WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
+    WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
   | -- | `mismatchSupplied` ~ Actual hash.
     --   `mismatchExpected` ~ Claimed hash in the header.
-    InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash HASH EraIndependentBlockBody))
+    InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
+
+instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (ShelleyBbodyPredFailure era)
 
 type instance EraRuleFailure "BBODY" ShelleyEra = ShelleyBbodyPredFailure ShelleyEra
 
@@ -117,8 +132,37 @@ instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure ShelleyEra where
 instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  EncCBOR (ShelleyBbodyPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      WrongBlockBodySizeBBODY mm -> Sum WrongBlockBodySizeBBODY 0 !> ToGroup mm
+      InvalidBodyHashBBODY mm -> Sum (InvalidBodyHashBBODY @era) 1 !> ToGroup mm
+      LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  DecCBOR (ShelleyBbodyPredFailure era)
+  where
+  decCBOR = decode . Summands "ShelleyBbodyPredFailure" $ \case
+    0 -> SumD WrongBlockBodySizeBBODY <! FromGroup
+    1 -> SumD InvalidBodyHashBBODY <! FromGroup
+    2 -> SumD LedgersFailure <! From
+    n -> Invalid n
+
 newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))
+  deriving (Generic)
+
+deriving instance
+  Eq (Event (EraRule "LEDGERS" era)) =>
+  Eq (ShelleyBbodyEvent era)
 
 deriving stock instance
   ( Era era
@@ -139,20 +183,16 @@ instance
   NoThunks (ShelleyBbodyPredFailure era)
 
 instance
-  ( EraSegWits era
+  ( EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   STS (ShelleyBBODY era)
   where
-  type
-    State (ShelleyBBODY era) =
-      ShelleyBbodyState era
+  type State (ShelleyBBODY era) = ShelleyBbodyState era
 
-  type
-    Signal (ShelleyBBODY era) =
-      Block BHeaderView era
+  type Signal (ShelleyBBODY era) = Block BHeaderView era
 
   type Environment (ShelleyBBODY era) = BbodyEnv era
 
@@ -168,46 +208,46 @@ instance
 bbodyTransition ::
   forall era.
   ( STS (ShelleyBBODY era)
-  , EraSegWits era
+  , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-            ( BbodyEnv pp account
-              , BbodyState ls b
-              , UnserialisedBlock bhview txsSeq
-              )
-          ) -> do
-        let txs = fromTxSeq txsSeq
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq txsSeq
+             ( BbodyEnv pp account
+               , BbodyState ls b
+               , Block {blockHeader = blockHeaderView, blockBody}
+               )
+           ) -> do
+        let txs = blockBody ^. txSeqBlockBodyL
+            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) blockBody
+            actualBodyHash = hashBlockBody blockBody
 
         actualBodySize
-          == fromIntegral (bhviewBSize bhview)
+          == fromIntegral (bhviewBSize blockHeaderView)
             ?! WrongBlockBodySizeBBODY
               ( Mismatch
                   { mismatchSupplied = actualBodySize
-                  , mismatchExpected = fromIntegral $ bhviewBSize bhview
+                  , mismatchExpected = fromIntegral $ bhviewBSize blockHeaderView
                   }
               )
 
         actualBodyHash
-          == bhviewBHash bhview
+          == bhviewBHash blockHeaderView
             ?! InvalidBodyHashBBODY
               ( Mismatch
                   { mismatchSupplied = actualBodyHash
-                  , mismatchExpected = bhviewBHash bhview
+                  , mismatchExpected = bhviewBHash blockHeaderView
                   }
               )
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
-        let hkAsStakePool = coerceKeyRole $ bhviewID bhview
-            slot = bhviewSlot bhview
+        let hkAsStakePool = coerceKeyRole $ bhviewID blockHeaderView
+            slot = bhviewSlot blockHeaderView
         (firstSlotNo, curEpochNo) <- liftSTS $ do
           ei <- asks epochInfoPure
           let curEpochNo = epochInfoEpoch ei slot
@@ -215,7 +255,7 @@ bbodyTransition =
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bhview) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv (bhviewSlot blockHeaderView) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
 
         let isOverlay = isOverlaySlot firstSlotNo (pp ^. ppDG) slot
         pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)

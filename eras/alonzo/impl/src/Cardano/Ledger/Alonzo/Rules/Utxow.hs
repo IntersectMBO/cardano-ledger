@@ -22,22 +22,20 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
   AlonzoUtxowPredFailure (..),
   hasExactSetOfRedeemers,
   missingRequiredDatums,
-  ppViewHashesMatch,
-)
-where
+  checkScriptIntegrityHash,
+) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure (..),
  )
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity (..), hashScriptIntegrity, mkScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
@@ -49,14 +47,14 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
+  ProtVer (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   quorum,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), natVersion)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..), dsGenDelegsL)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
@@ -68,19 +66,25 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.State (
+  EraCertState (..),
+  EraUTxO (..),
+  ScriptsProvided (..),
+  UTxO (..),
+  dsGenDelegsL,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (domain, eval, (➖))
 import Control.State.Transition.Extended
+import Data.ByteString (ByteString)
 import Data.Foldable (sequenceA_)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -95,33 +99,29 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure (ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      [(PlutusPurpose AsItem era, ScriptHash)]
+      (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
   | MissingRequiredDatums
-      -- TODO: Make this NonEmpty #4066
-
       -- | Set of missing data hashes
-      (Set DataHash)
+      (NonEmptySet DataHash)
       -- | Set of received data hashes
       (Set DataHash)
   | NotAllowedSupplementalDatums
-      -- TODO: Make this NonEmpty #4066
-
       -- | Set of unallowed data hashes
-      (Set DataHash)
+      (NonEmptySet DataHash)
       -- | Set of acceptable supplemental data hashes
       (Set DataHash)
   | PPViewHashesDontMatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
-  | -- | Set of witnesses which were needed and not supplied
-    MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
-      (Set (KeyHash 'Witness))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
-      -- TODO: Make this NonEmpty #4066
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | -- | List of redeemers not needed
     ExtraRedeemers
-      [PlutusPurpose AsIx era]
+      (NonEmpty (PlutusPurpose AsIx era))
+  | -- | The computed script integrity hash does not match the provided script integrity hash
+    ScriptIntegrityHashMismatch
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
+      (StrictMaybe ByteString)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" AlonzoEra = AlonzoUtxowPredFailure AlonzoEra
@@ -176,9 +176,7 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , EncCBOR (TxCert era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (TxAuxData era)
   ) =>
   EncCBOR (AlonzoUtxowPredFailure era)
   where
@@ -189,9 +187,9 @@ instance
       MissingRequiredDatums x y -> Sum MissingRequiredDatums 2 !> To x !> To y
       NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 3 !> To x !> To y
       PPViewHashesDontMatch m -> Sum PPViewHashesDontMatch 4 !> To m
-      MissingRequiredSigners x -> Sum MissingRequiredSigners 5 !> To x
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
       ExtraRedeemers x -> Sum ExtraRedeemers 7 !> To x
+      ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 8 !> To x !> To y
 
 newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
@@ -216,9 +214,9 @@ instance
       2 -> SumD MissingRequiredDatums <! From <! From
       3 -> SumD NotAllowedSupplementalDatums <! From <! From
       4 -> SumD PPViewHashesDontMatch <! From
-      5 -> SumD MissingRequiredSigners <! From
       6 -> SumD UnspendableUTxONoDatumHash <! From
       7 -> SumD ExtraRedeemers <! From
+      8 -> SumD ScriptIntegrityHashMismatch <! From <! From
       n -> Invalid n
 
 -- =================
@@ -226,42 +224,38 @@ instance
 {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} ⊆ dom(txdats txw)   -}
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h, ) ∈ txouts tx ∪ utxo (refInputs tx) } -}
 missingRequiredDatums ::
-  forall era.
+  forall era l.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   ) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   Test (AlonzoUtxowPredFailure era)
 missingRequiredDatums utxo tx = do
   let txBody = tx ^. bodyTxL
       scriptsProvided = getScriptsProvided utxo tx
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
-      txHashes = domain (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
-      unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
+      txHashes = Map.keysSet (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
+      unmatchedDatumHashes = Set.difference inputHashes txHashes
       allowedSupplementalDataHashes = getSupplementalDataHashes utxo txBody
-      supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
+      supplimentalDatumHashes = Set.difference txHashes inputHashes
       (okSupplimentalDHs, notOkSupplimentalDHs) =
         Set.partition (`Set.member` allowedSupplementalDataHashes) supplimentalDatumHashes
   sequenceA_
-    [ failureUnless
-        (Set.null txInsNoDataHash)
-        (UnspendableUTxONoDatumHash txInsNoDataHash)
-    , failureUnless
-        (Set.null unmatchedDatumHashes)
-        (MissingRequiredDatums unmatchedDatumHashes txHashes)
-    , failureUnless
-        (Set.null notOkSupplimentalDHs)
-        (NotAllowedSupplementalDatums notOkSupplimentalDHs okSupplimentalDHs)
+    [ failureOnNonEmptySet txInsNoDataHash UnspendableUTxONoDatumHash
+    , failureOnNonEmptySet unmatchedDatumHashes (\unmatched -> MissingRequiredDatums unmatched txHashes)
+    , failureOnNonEmptySet
+        notOkSupplimentalDHs
+        (\notOk -> NotAllowedSupplementalDatums notOk okSupplimentalDHs)
     ]
 
 -- ==================
 {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
 hasExactSetOfRedeemers ::
-  forall era.
+  forall era l.
   AlonzoEraTx era =>
-  Tx era ->
+  Tx l era ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
   Test (AlonzoUtxowPredFailure era)
@@ -279,30 +273,33 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
           redeemersNeeded
           fst
   sequenceA_
-    [ failureUnless (null extraRdmrs) (ExtraRedeemers extraRdmrs)
-    , failureUnless (null missingRdmrs) (MissingRedeemers (map snd missingRdmrs))
+    [ failureOnNonEmpty extraRdmrs ExtraRedeemers
+    , failureOnNonEmpty (map snd missingRdmrs) MissingRedeemers
     ]
 
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-ppViewHashesMatch ::
-  forall era.
+checkScriptIntegrityHash ::
+  forall era l.
   AlonzoEraTx era =>
-  Tx era ->
+  Tx l era ->
   PParams era ->
-  ScriptsProvided era ->
-  Set ScriptHash ->
+  StrictMaybe (ScriptIntegrity era) ->
   Test (AlonzoUtxowPredFailure era)
-ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
-  let scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
-      langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
-      langViews = Set.map (getLanguageView pp) langs
-      txWits = tx ^. witsTxL
-      computedPPhash = hashScriptIntegrity langViews (txWits ^. rdmrsTxWitsL) (txWits ^. datsTxWitsL)
-      bodyPPhash = tx ^. bodyTxL . scriptIntegrityHashTxBodyL
+checkScriptIntegrityHash tx pp scriptIntegrity = do
+  let computedScriptIntegrityHash = hashScriptIntegrity <$> scriptIntegrity
+      suppliedScriptIntegrityHash = tx ^. bodyTxL . scriptIntegrityHashTxBodyL
+      expectedScriptIntegrity = originalBytes <$> scriptIntegrity
+      mismatch =
+        Mismatch
+          { mismatchSupplied = suppliedScriptIntegrityHash
+          , mismatchExpected = computedScriptIntegrityHash
+          }
   failureUnless
-    (bodyPPhash == computedPPhash)
-    (PPViewHashesDontMatch Mismatch {mismatchSupplied = bodyPPhash, mismatchExpected = computedPPhash})
+    (suppliedScriptIntegrityHash == computedScriptIntegrityHash)
+    $ if pvMajor (pp ^. ppProtocolVersionL) < natVersion @11
+      then PPViewHashesDontMatch mismatch
+      else ScriptIntegrityHashMismatch mismatch expectedScriptIntegrity
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -323,7 +320,7 @@ alonzoStyleWitness ::
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
@@ -336,7 +333,7 @@ alonzoStyleWitness = do
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
-      witsKeyHashes = witsFromTxWitnesses @era tx
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
       scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts
@@ -385,8 +382,9 @@ alonzoStyleWitness = do
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a constructor of the predicate failure 'CollectError'.
 
+  let scriptIntegrity = mkScriptIntegrity pp tx scriptsProvided scriptsHashesNeeded
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptsHashesNeeded
+  runTest $ checkScriptIntegrityHash tx pp scriptIntegrity
 
   trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
@@ -416,13 +414,13 @@ instance
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraCertState era
   ) =>
   STS (AlonzoUTXOW era)
   where
   type State (AlonzoUTXOW era) = UTxOState era
-  type Signal (AlonzoUTXOW era) = Tx era
+  type Signal (AlonzoUTXOW era) = Tx TopTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era

@@ -8,7 +8,7 @@ import Paths_cardano_ledger_mary
 
 readMaryCddlFileNames :: IO [FilePath]
 readMaryCddlFileNames = do
-  base <- getDataFileName "cddl-files/mary.cddl"
+  base <- getDataFileName "cddl/data/mary.cddl"
   pure [base]
 
 readMaryCddlFiles :: IO [BSL.ByteString]

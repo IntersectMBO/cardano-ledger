@@ -1,0 +1,165 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
+module Test.Cardano.Ledger.Conway.Imp.UtxowSpec (spec) where
+
+import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Babbage.Tx (ScriptIntegrity (..), getLanguageView)
+import Cardano.Ledger.BaseTypes (
+  Inject (..),
+  Mismatch (..),
+  Network (..),
+  StrictMaybe (..),
+  TxIx (..),
+ )
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Conway.Core (
+  AlonzoEraTxBody (..),
+  AlonzoEraTxWits (..),
+  CoinPerByte (..),
+  EraIndependentScriptIntegrity,
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  EraTxWits (..),
+  InjectRuleFailure (..),
+  SafeHash,
+  SafeToHash (..),
+  TxLevel (..),
+  ppCoinsPerUTxOByteL,
+  txIdTx,
+ )
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure (..))
+import Cardano.Ledger.Conway.TxBody
+import Cardano.Ledger.Credential (Credential (..), StakeReference)
+import Cardano.Ledger.Keys (asWitness, witVKeyHash)
+import Cardano.Ledger.Plutus (Language (..), SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
+import Lens.Micro ((%~), (&), (.~), (^.))
+import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+
+spec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era))
+spec = do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
+    fixedTx <- fixupTx =<< setupBadPPViewHashTx
+    badScriptIntegrityHash <- arbitrary
+    tx <- substituteIntegrityHashAndFixWits badScriptIntegrityHash fixedTx
+    scriptIntegrityHash <- computeScriptIntegrityHash tx
+    impAnn "Submit a transaction with an invalid script integrity hash"
+      . withNoFixup
+      $ submitFailingTx
+        tx
+        [ injectFailure . PPViewHashesDontMatch $
+            Mismatch
+              { mismatchSupplied = badScriptIntegrityHash
+              , mismatchExpected = scriptIntegrityHash
+              }
+        ]
+  it "Fails with PPViewHashesDontMatchInformative after PV 11" . whenMajorVersionAtLeast @11 $ do
+    fixedTx <- fixupTx =<< setupBadPPViewHashTx
+    pp <- getsPParams id
+    badScriptIntegrityHash <- arbitrary
+    let
+      langView = [getLanguageView pp PlutusV2]
+      scriptIntegrity = ScriptIntegrity @era redeemers dats langView
+      redeemers = fixedTx ^. witsTxL . rdmrsTxWitsL
+      dats = fixedTx ^. witsTxL . datsTxWitsL
+    tx <- substituteIntegrityHashAndFixWits badScriptIntegrityHash fixedTx
+    scriptIntegrityHash <- computeScriptIntegrityHash tx
+    let
+      mismatch =
+        Mismatch
+          { mismatchSupplied = badScriptIntegrityHash
+          , mismatchExpected = scriptIntegrityHash
+          }
+    impAnn "Submit a transaction with an invalid script integrity hash"
+      . withNoFixup
+      $ submitFailingTx
+        tx
+        [ injectFailure $ ScriptIntegrityHashMismatch mismatch (SJust $ originalBytes scriptIntegrity)
+        ]
+  it "Transaction containing SPO vote but no witness for it fails" $ do
+    spoKh <- freshKeyHash
+    registerPool spoKh
+    gaId <- mkProposal InfoAction >>= submitProposal
+    submitVote_ @era VoteYes (StakePoolVoter spoKh) gaId
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . votingProceduresTxBodyL
+              .~ VotingProcedures
+                ( Map.singleton
+                    (StakePoolVoter spoKh)
+                    ( Map.singleton
+                        gaId
+                        ( VotingProcedure
+                            { vProcVote = VoteYes
+                            , vProcAnchor = SNothing
+                            }
+                        )
+                    )
+                )
+    let isSPOWitness wit = witVKeyHash wit == asWitness spoKh
+    withPostFixup (pure . (witsTxL . addrTxWitsL %~ Set.filter (not . isSPOWitness))) $
+      submitFailingTx
+        tx
+        [ injectFailure $
+            MissingVKeyWitnessesUTXOW $
+              NES.singleton $
+                asWitness spoKh
+        ]
+
+setupBadPPViewHashTx ::
+  forall era.
+  ConwayEraImp era =>
+  ImpTestM era (Tx TopTx era)
+setupBadPPViewHashTx = do
+  modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1)
+  someKeyHash <- arbitrary @StakeReference
+  let scriptTxOut =
+        mkBasicTxOut
+          ( Addr
+              Testnet
+              (ScriptHashObj (hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2))
+              someKeyHash
+          )
+          (inject $ Coin 1_000_000)
+  scriptTxIn <-
+    impAnn "Submit a transaction that has a script output"
+      . submitTx
+      $ mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL .~ [scriptTxOut]
+  pure $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . inputsTxBodyL .~ [TxIn (txIdTx scriptTxIn) (TxIx 0)]
+
+substituteIntegrityHashAndFixWits ::
+  forall era.
+  ConwayEraImp era =>
+  StrictMaybe (SafeHash EraIndependentScriptIntegrity) ->
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+substituteIntegrityHashAndFixWits hash tx =
+  let txWithNewHash =
+        tx
+          & bodyTxL . scriptIntegrityHashTxBodyL .~ hash
+          & witsTxL .~ mkBasicTxWits
+   in fixupScriptWits txWithNewHash
+        >>= fixupDatums
+        >>= fixupRedeemers
+        >>= updateAddrTxWits

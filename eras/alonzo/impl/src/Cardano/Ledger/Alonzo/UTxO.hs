@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -30,56 +32,61 @@ module Cardano.Ledger.Alonzo.UTxO (
 
   -- * WitsVKey needed
   getAlonzoWitsVKeyNeeded,
-)
-where
+) where
 
-import Cardano.Ledger.Alonzo.CertState ()
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (credScriptHash)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
-import Cardano.Ledger.Shelley.TxBody (raCredential)
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
+  shelleyConsumed,
  )
 import Cardano.Ledger.State (
+  EraCertState (..),
   EraUTxO (..),
   ScriptsProvided (..),
   UTxO (..),
   getScriptHash,
  )
 import Cardano.Ledger.TxIn
-import Control.SetAlgebra (eval, (◁))
 import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import qualified Data.Set as Set
 import Data.Word (Word32)
+import GHC.Generics
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
 -- | Alonzo era style `ScriptsNeeded` require also a `PlutusPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash)]
-  deriving (Monoid, Semigroup)
+  deriving (Monoid, Semigroup, Generic)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
+
 deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
 
+  consumed = shelleyConsumed
+
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = getProducedMaryValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
@@ -98,7 +105,7 @@ class EraUTxO era => AlonzoEraUTxO era where
   -- to the outputs and reference inputs are the supplemental datums.
   getSupplementalDataHashes ::
     UTxO era ->
-    TxBody era ->
+    TxBody l era ->
     Set.Set DataHash
 
   -- | Lookup the TxIn from the `Spending` ScriptPurpose and find the datum needed for
@@ -112,7 +119,7 @@ class EraUTxO era => AlonzoEraUTxO era where
   -- @
   getSpendingDatum ::
     UTxO era ->
-    Tx era ->
+    Tx l era ->
     PlutusPurpose AsItem era ->
     Maybe (Data era)
 
@@ -123,7 +130,7 @@ instance AlonzoEraUTxO AlonzoEra where
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>
-  TxBody era ->
+  TxBody l era ->
   Set.Set DataHash
 getAlonzoSupplementalDataHashes txBody =
   Set.fromList
@@ -137,7 +144,7 @@ getAlonzoSupplementalDataHashes txBody =
 getAlonzoSpendingDatum ::
   (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   PlutusPurpose AsItem era ->
   Maybe (Data era)
 getAlonzoSpendingDatum (UTxO m) tx sp = do
@@ -158,7 +165,7 @@ getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn
 getInputDataHashesTxBody ::
   (EraTxBody era, AlonzoEraTxOut era, AlonzoEraScript era) =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   ScriptsProvided era ->
   (Set.Set DataHash, Set.Set TxIn)
 getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
@@ -170,7 +177,7 @@ getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
       pure $ plutusScriptLanguage plutusScript
     isSpendingPlutusScript = isJust . spendingPlutusScriptLanguage
     spendInputs = txBody ^. inputsTxBodyL
-    spendUTxO = eval (spendInputs ◁ utxo)
+    spendUTxO = Map.restrictKeys utxo spendInputs
     accum ans@(!hashSet, !inputSet) txIn txOut =
       let addr = txOut ^. addrTxOutL
        in case txOut ^. datumTxOutF of
@@ -221,7 +228,7 @@ getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
 getAlonzoScriptsNeeded ::
   (MaryEraTxBody era, AlonzoEraScript era) =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   AlonzoScriptsNeeded era
 getAlonzoScriptsNeeded utxo txBody =
   getSpendingScriptsNeeded utxo txBody
@@ -278,7 +285,7 @@ zipAsIxItem xs f =
 getSpendingScriptsNeeded ::
   (AlonzoEraScript era, EraTxBody era) =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   AlonzoScriptsNeeded era
 getSpendingScriptsNeeded (UTxO utxo) txBody =
   AlonzoScriptsNeeded $
@@ -292,19 +299,18 @@ getSpendingScriptsNeeded (UTxO utxo) txBody =
 
 getRewardingScriptsNeeded ::
   (AlonzoEraScript era, EraTxBody era) =>
-  TxBody era ->
+  TxBody l era ->
   AlonzoScriptsNeeded era
 getRewardingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
     catMaybes $
       zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
-        \asIxItem@(AsIxItem _ rewardAccount) ->
-          (RewardingPurpose asIxItem,) <$> credScriptHash (raCredential rewardAccount)
+        \asIxItem@(AsIxItem _ accountAddress) -> (RewardingPurpose asIxItem,) <$> credScriptHash (accountAddress ^. accountAddressCredentialL)
 {-# INLINEABLE getRewardingScriptsNeeded #-}
 
 getMintingScriptsNeeded ::
   (AlonzoEraScript era, MaryEraTxBody era) =>
-  TxBody era ->
+  TxBody l era ->
   AlonzoScriptsNeeded era
 getMintingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
@@ -314,13 +320,18 @@ getMintingScriptsNeeded txBody =
 
 -- | Just like `getShelleyWitsVKeyNeeded`, but also requires `reqSignerHashesTxBodyL`.
 getAlonzoWitsVKeyNeeded ::
-  forall era.
-  (EraTx era, AlonzoEraTxBody era, ShelleyEraTxBody era, EraCertState era) =>
+  forall era l.
+  ( EraTx era
+  , AlonzoEraTxBody era
+  , ShelleyEraTxBody era
+  , EraCertState era
+  , STxLevel l era ~ STxTopLevel l era
+  ) =>
   CertState era ->
   UTxO era ->
-  TxBody era ->
-  Set.Set (KeyHash 'Witness)
+  TxBody l era ->
+  Set.Set (KeyHash Witness)
 getAlonzoWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeeded certState utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyL)
+    `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
 {-# INLINEABLE getAlonzoWitsVKeyNeeded #-}

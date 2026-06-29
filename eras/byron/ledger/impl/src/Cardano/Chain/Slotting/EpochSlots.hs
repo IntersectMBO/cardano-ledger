@@ -6,8 +6,7 @@ module Cardano.Chain.Slotting.EpochSlots (
   EpochSlots (..),
   WithEpochSlots (..),
   epochFirstSlot,
-)
-where
+) where
 
 import Cardano.Chain.Slotting.EpochNumber
 import Cardano.Chain.Slotting.SlotNumber

@@ -20,8 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Delpl (
   ShelleyDelplPredFailure (..),
   ShelleyDelplEvent,
   PredicateFailure,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, invalidKey)
 import Cardano.Ledger.Binary (
@@ -30,15 +29,9 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
-  DState,
-  PState,
- )
 import Cardano.Ledger.Shelley.Rules.Deleg (
   DelegEnv (..),
   ShelleyDELEG,
@@ -47,6 +40,7 @@ import Cardano.Ledger.Shelley.Rules.Deleg (
  )
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Pool as Pool
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq
@@ -62,7 +56,7 @@ data DelplEnv era = DelplEnv
   , delplEpochNo :: EpochNo
   , delPlPtr :: Ptr
   , delPlPp :: PParams era
-  , delPlAccount :: AccountState
+  , delPlAccount :: ChainAccountState
   }
 
 data ShelleyDelplPredFailure era
@@ -126,7 +120,7 @@ instance
   , EraCertState era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , State (EraRule "POOL" era) ~ PState era
@@ -151,7 +145,6 @@ instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "POOL" era))
   , EncCBOR (PredicateFailure (EraRule "DELEG" era))
-  , Typeable (Script era)
   ) =>
   EncCBOR (ShelleyDelplPredFailure era)
   where
@@ -190,7 +183,7 @@ delplTransition ::
   forall era.
   ( Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , State (EraRule "POOL" era) ~ PState era
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
@@ -201,23 +194,21 @@ delplTransition ::
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
-  TRC (DelplEnv slot eNo ptr pp acnt, d, c) <- judgmentContext
+  TRC (DelplEnv slot eNo ptr pp chainAccountState, d, c) <- judgmentContext
   case c of
     ShelleyTxCertPool poolCert -> do
       ps <-
         trans @(EraRule "POOL" era) $ TRC (PoolEnv eNo pp, d ^. certPStateL, poolCert)
       pure $ d & certPStateL .~ ps
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
-      ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
-      pure $ d & certDStateL .~ ds
+      trans @(EraRule "DELEG" era) $
+        TRC (DelegEnv slot eNo ptr chainAccountState pp, d, c)
     ShelleyTxCertDelegCert _ -> do
-      ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
-      pure $ d & certDStateL .~ ds
+      trans @(EraRule "DELEG" era) $
+        TRC (DelegEnv slot eNo ptr chainAccountState pp, d, c)
     ShelleyTxCertMir _ -> do
-      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
-      pure $ d & certDStateL .~ ds
+      trans @(EraRule "DELEG" era) $
+        TRC (DelegEnv slot eNo ptr chainAccountState pp, d, c)
 
 instance
   ( Era era
@@ -231,9 +222,11 @@ instance
   wrapEvent = PoolEvent
 
 instance
-  ( ShelleyEraTxCert era
+  ( ShelleyEraAccounts era
+  , ShelleyEraTxCert era
+  , EraCertState era
   , EraPParams era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   , Event (EraRule "DELEG" era) ~ ShelleyDelegEvent era
   ) =>

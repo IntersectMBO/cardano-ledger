@@ -12,8 +12,7 @@ module Cardano.Chain.Update.Payload (
   APayload (..),
   Payload,
   payload,
-)
-where
+) where
 
 import Cardano.Chain.Update.Proposal (
   AProposal,

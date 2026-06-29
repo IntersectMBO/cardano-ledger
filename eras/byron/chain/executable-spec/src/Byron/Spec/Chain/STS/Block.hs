@@ -15,7 +15,7 @@ import Byron.Spec.Ledger.UTxO (Tx, TxIn, TxOut, Wit)
 import Byron.Spec.Ledger.Update (ProtVer, STag, UProp, Vote)
 import Data.AbstractSize
 import Data.ByteString (ByteString)
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Function (on)
 import qualified Data.Hashable as H
 import qualified Data.Map.Strict as Map
@@ -45,7 +45,7 @@ data BlockHeader = BlockHeader
   , _bhUpdHash :: !Hash
   -- ^ Update payload hash
   }
-  deriving (Eq, Generic, Show, Data, Typeable)
+  deriving (Eq, Generic, Show, Data)
 
 -- TODO: BlockVersion – the protocol (block) version that created the block
 -- TODO: SoftwareVersion – the software version that created the block
@@ -76,7 +76,7 @@ data BlockBody = BlockBody
   , _bProtVer :: !ProtVer
   -- ^ Protocol version
   }
-  deriving (Generic, Show, Data, Typeable)
+  deriving (Generic, Show, Data)
 
 makeLenses ''BlockBody
 
@@ -88,7 +88,7 @@ data Block = Block
   { _bHeader :: BlockHeader
   , _bBody :: BlockBody
   }
-  deriving (Generic, Show, Data, Typeable)
+  deriving (Generic, Show, Data)
 
 makeLenses ''Block
 

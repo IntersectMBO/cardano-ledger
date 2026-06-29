@@ -1,5 +1,23 @@
 # Revision history for `cardano-ledger-byron`
 
+## 1.3.0.0
+
+* Remove deprecated function `decCBORTextAddress`
+* Remove deprecated function `subSlotCount`
+* Add `ToCBOR` and `FromCBOR` instances for `KeyHash` and `GenesisHash`
+* Rename `encodedSizeTestEncCBOR` to `encodedSizeTestToCBOR`
+
+## 1.2.0.0
+
+* Remove `osHelper` and `archHelper` functions.
+* Added `Test.Cardano.Chain.Binary.Cddl` module
+
+### `testlib`
+
+* Added `testlib` sublibrary as replacement of `cardano-ledger-byron-test` package
+* Depend on libraries that use crypton instead of cryptonite (from former `cardano-ledger-byron-test` v1.5.2.1)
+* Move `mainnet-genesis.json` to this test package to make `ts_prop_elaboratedCertsValid` pass when run with `cabal`. #4586 (from former `cardano-ledger-byron-test` v1.5.2.0)
+
 ## 1.1.0.0
 
 * Switch from cryptonite library (deprecated) to crypton (a drop in replacement)

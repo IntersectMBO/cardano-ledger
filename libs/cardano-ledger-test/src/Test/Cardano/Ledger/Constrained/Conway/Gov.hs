@@ -13,16 +13,13 @@
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Shelley.HardForks qualified as HardForks
-import Cardano.Ledger.UMap (umElems, umElemsL)
-import Constrained
-import Constrained.Base (Pred (..))
+import Cardano.Ledger.Conway.State
+import Constrained.API
 import Data.Coerce
 import Data.Foldable
 import Data.Map qualified as Map
@@ -33,29 +30,26 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 govEnvSpec ::
-  IsConwayUniv fn =>
-  Specification fn (GovEnv ConwayEra)
+  Specification (GovEnv ConwayEra)
 govEnvSpec = constrained $ \ge ->
-  match ge $ \_ _ pp _ _ ->
+  match ge $ \_ _ pp _ _ _ ->
     satisfies pp pparamsSpec
 
 -- NOTE: it is probably OK not to check uniqueness of ids here, because a clash
 -- is never going to be generated, and the real representation of `Proposals` doesn't
 -- allow the id to appear twice.
 govProposalsSpec ::
-  IsConwayUniv fn =>
   GovEnv ConwayEra ->
-  Specification fn (Proposals ConwayEra)
-govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
-  proposalsSpec (lit geEpoch) (lit gePPolicy) (lit geCertState)
+  Specification (Proposals ConwayEra)
+govProposalsSpec GovEnv {geEpoch, geGuardrailsScriptHash, geCertState} =
+  proposalsSpec (lit geEpoch) (lit geGuardrailsScriptHash) (lit geCertState)
 
 proposalsSpec ::
-  IsConwayUniv fn =>
-  Term fn EpochNo ->
-  Term fn (StrictMaybe ScriptHash) ->
-  Term fn (CertState ConwayEra) ->
-  Specification fn (Proposals ConwayEra)
-proposalsSpec geEpoch gePPolicy geCertState =
+  Term EpochNo ->
+  Term (StrictMaybe ScriptHash) ->
+  Term (CertState ConwayEra) ->
+  Specification (Proposals ConwayEra)
+proposalsSpec geEpoch geGuardrailsScriptHash geCertState =
   constrained $ \ [var|props|] ->
     -- Note each of ppupTree, hardForkTree, committeeTree, constitutionTree
     -- have the pair type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [Tree GAS])
@@ -72,7 +66,7 @@ proposalsSpec geEpoch gePPolicy geCertState =
                       \_ ppup policy ->
                         [ assert $ ppup /=. lit emptyPParamsUpdate
                         , satisfies ppup wfPParamsUpdateSpec
-                        , assert $ policy ==. gePPolicy
+                        , assert $ policy ==. geGuardrailsScriptHash
                         ]
                   ]
               )
@@ -152,18 +146,18 @@ proposalsSpec geEpoch gePPolicy geCertState =
             (branch $ \_ _ -> False) -- HardForkInitiation
             -- Treasury Withdrawal
             ( branch $ \ [var|withdrawMap|] [var|policy|] ->
-                Explain (pure "TreasuryWithdrawal fails") $
-                  Block
+                explanation (pure "TreasuryWithdrawal fails") $
+                  fold $
                     [ dependsOn gasOther withdrawMap
                     , match geCertState $ \_vState _pState [var|dState|] ->
-                        match dState $ \ [var|rewardMap|] _ _ _ ->
-                          reify rewardMap (Map.keysSet . umElems) $ \ [var|registeredCredentials|] ->
-                            forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
-                              match rewAcnt $ \ [var|network|] [var|credential|] ->
+                        match dState $ \ [var|accounts|] _ _ _ ->
+                          reify accounts (Map.keysSet . (^. accountsMapL)) $ \ [var|registeredCredentials|] ->
+                            forAll (dom_ withdrawMap) $ \ [var|accountAddress|] ->
+                              match accountAddress $ \ [var|network|] [var|credential|] ->
                                 [ network ==. lit Testnet
                                 , credential `member_` registeredCredentials
                                 ]
-                    , assert $ policy ==. gePPolicy
+                    , assert $ policy ==. geGuardrailsScriptHash
                     ]
             )
             (branch $ \_ -> False) -- NoConfidence
@@ -174,26 +168,26 @@ proposalsSpec geEpoch gePPolicy geCertState =
       , genHint listSizeHint unorderedProposals
       ]
   where
-    treeGenHint = (Just 2, 10)
+    treeGenHint = (Just 2, 6)
     listSizeHint = 5
 
 allGASInTree ::
-  (IsConwayUniv fn, IsPred p fn) =>
-  (Term fn (GovActionState ConwayEra) -> p) ->
-  Specification fn (ProposalTree ConwayEra)
+  IsPred p =>
+  (Term (GovActionState ConwayEra) -> p) ->
+  Specification (ProposalTree ConwayEra)
 allGASInTree k = constrained $ \ [var|proposalTree|] ->
   forAll (snd_ proposalTree) $ \ [var|subtree|] ->
     forAll' subtree $ \ [var|gas|] _ ->
       k gas
 
 allGASAndChildInTree ::
-  (IsConwayUniv fn, IsPred p fn) =>
-  Term fn (ProposalTree ConwayEra) ->
-  ( Term fn (GovActionState ConwayEra) ->
-    Term fn (GovActionState ConwayEra) ->
+  IsPred p =>
+  Term (ProposalTree ConwayEra) ->
+  ( Term (GovActionState ConwayEra) ->
+    Term (GovActionState ConwayEra) ->
     p
   ) ->
-  Pred fn
+  Pred
 allGASAndChildInTree t k =
   forAll (snd_ t) $ \ [var|subtree|] ->
     forAll' subtree $ \ [var|gas|] [var|cs|] ->
@@ -201,9 +195,8 @@ allGASAndChildInTree t k =
         k gas (rootLabel_ t'')
 
 wellFormedChildren ::
-  IsConwayUniv fn =>
-  Term fn (ProposalTree ConwayEra) ->
-  Pred fn
+  Term (ProposalTree ConwayEra) ->
+  Pred
 wellFormedChildren rootAndTrees =
   match rootAndTrees $ \root trees ->
     [ dependsOn rootAndTrees root
@@ -224,12 +217,11 @@ wellFormedChildren rootAndTrees =
     ]
 
 withPrevActId ::
-  IsConwayUniv fn =>
-  Term fn (GovActionState ConwayEra) ->
-  (Term fn (StrictMaybe GovActionId) -> Pred fn) ->
-  Pred fn
+  Term (GovActionState ConwayEra) ->
+  (Term (StrictMaybe GovActionId) -> Pred) ->
+  Pred
 withPrevActId gas k =
-  Block
+  fold
     [ match (gasProposalProcedure_ gas) $ \_deposit [var|retAddr|] _action _anchor ->
         match retAddr $ \ [var|net|] _ -> [dependsOn gas net, assert $ net ==. lit Testnet]
     , caseOn
@@ -283,20 +275,19 @@ withPrevActId gas k =
     ]
 
 onHardFork ::
-  (IsConwayUniv fn, IsPred p fn) =>
-  Term fn (GovActionState ConwayEra) ->
-  ( Term fn (StrictMaybe (GovPurposeId 'HardForkPurpose ConwayEra)) ->
-    Term fn ProtVer ->
+  IsPred p =>
+  Term (GovActionState ConwayEra) ->
+  ( Term (StrictMaybe (GovPurposeId 'HardForkPurpose)) ->
+    Term ProtVer ->
     p
   ) ->
-  Pred fn
+  Pred
 onHardFork gas k = onCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gas) k
 
 govProceduresSpec ::
-  IsConwayUniv fn =>
   GovEnv ConwayEra ->
   Proposals ConwayEra ->
-  Specification fn (GovSignal ConwayEra)
+  Specification (GovSignal ConwayEra)
 govProceduresSpec ge@GovEnv {..} ps =
   let actions f =
         [ gid
@@ -306,36 +297,39 @@ govProceduresSpec ge@GovEnv {..} ps =
         ]
       committeeState = geCertState ^. certVStateL . vsCommitteeStateL
       knownDReps = Map.keysSet $ geCertState ^. certVStateL . vsDRepsL
-      knownStakePools = Map.keysSet $ geCertState ^. certPStateL . psStakePoolParamsL
+      knownStakePools = Map.keysSet $ geCertState ^. certPStateL . psStakePoolsL
       knownCommitteeAuthorizations = authorizedHotCommitteeCredentials committeeState
+      maxVoters = sum [length knownCommitteeAuthorizations, length knownDReps, length knownStakePools]
       committeeVotableActionIds =
         actions (isCommitteeVotingAllowed geEpoch committeeState)
       drepVotableActionIds =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =
         actions isStakePoolVotingAllowed
-      registeredCredentials = Map.keysSet $ geCertState ^. certDStateL . dsUnifiedL . umElemsL
+      registeredCredentials = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
    in constrained $ \govSignal ->
         match govSignal $ \votingProcs proposalProcs _certificates ->
           [ match votingProcs $ \votingProcsMap ->
-              forAll votingProcsMap $ \kvp ->
-                match kvp $ \voter mapActVote ->
-                  (caseOn voter)
-                    ( branch $ \committeeHotCred ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
-                        , member_ committeeHotCred $ lit knownCommitteeAuthorizations
-                        ]
-                    )
-                    ( branch $ \drepCred ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
-                        , member_ drepCred $ lit knownDReps
-                        ]
-                    )
-                    ( branch $ \poolKeyHash ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
-                        , member_ poolKeyHash $ lit knownStakePools
-                        ]
-                    )
+              [ assert $ sizeOf_ votingProcsMap <=. lit (toInteger maxVoters)
+              , forAll votingProcsMap $ \kvp ->
+                  match kvp $ \voter mapActVote ->
+                    (caseOn voter)
+                      ( branch $ \committeeHotCred ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                          , member_ committeeHotCred $ lit knownCommitteeAuthorizations
+                          ]
+                      )
+                      ( branch $ \drepCred ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
+                          , member_ drepCred $ lit knownDReps
+                          ]
+                      )
+                      ( branch $ \poolKeyHash ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
+                          , member_ poolKeyHash $ lit knownStakePools
+                          ]
+                      )
+              ]
           , forAll proposalProcs $ \proc ->
               match proc $ \deposit returnAddr govAction _ ->
                 [ assert $ deposit ==. lit (gePParams ^. ppGovActionDepositL)
@@ -349,12 +343,11 @@ govProceduresSpec ge@GovEnv {..} ps =
           ]
 
 wfGovAction ::
-  IsConwayUniv fn =>
   GovEnv ConwayEra ->
   Proposals ConwayEra ->
-  Term fn (GovAction ConwayEra) ->
-  Pred fn
-wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
+  Term (GovAction ConwayEra) ->
+  Pred
+wfGovAction GovEnv {geGuardrailsScriptHash, geEpoch, gePParams, geCertState} ps govAction =
   caseOn
     govAction
     -- ParameterChange
@@ -362,7 +355,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
         [ assert $ mPrevActionId `elem_` lit ppupIds
         , assert $ ppUpdate /=. lit emptyPParamsUpdate
         , satisfies ppUpdate wfPParamsUpdateSpec
-        , assert $ policy ==. lit gePPolicy
+        , assert $ policy ==. lit geGuardrailsScriptHash
         ]
     )
     -- HardForkInitiation
@@ -390,20 +383,20 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
     )
     -- TreasuryWithdrawals
     ( branch $ \withdrawMap policy ->
-        [ forAll (dom_ withdrawMap) $ \rewAcnt ->
-            match rewAcnt $ \net cred ->
+        [ forAll (dom_ withdrawMap) $ \accountAddress ->
+            match accountAddress $ \net cred ->
               [ net ==. lit Testnet
               , cred `member_` lit registeredCredentials
               ]
         , assert $ sum_ (rng_ withdrawMap) >. lit (Coin 0)
-        , assert $ policy ==. lit gePPolicy
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ policy ==. lit geGuardrailsScriptHash
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- NoConfidence
     ( branch $ \mPrevActionId ->
         [ assert $ mPrevActionId `elem_` lit committeeIds
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- UpdateCommittee
@@ -411,19 +404,19 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
         [ assert $ mPrevActionId `elem_` lit committeeIds
         , forAll (rng_ added) $ \epoch ->
             lit geEpoch <. epoch
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- NewConstitution
     ( branch $ \mPrevActionId _c ->
         [ assert $ mPrevActionId `elem_` lit constitutionIds
-        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        , assert $ not $ hardforkConwayBootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- InfoAction
     (branch $ \_ -> True)
   where
-    registeredCredentials = Map.keysSet $ geCertState ^. certDStateL . dsUnifiedL . umElemsL
+    registeredCredentials = Map.keysSet $ geCertState ^. certDStateL . accountsL . accountsMapL
     prevGovActionIds = ps ^. pRootsL . L.to toPrevGovActionIds
     constitutionIds =
       (prevGovActionIds ^. grConstitutionL)
@@ -470,13 +463,13 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
 
     actions = toList $ proposalsActions ps
 
-wfPParamsUpdateSpec :: forall fn. IsConwayUniv fn => Specification fn (PParamsUpdate ConwayEra)
+wfPParamsUpdateSpec :: Specification (PParamsUpdate ConwayEra)
 wfPParamsUpdateSpec =
   constrained' $ \ppupdate ->
     -- Note that ppupdate :: SimplePPUpdate
     match ppupdate $
-      \_minFeeA
-       _minFeeB
+      \_txFeePerByte
+       _txFeeFixed
        maxBBSize
        maxTxSize
        maxBHSize

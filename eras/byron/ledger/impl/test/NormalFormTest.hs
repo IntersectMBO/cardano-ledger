@@ -12,8 +12,7 @@
 -- without @hpc@.
 module Main (
   main,
-)
-where
+) where
 
 import Cardano.Prelude
 import System.IO.Silently (hSilence)

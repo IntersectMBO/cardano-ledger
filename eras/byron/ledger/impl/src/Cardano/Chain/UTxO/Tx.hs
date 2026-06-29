@@ -11,8 +11,7 @@ module Cardano.Chain.UTxO.Tx (
   TxAttributes,
   TxIn (..),
   TxOut (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (
   Address (..),
@@ -87,6 +86,12 @@ instance B.Buildable Tx where
 
 instance ToCBOR Tx where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy =
+    1
+      + size (txInputs <$> pxy)
+      + size (txOutputs <$> pxy)
+      + size
+        (txAttributes <$> pxy)
 
 instance FromCBOR Tx where
   fromCBOR = fromByronCBOR
@@ -101,13 +106,6 @@ instance EncCBOR Tx where
       <> encCBOR (txOutputs tx)
       <> encCBOR
         (txAttributes tx)
-
-  encodedSizeExpr size pxy =
-    1
-      + size (txInputs <$> pxy)
-      + size (txOutputs <$> pxy)
-      + size
-        (txAttributes <$> pxy)
 
 instance DecCBOR Tx where
   decCBOR = do
@@ -155,6 +153,10 @@ instance ToJSON TxIn
 
 instance ToCBOR TxIn where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    2
+      + knownCborDataItemSizeExpr
+        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word16)])
 
 instance FromCBOR TxIn where
   fromCBOR = fromByronCBOR
@@ -166,18 +168,13 @@ instance EncCBOR TxIn where
       <> encodeKnownCborDataItem
         (txInHash, txInIndex)
 
-  encodedSizeExpr size _ =
-    2
-      + knownCborDataItemSizeExpr
-        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word16)])
-
 instance DecCBOR TxIn where
   decCBOR = do
     enforceSize "TxIn" 2
     tag <- decCBOR @Word8
     case tag of
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
-      _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag
+      _ -> cborError $ DecoderErrorUnknownTag "TxIn" $ fromIntegral @Word8 @Word tag
 
 instance HeapWords TxIn where
   heapWords (TxInUtxo txid _w16) = 3 + heapWords txid + 2
@@ -208,11 +205,10 @@ instance EncCBOR TxOut where
   encCBOR txOut =
     encodeListLen 2 <> encCBOR (txOutAddress txOut) <> encCBOR (txOutValue txOut)
 
-  encodedSizeExpr size pxy =
-    1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
-
 instance ToCBOR TxOut where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy =
+    1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
 
 instance FromCBOR TxOut where
   fromCBOR = fromByronCBOR

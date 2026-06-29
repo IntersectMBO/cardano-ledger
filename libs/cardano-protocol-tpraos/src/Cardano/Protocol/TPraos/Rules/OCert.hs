@@ -10,8 +10,7 @@ module Cardano.Protocol.TPraos.Rules.OCert (
   PredicateFailure,
   OCertEnv (..),
   OcertPredicateFailure (..),
-)
-where
+) where
 
 import Cardano.Crypto.KES (Signable, verifySignedKES)
 import Cardano.Ledger.BaseTypes
@@ -20,7 +19,6 @@ import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, singleton, (⨃))
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -50,7 +48,7 @@ data OcertPredicateFailure
       Word -- expected KES evolutions
       String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
-      (KeyHash 'BlockIssuer) -- stake pool key hash
+      (KeyHash BlockIssuer) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
 instance NoThunks OcertPredicateFailure
@@ -61,7 +59,7 @@ instance
   ) =>
   STS (OCERT c)
   where
-  type State (OCERT c) = Map (KeyHash 'BlockIssuer) Word64
+  type State (OCERT c) = Map (KeyHash BlockIssuer) Word64
   type Signal (OCERT c) = BHeader c
   type Environment (OCERT c) = OCertEnv
   type BaseM (OCERT c) = ShelleyBase
@@ -106,4 +104,4 @@ ocertTransition =
         pure cs
       Just m -> do
         m <= n ?! CounterTooSmallOCERT m n
-        pure (eval (cs ⨃ singleton hk n))
+        pure (Map.insert hk n cs)

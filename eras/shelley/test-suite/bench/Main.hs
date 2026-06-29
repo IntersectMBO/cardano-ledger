@@ -6,7 +6,6 @@
 
 module Main where
 
-import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation (
   applyBlock,
   benchValidate,
@@ -23,20 +22,14 @@ import Cardano.Ledger.Shelley.Bench.Gen (
   genTriple,
  )
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState,
-  DState (..),
   LedgerState (..),
-  PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra (compile, compute, run)
-import Control.SetAlgebra (dom, keysEqual, (▷), (◁))
 import Criterion.Main (
   Benchmark,
   bench,
@@ -48,7 +41,6 @@ import Criterion.Main (
   whnf,
   whnfIO,
  )
-import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -67,8 +59,6 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredKeys,
   ledgerStateWithNregisteredPools,
  )
-
-import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC
@@ -109,18 +99,6 @@ eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n 
               ]
         )
         (\state -> bench (show m) (whnf (f state) state))
-
-mainEq :: IO ()
-mainEq =
-  defaultMain
-    [ bgroup "KeysEqual tests" $
-        [ eqf "keysEqual" keysEqual (100 :: Int)
-        , eqf
-            "keys x == keys y"
-            (\x y -> Map.keys x == Map.keys y)
-            (100 :: Int)
-        ]
-    ]
 
 -- =================================================
 -- Spending 1 UTxO
@@ -185,30 +163,6 @@ profileCreateRegPools size = do
 -- ==========================================
 -- Epoch Boundary
 
-profileEpochBoundary :: Benchmark
-profileEpochBoundary =
-  bgroup "aggregate stake" $ epochAt <$> benchParameters
-  where
-    benchParameters :: [Int]
-    benchParameters = [5000, 50000, 500000]
-
-epochAt :: Int -> Benchmark
-epochAt x =
-  env (QC.generate (genTestCase x n)) $ \arg ->
-    bgroup
-      ("UTxO=" ++ show x ++ ",  address=" ++ show n)
-      [ bench "stakeDistr" (nf action2m arg)
-      , bench "instantStake" (nf benchInstantStake arg)
-      ]
-  where
-    n = 10000 :: Int
-
-action2m ::
-  EraTxOut era =>
-  (DState era, PState era, UTxO era) ->
-  SnapShot
-action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
-
 benchInstantStake ::
   forall era.
   EraStake era =>
@@ -254,35 +208,6 @@ profileValid = do
   state <- validateInput @ShelleyEra 10000
   let ans = sum [applyBlock @ShelleyEra state n | n <- [1 .. 10000 :: Int]]
   print ans
-
--- ========================================================
--- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
-
-domainRangeRestrict :: IO ()
-domainRangeRestrict =
-  defaultMain
-    [ bgroup "domain-range restict" $
-        drrAt <$> benchParameters
-    ]
-  where
-    benchParameters :: [Int]
-    benchParameters = [1000, 10000, 100000]
-
-drrAt :: Int -> Benchmark
-drrAt x =
-  env (expr x) $
-    \arg ->
-      bgroup
-        ("size=" ++ show x)
-        [ bench "compute" (whnf alg1 arg)
-        , bench "run . compile" (whnf alg2 arg)
-        ]
-
-alg1 :: (Map Int Int, Map Int Char, Map Char Char) -> Map Int Char
-alg1 (d, r, rg) = compute ((dom d ◁ r) ▷ dom rg)
-
-alg2 :: (Map Int Int, Map Int Char, Map Char Char) -> Map Int Char
-alg2 (d, r, rg) = run $ compile ((dom d ◁ r) ▷ dom rg)
 
 -- =================================================
 -- Some things we might want to profile.
@@ -447,8 +372,6 @@ main = do
             ledgerStateWithNkeysMpools
             ledgerDelegateManyKeysOnePool
         ]
-    , profileEpochBoundary
-    , bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000]
     , validGroup
     , -- Benchmarks for the various generators
       bgroup

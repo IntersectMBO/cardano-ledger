@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Validation rules for registering updates
 --
@@ -24,8 +25,7 @@ module Cardano.Chain.Update.Validation.Registration (
   registerProposal,
   TooLarge (..),
   Adopted (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
@@ -291,7 +291,7 @@ instance DecCBOR Error where
       11 -> checkSize 2 >> SoftwareVersionError <$> decCBOR
       12 -> checkSize 2 >> SystemTagError <$> decCBOR
       13 -> checkSize 1 >> pure NullUpdateProposal
-      _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" $ fromIntegral @Word8 @Word tag
 
 data TooLarge n = TooLarge
   { tlActual :: n
@@ -299,7 +299,7 @@ data TooLarge n = TooLarge
   }
   deriving (Eq, Show)
 
-instance EncCBOR n => ToCBOR (TooLarge n) where
+instance (EncCBOR n, Typeable n) => ToCBOR (TooLarge n) where
   toCBOR = toByronCBOR
 
 instance DecCBOR n => FromCBOR (TooLarge n) where
@@ -443,9 +443,9 @@ registerProposalComponents env rs proposal = do
       unAnnotated protocolMagic
         == ProtocolMagicId 633343913 -- staging
         && ( currentSlot
-              == SlotNumber 969188 -- in epoch 44
-              || currentSlot
-              == SlotNumber 1915231 -- in epoch 88
+               == SlotNumber 969188 -- in epoch 44
+               || currentSlot
+               == SlotNumber 1915231 -- in epoch 88
            )
 
 -- | Validate a protocol update

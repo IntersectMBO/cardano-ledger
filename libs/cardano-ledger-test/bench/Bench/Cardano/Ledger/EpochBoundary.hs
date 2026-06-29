@@ -12,10 +12,8 @@ import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (KeyHashObj),
-  PaymentCredential,
   Ptr (..),
   SlotNo32 (..),
-  StakeCredential,
   StakeReference (StakeRefNull),
  )
 import Cardano.Ledger.Mary (MaryEra)
@@ -39,7 +37,7 @@ import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCr
 
 type TestEra = MaryEra
 
-payCred :: PaymentCredential
+payCred :: Credential Payment
 payCred = KeyHashObj $ KeyHash $ mkDummyHash (2024 :: Int)
 
 -- | Infinite list of transaction inputs
@@ -60,7 +58,7 @@ txOutUnstaked =
     (fromJust . toCompact . Val.inject $ Coin 1000)
 
 -- | Generate TxOuts for each stake credential.
-txOutsFromCreds :: [StakeCredential] -> [TxOut TestEra]
+txOutsFromCreds :: [Credential Staking] -> [TxOut TestEra]
 txOutsFromCreds creds =
   [ TxOutCompact (compactAddr $ mkAddr payCred cred) coinVal
   | cred <- creds
@@ -77,11 +75,11 @@ txOutsFromPtrs ptrs =
     coinVal = fromJust . toCompact . Val.inject $ Coin 200
 
 -- | Generate n stake credentials
-stakeCreds :: Word64 -> [StakeCredential]
+stakeCreds :: Word64 -> [Credential Staking]
 stakeCreds n = [KeyHashObj (KeyHash (mkDummyHash (123456 + i))) | i <- [1 .. n]]
 
 -- | Generate pointers to a list of stake credentials
-stakePtrs :: [StakeCredential] -> Map Ptr StakeCredential
+stakePtrs :: [Credential Staking] -> Map Ptr (Credential Staking)
 stakePtrs creds =
   Map.fromList
     [ (Ptr (SlotNo32 i) minBound minBound, cred)
@@ -115,7 +113,7 @@ utxo noUnstaked noBase ptrMap dupFactor =
     cycleTimes n xs = xs ++ cycleTimes (n - 1) xs
 
 data AggTestSetup = AggTestSetup
-  { atsPtrMap :: !(Map Ptr StakeCredential)
+  { atsPtrMap :: !(Map Ptr (Credential Staking))
   , atsUTxO :: !(UTxO TestEra)
   }
 

@@ -2,8 +2,7 @@
 
 module Main (
   main,
-)
-where
+) where
 
 import Test.Byron.Spec.Ledger.AbstractSize.Properties (testProperty, testTxHasTypeReps)
 import qualified Test.Byron.Spec.Ledger.Core.Generators.Properties as CoreGen

@@ -8,19 +8,14 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
-  PState (..),
   esLStateL,
   lsCertStateL,
   nesEsL,
-  psStakePoolParams,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -28,7 +23,7 @@ import Cardano.Protocol.TPraos.BHeader (
   bhbody,
   bheaderSlotNo,
  )
-import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -77,12 +72,12 @@ tests =
         map removedAfterPoolreap_ $
           filter (not . sameEpoch) (chainSstWithTick tr)
   where
-    poolState target = (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+    stakePools target = (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certPStateL
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
-    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
+    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
-       in removedAfterPoolreap (poolState source) (poolState target) e
+       in removedAfterPoolreap (stakePools source) (stakePools target) e
 
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
@@ -92,18 +87,17 @@ removedAfterPoolreap ::
   PState era ->
   EpochNo ->
   Property
-removedAfterPoolreap p p' e =
+removedAfterPoolreap p p' epoch =
   property $
-    eval (retire ⊆ dom stp)
-      && Set.null (eval (retire ∩ dom stp'))
-      && Set.null (eval (retire ∩ dom retiring'))
+    (retire `Set.isSubsetOf` (Map.keysSet stp))
+      && Set.null (Set.intersection retire (Map.keysSet stp'))
+      && Set.null (Set.intersection retire (Map.keysSet retiring'))
   where
-    stp = psStakePoolParams p
-    stp' = psStakePoolParams p'
+    stp = psStakePools p
+    stp' = psStakePools p'
     retiring = psRetiring p
     retiring' = psRetiring p'
-    retire :: Set.Set (KeyHash 'StakePool) -- This declaration needed to disambiguate 'eval'
-    retire = eval (dom (retiring ▷ setSingleton e))
+    retire = Map.keysSet $ Map.filter (epoch ==) retiring
 
 sameEpoch ::
   forall era.

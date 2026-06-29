@@ -1,16 +1,20 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra (
-  Allegra,
   AllegraEra,
-)
-where
+  Tx (..),
+  ApplyTxError (..),
+) where
 
+import Cardano.Ledger.Allegra.BlockBody ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()
@@ -18,20 +22,25 @@ import Cardano.Ledger.Allegra.Scripts ()
 import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Allegra.Transition ()
 import Cardano.Ledger.Allegra.Translation ()
-import Cardano.Ledger.Allegra.Tx ()
-import Cardano.Ledger.Allegra.TxSeq ()
+import Cardano.Ledger.Allegra.Tx (Tx (..))
 import Cardano.Ledger.Allegra.UTxO ()
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Shelley.API
-
-type Allegra = AllegraEra
-
-{-# DEPRECATED Allegra "In favor of `AllegraEra`" #-}
+import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure)
+import Data.Bifunctor (Bifunctor (first))
+import Data.List.NonEmpty (NonEmpty)
+import GHC.Generics (Generic)
 
 --------------------------------------------------------------------------------
 -- Mempool instances
 --------------------------------------------------------------------------------
 
 instance ApplyTx AllegraEra where
-  applyTxValidation = ruleApplyTxValidation @"LEDGER"
+  newtype ApplyTxError AllegraEra = AllegraApplyTxError (NonEmpty (ShelleyLedgerPredFailure AllegraEra))
+    deriving (Eq, Show)
+    deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
+  applyTxValidation validationPolicy globals env state tx =
+    first AllegraApplyTxError $
+      ruleApplyTxValidation @"LEDGER" validationPolicy globals env state tx
 
 instance ApplyBlock AllegraEra

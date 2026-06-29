@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -19,6 +20,9 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
@@ -68,9 +72,9 @@ module Cardano.Ledger.Shelley.TxCert (
   PoolCert (..),
   isRegStakeTxCert,
   isUnRegStakeTxCert,
-)
-where
+) where
 
+import Cardano.Base.Proxy (asProxy)
 import Cardano.Ledger.BaseTypes (invalidKey, kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -94,14 +98,14 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
-  StakeCredential,
   credKeyHashWitness,
   credScriptHash,
  )
+import Cardano.Ledger.Internal.Era (AllegraEra, AlonzoEra, BabbageEra, MaryEra)
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
+import Cardano.Ledger.State (StakePoolParams (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
@@ -146,21 +150,22 @@ instance EraTxCert ShelleyEra where
 
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
-class EraTxCert era => ShelleyEraTxCert era where
-  mkRegTxCert :: StakeCredential -> TxCert era
-  getRegTxCert :: TxCert era -> Maybe StakeCredential
+-- | All of the Shelley related certificate functionality that has been fully deprecated in Dijkstra.
+class (EraTxCert era, AtMostEra "Conway" era) => ShelleyEraTxCert era where
+  mkRegTxCert :: Credential Staking -> TxCert era
+  getRegTxCert :: TxCert era -> Maybe (Credential Staking)
 
-  mkUnRegTxCert :: StakeCredential -> TxCert era
-  getUnRegTxCert :: TxCert era -> Maybe StakeCredential
+  mkUnRegTxCert :: Credential Staking -> TxCert era
+  getUnRegTxCert :: TxCert era -> Maybe (Credential Staking)
 
-  mkDelegStakeTxCert :: StakeCredential -> KeyHash 'StakePool -> TxCert era
-  getDelegStakeTxCert :: TxCert era -> Maybe (StakeCredential, KeyHash 'StakePool)
+  mkDelegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
+  getDelegStakeTxCert :: TxCert era -> Maybe (Credential Staking, KeyHash StakePool)
 
-  mkGenesisDelegTxCert :: ProtVerAtMost era 8 => GenesisDelegCert -> TxCert era
-  getGenesisDelegTxCert :: ProtVerAtMost era 8 => TxCert era -> Maybe GenesisDelegCert
+  mkGenesisDelegTxCert :: AtMostEra "Babbage" era => GenesisDelegCert -> TxCert era
+  getGenesisDelegTxCert :: AtMostEra "Babbage" era => TxCert era -> Maybe GenesisDelegCert
 
-  mkMirTxCert :: ProtVerAtMost era 8 => MIRCert -> TxCert era
-  getMirTxCert :: ProtVerAtMost era 8 => TxCert era -> Maybe MIRCert
+  mkMirTxCert :: AtMostEra "Babbage" era => MIRCert -> TxCert era
+  getMirTxCert :: AtMostEra "Babbage" era => TxCert era -> Maybe MIRCert
 
 instance ShelleyEraTxCert ShelleyEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
@@ -188,36 +193,36 @@ instance ShelleyEraTxCert ShelleyEra where
   getMirTxCert (ShelleyTxCertMir c) = Just c
   getMirTxCert _ = Nothing
 
-pattern RegTxCert :: ShelleyEraTxCert era => StakeCredential -> TxCert era
+pattern RegTxCert :: ShelleyEraTxCert era => Credential Staking -> TxCert era
 pattern RegTxCert c <- (getRegTxCert -> Just c)
   where
     RegTxCert c = mkRegTxCert c
 
-pattern UnRegTxCert :: ShelleyEraTxCert era => StakeCredential -> TxCert era
+pattern UnRegTxCert :: ShelleyEraTxCert era => Credential Staking -> TxCert era
 pattern UnRegTxCert c <- (getUnRegTxCert -> Just c)
   where
     UnRegTxCert c = mkUnRegTxCert c
 
 pattern DelegStakeTxCert ::
   ShelleyEraTxCert era =>
-  StakeCredential ->
-  KeyHash 'StakePool ->
+  Credential Staking ->
+  KeyHash StakePool ->
   TxCert era
 pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
   where
     DelegStakeTxCert c kh = mkDelegStakeTxCert c kh
 
 pattern MirTxCert ::
-  (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert -> TxCert era
+  (ShelleyEraTxCert era, AtMostEra "Babbage" era) => MIRCert -> TxCert era
 pattern MirTxCert d <- (getMirTxCert -> Just d)
   where
     MirTxCert d = mkMirTxCert d
 
 pattern GenesisDelegTxCert ::
-  (ShelleyEraTxCert era, ProtVerAtMost era 8) =>
-  KeyHash 'Genesis ->
-  KeyHash 'GenesisDelegate ->
-  VRFVerKeyHash 'GenDelegVRF ->
+  (ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
+  KeyHash GenesisRole ->
+  KeyHash GenesisDelegate ->
+  VRFVerKeyHash GenDelegVRF ->
   TxCert era
 pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   (getGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrfKeyHash))
@@ -232,15 +237,60 @@ pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   , UnRegTxCert
   , DelegStakeTxCert
   , MirTxCert
-  , GenesisDelegTxCert
+  , GenesisDelegTxCert ::
+    ShelleyEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    AllegraEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    MaryEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    AlonzoEra
+  #-}
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert ::
+    BabbageEra
   #-}
 
 -- | Genesis key delegation certificate
 data GenesisDelegCert
   = GenesisDelegCert
-      !(KeyHash 'Genesis)
-      !(KeyHash 'GenesisDelegate)
-      !(VRFVerKeyHash 'GenDelegVRF)
+      !(KeyHash GenesisRole)
+      !(KeyHash GenesisDelegate)
+      !(VRFVerKeyHash GenDelegVRF)
   deriving (Show, Generic, Eq, Ord)
 
 instance NoThunks GenesisDelegCert
@@ -256,10 +306,10 @@ instance ToJSON GenesisDelegCert where
       , "hashVrf" .= toJSON hashVrf
       ]
 
-genesisKeyHashWitness :: GenesisDelegCert -> KeyHash 'Witness
+genesisKeyHashWitness :: GenesisDelegCert -> KeyHash Witness
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
 
-genesisCWitness :: GenesisDelegCert -> KeyHash 'Genesis
+genesisCWitness :: GenesisDelegCert -> KeyHash GenesisRole
 genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 data MIRPot = ReservesMIR | TreasuryMIR
@@ -285,9 +335,9 @@ instance ToJSON MIRPot where
 
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
--- reward accounts or instead transfered to the opposite pot.
+-- account addresses or instead transfered to the opposite pot.
 data MIRTarget
-  = StakeAddressesMIR !(Map (Credential 'Staking) DeltaCoin)
+  = StakeAddressesMIR !(Map (Credential Staking) DeltaCoin)
   | SendToOppositePotMIR !Coin
   deriving (Show, Generic, Eq, Ord, NFData)
 
@@ -385,7 +435,7 @@ encodeShelleyDelegCert = \case
 encodePoolCert :: PoolCert -> Encoding
 encodePoolCert = \case
   RegPool poolParams ->
-    encodeListLen (1 + listLen poolParams)
+    encodeListLen (1 + listLen (asProxy poolParams))
       <> encodeWord8 3
       <> encCBORGroup poolParams
   RetirePool vk epoch ->
@@ -456,7 +506,7 @@ poolTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
 poolTxCertDecoder = \case
   3 -> do
     group <- decCBORGroup
-    pure (1 + listLenInt group, RegPoolTxCert group)
+    pure (1 + listLenInt (Just group), RegPoolTxCert group)
   4 -> do
     a <- decCBOR
     b <- decCBOR
@@ -466,11 +516,11 @@ poolTxCertDecoder = \case
 
 data ShelleyDelegCert
   = -- | A stake credential registration certificate.
-    ShelleyRegCert !StakeCredential
+    ShelleyRegCert !(Credential Staking)
   | -- | A stake credential deregistration certificate.
-    ShelleyUnRegCert !StakeCredential
+    ShelleyUnRegCert !(Credential Staking)
   | -- | A stake delegation certificate.
-    ShelleyDelegCert !StakeCredential !(KeyHash 'StakePool)
+    ShelleyDelegCert !(Credential Staking) !(KeyHash StakePool)
   deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON ShelleyDelegCert where
@@ -493,8 +543,8 @@ isDelegation :: ShelleyEraTxCert era => TxCert era -> Bool
 isDelegation (DelegStakeTxCert _ _) = True
 isDelegation _ = False
 
--- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+-- | Check for GenesisDelegate' constructor
+isGenesisDelegation :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isGenesisDelegation = isJust . getGenesisDelegTxCert
 
 -- | Check for 'RegPool' constructor
@@ -507,15 +557,15 @@ isRetirePool :: EraTxCert era => TxCert era -> Bool
 isRetirePool (RetirePoolTxCert _ _) = True
 isRetirePool _ = False
 
-isInstantaneousRewards :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isInstantaneousRewards :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isInstantaneousRewards = isJust . getMirTxCert
 
-isReservesMIRCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isReservesMIRCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isReservesMIRCert x = case getMirTxCert x of
   Just (MIRCert ReservesMIR _) -> True
   _ -> False
 
-isTreasuryMIRCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
+isTreasuryMIRCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> Bool
 isTreasuryMIRCert x = case getMirTxCert x of
   Just (MIRCert TreasuryMIR _) -> True
   _ -> False
@@ -531,7 +581,7 @@ getScriptWitnessShelleyTxCert = \case
       ShelleyDelegCert cred _ -> credScriptHash cred
   _ -> Nothing
 
-getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash 'Witness)
+getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash Witness)
 getVKeyWitnessShelleyTxCert = \case
   ShelleyTxCertDelegCert delegCert ->
     case delegCert of
@@ -558,7 +608,7 @@ shelleyTotalDepositsTxCerts ::
   (EraPParams era, Foldable f, EraTxCert era) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool -> Bool) ->
+  (KeyHash StakePool -> Bool) ->
   f (TxCert era) ->
   Coin
 shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
@@ -570,9 +620,9 @@ shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
     numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (F.foldl' addNewPoolIds Set.empty certs)
     addNewPoolIds regPoolIds = \case
-      RegPoolTxCert (PoolParams {ppId})
+      RegPoolTxCert (StakePoolParams {sppId})
         -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
-        | not (isRegPoolRegistered ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
+        | not (isRegPoolRegistered sppId || Set.member sppId regPoolIds) -> Set.insert sppId regPoolIds
       _ -> regPoolIds
 
 -- | Compute the key deregistration refunds in a transaction
@@ -580,7 +630,7 @@ shelleyTotalRefundsTxCerts ::
   (EraPParams era, Foldable f, EraTxCert era) =>
   PParams era ->
   -- | Function that can lookup current deposit, in case when the stake key is registered.
-  (StakeCredential -> Maybe Coin) ->
+  (Credential Staking -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
 shelleyTotalRefundsTxCerts pp lookupDeposit = snd . F.foldl' accum (mempty, Coin 0)

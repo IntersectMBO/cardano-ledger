@@ -16,8 +16,7 @@ module Cardano.Ledger.Core.Translation (
   translateEraMaybe,
   translateEra',
   translateEraThroughCBOR,
-)
-where
+) where
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core.Era

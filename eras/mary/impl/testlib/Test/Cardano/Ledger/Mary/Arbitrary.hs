@@ -1,14 +1,18 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Mary.Arbitrary (
-  genEmptyMultiAsset,
+  genMultiAssetCompletelyEmpty,
+  genMultiAssetNestedEmpty,
   genMaryValue,
   genMultiAsset,
   genMultiAssetToFail,
@@ -22,7 +26,8 @@ import Cardano.Crypto.Hash.Class (castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
+import Cardano.Ledger.Mary (ApplyTxError (..), MaryEra, Tx (..), TxBody (MaryTxBody))
+import Cardano.Ledger.Mary.Transition
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -34,11 +39,10 @@ import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Maybe (fromMaybe)
-import Data.Maybe.Strict (StrictMaybe)
 import Data.String (IsString (fromString))
+import Test.Cardano.Base.Bytes (genByteString, genShortByteString)
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteString, genShortByteString)
 import Test.Cardano.Ledger.Common
 
 instance Arbitrary AssetName where
@@ -49,16 +53,7 @@ instance Arbitrary AssetName where
         , (7, genShortByteString =<< choose (1, 32))
         ]
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  , Era era
-  , Arbitrary (TxOut era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (MaryTxBody era)
-  where
+instance Arbitrary (TxBody TopTx MaryEra) where
   arbitrary =
     MaryTxBody
       <$> arbitrary
@@ -190,8 +185,15 @@ instance Arbitrary MultiAsset where
           , choose (minBound :: Int, -1)
           ]
 
-genEmptyMultiAsset :: Gen MultiAsset
-genEmptyMultiAsset =
+-- | Generate completely empty MultiAsset (empty top-level map)
+-- This should succeed in Conway but fail in Dijkstra
+genMultiAssetCompletelyEmpty :: Gen MultiAsset
+genMultiAssetCompletelyEmpty = pure $ MultiAsset Map.empty
+
+-- | Generate MultiAsset with non-empty top-level map but empty nested asset maps
+-- This should fail in both Conway and Dijkstra
+genMultiAssetNestedEmpty :: Gen MultiAsset
+genMultiAssetNestedEmpty =
   MultiAsset <$> genNonEmptyMap arbitrary (pure Map.empty)
 
 -- | Better generator for a Non-Negative Int that explores more values
@@ -239,3 +241,9 @@ digitByteStrings = [fromString [x] | x <- ['0' .. '9']]
 
 hashOfDigitByteStrings :: HashAlgorithm h => [Hash h a]
 hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
+
+deriving newtype instance Arbitrary (TransitionConfig MaryEra)
+
+deriving newtype instance Arbitrary (Tx TopTx MaryEra)
+
+deriving newtype instance Arbitrary (ApplyTxError MaryEra)

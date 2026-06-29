@@ -20,10 +20,8 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
   AllegraUtxoPredFailure (..),
   validateOutsideValidityIntervalUTxO,
   shelleyToAllegraUtxoPredFailure,
-)
-where
+) where
 
-import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
 import Cardano.Ledger.Allegra.Rules.Ppup ()
@@ -39,7 +37,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -60,8 +57,10 @@ import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (toList)
 import Data.Int (Int64)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.Set.NonEmpty (NonEmptySet)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -70,29 +69,27 @@ import Validation
 -- ==========================================================
 
 data AllegraUtxoPredFailure era
-  = BadInputsUTxO (Set TxIn) -- The bad transaction inputs
+  = BadInputsUTxO (NonEmptySet TxIn) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
       ValidityInterval -- transaction's validity interval
       SlotNo -- current slot
-  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Integer)
+  | MaxTxSizeUTxO (Mismatch RelLTEQ Word32)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
-  | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era)) -- Consumed, then produced
+  | FeeTooSmallUTxO (Mismatch RelGTEQ Coin)
+  | ValueNotConservedUTxO (Mismatch RelEQ (Value era)) -- Consumed, then produced
   | WrongNetwork
       Network -- the expected network id
-      (Set Addr) -- the set of addresses with incorrect network IDs
+      (NonEmptySet Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       Network -- the expected network id
-      (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
+      (NonEmptySet AccountAddress) -- the set of account addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      [TxOut era] -- list of supplied transaction outputs that are too small
+      (NonEmpty (TxOut era)) -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      [TxOut era] -- list of supplied bad transaction outputs
-  | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
-    TriesToForgeADA -- TODO: remove
+      (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   | OutputTooBigUTxO
-      [TxOut era] -- list of supplied bad transaction outputs
+      (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" AllegraEra = AllegraUtxoPredFailure AllegraEra
@@ -177,6 +174,7 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , EraRule "UTXO" era ~ AllegraUTXO era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
@@ -244,7 +242,7 @@ utxoTransition = do
 validateOutsideValidityIntervalUTxO ::
   AllegraEraTxBody era =>
   SlotNo ->
-  TxBody era ->
+  TxBody l era ->
   Test (AllegraUtxoPredFailure era)
 validateOutsideValidityIntervalUTxO slot txb =
   failureUnless (inInterval slot (txb ^. vldtTxBodyL)) $
@@ -259,7 +257,7 @@ validateOutputTooBigUTxO ::
   UTxO era ->
   Test (AllegraUtxoPredFailure era)
 validateOutputTooBigUTxO pp (UTxO outputs) =
-  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
+  failureOnNonEmpty outputsTooBig OutputTooBigUTxO
   where
     version = pvMajor (pp ^. ppProtocolVersionL)
     maxValSize = 4000 :: Int64
@@ -280,7 +278,7 @@ validateOutputTooSmallUTxO ::
   UTxO era ->
   Test (AllegraUtxoPredFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
-  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  failureOnNonEmpty outputsTooSmall OutputTooSmallUTxO
   where
     outputsTooSmall =
       filter
@@ -304,18 +302,19 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraRule "UTXO" era ~ AllegraUTXO era
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
+  , SafeToHash (TxWits era)
   ) =>
   STS (AllegraUTXO era)
   where
   type State (AllegraUTXO era) = Shelley.UTxOState era
-  type Signal (AllegraUTXO era) = Tx era
+  type Signal (AllegraUTXO era) = Tx TopTx era
   type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
   type BaseM (AllegraUTXO era) = ShelleyBase
   type PredicateFailure (AllegraUTXO era) = AllegraUtxoPredFailure era
@@ -323,6 +322,7 @@ instance
 
   initialRules = []
   transitionRules = [utxoTransition]
+  assertions = [Shelley.validSizeComputationCheck]
 
 instance
   ( Era era
@@ -360,7 +360,6 @@ instance
       WrongNetwork right wrongs -> Sum WrongNetwork 8 !> To right !> To wrongs
       WrongNetworkWithdrawal right wrongs -> Sum WrongNetworkWithdrawal 9 !> To right !> To wrongs
       OutputBootAddrAttrsTooBig outs -> Sum OutputBootAddrAttrsTooBig 10 !> To outs
-      TriesToForgeADA -> Sum TriesToForgeADA 11
       OutputTooBigUTxO outs -> Sum OutputTooBigUTxO 12 !> To outs
 
 instance
@@ -381,7 +380,6 @@ instance
     8 -> SumD WrongNetwork <! From <! From
     9 -> SumD WrongNetworkWithdrawal <! From <! From
     10 -> SumD OutputBootAddrAttrsTooBig <! From
-    11 -> SumD TriesToForgeADA
     12 -> SumD OutputTooBigUTxO <! From
     k -> Invalid k
 

@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -15,22 +16,36 @@
 module Cardano.Ledger.Address (
   serialiseAddr,
   Addr (..),
-  addrPtrNormalize,
   BootstrapAddress (..),
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
   getNetwork,
-  RewardAccount (..),
+  AccountAddress (..),
+  AccountId (..),
+  accountAddressIdL,
+  accountAddressCredentialL,
+  accountAddressNetworkIdL,
+  serialiseAccountAddress,
+  deserialiseAccountAddress,
+  putAccountAddress,
+  decodeAccountAddress,
+  fromCborAccountAddress,
+  AddressBuffer,
+  pattern RewardAccount,
+  raNetwork,
+  raCredential,
   rewardAccountCredentialL,
   rewardAccountNetworkL,
   serialiseRewardAccount,
   deserialiseRewardAccount,
+  putRewardAccount,
+  decodeRewardAccount,
+  fromCborRewardAccount,
   bootstrapKeyHash,
   -- internals exported for testing
   putAddr,
   putCredential,
   putPtr,
-  putRewardAccount,
   putVariableLengthWord64,
   Word7 (..),
   toWord7,
@@ -52,11 +67,9 @@ module Cardano.Ledger.Address (
   fromCborCompactAddr,
   fromCborRigorousBothAddr,
   fromCborBackwardsBothAddr,
-  decodeRewardAccount,
-  fromCborRewardAccount,
   Withdrawals (..),
-)
-where
+  DirectDeposits (..),
+) where
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -80,7 +93,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (
   Credential (..),
-  PaymentCredential,
   Ptr (..),
   SlotNo32 (..),
   StakeReference (..),
@@ -111,6 +123,7 @@ import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTa
 import Data.Default (Default (..))
 import Data.Function (fix)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.MemPack (MemPack, Unpack (..))
 import Data.Proxy (Proxy (..))
@@ -130,21 +143,29 @@ serialiseAddr :: Addr -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 {-# INLINE serialiseAddr #-}
 
--- | Serialise a reward account to the external format.
-serialiseRewardAccount :: RewardAccount -> ByteString
-serialiseRewardAccount = BSL.toStrict . B.runPut . putRewardAccount
+-- | Serialise an account address to the external format.
+serialiseAccountAddress :: AccountAddress -> ByteString
+serialiseAccountAddress = BSL.toStrict . B.runPut . putAccountAddress
 
--- | Deserialise a reward account from the external format. This will fail if the
+-- | Deserialise an account address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAccount :: ByteString -> Maybe RewardAccount
-deserialiseRewardAccount = decodeRewardAccount
+deserialiseAccountAddress :: ByteString -> Maybe AccountAddress
+deserialiseAccountAddress = decodeAccountAddress
+
+{-# DEPRECATED serialiseRewardAccount "In favor of `serialiseAccountAddress`" #-}
+serialiseRewardAccount :: AccountAddress -> ByteString
+serialiseRewardAccount = serialiseAccountAddress
+
+{-# DEPRECATED deserialiseRewardAccount "In favor of `deserialiseAccountAddress`" #-}
+deserialiseRewardAccount :: ByteString -> Maybe AccountAddress
+deserialiseRewardAccount = deserialiseAccountAddress
 
 -- | An address for UTxO.
 --
 -- Contents of Addr data type are intentionally left as lazy, otherwise
 -- operating on compact form of an address will result in redundant work.
 data Addr
-  = Addr Network PaymentCredential StakeReference
+  = Addr Network (Credential Payment) StakeReference
   | AddrBootstrap BootstrapAddress
   deriving (Show, Eq, Generic, NFData, Ord)
 
@@ -158,57 +179,64 @@ getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
 
 instance NoThunks Addr
 
--- | This function is implemented solely for the purpose of translating garbage pointers
--- into knowingly invalid ones. Any pointer that contains a SlotNo, TxIx or CertIx that
--- is too large to fit into Word32, Word16 and Word16 respectively, will have all of its
--- values set to 0 using `normalizePtr`.
---
--- There are two reasons why we can safely do that at the Babbage/Conway era boundary:
---
--- * Invalid pointers are no longer allowed in transactions starting with Babbage era
---
--- * There are only a handful of `Ptr`s on mainnet that are invalid.
---
--- Once the transition is complete and we are officially in Conway era, this translation
--- logic can be removed in favor of a fixed deserializer that does the same thing for all
--- eras prior to Babbage.
-addrPtrNormalize :: Addr -> Addr
-addrPtrNormalize = id
-{-# DEPRECATED addrPtrNormalize "Pointers are now all normalized and this logic has been moved to the decoder" #-}
-
 -- | An account based address for rewards
-data RewardAccount = RewardAccount
-  { raNetwork :: !Network
-  , raCredential :: !(Credential 'Staking)
+data AccountAddress = AccountAddress
+  { aaNetworkId :: !Network
+  , aaId :: !AccountId
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-rewardAccountCredentialL :: Lens' RewardAccount (Credential 'Staking)
-rewardAccountCredentialL = lens raCredential $ \x y -> x {raCredential = y}
+newtype AccountId = AccountId {unAccountId :: Credential Staking}
+  deriving (Show, Eq, Generic, Ord)
+  deriving newtype (NFData, NoThunks, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
-rewardAccountNetworkL :: Lens' RewardAccount Network
-rewardAccountNetworkL = lens raNetwork $ \x y -> x {raNetwork = y}
+-- | Deprecated pattern synonym for backward compatibility
+pattern RewardAccount :: Network -> Credential Staking -> AccountAddress
+pattern RewardAccount {raNetwork, raCredential} = AccountAddress raNetwork (AccountId raCredential)
+{-# DEPRECATED RewardAccount "In favor of `AccountAddress`" #-}
 
-instance Default RewardAccount where
-  def = RewardAccount def def
+{-# DEPRECATED raNetwork "In favor of `aaNetworkId`" #-}
 
-instance ToJSON RewardAccount where
-  toJSON ra =
+{-# DEPRECATED raCredential "In favor of `aaId`" #-}
+
+{-# COMPLETE RewardAccount #-}
+
+accountAddressIdL :: Lens' AccountAddress AccountId
+accountAddressIdL = lens aaId $ \x y -> x {aaId = y}
+
+accountAddressCredentialL :: Lens' AccountAddress (Credential Staking)
+accountAddressCredentialL = lens (\(AccountAddress _ (AccountId c)) -> c) $ \x y -> x {aaId = AccountId y}
+
+accountAddressNetworkIdL :: Lens' AccountAddress Network
+accountAddressNetworkIdL = lens aaNetworkId $ \x y -> x {aaNetworkId = y}
+
+{-# DEPRECATED rewardAccountCredentialL "In favor of `accountAddressCredentialL`" #-}
+rewardAccountCredentialL :: Lens' AccountAddress (Credential Staking)
+rewardAccountCredentialL = accountAddressCredentialL
+
+{-# DEPRECATED rewardAccountNetworkL "In favor of `accountAddressNetworkIdL`" #-}
+rewardAccountNetworkL :: Lens' AccountAddress Network
+rewardAccountNetworkL = accountAddressNetworkIdL
+
+instance Default AccountAddress where
+  def = AccountAddress def (AccountId def)
+
+instance ToJSON AccountAddress where
+  toJSON aa =
     Aeson.object
-      [ "network" .= raNetwork ra
-      , "credential" .= raCredential ra
+      [ "network" .= aaNetworkId aa
+      , "credential" .= (aa ^. accountAddressCredentialL)
       ]
 
-instance FromJSON RewardAccount where
+instance FromJSON AccountAddress where
   parseJSON =
-    Aeson.withObject "RewardAccount" $ \obj ->
-      RewardAccount
+    Aeson.withObject "AccountAddress" $ \obj ->
+      AccountAddress
         <$> obj
           .: "network"
-        <*> obj
-          .: "credential"
+        <*> (AccountId <$> obj .: "credential")
 
-instance NoThunks RewardAccount
+instance NoThunks AccountAddress
 
 instance ToJSONKey Addr where
   toJSONKey = Aeson.ToJSONKeyText (Aeson.fromText . addrToText) (Aeson.text . addrToText)
@@ -275,16 +303,21 @@ putAddr (Addr network pc sr) =
           putCredential pc
 {-# INLINE putAddr #-}
 
-putRewardAccount :: RewardAccount -> Put
-putRewardAccount (RewardAccount network cred) = do
+putAccountAddress :: AccountAddress -> Put
+putAccountAddress (AccountAddress network (AccountId cred)) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
       netId = networkToWord8 network
-      rewardAccountPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
-      header = setPayCredBit (netId .|. rewardAccountPrefix)
+      accountAddressPrefix = 0xE0 -- 0b11100000 are always set for account addresses
+      header = setPayCredBit (netId .|. accountAddressPrefix)
   B.putWord8 header
   putCredential cred
+{-# INLINE putAccountAddress #-}
+
+{-# DEPRECATED putRewardAccount "In favor of `putAccountAddress`" #-}
+putRewardAccount :: AccountAddress -> Put
+putRewardAccount = putAccountAddress
 {-# INLINE putRewardAccount #-}
 
 putHash :: Hash.Hash h a -> Put
@@ -347,12 +380,12 @@ instance DecCBOR Addr where
   decCBOR = fromCborAddr
   {-# INLINE decCBOR #-}
 
-instance EncCBOR RewardAccount where
-  encCBOR = encCBOR . B.runPut . putRewardAccount
+instance EncCBOR AccountAddress where
+  encCBOR = encCBOR . B.runPut . putAccountAddress
   {-# INLINE encCBOR #-}
 
-instance DecCBOR RewardAccount where
-  decCBOR = fromCborRewardAccount
+instance DecCBOR AccountAddress where
+  decCBOR = fromCborAccountAddress
   {-# INLINE decCBOR #-}
 
 newtype BootstrapAddress = BootstrapAddress
@@ -366,7 +399,7 @@ instance NoThunks BootstrapAddress
 
 bootstrapKeyHash ::
   BootstrapAddress ->
-  KeyHash 'Payment
+  KeyHash Payment
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
@@ -462,6 +495,7 @@ fromCborBackwardsBothAddr = do
     pure (addr, UnsafeCompactAddr sbsCropped)
 {-# INLINE fromCborBackwardsBothAddr #-}
 
+-- | Class specialized for decoding of addresses
 class AddressBuffer b where
   bufLength :: b -> Int
 
@@ -490,7 +524,7 @@ instance AddressBuffer BS.ByteString where
   {-# INLINE bufToByteString #-}
   bufGetHash :: forall h a. Hash.HashAlgorithm h => BS.ByteString -> Int -> Maybe (Hash.Hash h a)
   bufGetHash bs offset = do
-    let size = fromIntegral (Hash.sizeHash (Proxy :: Proxy h))
+    let size = fromIntegral (Hash.hashSize (Proxy :: Proxy h))
     guard (offset >= 0 && offset + size <= BS.length bs)
     Hash.hashFromBytes (BS.unsafeTake size (BS.unsafeDrop offset bs))
   {-# INLINE bufGetHash #-}
@@ -568,36 +602,37 @@ decodeAddrStateT = decodeAddrStateLenientT False False
 -- While decoding an Addr the header (the first byte in the buffer) is expected to be in a
 -- certain format. Here are the meaning of all the bits:
 --
--- @@@
+-- @
 --
--- ┏━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
--- ┃  Byron Address ┃1┊0┊0┊0┊0┊0┊1┊0┃
--- ┣━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━┫
--- ┃Shelley Address ┃0┊x┊x┊x┊0┊0┊0┊x┃
--- ┗━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
---                  ┃0┊0┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
---                  ┃0┊0┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
---                  ┃0┊0┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingKey    ┃
---                  ┃0┊0┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingKey    ┃
---                  ┃0┊0┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingScript ┃
---                  ┃0┊0┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingScript ┃
---                  ┃0┊0┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingScript ┃
---                  ┃0┊0┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingScript ┃
---                  ┃0┊1┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingPtr    ┃
---                  ┃0┊1┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingPtr    ┃
---                  ┃0┊1┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingPtr    ┃
---                  ┃0┊1┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingPtr    ┃
---                  ┃0┊1┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingNull   ┃
---                  ┃0┊1┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingNull   ┃
---                  ┃0┊1┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingNull   ┃
---                  ┃0┊1┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingNull   ┃
---                  ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
---                      \ \ \       \
---                       \ \ \       `Is Mainnet Address
---                        \ \ `Payment Credential is a Script
---                         \ `Staking Credential is a Script / No Staking Credential
---                          `Not a Base Address
--- @@@
+-- ┏━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
+-- ┃  Byron Address  ┃1┊0┊0┊0┊0┊0┊1┊0┃
+-- ┣━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━┫
+-- ┃ Shelley Address ┃0┊x┊x┊x┊0┊0┊0┊x┃
+-- ┗━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+--                   ┃0┊0┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
+--                   ┃0┊0┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
+--                   ┃0┊0┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingKey    ┃
+--                   ┃0┊0┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingKey    ┃
+--                   ┃0┊0┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingScript ┃
+--                   ┃0┊0┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingScript ┃
+--                   ┃0┊0┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingScript ┃
+--                   ┃0┊0┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingScript ┃
+--                   ┃0┊1┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingPtr    ┃
+--                   ┃0┊1┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingPtr    ┃
+--                   ┃0┊1┊0┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingPtr    ┃
+--                   ┃0┊1┊0┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingPtr    ┃
+--                   ┃0┊1┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingNull   ┃
+--                   ┃0┊1┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingNull   ┃
+--                   ┃0┊1┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingNull   ┃
+--                   ┃0┊1┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingNull   ┃
+--                   ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+--                      | | |       |
+--                      | | |       `Is Mainnet Address
+--                      | | `Payment Credential is a Script
+--                      | `Staking Credential is a Script / No Staking Credential
+--                      `Not a Base Address
+--
+-- @
 decodeAddrStateLenientT ::
   (MonadFail m, AddressBuffer b) =>
   -- | Enable lenient decoding for Ptrs, i.e. indicate whether junk can follow a Ptr. This
@@ -665,7 +700,7 @@ decodePaymentCredential ::
   (MonadFail m, AddressBuffer b) =>
   Header ->
   b ->
-  StateT Int m PaymentCredential
+  StateT Int m (Credential Payment)
 decodePaymentCredential header buf
   | headerIsPaymentScript header = ScriptHashObj <$> decodeScriptHash buf
   | otherwise = KeyHashObj <$> decodeKeyHash buf
@@ -721,7 +756,7 @@ decodeHash buf = do
     Nothing -> fail "Impossible: Negative offset"
   where
     hashLen :: Int
-    hashLen = fromIntegral (Hash.sizeHash (Proxy :: Proxy h))
+    hashLen = fromIntegral (Hash.hashSize (Proxy :: Proxy h))
 {-# INLINE decodeHash #-}
 
 decodePtr ::
@@ -841,63 +876,76 @@ decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
 {-# INLINE decodeVariableLengthWord64 #-}
 
 ------------------------------------------------------------------------------------------
--- Reward Account Deserializer -----------------------------------------------------------
+-- Account Address Deserializer ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+-- | Account Address Header.
+--
+-- @
+--
+-- ┏━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
+-- ┃ Account Address ┃1┊1┊1┊x┊0┊0┊0┊x┃
+-- ┗━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━┓
+--                   ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet StakingKey    ┃
+--                   ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet StakingKey    ┃
+--                   ┃1┊1┊1┊1┊0┊0┊0┊0┃ Testnet StakingScript ┃
+--                   ┃1┊1┊1┊1┊0┊0┊0┊1┃ Mainnet StakingScript ┃
+--                   ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━┛
+--                          |       |
+--                          |       `Is Mainnet Address
+--                          `Account Credential is a Script
+--
+-- @
+decodeAccountAddress ::
+  forall b m.
+  (AddressBuffer b, MonadFail m) =>
+  b ->
+  m AccountAddress
+decodeAccountAddress buf = evalStateT (decodeAccountAddressT buf) 0
+
+fromCborAccountAddress :: Decoder s AccountAddress
+fromCborAccountAddress = do
+  sbs :: ShortByteString <- decCBOR
+  decodeAccountAddress sbs
+
+{-# DEPRECATED decodeRewardAccount "In favor of `decodeAccountAddress`" #-}
 decodeRewardAccount ::
   forall b m.
   (AddressBuffer b, MonadFail m) =>
   b ->
-  m RewardAccount
-decodeRewardAccount buf = evalStateT (decodeRewardAccountT buf) 0
+  m AccountAddress
+decodeRewardAccount = decodeAccountAddress
 
-fromCborRewardAccount :: Decoder s RewardAccount
-fromCborRewardAccount = do
-  sbs :: ShortByteString <- decCBOR
-  decodeRewardAccount sbs
+{-# DEPRECATED fromCborRewardAccount "In favor of `fromCborAccountAddress`" #-}
+fromCborRewardAccount :: Decoder s AccountAddress
+fromCborRewardAccount = fromCborAccountAddress
 
-headerIsRewardAccount :: Header -> Bool
-headerIsRewardAccount header = header .&. 0b11101110 == 0b11100000
-{-# INLINE headerIsRewardAccount #-}
+headerIsAccountAddress :: Header -> Bool
+headerIsAccountAddress header = header .&. 0b11101110 == 0b11100000
+{-# INLINE headerIsAccountAddress #-}
 
-headerRewardAccountIsScript :: Header -> Bool
-headerRewardAccountIsScript = (`testBit` 4)
-{-# INLINE headerRewardAccountIsScript #-}
+headerAccountAddressIsScript :: Header -> Bool
+headerAccountAddressIsScript = (`testBit` 4)
+{-# INLINE headerAccountAddressIsScript #-}
 
--- | Reward Account Header.
---
--- @@@
---
--- ┏━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
--- ┃ Reward Account ┃1┊1┊1┊x┊0┊0┊0┊x┃
--- ┗━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
---                  ┃1┊1┊1┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
---                  ┃1┊1┊1┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
---                  ┃1┊1┊1┊1┊0┊0┊0┊0┃ Testnet PaymentScript StakingKey    ┃
---                  ┃1┊1┊1┊1┊0┊0┊0┊1┃ Mainnet PaymentScript StakingKey    ┃
---                  ┗━┷━┷━┷━┷━┷━┷━┷━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
---                          \       \
---                           \       `Is Mainnet Address
---                            `Account Credential is a Script
--- @@@
-decodeRewardAccountT ::
+decodeAccountAddressT ::
   (MonadFail m, AddressBuffer b) =>
   b ->
-  StateT Int m RewardAccount
-decodeRewardAccountT buf = do
+  StateT Int m AccountAddress
+decodeAccountAddressT buf = do
   guardLength "Header" 1 buf
   modify' (+ 1)
   let header = Header $ bufUnsafeIndex buf 0
-  unless (headerIsRewardAccount header) $
+  unless (headerIsAccountAddress header) $
     fail $
-      "Invalid header for the reward account: " <> show header
+      "Invalid header for the account address: " <> show header
   account <-
-    if headerRewardAccountIsScript header
+    if headerAccountAddressIsScript header
       then ScriptHashObj <$> decodeScriptHash buf
       else KeyHashObj <$> decodeKeyHash buf
-  ensureBufIsConsumed "RewardsAcnt" buf
-  pure $! RewardAccount (headerNetworkId header) account
-{-# INLINE decodeRewardAccountT #-}
+  ensureBufIsConsumed "AccountAddress" buf
+  pure $! AccountAddress (headerNetworkId header) (AccountId account)
+{-# INLINE decodeAccountAddressT #-}
 
 instance EncCBOR CompactAddr where
   encCBOR (UnsafeCompactAddr bytes) = encCBOR bytes
@@ -922,6 +970,23 @@ fromBoostrapCompactAddress :: Byron.CompactAddress -> CompactAddr
 fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 
 -- | This is called @wdrl@ in the spec.
-newtype Withdrawals = Withdrawals {unWithdrawals :: Map RewardAccount Coin}
+newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+instance Semigroup Withdrawals where
+  Withdrawals w1 <> Withdrawals w2 = Withdrawals $ Map.unionWith (<>) w1 w2
+
+instance Monoid Withdrawals where
+  mempty = Withdrawals Map.empty
+
+-- | Direct deposits to account addresses.
+newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map AccountAddress Coin}
+  deriving (Show, Eq, Generic)
+  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+instance Semigroup DirectDeposits where
+  DirectDeposits d1 <> DirectDeposits d2 = DirectDeposits $ Map.unionWith (<>) d1 d2
+
+instance Monoid DirectDeposits where
+  mempty = DirectDeposits Map.empty

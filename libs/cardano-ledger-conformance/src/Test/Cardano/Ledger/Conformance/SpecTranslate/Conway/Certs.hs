@@ -12,7 +12,6 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs () where
 
-import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -21,28 +20,23 @@ import Cardano.Ledger.Conway.Rules
 import Data.Functor.Identity (Identity)
 import Data.Map (keysSet)
 import Data.Map.Strict (Map)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
-import Test.Cardano.Ledger.Conway.TreeDiff
-
-instance ToExpr (PredicateFailure (EraRule "CERT" era)) => SpecTranslate ctx (ConwayCertsPredFailure era) where
-  type SpecRep (ConwayCertsPredFailure era) = OpaqueErrorString
-  toSpecRep = pure . showOpaqueErrorString
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map RewardAccount Coin)
+  , Inject ctx (Map AccountAddress Coin)
   ) =>
   SpecTranslate ctx (CertsEnv era)
   where
   type SpecRep (CertsEnv era) = Agda.CertEnv
   toSpecRep CertsEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map RewardAccount Coin)
+    withdrawals <- askCtx @(Map AccountAddress Coin)
     let ccColdCreds = foldMap (keysSet . committeeMembers) certsCurrentCommittee
     Agda.MkCertEnv
       <$> toSpecRep certsCurrentEpoch

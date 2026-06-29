@@ -8,12 +8,9 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
-import Control.State.Transition.Extended (PredicateFailure)
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -31,8 +28,6 @@ eraRoundTripProps ::
   forall e.
   ( ApplyTx e
   , Arbitrary (ApplyTxError e)
-  , EncCBOR (PredicateFailure (EraRule "LEDGER" e))
-  , DecCBOR (PredicateFailure (EraRule "LEDGER" e))
   ) =>
   TestTree
 eraRoundTripProps =

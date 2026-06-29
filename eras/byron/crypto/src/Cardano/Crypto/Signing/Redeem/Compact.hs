@@ -13,8 +13,7 @@ module Cardano.Crypto.Signing.Redeem.Compact (
   CompactRedeemVerificationKey (..),
   fromCompactRedeemVerificationKey,
   toCompactRedeemVerificationKey,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.Redeem.VerificationKey (
   RedeemVerificationKey (..),

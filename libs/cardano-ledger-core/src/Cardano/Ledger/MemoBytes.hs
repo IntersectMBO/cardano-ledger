@@ -6,16 +6,10 @@
 --   introduced in the module 'Cardano.Ledger.SafeHash'
 module Cardano.Ledger.MemoBytes (
   MemoBytes (Memo),
-  MemoHashIndex,
   Mem,
-  mkMemoBytes,
+  MemoHashIndex,
   getMemoBytesType,
   getMemoBytesHash,
-  memoBytes,
-  memoBytesEra,
-  shorten,
-  showMemo,
-  printMemo,
   shortToLazy,
   contentsEq,
   decodeMemoBytes,
@@ -31,7 +25,7 @@ module Cardano.Ledger.MemoBytes (
   eqRawType,
   getMemoRawBytes,
   lensMemoRawType,
-  getterMemoRawType,
+  memoRawTypeL,
 
   -- * MemoBytes MemPack definitions
   byteCountMemoBytes,
@@ -40,7 +34,6 @@ module Cardano.Ledger.MemoBytes (
 
   -- * Raw equality
   EqRaw (..),
-)
-where
+) where
 
 import Cardano.Ledger.MemoBytes.Internal

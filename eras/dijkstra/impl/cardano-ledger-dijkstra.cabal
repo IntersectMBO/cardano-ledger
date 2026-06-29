@@ -1,0 +1,264 @@
+cabal-version: 3.0
+name: cardano-ledger-dijkstra
+version: 0.2.0.1
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Cardano ledger with nested transactions
+description:
+  This package builds upon the Conway ledger with a nested transactions system.
+
+category: Network
+build-type: Simple
+data-files:
+  cddl/data/dijkstra.cddl
+  golden/*.json
+
+extra-source-files: CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: eras/dijkstra
+
+flag asserts
+  description: Enable assertions
+  default: False
+
+library
+  exposed-modules:
+    Cardano.Ledger.Dijkstra
+    Cardano.Ledger.Dijkstra.BlockBody
+    Cardano.Ledger.Dijkstra.Core
+    Cardano.Ledger.Dijkstra.Era
+    Cardano.Ledger.Dijkstra.Genesis
+    Cardano.Ledger.Dijkstra.Governance
+    Cardano.Ledger.Dijkstra.PParams
+    Cardano.Ledger.Dijkstra.Rules
+    Cardano.Ledger.Dijkstra.Scripts
+    Cardano.Ledger.Dijkstra.State
+    Cardano.Ledger.Dijkstra.Transition
+    Cardano.Ledger.Dijkstra.Tx
+    Cardano.Ledger.Dijkstra.TxAuxData
+    Cardano.Ledger.Dijkstra.TxBody
+    Cardano.Ledger.Dijkstra.TxCert
+    Cardano.Ledger.Dijkstra.TxInfo
+    Cardano.Ledger.Dijkstra.TxOut
+    Cardano.Ledger.Dijkstra.TxWits
+    Cardano.Ledger.Dijkstra.UTxO
+
+  other-modules:
+    Cardano.Ledger.Dijkstra.BlockBody.Internal
+    Cardano.Ledger.Dijkstra.Rules.Bbody
+    Cardano.Ledger.Dijkstra.Rules.Cert
+    Cardano.Ledger.Dijkstra.Rules.Certs
+    Cardano.Ledger.Dijkstra.Rules.Deleg
+    Cardano.Ledger.Dijkstra.Rules.Gov
+    Cardano.Ledger.Dijkstra.Rules.GovCert
+    Cardano.Ledger.Dijkstra.Rules.Ledger
+    Cardano.Ledger.Dijkstra.Rules.Ledgers
+    Cardano.Ledger.Dijkstra.Rules.Mempool
+    Cardano.Ledger.Dijkstra.Rules.Pool
+    Cardano.Ledger.Dijkstra.Rules.SubCert
+    Cardano.Ledger.Dijkstra.Rules.SubCerts
+    Cardano.Ledger.Dijkstra.Rules.SubDeleg
+    Cardano.Ledger.Dijkstra.Rules.SubGov
+    Cardano.Ledger.Dijkstra.Rules.SubGovCert
+    Cardano.Ledger.Dijkstra.Rules.SubLedger
+    Cardano.Ledger.Dijkstra.Rules.SubLedgers
+    Cardano.Ledger.Dijkstra.Rules.SubPool
+    Cardano.Ledger.Dijkstra.Rules.SubUtxo
+    Cardano.Ledger.Dijkstra.Rules.SubUtxow
+    Cardano.Ledger.Dijkstra.Rules.Utxo
+    Cardano.Ledger.Dijkstra.Rules.Utxos
+    Cardano.Ledger.Dijkstra.Rules.Utxow
+    Cardano.Ledger.Dijkstra.State.Account
+    Cardano.Ledger.Dijkstra.State.CertState
+    Cardano.Ledger.Dijkstra.State.Stake
+    Cardano.Ledger.Dijkstra.Translation
+
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+  build-depends:
+    FailT,
+    aeson,
+    base >=4.14 && <5,
+    bytestring,
+    cardano-crypto-class,
+    cardano-data ^>=1.3,
+    cardano-ledger-allegra,
+    cardano-ledger-alonzo ^>=1.15,
+    cardano-ledger-babbage,
+    cardano-ledger-binary ^>=1.8,
+    cardano-ledger-conway ^>=1.22,
+    cardano-ledger-core:{cardano-ledger-core, internal} >=1.19,
+    cardano-ledger-mary,
+    cardano-ledger-shelley,
+    cardano-strict-containers,
+    containers,
+    data-default,
+    deepseq,
+    mempack,
+    microlens,
+    nothunks,
+    plutus-ledger-api,
+    small-steps >=1.1.2,
+    text,
+
+  if flag(asserts)
+    ghc-options: -fno-ignore-asserts
+
+library testlib
+  visibility: public
+  hs-source-dirs: testlib
+  exposed-modules:
+    Test.Cardano.Ledger.Dijkstra.Arbitrary
+    Test.Cardano.Ledger.Dijkstra.Binary.Annotator
+    Test.Cardano.Ledger.Dijkstra.Binary.Cddl
+    Test.Cardano.Ledger.Dijkstra.Binary.Golden
+    Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip
+    Test.Cardano.Ledger.Dijkstra.Era
+    Test.Cardano.Ledger.Dijkstra.Examples
+    Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
+    Test.Cardano.Ledger.Dijkstra.ImpTest
+    Test.Cardano.Ledger.Dijkstra.TreeDiff
+    Test.Cardano.Ledger.Dijkstra.TxInfoSpec
+
+  other-modules: Paths_cardano_ledger_dijkstra
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+  build-depends:
+    base,
+    bytestring,
+    cardano-data,
+    cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+    cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-strict-containers,
+    containers,
+    generic-random,
+    microlens,
+    small-steps,
+    tree-diff,
+
+library cddl
+  exposed-modules:
+    Cardano.Ledger.Dijkstra.HuddleSpec
+
+  visibility: public
+  hs-source-dirs: cddl/lib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-conway:cddl,
+    cardano-ledger-dijkstra,
+    heredoc,
+    text,
+
+executable generate-cddl
+  main-is: Main.hs
+  hs-source-dirs: cddl/exe
+  other-modules: Paths_cardano_ledger_dijkstra
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib,
+    cardano-ledger-dijkstra:cddl,
+
+test-suite tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Paths_cardano_ledger_dijkstra
+    Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec
+    Test.Cardano.Ledger.Dijkstra.BlockBodySpec
+    Test.Cardano.Ledger.Dijkstra.GoldenSpec
+
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+  build-depends:
+    base,
+    cardano-ledger-alonzo,
+    cardano-ledger-babbage:testlib,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, cddl, testlib},
+    cardano-ledger-shelley:testlib,
+    cardano-strict-containers,

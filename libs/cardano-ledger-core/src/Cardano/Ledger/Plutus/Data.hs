@@ -14,15 +14,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
--- This is needed for the `HeapWords (StrictMaybe (DataHash c))` instance
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Plutus.Data (
   PlutusData (..),
-  Data (Data),
+  Data (Data, MkData),
   unData,
   DataHash,
   upgradeData,
@@ -35,20 +32,20 @@ module Cardano.Ledger.Plutus.Data (
   binaryDataToData,
   dataToBinaryData,
   Datum (..),
+  mkInlineDatum,
+  mkHashedDatum,
   datumDataHash,
   translateDatum,
-)
-where
+) where
 
-import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
-  Annotator (..),
+  Annotator,
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
   ToCBOR (..),
-  decodeFullAnnotator,
+  decodeFull',
   decodeNestedCborBytes,
   encodeTag,
   fromPlainDecoder,
@@ -63,14 +60,12 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
-  mkMemoBytes,
   mkMemoizedEra,
-  shortToLazy,
  )
+import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
-import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
 import Data.MemPack
@@ -88,16 +83,16 @@ import qualified PlutusLedgerApi.V1 as PV1
 newtype PlutusData era = PlutusData PV1.Data
   deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
-instance Typeable era => EncCBOR (PlutusData era) where
+instance EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
-
-instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
-  decCBOR = pure <$> fromPlainDecoder Cborg.decode
 
 instance Typeable era => DecCBOR (PlutusData era) where
   decCBOR = fromPlainDecoder Cborg.decode
 
-newtype Data era = DataConstr (MemoBytes (PlutusData era))
+instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
+  decCBOR = pure <$> fromPlainDecoder Cborg.decode
+
+newtype Data era = MkData (MemoBytes (PlutusData era))
   deriving (Eq, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData, DecCBOR)
 
@@ -107,9 +102,13 @@ instance Typeable era => EncCBOR (Data era)
 instance Memoized (Data era) where
   type RawType (Data era) = PlutusData era
 
-deriving instance Show (Data era)
+deriving via
+  Mem (PlutusData era)
+  instance
+    Era era =>
+    DecCBOR (Annotator (Data era))
 
-deriving via Mem (PlutusData era) instance Era era => DecCBOR (Annotator (Data era))
+deriving instance Show (Data era)
 
 type instance MemoHashIndex (PlutusData era) = EraIndependentData
 
@@ -149,7 +148,7 @@ newtype BinaryData era = BinaryData ShortByteString
 
 instance HashAnnotated (BinaryData era) EraIndependentData
 
-instance Typeable era => EncCBOR (BinaryData era) where
+instance EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
 
 instance Era era => DecCBOR (BinaryData era) where
@@ -169,8 +168,9 @@ makeBinaryData sbs = do
 
 decodeBinaryData :: forall era. Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do
-  plutusData <- decodeFullAnnotator (eraProtVerLow @era) "Data" decCBOR (fromStrict (fromShort sbs))
-  pure (DataConstr (mkMemoBytes plutusData $ shortToLazy sbs))
+  let bs = fromShort sbs
+  plutusData <- decodeFull' (eraProtVerLow @era) bs
+  pure (MkData (mkMemoBytesShort plutusData sbs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
 -- construct `BinaryData` is through the smart constructor `makeBinaryData` that
@@ -183,7 +183,7 @@ binaryDataToData binaryData =
     Right d -> d
 
 dataToBinaryData :: Data era -> BinaryData era
-dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
+dataToBinaryData (MkData (Memo _ sbs)) = BinaryData sbs
 
 hashBinaryData :: BinaryData era -> DataHash
 hashBinaryData = hashAnnotated
@@ -197,10 +197,6 @@ hashData = hashAnnotated
 dataHashSize :: StrictMaybe DataHash -> Integer
 dataHashSize SNothing = 0
 dataHashSize (SJust _) = 10
-
-instance HeapWords (StrictMaybe DataHash) where
-  heapWords SNothing = heapWords0
-  heapWords (SJust a) = heapWords1 a
 
 -- ============================================================================
 -- Datum
@@ -254,6 +250,12 @@ instance Era era => ToJSON (Datum era) where
     case datumDataHash d of
       SNothing -> toEncoding Null
       SJust dh -> toEncoding dh
+
+mkInlineDatum :: forall era. Era era => PV1.Data -> Datum era
+mkInlineDatum = Datum . dataToBinaryData . Data @era
+
+mkHashedDatum :: forall era. Era era => PV1.Data -> Datum era
+mkHashedDatum = DatumHash . hashData . Data @era
 
 -- | Get the Hash of the datum.
 datumDataHash :: Datum era -> StrictMaybe DataHash

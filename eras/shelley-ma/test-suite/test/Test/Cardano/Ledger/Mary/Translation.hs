@@ -6,19 +6,18 @@
 module Test.Cardano.Ledger.Mary.Translation (
   maryTranslationTests,
   maryEncodeDecodeTests,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Translation ()
 import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Mary.Arbitrary ()
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -54,7 +53,7 @@ maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @MaryEra @S.ShelleyTx NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @(Tx TopTx) NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
         translateEraEncoding @MaryEra @S.ShelleyGovState NoGenesis toCBOR toCBOR

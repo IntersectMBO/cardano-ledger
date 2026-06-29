@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
@@ -13,6 +14,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 module Cardano.Ledger.Core.Era (
   -- * Era
@@ -46,76 +50,19 @@ module Cardano.Ledger.Core.Era (
   fromEraCBOR,
   fromEraShareCBOR,
   eraDecoder,
-)
-where
+  eraDecoderWithBytes,
+) where
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Internal.Era (ByronEra, Era (..), EraFromName)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition.Extended (PredicateFailure, STS (..))
+import qualified Data.ByteString.Lazy as BSL
 import Data.Kind (Constraint, Type)
-import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import Lens.Micro
-
---------------------------------------------------------------------------------
--- Era
---------------------------------------------------------------------------------
-
-class
-  ( Typeable era
-  , KnownNat (ProtVerLow era)
-  , KnownNat (ProtVerHigh era)
-  , ProtVerLow era <= ProtVerHigh era
-  , MinVersion <= ProtVerLow era
-  , MinVersion <= ProtVerHigh era
-  , -- We need to make sure that there is never a case that MaxVersion equals to the highest
-    -- protocol version for the era, otherwise we can never upgrade to the next version:
-    CmpNat (ProtVerLow era) MaxVersion ~ 'LT
-  , CmpNat (ProtVerHigh era) MaxVersion ~ 'LT
-  , -- These two are redundant and can be removed once support for GHC-8.10 is dropped:
-    ProtVerLow era <= MaxVersion
-  , ProtVerHigh era <= MaxVersion
-  ) =>
-  Era era
-  where
-  -- | Map an era to its predecessor.
-  --
-  -- For example:
-  --
-  -- > type instance PreviousEra (AllegraEra c) = ShelleyEra c
-  type PreviousEra era = (r :: Type) | r -> era
-
-  -- | Lowest major protocol version for this era
-  type ProtVerLow era :: Nat
-
-  -- | Highest major protocol version for this era. By default se to `ProtVerLow`
-  type ProtVerHigh era :: Nat
-
-  type ProtVerHigh era = ProtVerLow era
-
-  -- | Textual name of the current era.
-  --
-  -- Designed to be used with @TypeApplications@:
-  --
-  -- >>> eraName @ByronEra
-  -- Byron
-  eraName :: String
-
--- | This is the era that preceded Shelley era. It cannot have any other class instances,
--- except for `Era` type class.
-data ByronEra
-
--- | This is a non-existent era and is defined for satisfying the `PreviousEra` type family injectivity
-data VoidEra
-
-instance Era ByronEra where
-  type PreviousEra ByronEra = VoidEra
-  type ProtVerLow ByronEra = 0
-  type ProtVerHigh ByronEra = 1
-
-  eraName = "Byron"
 
 -----------------------------
 -- Rules --------------------
@@ -154,14 +101,23 @@ absurdEraRule a = case a of {}
 
 -- Rules that must never have a predicate failures
 type instance EraRuleFailure "EPOCH" era = VoidEraRule "EPOCH" era
+
 type instance EraRuleFailure "NEWEPOCH" era = VoidEraRule "NEWEPOCH" era
+
 type instance EraRuleFailure "MIR" era = VoidEraRule "MIR" era
+
 type instance EraRuleFailure "NEWPP" era = VoidEraRule "NEWPP" era
+
 type instance EraRuleFailure "SNAP" era = VoidEraRule "SNAP" era
+
 type instance EraRuleFailure "TICK" era = VoidEraRule "TICK" era
+
 type instance EraRuleFailure "TICKF" era = VoidEraRule "TICKF" era
+
 type instance EraRuleFailure "UPEC" era = VoidEraRule "UPEC" era
+
 type instance EraRuleFailure "RUPD" era = VoidEraRule "RUPD" era
+
 type instance EraRuleFailure "POOLREAP" era = VoidEraRule "POOLREAP" era
 
 class
@@ -218,12 +174,12 @@ type ExactEra inEra era =
   ProtVerInBounds era (ProtVerLow inEra) (ProtVerHigh inEra)
 
 -- | Restrict the @era@ to equal to @atLeastEra@ or come after it
-type AtLeastEra atLeastEra era =
-  ProtVerAtLeast era (ProtVerLow atLeastEra)
+type AtLeastEra (atLeastEra :: Symbol) era =
+  ProtVerAtLeast era (ProtVerLow (EraFromName atLeastEra))
 
 -- | Restrict the @era@ to equal to @eraName@ or come before it.
-type AtMostEra eraMostEra era =
-  ProtVerAtMost era (ProtVerHigh eraMostEra)
+type AtMostEra (eraMostEra :: Symbol) era =
+  ProtVerAtMost era (ProtVerHigh (EraFromName eraMostEra))
 
 -- | Get the value level `Version` of the lowest major protocol version for the supplied @era@.
 eraProtVerLow :: forall era. Era era => Version
@@ -243,12 +199,12 @@ eraProtVersions = [eraProtVerLow @era .. eraProtVerHigh @era]
 --
 -- For example these will type check
 --
--- >>> atLeastEra @BabbageEra @ConwayEra
--- >>> atLeastEra @BabbageEra @BabbageEra
+-- > atLeastEra @"Babbage" @ConwayEra
+-- > atLeastEra @"Babbage" @BabbageEra
 --
 -- However this will result in a type error
 --
--- >>> atLeastEra @BabbageEra @AlonzoEra
+-- > atLeastEra @"Babbage" @AlonzoEra
 atLeastEra :: AtLeastEra eraName era => ()
 atLeastEra = ()
 
@@ -258,12 +214,12 @@ atLeastEra = ()
 --
 -- For example these will type check
 --
--- >>> atMostEra @BabbageEra @ShelleyEra
--- >>> atMostEra @AlonzoEra @MaryEra
+-- > atMostEra @BabbageEra @ShelleyEra
+-- > atMostEra @AlonzoEra @MaryEra
 --
 -- However this will result in a type error
 --
--- >>> atMostEra @BabbageEra @ConwayEra
+-- > atMostEra @BabbageEra @ConwayEra
 atMostEra :: AtMostEra eraName era => ()
 atMostEra = ()
 
@@ -302,7 +258,12 @@ fromEraShareCBOR = eraDecoder @era decNoShareCBOR
 -- version for the supplied @era@
 --
 -- This action should not be used for decoders that require access to original bytes, use
--- `toPlainDecoder` instead.
+-- `eraDecoderWithBytes` instead.
 eraDecoder :: forall era t s. Era era => Decoder s t -> Plain.Decoder s t
 eraDecoder = toPlainDecoder Nothing (eraProtVerLow @era)
 {-# INLINE eraDecoder #-}
+
+-- | Just like `eraDecoder`, but for decoders that rely on access for underlying bytes
+eraDecoderWithBytes :: forall era t s. Era era => BSL.ByteString -> Decoder s t -> Plain.Decoder s t
+eraDecoderWithBytes bsl = toPlainDecoder (Just bsl) (eraProtVerLow @era)
+{-# INLINE eraDecoderWithBytes #-}

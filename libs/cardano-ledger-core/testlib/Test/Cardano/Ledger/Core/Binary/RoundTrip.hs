@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -35,7 +36,6 @@ module Test.Cardano.Ledger.Core.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
@@ -140,7 +140,7 @@ roundTripAnnEraTypeExpectation = roundTripAnnEraExpectation @era @(t era)
 -- | QuickCheck property spec that uses `roundTripShareEraExpectation`
 roundTripShareEraSpec ::
   forall era t.
-  (Era era, Show t, Eq t, EncCBOR t, DecShareCBOR t, Arbitrary t, HasCallStack) =>
+  (Era era, Typeable t, Show t, Eq t, EncCBOR t, DecShareCBOR t, Arbitrary t, HasCallStack) =>
   Spec
 roundTripShareEraSpec =
   prop (show (typeRep $ Proxy @t)) $ roundTripShareEraExpectation @era @t
@@ -149,7 +149,7 @@ roundTripShareEraSpec =
 -- EncCBOR/DecShareCBOR. Requires TypeApplication of an @@era@
 roundTripShareEraExpectation ::
   forall era t.
-  (Era era, Show t, Eq t, EncCBOR t, DecShareCBOR t, HasCallStack) =>
+  (Era era, Typeable t, Show t, Eq t, EncCBOR t, DecShareCBOR t, HasCallStack) =>
   t ->
   Expectation
 roundTripShareEraExpectation =
@@ -162,6 +162,7 @@ roundTripShareEraExpectation =
 roundTripShareEraTypeSpec ::
   forall era t.
   ( Era era
+  , Typeable t
   , Show (t era)
   , Eq (t era)
   , EncCBOR (t era)
@@ -178,7 +179,7 @@ roundTripShareEraTypeSpec =
 -- types of this function are unambiguous.
 roundTripShareEraTypeExpectation ::
   forall era t.
-  (Era era, Show (t era), Eq (t era), EncCBOR (t era), DecShareCBOR (t era), HasCallStack) =>
+  (Era era, Typeable t, Show (t era), Eq (t era), EncCBOR (t era), DecShareCBOR (t era), HasCallStack) =>
   t era ->
   Expectation
 roundTripShareEraTypeExpectation = roundTripShareEraExpectation @era @(t era)
@@ -188,8 +189,8 @@ roundTripCoreEraTypesSpec ::
   forall era.
   ( EraTx era
   , EraCertState era
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
+  , Arbitrary (Tx TopTx era)
+  , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxCert era)
   , Arbitrary (TxWits era)
@@ -200,11 +201,13 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (CertState era)
+  , Arbitrary (Accounts era)
   , DecCBOR (Script era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (TxBody TopTx era)
+  , DecCBOR (Tx TopTx era)
+  , Typeable (CertState era)
   , HasCallStack
   ) =>
   Spec
@@ -222,10 +225,10 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(TxAuxData era)
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripEraSpec @era @(TxWits era)
-    roundTripAnnEraSpec @era @(TxBody era)
-    roundTripEraSpec @era @(TxBody era)
-    roundTripAnnEraSpec @era @(Tx era)
-    roundTripEraSpec @era @(Tx era)
+    roundTripAnnEraSpec @era @(TxBody TopTx era)
+    roundTripEraSpec @era @(TxBody TopTx era)
+    roundTripAnnEraSpec @era @(Tx TopTx era)
+    roundTripEraSpec @era @(Tx TopTx era)
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)
@@ -237,7 +240,6 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
-    roundTripShareEraTypeSpec @era @VState
     roundTripShareEraTypeSpec @era @UTxO
 
 data EraRuleProof era (rs :: [Symbol]) where

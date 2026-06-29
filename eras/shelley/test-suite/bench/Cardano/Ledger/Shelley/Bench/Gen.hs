@@ -8,17 +8,14 @@ module Cardano.Ledger.Shelley.Bench.Gen (
   genTriple,
   genBlock,
   genChainState,
-)
-where
+) where
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
-  CertState,
   DelplEnv,
   ShelleyLEDGERS,
-  ShelleyTx,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -37,7 +34,7 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (
   Constants (
     maxGenesisUTxOouts,
-    maxMinFeeA,
+    maxTxFeePerByte,
     minGenesisUTxOouts
   ),
   defaultConstants,
@@ -73,7 +70,7 @@ genChainState n ge =
           , -- We are using real crypto types here, which can be larger than
             -- those expected by the mock fee calculations. Since this is
             -- unimportant for now, we set the A part of the fee to 0
-            maxMinFeeA = Coin 0
+            maxTxFeePerByte = Coin 0
           }
       ge' = GenEnv (geKeySpace ge) (ScriptSpace [] [] Map.empty Map.empty) cs
    in fromRight (error "genChainState failed")
@@ -106,17 +103,17 @@ genTriple ::
   , EraGov era
   , EraStake era
   , EraUTxO era
+  , ShelleyEraAccounts era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , Tx era ~ ShelleyTx era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   ) =>
   Proxy era ->
   Int ->
-  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (ShelleyTx era))
+  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (Tx TopTx era))
 genTriple proxy n = do
   let ge = genEnv proxy defaultConstants
   cs <- genChainState n ge

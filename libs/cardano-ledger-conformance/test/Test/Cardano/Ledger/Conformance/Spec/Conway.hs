@@ -1,44 +1,62 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 
-import Cardano.Ledger.Conway (ConwayEra)
-import Test.Cardano.Ledger.Conformance (conformsToImpl, inputsGenerateWithin)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace qualified as MiniTrace
-import Test.Cardano.Ledger.Conformance.Imp qualified as Imp (spec)
-import Test.Cardano.Ledger.Conformance.Imp.Ratify qualified as RatifyImp
-import Test.Cardano.Ledger.Constrained.Conway
-import Test.Cardano.Ledger.Conway.ImpTest ()
+import Data.Map.Strict qualified as Map
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
+import Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify qualified as Ratify
+import Test.Cardano.Ledger.Conformance.Spec.Core
+import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
+import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
+  ConwayCertGenContext (..),
+  constrainedCert,
+  constrainedCerts,
+  constrainedDeleg,
+  constrainedEnact,
+  constrainedEpoch,
+  constrainedGov,
+  constrainedGovCert,
+  constrainedPool,
+  constrainedUtxo,
+ )
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
 spec = do
-  describe "MiniTrace" MiniTrace.spec
-  describe "Generators" $ do
-    inputsGenerateWithin @ConwayFn @"GOV" @ConwayEra 60_000_000
-    inputsGenerateWithin @ConwayFn @"ENACT" @ConwayEra 60_000_000
-  describe "Conformance" $ do
+  describe "Constrained Generators" $ do
     describe "Ticks transition graph" $ do
-      prop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @ConwayEra
-      prop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @ConwayEra
-      xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @ConwayEra
-      xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @ConwayEra
+      prop "ENACT" $
+        conformsToImplConstrained constrainedEnact $
+          \curEpoch _ _ _ -> pure curEpoch
+      Ratify.spec
+      xprop "EPOCH" $ conformsToImplConstrained_ constrainedEpoch
+      xprop "NEWEPOCH" $ conformsToImplConstrained_ constrainedEpoch
     describe "Blocks transition graph" $ do
-      prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @ConwayEra
-      prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @ConwayEra
-      prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @ConwayEra
-      prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @ConwayEra
-      prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @ConwayEra
-      prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @ConwayEra
+      prop "DELEG" $
+        conformsToImplConstrained constrainedDeleg $
+          \(_, ConwayCertGenContext {..}) _ _ _ -> pure $ Map.keysSet ccccDelegatees
+      prop "GOVCERT" $ conformsToImplConstrained_ constrainedGovCert
+      prop "POOL" $ conformsToImplConstrained_ constrainedPool
+      prop "CERT" $ conformsToImplConstrained_ constrainedCert
+      prop "CERTS" $
+        conformsToImplConstrained constrainedCerts $
+          \(_, ConwayCertGenContext {..}) _ _ _ ->
+            pure $
+              ConwayCertExecContext
+                { ccecVotes = ccccVotes
+                , ccecWithdrawals = ccccWithdrawals
+                }
+      prop "GOV" $ conformsToImplConstrained_ constrainedGov
       -- UTXO is disabled due to: https://github.com/IntersectMBO/cardano-ledger/issues/4876
-      xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @ConwayEra
-      xprop "UTXOW" $ conformsToImpl @"UTXOW" @ConwayFn @ConwayEra
-      xprop "LEDGER" $ conformsToImpl @"LEDGER" @ConwayFn @ConwayEra
-      xprop "LEDGERS" $ conformsToImpl @"LEDGERS" @ConwayFn @ConwayEra
-    describe "ImpTests" $ do
-      RatifyImp.spec
-      Imp.spec
+      xprop "UTXO" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      xprop "UTXOW" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      xprop "LEDGER" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      xprop "LEDGERS" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext

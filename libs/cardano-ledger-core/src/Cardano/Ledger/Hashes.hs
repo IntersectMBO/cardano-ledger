@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
@@ -10,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Hashes (
@@ -68,6 +70,9 @@ module Cardano.Ledger.Hashes (
   SafeHash,
   SafeToHash (..),
 
+  -- * Header Hash
+  HashHeader (..),
+
   -- ** Creating SafeHash
   HashAnnotated,
   hashAnnotated,
@@ -76,13 +81,14 @@ module Cardano.Ledger.Hashes (
   -- ** Other operations
   castSafeHash,
   extractHash,
-)
-where
+  standardHashSize,
+  standardAddrHashSize,
+) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
+import Cardano.Crypto.Hash (hashSize)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -104,6 +110,7 @@ import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.MemPack
 import Data.Typeable
+import Foreign.Storable (Storable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -169,6 +176,7 @@ newtype KeyHash (r :: KeyRole) = KeyHash
     , FromJSON
     , Default
     , MemPack
+    , Storable
     )
 
 instance HasKeyRole KeyHash
@@ -203,13 +211,14 @@ newtype ScriptHash
     , ToJSONKey
     , FromJSONKey
     , MemPack
+    , Storable
     )
 
 --------------------------------------------------------------------------------
 -- VRF Key Hashes
 --------------------------------------------------------------------------------
 
-data KeyRoleVRF
+type data KeyRoleVRF
   = StakePoolVRF
   | GenDelegVRF
   | BlockIssuerVRF
@@ -254,8 +263,8 @@ newtype TxAuxDataHash = TxAuxDataHash
 
 -- TODO: Move to cardano-ledger-shelley, whenever CertState will become era parametric
 data GenDelegPair = GenDelegPair
-  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate)
-  , genDelegVrfHash :: !(VRFVerKeyHash 'GenDelegVRF)
+  { genDelegKeyHash :: !(KeyHash GenesisDelegate)
+  , genDelegVrfHash :: !(VRFVerKeyHash GenDelegVRF)
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -290,7 +299,7 @@ instance FromJSON GenDelegPair where
         <*> obj .: "vrf"
 
 newtype GenDelegs = GenDelegs
-  { unGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+  { unGenDelegs :: Map (KeyHash GenesisRole) GenDelegPair
   }
   deriving (Eq, EncCBOR, DecCBOR, NoThunks, NFData, Generic, FromJSON, ToJSON)
   deriving (Show) via Quiet GenDelegs
@@ -332,7 +341,6 @@ newtype SafeHash i = SafeHash (Hash.Hash HASH i)
     , NoThunks
     , NFData
     , SafeToHash
-    , HeapWords
     , ToCBOR
     , FromCBOR
     , EncCBOR
@@ -403,8 +411,25 @@ class SafeToHash x => HashAnnotated x i | x -> i where
   hashAnnotated = makeHashWithExplicitProxys (Proxy @i)
   {-# INLINE hashAnnotated #-}
 
+--------------------------------------------------------------------------------
+-- Block Header Hash
+--------------------------------------------------------------------------------
+newtype HashHeader = HashHeader {unHashHeader :: Hash.Hash HASH EraIndependentBlockHeader}
+  deriving stock (Show, Eq, Generic, Ord)
+  deriving newtype (NFData, NoThunks)
+
+deriving newtype instance EncCBOR HashHeader
+
+deriving newtype instance DecCBOR HashHeader
+
 -- OTHER
 
 -- | To change the index parameter of SafeHash (which is a phantom type) use castSafeHash
 castSafeHash :: forall i j. SafeHash i -> SafeHash j
 castSafeHash (SafeHash h) = SafeHash (Hash.castHash h)
+
+standardHashSize :: Int
+standardHashSize = fromIntegral . hashSize $ Proxy @HASH
+
+standardAddrHashSize :: Int
+standardAddrHashSize = fromIntegral . hashSize $ Proxy @ADDRHASH

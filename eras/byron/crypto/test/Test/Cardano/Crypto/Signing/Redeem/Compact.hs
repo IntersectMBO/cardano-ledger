@@ -2,8 +2,7 @@
 
 module Test.Cardano.Crypto.Signing.Redeem.Compact (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto.Signing.Redeem (
   fromCompactRedeemVerificationKey,

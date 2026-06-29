@@ -9,20 +9,10 @@
 
 module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 
-import Cardano.Ledger.Api.State.Query (
-  CommitteeMemberState (..),
-  CommitteeMembersState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  NextEpochChange (..),
-  filterStakePoolDelegsAndRewards,
-  getNextEpochCommitteeMembers,
-  queryCommitteeMembersState,
- )
+import Cardano.Ledger.Api.Era
+import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
-import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -33,48 +23,64 @@ import Cardano.Ledger.Conway.Governance (
   newEpochStateDRepPulsingStateL,
   rsEnactStateL,
  )
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  vsCommitteeStateL,
+ )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (UMap)
 import Data.Default (Default (..))
 import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Api.Arbitrary ()
-import Test.Cardano.Ledger.Api.State.Query
+import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Arbitrary (genValidUMapWithCreds)
+import Test.Cardano.Ledger.Core.Arbitrary
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Slotting.Numeric ()
 
 spec :: Spec
 spec = do
-  describe "GetFilteredDelegationsAndRewardAccounts" $ do
-    prop "filterStakePoolDelegsAndRewards same as getFilteredDelegationsAndRewardAccounts" $
-      forAll genValidUMapWithCreds $ \(umap :: UMap, creds) ->
-        filterStakePoolDelegsAndRewards umap creds
-          `shouldBe` getFilteredDelegationsAndRewardAccounts umap creds
+  latestErasSpec @ConwayEra
+  latestErasSpec @DijkstraEra
 
-  describe "GetCommitteeMembersState" $ do
-    committeeMembersStateSpec @ConwayEra
+latestErasSpec ::
+  forall era.
+  ( ConwayEraGov era
+  , Default (StashedAVVMAddresses era)
+  , GovState era ~ ConwayGovState era
+  , ConwayEraCertState era
+  ) =>
+  Spec
+latestErasSpec =
+  describe "QuerySpec" $ do
+    describe (eraName @era) $ do
+      describe "Roundtrip" $ do
+        prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
+        prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
+      describe "Queries" $ do
+        committeeMembersStateSpec @era
+        queryStakeSnapshotsSpec @era
 
 committeeMembersStateSpec ::
   forall era.
   ( ConwayEraGov era
-  , Default (EpochState era)
   , Default (StashedAVVMAddresses era)
   , GovState era ~ ConwayGovState era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Spec
 committeeMembersStateSpec =
-  prop "CommitteeMembersState Query" $ \statusFilter -> do
+  prop "GetCommitteeMembersState" $ \statusFilter -> do
     forAll genCommittee $ \committee ->
       -- half of the committee members in the next epoch will overlap with the current ones
       forAll (genNextCommittee @era committee) $ \nextCommittee ->
@@ -91,15 +97,7 @@ committeeMembersStateSpec =
               nextRatifyState =
                 (def @(RatifyState era))
                   & rsEnactStateL . ensCommitteeL .~ maybeToStrictMaybe nextCommittee
-              defNewEpochState =
-                NewEpochState @era
-                  (EpochNo 0)
-                  (BlocksMade def)
-                  (BlocksMade def)
-                  def
-                  def
-                  (PoolDistr def $ CompactCoin 1)
-                  def
+              defNewEpochState = def @(NewEpochState era)
           -- replace some cold and hot keys from the filter with known ones from both
           -- committee and committeeState
           forAll (genRelevantColdCredsFilter committee committeeState) $ \ckFilter ->
@@ -117,7 +115,7 @@ committeeMembersStateSpec =
 
 propEmpty ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propEmpty nes = do
@@ -128,7 +126,7 @@ propEmpty nes = do
 
 propComplete ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propComplete nes = do
@@ -141,7 +139,7 @@ propComplete nes = do
 
 propNotAuthorized ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propNotAuthorized nes = do
@@ -159,7 +157,7 @@ propNotAuthorized nes = do
 
 propAuthorized ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propAuthorized nes = do
@@ -174,7 +172,7 @@ propAuthorized nes = do
 
 propResigned ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propResigned nes = do
@@ -189,7 +187,7 @@ propResigned nes = do
 
 propUnrecognized ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propUnrecognized nes = do
@@ -218,7 +216,7 @@ propUnrecognized nes = do
 
 propActiveAuthorized ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propActiveAuthorized nes = do
@@ -253,9 +251,9 @@ propActiveAuthorized nes = do
 
 propFilters ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
-  Set (Credential 'ColdCommitteeRole) ->
-  Set (Credential 'HotCommitteeRole) ->
+  (ConwayEraGov era, ConwayEraCertState era) =>
+  Set (Credential ColdCommitteeRole) ->
+  Set (Credential HotCommitteeRole) ->
   Set MemberStatus ->
   NewEpochState era ->
   Expectation
@@ -278,7 +276,7 @@ propFilters ckFilter hkFilter statusFilter nes = do
 
 propNextEpoch ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propNextEpoch nes = do
@@ -335,7 +333,7 @@ propNextEpoch nes = do
 
 propNoExpiration ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Expectation
 propNoExpiration nes =
@@ -371,7 +369,7 @@ genNextCommittee ::
 genNextCommittee maybeCm =
   oneof [pure Nothing, Just <$> genCommittee' (genMembersRetaining maybeCm)]
 
-genCommittee' :: Gen [Credential 'ColdCommitteeRole] -> Gen (Committee era)
+genCommittee' :: Gen [Credential ColdCommitteeRole] -> Gen (Committee era)
 genCommittee' genCreds = do
   creds <- genCreds
   m <- zip creds <$> listOf (EpochNo <$> chooseBoundedIntegral (0, 20))
@@ -381,7 +379,7 @@ genRelevantColdCredsFilter ::
   forall era.
   Maybe (Committee era) ->
   CommitteeState era ->
-  Gen (Set.Set (Credential 'ColdCommitteeRole))
+  Gen (Set.Set (Credential ColdCommitteeRole))
 genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
   creds <-
     (++)
@@ -392,7 +390,7 @@ genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
 genRelevantHotCredsFilter ::
   forall era.
   CommitteeState era ->
-  Gen (Set.Set (Credential 'HotCommitteeRole))
+  Gen (Set.Set (Credential HotCommitteeRole))
 genRelevantHotCredsFilter (CommitteeState comStateMembers) =
   Set.fromList
     <$> genRetaining
@@ -401,7 +399,7 @@ genRelevantHotCredsFilter (CommitteeState comStateMembers) =
 genMembersRetaining ::
   forall era.
   Maybe (Committee era) ->
-  Gen [Credential 'ColdCommitteeRole]
+  Gen [Credential ColdCommitteeRole]
 genMembersRetaining maybeCm =
   genRetaining $ Map.keys $ foldMap' committeeMembers maybeCm
 
@@ -412,11 +410,11 @@ genRetaining ret = do
   pure $ new <> take retSize ret
 
 withCommitteeInfo ::
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
-  ( Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- current committee members
+  ( Map.Map (Credential ColdCommitteeRole) EpochNo -> -- current committee members
     CommitteeState era ->
-    Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- next epoch committee members
+    Map.Map (Credential ColdCommitteeRole) EpochNo -> -- next epoch committee members
     CommitteeMembersState ->
     Expectation
   ) ->
@@ -428,11 +426,11 @@ withCommitteeInfo nes expectation = expectation comMembers comState nextComMembe
 
 committeeInfo ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
-  ( Map.Map (Credential 'ColdCommitteeRole) EpochNo
+  ( Map.Map (Credential ColdCommitteeRole) EpochNo
   , CommitteeState era
-  , Map.Map (Credential 'ColdCommitteeRole) EpochNo
+  , Map.Map (Credential ColdCommitteeRole) EpochNo
   )
 committeeInfo nes =
   let ledgerState = nes ^. nesEpochStateL . esLStateL
@@ -446,7 +444,7 @@ committeeInfo nes =
 
 queryCommitteeMembersStateNoFilters ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   CommitteeMembersState
 queryCommitteeMembersStateNoFilters =
@@ -454,3 +452,51 @@ queryCommitteeMembersStateNoFilters =
     Set.empty
     Set.empty
     Set.empty
+
+queryStakeSnapshotsSpec ::
+  forall era.
+  ( EraCertState era
+  , EraGov era
+  , EraStake era
+  , Default (StashedAVVMAddresses era)
+  ) =>
+  Spec
+queryStakeSnapshotsSpec =
+  describe "GetStakeSnapshots" $ do
+    prop "ssStakeSnapshots has all poolIds" $ \ss -> do
+      let
+        nes = (def :: NewEpochState era) & nesEsL . esSnapshotsL .~ ss
+        result = queryStakeSnapshots nes Nothing
+        getPoolIdsWithNonZeroDelegators =
+          Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
+        getPoolIdsWithNonZeroStake =
+          Map.filter ((> mempty) . spssStake) . VMap.toMap . ssStakePoolsSnapShot
+        allPoolIdsFiltered with =
+          foldMap
+            (Map.keysSet . with)
+            [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
+        version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
+        allPoolIds
+          | version >= natVersion @11 = allPoolIdsFiltered getPoolIdsWithNonZeroStake
+          | otherwise = allPoolIdsFiltered getPoolIdsWithNonZeroDelegators
+        nonZeroTotal = ssTotalActiveStake
+        nonZeroSubTotal ssWhich =
+          nonZeroOr (foldMap ssWhich (ssStakeSnapshots result)) (knownNonZeroCoin @1)
+      subPoolIds <- uniformSubSet Nothing allPoolIds QC
+      -- Tricky bit about the query is when all pool ids are requested then ones that do not have
+      -- delegations are filtered out, while when poolIds are specified, then they are retained even
+      -- if they don't have any delegations
+      let
+        subResult = queryStakeSnapshots nes (Just subPoolIds)
+      pure @Gen $
+        conjoin
+          [ counterexample "AllPoolIds" $
+              Map.keysSet (ssStakeSnapshots result) === allPoolIds
+          , counterexample "SubTotal Mark" $ nonZeroSubTotal ssMarkPool === ssMarkTotal result
+          , counterexample "SubTotal Set" $ nonZeroSubTotal ssSetPool === ssSetTotal result
+          , counterexample "SubTotal Go" $ nonZeroSubTotal ssGoPool === ssGoTotal result
+          , counterexample "Total Mark" $ ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
+          , counterexample "Total Set" $ ssSetTotal result === nonZeroTotal (ssStakeSet ss)
+          , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal (ssStakeGo ss)
+          , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
+          ]

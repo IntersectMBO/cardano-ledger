@@ -22,26 +22,30 @@ library
   exposed-modules:
     Test.Cardano.Ledger.Conformance
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
-    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Base
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
-    Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
-    Test.Cardano.Ledger.Conformance.SpecTranslate.Core
     Test.Cardano.Ledger.Conformance.Utils
 
   hs-source-dirs: src
   other-modules:
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Enact
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Epoch
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Gov
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.NewEpoch
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ratify
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow
     Test.Cardano.Ledger.Conformance.Orphans
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg
@@ -51,7 +55,7 @@ library
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledgers
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
     Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo
-    Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxow
+    Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 
   default-language: Haskell2010
   ghc-options:
@@ -59,15 +63,24 @@ library
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wpartial-fields
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base16-bytestring,
     bytestring,
-    cardano-crypto-class,
+    cardano-crypto-class >=2.3,
     cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
@@ -82,7 +95,6 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-test,
     cardano-strict-containers,
-    constrained-generators,
     containers,
     data-default,
     deepseq,
@@ -94,11 +106,9 @@ library
     prettyprinter-ansi-terminal,
     small-steps >=1.1,
     text,
+    tree-diff,
     unliftio,
     vector-map,
-
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-incomplete-patterns
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
@@ -108,11 +118,13 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
-    Test.Cardano.Ledger.Conformance.ConformanceSpec
-    Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace
-    Test.Cardano.Ledger.Conformance.Imp
-    Test.Cardano.Ledger.Conformance.Imp.Ratify
+    Test.Cardano.Ledger.Conformance.Imp.Conway
+    Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify
+    Test.Cardano.Ledger.Conformance.Imp.Core
+    Test.Cardano.Ledger.Conformance.Spec.Base
     Test.Cardano.Ledger.Conformance.Spec.Conway
+    Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify
+    Test.Cardano.Ledger.Conformance.Spec.Core
 
   default-language: Haskell2010
   ghc-options:
@@ -128,9 +140,7 @@ test-suite tests
     -with-rtsopts=-N
 
   build-depends:
-    base >=4.14 && <5,
-    cardano-data,
-    cardano-ledger-alonzo,
+    base >=4.18 && <5,
     cardano-ledger-conformance,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -142,5 +152,8 @@ test-suite tests
     containers,
     microlens,
     microlens-mtl,
+    mtl,
+    prettyprinter,
     small-steps,
+    text,
     unliftio,

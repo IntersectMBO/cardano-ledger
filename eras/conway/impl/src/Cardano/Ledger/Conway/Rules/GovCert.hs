@@ -20,8 +20,8 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
   computeDRepExpiry,
-)
-where
+  conwayGovCertTransition,
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochNo,
@@ -37,21 +37,10 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  EraCertState (..),
-  VState (..),
-  csCommitteeCredsL,
-  dsUnifiedL,
-  vsCommitteeStateL,
-  vsDRepsL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.CertState ()
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT, hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
@@ -60,12 +49,11 @@ import Cardano.Ledger.Conway.Governance (
   GovPurposeId,
   ProposalProcedure (..),
  )
+import Cardano.Ledger.Conway.PParams (ppDRepDepositCompactL)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -97,7 +85,7 @@ data ConwayGovCertEnv era = ConwayGovCertEnv
   , cgceCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , cgceCurrentCommittee :: StrictMaybe (Committee era)
-  , cgceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
+  , cgceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
   -- ^ All of the `UpdateCommittee` proposals
   }
   deriving (Generic)
@@ -119,15 +107,15 @@ deriving instance EraPParams era => Show (ConwayGovCertEnv era)
 deriving instance EraPParams era => Eq (ConwayGovCertEnv era)
 
 data ConwayGovCertPredFailure era
-  = ConwayDRepAlreadyRegistered (Credential 'DRepRole)
-  | ConwayDRepNotRegistered (Credential 'DRepRole)
-  | ConwayDRepIncorrectDeposit (Mismatch 'RelEQ Coin)
-  | ConwayCommitteeHasPreviouslyResigned (Credential 'ColdCommitteeRole)
-  | ConwayDRepIncorrectRefund (Mismatch 'RelEQ Coin)
+  = ConwayDRepAlreadyRegistered (Credential DRepRole)
+  | ConwayDRepNotRegistered (Credential DRepRole)
+  | ConwayDRepIncorrectDeposit (Mismatch RelEQ Coin)
+  | ConwayCommitteeHasPreviouslyResigned (Credential ColdCommitteeRole)
+  | ConwayDRepIncorrectRefund (Mismatch RelEQ Coin)
   | -- | Predicate failure whenever an update to an unknown committee member is
     -- attempted. Current Constitutional Committee and all available proposals will be
     -- searched before reporting this predicate failure.
-    ConwayCommitteeIsUnknown (Credential 'ColdCommitteeRole)
+    ConwayCommitteeIsUnknown (Credential ColdCommitteeRole)
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "GOVCERT" ConwayEra = ConwayGovCertPredFailure ConwayEra
@@ -166,10 +154,10 @@ instance
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
+  , InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
-  , EraCertState era
-  , CertState era ~ ShelleyCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayGOVCERT era)
   where
@@ -180,11 +168,18 @@ instance
   type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era
   type Event (ConwayGOVCERT era) = Void
 
-  transitionRules = [conwayGovCertTransition @era]
+  transitionRules = [conwayGovCertTransition]
 
 conwayGovCertTransition ::
-  (ConwayEraPParams era, EraCertState era, CertState era ~ ShelleyCertState era) =>
-  TransitionRule (ConwayGOVCERT era)
+  forall rule era.
+  ( ConwayEraPParams era
+  , ConwayEraCertState era
+  , InjectRuleFailure rule ConwayGovCertPredFailure era
+  , State (EraRule rule era) ~ CertState era
+  , Signal (EraRule rule era) ~ ConwayGovCert
+  , Environment (EraRule rule era) ~ ConwayGovCertEnv era
+  ) =>
+  TransitionRule (EraRule rule era)
 conwayGovCertTransition = do
   TRC
     ( ConwayGovCertEnv {cgcePParams, cgceCurrentEpoch, cgceCurrentCommittee, cgceCommitteeProposals}
@@ -192,7 +187,8 @@ conwayGovCertTransition = do
       , cert
       ) <-
     judgmentContext
-  let ppDRepDeposit = cgcePParams ^. ppDRepDepositL
+  let ppDRepDepositCompact = cgcePParams ^. ppDRepDepositCompactL
+      ppDRepDeposit = fromCompact ppDRepDepositCompact
       ppDRepActivity = cgcePParams ^. ppDRepActivityL
       checkAndOverwriteCommitteeMemberState coldCred newMemberState = do
         let VState {vsCommitteeState = CommitteeState csCommitteeCreds} = certState ^. certVStateL
@@ -200,7 +196,7 @@ conwayGovCertTransition = do
               Map.lookup coldCred csCommitteeCreds >>= \case
                 CommitteeMemberResigned {} -> Just coldCred
                 CommitteeHotCredential {} -> Nothing
-        failOnJust coldCredResigned ConwayCommitteeHasPreviouslyResigned
+        failOnJust coldCredResigned $ injectFailure . ConwayCommitteeHasPreviouslyResigned
         let isCurrentMember =
               strictMaybe False (Map.member coldCred . committeeMembers) cgceCurrentCommittee
             committeeUpdateContainsColdCred GovActionState {gasProposalProcedure} =
@@ -209,16 +205,17 @@ conwayGovCertTransition = do
                 _ -> False
             isPotentialFutureMember =
               any committeeUpdateContainsColdCred cgceCommitteeProposals
-        isCurrentMember || isPotentialFutureMember ?! ConwayCommitteeIsUnknown coldCred
+        isCurrentMember || isPotentialFutureMember ?! (injectFailure . ConwayCommitteeIsUnknown) coldCred
         pure $
           certState
             & certVStateL . vsCommitteeStateL . csCommitteeCredsL %~ Map.insert coldCred newMemberState
   case cert of
     ConwayRegDRep cred deposit mAnchor -> do
-      Map.notMember cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepAlreadyRegistered cred
+      Map.notMember cred (certState ^. certVStateL . vsDRepsL)
+        ?! (injectFailure . ConwayDRepAlreadyRegistered) cred
       deposit
         == ppDRepDeposit
-          ?! ConwayDRepIncorrectDeposit
+          ?! (injectFailure . ConwayDRepIncorrectDeposit)
             Mismatch
               { mismatchSupplied = deposit
               , mismatchExpected = ppDRepDeposit
@@ -231,7 +228,7 @@ conwayGovCertTransition = do
                     cgceCurrentEpoch
                     (certState ^. certVStateL . vsNumDormantEpochsL)
               , drepAnchor = mAnchor
-              , drepDeposit = ppDRepDeposit
+              , drepDeposit = ppDRepDepositCompact
               , drepDelegs = mempty
               }
       pure $
@@ -244,36 +241,38 @@ conwayGovCertTransition = do
             let paidDeposit = drepState ^. drepDepositL
             guard (refund /= paidDeposit)
             pure paidDeposit
-      isJust mDRepState ?! ConwayDRepNotRegistered cred
-      failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund . Mismatch refund
+      isJust mDRepState ?! (injectFailure . ConwayDRepNotRegistered) cred
+      failOnJust drepRefundMismatch $ injectFailure . ConwayDRepIncorrectRefund . Mismatch refund
       let
         certState' =
           certState & certVStateL . vsDRepsL %~ Map.delete cred
+        clearDRepDelegations delegs accountsMap =
+          foldr (Map.adjust (dRepDelegationAccountStateL .~ Nothing)) accountsMap delegs
       pure $
         case mDRepState of
           Nothing -> certState'
           Just dRepState ->
             certState'
-              & certDStateL . dsUnifiedL
-                .~ drepDelegs dRepState UM.⋪ UM.DRepUView (certState ^. certDStateL . dsUnifiedL)
+              & certDStateL . accountsL . accountsMapL
+                %~ clearDRepDelegations (drepDelegs dRepState)
     -- Update a DRep expiry along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
-      Map.member cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepNotRegistered cred
+      Map.member cred (certState ^. certVStateL . vsDRepsL)
+        ?! (injectFailure . ConwayDRepNotRegistered) cred
       pure $
         certState
           & certVStateL . vsDRepsL
-            %~ ( Map.adjust
-                  ( \drepState ->
-                      drepState
-                        & drepExpiryL
-                          .~ computeDRepExpiry
-                            ppDRepActivity
-                            cgceCurrentEpoch
-                            (certState ^. certVStateL . vsNumDormantEpochsL)
-                        & drepAnchorL .~ mAnchor
-                  )
-                  cred
-               )
+            %~ Map.adjust
+              ( \drepState ->
+                  drepState
+                    & drepExpiryL
+                      .~ computeDRepExpiry
+                        ppDRepActivity
+                        cgceCurrentEpoch
+                        (certState ^. certVStateL . vsNumDormantEpochsL)
+                    & drepAnchorL .~ mAnchor
+              )
+              cred
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeMemberState coldCred $ CommitteeHotCredential hotCred
     ConwayResignCommitteeColdKey coldCred anchor ->
@@ -290,7 +289,7 @@ computeDRepExpiryVersioned ::
 computeDRepExpiryVersioned pp currentEpoch numDormantEpochs
   -- Starting with version 10, we correctly take into account the number of dormant epochs
   -- when registering a drep
-  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+  | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL) =
       addEpochInterval currentEpoch (pp ^. ppDRepActivityL)
   | otherwise =
       computeDRepExpiry (pp ^. ppDRepActivityL) currentEpoch numDormantEpochs

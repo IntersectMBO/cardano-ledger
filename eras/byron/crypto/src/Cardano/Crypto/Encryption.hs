@@ -8,8 +8,7 @@ module Cardano.Crypto.Encryption (
   AesKey (..),
   aesEncrypt,
   aesDecrypt,
-)
-where
+) where
 
 import Cardano.Prelude hiding (init)
 import Crypto.Cipher.AES (AES256)

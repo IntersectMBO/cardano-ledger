@@ -7,8 +7,7 @@ module Test.Cardano.Ledger.EraBuffet (
   TxBody,
   TxAuxData,
   Era,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core (Era, Script, TxAuxData, TxBody, Value)

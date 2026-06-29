@@ -13,16 +13,16 @@
 -- for the GOVCERT rule
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Constrained
+import Constrained.API
 import qualified Data.Map as Map
 import Data.Set (Set)
 import Lens.Micro
@@ -33,16 +33,16 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 -- | There are no hard constraints on VState, other than witnessing, and delegatee conformance
 --   which must align with the conwayCertExecContextSpec
 vStateSpec ::
-  forall fn era.
-  (IsConwayUniv fn, Era era) =>
+  forall era.
+  Era era =>
   WitUniv era ->
-  Set (Credential 'DRepRole) ->
-  Specification fn (VState era)
+  Set (Credential DRepRole) ->
+  Specification (VState era)
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
-  match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
+  match vstate $ \ [var|dreps2|] [var|committeestate|] [var|_numdormant|] ->
     [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
-    , assert $ dom_ dreps ==. (lit delegatees) -- TODO, there are missing constraints about the (rng_ dreps)
-    , forAll dreps $ \ [var|pair|] ->
+    , assert $ dom_ dreps2 ==. lit delegatees -- TODO, there are missing constraints about the (rng_ dreps)
+    , forAll dreps2 $ \ [var|pair|] ->
         match pair $ \ [var|drep|] [var|drepstate|] ->
           [ dependsOn drepstate drep
           , witness univ drep
@@ -52,11 +52,11 @@ vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
     ]
 
 govCertSpec ::
-  (IsConwayUniv fn, EraCertState era) =>
+  EraCertState era =>
   WitUniv era ->
   ConwayGovCertEnv ConwayEra ->
   CertState ConwayEra ->
-  Specification fn ConwayGovCert
+  Specification ConwayGovCert
 govCertSpec univ ConwayGovCertEnv {..} certState =
   let vs = certState ^. certVStateL
       reps = lit $ Map.keysSet $ vsDReps vs
@@ -77,7 +77,7 @@ govCertSpec univ ConwayGovCertEnv {..} certState =
           -- that each branch is choosen with similar frequency
           -- ConwayRegDRep
           ( branchW 1 $ \ [var|keyreg|] [var|coinreg|] _ ->
-              [ assert $ not_ $ member_ keyreg (dom_ (lit deposits))
+              [ assert $ not_ $ mapMember_ keyreg (lit deposits)
               , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
               , witness univ keyreg
               ]
@@ -111,10 +111,10 @@ govCertSpec univ ConwayGovCertEnv {..} certState =
 -- | Operations for authenticating a HotKey, or resigning a ColdKey are illegal
 --   if that key has already resigned.
 notYetResigned ::
-  (HasSpec fn x, Ord x, IsConwayUniv fn) =>
+  (HasSpec x, Ord x, IsNormalType x) =>
   Map.Map x CommitteeAuthorization ->
-  Term fn x ->
-  Pred fn
+  Term x ->
+  Pred
 notYetResigned committeeStatus coldcred =
   ( caseOn
       (lookup_ coldcred (lit committeeStatus))
@@ -132,16 +132,14 @@ notYetResigned committeeStatus coldcred =
   )
 
 govCertEnvSpec ::
-  forall fn.
-  IsConwayUniv fn =>
   WitUniv ConwayEra ->
-  Specification fn (ConwayGovCertEnv ConwayEra)
+  Specification (ConwayGovCertEnv ConwayEra)
 govCertEnvSpec univ =
   constrained $ \ [var|gce|] ->
     match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->
       [ satisfies pp pparamsSpec
       , unsafeExists (\x -> [satisfies x (committeeWitness univ), assert $ committee ==. cSJust_ x])
-      , assert $ sizeOf_ (dom_ proposalmap) <=. lit 5
-      , assert $ sizeOf_ (dom_ proposalmap) >=. lit 1
+      , assert $ sizeOf_ (proposalmap) <=. lit 5
+      , assert $ sizeOf_ (proposalmap) >=. lit 1
       , forAll (rng_ proposalmap) $ \x -> satisfies x (govActionStateWitness univ)
       ]

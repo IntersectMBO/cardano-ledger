@@ -10,8 +10,7 @@
 module Cardano.Chain.Slotting.EpochNumber (
   EpochNumber (..),
   isBootstrapEra,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -58,13 +57,13 @@ instance Aeson.ToJSON EpochNumber
 
 instance ToCBOR EpochNumber where
   toCBOR = toByronCBOR
+  encodedSizeExpr size = encodedSizeExpr size . fmap getEpochNumber
 
 instance FromCBOR EpochNumber where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR EpochNumber where
   encCBOR (EpochNumber epoch) = encCBOR epoch
-  encodedSizeExpr size = encodedSizeExpr size . fmap getEpochNumber
 
 instance DecCBOR EpochNumber where
   decCBOR = EpochNumber <$> decCBOR

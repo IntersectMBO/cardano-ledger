@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -35,7 +37,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   chainChecks,
@@ -52,13 +53,11 @@ import Cardano.Ledger.Shelley.AdaPots (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
   curPParamsEpochStateL,
-  dsGenDelegsL,
   futurePParamsEpochStateL,
   nesEpochStateL,
   prevPParamsEpochStateL,
@@ -72,14 +71,11 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyState (..),
   ShelleyTICK,
   ShelleyTickEvent,
-  ShelleyTickPredFailure,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
-  HashHeader,
   LastAppliedBlock (..),
   bhHash,
   bhbody,
@@ -126,7 +122,7 @@ data CHAIN era
 
 data ChainState era = ChainState
   { chainNes :: NewEpochState era
-  , chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer) Word64
+  , chainOCertIssue :: Map.Map (KeyHash BlockIssuer) Word64
   , chainEpochNonce :: Nonce
   , chainEvolvingNonce :: Nonce
   , chainCandidateNonce :: Nonce
@@ -147,7 +143,6 @@ chainStateNesL = lens chainNes $ \x y -> x {chainNes = y}
 data TestChainPredicateFailure era
   = RealChainPredicateFailure ChainPredicateFailure
   | BbodyFailure (PredicateFailure (EraRule "BBODY" era)) -- Subtransition Failures
-  | TickFailure (PredicateFailure (EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure (PredicateFailure (EraRule "TICKN" era)) -- Subtransition Failures
   | PrtclFailure (PredicateFailure (PRTCL MockCrypto)) -- Subtransition Failures
   | PrtclSeqFailure PrtlSeqFailure -- Subtransition Failures
@@ -195,7 +190,7 @@ initialShelleyState ::
   EpochNo ->
   UTxO era ->
   Coin ->
-  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash GenesisRole) GenDelegPair ->
   PParams era ->
   Nonce ->
   ChainState era
@@ -206,7 +201,10 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         ( EpochState
-            (AccountState (Coin 0) reserves)
+            ChainAccountState
+              { casTreasury = Coin 0
+              , casReserves = reserves
+              }
             ( LedgerState
                 ( smartUTxOState
                     pp
@@ -216,7 +214,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     emptyGovState
                     mempty
                 )
-                (mkCertState def def dState)
+                (def & certDStateL .~ dState)
             )
             emptySnapShots
             def
@@ -225,7 +223,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             & futurePParamsEpochStateL .~ PotentialPParamsUpdate Nothing
         )
         SNothing
-        (PoolDistr Map.empty mempty)
+        def
         def
     )
     cs
@@ -245,7 +243,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
     dState :: DState era
     dState =
       DState
-        { dsUnified = UM.empty
+        { dsAccounts = def
         , dsFutureGenDelegs = Map.empty
         , dsGenDelegs = GenDelegs genDelegs
         , dsIRewards = def
@@ -266,8 +264,8 @@ instance
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
-  , EncCBORGroup (TxSeq era)
-  , ProtVerAtMost era 6
+  , EncCBORGroup (BlockBody era)
+  , AtMostEra "Alonzo" era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era
   ) =>
@@ -301,8 +299,7 @@ chainTransition ::
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
-  , EncCBORGroup (TxSeq era)
-  , ProtVerAtMost era 6
+  , AtMostEra "Alonzo" era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
   , EraCertState era
@@ -311,25 +308,25 @@ chainTransition ::
 chainTransition =
   judgmentContext
     >>= \( TRC
-            ( _
-              , ChainState
-                  nes
-                  cs
-                  eta0
-                  etaV
-                  etaC
-                  etaH
-                  lab
-              , Block bh txs
-              )
-          ) -> do
+             ( _
+               , ChainState
+                   nes
+                   cs
+                   eta0
+                   etaV
+                   etaC
+                   etaH
+                   lab
+               , Block bh txs
+               )
+           ) -> do
         case prtlSeqChecks lab bh of
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e
 
         let pp = nes ^. nesEpochStateL . curPParamsEpochStateL
             chainChecksData = pparamsToChainChecksPParams pp
-            bhView = makeHeaderView bh
+            bhView = makeHeaderView bh Nothing
 
         -- We allow one protocol version higher than the current era's maximum, because
         -- that is the way we can get out of the current era into the next one. We test
@@ -370,10 +367,9 @@ chainTransition =
               , bh
               )
 
-        let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView txs thouShaltNot)
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block bhView txs)
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh
@@ -413,12 +409,11 @@ instance
   ( Era era
   , Era era
   , STS (ShelleyTICK era)
-  , PredicateFailure (EraRule "TICK" era) ~ ShelleyTickPredFailure era
   , Event (EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
   Embed (ShelleyTICK era) (CHAIN era)
   where
-  wrapFailed = TickFailure
+  wrapFailed = \case {}
   wrapEvent = TickEvent
 
 instance Era era => Embed (PRTCL MockCrypto) (CHAIN era) where

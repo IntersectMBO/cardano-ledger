@@ -5,8 +5,7 @@
 module Test.Cardano.Ledger.Plutus.ScriptTestContext (
   PlutusArgs (..),
   ScriptTestContext (..),
-)
-where
+) where
 
 import Cardano.Ledger.Plutus.Language (Plutus, PlutusLanguage)
 import Control.DeepSeq (NFData (..))

@@ -1,7 +1,6 @@
 module Cardano.Chain.UTxO (
   module X,
-)
-where
+) where
 
 import Cardano.Chain.UTxO.Compact as X
 import Cardano.Chain.UTxO.GenesisUTxO as X

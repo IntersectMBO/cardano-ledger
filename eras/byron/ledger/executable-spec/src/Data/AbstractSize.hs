@@ -11,8 +11,7 @@ module Data.AbstractSize (
   abstractSize,
   AccountingMap,
   Size,
-)
-where
+) where
 
 import Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.Mock (MockDSIGN, SigDSIGN (SigMockDSIGN))

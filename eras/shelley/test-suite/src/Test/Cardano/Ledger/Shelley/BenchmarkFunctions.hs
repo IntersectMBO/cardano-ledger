@@ -21,10 +21,8 @@ module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredPools, -- How to precompute env for the Stake Pool transactions
   ledgerDelegateManyKeysOnePool,
   ledgerStateWithNkeysMpools, -- How to precompute env for the Stake Delegation transactions
-)
-where
+) where
 
-import Cardano.Ledger.Address (Addr, RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Network (..),
@@ -33,33 +31,19 @@ import Cardano.Ledger.BaseTypes (
   inject,
   mkTxIxPartial,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (
-  PoolParams (..),
-  ppCost,
-  ppId,
-  ppMargin,
-  ppMetadata,
-  ppOwners,
-  ppPledge,
-  ppRelays,
-  ppRewardAccount,
-  ppVrf,
- )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   LedgerState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.TxBody (TxBody (ShelleyTxBody))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
@@ -91,12 +75,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
 
 -- =========================================================
 
-aliceStake :: KeyPair 'Staking
+aliceStake :: KeyPair Staking
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-alicePay :: KeyPair 'Payment
+alicePay :: KeyPair Payment
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
@@ -123,7 +107,7 @@ initUTxO n =
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
 -- ease of creating transactions.
-ppsBench :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
+ppsBench :: (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) => PParams era
 ppsBench =
   emptyPParams
     & ppMaxBBSizeL .~ 50000
@@ -132,19 +116,19 @@ ppsBench =
     & ppKeyDepositL .~ Coin 0
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 1000000000
-    & ppMinFeeAL .~ Coin 0
-    & ppMinFeeBL .~ Coin 0
+    & ppTxFeePerByteL .~ CoinPerByte (CompactCoin 0)
+    & ppTxFeeFixedL .~ Coin 0
     & ppMinUTxOValueL .~ Coin 10
     & ppPoolDepositL .~ Coin 0
     & ppRhoL .~ unsafeBoundRational 0.0021
     & ppTauL .~ unsafeBoundRational 0.2
 
-ledgerEnv :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => LedgerEnv era
-ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound ppsBench (AccountState (Coin 0) (Coin 0))
+ledgerEnv :: (EraPParams era, AtMostEra "Mary" era, AtMostEra "Alonzo" era) => LedgerEnv era
+ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound ppsBench (ChainAccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   LedgerState ShelleyEra ->
-  ShelleyTx ShelleyEra ->
+  Tx TopTx ShelleyEra ->
   LedgerEnv ShelleyEra ->
   ()
 testLEDGER initSt tx env = do
@@ -153,7 +137,7 @@ testLEDGER initSt tx env = do
     Right _ -> ()
     Left e -> error $ show e
 
-txbSpendOneUTxO :: ShelleyTxBody ShelleyEra
+txbSpendOneUTxO :: TxBody TopTx ShelleyEra
 txbSpendOneUTxO =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -169,14 +153,12 @@ txbSpendOneUTxO =
     SNothing
     SNothing
 
-txSpendOneUTxO :: ShelleyTx ShelleyEra
+txSpendOneUTxO :: Tx TopTx ShelleyEra
 txSpendOneUTxO =
-  ShelleyTx
-    txbSpendOneUTxO
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay]
-      }
-    SNothing
+  mkBasicTx txbSpendOneUTxO
+    & witsTxL
+      .~ (mkBasicTxWits & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txbSpendOneUTxO) [asWitness alicePay])
+    & auxDataTxL .~ SNothing
 
 ledgerSpendOneUTxO :: Integer -> ()
 ledgerSpendOneUTxO n = testLEDGER (initLedgerState n) txSpendOneUTxO ledgerEnv
@@ -191,27 +173,27 @@ ledgerSpendOneGivenUTxO state = testLEDGER (LedgerState state def) txSpendOneUTx
 
 -- Create stake key pairs, corresponding to seeds
 -- (RawSeed start 0 0 0 0) through (RawSeed end 0 0 0 0)
-stakeKeys :: Word64 -> Word64 -> [KeyPair 'Staking]
+stakeKeys :: Word64 -> Word64 -> [KeyPair Staking]
 stakeKeys start end = fmap (\w -> mkKeyPair' (RawSeed w 0 0 0 0)) [start .. end]
 
-stakeKeyOne :: KeyPair 'Staking
+stakeKeyOne :: KeyPair Staking
 stakeKeyOne = mkKeyPair' (RawSeed 1 0 0 0 0)
 
-stakeKeyToCred :: KeyPair 'Staking -> Credential 'Staking
+stakeKeyToCred :: KeyPair Staking -> Credential Staking
 stakeKeyToCred = KeyHashObj . hashKey . vKey
 
-firstStakeKeyCred :: Credential 'Staking
+firstStakeKeyCred :: Credential Staking
 firstStakeKeyCred = stakeKeyToCred stakeKeyOne
 
 -- Create stake key registration certificates
-stakeKeyRegistrations :: [KeyPair 'Staking] -> StrictSeq (TxCert ShelleyEra)
+stakeKeyRegistrations :: [KeyPair Staking] -> StrictSeq (TxCert ShelleyEra)
 stakeKeyRegistrations keys =
   StrictSeq.fromList $
     fmap (RegTxCert . KeyHashObj . hashKey . vKey) keys
 
 -- Create a transaction body given a sequence of certificates.
 -- It spends the genesis coin given by the index ix.
-txbFromCerts :: TxIx -> StrictSeq (TxCert ShelleyEra) -> ShelleyTxBody ShelleyEra
+txbFromCerts :: TxIx -> StrictSeq (TxCert ShelleyEra) -> TxBody TopTx ShelleyEra
 txbFromCerts ix regCerts =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId ix])
@@ -224,19 +206,17 @@ txbFromCerts ix regCerts =
     SNothing
 
 makeSimpleTx ::
-  ShelleyTxBody ShelleyEra ->
-  [KeyPair 'Witness] ->
-  ShelleyTx ShelleyEra
+  TxBody TopTx ShelleyEra ->
+  [KeyPair Witness] ->
+  Tx TopTx ShelleyEra
 makeSimpleTx txbody keysAddr =
-  ShelleyTx
-    txbody
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbody) keysAddr
-      }
-    SNothing
+  mkBasicTx mkBasicTxBody
+    & bodyTxL .~ txbody
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txbody) keysAddr)
+    & auxDataTxL .~ SNothing
 
 -- Create a transaction that registers stake credentials.
-txRegStakeKeys :: TxIx -> [KeyPair 'Staking] -> ShelleyTx ShelleyEra
+txRegStakeKeys :: TxIx -> [KeyPair Staking] -> Tx TopTx ShelleyEra
 txRegStakeKeys ix keys =
   makeSimpleTx
     (txbFromCerts ix $ stakeKeyRegistrations keys)
@@ -246,7 +226,7 @@ initLedgerState :: Integer -> LedgerState ShelleyEra
 initLedgerState n = LedgerState (initUTxO n) def
 
 makeLEDGERState ::
-  HasCallStack => LedgerState ShelleyEra -> ShelleyTx ShelleyEra -> LedgerState ShelleyEra
+  HasCallStack => LedgerState ShelleyEra -> Tx TopTx ShelleyEra -> LedgerState ShelleyEra
 makeLEDGERState start tx =
   let st = applySTS @(ShelleyLEDGER ShelleyEra) (TRC (ledgerEnv, start, tx))
    in case runShelleyBase st of
@@ -279,7 +259,7 @@ ledgerRegisterStakeKeys x y state =
 
 -- Create a transaction body that de-registers stake credentials,
 -- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0)
-txbDeRegStakeKey :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbDeRegStakeKey :: Word64 -> Word64 -> TxBody TopTx ShelleyEra
 txbDeRegStakeKey x y =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -295,7 +275,7 @@ txbDeRegStakeKey x y =
 
 -- Create a transaction that deregisters stake credentials numbered x through y.
 -- It spends the genesis coin indexed by 1.
-txDeRegStakeKeys :: Word64 -> Word64 -> ShelleyTx ShelleyEra
+txDeRegStakeKeys :: Word64 -> Word64 -> Tx TopTx ShelleyEra
 txDeRegStakeKeys x y =
   makeSimpleTx
     (txbDeRegStakeKey x y)
@@ -315,9 +295,9 @@ ledgerDeRegisterStakeKeys x y state =
 -- ===========================================================
 -- Reward Withdrawal example
 
--- Create a transaction body that withdrawals from reward accounts,
+-- Create a transaction body that withdrawals from account addresses,
 -- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0).
-txbWithdrawals :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbWithdrawals :: Word64 -> Word64 -> TxBody TopTx ShelleyEra
 txbWithdrawals x y =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -325,16 +305,16 @@ txbWithdrawals x y =
     StrictSeq.empty
     ( Withdrawals $
         Map.fromList $
-          fmap (\ks -> (RewardAccount Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
+          fmap (\ks -> (AccountAddress Testnet (AccountId (stakeKeyToCred ks)), Coin 0)) (stakeKeys x y)
     )
     (Coin 0)
     (SlotNo 10)
     SNothing
     SNothing
 
--- Create a transaction that withdrawals from a reward accounts.
+-- Create a transaction that withdrawals from a account addresses.
 -- It spends the genesis coin indexed by 1.
-txWithdrawals :: Word64 -> Word64 -> ShelleyTx ShelleyEra
+txWithdrawals :: Word64 -> Word64 -> Tx TopTx ShelleyEra
 txWithdrawals x y =
   makeSimpleTx
     (txbWithdrawals x y)
@@ -354,41 +334,41 @@ ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerE
 
 -- Create stake pool key pairs, corresponding to seeds
 -- (RawSeed start 0 0 0 0) through (RawSeed end 0 0 0 0)
-poolColdKeys :: Word64 -> Word64 -> [KeyPair 'StakePool]
+poolColdKeys :: Word64 -> Word64 -> [KeyPair StakePool]
 poolColdKeys start end = fmap (\w -> mkKeyPair' (RawSeed w 1 0 0 0)) [start .. end]
 
-firstStakePool :: KeyPair 'StakePool
+firstStakePool :: KeyPair StakePool
 firstStakePool = mkKeyPair' (RawSeed 1 1 0 0 0)
 
-mkPoolKeyHash :: KeyPair 'StakePool -> KeyHash 'StakePool
+mkPoolKeyHash :: KeyPair StakePool -> KeyHash StakePool
 mkPoolKeyHash = hashKey . vKey
 
-firstStakePoolKeyHash :: KeyHash 'StakePool
+firstStakePoolKeyHash :: KeyHash StakePool
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
-vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
+vrfKeyHash :: VRFVerKeyHash StakePoolVRF
 vrfKeyHash = hashVerKeyVRF @MockCrypto . vrfVerKey . mkVRFKeyPair @MockCrypto $ RawSeed 0 0 0 0 0
 
-mkPoolParameters :: KeyPair 'StakePool -> PoolParams
-mkPoolParameters keys =
-  PoolParams
-    { ppId = hashKey (vKey keys)
-    , ppVrf = vrfKeyHash
-    , ppPledge = Coin 0
-    , ppCost = Coin 0
-    , ppMargin = unsafeBoundRational 0
-    , ppRewardAccount = RewardAccount Testnet firstStakeKeyCred
-    , ppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
-    , ppRelays = StrictSeq.empty
-    , ppMetadata = SNothing
+mkStakePoolParams :: KeyPair StakePool -> StakePoolParams
+mkStakePoolParams keys =
+  StakePoolParams
+    { sppId = hashKey (vKey keys)
+    , sppVrf = vrfKeyHash
+    , sppPledge = Coin 0
+    , sppCost = Coin 0
+    , sppMargin = unsafeBoundRational 0
+    , sppAccountAddress = AccountAddress Testnet (AccountId firstStakeKeyCred)
+    , sppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
+    , sppRelays = StrictSeq.empty
+    , sppMetadata = SNothing
     }
 
 -- Create stake pool registration certs
-poolRegCerts :: [KeyPair 'StakePool] -> StrictSeq (TxCert ShelleyEra)
-poolRegCerts = StrictSeq.fromList . fmap (RegPoolTxCert . mkPoolParameters)
+poolRegCerts :: [KeyPair StakePool] -> StrictSeq (TxCert ShelleyEra)
+poolRegCerts = StrictSeq.fromList . fmap (RegPoolTxCert . mkStakePoolParams)
 
 -- Create a transaction that registers stake pools.
-txRegStakePools :: TxIx -> [KeyPair 'StakePool] -> ShelleyTx ShelleyEra
+txRegStakePools :: TxIx -> [KeyPair StakePool] -> Tx TopTx ShelleyEra
 txRegStakePools ix keys =
   makeSimpleTx
     (txbFromCerts ix $ poolRegCerts keys)
@@ -434,7 +414,7 @@ ledgerReRegisterStakePools x y state =
 
 -- Create a transaction body that retires stake pools,
 -- corresponding to the keys seeded with (RawSeed x 1 0 0 0) to (RawSeed y 1 0 0 0)
-txbRetireStakePool :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbRetireStakePool :: Word64 -> Word64 -> TxBody TopTx ShelleyEra
 txbRetireStakePool x y =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -452,7 +432,7 @@ txbRetireStakePool x y =
 
 -- Create a transaction that retires stake pools x through y.
 -- It spends the genesis coin indexed by 1.
-txRetireStakePool :: Word64 -> Word64 -> ShelleyTx ShelleyEra
+txRetireStakePool :: Word64 -> Word64 -> Tx TopTx ShelleyEra
 txRetireStakePool x y =
   makeSimpleTx
     (txbRetireStakePool x y)
@@ -482,7 +462,7 @@ ledgerStateWithNkeysMpools n m =
 
 -- Create a transaction body that delegates several keys to ONE stake pool,
 -- corresponding to the keys seeded with (RawSeed n 0 0 0 0) to (RawSeed m 0 0 0 0)
-txbDelegate :: Word64 -> Word64 -> ShelleyTxBody ShelleyEra
+txbDelegate :: Word64 -> Word64 -> TxBody TopTx ShelleyEra
 txbDelegate n m =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 2])
@@ -499,7 +479,7 @@ txbDelegate n m =
     SNothing
 
 -- Create a transaction that delegates stake.
-txDelegate :: Word64 -> Word64 -> ShelleyTx ShelleyEra
+txDelegate :: Word64 -> Word64 -> Tx TopTx ShelleyEra
 txDelegate n m =
   makeSimpleTx
     (txbDelegate n m)

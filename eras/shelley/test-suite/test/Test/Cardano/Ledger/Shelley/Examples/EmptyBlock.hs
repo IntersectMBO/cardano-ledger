@@ -7,8 +7,7 @@
 
 module Test.Cardano.Ledger.Shelley.Examples.EmptyBlock (
   exEmptyBlock,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
@@ -21,7 +20,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..))
 import Test.Cardano.Ledger.Shelley.Examples.Combinators (
   evolveNonceUnfrozen,
   newLab,
@@ -48,8 +47,8 @@ initStEx1 ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -58,9 +57,9 @@ initStEx1 = initSt (UTxO mempty)
 blockEx1 ::
   forall era.
   ( HasCallStack
-  , EraSegWits era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , EraBlockBody era
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   ) =>
   Block (BHeader MockCrypto) era
 blockEx1 =
@@ -80,21 +79,21 @@ blockEx1 =
 blockNonce ::
   forall era.
   ( HasCallStack
-  , EraSegWits era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , EraBlockBody era
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   ) =>
   Nonce
 blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  ( EraSegWits era
+  ( EraBlockBody era
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -108,12 +107,12 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) $ newLab blockEx1 initStEx
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
-  ( EraSegWits era
+  ( EraBlockBody era
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   CHAINExample era

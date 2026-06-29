@@ -16,8 +16,7 @@ module Cardano.Ledger.Babbage.Scripts (
   AlonzoScript (..),
   isPlutusScript,
   PlutusScript (..),
-)
-where
+) where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Core
@@ -26,6 +25,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   PlutusScript (..),
   alonzoScriptPrefixTag,
+  eraUnsupportedLanguage,
   isPlutusScript,
  )
 import Cardano.Ledger.Babbage.Era
@@ -42,16 +42,16 @@ instance EraScript BabbageEra where
   type NativeScript BabbageEra = Timelock BabbageEra
 
   upgradeScript = \case
-    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    NativeScript ts -> NativeScript $ translateTimelock ts
     PlutusScript (AlonzoPlutusV1 ps) -> PlutusScript $ BabbagePlutusV1 ps
 
   scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
-    TimelockScript ts -> Just ts
+    NativeScript ts -> Just ts
     _ -> Nothing
 
-  fromNativeScript = TimelockScript
+  fromNativeScript = NativeScript
 
 instance AlonzoEraScript BabbageEra where
   data PlutusScript BabbageEra
@@ -64,9 +64,9 @@ instance AlonzoEraScript BabbageEra where
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
-      SPlutusV1 -> Just $ BabbagePlutusV1 plutus
-      SPlutusV2 -> Just $ BabbagePlutusV2 plutus
-      _ -> Nothing
+      SPlutusV1 -> pure $ BabbagePlutusV1 plutus
+      SPlutusV2 -> pure $ BabbagePlutusV2 plutus
+      slang -> eraUnsupportedLanguage @BabbageEra slang
 
   withPlutusScript (BabbagePlutusV1 plutus) f = f plutus
   withPlutusScript (BabbagePlutusV2 plutus) f = f plutus
@@ -125,7 +125,9 @@ instance AllegraEraScript BabbageEra where
 
 instance NFData (PlutusScript BabbageEra) where
   rnf = rwhnf
+
 instance NoThunks (PlutusScript BabbageEra)
+
 instance SafeToHash (PlutusScript BabbageEra) where
   originalBytes ps = withPlutusScript ps originalBytes
 

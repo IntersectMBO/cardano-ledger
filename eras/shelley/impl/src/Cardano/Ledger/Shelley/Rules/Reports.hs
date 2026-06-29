@@ -15,19 +15,13 @@ module Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCoinMap,
   showTxCerts,
   produceEqualsConsumed,
-)
-where
+) where
 
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  InstantaneousRewards (..),
- )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), InstantaneousRewards (..), UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
@@ -45,8 +39,10 @@ showKeyHash (KeyHash hash) = take 10 (show hash)
 showCerts :: Show (TxCert era) => [TxCert era] -> String
 showCerts certs = unlines (map (("  " ++) . show) certs)
 
-showTxCerts :: EraTxBody era => TxBody era -> String
-showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
+showTxCerts :: EraTxBody era => TxBody t era -> String
+showTxCerts txb = case toList (txb ^. certsTxBodyL) of
+  [] -> "No TxCerts in this TxBody\n" ++ show txb
+  certs -> showCerts certs
 
 -- | Display a synopsis of a map to Coin
 synopsisCoinMap :: Maybe (Map.Map k Coin) -> String
@@ -61,7 +57,7 @@ produceEqualsConsumed ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody TopTx era ->
   String
 produceEqualsConsumed pp dpstate utxo txb =
   let consumedValue = consumedTxBody txb pp dpstate utxo
@@ -84,12 +80,12 @@ showMap showKey showVal m = unlines (map showpair (Map.toList m))
 showListy :: Foldable t => (a -> String) -> t a -> String
 showListy showElem list = unlines (map showElem (toList list))
 
-showRewardAcct :: RewardAccount -> [Char]
-showRewardAcct (RewardAccount {raNetwork = network, raCredential = cred}) =
+showAccountAddress :: AccountAddress -> [Char]
+showAccountAddress (AccountAddress network (AccountId cred)) =
   show network ++ " " ++ showCred cred
 
 showWithdrawal :: Withdrawals -> String
-showWithdrawal (Withdrawals m) = showMap (("   " ++) . showRewardAcct) show m
+showWithdrawal (Withdrawals m) = showMap (("   " ++) . showAccountAddress) show m
 
 showIR :: InstantaneousRewards -> String
 showIR (InstantaneousRewards m n x y) =

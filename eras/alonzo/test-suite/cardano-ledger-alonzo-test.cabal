@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-alonzo-test
-version: 1.3.1.0
+version: 1.4.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -25,9 +25,7 @@ library
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
     Test.Cardano.Ledger.Alonzo.EraMapping
-    Test.Cardano.Ledger.Alonzo.Examples.Consensus
     Test.Cardano.Ledger.Alonzo.Scripts
-    Test.Cardano.Ledger.Alonzo.Serialisation.Generators
     Test.Cardano.Ledger.Alonzo.Trace
 
   hs-source-dirs: src
@@ -42,13 +40,17 @@ library
     -Wredundant-constraints
     -Wunused-packages
 
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     QuickCheck,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     cardano-ledger-allegra >=1.2,
-    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.13,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.14,
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.19,
     cardano-ledger-mary >=1.4,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.14,
     cardano-ledger-shelley-ma-test >=1.2,
@@ -56,9 +58,7 @@ library
     cardano-protocol-tpraos >=1.0,
     cardano-slotting,
     cardano-strict-containers,
-    cborg,
     containers,
-    data-default,
     microlens,
     plutus-ledger-api >=1.33,
     random,
@@ -73,10 +73,6 @@ test-suite cardano-ledger-alonzo-test
     Paths_cardano_ledger_alonzo_test
     Test.Cardano.Ledger.Alonzo.ChainTrace
     Test.Cardano.Ledger.Alonzo.Golden
-    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
-    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
-    Test.Cardano.Ledger.Alonzo.Translation
-    Test.Cardano.Ledger.Alonzo.TxInfo
 
   default-language: Haskell2010
   ghc-options:
@@ -90,27 +86,24 @@ test-suite cardano-ledger-alonzo-test
     -rtsopts
 
   build-depends:
-    QuickCheck,
     aeson >=2,
     base,
     base16-bytestring,
     bytestring,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-alonzo-test,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},
-    cardano-ledger-mary:{cardano-ledger-mary, testlib},
+    cardano-ledger-mary,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-test,
-    cardano-protocol-tpraos,
+    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
     cardano-slotting,
     cardano-strict-containers,
     containers,
+    hspec,
     microlens,
     plutus-ledger-api,
     small-steps:{small-steps, testlib} >=1.1,
-    tasty,
-    tasty-hunit,
-    tasty-quickcheck,
     time,

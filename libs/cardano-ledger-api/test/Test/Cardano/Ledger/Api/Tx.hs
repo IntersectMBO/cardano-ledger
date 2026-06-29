@@ -12,6 +12,8 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
+import Cardano.Ledger.Core (TxLevel (..))
 import Cardano.Ledger.Hashes (extractHash, hashAnnotated, hashKey)
 import Cardano.Ledger.Keys (makeBootstrapWitness)
 import Cardano.Ledger.Val (Val ((<×>)))
@@ -20,20 +22,20 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro
 import Numeric.Natural
+import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), KeyPair (..), mkWitnessVKey)
 
 txSpec ::
   forall era.
   ( EraTx era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , Arbitrary (PParams era)
   ) =>
   Spec
 txSpec = describe (eraName @era) $ do
   describe "estimateMinFeeTx" $ do
-    prop "no Bootstrap" $ \(pp :: PParams era) (tx :: Tx era) keyPairsList ->
+    prop "no Bootstrap" $ \(pp :: PParams era) (tx :: Tx TopTx era) keyPairsList ->
       let
         txBody = tx ^. bodyTxL
         txBodyHash = hashAnnotated txBody
@@ -45,7 +47,7 @@ txSpec = describe (eraName @era) $ do
        in
         estimateMinFeeTx pp tx (Map.size keyPairs) 0 0
           === (setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL)
-    prop "with Bootstrap" $ \(pp :: PParams era) (tx :: Tx era) keyPairsList byronKeyPairsList ->
+    prop "with Bootstrap" $ \(pp :: PParams era) (tx :: Tx TopTx era) keyPairsList byronKeyPairsList ->
       let
         txBody = tx ^. bodyTxL
         txBodyHash = hashAnnotated txBody
@@ -89,12 +91,12 @@ txSpec = describe (eraName @era) $ do
         -- size of the transaction, which in turn affects the overestimation. For this
         -- reason we can only check `>=`
         let
-          overestimatedMinFeeA = toInteger (sum overestimations) <×> pp ^. ppMinFeeAL
+          overestimatedTxFeePerByte = sum overestimations <×> fromCompact (unCoinPerByte (pp ^. ppTxFeePerByteL))
           estimation = estimateMinFeeTx pp tx (Map.size keyPairs) (Map.size byronKeyPairs) 0
           actual = setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL
          in
           tabulate "Attrs overestimation in bytes" (map show overestimations) $
-            estimation >= actual <> overestimatedMinFeeA
+            estimation >= actual <> overestimatedTxFeePerByte
 
 spec :: Spec
 spec = do
@@ -104,3 +106,4 @@ spec = do
   txSpec @AlonzoEra
   txSpec @BabbageEra
   txSpec @ConwayEra
+  txSpec @DijkstraEra

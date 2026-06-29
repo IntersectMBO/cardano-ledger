@@ -51,8 +51,7 @@ module Test.Control.State.Transition.Trace (
   applySTSTest,
   getEvents,
   splitTrace,
-)
-where
+) where
 
 import Control.DeepSeq (NFData)
 import Control.Monad (void)
@@ -71,8 +70,8 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.), (^..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
-import Test.Cardano.Ledger.Binary.TreeDiff (ToExpr, assertExprEqualWithMessage)
-import Test.Tasty.HUnit (assertFailure, (@?=))
+import Test.Cardano.Ledger.Binary.TreeDiff (ToExpr, expectExprEqualWithMessage)
+import Test.Hspec (expectationFailure, shouldBe)
 
 -- Signal and resulting state.
 --
@@ -413,7 +412,9 @@ mSt .- sig = do
   st <- mSt
   validation <- ask -- Get the validation function from the environment
   case validation st sig of
-    Left pfs -> liftIO . assertFailure . show $ pfs
+    Left pfs -> do
+      liftIO . expectationFailure . show $ pfs
+      pure st
     Right st' -> pure st'
 
 -- | Bind the state inside the first argument, and check whether it is equal to
@@ -427,7 +428,7 @@ mSt .- sig = do
   m st
 mSt .->> stExpected = do
   stActual <- mSt
-  liftIO $ assertExprEqualWithMessage "Check trace with (.->>) fails" stExpected stActual
+  liftIO $ expectExprEqualWithMessage "Check trace with (.->>) fails" stExpected stActual
   return stActual
 
 -- | Bind the state inside the first argument, and check whether it is equal to
@@ -440,7 +441,7 @@ mSt .->> stExpected = do
   m st
 mSt .-> stExpected = do
   stActual <- mSt
-  liftIO $ stActual @?= stExpected
+  liftIO $ stActual `shouldBe` stExpected
   return stActual
 
 checkTrace ::

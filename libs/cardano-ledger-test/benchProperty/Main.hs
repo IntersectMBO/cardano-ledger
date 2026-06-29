@@ -45,13 +45,13 @@ import Cardano.Ledger.Shelley.Rules (
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
+import Test.Cardano.Ledger.Common (ledgerTestMain)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
   ChainEvent (..),
   TestChainPredicateFailure (..),
  )
 import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (relevantCasesAreCovered)
-import qualified Test.Tasty as T
 
 -- ===============================================================
 
@@ -65,7 +65,7 @@ instance Embed (AlonzoUTXOW AlonzoEra) (ShelleyLEDGER AlonzoEra) where
 
 profileCover :: IO ()
 profileCover =
-  T.defaultMain $
+  ledgerTestMain $
     relevantCasesAreCovered @AlonzoEra 1
 
 main :: IO ()

@@ -6,8 +6,7 @@
 module Test.Cardano.Ledger.Allegra.Translation (
   allegraTranslationTests,
   allegraEncodeDecodeTests,
-)
-where
+) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary
@@ -16,6 +15,7 @@ import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.Binary.RoundTrip
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR, translateEraEncoding)
@@ -49,7 +49,7 @@ allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @AllegraEra @S.ShelleyTx NoGenesis toCBOR toCBOR
+        translateEraEncoding @AllegraEra @(Tx TopTx) NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
         translateEraEncoding @AllegraEra @S.ShelleyGovState NoGenesis toCBOR toCBOR

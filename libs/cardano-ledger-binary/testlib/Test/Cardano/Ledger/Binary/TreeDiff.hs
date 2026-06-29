@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   assertColorFailure,
   expectExprEqual,
   expectExprEqualWithMessage,
-  assertExprEqualWithMessage,
   callStackToLocation,
   srcLocToLocation,
   Expr (App, Rec, Lst),
@@ -34,8 +33,7 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   ansiWlPretty,
   ppEditExpr,
   ediff,
-)
-where
+) where
 
 import qualified Cardano.Binary as Plain
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -62,7 +60,6 @@ import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation)
 import Test.ImpSpec (ansiDocToString)
 import Test.ImpSpec.Expectations (assertColorFailure, callStackToLocation, srcLocToLocation)
-import Test.Tasty.HUnit (Assertion, assertFailure)
 
 -- =====================================================
 -- Cardano functions that deal with TreeDiff and ToExpr
@@ -97,9 +94,22 @@ instance ToExpr a => ToExpr (StrictSeq a) where
 instance ToExpr a => ToExpr (StrictMaybe a)
 
 instance ToExpr Version where
-  toExpr v = App "Version" [toExpr (getVersion64 v)]
+  toExpr v = App "Version" [toExpr (getVersion32 v)]
 
 instance ToExpr a => ToExpr (Sized a)
+
+instance ToExpr DeserialiseFailure where
+  toExpr (DeserialiseFailure x y) = App "DeserialiseFailure" [toExpr x, toExpr y]
+
+instance ToExpr DecoderError where
+  toExpr (DecoderErrorCanonicityViolation x) = App "DecoderErrorCanonicityViolation" [toExpr x]
+  toExpr (DecoderErrorCustom x y) = App "DecoderErrorCustom" [toExpr x, toExpr y]
+  toExpr (DecoderErrorDeserialiseFailure x y) = App "DecoderErrorDeserialiseFailure" [toExpr x, toExpr y]
+  toExpr (DecoderErrorEmptyList x) = App "DecoderErrorEmptyList" [toExpr x]
+  toExpr (DecoderErrorLeftover x y) = App "DecoderErrorLeftover" [toExpr x, toExpr y]
+  toExpr (DecoderErrorSizeMismatch x y z) = App "DecoderErrorSizeMismatch" [toExpr x, toExpr y, toExpr z]
+  toExpr (DecoderErrorUnknownTag x y) = App "DecoderErrorUnknownTag" [toExpr x, toExpr y]
+  toExpr DecoderErrorVoid = App "DecoderErrorVoid" []
 
 --------------------------------------------------------------------------------
 --  Diffing and pretty showing CBOR
@@ -219,13 +229,8 @@ showHexBytesGrouped n bs
 expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
 expectExprEqual = expectExprEqualWithMessage "Expected two values to be equal:"
 
--- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
 expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Expectation
 expectExprEqualWithMessage = requireExprEqualWithMessage (assertColorFailure . ansiDocToString) . Pretty.pretty
-
--- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
-assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Assertion
-assertExprEqualWithMessage = requireExprEqualWithMessage (assertFailure . ansiDocToString) . Pretty.pretty
 
 requireExprEqualWithMessage ::
   (ToExpr a, Eq a, Monoid b) => (Doc AnsiStyle -> b) -> Doc AnsiStyle -> a -> a -> b
@@ -233,4 +238,4 @@ requireExprEqualWithMessage fail_ message expected actual =
   if actual == expected then mempty else fail_ doc
   where
     doc = Pretty.width message (\w -> if w == 0 then diff else Pretty.line <> Pretty.indent 2 diff)
-    diff = diffExpr expected actual
+    diff = diffExpr actual expected

@@ -11,11 +11,11 @@ import Byron.Spec.Ledger.Core
 import Byron.Spec.Ledger.Update
 import Control.State.Transition
 import Data.Bimap (Bimap)
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Sequence (Seq)
 import Lens.Micro ((^.))
 
-data PBFT deriving (Data, Typeable)
+data PBFT deriving (Data)
 
 data PbftPredicateFailure
   = SlotNotAfterLastBlock Slot Slot
@@ -23,7 +23,7 @@ data PbftPredicateFailure
   | PrevHashNotMatching Hash Hash
   | InvalidHeaderSignature VKey (Sig Hash)
   | SigCountFailure (PredicateFailure SIGCNT)
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS PBFT where
   type

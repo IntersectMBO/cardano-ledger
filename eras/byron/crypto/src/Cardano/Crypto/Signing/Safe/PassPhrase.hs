@@ -7,8 +7,7 @@ module Cardano.Crypto.Signing.Safe.PassPhrase (
   PassPhrase (..),
   emptyPassphrase,
   passphraseLength,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),

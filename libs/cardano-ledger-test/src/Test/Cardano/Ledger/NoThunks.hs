@@ -1,56 +1,71 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.NoThunks (
   test,
 ) where
 
-import Control.State.Transition.Extended (STS)
-import Data.Default (def)
-import Test.Cardano.Ledger.Generic.GenState (GenSize)
+import Cardano.Ledger.Conway.Core (Era (..))
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.State
+import NoThunks.Class (NoThunks)
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Generic.GenState (EraGenericGen, GenSize, defaultGenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
-import Test.Cardano.Ledger.Generic.Trace (traceProp)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  AlonzoEra,
+  BabbageEra,
+  MaryEra,
+  ShelleyEra,
+ )
+import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace)
 
-test :: TestTree
+test :: Spec
 test =
-  testGroup
-    "There are no unexpected thunks in MockChainState"
-    [ f $ Babbage
-    , f $ Alonzo
-    , f $ Allegra
-    , f $ Mary
-    , f $ Shelley
-    ]
+  describe "There are no unexpected thunks in MockChainState" $ do
+    f @ShelleyEra
+    f @AllegraEra
+    f @MaryEra
+    f @AlonzoEra
+    f @BabbageEra
   where
-    f proof = testThunks proof 100 def
+    f ::
+      forall era.
+      ( HasTrace (MOCKCHAIN era) (Gen1 era)
+      , EraGenericGen era
+      , ShelleyEraAccounts era
+      , NoThunks (StashedAVVMAddresses era)
+      ) =>
+      Spec
+    f = testThunks @era 100 defaultGenSize
 
 testThunks ::
   forall era.
-  ( Reflect era
-  , STS (MOCKCHAIN era)
+  ( HasTrace (MOCKCHAIN era) (Gen1 era)
+  , EraGenericGen era
+  , NoThunks (StashedAVVMAddresses era)
+  , ShelleyEraAccounts era
   ) =>
-  Proof era ->
   Int ->
   GenSize ->
-  TestTree
-testThunks proof numTx gensize =
-  testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
-    traceProp
-      proof
+  Spec
+testThunks numTx gensize =
+  prop (eraName @era ++ " era. Trace length = " ++ show numTx) $
+    traceProp @era
       numTx
       gensize
       ( \_ !trc -> do
-          nt <- noThunksGen proof trc
+          nt <- noThunksGen trc
           case nt of
             Just x -> error $ "Thunks present: " <> show x
             Nothing -> return ()
       )
-
--- main :: IO ()
--- main = defaultMain test

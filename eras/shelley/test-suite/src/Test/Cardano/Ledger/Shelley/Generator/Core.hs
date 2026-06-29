@@ -49,16 +49,14 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
   mkKeyPair,
   mkKeyPairs,
   mkGenKey,
-  genesisAccountState,
+  genesisChainAccountState,
   genCoin,
   PreAlonzo,
   hashData,
   findPlutus,
-)
-where
+) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfoPure, stabilityWindow)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -71,7 +69,7 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (VKey, asWitness)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (
   Duration (..),
@@ -79,7 +77,6 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
-import Cardano.Ledger.State (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
 import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -193,20 +190,20 @@ data GenEnv c era = GenEnv
 --
 --   These are the _only_ keys which should be involved in the trace.
 data KeySpace c era = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
-  , ksGenesisDelegates :: [AllIssuerKeys c 'GenesisDelegate]
+  { ksCoreNodes :: [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)]
+  , ksGenesisDelegates :: [AllIssuerKeys c GenesisDelegate]
   -- ^ Bag of keys to be used for future genesis delegates
-  , ksStakePools :: [AllIssuerKeys c 'StakePool]
+  , ksStakePools :: [AllIssuerKeys c StakePool]
   -- ^ Bag of keys to be used for future stake pools
   , ksKeyPairs :: KeyPairs
   -- ^ Bag of keys to be used for future payment/staking addresses
   , ksMSigScripts :: [(Script era, Script era)]
-  , ksIndexedPaymentKeys :: Map (KeyHash 'Payment) (KeyPair 'Payment)
+  , ksIndexedPaymentKeys :: Map (KeyHash Payment) (KeyPair Payment)
   -- ^ Index over the payment keys in 'ksKeyPairs'
-  , ksIndexedStakingKeys :: Map (KeyHash 'Staking) (KeyPair 'Staking)
+  , ksIndexedStakingKeys :: Map (KeyHash Staking) (KeyPair Staking)
   -- ^ Index over the staking keys in 'ksKeyPairs'
   , ksIndexedGenDelegates ::
-      Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate)
+      Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate)
   -- ^ Index over the cold key hashes in Genesis Delegates
   , ksIndexedPayScripts :: Map ScriptHash (Script era, Script era)
   -- ^ Index over the pay script hashes in Script pairs
@@ -219,9 +216,9 @@ deriving instance (Era era, Show (Script era), Crypto c) => Show (KeySpace c era
 pattern KeySpace ::
   forall c era.
   ScriptClass era =>
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  [AllIssuerKeys c 'GenesisDelegate] ->
-  [AllIssuerKeys c 'StakePool] ->
+  [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)] ->
+  [AllIssuerKeys c GenesisDelegate] ->
+  [AllIssuerKeys c StakePool] ->
   KeyPairs ->
   [(Script era, Script era)] ->
   KeySpace c era
@@ -279,9 +276,9 @@ genWord64 lower upper =
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
 mkGenesisDelegatesHashMap ::
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  [AllIssuerKeys c 'GenesisDelegate] ->
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate)
+  [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)] ->
+  [AllIssuerKeys c GenesisDelegate] ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate)
 mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
   where
@@ -290,7 +287,7 @@ mkGenesisDelegatesHashMap coreNodes genesisDelegates =
 
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
-mkStakeKeyHashMap :: KeyPairs -> Map (KeyHash 'Staking) (KeyPair 'Staking)
+mkStakeKeyHashMap :: KeyPairs -> Map (KeyHash Staking) (KeyPair Staking)
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -300,7 +297,7 @@ mkStakeKeyHashMap keyPairs =
 -- from a list of (payment, staking) key pairs.
 mkPayKeyHashMap ::
   KeyPairs ->
-  Map (KeyHash 'Payment) (KeyPair 'Payment)
+  Map (KeyHash Payment) (KeyPair Payment)
 mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -324,8 +321,8 @@ findPayKeyPairCred _ _ =
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairAddr ::
   Addr ->
-  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
-  KeyPair 'Payment
+  Map (KeyHash Payment) (KeyPair Payment) ->
+  KeyPair Payment
 findPayKeyPairAddr a keyHashMap =
   case a of
     Addr _ addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
@@ -336,7 +333,7 @@ findPayKeyPairAddr a keyHashMap =
 -- | Find matching multisig scripts for a credential.
 findPayScriptFromCred ::
   forall era.
-  Credential 'Witness ->
+  Credential Witness ->
   Map ScriptHash (Script era, Script era) ->
   (Script era, Script era)
 findPayScriptFromCred (ScriptHashObj scriptHash) scriptsByPayHash =
@@ -348,7 +345,7 @@ findPayScriptFromCred _ _ =
 
 -- | Find first matching script for a credential.
 findStakeScriptFromCred ::
-  Credential 'Witness ->
+  Credential Witness ->
   Map ScriptHash (Script era, Script era) ->
   (Script era, Script era)
 findStakeScriptFromCred (ScriptHashObj scriptHash) scriptsByStakeHash =
@@ -372,7 +369,7 @@ findPayScriptFromAddr _ _ =
   error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey :: KeyPairs -> Gen (VKey 'Staking)
+pickStakeKey :: KeyPairs -> Gen (VKey Staking)
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -437,11 +434,11 @@ tooLateInEpoch s = runShelleyBase $ do
   return (s >= firstSlotNo *- Duration (2 * stabilityWindow))
 
 -- | Account with empty treasury
-genesisAccountState :: AccountState
-genesisAccountState =
-  AccountState
-    { asTreasury = Coin 0
-    , asReserves = maxLLSupply
+genesisChainAccountState :: ChainAccountState
+genesisChainAccountState =
+  ChainAccountState
+    { casTreasury = Coin 0
+    , casReserves = maxLLSupply
     }
 
 -- | Creates the UTxO for a new ledger with the specified

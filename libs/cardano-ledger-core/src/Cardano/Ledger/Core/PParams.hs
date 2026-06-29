@@ -3,13 +3,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,19 +23,25 @@
 module Cardano.Ledger.Core.PParams (
   EraPParams (..),
   PParams (..),
+  PParam (..),
+  PParamUpdate (..),
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
   genericApplyPPUpdates,
+  CoinPerByte (..),
 
   -- * PParams lens
-  ppMinFeeAL,
-  ppMinFeeBL,
+  ppTxFeePerByteL,
+  ppTxFeeFixedL,
+  ppTxFeeFixedCompactL,
   ppMaxBBSizeL,
   ppMaxTxSizeL,
   ppMaxBHSizeL,
   ppKeyDepositL,
+  ppKeyDepositCompactL,
   ppPoolDepositL,
+  ppPoolDepositCompactL,
   ppEMaxL,
   ppNOptL,
   ppA0L,
@@ -43,16 +50,21 @@ module Cardano.Ledger.Core.PParams (
   ppDL,
   ppExtraEntropyL,
   ppMinUTxOValueL,
+  ppMinUTxOValueCompactL,
   ppMinPoolCostL,
+  ppMinPoolCostCompactL,
 
   -- * PParamsUpdate lens
-  ppuMinFeeAL,
-  ppuMinFeeBL,
+  ppuTxFeePerByteL,
+  ppuTxFeeFixedL,
+  ppuTxFeeFixedCompactL,
   ppuMaxBBSizeL,
   ppuMaxTxSizeL,
   ppuMaxBHSizeL,
   ppuKeyDepositL,
+  ppuKeyDepositCompactL,
   ppuPoolDepositL,
+  ppuPoolDepositCompactL,
   ppuEMaxL,
   ppuNOptL,
   ppuA0L,
@@ -61,11 +73,13 @@ module Cardano.Ledger.Core.PParams (
   ppuDL,
   ppuExtraEntropyL,
   ppuMinUTxOValueL,
+  ppuMinUTxOValueCompactL,
   ppuMinPoolCostL,
+  ppuMinPoolCostCompactL,
 
   -- * Utility
-  ppLens,
-  ppuLens,
+  ppLensHKD,
+  ppuLensHKD,
   mapPParams,
   mapPParamsUpdate,
   upgradePParams,
@@ -73,36 +87,67 @@ module Cardano.Ledger.Core.PParams (
   upgradePParamsUpdate,
   downgradePParamsUpdate,
 
-  -- * PParamsUpdate to Data
-  PParam (..),
-  makePParamMap,
-)
-where
+  -- * Deprecated
+  hkdMinFeeAL,
+  hkdMinFeeBL,
+  ppMinFeeAL,
+  ppMinFeeBL,
+  ppuMinFeeAL,
+  ppuMinFeeBL,
+) where
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   Nonce (..),
   ProtVer,
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   UnitInterval,
+  maybeToStrictMaybe,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+  encodeMapLen,
+  encodeWord,
+ )
+import Cardano.Ledger.Binary.Coders (Decode (..), Field, decode, field, invalidField)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CoinPerByte (..),
+  coinPerByteFL,
+  coinPerByteL,
+  hkdCoinPerByteL,
+  hkdPartialCompactCoinL,
+  partialCompactCoinL,
+ )
+import Cardano.Ledger.Compactible (Compactible (..), partialCompactFL)
+import Cardano.Ledger.Core.Era (AtMostEra, Era (..), PreviousEra, fromEraCBOR, toEraCBOR)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Data (Typeable)
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:!), (.=))
+import qualified Data.Aeson.Key as Aeson (fromText)
 import Data.Default (Default (..))
+import qualified Data.Foldable as F (foldMap', foldl', foldlM)
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Typeable (typeRep)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens)
+import GHC.Stack (HasCallStack)
+import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -126,23 +171,40 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD Identity era) => Show (PParams era)
 
-deriving newtype instance
-  ToJSON (PParamsHKD Identity era) => ToJSON (PParams era)
+deriving via
+  KeyValuePairs (PParams era)
+  instance
+    EraPParams era => ToJSON (PParams era)
 
-deriving newtype instance
-  FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
+instance EraPParams era => FromJSON (PParams era) where
+  parseJSON =
+    withObject (show . typeRep $ Proxy @(PParams era)) $ \obj ->
+      let accum acc PParam {ppName, ppLens} =
+            set ppLens <$> obj .: Aeson.fromText ppName <*> pure acc
+       in F.foldlM accum (emptyPParams @era) (eraPParams @era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
+instance EraPParams era => EncCBOR (PParams era) where
+  encCBOR pp =
+    encodeListLen (fromIntegral (length (eraPParams @era)))
+      <> F.foldMap' toEnc (eraPParams @era)
+    where
+      toEnc PParam {ppLens} = encCBOR $ pp ^. ppLens
 
-deriving newtype instance
-  (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
+instance EraPParams era => DecCBOR (PParams era) where
+  decCBOR =
+    decodeRecordNamed
+      (T.pack . show . typeRep $ Proxy @(PParams era))
+      (const (fromIntegral (length (eraPParams @era))))
+      $ F.foldlM accum (emptyPParams @era) (eraPParams @era)
+    where
+      accum acc PParam {ppLens} =
+        set ppLens <$> decCBOR <*> pure acc
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD Identity era)) => ToCBOR (PParams era)
+instance EraPParams era => ToCBOR (PParams era) where
+  toCBOR = toEraCBOR @era
 
-deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
+instance EraPParams era => FromCBOR (PParams era) where
+  fromCBOR = fromEraCBOR @era
 
 deriving instance Generic (PParams era)
 
@@ -167,23 +229,62 @@ deriving newtype instance
 deriving stock instance
   Show (PParamsHKD StrictMaybe era) => Show (PParamsUpdate era)
 
-deriving newtype instance
-  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
+instance EraPParams era => EncCBOR (PParamsUpdate era) where
+  encCBOR pp = encodeMapLen count <> enc
+    where
+      !(!count, !enc) = countAndConcat (eraPParams @era)
+      encodeField PParam {ppUpdate} = do
+        PParamUpdate {ppuTag, ppuLens} <- maybeToStrictMaybe ppUpdate
+        (encodeWord ppuTag <>) . encCBOR <$> pp ^. ppuLens
+      countAndConcat = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case encodeField x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
 
-deriving newtype instance
-  (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
+instance EraPParams era => DecCBOR (PParamsUpdate era) where
+  decCBOR =
+    decode $
+      SparseKeyed
+        (show . typeRep $ Proxy @(PParamsUpdate era))
+        emptyPParamsUpdate
+        updateField
+        []
+    where
+      updateField k =
+        IntMap.findWithDefault
+          (invalidField k)
+          (fromIntegral k)
+          updateFieldMap
+      updateFieldMap :: IntMap (Field (PParamsUpdate era))
+      updateFieldMap =
+        IntMap.fromList
+          [ (fromIntegral ppuTag, field (set ppuLens . SJust) From)
+          | PParam {ppUpdate = Just PParamUpdate {ppuTag, ppuLens}} <- eraPParams @era
+          ]
 
-deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD StrictMaybe era)) => ToCBOR (PParamsUpdate era)
+instance EraPParams era => ToCBOR (PParamsUpdate era) where
+  toCBOR = toEraCBOR @era
 
-deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
+instance EraPParams era => FromCBOR (PParamsUpdate era) where
+  fromCBOR = fromEraCBOR @era
 
-deriving newtype instance
-  ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
+deriving via
+  KeyValuePairs (PParamsUpdate era)
+  instance
+    EraPParams era => ToJSON (PParamsUpdate era)
 
-deriving newtype instance
-  FromJSON (PParamsHKD StrictMaybe era) => FromJSON (PParamsUpdate era)
+instance EraPParams era => FromJSON (PParamsUpdate era) where
+  parseJSON =
+    withObject (show . typeRep $ Proxy @(PParamsUpdate era)) $ \obj ->
+      let go acc PParam {ppName, ppUpdate} =
+            maybe id setPpu <$> obj .:! Aeson.fromText ppName <*> pure acc
+            where
+              setPpu = maybe (const id) (\PParamUpdate {ppuLens} -> set ppuLens . SJust) ppUpdate
+       in F.foldlM
+            go
+            (emptyPParamsUpdate @era)
+            (eraPParams @era)
 
 deriving instance Generic (PParamsUpdate era)
 
@@ -233,23 +334,12 @@ class
   , Ord (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
-  , EncCBOR (PParamsHKD Identity era)
-  , DecCBOR (PParamsHKD Identity era)
-  , ToCBOR (PParamsHKD Identity era)
-  , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
-  , ToJSON (PParamsHKD Identity era)
-  , FromJSON (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
-  , EncCBOR (PParamsHKD StrictMaybe era)
-  , DecCBOR (PParamsHKD StrictMaybe era)
-  , ToCBOR (PParamsHKD StrictMaybe era)
-  , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
-  , ToJSON (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where
@@ -280,6 +370,11 @@ class
 
   type DowngradePParams (f :: Type -> Type) era :: Type
 
+  emptyUpgradePParamsUpdate :: UpgradePParams StrictMaybe era
+  default emptyUpgradePParamsUpdate ::
+    UpgradePParams StrictMaybe era ~ () => UpgradePParams StrictMaybe era
+  emptyUpgradePParamsUpdate = ()
+
   -- | Upgrade PParams from previous era to the current one
   upgradePParamsHKD ::
     (HKDApplicative f, EraPParams (PreviousEra era)) =>
@@ -297,10 +392,10 @@ class
   -- HKD Versions of lenses
 
   -- | The linear factor for the minimum fee calculation
-  hkdMinFeeAL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdTxFeePerByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
 
   -- | The constant factor for the minimum fee calculation
-  hkdMinFeeBL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdTxFeeFixedCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | Maximal block body size
   hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
@@ -312,10 +407,10 @@ class
   hkdMaxBHSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
   -- | The amount of a key registration deposit
-  hkdKeyDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdKeyDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | The amount of a pool registration deposit
-  hkdPoolDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdPoolDepositCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | epoch bound on pool retirement
   hkdEMaxL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
@@ -333,33 +428,46 @@ class
   hkdTauL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f UnitInterval)
 
   -- | Decentralization parameter
-  hkdDL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f UnitInterval)
+  hkdDL :: (HKDFunctor f, AtMostEra "Alonzo" era) => Lens' (PParamsHKD f era) (HKD f UnitInterval)
 
   -- | Decentralization parameter getter
   ppDG :: SimpleGetter (PParams era) UnitInterval
-  default ppDG :: ProtVerAtMost era 6 => SimpleGetter (PParams era) UnitInterval
-  ppDG = ppLens . hkdDL @era @Identity
+  default ppDG :: AtMostEra "Alonzo" era => SimpleGetter (PParams era) UnitInterval
+  ppDG = ppLensHKD . hkdDL @era @Identity
 
   -- | Extra entropy
-  hkdExtraEntropyL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f Nonce)
+  hkdExtraEntropyL :: (HKDFunctor f, AtMostEra "Alonzo" era) => Lens' (PParamsHKD f era) (HKD f Nonce)
 
   -- | Protocol version
   hkdProtocolVersionL ::
-    (HKDFunctor f, ProtVerAtMost era 8) => Lens' (PParamsHKD f era) (HKD f ProtVer)
+    (HKDFunctor f, AtMostEra "Babbage" era) => Lens' (PParamsHKD f era) (HKD f ProtVer)
 
   ppProtocolVersionL :: Lens' (PParams era) ProtVer
-  default ppProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParams era) ProtVer
-  ppProtocolVersionL = ppLens . hkdProtocolVersionL @era @Identity
+  default ppProtocolVersionL :: AtMostEra "Babbage" era => Lens' (PParams era) ProtVer
+  ppProtocolVersionL = ppLensHKD . hkdProtocolVersionL @era @Identity
 
   -- | PParamsUpdate Protocol version
-  ppuProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
-  ppuProtocolVersionL = ppuLens . hkdProtocolVersionL @era @StrictMaybe
+  ppuProtocolVersionL :: AtMostEra "Babbage" era => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
+  ppuProtocolVersionL = ppuLensHKD . hkdProtocolVersionL @era @StrictMaybe
 
   -- | Minimum UTxO value
-  hkdMinUTxOValueL :: HKDFunctor f => ProtVerAtMost era 4 => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinUTxOValueCompactL ::
+    (HKDFunctor f, AtMostEra "Mary" era) => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
 
   -- | Minimum Stake Pool Cost
-  hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdMinPoolCostCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
+
+  eraPParams :: [PParam era]
+
+hkdMinFeeAL ::
+  forall era f. (EraPParams era, HKDFunctor f) => Lens' (PParamsHKD f era) (HKD f Coin)
+hkdMinFeeAL = hkdTxFeePerByteL @era @f . hkdCoinPerByteL @f . hkdPartialCompactCoinL @f
+{-# DEPRECATED hkdMinFeeAL "In favor of `hkdTxFeePerByteL`" #-}
+
+hkdMinFeeBL ::
+  forall era f. (EraPParams era, HKDFunctor f) => Lens' (PParamsHKD f era) (HKD f Coin)
+hkdMinFeeBL = hkdTxFeeFixedCompactL @era @f . hkdPartialCompactCoinL @f
+{-# DEPRECATED hkdMinFeeBL "In favor of `hkdTxFeeFixedCompactL`" #-}
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
@@ -367,152 +475,238 @@ emptyPParams = PParams emptyPParamsIdentity
 emptyPParamsUpdate :: EraPParams era => PParamsUpdate era
 emptyPParamsUpdate = PParamsUpdate emptyPParamsStrictMaybe
 
-ppLens :: Lens' (PParams era) (PParamsHKD Identity era)
-ppLens = lens (\(PParams x) -> x) (\_ pp -> PParams pp)
+ppLensHKD :: Lens' (PParams era) (PParamsHKD Identity era)
+ppLensHKD = lens (\(PParams x) -> x) (\_ pp -> PParams pp)
 
-ppuLens :: Lens' (PParamsUpdate era) (PParamsHKD StrictMaybe era)
-ppuLens = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
+ppuLensHKD :: Lens' (PParamsUpdate era) (PParamsHKD StrictMaybe era)
+ppuLensHKD = lens (\(PParamsUpdate x) -> x) (\_ pp -> PParamsUpdate pp)
 
 -- PParams versions of lenses
 
 -- | The linear factor for the minimum fee calculation
+ppTxFeePerByteL :: forall era. EraPParams era => Lens' (PParams era) CoinPerByte
+ppTxFeePerByteL = ppLensHKD . hkdTxFeePerByteL @era @Identity
+
 ppMinFeeAL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeAL = ppLens . hkdMinFeeAL @era @Identity
+ppMinFeeAL = ppTxFeePerByteL . coinPerByteL . partialCompactCoinL
+{-# DEPRECATED ppMinFeeAL "In favor of `ppTxFeePerByteL`" #-}
 
 -- | The constant factor for the minimum fee calculation
+ppTxFeeFixedL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppTxFeeFixedL = ppTxFeeFixedCompactL . partialCompactCoinL
+
 ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinFeeBL = ppLens . hkdMinFeeBL @era @Identity
+ppMinFeeBL = ppTxFeeFixedL
+{-# DEPRECATED ppMinFeeBL "In favor of `ppTxFeeFixedL`" #-}
+
+-- | The constant factor for the minimum fee calculation in compacted form
+ppTxFeeFixedCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppTxFeeFixedCompactL = ppLensHKD . hkdTxFeeFixedCompactL @era @Identity
 
 -- | Maximal block body size
 ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
-ppMaxBBSizeL = ppLens . hkdMaxBBSizeL @era @Identity
+ppMaxBBSizeL = ppLensHKD . hkdMaxBBSizeL @era @Identity
 
 -- | Maximal transaction size
 ppMaxTxSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
-ppMaxTxSizeL = ppLens . hkdMaxTxSizeL @era @Identity
+ppMaxTxSizeL = ppLensHKD . hkdMaxTxSizeL @era @Identity
 
 -- | Maximal block header size
 ppMaxBHSizeL :: forall era. EraPParams era => Lens' (PParams era) Word16
-ppMaxBHSizeL = ppLens . hkdMaxBHSizeL @era @Identity
+ppMaxBHSizeL = ppLensHKD . hkdMaxBHSizeL @era @Identity
 
 -- | The amount of a key registration deposit
-ppKeyDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppKeyDepositL = ppLens . hkdKeyDepositL @era @Identity
+ppKeyDepositL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppKeyDepositL = ppKeyDepositCompactL . partialCompactCoinL
+
+-- | The amount of a key registration deposit in compacted form
+ppKeyDepositCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppKeyDepositCompactL = ppLensHKD . hkdKeyDepositCompactL @era @Identity
 
 -- | The amount of a pool registration deposit
-ppPoolDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppPoolDepositL = ppLens . hkdPoolDepositL @era @Identity
+ppPoolDepositL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppPoolDepositL = ppPoolDepositCompactL . partialCompactCoinL
+
+-- | The amount of a pool registration deposit in compacted form
+ppPoolDepositCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppPoolDepositCompactL = ppLensHKD . hkdPoolDepositCompactL @era @Identity
 
 -- | epoch bound on pool retirement
 ppEMaxL :: forall era. EraPParams era => Lens' (PParams era) EpochInterval
-ppEMaxL = ppLens . hkdEMaxL @era @Identity
+ppEMaxL = ppLensHKD . hkdEMaxL @era @Identity
 
 -- | Desired number of pools
 ppNOptL :: forall era. EraPParams era => Lens' (PParams era) Word16
-ppNOptL = ppLens . hkdNOptL @era @Identity
+ppNOptL = ppLensHKD . hkdNOptL @era @Identity
 
 -- | Pool influence
 ppA0L :: forall era. EraPParams era => Lens' (PParams era) NonNegativeInterval
-ppA0L = ppLens . hkdA0L @era @Identity
+ppA0L = ppLensHKD . hkdA0L @era @Identity
 
 -- | Monetary expansion
 ppRhoL :: forall era. EraPParams era => Lens' (PParams era) UnitInterval
-ppRhoL = ppLens . hkdRhoL @era @Identity
+ppRhoL = ppLensHKD . hkdRhoL @era @Identity
 
 -- | Treasury expansion
 ppTauL :: forall era. EraPParams era => Lens' (PParams era) UnitInterval
-ppTauL = ppLens . hkdTauL @era @Identity
+ppTauL = ppLensHKD . hkdTauL @era @Identity
 
 -- | Decentralization parameter
-ppDL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) UnitInterval
-ppDL = ppLens . hkdDL @era @Identity
+ppDL :: forall era. (EraPParams era, AtMostEra "Alonzo" era) => Lens' (PParams era) UnitInterval
+ppDL = ppLensHKD . hkdDL @era @Identity
 
 -- | Extra entropy
-ppExtraEntropyL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) Nonce
-ppExtraEntropyL = ppLens . hkdExtraEntropyL @era @Identity
+ppExtraEntropyL :: forall era. (EraPParams era, AtMostEra "Alonzo" era) => Lens' (PParams era) Nonce
+ppExtraEntropyL = ppLensHKD . hkdExtraEntropyL @era @Identity
 
 -- | Minimum UTxO value
-ppMinUTxOValueL :: forall era. (EraPParams era, ProtVerAtMost era 4) => Lens' (PParams era) Coin
-ppMinUTxOValueL = ppLens . hkdMinUTxOValueL @era @Identity
+ppMinUTxOValueL ::
+  forall era. (EraPParams era, AtMostEra "Mary" era, HasCallStack) => Lens' (PParams era) Coin
+ppMinUTxOValueL = ppMinUTxOValueCompactL . partialCompactCoinL
+
+-- | Minimum UTxO value in compacted form
+ppMinUTxOValueCompactL ::
+  forall era. (EraPParams era, AtMostEra "Mary" era) => Lens' (PParams era) (CompactForm Coin)
+ppMinUTxOValueCompactL = ppLensHKD . hkdMinUTxOValueCompactL @era @Identity
 
 -- | Minimum Stake Pool Cost
-ppMinPoolCostL :: forall era. EraPParams era => Lens' (PParams era) Coin
-ppMinPoolCostL = ppLens . hkdMinPoolCostL @era @Identity
+ppMinPoolCostL :: forall era. (EraPParams era, HasCallStack) => Lens' (PParams era) Coin
+ppMinPoolCostL = ppMinPoolCostCompactL . partialCompactCoinL
+
+-- | Minimum Stake Pool Cost in compacted form
+ppMinPoolCostCompactL :: forall era. EraPParams era => Lens' (PParams era) (CompactForm Coin)
+ppMinPoolCostCompactL = ppLensHKD . hkdMinPoolCostCompactL @era @Identity
 
 -- PParamsUpdate versions of lenses
 
 -- | The linear factor for the minimum fee calculation
-ppuMinFeeAL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeAL = ppuLens . hkdMinFeeAL @era @StrictMaybe
+ppuTxFeePerByteL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
+ppuTxFeePerByteL = ppuLensHKD . hkdTxFeePerByteL @era @StrictMaybe
+
+ppuMinFeeAL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinFeeAL = ppuTxFeePerByteL . coinPerByteFL . partialCompactFL
+{-# DEPRECATED ppuMinFeeAL "In favor of `ppuTxFeePerByteL`" #-}
 
 -- | The constant factor for the minimum fee calculation
-ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinFeeBL = ppuLens . hkdMinFeeBL @era @StrictMaybe
+ppuTxFeeFixedL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuTxFeeFixedL = ppuLensHKD . hkdTxFeeFixedCompactL @era @StrictMaybe . partialCompactFL
+
+ppuMinFeeBL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinFeeBL = ppuTxFeeFixedL
+{-# DEPRECATED ppuMinFeeBL "In favor of `ppuTxFeeFixedL`" #-}
+
+-- | The constant factor for the minimum fee calculation in compacted form
+ppuTxFeeFixedCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuTxFeeFixedCompactL = ppuLensHKD . hkdTxFeeFixedCompactL @era @StrictMaybe
 
 -- | Maximal block body size
 ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
-ppuMaxBBSizeL = ppuLens . hkdMaxBBSizeL @era @StrictMaybe
+ppuMaxBBSizeL = ppuLensHKD . hkdMaxBBSizeL @era @StrictMaybe
 
 -- | Maximal transaction size
 ppuMaxTxSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
-ppuMaxTxSizeL = ppuLens . hkdMaxTxSizeL @era @StrictMaybe
+ppuMaxTxSizeL = ppuLensHKD . hkdMaxTxSizeL @era @StrictMaybe
 
 -- | Maximal block header size
 ppuMaxBHSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
-ppuMaxBHSizeL = ppuLens . hkdMaxBHSizeL @era @StrictMaybe
+ppuMaxBHSizeL = ppuLensHKD . hkdMaxBHSizeL @era @StrictMaybe
 
 -- | The amount of a key registration deposit
-ppuKeyDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuKeyDepositL = ppuLens . hkdKeyDepositL @era @StrictMaybe
+ppuKeyDepositL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuKeyDepositL = ppuLensHKD . hkdKeyDepositCompactL @era @StrictMaybe . partialCompactFL
 
--- | The amount of a pool registration deposit
-ppuPoolDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuPoolDepositL = ppuLens . hkdPoolDepositL @era @StrictMaybe
+-- | The amount of a key registration deposit
+ppuKeyDepositCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuKeyDepositCompactL = ppuLensHKD . hkdKeyDepositCompactL @era @StrictMaybe
+
+-- | The amount of a pool registration deposit. The value must be small enough
+-- to fit into a Word64.
+ppuPoolDepositL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuPoolDepositL = ppuLensHKD . hkdPoolDepositCompactL @era @StrictMaybe . partialCompactFL
+
+-- | The amount of a pool registration deposit in compacted form
+ppuPoolDepositCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuPoolDepositCompactL = ppuLensHKD . hkdPoolDepositCompactL @era @StrictMaybe
 
 -- | epoch bound on pool retirement
 ppuEMaxL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuEMaxL = ppuLens . hkdEMaxL @era @StrictMaybe
+ppuEMaxL = ppuLensHKD . hkdEMaxL @era @StrictMaybe
 
 -- | Desired number of pools
 ppuNOptL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
-ppuNOptL = ppuLens . hkdNOptL @era @StrictMaybe
+ppuNOptL = ppuLensHKD . hkdNOptL @era @StrictMaybe
 
 -- | Pool influence
 ppuA0L :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe NonNegativeInterval)
-ppuA0L = ppuLens . hkdA0L @era @StrictMaybe
+ppuA0L = ppuLensHKD . hkdA0L @era @StrictMaybe
 
 -- | Monetary expansion
 ppuRhoL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuRhoL = ppuLens . hkdRhoL @era @StrictMaybe
+ppuRhoL = ppuLensHKD . hkdRhoL @era @StrictMaybe
 
 -- | Treasury expansion
 ppuTauL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuTauL = ppuLens . hkdTauL @era @StrictMaybe
+ppuTauL = ppuLensHKD . hkdTauL @era @StrictMaybe
 
 -- | Decentralization parameter
 ppuDL ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Alonzo" era) =>
   Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuDL = ppuLens . hkdDL @era @StrictMaybe
+ppuDL = ppuLensHKD . hkdDL @era @StrictMaybe
 
 -- | Extra entropy
 ppuExtraEntropyL ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
+  (EraPParams era, AtMostEra "Alonzo" era) =>
   Lens' (PParamsUpdate era) (StrictMaybe Nonce)
-ppuExtraEntropyL = ppuLens . hkdExtraEntropyL @era @StrictMaybe
+ppuExtraEntropyL = ppuLensHKD . hkdExtraEntropyL @era @StrictMaybe
 
 -- | Minimum UTxO value
 ppuMinUTxOValueL ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 4) =>
+  (EraPParams era, AtMostEra "Mary" era, HasCallStack) =>
   Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinUTxOValueL = ppuLens . hkdMinUTxOValueL @era @StrictMaybe
+ppuMinUTxOValueL = ppuLensHKD . hkdMinUTxOValueCompactL @era @StrictMaybe . partialCompactFL
+
+-- | Minimum UTxO value in compacted form
+ppuMinUTxOValueCompactL ::
+  forall era.
+  (EraPParams era, AtMostEra "Mary" era) =>
+  Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuMinUTxOValueCompactL = ppuLensHKD . hkdMinUTxOValueCompactL @era @StrictMaybe
 
 -- | Minimum Stake Pool Cost
-ppuMinPoolCostL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuMinPoolCostL = ppuLens . hkdMinPoolCostL @era @StrictMaybe
+ppuMinPoolCostL ::
+  forall era. (EraPParams era, HasCallStack) => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuMinPoolCostL = ppuLensHKD . hkdMinPoolCostCompactL @era @StrictMaybe . partialCompactFL
+
+-- | Minimum Stake Pool Cost in compacted form
+ppuMinPoolCostCompactL ::
+  forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (CompactForm Coin))
+ppuMinPoolCostCompactL = ppuLensHKD . hkdMinPoolCostCompactL @era @StrictMaybe
+
+instance EraPParams era => ToKeyValuePairs (PParams era) where
+  toKeyValuePairs pp =
+    [ Aeson.fromText ppName .= toJSON (pp ^. ppLens)
+    | PParam {ppName, ppLens} <- eraPParams @era
+    ]
+
+instance EraPParams era => ToKeyValuePairs (PParamsUpdate era) where
+  toKeyValuePairs ppu =
+    [ Aeson.fromText ppName .= toJSON v
+    | PParam {ppName, ppUpdate = Just (PParamUpdate {ppuLens})} <- eraPParams @era
+    , SJust v <- [ppu ^. ppuLens]
+    ]
 
 mapPParams :: (PParamsHKD Identity era1 -> PParamsHKD Identity era2) -> PParams era1 -> PParams era2
 mapPParams f (PParams pp) = PParams $ f pp
@@ -555,13 +749,20 @@ downgradePParamsUpdate ::
 downgradePParamsUpdate args (PParamsUpdate pphkd) =
   PParamsUpdate (downgradePParamsHKD @_ @StrictMaybe args pphkd)
 
--- =====================================================================================
--- Tools for building ToPlutusData instances for (PParamUpdates era).
-
--- | Pair the tag, and exisitenially hide the type of the lens for the field with that Lens'
+-- | Represents a single protocol parameter and the data required to serialize it.
 data PParam era where
-  PParam :: ToPlutusData t => Word -> Lens' (PParamsUpdate era) (StrictMaybe t) -> PParam era
+  PParam ::
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t, ToPlutusData t) =>
+    { ppName :: Text
+    -- ^ Used as JSON key
+    , ppLens :: Lens' (PParams era) t
+    , ppUpdate :: Maybe (PParamUpdate era t)
+    -- ^ Not all protocol parameters have an update functionality in all eras
+    } ->
+    PParam era
 
--- | Turn a list into a Map, this assures we have no duplicates.
-makePParamMap :: [PParam era] -> Map Word (PParam era)
-makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
+data PParamUpdate era t = PParamUpdate
+  { ppuTag :: Word
+  -- ^ Used in CBOR and Plutus Data encoding of
+  , ppuLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+  }

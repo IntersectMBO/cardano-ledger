@@ -10,6 +10,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -20,56 +21,54 @@ module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Shelley.API.Types
-import Data.Word
-
-import Constrained
-
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (
-  DRepState (..),
-  dsUnifiedL,
-  psDepositsL,
-  vsDRepsL,
- )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
   EraPParams (..),
-  EraTx,
+  EraTx (..),
   EraTxAuxData (..),
-  EraTxBody (..),
   EraTxWits (..),
+  TxLevel (..),
+  ppMaxTxSizeL,
  )
-import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
-import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
+import Cardano.Ledger.Conway.Governance (GovActionId)
+import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
-import Cardano.Ledger.UMap (depositMap)
+import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
-import Data.Bifunctor (Bifunctor (..))
-import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
+import Data.Word
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr, oneof)
+import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, ToExpr, oneof)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
+import Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenSize (..),
+  GenState (..),
+  initialLedgerState,
+  runGenRS,
+ )
+import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
+import Test.Cardano.Ledger.Generic.Instances ()
+import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 
 instance HasSimpleRep DepositPurpose
-instance IsConwayUniv fn => HasSpec fn DepositPurpose
+
+instance HasSpec DepositPurpose
 
 witnessDepositPurpose ::
-  forall fn era.
-  (Era era, IsConwayUniv fn) =>
-  WitUniv era -> Specification fn DepositPurpose
+  forall era.
+  Era era =>
+  WitUniv era -> Specification DepositPurpose
 witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
   (caseOn depPurpose)
     -- CredentialDeposit !(Credential 'Staking c)
@@ -82,9 +81,9 @@ witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
     (branch $ \_ -> True)
 
 data DepositPurpose
-  = CredentialDeposit !(Credential 'Staking)
-  | PoolDeposit !(KeyHash 'StakePool)
-  | DRepDeposit !(Credential 'DRepRole)
+  = CredentialDeposit !(Credential Staking)
+  | PoolDeposit !(KeyHash StakePool)
+  | DRepDeposit !(Credential DRepRole)
   | GovActionDeposit !GovActionId
   deriving (Generic, Eq, Show, Ord)
 
@@ -120,18 +119,16 @@ instance NFData DepositPurpose
 instance ToExpr DepositPurpose
 
 utxoEnvSpec ::
-  IsConwayUniv fn =>
   UtxoExecContext ConwayEra ->
-  Specification fn (UtxoEnv ConwayEra)
+  Specification (UtxoEnv ConwayEra)
 utxoEnvSpec UtxoExecContext {..} =
   constrained $ \utxoEnv ->
     utxoEnv ==. lit uecUtxoEnv
 
 utxoStateSpec ::
-  IsConwayUniv fn =>
   UtxoExecContext ConwayEra ->
   UtxoEnv ConwayEra ->
-  Specification fn (UTxOState ConwayEra)
+  Specification (UTxOState ConwayEra)
 utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
   constrained $ \utxoState ->
     match utxoState $
@@ -150,7 +147,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals
 
 data UtxoExecContext era = UtxoExecContext
-  { uecTx :: !(AlonzoTx era)
+  { uecTx :: !(Tx TopTx era)
   , uecUTxO :: !(UTxO era)
   , uecUtxoEnv :: !(UtxoEnv era)
   }
@@ -167,21 +164,20 @@ instance
 instance
   ( EraTx era
   , ToExpr (TxOut era)
-  , ToExpr (TxBody era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , ToExpr (PParamsHKD Identity era)
   , EraCertState era
   , ToExpr (CertState era)
+  , ToExpr (Tx TopTx era)
   ) =>
   ToExpr (UtxoExecContext era)
 
 instance
   ( EraPParams era
   , EncCBOR (TxOut era)
-  , EncCBOR (TxBody era)
-  , EncCBOR (TxAuxData era)
-  , EncCBOR (TxWits era)
+  , EncCBOR (Tx TopTx era)
   , EraCertState era
   ) =>
   EncCBOR (UtxoExecContext era)
@@ -194,23 +190,19 @@ instance
             !> To uecUTxO
             !> To uecUtxoEnv
 
--- TODO: generalise
-instance CertState era ~ ShelleyCertState era => Inject (UtxoExecContext era) (ShelleyCertState era) where
+instance CertState era ~ ConwayCertState era => Inject (UtxoExecContext era) (ConwayCertState era) where
   inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
 
 utxoTxSpec ::
-  ( IsConwayUniv fn
-  , HasSpec fn (AlonzoTx era)
-  ) =>
+  HasSpec (Tx TopTx era) =>
   UtxoExecContext era ->
-  Specification fn (AlonzoTx era)
+  Specification (Tx TopTx era)
 utxoTxSpec UtxoExecContext {uecTx} =
   constrained $ \tx -> tx ==. lit uecTx
 
 correctAddrAndWFCoin ::
-  IsConwayUniv fn =>
-  Term fn (TxOut ConwayEra) ->
-  Pred fn
+  Term (TxOut ConwayEra) ->
+  Pred
 correctAddrAndWFCoin txOut =
   match txOut $ \addr v _ _ ->
     [ match v $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
@@ -224,11 +216,24 @@ correctAddrAndWFCoin txOut =
         )
     ]
 
-depositsMap :: EraCertState era => CertState era -> Proposals era -> Map.Map DepositPurpose Coin
-depositsMap certState props =
-  Map.unions
-    [ Map.mapKeys CredentialDeposit $ depositMap (certState ^. certDStateL . dsUnifiedL)
-    , Map.mapKeys PoolDeposit $ certState ^. certPStateL . psDepositsL
-    , fmap drepDeposit . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
-    , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
-    ]
+genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)
+genUtxoExecContext = do
+  ueSlot <- arbitrary
+  let
+    genSize =
+      GenSize.small
+        { invalidScriptFreq = 0 -- TODO make the test work with invalid scripts
+        , regCertFreq = 0
+        , delegCertFreq = 0
+        }
+  ((uecUTxO, uecTx), gs) <- runGenRS genSize $ genAlonzoTx ueSlot
+  let
+    txSize = uecTx ^. sizeTxF
+    lState = initialLedgerState gs
+    ueCertState = lsCertState lState
+    uePParams =
+      gePParams (gsGenEnv gs)
+        & ppMaxTxSizeL .~ fromIntegral txSize
+        & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+    uecUtxoEnv = UtxoEnv {..}
+  pure UtxoExecContext {..}

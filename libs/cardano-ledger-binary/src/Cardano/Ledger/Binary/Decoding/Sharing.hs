@@ -24,8 +24,7 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   internSet,
   toMemptyLens,
   decShareMonadCBOR,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding.DecCBOR
 import Cardano.Ledger.Binary.Decoding.Decoder
@@ -39,8 +38,9 @@ import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
 import qualified Data.Set as Set (size)
 import qualified Data.Set.Internal as Set (Set (..))
-import Data.VMap (VB, VMap, VP)
+import Data.VMap (VB, VMap, VP, VS)
 import qualified Data.VMap as VMap
+import Foreign.Storable (Storable)
 import Lens.Micro
 
 -- =======================================
@@ -130,7 +130,7 @@ internsFromMap m
             }
         ]
 
-internsFromVMap :: Ord k => VMap VB kv k a -> Interns k
+internsFromVMap :: (Ord k, VMap.Vector kv a) => VMap VB kv k a -> Interns k
 internsFromVMap m
   | VMap.size m == 0 = mempty
   | otherwise =
@@ -175,8 +175,8 @@ decShareLensCBOR l = do
   lift $ decShareCBOR (s ^. l)
 
 -- | Using this function it is possible to compose two lenses. One will extract
--- a value and another will used it for placing it into a empty monoid. Here is
--- an example of how a second element of a tuple can be projected on the third
+-- a value and another will place it into an empty monoid.
+-- Here is an example of how a second element of a tuple can be projected on the third
 -- element of a 3-tuple.
 --
 -- > toMemptyLens _3 _2 == lens (\(_, b) -> (mempty, mempty, b)) (\(a, _) (_, _, b) -> (a, b))
@@ -231,6 +231,12 @@ instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (VMap VB VB k v) where
 
 instance (Ord k, DecCBOR k, DecCBOR v, Prim v) => DecShareCBOR (VMap VB VP k v) where
   type Share (VMap VB VP k v) = Interns k
+  decShareCBOR kis = do
+    decodeVMap (interns kis <$> decCBOR) decCBOR
+  getShare !m = internsFromVMap m
+
+instance (Ord k, DecCBOR k, DecCBOR v, Storable v) => DecShareCBOR (VMap VB VS k v) where
+  type Share (VMap VB VS k v) = Interns k
   decShareCBOR kis = do
     decodeVMap (interns kis <$> decCBOR) decCBOR
   getShare !m = internsFromVMap m

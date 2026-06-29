@@ -31,10 +31,10 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   epochFromSlot,
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
-)
-where
+  testIncompleteAndMissingWithdrawals,
+) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
+import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, TxIx, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -42,12 +42,12 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
-import Cardano.Ledger.CertState (EraCertState (..))
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
   LedgerState (..),
   UTxOState (..),
   utxosDepositedL,
@@ -66,21 +66,31 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochFromSlot)
 import Control.DeepSeq (NFData (..))
+import Control.Monad (guard)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Assertion (PostCondition),
   AssertionViolation (..),
   Embed (..),
+  Rule,
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnNonEmptyMap,
   judgmentContext,
   liftSTS,
   trans,
  )
+import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.NonEmpty as NEM
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -93,11 +103,12 @@ data LedgerEnv era = LedgerEnv
   , ledgerEpochNo :: Maybe EpochNo
   , ledgerIx :: TxIx
   , ledgerPp :: PParams era
-  , ledgerAccount :: AccountState
+  , ledgerAccount :: ChainAccountState
   }
   deriving (Generic)
 
 deriving instance Show (PParams era) => Show (LedgerEnv era)
+
 deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
 instance NFData (PParams era) => NFData (LedgerEnv era)
@@ -116,6 +127,8 @@ instance EraPParams era => EncCBOR (LedgerEnv era) where
 data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
+  | ShelleyWithdrawalsMissingAccounts Withdrawals
+  | ShelleyIncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   deriving (Generic)
 
 ledgerSlotNoL :: Lens' (LedgerEnv era) SlotNo
@@ -130,7 +143,7 @@ ledgerIxL = lens ledgerIx $ \x y -> x {ledgerIx = y}
 ledgerPpL :: Lens' (LedgerEnv era) (PParams era)
 ledgerPpL = lens ledgerPp $ \x y -> x {ledgerPp = y}
 
-ledgerAccountL :: Lens' (LedgerEnv era) AccountState
+ledgerAccountL :: Lens' (LedgerEnv era) ChainAccountState
 ledgerAccountL = lens ledgerAccount $ \x y -> x {ledgerAccount = y}
 
 type instance EraRuleFailure "LEDGER" ShelleyEra = ShelleyLedgerPredFailure ShelleyEra
@@ -213,8 +226,10 @@ instance
   EncCBOR (ShelleyLedgerPredFailure era)
   where
   encCBOR = \case
-    (UtxowFailure a) -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR a
-    (DelegsFailure a) -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR a
+    UtxowFailure a -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR a
+    DelegsFailure a -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR a
+    ShelleyWithdrawalsMissingAccounts w -> encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR w
+    ShelleyIncompleteWithdrawals w -> encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR w
 
 instance
   ( DecCBOR (PredicateFailure (EraRule "DELEGS" era))
@@ -232,6 +247,12 @@ instance
         1 -> do
           a <- decCBOR
           pure (2, DelegsFailure a)
+        2 -> do
+          w <- decCBOR
+          pure (2, ShelleyWithdrawalsMissingAccounts w)
+        3 -> do
+          w <- decCBOR
+          pure (2, ShelleyIncompleteWithdrawals w)
         k -> invalidKey k
 
 shelleyLedgerAssertions ::
@@ -246,6 +267,12 @@ shelleyLedgerAssertions =
       ( \(TRC (_, _, _))
          (LedgerState utxoSt dpstate) -> potEqualsObligation dpstate utxoSt
       )
+  , PostCondition
+      "Reverse stake pool delegations must match"
+      ( \(TRC (_, _, _))
+         (LedgerState _ certState) ->
+            uncurry (==) $ calculateDelegatorsPerStakePool certState
+      )
   ]
 
 instance
@@ -256,16 +283,19 @@ instance
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
+  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   STS (ShelleyLEDGER era)
   where
   type State (ShelleyLEDGER era) = LedgerState era
-  type Signal (ShelleyLEDGER era) = Tx era
+  type Signal (ShelleyLEDGER era) = Tx TopTx era
   type Environment (ShelleyLEDGER era) = LedgerEnv era
   type BaseM (ShelleyLEDGER era) = ShelleyBase
   type PredicateFailure (ShelleyLEDGER era) = ShelleyLedgerPredFailure era
@@ -281,6 +311,7 @@ instance
 ledgerTransition ::
   forall era.
   ( EraTx era
+  , EraCertState era
   , STS (ShelleyLEDGER era)
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
@@ -289,18 +320,22 @@ ledgerTransition ::
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , EraRule "LEDGER" era ~ ShelleyLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
   TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, tx) <-
     judgmentContext
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
+  let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+  testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
   certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
         ( DelegsEnv slot curEpochNo txIx pp tx account
-        , certState
+        , certState & certDStateL . accountsL %~ drainAccounts withdrawals
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
 
@@ -312,6 +347,26 @@ ledgerTransition = do
         , tx
         )
   pure (LedgerState utxoSt' certState')
+
+testIncompleteAndMissingWithdrawals ::
+  ( EraAccounts era
+  , STS sts
+  , BaseM sts ~ ShelleyBase
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , sts ~ EraRule "LEDGER" era
+  ) =>
+  Accounts era ->
+  Withdrawals ->
+  Rule sts ctx ()
+testIncompleteAndMissingWithdrawals accounts withdrawals = do
+  network <- liftSTS $ asks networkId
+  let (missingWithdrawals, incompleteWithdrawals) =
+        case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+          Nothing -> (Map.empty, Map.empty)
+          Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
+  failOnNonEmptyMap missingWithdrawals $
+    injectFailure . ShelleyWithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+  failOnNonEmptyMap incompleteWithdrawals $ injectFailure . ShelleyIncompleteWithdrawals
 
 instance
   ( Era era
@@ -341,7 +396,7 @@ renderDepositEqualsObligationViolation ::
   , EraGov era
   , EraCertState era
   , Environment t ~ LedgerEnv era
-  , Signal t ~ Tx era
+  , Signal t ~ Tx TopTx era
   , State t ~ LedgerState era
   ) =>
   AssertionViolation t ->
@@ -350,25 +405,58 @@ renderDepositEqualsObligationViolation
   AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _, _, tx), avState} =
     case avState of
       Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
-      Just lstate ->
-        let certstate = lsCertState lstate
-            utxoSt = lsUTxOState lstate
-            utxo = utxosUtxo utxoSt
-            txb = tx ^. bodyTxL
-            pot = utxoSt ^. utxosDepositedL
-         in "\n\nAssertionViolation ("
-              <> avSTS
-              <> ")\n\n  "
-              <> avMsg
-              <> "\n\nCERTS\n"
-              <> showTxCerts txb
-              <> "\n(slot,keyDeposit,poolDeposit) "
-              <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
-              <> "\nThe Pot (utxosDeposited) = "
-              <> show pot
-              <> "\n"
-              <> show (allObligations certstate (utxosGovState utxoSt))
-              <> "\nConsumed = "
-              <> show (consumedTxBody txb pp certstate utxo)
-              <> "\nProduced = "
-              <> show (producedTxBody txb pp certstate)
+      Just lstate
+        | avMsg == "Deposit pot must equal obligation (LEDGER)" ->
+            let certstate = lsCertState lstate
+                utxoSt = lsUTxOState lstate
+                utxo = utxosUtxo utxoSt
+                txb = tx ^. bodyTxL
+                pot = utxoSt ^. utxosDepositedL
+             in "\n\nAssertionViolation ("
+                  <> avSTS
+                  <> ")\n\n  "
+                  <> avMsg
+                  <> "\n\nCERTS\n"
+                  <> showTxCerts txb
+                  <> "\n(slot,keyDeposit,poolDeposit) "
+                  <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
+                  <> "\nThe Pot (utxosDeposited) = "
+                  <> show pot
+                  <> "\n"
+                  <> show (allObligations certstate (utxosGovState utxoSt))
+                  <> "\nConsumed = "
+                  <> show (consumedTxBody txb pp certstate utxo)
+                  <> "\nProduced = "
+                  <> show (producedTxBody txb pp certstate)
+        | avMsg == "Reverse stake pool delegations must match" ->
+            case calculateDelegatorsPerStakePool (lsCertState lstate) of
+              (reverseDelegatorsPerStakePool, delegatorsPerStakePool) ->
+                avMsg
+                  <> "\nReverse Delegations: \n  "
+                  <> show reverseDelegatorsPerStakePool
+                  <> "\nForward Delegations:\n  "
+                  <> show delegatorsPerStakePool
+        | otherwise -> error $ "Unexpected assertion message: " <> avMsg
+
+calculateDelegatorsPerStakePool ::
+  EraCertState era =>
+  CertState era ->
+  ( Map (KeyHash StakePool) (Set.Set (Credential Staking))
+  , Map (KeyHash StakePool) (Set.Set (Credential Staking))
+  )
+calculateDelegatorsPerStakePool certState =
+  let accountsMap = certState ^. certDStateL . accountsL . accountsMapL
+      delegatorsPerStakePool =
+        Map.foldlWithKey'
+          ( \acc cred accountState ->
+              case accountState ^. stakePoolDelegationAccountStateL of
+                Nothing -> acc
+                Just poolId -> Map.insertWith (<>) poolId (Set.singleton cred) acc
+          )
+          mempty
+          accountsMap
+      reverseDelegatorsPerStakePool =
+        Map.mapMaybe
+          (\sps -> spsDelegators sps <$ guard (not (Set.null (spsDelegators sps))))
+          (certState ^. certPStateL . psStakePoolsL)
+   in (reverseDelegatorsPerStakePool, delegatorsPerStakePool)

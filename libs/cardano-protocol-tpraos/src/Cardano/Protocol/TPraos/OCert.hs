@@ -17,9 +17,9 @@ module Cardano.Protocol.TPraos.OCert (
   KESPeriod (..),
   slotsPerKESPeriod,
   kesPeriod,
-)
-where
+) where
 
+import Cardano.Base.Proxy (asProxy)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -32,10 +32,9 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
-  encodedSigDSIGNSizeExpr,
-  encodedVerKeyKESSizeExpr,
   fromPlainDecoder,
   fromPlainEncoding,
+  listLenInt,
   runByteBuilder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -61,16 +60,16 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 data OCertEnv = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool)
-  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate)
+  { ocertEnvStPools :: Set (KeyHash StakePool)
+  , ocertEnvGenDelegs :: Set (KeyHash GenesisDelegate)
   }
   deriving (Show, Eq)
 
 currentIssueNo ::
   OCertEnv ->
-  Map (KeyHash 'BlockIssuer) Word64 ->
+  Map (KeyHash BlockIssuer) Word64 ->
   -- | Pool hash
-  KeyHash 'BlockIssuer ->
+  KeyHash BlockIssuer ->
   Maybe Word64
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
@@ -108,27 +107,17 @@ instance Crypto c => NoThunks (OCert c)
 
 instance Crypto c => EncCBORGroup (OCert c) where
   encCBORGroup = fromPlainEncoding . encodeOCertFields
-  encodedGroupSizeExpr size proxy =
-    encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
-      + encodedSizeExpr size (toWord . ocertN <$> proxy)
-      + encodedSizeExpr size ((\(KESPeriod p) -> p) . ocertKESPeriod <$> proxy)
-      + encodedSigDSIGNSizeExpr ((\(DSIGN.SignedDSIGN sig) -> sig) . ocertSigma <$> proxy)
-    where
-      toWord :: Word64 -> Word
-      toWord = fromIntegral
-
   listLen _ = 4
-  listLenBound _ = 4
 
 instance Crypto c => DecCBORGroup (OCert c) where
   decCBORGroup = fromPlainDecoder decodeOCertFields
 
 instance Crypto c => ToCBOR (OCert c) where
-  toCBOR ocert = Plain.encodeListLen (listLen ocert) <> encodeOCertFields ocert
+  toCBOR ocert = Plain.encodeListLen (listLen (asProxy ocert)) <> encodeOCertFields ocert
 
 instance Crypto c => FromCBOR (OCert c) where
   fromCBOR =
-    Plain.decodeRecordNamed "OCert" (fromIntegral . listLen) decodeOCertFields
+    Plain.decodeRecordNamed "OCert" (listLenInt . Just) decodeOCertFields
 
 encodeOCertFields :: Crypto c => OCert c -> Plain.Encoding
 encodeOCertFields ocert =
@@ -160,7 +149,7 @@ instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.sizeVerKeyKES (Proxy @(KES c))
+          KES.verKeySizeKES (Proxy @(KES c))
             + 8
             + 8
       )

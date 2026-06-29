@@ -21,8 +21,7 @@ module Data.ListMap (
   empty,
   fromList,
   toList,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeMapLen, encodeMapLen)
 import Control.DeepSeq (NFData, NFData1)

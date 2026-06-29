@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,10 +26,8 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
 import Cardano.Ledger.Block (
   Block (..),
-  bheader,
   neededTxInsForBlock,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)
@@ -45,7 +44,9 @@ import Cardano.Ledger.Shelley.Rules (
   DelegEnv (..),
   LedgerEnv (..),
   PoolEnv (..),
+  PoolEvent,
   ShelleyPOOL,
+  ShelleyPoolPredFailure,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -113,7 +114,6 @@ type TestingLedger era ledger =
   ( BaseM ledger ~ ReaderT Globals Identity
   , Environment ledger ~ LedgerEnv era
   , State ledger ~ LedgerState era
-  , Signal ledger ~ Tx era
   , Embed (EraRule "DELEGS" era) ledger
   , Embed (EraRule "UTXOW" era) ledger
   , STS ledger
@@ -140,17 +140,21 @@ shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 cons
 
 -- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
 ledgerTraceFromBlock ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
-  , TestingLedger era ledger
+  , STS (EraRule "LEDGER" era)
+  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (ChainState era, Trace ledger)
+  (ChainState era, Trace (EraRule "LEDGER" era))
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
   , runShelleyBase $
-      Trace.closure @ledger ledgerEnv ledgerSt0 txs
+      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0 txs
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -159,17 +163,21 @@ ledgerTraceFromBlock chainSt block =
 -- it restricts the UTxO state to only those needed by the block.
 -- It also returns the unused UTxO for comparison later.
 ledgerTraceFromBlockWithRestrictedUTxO ::
-  forall era ledger.
+  forall era.
   ( ChainProperty era
-  , TestingLedger era ledger
+  , STS (EraRule "LEDGER" era)
+  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (UTxO era, Trace ledger)
+  (UTxO era, Trace (EraRule "LEDGER" era))
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
   , runShelleyBase $
-      Trace.closure @ledger ledgerEnv ledgerSt0' txs
+      Trace.closure @(EraRule "LEDGER" era) ledgerEnv ledgerSt0' txs
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -183,7 +191,9 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
 poolTraceFromBlock ::
   forall era.
   ( ChainProperty era
-  , ShelleyEraTxBody era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -208,6 +218,7 @@ delegTraceFromBlock ::
   forall era.
   ( ChainProperty era
   , ShelleyEraTxBody era
+  , ShelleyEraAccounts era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -215,7 +226,7 @@ delegTraceFromBlock ::
 delegTraceFromBlock chainSt block =
   ( delegEnv
   , runShelleyBase $
-      Trace.closure @(ShelleyDELEG era) delegEnv delegSt0 blockCerts
+      Trace.closure @(ShelleyDELEG era) delegEnv (ledgerSt0 ^. lsCertStateL) blockCerts
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -226,8 +237,6 @@ delegTraceFromBlock chainSt block =
           dummyCertIx = minBound
           ptr = Ptr (SlotNo32 (fromIntegral slot64)) txIx dummyCertIx
        in DelegEnv slot (epochFromSlotNo slot) ptr reserves pp
-    delegSt0 =
-      ledgerSt0 ^. lsCertStateL . certDStateL
     delegCert (RegTxCert _) = True
     delegCert (UnRegTxCert _) = True
     delegCert (DelegStakeTxCert _ _) = True
@@ -246,21 +255,20 @@ ledgerTraceBase ::
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
-ledgerTraceBase chainSt block =
+  (ChainState era, LedgerEnv era, LedgerState era, [Tx TopTx era])
+ledgerTraceBase chainSt Block {blockHeader = BHeader bhb _, blockBody} =
   ( tickedChainSt
-  , LedgerEnv slot Nothing minBound pp_ (esAccountState nes)
+  , LedgerEnv slot Nothing minBound pp_ (esChainAccountState nes)
   , esLState nes
   , txs
   )
   where
-    (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = nes ^. curPParamsEpochStateL
     -- Oldest to Newest first
-    txs = (reverse . toList . fromTxSeq) txSeq -- HERE WE USE SOME SegWit function
+    txs = reverse $ toList $ blockBody ^. txSeqBlockBodyL -- HERE WE USE SOME SegWit function
 
 -- | Transform the [(source, signal, target)] of a CHAIN Trace
 -- by manually applying the Chain TICK Rule to each source and producing
@@ -282,8 +290,7 @@ chainSstWithTick ledgerTr =
   map applyTick (sourceSignalTargets ledgerTr)
   where
     applyTick sst@SourceSignalTarget {source = chainSt, signal = block} =
-      let bh = bheader block
-          slot = (bheaderSlotNo . bhbody) bh
+      let slot = bheaderSlotNo (bhbody (blockHeader block))
        in sst {target = tickChainState @era slot chainSt}
 
 ---------------------------

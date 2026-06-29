@@ -1,7 +1,6 @@
 module Cardano.Chain.Byron.API.Protocol (
   previewDelegationMap,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as CC
 import qualified Cardano.Chain.Delegation as Delegation

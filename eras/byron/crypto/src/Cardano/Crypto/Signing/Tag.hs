@@ -7,8 +7,7 @@ module Cardano.Crypto.Signing.Tag (
   SignTag (..),
   signTag,
   signTagDecoded,
-)
-where
+) where
 
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))

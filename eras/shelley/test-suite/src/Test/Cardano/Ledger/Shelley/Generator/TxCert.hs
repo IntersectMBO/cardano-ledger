@@ -13,47 +13,33 @@
 module Test.Cardano.Ledger.Shelley.Generator.TxCert (
   genTxCert,
   CertCred (..),
-)
-where
+) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.API (
-  AccountState (..),
   Coin (..),
   Credential (..),
-  DState (..),
   GenDelegPair (..),
   GenDelegs (..),
   Network (..),
-  PState (..),
-  PoolParams (..),
   StrictMaybe (..),
   VKey,
  )
 import Cardano.Ledger.Shelley.Core
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState (
-  availableAfterMIR,
-  dsFutureGenDelegsL,
-  dsGenDelegsL,
-  rewards,
- )
+import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.Crypto (Crypto, hashVerKeyVRF)
 import Control.Monad (replicateM)
-import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, fromList, lookup)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set ((\\))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
@@ -78,10 +64,10 @@ import qualified Test.QuickCheck as QC
 
 data CertCred era
   = CoreKeyCred [GenesisKeyPair MockCrypto]
-  | StakeCred (KeyPair 'Staking)
-  | PoolCred (KeyPair 'StakePool)
+  | StakeCred (KeyPair Staking)
+  | PoolCred (KeyPair StakePool)
   | ScriptCred (Script era, Script era)
-  | DelegateCred [KeyPair 'GenesisDelegate]
+  | DelegateCred [KeyPair GenesisDelegate]
   | NoCred
 
 deriving instance (Era era, Show (Script era)) => Show (CertCred era)
@@ -98,11 +84,11 @@ deriving instance (Era era, Show (Script era)) => Show (CertCred era)
 -- and we generate more delegations than registrations of keys/pools.
 genTxCert ::
   forall era c.
-  (EraGen era, ProtVerAtMost era 8, EraCertState era, Crypto c) =>
+  (EraGen era, AtMostEra "Babbage" era, EraCertState era, Crypto c) =>
   Constants ->
   KeySpace c era ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   CertState era ->
   SlotNo ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -156,7 +142,7 @@ genTxCert
 -- | Generate a RegKey certificate
 genRegKeyCert ::
   forall era.
-  (EraScript era, ShelleyEraTxCert era) =>
+  (EraScript era, ShelleyEraTxCert era, EraAccounts era) =>
   Constants ->
   KeyPairs ->
   [(Script era, Script era)] ->
@@ -195,7 +181,7 @@ genRegKeyCert
       ]
     where
       scriptToCred' = ScriptHashObj . hashScript @era
-      notRegistered k = UM.notMember k (rewards delegSt)
+      notRegistered cred = not (isAccountRegistered cred (delegSt ^. accountsL))
       availableKeys = filter (notRegistered . mkCredential . snd) keys
       availableScripts = filter (notRegistered . scriptToCred' . snd) scripts
 
@@ -203,7 +189,7 @@ genRegKeyCert
 -- needed to witness the certificate.
 genDeRegKeyCert ::
   forall era.
-  (EraScript era, ShelleyEraTxCert era) =>
+  (EraScript era, EraAccounts era, ShelleyEraTxCert era) =>
   Constants ->
   KeyPairs ->
   [(Script era, Script era)] ->
@@ -234,7 +220,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
     ]
   where
     scriptToCred' = ScriptHashObj . hashScript @era
-    registered k = UM.member k (rewards dState)
+    registered cred = isAccountRegistered cred (dState ^. accountsL)
     availableKeys =
       filter
         ( \(_, k) ->
@@ -249,9 +235,10 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
              in ((&&) <$> registered <*> zeroRewards) cred
         )
         scripts
-    zeroRewards k = case UM.lookup (raCredential $ RewardAccount Testnet k) (rewards dState) of
-      Nothing -> False
-      Just (UM.RDPair ccoin _) -> ccoin == UM.CompactCoin 0
+    zeroRewards cred =
+      case lookupAccountState cred (dState ^. accountsL) of
+        Nothing -> False
+        Just accountState -> accountState ^. balanceAccountStateL == mempty
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
@@ -305,20 +292,20 @@ genDelegation
         where
           scriptCert =
             DelegStakeTxCert (scriptToCred' delegatorScript) poolKey
-      registeredDelegate k = UM.member k (rewards (dpState ^. certDStateL))
+      registeredDelegate cred = isAccountRegistered cred (dpState ^. certDStateL . accountsL)
       availableDelegates = filter (registeredDelegate . mkCredential . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
-      registeredPools = psStakePoolParams (dpState ^. certPStateL)
-      availablePools = Set.toList $ domain registeredPools
+      registeredPools = psStakePools (dpState ^. certPStateL)
+      availablePools = Map.keys registeredPools
 
 genGenesisDelegation ::
   forall era c.
-  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8, EraCertState era, Crypto c) =>
+  (Era era, ShelleyEraTxCert era, AtMostEra "Babbage" era, EraCertState era, Crypto c) =>
   -- | Core nodes
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [(GenesisKeyPair c, AllIssuerKeys c GenesisDelegate)] ->
   -- | All potential genesis delegate keys
-  [AllIssuerKeys c 'GenesisDelegate] ->
+  [AllIssuerKeys c GenesisDelegate] ->
   CertState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
@@ -342,7 +329,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
         , CoreKeyCred [gkey]
         )
     GenDelegs genDelegs_ = dpState ^. certDStateL . dsGenDelegsL
-    genesisDelegator k = eval (k ∈ dom genDelegs_)
+    genesisDelegator k = Map.member k genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
     activeGenDelegsKeyHashSet =
       Set.fromList $ genDelegKeyHash <$> Map.elems genDelegs_
@@ -358,14 +345,14 @@ genStakePool ::
   forall c.
   Crypto c =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys c 'StakePool] ->
-  -- | KeyPairs containing staking keys to act as owners/reward account
+  [AllIssuerKeys c StakePool] ->
+  -- | KeyPairs containing staking keys to act as owners/account address
   KeyPairs ->
   -- | Minimum pool cost Protocol Param
   Coin ->
-  Gen (PoolParams, KeyPair 'StakePool)
+  Gen (StakePoolParams, KeyPair StakePool)
 genStakePool poolKeys skeys (Coin minPoolCost) =
-  mkPoolParams
+  mkStakePoolParams
     <$> QC.elements poolKeys
     <*> ( Coin -- pledge
             <$> QC.frequency
@@ -377,34 +364,34 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> getAnyStakeKey skeys
   where
-    getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
+    getAnyStakeKey :: KeyPairs -> Gen (VKey Staking)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
-    mkPoolParams ::
-      AllIssuerKeys c 'StakePool ->
+    mkStakePoolParams ::
+      AllIssuerKeys c StakePool ->
       Coin ->
       Coin ->
       Natural ->
-      VKey 'Staking ->
-      (PoolParams, KeyPair 'StakePool)
-    mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
+      VKey Staking ->
+      (StakePoolParams, KeyPair StakePool)
+    mkStakePoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
-          pps =
-            PoolParams
+          spps =
+            StakePoolParams
               (hashKey . vKey $ aikCold allPoolKeys)
               (hashVerKeyVRF @c . vrfVerKey $ aikVrf allPoolKeys)
               pledge
               cost
               interval
-              (RewardAccount Testnet $ KeyHashObj $ hashKey acntKey)
+              (AccountAddress Testnet $ AccountId $ KeyHashObj $ hashKey acntKey)
               Set.empty
               StrictSeq.empty
               SNothing
-       in (pps, aikCold allPoolKeys)
+       in (spps, aikCold allPoolKeys)
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
   (Era era, EraTxCert era, Crypto c) =>
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys c StakePool] ->
   KeyPairs ->
   Coin ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -422,11 +409,11 @@ genRegPool poolKeys keyPairs minPoolCost = do
 genRetirePool ::
   (EraPParams era, EraTxCert era) =>
   PParams era ->
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys c StakePool] ->
   PState era ->
   SlotNo ->
   Gen (Maybe (TxCert era, CertCred era))
-genRetirePool _pp poolKeys pState slot =
+genRetirePool _pp poolKeys (PState {psStakePools, psRetiring}) slot =
   if null retireable
     then pure Nothing
     else
@@ -439,10 +426,7 @@ genRetirePool _pp poolKeys pState slot =
         <$> QC.elements retireable
         <*> (EpochNo <$> genWord64 epochLow epochHigh)
   where
-    stakePools = psStakePoolParams pState
-    registered_ = eval (dom stakePools)
-    retiring_ = domain (psRetiring pState)
-    retireable = Set.toList (registered_ \\ retiring_)
+    retireable = Map.keys (Map.difference psStakePools psRetiring)
     lookupHash hk' =
       fromMaybe
         (error "genRetirePool: could not find keyHash")
@@ -457,12 +441,12 @@ genRetirePool _pp poolKeys pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewardsAccounts ::
-  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, EraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState delegSt = do
@@ -471,11 +455,11 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
         fromMaybe
           (error "genInstantaneousRewardsAccounts: lookupGenDelegate failed")
           (Map.lookup gk genesisDelegatesByHash)
-      credentials = rewards delegSt
+      accountsMap = delegSt ^. accountsL . accountsMapL
   winnerCreds <-
     take
-      <$> QC.elements [0 .. (max 0 $ UM.size credentials - 1)]
-      <*> QC.shuffle (Set.toList (UM.domain credentials))
+      <$> QC.elements [0 .. (max 0 $ Map.size accountsMap - 1)]
+      <*> QC.shuffle (Map.keys accountsMap)
   coins <- replicateM (length winnerCreds) $ genInteger 1 1000
   let credCoinMap = Map.fromList $ zip winnerCreds (fmap DeltaCoin coins)
 
@@ -507,12 +491,12 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
 
 -- | Generate an InstantaneousRewards Transfer
 genInstantaneousRewardsTransfer ::
-  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState delegSt = do
@@ -544,16 +528,16 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
           )
 
 genInstantaneousRewards ::
-  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, EraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
+  Map (KeyHash GenesisDelegate) (AllIssuerKeys c GenesisDelegate) ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt =
-  if HardForks.allowMIRTransfer (pparams ^. ppProtocolVersionL)
+  if hardforkAlonzoAllowMIRTransfer (pparams ^. ppProtocolVersionL)
     then
       QC.oneof
         [ genInstantaneousRewardsAccounts

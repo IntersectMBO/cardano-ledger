@@ -8,7 +8,7 @@ import Paths_cardano_ledger_babbage
 
 readBabbageCddlFileNames :: IO [FilePath]
 readBabbageCddlFileNames = do
-  base <- getDataFileName "cddl-files/babbage.cddl"
+  base <- getDataFileName "cddl/data/babbage.cddl"
   pure [base]
 
 readBabbageCddlFiles :: IO [BSL.ByteString]

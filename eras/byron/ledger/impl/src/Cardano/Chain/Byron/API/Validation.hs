@@ -17,8 +17,7 @@ module Cardano.Chain.Byron.API.Validation (
   applyChainTick,
   validateBlock,
   validateBoundary,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common

@@ -9,27 +9,20 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.Deleg (
   tests,
-)
-where
+) where
 
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Shelley (hardforkAlonzoAllowMIRTransfer)
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
-  InstantaneousRewards (..),
-  delegations,
-  rewards,
- )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import Cardano.Ledger.Shelley.State
-import qualified Cardano.Ledger.UMap as UM
-import Control.SetAlgebra (eval, rng, (∈))
 import Data.Foldable (fold)
 import Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
 import qualified Data.Set as Set
+import Lens.Micro
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -55,16 +48,18 @@ import Test.QuickCheck (
   Testable (..),
   conjoin,
   counterexample,
+  (===),
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
 
--- | Various properties of the POOL STS Rule, tested on longer traces
+-- | Various properties of the DELEG STS Rule, tested on longer traces
 -- (double the default length)
 tests ::
   forall era.
   ( EraGen era
   , EraStake era
+  , ShelleyEraAccounts era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
@@ -81,7 +76,7 @@ tests =
         [ keyRegistration delegSst
         , keyDeRegistration delegSst
         , keyDelegation delegSst
-        , rewardsSumInvariant delegSst
+        , balancesSumInvariant delegSst
         , checkInstantaneousRewards denv delegSst
         ]
     chainProp :: SourceSignalTarget (CHAIN era) -> Property
@@ -93,82 +88,90 @@ tests =
        in conjoin (map (delegProp delegEnv) delegSsts)
 
 -- | Check stake key registration
-keyRegistration :: ShelleyEraTxCert era => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyRegistration ::
+  (EraCertState era, ShelleyEraTxCert era) =>
+  SourceSignalTarget (ShelleyDELEG era) ->
+  Property
 keyRegistration
   SourceSignalTarget
-    { signal = RegTxCert hk
+    { signal = RegTxCert cred
     , target = targetSt
     } =
     conjoin
       [ counterexample
-          "a newly registered key should have a reward account"
-          (UM.member hk (rewards targetSt))
+          "a newly registered key should have a staking address"
+          (isAccountRegistered cred (targetSt ^. certDStateL . accountsL))
       , counterexample
-          "a newly registered key should have a reward account with 0 balance"
-          ((UM.rdReward <$> UM.lookup hk (rewards targetSt)) == Just mempty)
+          "a newly registered key should have a staking address with 0 balance"
+          ( ((^. balanceAccountStateL) <$> lookupAccountState cred (targetSt ^. certDStateL . accountsL))
+              === Just mempty
+          )
       ]
 keyRegistration _ = property ()
 
 -- | Check stake key de-registration
-keyDeRegistration :: ShelleyEraTxCert era => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDeRegistration ::
+  (EraCertState era, ShelleyEraTxCert era) =>
+  SourceSignalTarget (ShelleyDELEG era) ->
+  Property
 keyDeRegistration
   SourceSignalTarget
-    { signal = UnRegTxCert hk
+    { signal = UnRegTxCert cred
     , target = targetSt
     } =
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          (UM.notMember hk (rewards targetSt))
+          (not (isAccountRegistered cred (targetSt ^. certDStateL . accountsL)))
       , counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
-          (UM.notMember hk (delegations targetSt))
+          (isNothing (lookupStakePoolDelegation cred (targetSt ^. certDStateL . accountsL)))
       ]
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
-keyDelegation :: ShelleyEraTxCert era => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDelegation ::
+  (EraCertState era, ShelleyEraTxCert era) =>
+  SourceSignalTarget (ShelleyDELEG era) ->
+  Property
 keyDelegation
   SourceSignalTarget
-    { signal = DelegStakeTxCert from to
+    { signal = DelegStakeTxCert stakeCred poolId
     , target = targetSt
     } =
-    let fromImage = eval (rng (Set.singleton from `UM.domRestrictedMap` delegations targetSt))
-     in conjoin
-          [ counterexample
-              "a delegated key should have a reward account"
-              (UM.member from (rewards targetSt))
-          , counterexample
-              "a registered stake credential should be delegated"
-              (eval (to ∈ fromImage) :: Bool)
-          , counterexample
-              "a registered stake credential should be uniquely delegated"
-              (Set.size fromImage == 1)
-          ]
+    conjoin
+      [ counterexample
+          "a delegated key should have a staking address"
+          (isAccountRegistered stakeCred (targetSt ^. certDStateL . accountsL))
+      , counterexample
+          "a registered stake credential should be delegated"
+          (lookupStakePoolDelegation stakeCred (targetSt ^. certDStateL . accountsL) === Just poolId)
+      ]
 keyDelegation _ = property ()
 
--- | Check that the sum of rewards does not change and that each element
+-- | Check that the sum of balances does not change and that each element
 -- that is either removed or added has a zero balance.
-rewardsSumInvariant :: SourceSignalTarget (ShelleyDELEG era) -> Property
-rewardsSumInvariant
+balancesSumInvariant :: EraCertState era => SourceSignalTarget (ShelleyDELEG era) -> Property
+balancesSumInvariant
   SourceSignalTarget {source, target} =
-    let sourceRewards = UM.compactRewardMap (dsUnified source)
-        targetRewards = UM.compactRewardMap (dsUnified target)
-        rewardsSum = F.foldl' (<>) mempty
+    let accountsBalances ds = Map.map (^. balanceAccountStateL) (ds ^. accountsL . accountsMapL)
+        sourceBalances = accountsBalances (source ^. certDStateL)
+        targetBalances = accountsBalances (target ^. certDStateL)
+        balancesSum = F.foldl' (<>) mempty
      in conjoin
           [ counterexample
-              "sum of rewards should not change"
-              (rewardsSum sourceRewards == rewardsSum targetRewards)
+              "sum of balances should not change"
+              (balancesSum sourceBalances === balancesSum targetBalances)
           , counterexample
               "dropped elements have a zero reward balance"
-              (null (Map.filter (/= UM.CompactCoin 0) $ sourceRewards `Map.difference` targetRewards))
+              (null (Map.filter (/= mempty) $ sourceBalances `Map.difference` targetBalances))
           , counterexample
               "added elements have a zero reward balance"
-              (null (Map.filter (/= UM.CompactCoin 0) $ targetRewards `Map.difference` sourceRewards))
+              (null (Map.filter (/= mempty) $ targetBalances `Map.difference` sourceBalances))
           ]
 
 checkInstantaneousRewards ::
-  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, EraCertState era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
@@ -180,36 +183,36 @@ checkInstantaneousRewards
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards (target ^. certDStateL)))
           , counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL $ ppDE denv
+              ( if hardforkAlonzoAllowMIRTransfer . view ppProtocolVersionL $ ppDE denv
                   then -- In the Alonzo era, repeated fields are added
-                    fold (iRReserves $ dsIRewards source)
+                    fold (iRReserves $ dsIRewards (source ^. certDStateL))
                       `addDeltaCoin` fold irwd
-                      == fold (iRReserves $ dsIRewards target)
+                      == fold (iRReserves $ dsIRewards (target ^. certDStateL))
                   else -- Prior to the Alonzo era, repeated fields overridden
-                    fold (iRReserves (dsIRewards source) Map.\\ irwd)
+                    fold (iRReserves (dsIRewards (source ^. certDStateL)) Map.\\ irwd)
                       `addDeltaCoin` fold irwd
-                      == fold (iRReserves $ dsIRewards target)
+                      == fold (iRReserves $ dsIRewards (target ^. certDStateL))
               )
           ]
       MirTxCert (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target))
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards (target ^. certDStateL)))
           , counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
-              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
+              ( if hardforkAlonzoAllowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
-                    fold (iRTreasury $ dsIRewards source)
+                    fold (iRTreasury $ dsIRewards (source ^. certDStateL))
                       `addDeltaCoin` fold irwd
-                      == fold (iRTreasury $ dsIRewards target)
+                      == fold (iRTreasury $ dsIRewards (target ^. certDStateL))
                   else -- Prior to the Alonzo era, repeated fields overridden
-                    fold (iRTreasury (dsIRewards source) Map.\\ irwd)
+                    fold (iRTreasury (dsIRewards (source ^. certDStateL)) Map.\\ irwd)
                       `addDeltaCoin` fold irwd
-                      == fold (iRTreasury $ dsIRewards target)
+                      == fold (iRTreasury $ dsIRewards (target ^. certDStateL))
               )
           ]
       _ -> property ()

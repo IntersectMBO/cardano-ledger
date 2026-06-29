@@ -1,10 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -49,7 +48,6 @@ module Cardano.Ledger.Conway.Governance.Internal (
   rsDelayedL,
   epochStateStakeDistrL,
   epochStateRegDrepL,
-  epochStateUMapL,
   ratifySignalL,
   reStakePoolDistrL,
   reDRepDistrL,
@@ -63,8 +61,10 @@ module Cardano.Ledger.Conway.Governance.Internal (
 
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
+  KeyValuePairs (..),
   ProtVer (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   UnitInterval,
   isSJust,
  )
@@ -88,8 +88,9 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (CompactForm)
+import Cardano.Ledger.Conway.Era (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
@@ -109,17 +110,9 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.PoolParams (PoolParams)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import Cardano.Ledger.Shelley.LedgerState (
-  epochStateRegDrepL,
-  epochStateStakeDistrL,
-  epochStateUMapL,
- )
-import Cardano.Ledger.UMap
+import Cardano.Ledger.Shelley.LedgerState (epochStateStakeDistrL)
 import Control.DeepSeq (NFData (rnf), deepseq)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
@@ -143,8 +136,8 @@ data EnactState era = EnactState
   , ensCurPParams :: !(PParams era)
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
-  , ensWithdrawals :: !(Map (Credential 'Staking) Coin)
-  , ensPrevGovActionIds :: !(GovRelation StrictMaybe era)
+  , ensWithdrawals :: !(Map (Credential Staking) Coin)
+  , ensPrevGovActionIds :: !(GovRelation StrictMaybe)
   -- ^ Last enacted GovAction Ids
   }
   deriving (Generic)
@@ -167,41 +160,42 @@ ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
 ensTreasuryL :: Lens' (EnactState era) Coin
 ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
 
-ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking) Coin)
+ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential Staking) Coin)
 ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
-ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe era)
+ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
 
 ensPrevPParamUpdateL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose))
 ensPrevPParamUpdateL = ensPrevGovActionIdsL . grPParamUpdateL
 
 ensPrevHardForkL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose))
 ensPrevHardForkL = ensPrevGovActionIdsL . grHardForkL
 
 ensPrevCommitteeL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose))
 ensPrevCommitteeL = ensPrevGovActionIdsL . grCommitteeL
 
 ensPrevConstitutionL ::
-  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose))
 ensPrevConstitutionL = ensPrevGovActionIdsL . grConstitutionL
 
-instance EraPParams era => ToJSON (EnactState era) where
-  toJSON = object . toEnactStatePairs
-  toEncoding = pairs . mconcat . toEnactStatePairs
+deriving via
+  KeyValuePairs (EnactState era)
+  instance
+    EraPParams era => ToJSON (EnactState era)
 
-toEnactStatePairs :: (KeyValue e a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
-  let EnactState {..} = cg
-   in [ "committee" .= ensCommittee
-      , "constitution" .= ensConstitution
-      , "curPParams" .= ensCurPParams
-      , "prevPParams" .= ensPrevPParams
-      , "prevGovActionIds" .= ensPrevGovActionIds
-      ]
+instance EraPParams era => ToKeyValuePairs (EnactState era) where
+  toKeyValuePairs cg@(EnactState _ _ _ _ _ _ _) =
+    let EnactState {..} = cg
+     in [ "committee" .= ensCommittee
+        , "constitution" .= ensConstitution
+        , "curPParams" .= ensCurPParams
+        , "prevPParams" .= ensPrevPParams
+        , "prevGovActionIds" .= ensPrevGovActionIds
+        ]
 
 deriving instance (Era era, Eq (PParams era)) => Eq (EnactState era)
 
@@ -222,7 +216,7 @@ instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR = decNoShareCBOR
 
 instance EraPParams era => DecShareCBOR (EnactState era) where
-  type Share (EnactState era) = Interns (Credential 'Staking)
+  type Share (EnactState era) = Interns (Credential Staking)
   decShareCBOR is =
     decode $
       RecD EnactState
@@ -308,18 +302,19 @@ instance EraPParams era => NFData (RatifyState era)
 
 instance EraPParams era => NoThunks (RatifyState era)
 
-instance EraPParams era => ToJSON (RatifyState era) where
-  toJSON = object . toRatifyStatePairs
-  toEncoding = pairs . mconcat . toRatifyStatePairs
+deriving via
+  KeyValuePairs (RatifyState era)
+  instance
+    EraPParams era => ToJSON (RatifyState era)
 
-toRatifyStatePairs :: (KeyValue e a, EraPParams era) => RatifyState era -> [a]
-toRatifyStatePairs cg@(RatifyState _ _ _ _) =
-  let RatifyState {..} = cg
-   in [ "nextEnactState" .= rsEnactState
-      , "enactedGovActions" .= rsEnacted
-      , "expiredGovActions" .= rsExpired
-      , "ratificationDelayed" .= rsDelayed
-      ]
+instance EraPParams era => ToKeyValuePairs (RatifyState era) where
+  toKeyValuePairs cg@(RatifyState _ _ _ _) =
+    let RatifyState {..} = cg
+     in [ "nextEnactState" .= rsEnactState
+        , "enactedGovActions" .= rsEnacted
+        , "expiredGovActions" .= rsExpired
+        , "ratificationDelayed" .= rsDelayed
+        ]
 
 pparamsUpdateThreshold ::
   forall era.
@@ -477,7 +472,7 @@ votingCommitteeThresholdInternal currentEpoch pp committee (CommitteeState hotKe
         -- if the committee size is smaller than the minimum given in PParams,
         -- we treat it as if we had no committee
         SJust t
-          | HF.bootstrapPhase (pp ^. ppProtocolVersionL)
+          | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)
               || activeCommitteeSize >= minSize ->
               VotingThreshold t
         _ -> NoVotingThreshold
@@ -529,7 +524,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
         , dvtHardForkInitiation
         , dvtTreasuryWithdrawal
         } -- We reset all (except InfoAction) DRep thresholds to 0 during bootstrap phase
-          | HF.bootstrapPhase (pp ^. ppProtocolVersionL) = def
+          | hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL) = def
           | otherwise = pp ^. ppDRepVotingThresholdsL
    in case action of
         NoConfidence {} -> VotingThreshold dvtMotionNoConfidence
@@ -568,15 +563,16 @@ data RatifyEnv era = RatifyEnv
   { reInstantStake :: InstantStake era
   , reStakePoolDistr :: PoolDistr
   , reDRepDistr :: Map DRep (CompactForm Coin)
-  , reDRepState :: Map (Credential 'DRepRole) DRepState
+  , reDRepState :: Map (Credential DRepRole) DRepState
   , reCurrentEpoch :: EpochNo
   , reCommitteeState :: CommitteeState era
-  , reDelegatees :: Map (Credential 'Staking) DRep
-  , rePoolParams :: Map (KeyHash 'StakePool) PoolParams
+  , reAccounts :: Accounts era
+  , reStakePools :: Map (KeyHash StakePool) StakePoolState
   }
   deriving (Generic)
 
 instance CanGetInstantStake RatifyEnv
+
 instance CanSetInstantStake RatifyEnv where
   instantStakeL = lens reInstantStake (\x y -> x {reInstantStake = y})
 
@@ -587,7 +583,7 @@ reDRepDistrL :: Lens' (RatifyEnv era) (Map DRep (CompactForm Coin))
 reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})
 
 reDRepStateL ::
-  Lens' (RatifyEnv era) (Map (Credential 'DRepRole) DRepState)
+  Lens' (RatifyEnv era) (Map (Credential DRepRole) DRepState)
 reDRepStateL = lens reDRepState (\x y -> x {reDRepState = y})
 
 reCurrentEpochL :: Lens' (RatifyEnv era) EpochNo
@@ -596,22 +592,26 @@ reCurrentEpochL = lens reCurrentEpoch (\x y -> x {reCurrentEpoch = y})
 reCommitteeStateL :: Lens' (RatifyEnv era) (CommitteeState era)
 reCommitteeStateL = lens reCommitteeState (\x y -> x {reCommitteeState = y})
 
-deriving instance Show (InstantStake era) => Show (RatifyEnv era)
-deriving instance Eq (InstantStake era) => Eq (RatifyEnv era)
+deriving instance (Show (InstantStake era), Show (Accounts era)) => Show (RatifyEnv era)
 
-instance Default (InstantStake era) => Default (RatifyEnv era) where
+deriving instance (Eq (InstantStake era), Eq (Accounts era)) => Eq (RatifyEnv era)
+
+instance (Default (InstantStake era), Default (Accounts era)) => Default (RatifyEnv era) where
   def =
     RatifyEnv
       def
-      (PoolDistr Map.empty mempty)
+      def
       Map.empty
       Map.empty
       (EpochNo 0)
       def
-      Map.empty
+      def
       Map.empty
 
-instance (Typeable era, NoThunks (InstantStake era)) => NoThunks (RatifyEnv era) where
+instance
+  (Typeable era, NoThunks (InstantStake era), NoThunks (Accounts era)) =>
+  NoThunks (RatifyEnv era)
+  where
   showTypeOf _ = "RatifyEnv"
   wNoThunks ctxt (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     allNoThunks
@@ -625,7 +625,7 @@ instance (Typeable era, NoThunks (InstantStake era)) => NoThunks (RatifyEnv era)
       , noThunks ctxt poolps
       ]
 
-instance (Era era, NFData (InstantStake era)) => NFData (RatifyEnv era) where
+instance (Era era, NFData (InstantStake era), NFData (Accounts era)) => NFData (RatifyEnv era) where
   rnf (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     stake `deepseq`
       pool `deepseq`
@@ -636,7 +636,10 @@ instance (Era era, NFData (InstantStake era)) => NFData (RatifyEnv era) where
                 delegatees `deepseq`
                   rnf poolps
 
-instance (Era era, EncCBOR (InstantStake era)) => EncCBOR (RatifyEnv era) where
+instance
+  (Era era, EncCBOR (InstantStake era), EncCBOR (Accounts era)) =>
+  EncCBOR (RatifyEnv era)
+  where
   encCBOR env@(RatifyEnv _ _ _ _ _ _ _ _) =
     let RatifyEnv {..} = env
      in encode $
@@ -647,10 +650,13 @@ instance (Era era, EncCBOR (InstantStake era)) => EncCBOR (RatifyEnv era) where
             !> To reDRepState
             !> To reCurrentEpoch
             !> To reCommitteeState
-            !> To reDelegatees
-            !> To rePoolParams
+            !> To reAccounts
+            !> To reStakePools
 
-instance (Era era, DecCBOR (InstantStake era)) => DecCBOR (RatifyEnv era) where
+instance
+  (Era era, DecCBOR (InstantStake era), DecCBOR (Accounts era)) =>
+  DecCBOR (RatifyEnv era)
+  where
   decCBOR =
     decode $
       RecD RatifyEnv
@@ -685,10 +691,10 @@ instance EraPParams era => DecCBOR (RatifyState era) where
 instance EraPParams era => DecShareCBOR (RatifyState era) where
   type
     Share (RatifyState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decShareCBOR is@(cs, _, _, _) =
     decode $

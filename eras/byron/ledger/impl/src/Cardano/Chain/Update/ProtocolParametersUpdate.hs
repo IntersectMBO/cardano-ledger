@@ -9,8 +9,7 @@ module Cardano.Chain.Update.ProtocolParametersUpdate (
   ProtocolParametersUpdate (..),
   isEmpty,
   apply,
-)
-where
+) where
 
 import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..))

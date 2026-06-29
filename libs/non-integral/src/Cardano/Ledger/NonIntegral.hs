@@ -7,8 +7,7 @@ module Cardano.Ledger.NonIntegral (
   scaleExp,
   CompareResult (..),
   taylorExpCmp,
-)
-where
+) where
 
 data CompareResult a
   = BELOW a Int

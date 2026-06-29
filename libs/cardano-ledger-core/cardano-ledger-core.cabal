@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-core
-version: 1.17.0.0
+version: 1.20.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -24,23 +24,45 @@ flag asserts
   description: Enable assertions
   default: False
 
+common warnings
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
+
+common rtsopts
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
 library
+  import: warnings
   exposed-modules:
     Cardano.Ledger.Address
-    Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BHeaderView
     Cardano.Ledger.BaseTypes
     Cardano.Ledger.BaseTypes.NonZero
     Cardano.Ledger.Block
-    Cardano.Ledger.CertState
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
-    Cardano.Ledger.Crypto
-    Cardano.Ledger.Crypto.Internal
     Cardano.Ledger.DRep
-    Cardano.Ledger.EpochBoundary
     Cardano.Ledger.Genesis
     Cardano.Ledger.HKD
     Cardano.Ledger.Hashes
@@ -59,17 +81,12 @@ library
     Cardano.Ledger.Plutus.Language
     Cardano.Ledger.Plutus.ToPlutusData
     Cardano.Ledger.Plutus.TxInfo
-    Cardano.Ledger.PoolDistr
-    Cardano.Ledger.PoolParams
     Cardano.Ledger.Rewards
     Cardano.Ledger.Rules.ValidationMode
-    Cardano.Ledger.SafeHash
     Cardano.Ledger.Slot
     Cardano.Ledger.State
     Cardano.Ledger.Tools
     Cardano.Ledger.TxIn
-    Cardano.Ledger.UMap
-    Cardano.Ledger.UTxO
     Cardano.Ledger.Val
 
   hs-source-dirs: src
@@ -78,57 +95,52 @@ library
     Cardano.Ledger.Core.PParams
     Cardano.Ledger.Core.Translation
     Cardano.Ledger.Core.TxCert
+    Cardano.Ledger.Core.TxLevel
     Cardano.Ledger.Keys.Internal
-    Cardano.Ledger.State.AccountState
+    Cardano.Ledger.State.Account
+    Cardano.Ledger.State.CertState
+    Cardano.Ledger.State.ChainAccount
     Cardano.Ledger.State.Governance
     Cardano.Ledger.State.PoolDistr
     Cardano.Ledger.State.SnapShots
     Cardano.Ledger.State.Stake
+    Cardano.Ledger.State.StakePool
     Cardano.Ledger.State.UTxO
 
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-
   build-depends:
     FailT,
     aeson >=2,
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     base-deriving-via,
     base16-bytestring,
     base64-bytestring,
     binary,
     bytestring >=0.10 && <0.11.3 || >=0.11.4,
+    cardano-base >=0.1.1.0,
     cardano-crypto,
-    cardano-crypto-class ^>=2.2,
-    cardano-crypto-praos ^>=2.2,
+    cardano-crypto-class >=2.3.2 && <2.5,
     cardano-crypto-wrapper,
-    cardano-data ^>=1.2,
-    cardano-ledger-binary ^>=1.6,
+    cardano-data >=1.3,
+    cardano-ledger-binary ^>=1.8.1,
     cardano-ledger-byron,
+    cardano-ledger-core:internal,
     cardano-slotting,
     cardano-strict-containers,
     containers,
     data-default >=0.8,
     deepseq,
     groups,
-    heapwords,
     iproute,
     measures,
-    mempack,
+    mempack >=0.2,
     microlens,
     mtl,
     non-integral >=1.0,
-    nothunks >=0.1.5 && <0.3,
+    nothunks >=0.1.5 && <0.4,
     partial-order,
     plutus-core,
-    plutus-ledger-api,
+    plutus-ledger-api >=1.56,
     prettyprinter,
     primitive,
     quiet,
@@ -141,26 +153,71 @@ library
     transformers,
     utf8-string,
     validation-selective,
-    vector-map ^>=1.1,
+    vector-map >=1.1,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
+library internal
+  import: warnings
+  build-depends:
+    base,
+    cardano-ledger-binary,
+
+  exposed-modules:
+    Cardano.Ledger.Internal.Era
+
+  other-modules:
+    Cardano.Ledger.Internal.Definition.Era
+
+  visibility: public
+  hs-source-dirs: internal
+  default-language: Haskell2010
+
+library cddl
+  import: warnings
+  exposed-modules:
+    Cardano.Ledger.Core.HuddleSpec
+    Cardano.Ledger.Huddle
+
+  visibility: public
+  hs-source-dirs: cddl
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+  build-depends:
+    base,
+    bytestring,
+    cardano-ledger-binary,
+    cardano-ledger-core,
+    cborg,
+    cuddle >=1.1,
+    heredoc,
+    mempack,
+    random,
+    text,
 
 library testlib
+  import: warnings
   exposed-modules:
     Test.Cardano.Ledger.Common
     Test.Cardano.Ledger.Core.Address
     Test.Cardano.Ledger.Core.Arbitrary
     Test.Cardano.Ledger.Core.Binary
-    Test.Cardano.Ledger.Core.Binary.CDDL
+    Test.Cardano.Ledger.Core.Binary.Annotator
     Test.Cardano.Ledger.Core.Binary.RoundTrip
     Test.Cardano.Ledger.Core.JSON
     Test.Cardano.Ledger.Core.KeyPair
     Test.Cardano.Ledger.Core.Rational
     Test.Cardano.Ledger.Core.Utils
+    Test.Cardano.Ledger.Era
     Test.Cardano.Ledger.Imp.Common
     Test.Cardano.Ledger.Plutus
     Test.Cardano.Ledger.Plutus.Examples
@@ -172,15 +229,6 @@ library testlib
   visibility: public
   hs-source-dirs: testlib
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-
   build-depends:
     FailT,
     ImpSpec,
@@ -191,27 +239,26 @@ library testlib
     base16-bytestring,
     binary,
     bytestring,
-    cardano-crypto-class,
-    cardano-crypto-test,
-    cardano-crypto-wrapper,
+    cardano-base:testlib,
+    cardano-crypto-class:{cardano-crypto-class, testlib},
+    cardano-crypto-praos:testlib,
+    cardano-crypto-wrapper:{cardano-crypto-wrapper, testlib},
+    cardano-data:testlib,
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.5,
-    cardano-ledger-byron,
-    cardano-ledger-byron-test,
+    cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core,
-    cardano-slotting,
+    cardano-slotting:{cardano-slotting, testlib},
+    cardano-strict-containers:testlib,
     containers,
-    cuddle,
-    data-default,
     deepseq,
     generic-random,
     genvalidity,
     hedgehog-quickcheck,
-    heredoc,
     hspec,
+    microlens,
     mtl,
     nothunks,
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
-    prettyprinter,
     primitive,
     quickcheck-transformer,
     random >=1.2,
@@ -220,37 +267,41 @@ library testlib
     time,
     tree-diff,
     unliftio,
+    vector,
     vector-map:{vector-map, testlib},
 
-  if !impl(ghc >=9.2)
-    ghc-options: -Wno-name-shadowing
+library tasty-compat
+  import: warnings
+  visibility: public
+  default-language: Haskell2010
+  hs-source-dirs: tasty-compat
+  exposed-modules:
+    Test.Tasty
+    Test.Tasty.HUnit
+    Test.Tasty.QuickCheck
+
+  build-depends:
+    HUnit,
+    QuickCheck,
+    base,
+    hspec,
 
 executable plutus-debug
+  import: warnings, rtsopts
   main-is: PlutusDebug.hs
   hs-source-dirs: app
   other-modules:
     CLI
 
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
   build-depends:
-    base >=4.14 && <5,
+    base >=4.18 && <5,
     cardano-ledger-binary,
     cardano-ledger-core,
     optparse-applicative,
 
 test-suite tests
+  import: warnings, rtsopts
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: test
@@ -260,22 +311,10 @@ test-suite tests
     Test.Cardano.Ledger.BinarySpec
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
+    Test.Cardano.Ledger.State.StakePoolSpec
     Test.Cardano.Ledger.ToolsSpec
-    Test.Cardano.Ledger.UMapSpec
 
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wpartial-fields
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -with-rtsopts=-N
-
   build-depends:
     FailT,
     aeson,
@@ -291,50 +330,17 @@ test-suite tests
     genvalidity,
     genvalidity-scientific,
     plutus-ledger-api,
+    quickcheck-classes,
     quickcheck-instances,
     scientific,
     testlib,
 
-benchmark umap
-  type: exitcode-stdio-1.0
-  main-is: UMap.hs
-  hs-source-dirs: bench
-  default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -O2
-
-  build-depends:
-    QuickCheck,
-    base,
-    cardano-ledger-core,
-    containers,
-    criterion,
-    testlib,
-
 benchmark addr
+  import: warnings, rtsopts
   type: exitcode-stdio-1.0
   main-is: Addr.hs
   hs-source-dirs: bench
   default-language: Haskell2010
-  ghc-options:
-    -Wall
-    -Wcompat
-    -Wincomplete-record-updates
-    -Wincomplete-uni-patterns
-    -Wredundant-constraints
-    -Wunused-packages
-    -threaded
-    -rtsopts
-    -O2
-
   build-depends:
     QuickCheck,
     base,

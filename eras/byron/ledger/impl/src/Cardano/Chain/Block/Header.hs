@@ -67,8 +67,7 @@ module Cardano.Chain.Block.Header (
   -- * ToSign
   ToSign (..),
   recoverSignedBytes,
-)
-where
+) where
 
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary (
@@ -302,10 +301,10 @@ encCBORHeader es h =
     <> encCBOR (headerPrevHash h)
     <> encCBOR (headerProof h)
     <> ( encodeListLen 4
-          <> encCBOR (fromSlotNumber es $ headerSlot h)
-          <> encCBOR (headerGenesisKey h)
-          <> encCBOR (headerDifficulty h)
-          <> encCBOR (headerSignature h)
+           <> encCBOR (fromSlotNumber es $ headerSlot h)
+           <> encCBOR (headerGenesisKey h)
+           <> encCBOR (headerDifficulty h)
+           <> encCBOR (headerSignature h)
        )
     <> encCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
 
@@ -416,7 +415,7 @@ decCBORHeaderToHash epochSlots = do
       void decCBORABoundaryHeader
       pure Nothing
     1 -> Just <$!> decCBORHeader epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+    t -> cborError $ DecoderErrorUnknownTag "Header" t
 
 --------------------------------------------------------------------------------
 -- Header Formatting
@@ -549,22 +548,22 @@ encCBORABoundaryHeader pm hdr =
   encodeListLen 5
     <> encCBOR pm
     <> ( case boundaryPrevHash hdr of
-          Left gh -> encCBOR (genesisHeaderHash gh)
-          Right hh -> encCBOR hh
+           Left gh -> encCBOR (genesisHeaderHash gh)
+           Right hh -> encCBOR hh
        )
     -- Body proof
     -- The body is always an empty slot leader schedule, so we hash that.
     <> encCBOR (serializeCborHash ([] :: [()]))
     -- Consensus data
     <> ( encodeListLen 2
-          -- Epoch
-          <> encCBOR (boundaryEpoch hdr)
-          -- Chain difficulty
-          <> encCBOR (boundaryDifficulty hdr)
+           -- Epoch
+           <> encCBOR (boundaryEpoch hdr)
+           -- Chain difficulty
+           <> encCBOR (boundaryDifficulty hdr)
        )
     -- Extra data
     <> ( encodeListLen 1
-          <> encCBOR genesisTag
+           <> encCBOR genesisTag
        )
   where
     -- Genesis tag to indicate the presence of a genesis hash in a non-zero
@@ -667,6 +666,10 @@ instance ToJSON a => ToJSON (ABlockSignature a)
 
 instance ToCBOR BlockSignature where
   toCBOR = toByronCBOR
+  encodedSizeExpr size sig =
+    3
+      + encodedSizeExpr size (delegationCertificate <$> sig)
+      + encodedSizeExpr size (signature <$> sig)
 
 instance FromCBOR BlockSignature where
   fromCBOR = fromByronCBOR
@@ -682,24 +685,19 @@ instance EncCBOR BlockSignature where
       <> encCBOR (2 :: Word8)
       <> (encodeListLen 2 <> encCBOR cert <> encCBOR sig)
 
-  encodedSizeExpr size sig =
-    3
-      + encodedSizeExpr size (delegationCertificate <$> sig)
-      + encodedSizeExpr size (signature <$> sig)
-
 instance DecCBOR BlockSignature where
   decCBOR = void <$> decCBOR @(ABlockSignature ByteSpan)
 
 instance DecCBOR (ABlockSignature ByteSpan) where
   decCBOR = do
     enforceSize "BlockSignature" 2
-    decCBOR >>= \case
+    decCBOR @Word8 >>= \case
       2 ->
         ABlockSignature
           <$ enforceSize "BlockSignature" 2
           <*> decCBOR
           <*> decCBOR
-      t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
+      t -> cborError $ DecoderErrorUnknownTag "BlockSignature" $ fromIntegral @Word8 @Word t
 
 --------------------------------------------------------------------------------
 -- ToSign
@@ -737,6 +735,13 @@ data ToSign = ToSign
 
 instance ToCBOR ToSign where
   toCBOR = toByronCBOR
+  encodedSizeExpr size ts =
+    1
+      + encodedSizeExpr size (tsHeaderHash <$> ts)
+      + encodedSizeExpr size (tsBodyProof <$> ts)
+      + encodedSizeExpr size (tsSlot <$> ts)
+      + encodedSizeExpr size (tsDifficulty <$> ts)
+      + encCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance FromCBOR ToSign where
   fromCBOR = fromByronCBOR
@@ -749,14 +754,6 @@ instance EncCBOR ToSign where
       <> encCBOR (tsSlot ts)
       <> encCBOR (tsDifficulty ts)
       <> encCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
-
-  encodedSizeExpr size ts =
-    1
-      + encodedSizeExpr size (tsHeaderHash <$> ts)
-      + encodedSizeExpr size (tsBodyProof <$> ts)
-      + encodedSizeExpr size (tsSlot <$> ts)
-      + encodedSizeExpr size (tsDifficulty <$> ts)
-      + encCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance DecCBOR ToSign where
   decCBOR = do

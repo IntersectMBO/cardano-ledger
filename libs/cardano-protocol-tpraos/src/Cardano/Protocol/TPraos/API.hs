@@ -38,8 +38,9 @@ module Cardano.Protocol.TPraos.API (
   -- Leader Schedule
   checkLeaderValue,
   getLeaderSchedule,
-)
-where
+  -- HashHeader
+  HashHeader (..),
+) where
 
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
@@ -57,10 +58,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), coerceKeyRole)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -74,7 +75,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (PoolDistr (..), individualPoolStake)
+import Cardano.Ledger.State (EraCertState (..), PoolDistr (..), individualPoolStake)
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody,
@@ -102,6 +103,7 @@ import Control.State.Transition.Extended (
   applySTS,
   reapplySTS,
  )
+import Data.Default (def)
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
@@ -139,7 +141,7 @@ class
     NewEpochState era ->
     LedgerView
   default currentLedgerView ::
-    ProtVerAtMost era 6 =>
+    AtMostEra "Alonzo" era =>
     NewEpochState era ->
     LedgerView
   currentLedgerView = view
@@ -153,7 +155,7 @@ class
     m LedgerView
   default futureLedgerView ::
     ( MonadError (FutureLedgerViewError era) m
-    , ProtVerAtMost era 6
+    , AtMostEra "Alonzo" era
     ) =>
     Globals ->
     NewEpochState era ->
@@ -217,6 +219,30 @@ instance GetLedgerView ConwayEra where
           . applySTS @(EraRule "TICKF" ConwayEra)
           $ TRC ((), ss, slot)
 
+-- Note that although we do not use TPraos in the Dijkstra era, we include this
+-- because it makes it simpler to get the ledger view for Praos.
+instance GetLedgerView DijkstraEra where
+  currentLedgerView
+    NewEpochState {nesPd = pd, nesEs = es} =
+      LedgerView
+        { lvD = es ^. curPParamsEpochStateL . ppDG
+        , lvExtraEntropy = error "Extra entropy is not set in the Dijkstra era"
+        , lvPoolDistr = pd
+        , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
+        , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
+        }
+
+  futureLedgerView globals ss slot =
+    liftEither
+      . right currentLedgerView
+      . left FutureLedgerViewError
+      $ res
+    where
+      res =
+        flip runReader globals
+          . applySTS @(EraRule "TICKF" DijkstraEra)
+          $ TRC ((), ss, slot)
+
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView = LedgerView
   { lvD :: UnitInterval
@@ -254,7 +280,7 @@ mkPrtclEnv
       lvGenDelegs
 
 view ::
-  (ProtVerAtMost era 6, EraGov era, EraCertState era) =>
+  (AtMostEra "Alonzo" era, EraGov era, EraCertState era) =>
   NewEpochState era ->
   LedgerView
 view
@@ -323,7 +349,7 @@ futureView ::
   , Environment (EraRule "TICKF" era) ~ ()
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
-  , ProtVerAtMost era 6
+  , AtMostEra "Alonzo" era
   , EraGov era
   , EraCertState era
   ) =>
@@ -360,7 +386,7 @@ data ChainDepState = ChainDepState
 -- genesis delegates.
 initialChainDepState ::
   Nonce ->
-  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash GenesisRole) GenDelegPair ->
   ChainDepState
 initialChainDepState initNonce genDelegs =
   ChainDepState
@@ -539,7 +565,7 @@ getLeaderSchedule ::
   Globals ->
   NewEpochState era ->
   ChainDepState ->
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   VRF.SignKeyVRF v ->
   PParams era ->
   Set SlotNo
@@ -568,7 +594,7 @@ mkInitialShelleyLedgerView transCtxt =
    in LedgerView
         { lvD = fbtcProtocolParams transCtxt ^. ppDG
         , lvExtraEntropy = ee
-        , lvPoolDistr = PoolDistr Map.empty mempty
+        , lvPoolDistr = def
         , lvGenDelegs = GenDelegs $ fbtcGenDelegs transCtxt
         , lvChainChecks = pparamsToChainChecksPParams . fbtcProtocolParams $ transCtxt
         }

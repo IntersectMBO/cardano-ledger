@@ -2,8 +2,7 @@
 
 module Test.Cardano.Crypto.Random (
   tests,
-)
-where
+) where
 
 import Cardano.Crypto.Random (deterministic, randomNumber)
 import Cardano.Prelude

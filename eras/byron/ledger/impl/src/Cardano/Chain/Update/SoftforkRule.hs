@@ -9,8 +9,7 @@
 
 module Cardano.Chain.Update.SoftforkRule (
   SoftforkRule (..),
-)
-where
+) where
 
 import Cardano.Chain.Common (LovelacePortion)
 import Cardano.Ledger.Binary (

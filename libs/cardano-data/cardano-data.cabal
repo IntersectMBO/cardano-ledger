@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-data
-version: 1.2.4.0
+version: 1.3.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -19,11 +19,13 @@ library
   exposed-modules:
     Data.CanonicalMaps
     Data.ListMap
+    Data.Map.NonEmpty
     Data.MapExtras
     Data.MonoTuple
     Data.OMap.Strict
     Data.OSet.Strict
     Data.Pulse
+    Data.Set.NonEmpty
     Data.Universe
 
   hs-source-dirs: src
@@ -33,18 +35,26 @@ library
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+
+  -- In ghc-9.14 the `pattern` namespace specifier is deprecated.
+  if impl(ghc >=9.14)
+    ghc-options:
+      -Wno-pattern-namespace-specifier
   build-depends:
     aeson >=2.2,
-    base >=4.14 && <5,
-    cardano-ledger-binary >=1.4,
+    base >=4.18 && <5,
+    cardano-ledger-binary >=1.8,
     cardano-strict-containers >=0.1.2.1,
     containers,
     data-default,
     deepseq,
-    microlens,
     mtl,
     nothunks,
     vector,
@@ -63,9 +73,13 @@ library testlib
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
-    -Wredundant-constraints
     -Wunused-packages
 
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
   build-depends:
     QuickCheck,
     base,
@@ -73,7 +87,6 @@ library testlib
     cardano-ledger-binary:testlib,
     containers,
     hspec,
-    microlens,
 
 test-suite cardano-data-tests
   type: exitcode-stdio-1.0
@@ -100,9 +113,8 @@ test-suite cardano-data-tests
     base,
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
-    cardano-strict-containers,
+    cardano-strict-containers:{cardano-strict-containers, testlib},
     containers,
     hspec,
-    microlens,
     quickcheck-classes,
     testlib,

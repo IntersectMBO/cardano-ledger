@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -11,18 +12,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Translation (
-  Tx (..),
-  addrPtrNormalize,
-  translateDatum,
-) where
+module Cardano.Ledger.Conway.Translation () where
 
-import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Conway.CertState ()
-import Cardano.Ledger.Conway.Core hiding (Tx)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
@@ -38,23 +33,18 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
-import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Shelley.API (
-  DState (..),
   EpochState (..),
   NewEpochState (..),
-  PState (..),
   StrictMaybe (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
   lsCertStateL,
+  lsUTxOStateL,
  )
-import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -96,11 +86,9 @@ instance TranslateEra ConwayEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-newtype Tx era = Tx {unTx :: Core.Tx era}
-
-instance TranslateEra ConwayEra Tx where
-  type TranslationError ConwayEra Tx = DecoderError
-  translateEra _ctxt (Tx tx) = do
+instance TranslateEra ConwayEra (Tx TopTx) where
+  type TranslationError ConwayEra (Tx TopTx) = DecoderError
+  translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -108,12 +96,11 @@ instance TranslateEra ConwayEra Tx where
     txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
     auxData <- mapM (translateEraThroughCBOR "AuxData") (tx ^. auxDataTxL)
     let isValidTx = tx ^. isValidTxL
-        newTx =
-          mkBasicTx txBody
-            & witsTxL .~ txWits
-            & isValidTxL .~ isValidTx
-            & auxDataTxL .~ auxData
-    pure $ Tx newTx
+    pure $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & isValidTxL .~ isValidTx
+        & auxDataTxL .~ auxData
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -132,20 +119,24 @@ instance TranslateEra ConwayEra EpochState where
   translateEra ctxt es =
     pure $
       EpochState
-        { esAccountState = esAccountState es
+        { esChainAccountState = esChainAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
 instance TranslateEra ConwayEra DState where
-  translateEra _ DState {dsUnified = umap, ..} = pure DState {dsUnified = umap', ..}
+  translateEra _ DState {dsAccounts = accounts, ..} =
+    pure DState {dsAccounts = translateAccounts accounts, ..}
     where
-      umap' =
-        umap
-          { UM.umElems =
-              Map.map (\(UM.UMElem rd _ poolId drep) -> UM.UMElem rd mempty poolId drep) (UM.umElems umap)
-          , UM.umPtrs = mempty
+      translateAccounts ShelleyAccounts {saStates} =
+        ConwayAccounts {caStates = Map.map translateAccountState saStates}
+      translateAccountState ShelleyAccountState {sasBalance, sasDeposit, sasStakePoolDelegation} =
+        ConwayAccountState
+          { casBalance = sasBalance
+          , casDeposit = sasDeposit
+          , casStakePoolDelegation = strictMaybeToMaybe sasStakePoolDelegation
+          , casDRepDelegation = Nothing
           }
 
 instance TranslateEra ConwayEra PState where
@@ -155,14 +146,18 @@ instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
-        { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
-        , API.lsCertState =
-            ShelleyCertState
-              { shelleyCertDState = translateEra' conwayGenesis (ls ^. lsCertStateL . certDStateL)
-              , shelleyCertPState = translateEra' conwayGenesis (ls ^. lsCertStateL . certPStateL)
-              , shelleyCertVState = def
-              }
+        { API.lsUTxOState = translateEra' conwayGenesis $ ls ^. lsUTxOStateL
+        , API.lsCertState = translateCertState conwayGenesis $ ls ^. lsCertStateL
         }
+
+translateCertState ::
+  TranslationContext ConwayEra ->
+  API.CertState BabbageEra ->
+  API.CertState ConwayEra
+translateCertState ctx scert =
+  def
+    & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
+    & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
 
 translateGovState ::
   TranslationContext ConwayEra ->

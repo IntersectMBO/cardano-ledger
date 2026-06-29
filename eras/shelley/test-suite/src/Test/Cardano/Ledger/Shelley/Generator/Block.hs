@@ -11,8 +11,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Block (
   genBlock,
   genBlockWithTxGen,
   tickChainState,
-)
-where
+) where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (bhviewBSize, bhviewHSize)
@@ -37,7 +36,6 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
-import Control.SetAlgebra (dom, eval)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
@@ -79,10 +77,10 @@ import qualified Test.QuickCheck as QC (choose)
 -- | Type alias for a transaction generator
 type TxGen era =
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   LedgerState era ->
   SlotNo ->
-  Gen (Seq (Tx era))
+  Gen (Seq (Tx TopTx era))
 
 -- | Generate a valid block.
 genBlock ::
@@ -152,7 +150,7 @@ genBlockWithTxGen
           currentIssueNo
             ( OCertEnv
                 (Set.fromList $ aikColdKeyHash <$> ksStakePools)
-                (eval (dom ksIndexedGenDelegates))
+                (Map.keysSet ksIndexedGenDelegates)
             )
             cs
             (coerceKeyRole . hashKey . vKey $ aikCold issuerKeys)
@@ -175,7 +173,7 @@ genBlockWithTxGen
         -- e.g. the KES period in which this key starts to be valid.
         <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
         <*> pure oCert
-    let hView = makeHeaderView (bheader theBlock)
+    let hView = makeHeaderView (blockHeader theBlock) Nothing
     unless (bhviewBSize hView <= pp ^. ppMaxBBSizeL) $
       tracedDiscard $
         "genBlockWithTxGen: bhviewBSize too large"
@@ -207,7 +205,7 @@ selectNextSlotWithLeader ::
   ChainState era ->
   -- Starting slot
   SlotNo ->
-  Maybe (SlotNo, ChainState era, AllIssuerKeys c 'BlockIssuer)
+  Maybe (SlotNo, ChainState era, AllIssuerKeys c BlockIssuer)
 selectNextSlotWithLeader
   (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _ _)
   origChainState
@@ -222,7 +220,7 @@ selectNextSlotWithLeader
       selectNextSlotWithLeaderThisEpoch ::
         -- Slot number whence we begin our search
         SlotNo ->
-        Maybe (SlotNo, ChainState era, AllIssuerKeys c 'BlockIssuer)
+        Maybe (SlotNo, ChainState era, AllIssuerKeys c BlockIssuer)
       selectNextSlotWithLeaderThisEpoch fromSlot =
         findJust selectLeaderForSlot [fromSlot .. toSlot]
         where
@@ -237,7 +235,7 @@ selectNextSlotWithLeader
       -- Try to select a leader for the given slot
       selectLeaderForSlot ::
         SlotNo ->
-        Maybe (ChainState era, AllIssuerKeys c 'BlockIssuer)
+        Maybe (ChainState era, AllIssuerKeys c BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
           <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of

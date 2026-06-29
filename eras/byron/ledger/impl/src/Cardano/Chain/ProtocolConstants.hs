@@ -6,8 +6,7 @@ module Cardano.Chain.ProtocolConstants (
   kUpdateStabilityParam,
   kChainQualityThreshold,
   kEpochSlots,
-)
-where
+) where
 
 import Cardano.Chain.Common.BlockCount (BlockCount (..))
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))

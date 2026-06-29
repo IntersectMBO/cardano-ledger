@@ -21,6 +21,7 @@ module Cardano.Ledger.BaseTypes.NonZero (
   NonZero,
   unNonZero,
   nonZero,
+  nonZeroM,
   knownNonZero,
   knownNonZeroBounded,
   (%.),
@@ -46,11 +47,9 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio (Ratio, numerator, (%))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
+import Foreign.Storable (Storable)
 import GHC.TypeLits
 import NoThunks.Class (NoThunks)
-#if __GLASGOW_HASKELL__ < 900
-import Numeric.Natural (Natural)
-#endif
 
 class KnownBounds a where
   type MinBound a :: Nat
@@ -75,8 +74,8 @@ instance KnownBounds Word64 where
 type WithinBounds n a = (MinBound a <= n, n <= MaxBound a)
 
 newtype NonZero a = NonZero {unNonZero :: a}
-  deriving (Eq, Ord, Show, NoThunks, NFData)
-  deriving newtype (EncCBOR, ToCBOR, ToJSON)
+  deriving (Show)
+  deriving newtype (Eq, Ord, EncCBOR, ToCBOR, ToJSON, NoThunks, NFData, Storable)
 
 class HasZero a where
   isZero :: a -> Bool
@@ -142,10 +141,12 @@ unsafeNonZero :: a -> NonZero a
 unsafeNonZero = NonZero
 
 infixl 7 %.
+
 (%.) :: Integral a => a -> NonZero a -> Ratio a
 x %. y = x % unNonZero y
 
 infixl 7 %?
+
 (%?) :: Integral a => a -> a -> Ratio a
 x %? y
   | y == 0 = 0
@@ -155,6 +156,7 @@ toIntegerNonZero :: Integral a => NonZero a -> NonZero Integer
 toIntegerNonZero (NonZero x) = NonZero $ toInteger x
 
 infixl 7 /.
+
 (/.) :: Fractional a => a -> NonZero a -> a
 x /. y = x / unNonZero y
 

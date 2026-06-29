@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -15,7 +16,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Arbitrary (
-  mkPlutusScript',
   alwaysSucceeds,
   alwaysSucceedsLang,
   alwaysFails,
@@ -32,11 +32,21 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genAlonzoPlutusPurposePointer,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Alonzo (AlonzoEra, ApplyTxError (..), Tx (..))
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.PParams (
+  AlonzoPParams (AlonzoPParams),
+  LangDepView (..),
+  OrdExUnits (OrdExUnits),
+ )
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (ContextError),
+  EraPlutusTxInfo,
+  SupportedLanguage (..),
+  mkSupportedPlutusScript,
+  supportedLanguages,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
 import Cardano.Ledger.Alonzo.Rules (
@@ -50,9 +60,9 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
  )
+import Cardano.Ledger.Alonzo.Transition (TransitionConfig (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
-  IsValid (IsValid),
   ScriptIntegrity (ScriptIntegrity),
   getLanguageView,
  )
@@ -60,7 +70,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
  )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
+import Cardano.Ledger.Alonzo.TxBody (TxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (AlonzoTxWits),
@@ -72,15 +82,12 @@ import Cardano.Ledger.Plutus.Data (hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
-  Plutus (..),
-  PlutusLanguage,
   asSLanguage,
-  plutusLanguage,
-  withSLanguage,
  )
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Set as Set
@@ -94,23 +101,28 @@ import Test.Cardano.Ledger.Core.Arbitrary (
   genValidAndUnknownCostModels,
   genValidCostModel,
   genValidCostModels,
+  genericShrinkMemo,
  )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
 
 instance
   ( Arbitrary (AlonzoScript era)
+  , Arbitrary (NativeScript era)
   , AlonzoEraScript era
   ) =>
   Arbitrary (AlonzoTxAuxData era)
   where
   arbitrary = mkAlonzoTxAuxData @[] <$> arbitrary <*> arbitrary
+  shrink (AlonzoTxAuxData md tl lpb) =
+    [AlonzoTxAuxData md' tl' lpb | (md', tl') <- shrink (md, tl)]
 
 instance
   (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) =>
   Arbitrary (Redeemers era)
   where
   arbitrary = Redeemers <$> arbitrary
+  shrink = genericShrinkMemo
 
 genNonEmptyRedeemers ::
   (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) => Gen (Redeemers era)
@@ -131,6 +143,7 @@ instance
       <*> genScripts
       <*> arbitrary
       <*> arbitrary
+  shrink = genericShrinkMemo
 
 genScripts ::
   forall era.
@@ -142,6 +155,7 @@ genScripts = Map.fromElems (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
 instance Era era => Arbitrary (TxDats era) where
   arbitrary = TxDats . Map.fromElems @[] hashData <$> arbitrary
+  shrink = genericShrinkMemo
 
 genNonEmptyTxDats :: Era era => Gen (TxDats era)
 genNonEmptyTxDats = TxDats . Map.fromElems @[] hashData <$> listOf1 arbitrary
@@ -158,15 +172,7 @@ instance
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
-instance
-  ( EraTxOut era
-  , EraTxCert era
-  , Arbitrary (TxOut era)
-  , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (AlonzoTxBody era)
-  where
+instance Arbitrary (TxBody TopTx AlonzoEra) where
   arbitrary =
     AlonzoTxBody
       <$> arbitrary
@@ -186,11 +192,11 @@ instance
 deriving newtype instance Arbitrary IsValid
 
 instance
-  ( Arbitrary (TxBody era)
-  , Arbitrary (TxWits era)
+  ( Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
+  , Arbitrary (TxBody TopTx era)
   ) =>
-  Arbitrary (AlonzoTx era)
+  Arbitrary (AlonzoTx TopTx era)
   where
   arbitrary =
     AlonzoTx
@@ -202,41 +208,39 @@ instance
 genEraLanguage :: forall era. AlonzoEraScript era => Gen Language
 genEraLanguage = choose (minBound, eraMaxLanguage @era)
 
+instance EraPlutusContext era => Arbitrary (SupportedLanguage era) where
+  arbitrary = elements $ NE.toList (supportedLanguages @era)
+
 instance
-  ( AlonzoEraScript era
+  ( EraPlutusContext era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   ) =>
   Arbitrary (AlonzoScript era)
   where
-  arbitrary = genEraLanguage @era >>= genAlonzoScript
+  arbitrary = arbitrary >>= genAlonzoScript
 
 genAlonzoScript ::
-  ( AlonzoEraScript era
+  ( EraPlutusContext era
   , Script era ~ AlonzoScript era
-  , NativeScript era ~ Timelock era
+  , Arbitrary (NativeScript era)
   ) =>
-  Language ->
+  SupportedLanguage era ->
   Gen (AlonzoScript era)
 genAlonzoScript lang =
   frequency
-    [ (2, genPlutusScript lang)
-    , (8, genNativeScript)
+    [ (2, fromPlutusScript <$> genPlutusScript lang)
+    , (8, fromNativeScript <$> genNativeScript)
     ]
 
 genNativeScript ::
-  ( AlonzoEraScript era
-  , NativeScript era ~ Timelock era
-  ) =>
-  Gen (AlonzoScript era)
-genNativeScript = TimelockScript <$> arbitrary
+  Arbitrary (NativeScript era) =>
+  Gen (NativeScript era)
+genNativeScript = arbitrary
 
 genPlutusScript ::
-  ( AlonzoEraScript era
-  , Script era ~ AlonzoScript era
-  ) =>
-  Language ->
-  Gen (AlonzoScript era)
+  SupportedLanguage era ->
+  Gen (PlutusScript era)
 genPlutusScript lang =
   frequency
     [ (5, alwaysSucceedsLang lang <$> elements [1, 2, 3])
@@ -350,19 +354,7 @@ instance
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
-  -- Switch to this implementation once #4110 is taken care of
-  -- arbitrary = genericArbitraryU
-  arbitrary =
-    oneof
-      [ ShelleyInAlonzoUtxowPredFailure <$> arbitrary
-      , -- MissingRedeemers <$> arbitrary -- see #4110
-        MissingRequiredDatums <$> arbitrary <*> arbitrary
-      , NotAllowedSupplementalDatums <$> arbitrary <*> arbitrary
-      , PPViewHashesDontMatch <$> arbitrary
-      , MissingRequiredSigners <$> arbitrary
-      , UnspendableUTxONoDatumHash <$> arbitrary
-      -- , ExtraRedeemers <$> arbitrary -- see #4110
-      ]
+  arbitrary = genericArbitraryU
 
 deriving instance Arbitrary ix => Arbitrary (AsIx ix it)
 
@@ -432,7 +424,8 @@ instance Arbitrary AlonzoGenesis where
   arbitrary =
     AlonzoGenesis
       <$> arbitrary
-      <*> genValidCostModels [PlutusV1, PlutusV2]
+      <*> genValidCostModel PlutusV1
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -442,35 +435,52 @@ instance Arbitrary AlonzoGenesis where
 
 alwaysSucceeds ::
   forall l era.
-  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  (HasCallStack, EraPlutusTxInfo l era) =>
   Natural ->
   Script era
-alwaysSucceeds n = mkPlutusScript' (alwaysSucceedsPlutus @l n)
+alwaysSucceeds = fromPlutusScript . mkSupportedPlutusScript . alwaysSucceedsPlutus @l
 
 alwaysFails ::
   forall l era.
-  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  (HasCallStack, EraPlutusTxInfo l era) =>
   Natural ->
   Script era
-alwaysFails n = mkPlutusScript' (alwaysFailsPlutus @l n)
+alwaysFails = fromPlutusScript . mkSupportedPlutusScript . alwaysFailsPlutus @l
 
-alwaysSucceedsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural -> Script era
-alwaysSucceedsLang lang n =
-  withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysSucceedsPlutus n)
+alwaysSucceedsLang ::
+  SupportedLanguage era ->
+  Natural ->
+  PlutusScript era
+alwaysSucceedsLang supportedLanguage n =
+  case supportedLanguage of
+    SupportedLanguage slang -> mkSupportedPlutusScript $ asSLanguage slang (alwaysSucceedsPlutus n)
 
-alwaysFailsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural -> Script era
-alwaysFailsLang lang n =
-  withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysFailsPlutus n)
+alwaysFailsLang ::
+  SupportedLanguage era ->
+  Natural ->
+  PlutusScript era
+alwaysFailsLang supportedLanguage n =
+  case supportedLanguage of
+    SupportedLanguage slang -> mkSupportedPlutusScript $ asSLanguage slang (alwaysFailsPlutus n)
 
--- | Partial version of `mkPlutusScript`
-mkPlutusScript' ::
-  forall era l.
-  (HasCallStack, AlonzoEraScript era, PlutusLanguage l) =>
-  Plutus l ->
-  Script era
-mkPlutusScript' plutus =
-  case mkPlutusScript plutus of
-    Nothing ->
-      error $
-        "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
-    Just plutusScript -> fromPlutusScript plutusScript
+instance Arbitrary (TransitionConfig AlonzoEra) where
+  arbitrary = AlonzoTransitionConfig <$> arbitrary <*> arbitrary
+
+deriving newtype instance Arbitrary (Tx TopTx AlonzoEra)
+
+deriving newtype instance Arbitrary (ApplyTxError AlonzoEra)
+
+instance
+  ( EraBlockBody era
+  , AlonzoEraTx era
+  , Arbitrary (Tx TopTx era)
+  , SafeToHash (TxWits era)
+  ) =>
+  Arbitrary (AlonzoBlockBody era)
+  where
+  arbitrary = AlonzoBlockBody <$> arbitrary
+
+instance Arbitrary LangDepView where
+  arbitrary = LangDepView <$> arbitrary <*> arbitrary
+
+deriving instance Arbitrary AlonzoExtraConfig

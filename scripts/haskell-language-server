@@ -1,3 +1,4 @@
 #! /usr/bin/env -S nix develop --accept-flake-config -c bash
+# shellcheck shell=bash
 
-haskell-language-server "$@"
+exec haskell-language-server "$@"

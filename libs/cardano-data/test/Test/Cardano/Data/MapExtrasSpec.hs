@@ -6,6 +6,7 @@ import Control.Monad
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras
+import Data.Word (Word8)
 import Test.Cardano.Data
 import Test.Hspec
 import Test.Hspec.QuickCheck
@@ -39,3 +40,9 @@ mapExtrasSpec =
           ma = intersectDomPLeft f m1 m2
       expectValidMap ma
       ma `shouldBe` Map.mapMaybeWithKey (\k v -> v <$ (guard . f k =<< Map.lookup k m2)) m1
+    prop "boundedEnumMap" $ do
+      let convert = fromIntegral :: Word8 -> Int
+          m = boundedEnumMap convert :: Map Int Word8
+      expectValidMap m
+      forM_ [minBound .. maxBound] $ \t -> do
+        Map.lookup (convert t) m `shouldBe` Just t

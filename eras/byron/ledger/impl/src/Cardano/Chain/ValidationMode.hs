@@ -10,8 +10,7 @@ module Cardano.Chain.ValidationMode (
   whenTxValidation,
   unlessNoTxValidation,
   wrapErrorWithValidationMode,
-)
-where
+) where
 
 import Cardano.Chain.Block.ValidationMode (
   BlockValidationMode (..),

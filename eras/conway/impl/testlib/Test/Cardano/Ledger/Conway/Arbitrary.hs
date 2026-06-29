@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -36,9 +37,8 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (Sized)
-import Cardano.Ledger.CertState (EraCertState (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
+import Cardano.Ledger.Conway (ApplyTxError (ConwayApplyTxError), ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -50,16 +50,19 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.Transition (TransitionConfig (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
+import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (Event))
 import Data.Default (def)
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
+import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -99,13 +102,31 @@ instance
   arbitrary = genericArbitraryU
 
 instance Arbitrary ConwayGenesis where
-  arbitrary =
-    ConwayGenesis
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = do
+    cgUpgradePParams <- arbitrary
+    cgConstitution <- arbitrary
+    cgCommittee <- arbitrary
+    delegatees <- arbitrary
+    delegs <-
+      if null delegatees
+        then pure mempty
+        else listOf ((,) <$> arbitrary <*> elements delegatees)
+    let delegatedDReps =
+          Set.toList $
+            Set.fromList [dRepCred | (_, DelegVote (DRepCredential dRepCred)) <- delegs]
+        arbitraryDRepState = do
+          drepState <- arbitrary
+          -- Genesis file should never supply the delegation set, it is later reconstructed by
+          -- injectIntoTestState when used
+          pure drepState {drepDelegs = Set.empty}
+    -- We need to preserve the invariant that delegations cannot point to non-existent DReps
+    initialDRepsWithDelegs <- forM delegatedDReps $ \dRepCred -> (,) dRepCred <$> arbitraryDRepState
+    initialDRepsNoDelegs <- listOf ((,) <$> arbitrary <*> arbitraryDRepState)
+    -- Intermediate conversion to a Map isn't necessary, since uniform generation of credentials
+    -- pretty much guarantees uniqueness
+    let cgDelegs = ListMap.fromList delegs
+        cgInitialDReps = ListMap.fromList $ initialDRepsNoDelegs ++ initialDRepsWithDelegs
+    pure ConwayGenesis {..}
 
 instance Arbitrary (UpgradeConwayPParams Identity) where
   arbitrary =
@@ -193,7 +214,10 @@ instance
     | (a', b', c', d') <- shrink (a, toList b, c, d)
     ]
 
-instance (Era era, Arbitrary (InstantStake era)) => Arbitrary (RatifyEnv era) where
+instance
+  (Era era, Arbitrary (InstantStake era), Arbitrary (Accounts era)) =>
+  Arbitrary (RatifyEnv era)
+  where
   arbitrary =
     RatifyEnv
       <$> arbitrary
@@ -220,6 +244,9 @@ instance
       <*> arbitrary
 
   shrink = genericShrink
+
+instance Arbitrary (VState era) where
+  arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance
   ( Era era
@@ -256,8 +283,8 @@ _uniqueIdGovActions ::
 _uniqueIdGovActions = SSeq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
 
 instance
-  (forall p. Arbitrary (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Arbitrary (GovRelation f era)
+  (forall p. Arbitrary (f (GovPurposeId (p :: GovActionPurpose)))) =>
+  Arbitrary (GovRelation f)
   where
   arbitrary = GovRelation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
@@ -313,7 +340,7 @@ instance
     where
       -- Starting from the root select a path in the tree until a leaf is reached.
       chooseLineage ::
-        (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+        (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
         Proposals era ->
         Seq.Seq (GovActionState era) ->
         Gen (Seq.Seq (GovActionState era))
@@ -407,8 +434,8 @@ genGovAction ps =
     ]
   where
     genWithParent ::
-      (StrictMaybe (GovPurposeId p era) -> Gen (GovAction era)) ->
-      (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+      (StrictMaybe (GovPurposeId p) -> Gen (GovAction era)) ->
+      (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
       Gen (GovAction era)
     genWithParent gen govRelL =
       gen
@@ -421,17 +448,17 @@ genPParamUpdateGovAction ::
   ( Era era
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
-  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose) ->
   Gen (GovAction era)
 genPParamUpdateGovAction parent = ParameterChange parent <$> arbitrary <*> arbitrary
 
 genHardForkGovAction ::
-  StrictMaybe (GovPurposeId 'HardForkPurpose era) ->
+  StrictMaybe (GovPurposeId 'HardForkPurpose) ->
   Gen (GovAction era)
 genHardForkGovAction parent = HardForkInitiation parent <$> arbitrary
 
 genCommitteeGovAction ::
-  StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
+  StrictMaybe (GovPurposeId 'CommitteePurpose) ->
   Gen (GovAction era)
 genCommitteeGovAction parent =
   oneof
@@ -441,7 +468,7 @@ genCommitteeGovAction parent =
 
 genConstitutionGovAction ::
   Era era =>
-  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose) ->
   Gen (GovAction era)
 genConstitutionGovAction parent = NewConstitution parent <$> arbitrary
 
@@ -478,8 +505,11 @@ instance
 genParameterChange :: Arbitrary (PParamsUpdate era) => Gen (GovAction era)
 genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary
 
-genHardForkInitiation :: Gen (GovAction era)
-genHardForkInitiation = HardForkInitiation <$> arbitrary <*> arbitrary
+genHardForkInitiation :: forall era. Era era => Gen (GovAction era)
+genHardForkInitiation =
+  HardForkInitiation
+    <$> arbitrary
+    <*> (ProtVer <$> elements [eraProtVerLow @era .. succ $ eraProtVerHigh @era] <*> arbitrary)
 
 genTreasuryWithdrawals :: Gen (GovAction era)
 genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary <*> arbitrary
@@ -524,7 +554,7 @@ instance Arbitrary GovActionId where
 
 deriving instance Arbitrary GovActionIx
 
-deriving instance Arbitrary (GovPurposeId p era)
+deriving instance Arbitrary (GovPurposeId p)
 
 instance Arbitrary Voter where
   arbitrary =
@@ -539,17 +569,7 @@ instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
   shrink = shrinkBoundedEnum
 
-instance
-  ( ConwayEraTxBody era
-  , Arbitrary (Sized (TxOut era))
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (Script era)
-  , Arbitrary (PParamsUpdate era)
-  , Arbitrary (TxCert era)
-  ) =>
-  Arbitrary (ConwayTxBody era)
-  where
+instance Arbitrary (TxBody TopTx ConwayEra) where
   arbitrary =
     ConwayTxBody
       <$> arbitrary
@@ -633,6 +653,7 @@ instance (Era era, Arbitrary (PParamsHKD Identity era), Arbitrary (CertState era
   arbitrary =
     GovEnv
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -859,3 +880,20 @@ instance Arbitrary DRepVotingThresholds where
 
 instance Era era => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary
+
+instance (Era era, Arbitrary (Accounts era)) => Arbitrary (ConwayCertState era) where
+  arbitrary = ConwayCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+deriving instance Arbitrary (ConwayAccounts era)
+
+instance Arbitrary (ConwayAccountState era) where
+  arbitrary = ConwayAccountState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance Arbitrary (TransitionConfig ConwayEra) where
+  arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary
+
+deriving newtype instance Arbitrary (Tx TopTx ConwayEra)
+
+deriving newtype instance Arbitrary (ApplyTxError ConwayEra)

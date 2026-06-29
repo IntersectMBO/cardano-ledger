@@ -1,20 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.PoolReReg
--- Description : Pool Re-Registration
---
--- Example demonstrating the adoption of of pool parameters
+-- | Example demonstrating the adoption of of pool parameters
 -- when re-registratiing.
 module Test.Cardano.Ledger.Shelley.Examples.PoolReReg (
   poolReRegExample,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -22,19 +16,17 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.State (SnapShot (ssPoolParams), UTxO (..), emptySnapShot)
+import Cardano.Ledger.State (ActiveStake (..), SnapShot, StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
@@ -43,12 +35,14 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (coreNodeKeysBySchedule)
 import Test.Cardano.Ledger.Shelley.Examples.Init (
@@ -91,19 +85,19 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> Coin 250 <-> feeTx1
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
-    (StrictSeq.fromList [RegPoolTxCert Cast.alicePoolParams])
+    (StrictSeq.fromList [RegPoolTxCert Cast.aliceStakePoolParams])
     (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
     SNothing
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -123,7 +117,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -137,9 +131,9 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [] [Cast.alicePoolParams]
+    . C.addFees feeTx1
     . C.newUTxO txbodyEx1
-    . C.newPool Cast.alicePoolParams
+    . C.regPool Cast.aliceStakePoolParams
     $ initStPoolReReg
 
 -- === Block 1, Slot 10, Epoch 0
@@ -158,10 +152,10 @@ feeTx2 = Coin 3
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-newPoolParams :: PoolParams
-newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
+newPoolParams :: StakePoolParams
+newPoolParams = Cast.aliceStakePoolParams {sppCost = Coin 500}
 
-txbodyEx2 :: ShelleyTxBody ShelleyEra
+txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -177,7 +171,7 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: ShelleyTx ShelleyEra
+txEx2 :: ShelleyTx TopTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -199,9 +193,9 @@ word64SlotToKesPeriodWord slot =
 blockEx2 :: Word64 -> Block (BHeader MockCrypto) ShelleyEra
 blockEx2 slot =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx slot)
-    [txEx2]
+    [MkShelleyTx txEx2]
     (SlotNo slot)
     (BlockNo 2)
     nonce0
@@ -216,9 +210,9 @@ blockEx2A = blockEx2 20
 
 expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
-  C.feesAndDeposits ppEx feeTx2 [] [newPoolParams] -- The deposit should be ignored because the poolId is already registered
+  C.addFees feeTx2
     . C.newUTxO txbodyEx2
-    . C.reregPool newPoolParams
+    . C.regPool newPoolParams
     $ expectedStEx1
 
 expectedStEx2A :: ChainState ShelleyEra
@@ -264,7 +258,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx2B
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2B)
+    (bhHash $ blockHeader blockEx2B)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
@@ -278,14 +272,14 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]}
+  mkSnapShotFromStakePoolParams (ActiveStake VMap.empty) [Cast.aliceStakePoolParams]
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
   C.newEpoch blockEx3
     . C.newSnapshot snapEx3 (feeTx1 <+> feeTx2)
     . C.applyRewardUpdate emptyRewardUpdate
-    . C.updatePoolParams newPoolParams
+    . C.updatePoolParams (networkId testGlobals) newPoolParams
     $ expectedStEx2B
 
 -- === Block 3, Slot 110, Epoch 1

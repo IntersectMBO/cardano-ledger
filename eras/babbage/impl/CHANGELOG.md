@@ -1,5 +1,91 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.13.0.0
+
+* Add `updateUTxOStateByTxValidity`
+* Change `babbageEvalScriptsTxInvalid` to return a `Rule` instead of `TransitionRule`
+* Change `STS` instance of `BabbageUTXOS`: use `UtxosEnv` as `Environment` and `ShelleyGovState` as `State`
+* Add `Generic` instance for `ApplyTxError`
+* Add `BabbageApplyTxError` constructor for `ApplyTxError era`
+* Renamed:
+  - `bppMinFeeA` -> `bppTxFeePerByte`
+  - `bppMinFeeB` -> `bppTxFeeFixed`
+* Changed type of `bppMinFeeA` to `CoinPerByte`
+* Moved `CoinPerByte` to `cardano-ledger-core`
+* Change sets containing errors into `NonEmptySet` for `BabbageUtxowPredFailure`
+* Change all lists into `NonEmpty` for `BabbageUtxoPredFailure`
+* Add `babbageUtxoValidation`
+* Add `babbageUtxoTests`
+* Changed the type of the following fields to `CompactForm Coin` in `BabbagePParams`:
+  - `bppMinFeeB`
+  - `bppKeyDeposit`
+  - `bppMinPoolCost`
+* Add `cddl` sub-library, and `generate-cddl` executable.
+* Remove deprecated functions `txOutData`, `txOutDataHash`, `txOutScript`
+* Remove deprecated type `Babbage`
+* Removed deprecated accessor functions:
+  - `spendInputs'`
+  - `collateralInputs'`
+  - `referenceInputs'`
+  - `outputs'`
+  - `collateralReturn'`
+  - `totalCollateral'`
+  - `certs'`
+  - `withdrawals'`
+  - `txfee'`
+  - `vldt'`
+  - `update'`
+  - `reqSignerHashes'`
+  - `mint'`
+  - `scriptIntegrityHash'`
+  - `adHash'`
+  - `txnetworkid'`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `HasEraTxLevel` instances for `Tx` and `TxBody`
+* Add `EraTxLevel` instance
+* Add `mkCollateralTxIn`
+
+### `cddl`
+
+* Move `cddl-files` to `cddl/data`.
+* Export `alonzoTransactionOutputRule`, `dataRule`, `datumOptionRule` for reuse.
+* Add full `HuddleSpec`.
+
+### `testlib`
+
+* Moved `Arbitrary` and `ToExpr` instances of `CoinPerByte` to `cardano-ledger-core`
+* Remove `huddle-cddl` and the `CDDL` modules.
+* Add `plutus_v2_script` to CDDL exports
+* Hide Shelley CDDL `protocol_version` and re-export a new one for Babbage
+* Use fixed-sized `uint .size 8` for `slot` and `block_number` in CDDL for header
+* Add `BabbageEraImp`
+* Removed `babbageEraSpecificSpec`
+
+## 1.12.0.0
+
+* Hide `Cardano.Ledger.Babbage.Translation` module
+* Fixed `FromJSON` instance for `TransitionConfig BabbageEra`
+* Added `COMPLETE` pragma for `TxCert BabbageEra`
+* Added `COMPLETE` pragma for `NativeScript BabbageEra`
+* Move to `testlib` the `DecCBOR` instance for `TxBody BabbageEra`
+* Remove `BabbageNonDisjointRefInputs` for protocol versions >10
+* Added `ppCoinsPerUTxOByte` to `PParams`
+* Removed `babbagePParamsHKDPairs` and `babbageCommonPParamsHKDPairs` from `PParams`
+* Remove `BabbageTxBody`
+* Removed `era` parameter from `BabbageTxBodyRaw`
+* Expose access to `BabbageTxBodyRaw`
+* Expose constructor `MkBabbageTxBody`
+* Deprecate `spendInputs'`, `collateralInputs'`, `referenceInputs'`, `outputs'`, `collateralReturn'`, `totalCollateral'`, `certs'`, `txfee'`, `withdrawals'`, `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`, `spendInputs'`, `txnetworkid'`.
+
+### `testlib`
+
+* Added `EraSpecificSpec BabbageEra` instance
+* Added `Examples` module with: `ledgerExamples`, `exampleBabbageNewEpochState`, `exampleCollateralOutput`
+* Added `Twiddle` instances for Babbage core types
+* Added `TxInfoSpec` (moved from `cardano-ledger-babbage-test`)
+* Added `Arbitrary` instance for `TransitionConfig BabbageEra`
+* Added `Era` module with `BabbageEraTest` class
+
 ## 1.11.0.0
 
 * Add `DecCBOR` instance for `BabbageTxBody`
@@ -24,13 +110,13 @@
 ## 1.10.0.0
 
 * Add `ProtVer` argument to `TxInfo` functions:
-  * `transTxRedeemers`
-  * `toPlutusV2Args`
+  - `transTxRedeemers`
+  - `toPlutusV2Args`
 
 ### `testlib`
 
 * Move `TxInfo` golden tests over from the older `-test` package. #4599
-  * Also move the `gen-golden` executable over.
+  - Also move the `gen-golden` executable over.
 
 ## 1.9.0.0
 
@@ -56,16 +142,16 @@
 ## 1.7.0.0
 
 * Add type `EraRuleEvent` instances for the event type of:
-  * `UTXOS`
-  * `PPUP`
-  * `LEDGER`
-  * `TICK`
+  - `UTXOS`
+  - `PPUP`
+  - `LEDGER`
+  - `TICK`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add `NFData` instance for `BabbageUtxoPredFailure`, `BabbageUtxowPredFailure`
 * Add implementation for `getMinFeeTxUtxo`
 * Add `getReferenceScriptsNonDistinct`
 * Add the constructor `BabbageNonDisjointRefInputs` to `BabbageUtxoPredFailure`
-  * Utxo rule raises that `PredicateFailure` in Conway and future Eras when they are not disjoint.
+  - Utxo rule raises that `PredicateFailure` in Conway and future Eras when they are not disjoint.
 * Modify `PParams` JSON instances to match `cardano-api`
 
 ### `testlib`
@@ -109,12 +195,12 @@
 ## 1.5.0.0
 
 * Add `Generic` instance for:
-  * `BabbageUtxoPredFailure`
-  * `BabbageUtxowPredFailure`
+  - `BabbageUtxoPredFailure`
+  - `BabbageUtxowPredFailure`
 * Add `ToExpr` instance for:
-  * `BabbageUtxoPredFailure`
-  * `BabbageUtxowPredFailure`
-  * `BabbageTxOut`
+  - `BabbageUtxoPredFailure`
+  - `BabbageUtxowPredFailure`
+  - `BabbageTxOut`
 * Switch to using `AlonzoEraUTxO` in rules
 * Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
 * Add `getBabbageSupplementalDataHashes`
@@ -129,8 +215,8 @@
 ## 1.4.5.0
 
 * Add `ToExpr` instance for:
-  * `BabbageTxBody`
-  * `BabbageTxOut`
+  - `BabbageTxBody`
+  - `BabbageTxOut`
 * Add `Generic` instance for `BabbageTxBody`
 * Add `BabbageTxUpgradeError` and `BabbageTxBodyUpgradeError`
 * Add `EraTransition` instance.
@@ -155,10 +241,10 @@
 ## 1.4.0.0
 
 * Added a protocol version constraint to:
-  * `STS (BabbageUTXOS era)` instance
-  * `STS (BabbageUTXOW era)` instance
-  * `utxosTransition`
-  * `babbageUtxowTransition`
+  - `STS (BabbageUTXOS era)` instance
+  - `STS (BabbageUTXOW era)` instance
+  - `utxosTransition`
+  - `babbageUtxowTransition`
 
 ## 1.3.0.0
 
@@ -176,9 +262,9 @@
 
 * Replace `DPState c` with `CertState era`
 * Add `TranslateEra` instances for:
-  * `DState`
-  * `PState`
-  * `VState`
+  - `DState`
+  - `PState`
+  - `VState`
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo and Babbage ledger era rules do not allow V3 scripts, however.).
   Addition of `babbageTxInfoV1` and `babbageTxInfoV2`
@@ -190,7 +276,7 @@
 * Removed validation function `validateOutputTooBigUTxO`, in favor of the same function
   from `cardano-ledger-alonzo`.
 
-###`testlib`
+### `testlib`
 
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 

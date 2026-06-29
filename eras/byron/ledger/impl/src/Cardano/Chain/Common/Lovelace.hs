@@ -46,8 +46,7 @@ module Cardano.Chain.Common.Lovelace (
   scaleLovelaceRationalUp,
   divLovelace,
   modLovelace,
-)
-where
+) where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -97,13 +96,13 @@ instance ToJSON Lovelace
 
 instance ToCBOR Lovelace where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance FromCBOR Lovelace where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR Lovelace where
   encCBOR = encCBOR . unsafeGetLovelace
-  encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance DecCBOR Lovelace where
   decCBOR = do
@@ -174,7 +173,7 @@ instance DecCBOR LovelaceError where
       1 -> checkSize 2 >> LovelaceTooLarge <$> decCBOR
       2 -> checkSize 2 >> LovelaceTooSmall <$> decCBOR
       3 -> checkSize 3 >> LovelaceUnderflow <$> decCBOR <*> decCBOR
-      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
+      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" $ fromIntegral @Word8 @Word tag
 
 -- | Maximal possible value of 'Lovelace'
 maxLovelaceVal :: Word64

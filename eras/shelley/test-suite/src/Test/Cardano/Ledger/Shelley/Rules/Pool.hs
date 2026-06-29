@@ -5,47 +5,32 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Pool (
   tests,
-)
-where
+) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
-import Cardano.Ledger.Block (bheader)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..))
+import Cardano.Ledger.Block (blockHeader)
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolParams (ppId)
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
-  PState (..),
   curPParamsEpochStateL,
-  psFutureStakePoolParams,
-  psStakePoolParams,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
+import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
-import Control.SetAlgebra (dom, eval, (∈), (∉))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
-import Test.Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  TraceOrder (OldestFirst),
-  sourceSignalTargets,
-  traceStates,
- )
-import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
-import Test.QuickCheck (Property, conjoin, counterexample, (===))
-
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
   poolTraceFromBlock,
@@ -55,8 +40,19 @@ import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   epochFromSlotNo,
  )
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  TraceOrder (OldestFirst),
+  sourceSignalTargets,
+  traceStates,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
+  Property,
   Testable (..),
+  conjoin,
+  counterexample,
+  (===),
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
@@ -69,6 +65,9 @@ tests ::
   , EraStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   TestTree
 tests =
@@ -85,7 +84,9 @@ tests =
 -- retirement.
 poolRetirement ::
   ( ChainProperty era
-  , ShelleyEraTxBody era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -94,7 +95,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
     map (poolRetirementProp currentEpoch maxEpoch) (sourceSignalTargets poolTr)
   where
     (chainSt', poolTr) = poolTraceFromBlock chainSt block
-    bhb = bhbody $ bheader block
+    bhb = bhbody $ blockHeader block
     currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
     maxEpoch = (view ppEMaxL . view curPParamsEpochStateL . nesEs . chainNes) chainSt'
 
@@ -102,7 +103,9 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- in the retiring map.
 poolRegistration ::
   ( ChainProperty era
-  , ShelleyEraTxBody era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -116,7 +119,9 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
   ( ChainProperty era
-  , ShelleyEraTxBody era
+  , EraRule "POOL" era ~ ShelleyPOOL era
+  , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
+  , InjectRuleEvent "POOL" PoolEvent era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -129,36 +134,40 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 poolRegistrationProp :: SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRegistrationProp
   SourceSignalTarget
-    { signal = RegPool poolParams
+    { signal = RegPool stakePoolParams
     , source = sourceSt
     , target = targetSt
     } =
-    let hk = ppId poolParams
-        reRegistration = eval (hk ∈ dom (psStakePoolParams sourceSt))
-     in if reRegistration
-          then
+    let hk = sppId stakePoolParams
+     in case Map.lookup hk $ psStakePools sourceSt of
+          Just _ ->
             conjoin
               [ counterexample
-                  "Pre-existing PoolParams must still be registered in pParams"
-                  (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+                  "Pre-existing StakePoolParams must still be registered in pParams"
+                  (Map.member hk (psStakePools targetSt) :: Bool)
               , counterexample
-                  "New PoolParams are registered in future Params map"
-                  (Map.lookup hk (psFutureStakePoolParams targetSt) === Just poolParams)
+                  "New StakePoolParams are registered in future Params map"
+                  ( Map.lookup hk (psFutureStakePoolParams targetSt)
+                      === Just stakePoolParams
+                  )
               , counterexample
-                  "PoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
+                  "StakePoolParams are removed in 'retiring'"
+                  (Map.notMember hk (psRetiring targetSt) :: Bool)
               ]
-          else -- first registration
+          Nothing ->
+            -- first registration
             conjoin
               [ counterexample
-                  "New PoolParams are registered in pParams"
-                  (Map.lookup hk (psStakePoolParams targetSt) === Just poolParams)
+                  "New StakePoolParams are registered in pParams"
+                  ( (stakePoolStateToStakePoolParams Testnet hk <$> Map.lookup hk (psStakePools targetSt))
+                      === Just stakePoolParams
+                  )
               , counterexample
-                  "PoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool)
+                  "StakePoolParams are not present in 'future pool params'"
+                  (Map.notMember hk (psFutureStakePoolParams targetSt) :: Bool)
               , counterexample
-                  "PoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
+                  "StakePoolParams are removed in 'retiring'"
+                  (Map.notMember hk (psRetiring targetSt) :: Bool)
               ]
 poolRegistrationProp _ = property ()
 
@@ -177,18 +186,18 @@ poolRetirementProp
           (currentEpoch < e && e < EpochNo (ce + fromIntegral maxEpoch))
       , counterexample
           "hk must be in source stPools"
-          (eval (hk ∈ dom (psStakePoolParams sourceSt)) :: Bool)
+          (Map.member hk (psStakePools sourceSt) :: Bool)
       , counterexample
           "hk must be in target stPools"
-          (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+          (Map.member hk (psStakePools targetSt) :: Bool)
       , counterexample
           "hk must be in target's retiring"
-          (eval (hk ∈ dom (psRetiring targetSt)) :: Bool)
+          (Map.member hk (psRetiring targetSt) :: Bool)
       ]
 poolRetirementProp _ _ _ = property ()
 
 poolStateIsInternallyConsistentProp :: PState c -> Property
-poolStateIsInternallyConsistentProp PState {psStakePoolParams = pParams_, psRetiring = retiring_} = do
+poolStateIsInternallyConsistentProp PState {psStakePools = pParams_, psRetiring = retiring_} = do
   let poolKeys = Map.keysSet pParams_
       pParamKeys = Map.keysSet pParams_
       retiringKeys = Map.keysSet retiring_

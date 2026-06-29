@@ -17,8 +17,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   DecCBOR (..),
   fromByronCBOR,
   decodeScriptContextFromData,
-)
-where
+) where
 
 import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
 import Cardano.Crypto.DSIGN.Class (

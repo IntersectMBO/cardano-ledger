@@ -10,10 +10,7 @@
 module Cardano.Chain.Slotting.SlotNumber (
   SlotNumber (..),
   addSlotCount,
-  -- deprecated
-  subSlotCount,
-)
-where
+) where
 
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
 import Cardano.Ledger.Binary (
@@ -47,13 +44,13 @@ instance Aeson.ToJSON SlotNumber
 
 instance ToCBOR SlotNumber where
   toCBOR = toByronCBOR
+  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber
 
 instance FromCBOR SlotNumber where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR SlotNumber where
   encCBOR = encCBOR . unSlotNumber
-  encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber
 
 instance DecCBOR SlotNumber where
   decCBOR = SlotNumber <$> decCBOR
@@ -74,9 +71,3 @@ addSlotCount :: SlotCount -> SlotNumber -> SlotNumber
 addSlotCount (SlotCount a) (SlotNumber b)
   | a <= maxBound - b = SlotNumber $ a + b
   | otherwise = SlotNumber maxBound
-
--- | Decrease a 'SlotNumber' by 'SlotCount', going no lower than 0
-{-# DEPRECATED subSlotCount "this function is dangerous and can usually be replaced by addSlotCount" #-}
-subSlotCount :: SlotCount -> SlotNumber -> SlotNumber
-subSlotCount (SlotCount a) (SlotNumber b) =
-  if a > b then SlotNumber 0 else SlotNumber (b - a)

@@ -1,15 +1,74 @@
 # Version history for `cardano-ledger-api`
 
+## 1.13.0.0
+
+* Add `queryStakeSnapshots` and the types produced by it:
+  - `StakeSnapshot`
+  - `StakeSnapshots`
+* Re-export `DirectDeposits` and `directDepositsTxBodyL` from `Cardano.Ledger.Api.Tx.Body`.
+* Re-export `constitutionGuardrailsScriptHashL` from `Cardano.Ledger.Api.Governance`.
+* Changed the type of the following functions by adding `Network` argument:
+  - `queryPoolParameters`
+  - `queryPoolState`
+  - `mkQueryPoolStateResult`
+* Remove deprecated function `queryCommitteeState`
+* Add `TxLevel` argument to `Tx` and `TxBody`
+* Add `EraTxLevel` instance
+* Add `AnyEraScript`
+* Add `AnyEraSpendingPurpose`, `AnyEraMintingPurpose`, `AnyEraCertifyingPurpose`, `AnyEraRewardingPurpose`, `AnyEraVotingPurpose`, `AnyEraProposingPurpose`, `AnyEraGuardingPurpose` patterns
+* Re-export `DijkstraEraScript`, `toGuardingPurpose` and `GuardingPurpose` pattern
+* Add `producedTxOuts` and `mkCollateralTxIn`
+* Add `AnyEraTx`
+* Add `AnyEraTxBody`
+* Add `ttlToValidityInterval`
+* Re-export `DijkstraEraTxBody`, `guardsTxBodyL`
+* Add `AnyEraTxCert`
+* Add `AnyEraTxWits`
+* Add `AnyEraTxOut` and `AnyEraTxAuxData`
+
+### `testlib`
+
+* Remove the `State.Query` module and `getFilteredDelegationsAndRewardAccounts` function.
+
+## 1.12.1.0
+
+* Fix a bug in `queryPoolState`, where current Pool parameters where returned instead of the future ones.
+
+## 1.12.0.0
+
+* Add `upgradeNativeScript` method to `EraApi`
+* Replace `timelockScriptsTxAuxDataL` with `nativeScriptsTxAuxDataL`
+* Changed the type of `translateAlonzoTxAuxData` to only work with consecutive eras
+* Add `EraHasName` type class and add `EraName` type family to the `Era` type class.
+* Add `queryPoolState` and bring back `queryPoolParameters` state query.
+* Add `queryDRepDelegations` state query
+* Remove `filterStakePoolDelegsAndRewards` as unnecessary. Use `queryStakePoolDelegsAndRewards` instead
+* Expose `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxWits`, `binaryUpgradeTxAuxData`, `upgradeTx`, `upgradeTxBody`, `upgradeTxWits`, `upgradeTxAuxData`
+* Add `EraApi` class
+* Export `VotingProcedure`, `ProposalProcedure`, `currentTreasuryValueTxBodyL` and
+  `treasuryDonationTxBodyL` from `Cardano.Ledger.Api.Tx.Body`
+* Export `DijkstraEra` from `Cardano.Ledger.Api.Era`
+* Set `LatestKnownEra` to `DijkstraEra`
+* Stop exporting deprecated `Shelley`, `Mary`, `Allegra`, `Alonzo`, `Babbage` and `Conway` type synonyms
+* Moved `Annotator` instances to `testlib` for all respective packages
+* Rename `queryAccountState` to `queryChainAccountState`
+
+### `testlib`
+
+* Add Consensus example modules (moved from test-packages): `Shelley`, `Allegra`, `Mary`, `Alonzo`, `Babbage`, `Conway`, `Dijkstra`
+* Re-export all Ledger `Arbitrary` instances from `Test.Cardano.Ledger.Api.Arbitrary`
+
 ## 1.11.0.0
 
+* Remove `witVKeyBytes`
 * Converted `CertState` to a type family
 * Expose new `TxAuxDataHash` and deprecate old `AuxiliaryDataHash`
 * Stop re-exporting `Crypto` and `StandardCrypto`, since they have been moved to `cardano-protocol-tpraos`
 * Removal of crypto parametrization:
-  * `LatestKnownEra`
-  * `HotCredAuthStatus` and `CommitteeMemberState`
-  * `DecAddr`
-  * Many other re-exported types. See individual packages for changelog
+  - `LatestKnownEra`
+  - `HotCredAuthStatus` and `CommitteeMemberState`
+  - `DecAddr`
+  - Many other re-exported types. See individual packages for changelog
 * Add `unRedeemersL`, `unTxDatsL`
 
 ## 1.10.0.0
@@ -106,17 +165,17 @@
 * Add `LatestKnownEra`
 * Add `Cardano.Ledger.Api.Transition` module
 * Add the dormant-epochs counter to `DRep` expiry in `queryDRepState` #3729
-  * If it is not zero.
+  - If it is not zero.
 * Rename:
-  * `GovActionsState` to `GovSnapshots`
-  * `cgGovActionsStateL` to `cgGovSnapshotsL`
+  - `GovActionsState` to `GovSnapshots`
+  - `cgGovActionsStateL` to `cgGovSnapshotsL`
 * Add `lookupRegStakeTxCert` and `lookupUnRegStakeTxCert`
 * Add `isRegStakeTxCert` and `isUnRegStakeTxCert`
 
 ## 1.5.0.0
 
 * Add one more parameter to `evalBalanceTxBody` #3688
-  * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
+  - `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `cgEnactStateL`
 
 ## 1.4.0.0
@@ -131,9 +190,9 @@
 * Add `upgradeTxAuxData` function to `EraTxAuxData`
 * Add `upgradeTxCert` function and `TxCertUpgradeError` family to `EraTxCert`
 * Export:
-  * Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
-  * Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`
-  * GovActions: `GovActionPurpose`, `PrevGovActionId`, `govActionIdToText`,
+  - Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
+  - Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`
+  - GovActions: `GovActionPurpose`, `PrevGovActionId`, `govActionIdToText`,
     `PrevGovActionId` and `GovActionPurpose`
 * Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
   `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.
@@ -162,7 +221,7 @@
 
 * Add support for Plutus V3
 * Start on `Cardano.Ledger.Api.State.Query` interface:
-  * Add `filterStakePoolDelegsAndRewards` and `queryStakePoolDelegsAndRewards`
+  - Add `filterStakePoolDelegsAndRewards` and `queryStakePoolDelegsAndRewards`
 
 ### `testlib`
 
@@ -194,9 +253,9 @@
   `Tag`.
 * Export from `Cardano.Ledger.Api.Scripts`: `CostModels` and `ValidityInterval`.
 * Export from `Cardano.Ledger.Api.Era`:
-  * `Era`
-  * `ByronEra`
-  * Protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
+  - `Era`
+  - `ByronEra`
+  - Protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
     `AtLeastEra`, `AtMostEra`, `ExactEra`, `ProtVerAtLeast`, `ProtVerAtMost`,
     `ProtVerInBounds`, `atLeastEra` and `atMostEra`
 * Move `Cardano.Ledger.Alonzo.Tools` module from `cardano-ledegr-alonzo` into

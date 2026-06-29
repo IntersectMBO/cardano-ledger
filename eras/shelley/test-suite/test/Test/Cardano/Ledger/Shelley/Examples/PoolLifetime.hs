@@ -8,11 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.PoolLifetime
--- Description : Pool Lifetime Example
---
--- Example demonstrating the creation of a new stake pool,
+-- | Example demonstrating the creation of a new stake pool,
 -- block production under Praos, rewards, and pool retirement.
 module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (
   makePulser,
@@ -20,8 +16,7 @@ module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (
   makeCompletedPulser,
   poolLifetimeExample,
   mkStake,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -30,22 +25,24 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   StrictMaybe (..),
   mkCertIxPartial,
+  unNonZero,
+  unsafeNonZero,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.CertState (EraCertState)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),
   DeltaCoin (..),
   addDeltaCoin,
+  knownNonZeroCoin,
   toDeltaCoin,
  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
-import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -65,8 +62,7 @@ import Cardano.Ledger.Shelley.PoolRank (
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
-  RewardAccount (..),
-  ShelleyTxBody (..),
+  TxBody (..),
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -90,12 +86,14 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Core.Arbitrary (mkSnapShotFromStakePoolParams)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeIssuerKeys,
@@ -140,7 +138,7 @@ toCompactCoinError c =
     Nothing -> error $ "Invalid coin: " <> show c
     Just compactCoin -> compactCoin
 
-mkStake :: [(Credential 'Staking, Coin)] -> Stake
+mkStake :: [(Credential Staking, Coin)] -> Stake
 mkStake = Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
 
 initUTxO :: UTxO ShelleyEra
@@ -174,7 +172,7 @@ dariaMIR = Coin 99
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -183,18 +181,18 @@ txbodyEx1 =
         ( [ RegTxCert Cast.aliceSHK
           , RegTxCert Cast.bobSHK
           , RegTxCert Cast.carlSHK
-          , RegPoolTxCert Cast.alicePoolParams
+          , RegPoolTxCert Cast.aliceStakePoolParams
           ]
             ++ [ ShelleyTxCertMir
-                  ( MIRCert
-                      ReservesMIR
-                      ( StakeAddressesMIR $
-                          Map.fromList
-                            [ (Cast.carlSHK, toDeltaCoin carlMIR)
-                            , (Cast.dariaSHK, toDeltaCoin dariaMIR)
-                            ]
-                      )
-                  )
+                   ( MIRCert
+                       ReservesMIR
+                       ( StakeAddressesMIR $
+                           Map.fromList
+                             [ (Cast.carlSHK, toDeltaCoin carlMIR)
+                             , (Cast.dariaSHK, toDeltaCoin dariaMIR)
+                             ]
+                       )
+                   )
                ]
         )
     )
@@ -204,7 +202,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -216,12 +214,12 @@ txEx1 =
                 <> (asWitness <$> [Cast.aliceStake])
                 <> [asWitness $ aikCold Cast.alicePoolKeys]
                 <> ( asWitness
-                      <$> [ aikCold (coreNodeIssuerKeys 0)
-                          , aikCold (coreNodeIssuerKeys 1)
-                          , aikCold (coreNodeIssuerKeys 2)
-                          , aikCold (coreNodeIssuerKeys 3)
-                          , aikCold (coreNodeIssuerKeys 4)
-                          ]
+                       <$> [ aikCold (coreNodeIssuerKeys 0)
+                           , aikCold (coreNodeIssuerKeys 1)
+                           , aikCold (coreNodeIssuerKeys 2)
+                           , aikCold (coreNodeIssuerKeys 3)
+                           , aikCold (coreNodeIssuerKeys 4)
+                           ]
                    )
             )
       }
@@ -232,7 +230,7 @@ blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -246,12 +244,12 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [Cast.alicePoolParams]
+    . C.addFees feeTx1
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 2))
-    . C.newPool Cast.alicePoolParams
+    . C.regPool Cast.aliceStakePoolParams
     . C.mir Cast.carlSHK ReservesMIR carlMIR
     . C.mir Cast.dariaSHK ReservesMIR dariaMIR
     $ initStPoolLifetime
@@ -280,7 +278,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2 :: ShelleyTxBody ShelleyEra
+txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound]
@@ -301,7 +299,7 @@ txbodyEx2 =
     , stbMDHash = SNothing
     }
 
-txEx2 :: ShelleyTx ShelleyEra
+txEx2 :: ShelleyTx TopTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -319,9 +317,9 @@ txEx2 =
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 90)
-    [txEx2]
+    [MkShelleyTx txEx2]
     (SlotNo 90)
     (BlockNo 2)
     nonce0
@@ -355,10 +353,10 @@ expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
   C.evolveNonceFrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
-    . C.feesAndDeposits ppEx feeTx2 [] []
+    . C.addFees feeTx2
     . C.newUTxO txbodyEx2
-    . C.delegation Cast.aliceSHK (ppId Cast.alicePoolParams)
-    . C.delegation Cast.bobSHK (ppId Cast.alicePoolParams)
+    . C.delegation Cast.aliceSHK (sppId Cast.aliceStakePoolParams)
+    . C.delegation Cast.bobSHK (sppId Cast.aliceStakePoolParams)
     . C.pulserUpdate pulserEx2
     $ expectedStEx1
 
@@ -378,7 +376,7 @@ epoch1Nonce = chainCandidateNonce expectedStEx2
 blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx2)
+    (bhHash $ blockHeader blockEx2)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
@@ -392,18 +390,17 @@ blockEx3 =
 
 snapEx3 :: SnapShot
 snapEx3 =
-  SnapShot
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr)
-          , (Cast.bobSHK, bobInitCoin)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
-        ]
-    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
-    }
+  mkSnapShotFromStakePoolParams
+    ( ActiveStake
+        ( VMap.fromList
+            [ (Cast.aliceSHK, mkSwd $ aliceCoinEx2Base <> aliceCoinEx2Ptr)
+            , (Cast.bobSHK, mkSwd bobInitCoin)
+            ]
+        )
+    )
+    poolParamsEx5
+  where
+    mkSwd = (`StakeWithDelegation` aikColdKeyHash Cast.alicePoolKeys) . unsafeNonZero . toCompactPartial
 
 expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
@@ -430,7 +427,7 @@ feeTx4 = Coin 5
 aliceCoinEx4Base :: Coin
 aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 
-txbodyEx4 :: ShelleyTxBody ShelleyEra
+txbodyEx4 :: TxBody TopTx ShelleyEra
 txbodyEx4 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
@@ -445,7 +442,7 @@ txbodyEx4 =
     , stbMDHash = SNothing
     }
 
-txEx4 :: ShelleyTx ShelleyEra
+txEx4 :: ShelleyTx TopTx ShelleyEra
 txEx4 =
   ShelleyTx
     txbodyEx4
@@ -460,9 +457,9 @@ txEx4 =
 blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx3)
+    (bhHash $ blockHeader blockEx3)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 190)
-    [txEx4]
+    [MkShelleyTx txEx4]
     (SlotNo 190)
     (BlockNo 4)
     epoch1Nonce
@@ -489,9 +486,9 @@ expectedStEx4 :: ChainState ShelleyEra
 expectedStEx4 =
   C.evolveNonceFrozen (getBlockNonce blockEx4)
     . C.newLab blockEx4
-    . C.feesAndDeposits ppEx feeTx4 [] []
+    . C.addFees feeTx4
     . C.newUTxO txbodyEx4
-    . C.delegation Cast.carlSHK (ppId Cast.alicePoolParams)
+    . C.delegation Cast.carlSHK (sppId Cast.aliceStakePoolParams)
     . C.pulserUpdate pulserEx4
     $ expectedStEx3
 
@@ -506,7 +503,7 @@ poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right (C.solidifyProposals 
 epoch2Nonce :: Nonce
 epoch2Nonce =
   chainCandidateNonce expectedStEx4
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx2)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx2)
 
 --
 -- Block 5, Slot 220, Epoch 2
@@ -515,7 +512,7 @@ epoch2Nonce =
 blockEx5 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx4)
+    (bhHash $ blockHeader blockEx4)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 220)
     []
     (SlotNo 220)
@@ -529,20 +526,21 @@ blockEx5 =
 
 snapEx5 :: SnapShot
 snapEx5 =
-  SnapShot
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr)
-          , (Cast.carlSHK, carlMIR)
-          , (Cast.bobSHK, bobInitCoin)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
-        ]
-    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
-    }
+  mkSnapShotFromStakePoolParams
+    ( ActiveStake
+        ( VMap.fromList
+            [ (Cast.aliceSHK, mkSwd $ aliceCoinEx4Base <> aliceCoinEx2Ptr)
+            , (Cast.carlSHK, mkSwd carlMIR)
+            , (Cast.bobSHK, mkSwd bobInitCoin)
+            ]
+        )
+    )
+    poolParamsEx5
+  where
+    mkSwd = (`StakeWithDelegation` aikColdKeyHash Cast.alicePoolKeys) . unsafeNonZero . toCompactPartial
+
+poolParamsEx5 :: [StakePoolParams]
+poolParamsEx5 = [Cast.aliceStakePoolParams]
 
 pdEx5 :: PoolDistr
 pdEx5 =
@@ -555,7 +553,7 @@ pdEx5 =
             Cast.aliceVRFKeyHash
         )
     )
-    (CompactCoin 1)
+    (knownNonZeroCoin @1)
 
 expectedStEx5 :: ChainState ShelleyEra
 expectedStEx5 =
@@ -582,7 +580,7 @@ poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 blockEx6 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx5)
+    (bhHash $ blockHeader blockEx5)
     Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization
@@ -629,12 +627,12 @@ poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right (C.solidifyProposals 
 epoch3Nonce :: Nonce
 epoch3Nonce =
   chainCandidateNonce expectedStEx6
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx4)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx4)
 
 blockEx7 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx6)
+    (bhHash $ blockHeader blockEx6)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 310)
     []
     (SlotNo 310)
@@ -670,7 +668,7 @@ poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 blockEx8 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx7)
+    (bhHash $ blockHeader blockEx7)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 390)
     []
     (SlotNo 390)
@@ -716,7 +714,7 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
 nonMyopicEx8 :: NonMyopic
 nonMyopicEx8 =
   NonMyopic
-    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8)
+    (VMap.fromMap (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8))
     rewardPot8
 
 pulserEx8 :: PulsingRewUpdate
@@ -766,12 +764,12 @@ poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right (C.solidifyProposals 
 epoch4Nonce :: Nonce
 epoch4Nonce =
   chainCandidateNonce expectedStEx8
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx6)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx6)
 
 blockEx9 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx8)
+    (bhHash $ blockHeader blockEx8)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 410)
     []
     (SlotNo 410)
@@ -785,14 +783,18 @@ blockEx9 =
 
 snapEx9 :: SnapShot
 snapEx9 =
-  snapEx5
-    { ssStake =
-        mkStake
-          [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8)
-          , (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8)
-          , (Cast.carlSHK, carlMIR)
-          ]
-    }
+  mkSnapShotFromStakePoolParams
+    ( ActiveStake
+        ( VMap.fromList
+            [ (Cast.bobSHK, mkSwd $ bobInitCoin <> bobRAcnt8)
+            , (Cast.aliceSHK, mkSwd $ aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8)
+            , (Cast.carlSHK, mkSwd carlMIR)
+            ]
+        )
+    )
+    poolParamsEx5
+  where
+    mkSwd = (`StakeWithDelegation` aikColdKeyHash Cast.alicePoolKeys) . unsafeNonZero . toCompactPartial
 
 expectedStEx9 :: ChainState ShelleyEra
 expectedStEx9 =
@@ -824,19 +826,19 @@ bobAda10 =
     <+> Coin 7
     <-> feeTx10
 
-txbodyEx10 :: ShelleyTxBody ShelleyEra
+txbodyEx10 :: TxBody TopTx ShelleyEra
 txbodyEx10 =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
     (StrictSeq.fromList [UnRegTxCert Cast.bobSHK])
-    (Withdrawals $ Map.singleton (RewardAccount Testnet Cast.bobSHK) bobRAcnt8)
+    (Withdrawals $ Map.singleton (AccountAddress Testnet (AccountId Cast.bobSHK)) bobRAcnt8)
     feeTx10
     (SlotNo 500)
     SNothing
     SNothing
 
-txEx10 :: ShelleyTx ShelleyEra
+txEx10 :: ShelleyTx TopTx ShelleyEra
 txEx10 =
   ShelleyTx
     txbodyEx10
@@ -849,9 +851,9 @@ txEx10 =
 blockEx10 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx10 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx9)
+    (bhHash $ blockHeader blockEx9)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 420)
-    [txEx10]
+    [MkShelleyTx txEx10]
     (SlotNo 420)
     (BlockNo 10)
     epoch4Nonce
@@ -866,14 +868,13 @@ expectedStEx10 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx10)
     . C.newLab blockEx10
     . C.deregStakeCred Cast.bobSHK
-    . C.feesAndKeyRefund feeTx10 Cast.bobSHK -- We must zero out the refund, before we deregister
-    -- because we loose the refund amount otherwise
+    . C.addFees feeTx10
     . C.newUTxO txbodyEx10
     $ expectedStEx9
 
 -- === Block 10, Slot 420, Epoch 4
 --
--- Drain Bob's reward account and de-register Bob's stake key.
+-- Drain Bob's account address and de-register Bob's stake key.
 poolLifetime10 :: CHAINExample ShelleyEra
 poolLifetime10 = CHAINExample expectedStEx9 blockEx10 (Right expectedStEx10)
 
@@ -890,7 +891,7 @@ aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: ShelleyTxBody ShelleyEra
+txbodyEx11 :: TxBody TopTx ShelleyEra
 txbodyEx11 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound])
@@ -902,7 +903,7 @@ txbodyEx11 =
     SNothing
     SNothing
 
-txEx11 :: ShelleyTx ShelleyEra
+txEx11 :: ShelleyTx TopTx ShelleyEra
 txEx11 =
   ShelleyTx
     txbodyEx11
@@ -919,9 +920,9 @@ txEx11 =
 blockEx11 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx11 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx10)
+    (bhHash $ blockHeader blockEx10)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 490)
-    [txEx11]
+    [MkShelleyTx txEx11]
     (SlotNo 490)
     (BlockNo 11)
     epoch4Nonce
@@ -941,7 +942,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
-    Coin stake = sumAllStake (ssStake snapEx5)
+    Coin stake = unNonZero $ sumAllActiveStake $ ssActiveStake snapEx5
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
@@ -949,7 +950,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
 nonMyopicEx11 :: NonMyopic
 nonMyopicEx11 =
   NonMyopic
-    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx11)
+    (VMap.fromMap (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx11))
     (Coin 0)
 
 pulserEx11 :: PulsingRewUpdate
@@ -969,7 +970,7 @@ expectedStEx11 :: ChainState ShelleyEra
 expectedStEx11 =
   C.evolveNonceFrozen (getBlockNonce blockEx11)
     . C.newLab blockEx11
-    . C.feesAndDeposits ppEx feeTx11 [] []
+    . C.addFees feeTx11
     . C.newUTxO txbodyEx11
     . C.pulserUpdate pulserEx11
     . C.stageRetirement (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch
@@ -988,12 +989,12 @@ poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right (C.solidifyProposa
 epoch5Nonce :: Nonce
 epoch5Nonce =
   chainCandidateNonce expectedStEx11
-    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx8)
+    ⭒ hashHeaderToNonce (bhHash $ blockHeader blockEx8)
 
 blockEx12 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx12 =
   mkBlockFakeVRF
-    (bhHash $ bheader blockEx11)
+    (bhHash $ blockHeader blockEx11)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 510)
     []
     (SlotNo 510)
@@ -1007,17 +1008,17 @@ blockEx12 =
 
 snapEx12 :: SnapShot
 snapEx12 =
-  snapEx9
-    { ssStake =
-        mkStake
-          [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr)
-          , (Cast.carlSHK, carlMIR)
-          ]
-    , ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
-        ]
-    }
+  mkSnapShotFromStakePoolParams
+    ( ActiveStake
+        ( VMap.fromList
+            [ (Cast.aliceSHK, mkSwd $ aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr)
+            , (Cast.carlSHK, mkSwd carlMIR)
+            ]
+        )
+    )
+    poolParamsEx5
+  where
+    mkSwd = (`StakeWithDelegation` aikColdKeyHash Cast.alicePoolKeys) . unsafeNonZero . toCompactPartial
 
 expectedStEx12 :: ChainState ShelleyEra
 expectedStEx12 =
@@ -1025,7 +1026,7 @@ expectedStEx12 =
     . C.newSnapshot snapEx12 (Coin 11)
     . C.applyRewardUpdate rewardUpdateEx11
     . C.setOCertCounter coreNodeHK 3
-    . C.reapPool Cast.alicePoolParams
+    . C.reapPool Cast.aliceStakePoolParams
     $ expectedStEx11
   where
     coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @ShelleyEra ppEx 510
@@ -1053,7 +1054,7 @@ poolLifetimeExample =
     , testCase "prelude to the first nontrivial rewards" $ testCHAINExample poolLifetime7
     , testCase "create a nontrivial rewards" $ testCHAINExample poolLifetime8
     , testCase "apply a nontrivial rewards" $ testCHAINExample poolLifetime9
-    , testCase "drain reward account and deregister" $ testCHAINExample poolLifetime10
+    , testCase "drain staking address and deregister" $ testCHAINExample poolLifetime10
     , testCase "stage stake pool retirement" $ testCHAINExample poolLifetime11
     , testCase "reap stake pool" $ testCHAINExample poolLifetime12
     ]

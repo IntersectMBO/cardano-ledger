@@ -1,11 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.Orphans where
 
+import Cardano.Ledger.Hashes (standardAddrHashSize)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default)
 import Data.List (nub, sortOn)
@@ -14,9 +16,9 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lib
+import MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (FixupSpecRep (..), OpaqueErrorString)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (OpaqueErrorString, SpecNormalize (..))
 import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
 
@@ -30,6 +32,8 @@ deriving instance Ord Credential
 
 deriving instance Ord GovRole
 
+deriving instance Ord GovVotes
+
 deriving instance Ord VDeleg
 
 deriving instance Ord Vote
@@ -40,7 +44,7 @@ deriving instance Ord DrepThresholds
 
 deriving instance Ord PParamsUpdate
 
-deriving instance Ord RwdAddr
+deriving instance Ord RewardAddress
 
 deriving instance Ord GovAction
 
@@ -52,7 +56,7 @@ instance NFData a => NFData (HSSet a)
 
 instance NFData PParamsUpdate
 
-instance NFData RwdAddr
+instance NFData RewardAddress
 
 instance NFData GovAction
 
@@ -74,6 +78,8 @@ instance NFData Credential
 
 instance NFData GovRole
 
+instance NFData GovVotes
+
 instance NFData GovActionState
 
 instance NFData Anchor
@@ -94,7 +100,7 @@ instance NFData GovEnv
 
 instance NFData VDeleg
 
-instance NFData PoolParams
+instance NFData StakePoolParams
 
 instance NFData DCert
 
@@ -168,11 +174,13 @@ instance (ToExpr k, ToExpr v) => ToExpr (HSMap k v)
 
 instance ToExpr PParamsUpdate
 
-instance ToExpr RwdAddr
+instance ToExpr RewardAddress
 
 instance ToExpr GovAction
 
 instance ToExpr GovRole
+
+instance ToExpr GovVotes
 
 instance ToExpr Vote
 
@@ -196,7 +204,7 @@ instance ToExpr EnactState
 
 instance ToExpr VDeleg
 
-instance ToExpr PoolParams
+instance ToExpr StakePoolParams
 
 instance ToExpr DCert
 
@@ -264,113 +272,130 @@ instance ToExpr LEnv
 
 instance Default (HSMap k v)
 
-instance FixupSpecRep Void
+instance SpecNormalize Void
 
-instance FixupSpecRep a => FixupSpecRep (NonEmpty a)
+instance SpecNormalize a => SpecNormalize (NonEmpty a)
 
-instance FixupSpecRep Text where
-  fixup = id
+instance SpecNormalize Text where
+  specNormalize = id
 
-instance FixupSpecRep OpaqueErrorString
+instance SpecNormalize OpaqueErrorString
 
-instance FixupSpecRep a => FixupSpecRep [a]
+instance SpecNormalize a => SpecNormalize [a]
 
-instance FixupSpecRep Char where
-  fixup = id
+instance SpecNormalize Char where
+  specNormalize = id
 
 instance
   ( Eq v
   , Ord k
-  , FixupSpecRep k
-  , FixupSpecRep v
+  , SpecNormalize k
+  , SpecNormalize v
   ) =>
-  FixupSpecRep (HSMap k v)
+  SpecNormalize (HSMap k v)
   where
-  fixup (MkHSMap l) = MkHSMap . sortOn fst $ bimap fixup fixup <$> nub l
+  specNormalize (MkHSMap l) = MkHSMap . sortOn fst $ bimap specNormalize specNormalize <$> nub l
 
-instance (Ord a, FixupSpecRep a) => FixupSpecRep (HSSet a) where
-  fixup (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ fixup <$> l
+instance (Ord a, SpecNormalize a) => SpecNormalize (HSSet a) where
+  specNormalize (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ specNormalize <$> l
 
-instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (a, b)
+instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (a, b)
 
-instance FixupSpecRep a => FixupSpecRep (Maybe a)
+instance SpecNormalize a => SpecNormalize (Maybe a)
 
-instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (Either a b)
+instance (SpecNormalize a, SpecNormalize b) => SpecNormalize (Either a b)
 
-instance FixupSpecRep Bool
+instance SpecNormalize Bool
 
-instance FixupSpecRep TxId where
-  fixup = id
+instance SpecNormalize TxId where
+  specNormalize = id
 
-instance FixupSpecRep ()
+instance SpecNormalize ()
 
-instance FixupSpecRep BaseAddr
+instance SpecNormalize BaseAddr
 
-instance FixupSpecRep BootstrapAddr
+instance SpecNormalize BootstrapAddr
 
-instance FixupSpecRep Timelock
+instance SpecNormalize Timelock
 
-instance FixupSpecRep HSTimelock
+instance SpecNormalize HSTimelock
 
-instance FixupSpecRep HSPlutusScript
+instance SpecNormalize HSPlutusScript
 
-instance FixupSpecRep UTxOState
+instance SpecNormalize UTxOState
 
-instance FixupSpecRep Credential
+instance SpecNormalize Credential
 
-instance FixupSpecRep GovRole
+instance SpecNormalize GovRole
 
-instance FixupSpecRep VDeleg
+instance SpecNormalize GovVotes
 
-instance FixupSpecRep DepositPurpose
+instance SpecNormalize VDeleg
 
-instance FixupSpecRep DState
+instance SpecNormalize DepositPurpose
 
-instance FixupSpecRep PoolParams
+instance SpecNormalize DState
 
-instance FixupSpecRep PState
+instance SpecNormalize StakePoolParams
 
-instance FixupSpecRep GState
+instance SpecNormalize PState
 
-instance FixupSpecRep CertState
+instance SpecNormalize GState
 
-instance FixupSpecRep Vote
+instance SpecNormalize CertState
 
-instance FixupSpecRep Lib.Rational where
-  fixup = id
+instance SpecNormalize Vote
 
-instance FixupSpecRep PParamsUpdate
+instance SpecNormalize Agda.Rational where
+  specNormalize = id
 
-instance FixupSpecRep RwdAddr
+instance SpecNormalize PParamsUpdate
 
-instance FixupSpecRep GovAction
+instance SpecNormalize RewardAddress
 
-instance FixupSpecRep GovActionState
+instance SpecNormalize GovAction
 
-instance FixupSpecRep StakeDistrs
+instance SpecNormalize GovActionState
 
-instance FixupSpecRep PoolThresholds
+instance SpecNormalize StakeDistrs
 
-instance FixupSpecRep DrepThresholds
+instance SpecNormalize PoolThresholds
 
-instance FixupSpecRep PParams
+instance SpecNormalize DrepThresholds
 
-instance FixupSpecRep EnactState
+instance SpecNormalize PParams
 
-instance FixupSpecRep RatifyEnv
+instance SpecNormalize EnactState
 
-instance FixupSpecRep RatifyState
+instance SpecNormalize RatifyEnv
 
-instance FixupSpecRep EpochState
+instance SpecNormalize RatifyState
 
-instance FixupSpecRep Snapshots
+instance SpecNormalize EpochState
 
-instance FixupSpecRep Snapshot
+instance SpecNormalize Snapshots
 
-instance FixupSpecRep Acnt
+instance SpecNormalize Snapshot where
+  specNormalize (MkSnapshot s d p) =
+    MkSnapshot (specNormalize s') (specNormalize d') p
+    where
+      s' = removeZero s
+      -- Only keep delegations for credentials that have non-zero stake,
+      -- since ActiveStake drops zero-stake credentials
+      d' = keepOnlyStaked s' (removeZero d)
+      removeZero (MkHSMap l) = MkHSMap $ filter ((/= 0) . snd) l
+      keepOnlyStaked (MkHSMap sl) (MkHSMap dl) =
+        let stakeKeys = Set.fromList (map fst sl)
+         in MkHSMap $ filter ((`Set.member` stakeKeys) . fst) dl
 
-instance FixupSpecRep LState
+instance SpecNormalize Acnt
 
-instance FixupSpecRep HsRewardUpdate
+instance SpecNormalize LState
 
-instance FixupSpecRep NewEpochState
+instance SpecNormalize HsRewardUpdate
+
+instance SpecNormalize NewEpochState
+
+deriving instance Semigroup (HSMap k v)
+
+deriving instance Monoid (HSMap k v)

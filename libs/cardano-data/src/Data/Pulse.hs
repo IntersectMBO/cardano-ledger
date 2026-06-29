@@ -33,8 +33,7 @@ module Data.Pulse (
   -- * Monadic folds designed to be used inside pulsers.
   foldlM',
   foldlWithKeyM',
-)
-where
+) where
 
 import Control.Monad.Identity (Identity (..))
 import qualified Data.Foldable as F

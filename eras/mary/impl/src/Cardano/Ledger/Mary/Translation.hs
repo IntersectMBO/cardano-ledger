@@ -11,29 +11,22 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.Translation where
+module Cardano.Ledger.Mary.Translation () where
 
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
@@ -67,9 +60,9 @@ instance TranslateEra MaryEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance TranslateEra MaryEra ShelleyTx where
-  type TranslationError MaryEra ShelleyTx = DecoderError
-  translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
+instance TranslateEra MaryEra (Tx TopTx) where
+  type TranslationError MaryEra (Tx TopTx) = DecoderError
+  translateEra _ctx = translateEraThroughCBOR "AllegraTx"
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -89,27 +82,33 @@ instance TranslateEra MaryEra EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es
+        { esChainAccountState = esChainAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
+instance TranslateEra MaryEra ShelleyAccounts where
+  translateEra _ = pure . coerce
+
 instance TranslateEra MaryEra DState where
-  translateEra _ DState {..} = pure DState {..}
+  translateEra ctx DState {dsAccounts = accountsShelley, ..} = do
+    dsAccounts <- translateEra ctx accountsShelley
+    pure DState {..}
 
 instance TranslateEra MaryEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra MaryEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra MaryEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra MaryEra ShelleyCertState
+instance TranslateEra MaryEra ShelleyCertState where
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra MaryEra LedgerState where
   translateEra ctxt ls =

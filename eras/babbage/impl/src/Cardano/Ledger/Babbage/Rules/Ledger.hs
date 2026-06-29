@@ -26,7 +26,6 @@ import Cardano.Ledger.Babbage.Rules.Delegs ()
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
@@ -55,6 +54,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (LedgerFailure),
   renderDepositEqualsObligationViolation,
  )
+import Cardano.Ledger.State (EraCertState)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -113,17 +113,20 @@ instance
   , Embed (EraRule "UTXOW" era) (BabbageLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraCertState era
+  , EraRule "LEDGER" era ~ BabbageLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   STS (BabbageLEDGER era)
   where
   type State (BabbageLEDGER era) = LedgerState era
-  type Signal (BabbageLEDGER era) = Tx era
+  type Signal (BabbageLEDGER era) = Tx TopTx era
   type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase
   type PredicateFailure (BabbageLEDGER era) = ShelleyLedgerPredFailure era

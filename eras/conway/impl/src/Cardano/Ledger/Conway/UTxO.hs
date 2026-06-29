@@ -10,9 +10,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.UTxO (
+  conwayConsumed,
   conwayProducedValue,
   getConwayWitsVKeyNeeded,
+  getConwayScriptsNeeded,
   txNonDistinctRefScriptsSize,
+  getConwayMinFeeTxUtxo,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
@@ -40,12 +43,12 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   unVotingProcedures,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -56,7 +59,7 @@ import Lens.Micro ((^.))
 getConwayScriptsNeeded ::
   ConwayEraTxBody era =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   AlonzoScriptsNeeded era
 getConwayScriptsNeeded utxo txBody =
   getSpendingScriptsNeeded utxo txBody
@@ -94,15 +97,30 @@ getConwayScriptsNeeded utxo txBody =
       where
         getProposalScriptHash ProposalProcedure {pProcGovAction} =
           case pProcGovAction of
-            ParameterChange _ _ (SJust govPolicyHash) -> Just govPolicyHash
-            TreasuryWithdrawals _ (SJust govPolicyHash) -> Just govPolicyHash
+            ParameterChange _ _ (SJust guardrailsScriptHash) -> Just guardrailsScriptHash
+            TreasuryWithdrawals _ (SJust guardrailsScriptHash) -> Just guardrailsScriptHash
             _ -> Nothing
 
-conwayProducedValue ::
-  (ConwayEraTxBody era, Value era ~ MaryValue) =>
+conwayConsumed ::
+  (EraUTxO era, ConwayEraCertState era) =>
   PParams era ->
-  (KeyHash 'StakePool -> Bool) ->
-  TxBody era ->
+  CertState era ->
+  UTxO era ->
+  TxBody l era ->
+  Value era
+conwayConsumed pp certState =
+  getConsumedValue
+    pp
+    (lookupDepositDState $ certState ^. certDStateL)
+    (lookupDepositVState $ certState ^. certVStateL)
+
+conwayProducedValue ::
+  ( ConwayEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  PParams era ->
+  (KeyHash StakePool -> Bool) ->
+  TxBody TopTx era ->
   Value era
 conwayProducedValue pp isStakePool txBody =
   getProducedMaryValue pp isStakePool txBody
@@ -111,9 +129,12 @@ conwayProducedValue pp isStakePool txBody =
 instance EraUTxO ConwayEra where
   type ScriptsNeeded ConwayEra = AlonzoScriptsNeeded ConwayEra
 
+  consumed = conwayConsumed
+
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = conwayProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (conwayProducedValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
 
@@ -135,7 +156,7 @@ getConwayMinFeeTxUtxo ::
   , BabbageEraTxBody era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx l era ->
   UTxO era ->
   Coin
 getConwayMinFeeTxUtxo pparams tx utxo =
@@ -147,7 +168,7 @@ getConwayMinFeeTxUtxo pparams tx utxo =
 --
 -- Any input that appears in both regular inputs and reference inputs of a transaction is
 -- only used once in this computation.
-txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx era -> Int
+txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx l era -> Int
 txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
   where
     inputs = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
@@ -156,17 +177,17 @@ txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize 
 getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
   UTxO era ->
-  TxBody era ->
-  Set.Set (KeyHash 'Witness)
+  TxBody l era ->
+  Set.Set (KeyHash Witness)
 getConwayWitsVKeyNeeded utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyL)
+    `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
     `Set.union` voterWitnesses txBody
 
 voterWitnesses ::
   ConwayEraTxBody era =>
-  TxBody era ->
-  Set.Set (KeyHash 'Witness)
+  TxBody l era ->
+  Set.Set (KeyHash Witness)
 voterWitnesses txb =
   Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
   where

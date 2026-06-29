@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -42,8 +43,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   -- * LgacyPlutusArgs helpers
   toPlutusV1Args,
   toLegacyPlutusArgs,
-)
-where
+) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
@@ -76,10 +76,8 @@ import Cardano.Ledger.Plutus.Language (
   SLanguage (..),
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -98,6 +96,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
 
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
@@ -106,10 +105,8 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
-      transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-    txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
-      txOut <- transLookupTxOut ltiUTxO txIn
-      pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
+      transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
     txCerts <- transTxBodyCerts proxy ltiProtVer txBody
     Right $
       PV1.TxInfo
@@ -130,6 +127,10 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
       txBody = ltiTx ^. bodyTxL
 
   toPlutusArgs = toPlutusV1Args
+
+  toPlutusTxInInfo _ utxo txIn = do
+    txOut <- transLookupTxOut utxo txIn
+    pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
 
 toPlutusV1Args ::
   EraPlutusTxInfo 'PlutusV1 era =>
@@ -164,6 +165,10 @@ instance EraPlutusContext AlonzoEra where
   type ContextError AlonzoEra = AlonzoContextError AlonzoEra
   newtype TxInfoResult AlonzoEra
     = AlonzoTxInfoResult (Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1))
+
+  mkSupportedLanguage = \case
+    PlutusV1 -> Just $ SupportedLanguage SPlutusV1
+    _lang -> Nothing
 
   mkTxInfoResult = AlonzoTxInfoResult . toPlutusTxInfo SPlutusV1
 
@@ -217,23 +222,14 @@ transValidityInterval ::
   forall proxy era a.
   Inject (AlonzoContextError era) a =>
   proxy era ->
-  ProtVer ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
   Either a PV1.POSIXTimeRange
-transValidityInterval _ protVer epochInfo systemStart = \case
+transValidityInterval _ epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
   ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
-  ValidityInterval SNothing (SJust i) -> do
-    t <- transSlotToPOSIXTime i
-    pure $
-      if HardForks.translateUpperBoundForPlutusScripts protVer
-        then
-          PV1.Interval
-            (PV1.LowerBound PV1.NegInf True)
-            (PV1.strictUpperBound t)
-        else PV1.to t
+  ValidityInterval SNothing (SJust i) -> PV1.to <$> transSlotToPOSIXTime i
   ValidityInterval (SJust i) (SJust j) -> do
     t1 <- transSlotToPOSIXTime i
     t2 <- transSlotToPOSIXTime j
@@ -258,15 +254,15 @@ transTxOut txOut = do
   address <- transAddr (txOut ^. addrTxOutL)
   pure $ PV1.TxOut address (transValue val) (transDataHash <$> strictMaybeToMaybe dataHash)
 
-transTxBodyId :: EraTxBody era => TxBody era -> PV1.TxId
-transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated txBody))
+transTxBodyId :: EraTxBody era => TxBody l era -> PV1.TxId
+transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))
 
 -- | Translate all `TxCert`s from within a `TxBody`
 transTxBodyCerts ::
   (EraPlutusTxInfo l era, EraTxBody era) =>
   proxy l ->
   ProtVer ->
-  TxBody era ->
+  TxBody t era ->
   Either (ContextError era) [PlutusTxCert l]
 transTxBodyCerts proxy pv txBody =
   mapM (toPlutusTxCert proxy pv) $ F.toList (txBody ^. certsTxBodyL)
@@ -274,17 +270,17 @@ transTxBodyCerts proxy pv txBody =
 transWithdrawals :: Withdrawals -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
-    accum ans rewardAccount (Coin n) =
-      Map.insert (PV1.StakingHash (transRewardAccount rewardAccount)) n ans
+    accum ans accountAddress (Coin n) =
+      Map.insert (PV1.StakingHash (transAccountAddress accountAddress)) n ans
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
-transTxBodyWithdrawals :: EraTxBody era => TxBody era -> [(PV1.StakingCredential, Integer)]
+transTxBodyWithdrawals :: EraTxBody era => TxBody t era -> [(PV1.StakingCredential, Integer)]
 transTxBodyWithdrawals txBody = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
 
 -- | Translate all required signers produced by `reqSignerHashesTxBodyL`s from within a
 -- `TxBody`
-transTxBodyReqSignerHashes :: AlonzoEraTxBody era => TxBody era -> [PV1.PubKeyHash]
-transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSignerHashesTxBodyL)
+transTxBodyReqSignerHashes :: AlonzoEraTxBody era => TxBody t era -> [PV1.PubKeyHash]
+transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSignerHashesTxBodyG)
 
 -- | Translate all `TxDats`s from within `TxWits`
 transTxWitsDatums :: AlonzoEraTxWits era => TxWits era -> [(PV1.DatumHash, PV1.Datum)]
@@ -300,18 +296,13 @@ transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
 transMultiAsset :: MultiAsset -> PV1.Value
-transMultiAsset ma = transMultiAssetInternal ma mempty
-
-transMultiAssetInternal :: MultiAsset -> PV1.Value -> PV1.Value
-transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAcc m
+transMultiAsset (MultiAsset m) = PV1.Value (toAssocMap transPolicyID (toAssocMap transAssetName id) m)
   where
-    accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
+    toAssocMap :: (k -> pk) -> (v -> pv) -> Map.Map k v -> PV2.Map pk pv
+    toAssocMap transKey transVal =
+      PV2.unsafeFromList . Map.foldrWithKey' accWithKey []
       where
-        accum2 ans2 tok quantity =
-          PV1.unionWith
-            (+)
-            ans2
-            (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
+        accWithKey key value !acc = (transKey key, transVal value) : acc
 
 -- | Hysterical raisins:
 --
@@ -320,7 +311,7 @@ transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAc
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
 transMintValue :: MultiAsset -> PV1.Value
-transMintValue m = transMultiAssetInternal m (transCoinToValue zero)
+transMintValue m = transCoinToValue zero <> transMultiAsset m
 
 transValue :: MaryValue -> PV1.Value
 transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
@@ -328,7 +319,7 @@ transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
 
-transTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
+transTxCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> PV1.DCert
 transTxCert txCert =
   case transTxCertCommon txCert of
     Just cert -> cert
@@ -347,11 +338,11 @@ transTxCertCommon = \case
     Just $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegStakeTxCert stakeCred keyHash ->
     Just $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
-  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+  RegPoolTxCert (StakePoolParams {sppId, sppVrf}) ->
     Just $
       PV1.DCertPoolRegister
-        (transKeyHash ppId)
-        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
+        (transKeyHash sppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     Just $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   _ -> Nothing
@@ -366,5 +357,5 @@ transPlutusPurpose proxy pv = \case
   AlonzoSpending (AsItem txIn) -> pure $ PV1.Spending (transTxIn txIn)
   AlonzoMinting (AsItem policyId) -> pure $ PV1.Minting (transPolicyID policyId)
   AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
-  AlonzoRewarding (AsItem rewardAccount) ->
-    pure $ PV1.Rewarding (PV1.StakingHash (transRewardAccount rewardAccount))
+  AlonzoRewarding (AsItem accountAddress) ->
+    pure $ PV1.Rewarding (PV1.StakingHash (transAccountAddress accountAddress))

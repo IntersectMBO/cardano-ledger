@@ -8,7 +8,7 @@ import Paths_cardano_ledger_allegra
 
 readAllegraCddlFileNames :: IO [FilePath]
 readAllegraCddlFileNames = do
-  base <- getDataFileName "cddl-files/allegra.cddl"
+  base <- getDataFileName "cddl/data/allegra.cddl"
   pure [base]
 
 readAllegraCddlFiles :: IO [BSL.ByteString]

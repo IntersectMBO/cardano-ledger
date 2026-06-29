@@ -3,19 +3,21 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | This module isolates all the types and functionality around
@@ -113,9 +115,11 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   PGraph (..),
   pGraphNodesL,
   proposalsDeposits,
+  mapPRoot,
+  translateProposals,
 ) where
 
-import Cardano.Ledger.Address (rewardAccountCredentialL)
+import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   isSJust,
@@ -131,11 +135,11 @@ import Cardano.Ledger.Binary (
   decodeListLikeWithCountT,
   decodeRecordNamedT,
  )
-import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
+import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin), addCompactCoin)
+import Cardano.Ledger.Compactible (toCompact)
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.UMap (addCompact, toCompact)
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
@@ -143,10 +147,11 @@ import Control.Monad.Trans (lift)
 import Data.Aeson (ToJSON (..))
 import Data.Default (Default (..))
 import Data.Either (partitionEithers)
-import Data.Foldable as F (foldl', foldrM, toList)
+import Data.Foldable as F (Foldable (..), foldl', foldrM, toList)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
+import qualified Data.OMap.Strict as OM
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
@@ -156,6 +161,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Tree
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Stack
 import Lens.Micro
@@ -170,6 +176,14 @@ data PRoot a = PRoot
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NoThunks, NFData, Default)
+
+-- | Map a function over the values in the `PRoot`.
+mapPRoot :: Ord b => (a -> b) -> PRoot a -> PRoot b
+mapPRoot f PRoot {..} =
+  PRoot
+    { prRoot = f <$> prRoot
+    , prChildren = Set.map f prChildren
+    }
 
 -- | A non-root edges in a `Proposals` tree. `peParent` is expected to be
 -- a `SNothing` only at the begining when no governance actions has been
@@ -223,11 +237,22 @@ pGraphNodesL = lens unPGraph $ \x y -> x {unPGraph = y}
 -- as the @`PrevGovActionIds`@ from the @`EnactState`@
 data Proposals era = Proposals
   { pProps :: !(OMap.OMap GovActionId (GovActionState era))
-  , pRoots :: !(GovRelation PRoot era)
-  , pGraph :: !(GovRelation PGraph era)
+  , pRoots :: !(GovRelation PRoot)
+  , pGraph :: !(GovRelation PGraph)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData, Default)
+
+translateProposals ::
+  ( TranslateEra era GovActionState
+  , TranslationError era GovActionState ~ Void
+  ) =>
+  TranslationContext era -> Proposals (PreviousEra era) -> Proposals era
+translateProposals ctxt Proposals {..} =
+  Proposals
+    (foldr' (\x -> (translateEra' ctxt x OM.<|)) mempty pProps)
+    pRoots
+    pGraph
 
 -- | Make sure not to change the `gasId`, otherwise all hell will break loose.
 mapProposals :: (GovActionState era -> GovActionState era) -> Proposals era -> Proposals era
@@ -236,10 +261,10 @@ mapProposals f props = props {pProps = OMap.mapUnsafe f (pProps props)}
 pPropsL :: Lens' (Proposals era) (OMap.OMap GovActionId (GovActionState era))
 pPropsL = lens pProps $ \x y -> x {pProps = y}
 
-pRootsL :: Lens' (Proposals era) (GovRelation PRoot era)
+pRootsL :: Lens' (Proposals era) (GovRelation PRoot)
 pRootsL = lens pRoots $ \x y -> x {pRoots = y}
 
-pGraphL :: Lens' (Proposals era) (GovRelation PGraph era)
+pGraphL :: Lens' (Proposals era) (GovRelation PGraph)
 pGraphL = lens pGraph $ \x y -> x {pGraph = y}
 
 instance EraPParams era => ToJSON (Proposals era) where
@@ -249,9 +274,9 @@ instance EraPParams era => ToJSON (Proposals era) where
 proposalsWithPurpose ::
   forall p era.
   ToGovActionPurpose p =>
-  (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+  (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
   Proposals era ->
-  Map (GovPurposeId p era) (GovActionState era)
+  Map (GovPurposeId p) (GovActionState era)
 proposalsWithPurpose propL Proposals {pProps, pGraph} =
   fromMaybe (assert False fallBackMapWithPurpose) $
     Map.traverseWithKey
@@ -260,7 +285,7 @@ proposalsWithPurpose propL Proposals {pProps, pGraph} =
   where
     -- In case there is a bug and there is an inconsistency in state we want to report in
     -- testing, while falling back onto alternative slower implementation
-    fallBackMapWithPurpose :: Map (GovPurposeId p era) (GovActionState era)
+    fallBackMapWithPurpose :: Map (GovPurposeId p) (GovActionState era)
     fallBackMapWithPurpose =
       Map.mapKeysMonotonic GovPurposeId $
         Map.filter (isGovActionWithPurpose @p . pProcGovAction . gasProposalProcedure) (OMap.toMap pProps)
@@ -288,9 +313,9 @@ runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
     -- Append a new GovActionState to the Proposals and then add it to the set of children
     -- for its parent as well as initiate an empty lineage for this new child.
     update ::
-      (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
-      StrictMaybe (GovPurposeId p era) ->
-      GovPurposeId p era ->
+      (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
+      StrictMaybe (GovPurposeId p) ->
+      GovPurposeId p ->
       Maybe (Proposals era)
     update govRelationL parent newId
       | parent == ps ^. pRootsL . govRelationL . prRootL =
@@ -304,7 +329,7 @@ runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
             psWithGas
               & pGraphL . govRelationL . pGraphNodesL
                 %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
-                      . Map.adjust (peChildrenL %~ Set.insert newId) parentId
+                       . Map.adjust (peChildrenL %~ Set.insert newId) parentId
                    )
       | otherwise = Nothing
 
@@ -312,7 +337,7 @@ runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
 -- @`GovActionState`@s and the 4 roots (@`PrevGovActionIds`@)
 mkProposals ::
   (EraPParams era, MonadFail m) =>
-  GovRelation StrictMaybe era ->
+  GovRelation StrictMaybe ->
   OMap.OMap GovActionId (GovActionState era) ->
   m (Proposals era)
 mkProposals pgais omap = do
@@ -338,7 +363,7 @@ mkProposals pgais omap = do
 -- WARNING: Should only be used for testing!
 unsafeMkProposals ::
   (HasCallStack, EraPParams era) =>
-  GovRelation StrictMaybe era ->
+  GovRelation StrictMaybe ->
   OMap.OMap GovActionId (GovActionState era) ->
   Proposals era
 unsafeMkProposals pgais omap = F.foldl' unsafeProposalsAddAction initialProposals omap
@@ -368,10 +393,10 @@ instance EraPParams era => DecCBOR (Proposals era) where
 instance EraPParams era => DecShareCBOR (Proposals era) where
   type
     Share (Proposals era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR = do
     decodeRecordNamedT "Proposals" (const 2) $ do
@@ -498,9 +523,9 @@ proposalsApplyEnactment enactedGass expiredGais props =
                 , removed
                 )
         enactFromRoot ::
-          (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
-          StrictMaybe (GovPurposeId p era) ->
-          GovPurposeId p era ->
+          (forall f. Lens' (GovRelation f) (f (GovPurposeId p))) ->
+          StrictMaybe (GovPurposeId p) ->
+          GovPurposeId p ->
           ( Proposals era
           , Map GovActionId (GovActionState era)
           , Map GovActionId (GovActionState era)
@@ -536,17 +561,17 @@ proposalsActions ::
   StrictSeq (GovActionState era)
 proposalsActions (Proposals omap _ _) = OMap.toStrictSeq omap
 
--- | Get a mapping from the reward-account staking credentials to deposits of
+-- | Get a mapping from the account-address staking credentials to deposits of
 -- all proposals.
 proposalsDeposits ::
   Proposals era ->
-  Map (Credential 'Staking) (CompactForm Coin)
+  Map (Credential Staking) (CompactForm Coin)
 proposalsDeposits =
   F.foldl'
     ( \gasMap gas ->
         Map.insertWith
-          addCompact
-          (gas ^. gasReturnAddrL . rewardAccountCredentialL)
+          addCompactCoin
+          (gas ^. gasReturnAddrL . accountAddressCredentialL)
           (fromMaybe (CompactCoin 0) $ toCompact $ gas ^. gasDepositL)
           gasMap
     )
@@ -574,10 +599,10 @@ proposalsLookupId ::
   Maybe (GovActionState era)
 proposalsLookupId gai (Proposals omap _ _) = OMap.lookup gai omap
 
-toPrevGovActionIds :: GovRelation PRoot era -> GovRelation StrictMaybe era
+toPrevGovActionIds :: GovRelation PRoot -> GovRelation StrictMaybe
 toPrevGovActionIds = hoistGovRelation prRoot
 
-fromPrevGovActionIds :: GovRelation StrictMaybe era -> GovRelation PRoot era
+fromPrevGovActionIds :: GovRelation StrictMaybe -> GovRelation PRoot
 fromPrevGovActionIds = hoistGovRelation (`PRoot` Set.empty)
 
 ---------------------
@@ -590,7 +615,7 @@ fromPrevGovActionIds = hoistGovRelation (`PRoot` Set.empty)
 data TreeMaybe a = TreeMaybe {unTreeMaybe :: Tree (StrictMaybe a)}
   deriving (Eq)
 
-instance Show (TreeMaybe (GovPurposeId p era)) where
+instance Show (TreeMaybe (GovPurposeId p)) where
   show = ("\n" <>) . drawTree . fmap showGovPurposeId . unTreeMaybe
     where
       showGovPurposeId = \case
@@ -598,11 +623,11 @@ instance Show (TreeMaybe (GovPurposeId p era)) where
         SJust (GovPurposeId govActionId) -> T.unpack (govActionIdToText govActionId)
 
 -- | Partial version of `toGovRelationTreeEither`
-toGovRelationTree :: (Era era, HasCallStack) => Proposals era -> GovRelation TreeMaybe era
+toGovRelationTree :: HasCallStack => Proposals era -> GovRelation TreeMaybe
 toGovRelationTree = either error id . toGovRelationTreeEither
 
 -- | Convert `Proposals` into a valid `Tree`
-toGovRelationTreeEither :: Era era => Proposals era -> Either String (GovRelation TreeMaybe era)
+toGovRelationTreeEither :: Proposals era -> Either String (GovRelation TreeMaybe)
 toGovRelationTreeEither Proposals {pProps, pRoots, pGraph} = do
   unless (OMap.invariantHolds' pProps) $ Left "OMap invariant is violated"
 
@@ -653,7 +678,7 @@ newtype ChildParent a = ChildParent (Map a (StrictMaybe a))
 toChildParentRelation ::
   Foldable f =>
   f (GovActionState era) ->
-  GovRelation ChildParent era
+  GovRelation ChildParent
 toChildParentRelation = foldMap toChildParent
   where
     toChildParent gas =
@@ -691,11 +716,11 @@ toPTree (ChildParent childParent) root (PGraph fullGraph) = do
     childToTree parent child (!graph, !acc) =
       case Map.lookup child graph of
         Nothing -> Left $ "Cannot find the node: " ++ show child
-        Just edges -> do
-          unless (peParent edges == parent) $
+        Just es -> do
+          unless (peParent es == parent) $
             Left $
               "Incorrect parent: "
-                ++ show (peParent edges)
+                ++ show (peParent es)
                 ++ " listed for the node: "
                 ++ show child
           case Map.lookup child childParent of
@@ -713,7 +738,7 @@ toPTree (ChildParent childParent) root (PGraph fullGraph) = do
           (graph', !subTree) <-
             -- Deleting the child from the graph ensures that every node except the root
             -- appears exactly once in the graph.
-            nodeToTree (SJust child) (peChildren edges) (Map.delete child graph)
+            nodeToTree (SJust child) (peChildren es) (Map.delete child graph)
           pure (graph', subTree : acc)
 
 -- | Verify invariant after addition of GovActionState to Proposals. Will print the state

@@ -22,24 +22,21 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY, AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
+import Cardano.Ledger.Alonzo.Tx (totExUnits)
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
@@ -58,6 +55,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -71,7 +69,6 @@ import Control.State.Transition (
  )
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -81,11 +78,18 @@ import NoThunks.Class (NoThunks (..))
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
-  | TooManyExUnits (Mismatch 'RelLTEQ ExUnits)
+  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
   deriving (Generic)
+
+instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (AlonzoBbodyPredFailure era)
 
 newtype AlonzoBbodyEvent era
   = ShelleyInAlonzoEvent (ShelleyBbodyEvent era)
+  deriving (Generic)
+
+deriving instance
+  Eq (Event (EraRule "LEDGERS" era)) =>
+  Eq (AlonzoBbodyEvent era)
 
 type instance EraRuleFailure "BBODY" AlonzoEra = AlonzoBbodyPredFailure AlonzoEra
 
@@ -146,18 +150,14 @@ deriving anyclass instance
   NoThunks (AlonzoBbodyPredFailure era)
 
 instance
-  ( Typeable era
-  , EncCBOR (ShelleyBbodyPredFailure era)
-  ) =>
+  (Era era, EncCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>
   EncCBOR (AlonzoBbodyPredFailure era)
   where
   encCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
   encCBOR (TooManyExUnits m) = encode (Sum TooManyExUnits 1 !> To m)
 
 instance
-  ( Typeable era
-  , DecCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no DecCBOR for (ShelleyBbodyPredFailure era)
-  ) =>
+  (Era era, DecCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>
   DecCBOR (AlonzoBbodyPredFailure era)
   where
   decCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
@@ -180,25 +180,23 @@ alonzoBbodyTransition ::
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , EraSegWits era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
+  , EraBlockBody era
   , AlonzoEraTxWits era
-  , TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
   TransitionRule (EraRule "BBODY" era)
 alonzoBbodyTransition =
   judgmentContext
     >>= \( TRC
-            ( BbodyEnv pp account
-              , BbodyState ls b
-              , UnserialisedBlock bh txsSeq
-              )
-          ) -> do
-        let txs = txSeqTxns txsSeq
+             ( BbodyEnv pp account
+               , BbodyState ls b
+               , Block bh txsSeq
+               )
+           ) -> do
+        let txs = txsSeq ^. txSeqBlockBodyL
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq @era txsSeq
+            actualBodyHash = hashBlockBody @era txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)
@@ -265,23 +263,16 @@ instance
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
-  , Tx era ~ AlonzoTx era
-  , TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
-  , EraSegWits era
+  , EraBlockBody era
   , AlonzoEraPParams era
   ) =>
   STS (AlonzoBBODY era)
   where
-  type
-    State (AlonzoBBODY era) =
-      ShelleyBbodyState era
+  type State (AlonzoBBODY era) = ShelleyBbodyState era
 
-  type
-    Signal (AlonzoBBODY era) =
-      (Block BHeaderView era)
+  type Signal (AlonzoBBODY era) = Block BHeaderView era
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 

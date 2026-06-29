@@ -39,6 +39,7 @@ import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
@@ -51,15 +52,6 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   ledgerTraceFromBlock,
  )
 import Test.Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
-import Test.QuickCheck (
-  Property,
-  conjoin,
-  counterexample,
-  (.&&.),
-  (===),
- )
-import Test.Tasty
-import qualified Test.Tasty.QuickCheck as TQC
 
 instance Embed (AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
   wrapFailed = BbodyFailure
@@ -71,9 +63,9 @@ traceLen = 100
 data HasPlutus = HasPlutus | NoPlutus
   deriving (Show)
 
-tests :: TestTree
+tests :: Spec
 tests =
-  TQC.testProperty "alonzo specific" $
+  prop "alonzo specific" $
     forAllChainTrace @AlonzoEra traceLen defaultConstants $ \tr ->
       conjoin $ map alonzoSpecificProps (sourceSignalTargets tr)
 
@@ -150,21 +142,21 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
               )
               ( counterexample "At least one UTxO is consumed" utxoConsumed
                   .&&. ( case (hasPlutus, isValid') of
-                          (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
-                          (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
-                          (HasPlutus, IsValid True) ->
-                            conjoin
-                              [ counterexample "Non trivial execution units" nonTrivialExU
-                              , counterexample "Received the expected plutus scripts" expectedPScripts
-                              , counterexample "Plutus scripts all evaluate to true" allPlutusTrue
-                              ]
-                          (HasPlutus, IsValid False) ->
-                            conjoin
-                              [ counterexample "No new UTxO" noNewUTxO
-                              , counterexample "The collateral amount was added to the fees" collateralInFees
-                              , dp === dp'
-                              , ds === ds'
-                              , counterexample "No failing Plutus scripts" $ not allPlutusTrue
-                              ]
+                           (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
+                           (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
+                           (HasPlutus, IsValid True) ->
+                             conjoin
+                               [ counterexample "Non trivial execution units" nonTrivialExU
+                               , counterexample "Received the expected plutus scripts" expectedPScripts
+                               , counterexample "Plutus scripts all evaluate to true" allPlutusTrue
+                               ]
+                           (HasPlutus, IsValid False) ->
+                             conjoin
+                               [ counterexample "No new UTxO" noNewUTxO
+                               , counterexample "The collateral amount was added to the fees" collateralInFees
+                               , dp === dp'
+                               , ds === ds'
+                               , counterexample "No failing Plutus scripts" $ not allPlutusTrue
+                               ]
                        )
               )

@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -114,6 +115,7 @@ module Cardano.Ledger.Conway.Governance (
   rsExpiredL,
   rsEnactedL,
   rsDelayedL,
+  constitutionGuardrailsScriptHashL,
   constitutionScriptL,
   constitutionAnchorL,
   gasIdL,
@@ -137,7 +139,6 @@ module Cardano.Ledger.Conway.Governance (
   epochStateDRepPulsingStateL,
   epochStateStakeDistrL,
   epochStateRegDrepL,
-  epochStateUMapL,
   pulseDRepPulsingState,
   completeDRepPulsingState,
   extractDRepPulsingState,
@@ -164,6 +165,7 @@ module Cardano.Ledger.Conway.Governance (
   reCommitteeStateL,
   DefaultVote (..),
   defaultStakePoolVote,
+  translateProposals,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -173,11 +175,12 @@ module Cardano.Ledger.Conway.Governance (
   showGovActionType,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (raCredential))
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
+  KeyValuePairs (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   knownNonZero,
   mulNonZero,
   toIntegerNonZero,
@@ -202,14 +205,8 @@ import Cardano.Ledger.Binary.Plain (
   decodeWord8,
   encodeWord8,
  )
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  EraCertState (..),
-  Obligations (..),
-  certVStateL,
-  csCommitteeCreds,
- )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (CompactForm)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.DRepPulser
 import Cardano.Ledger.Conway.Governance.Internal
@@ -218,37 +215,24 @@ import Cardano.Ledger.Conway.Governance.Proposals
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
-  LedgerState,
   NewEpochState (..),
-  dsUnified,
   epochStateGovStateL,
-  epochStatePoolParamsL,
-  epochStateTreasuryL,
+  epochStateStakePoolsL,
   esLStateL,
   lsCertState,
-  lsCertStateL,
   lsUTxOState,
-  lsUTxOStateL,
   newEpochStateGovStateL,
-  utxosGovStateL,
-  vsCommitteeState,
-  vsCommitteeStateL,
-  vsDReps,
  )
-import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader (ReaderT, ask)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
-import qualified Data.Foldable as F (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -276,7 +260,7 @@ data ConwayGovState era = ConwayGovState
   }
   deriving (Generic, Show)
 
-deriving instance (EraPParams era, EraStake era) => Eq (ConwayGovState era)
+deriving instance (ConwayEraAccounts era, EraPParams era, EraStake era) => Eq (ConwayGovState era)
 
 cgsProposalsL :: Lens' (ConwayGovState era) (Proposals era)
 cgsProposalsL = lens cgsProposals (\x y -> x {cgsProposals = y})
@@ -300,20 +284,24 @@ cgsFuturePParamsL :: Lens' (ConwayGovState era) (FuturePParams era)
 cgsFuturePParamsL =
   lens cgsFuturePParams (\cgs futurePParams -> cgs {cgsFuturePParams = futurePParams})
 
-govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
+govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
-  EraStake era => SimpleGetter (ConwayGovState era) (Map DRep (CompactForm Coin))
+  (ConwayEraAccounts era, EraStake era) =>
+  SimpleGetter (ConwayGovState era) (Map DRep (CompactForm Coin))
 conwayGovStateDRepDistrG = to (psDRepDistr . fst . finishDRepPulser . cgsDRepPulsingState)
 
-getRatifyState :: EraStake era => ConwayGovState era -> RatifyState era
+getRatifyState :: (ConwayEraAccounts era, EraStake era) => ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
 
 -- | This function updates the thunk, which will contain new PParams once evaluated or
 -- Nothing when there was no update. At the same time if we already know the future of
 -- PParams, then it will act as an identity function.
-predictFuturePParams :: EraStake era => ConwayGovState era -> ConwayGovState era
+predictFuturePParams ::
+  (ConwayEraAccounts era, EraStake era) =>
+  ConwayGovState era ->
+  ConwayGovState era
 predictFuturePParams govState =
   case cgsFuturePParams govState of
     NoPParamsUpdate -> govState
@@ -351,10 +339,10 @@ mkEnactState gs =
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
   type
     Share (ConwayGovState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
+      ( Interns (Credential Staking)
+      , Interns (KeyHash StakePool)
+      , Interns (Credential DRepRole)
+      , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR =
     decodeRecordNamedT "ConwayGovState" (const 7) $ do
@@ -370,7 +358,7 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR = decNoShareCBOR
 
-instance (EraPParams era, EraStake era) => EncCBOR (ConwayGovState era) where
+instance (ConwayEraAccounts era, EraPParams era, EraStake era) => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
     encode $
       Rec ConwayGovState
@@ -382,7 +370,7 @@ instance (EraPParams era, EraStake era) => EncCBOR (ConwayGovState era) where
         !> To cgsFuturePParams
         !> To cgsDRepPulsingState
 
-instance (EraPParams era, EraStake era) => ToCBOR (ConwayGovState era) where
+instance (ConwayEraAccounts era, EraPParams era, EraStake era) => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (ConwayGovState era) where
@@ -391,27 +379,32 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
 instance EraPParams era => Default (ConwayGovState era) where
   def = ConwayGovState def def def def def def (DRComplete def def)
 
-instance (EraPParams era, NFData (InstantStake era)) => NFData (ConwayGovState era)
+instance
+  (EraPParams era, NFData (InstantStake era), NFData (Accounts era)) =>
+  NFData (ConwayGovState era)
 
-instance (EraPParams era, NoThunks (InstantStake era)) => NoThunks (ConwayGovState era)
+instance
+  (EraPParams era, NoThunks (InstantStake era), NoThunks (Accounts era)) =>
+  NoThunks (ConwayGovState era)
 
-instance (EraPParams era, EraStake era) => ToJSON (ConwayGovState era) where
-  toJSON = object . toConwayGovPairs
-  toEncoding = pairs . mconcat . toConwayGovPairs
+deriving via
+  KeyValuePairs (ConwayGovState era)
+  instance
+    (ConwayEraAccounts era, EraPParams era, EraStake era) => ToJSON (ConwayGovState era)
 
-toConwayGovPairs :: EraStake era => (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
-  let ConwayGovState {..} = cg
-   in [ "proposals" .= cgsProposals
-      , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
-      , "committee" .= cgsCommittee
-      , "constitution" .= cgsConstitution
-      , "currentPParams" .= cgsCurPParams
-      , "previousPParams" .= cgsPrevPParams
-      , "futurePParams" .= cgsFuturePParams
-      ]
+instance (ConwayEraAccounts era, EraPParams era, EraStake era) => ToKeyValuePairs (ConwayGovState era) where
+  toKeyValuePairs cg@(ConwayGovState _ _ _ _ _ _ _) =
+    let ConwayGovState {..} = cg
+     in [ "proposals" .= cgsProposals
+        , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
+        , "committee" .= cgsCommittee
+        , "constitution" .= cgsConstitution
+        , "currentPParams" .= cgsCurPParams
+        , "previousPParams" .= cgsPrevPParams
+        , "futurePParams" .= cgsFuturePParams
+        ]
 
-instance EraPParams ConwayEra => EraGov ConwayEra where
+instance EraGov ConwayEra where
   type GovState ConwayEra = ConwayGovState ConwayEra
 
   curPParamsGovStateL = cgsCurPParamsL
@@ -428,7 +421,7 @@ instance EraPParams ConwayEra => EraGov ConwayEra where
       , oblPool = Coin 0
       }
 
-class (EraGov era, EraStake era) => ConwayEraGov era where
+class (EraGov era, EraStake era, ConwayEraAccounts era) => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
   proposalsGovStateL :: Lens' (GovState era) (Proposals era)
   drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
@@ -452,14 +445,14 @@ epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepP
 epochStateDRepPulsingStateL = epochStateGovStateL . drepPulsingStateGovStateL
 
 setCompleteDRepPulsingState ::
-  GovState era ~ ConwayGovState era =>
+  ConwayEraGov era =>
   PulsingSnapshot era ->
   RatifyState era ->
   EpochState era ->
   EpochState era
 setCompleteDRepPulsingState snapshot ratifyState epochState =
   epochState
-    & epochStateGovStateL . cgsDRepPulsingStateL
+    & epochStateGovStateL . drepPulsingStateGovStateL
       .~ DRComplete snapshot ratifyState
 
 -- | Refresh the pulser in the EpochState using all the new data that is needed to compute
@@ -469,7 +462,7 @@ setFreshDRepPulsingState ::
   , Monad m
   , RunConwayRatify era
   , ConwayEraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   EpochNo ->
   PoolDistr ->
@@ -496,9 +489,8 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       props = govState ^. cgsProposalsL
       -- Maximum number of blocks we are allowed to roll back: usually a small positive number
       k = securityParameter globals -- On mainnet set to 2160
-      umap = dsUnified dState
-      umapSize = Map.size $ umElems umap
-      pulseSize = max 1 (fromIntegral umapSize %. (knownNonZero @4 `mulNonZero` toIntegerNonZero k))
+      numAccounts = Map.size $ dState ^. accountsL . accountsMapL
+      pulseSize = max 1 (fromIntegral numAccounts %. (knownNonZero @4 `mulNonZero` toIntegerNonZero k))
       govState' =
         predictFuturePParams $
           govState
@@ -506,7 +498,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
               .~ DRPulsing
                 ( DRepPulser
                     { dpPulseSize = floor pulseSize
-                    , dpUMap = dsUnified dState
+                    , dpAccounts = dState ^. accountsL
                     , dpIndex = 0 -- used as the index of the remaining UMap
                     , dpInstantStake = instantStake -- used as part of the snapshot
                     , dpStakePoolDistr = stakePoolDistr
@@ -516,11 +508,11 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                     , dpCommitteeState = vsCommitteeState vState
                     , dpEnactState =
                         mkEnactState govState
-                          & ensTreasuryL .~ epochState ^. epochStateTreasuryL
+                          & ensTreasuryL .~ epochState ^. treasuryL
                     , dpProposals = proposalsActions props
                     , dpProposalDeposits = proposalsDeposits props
                     , dpGlobals = globals
-                    , dpPoolParams = epochState ^. epochStatePoolParamsL
+                    , dpStakePools = epochState ^. epochStateStakePoolsL
                     }
                 )
   pure $ epochState & epochStateGovStateL .~ govState'
@@ -534,13 +526,13 @@ forceDRepPulsingState nes = nes & newEpochStateDRepPulsingStateL %~ completeDRep
 
 -- | Default vote that will be used for Stake Pool.
 data DefaultVote
-  = -- | Reward account is delegated to a @DRepKeyHash@, @DRepScriptHash@ or undelegated:
+  = -- | Account address is delegated to a @DRepKeyHash@, @DRepScriptHash@ or undelegated:
     --   default vote is @No@.
     DefaultNo
-  | -- | Reward account is delegated to @DRepAlwaysAbstain@:
+  | -- | Account address is delegated to @DRepAlwaysAbstain@:
     --   default vote is @Abstain@, except for @HardForkInitiation@ actions.
     DefaultAbstain
-  | -- | Reward account is delegated to @DRepAlwaysNoConfidence@:
+  | -- | Account address is delegated to @DRepAlwaysNoConfidence@:
     --   default vote is @Yes@ in case of a @NoConfidence@ action, otherwise @No@.
     DefaultNoConfidence
   deriving (Eq, Show)
@@ -560,39 +552,38 @@ instance ToCBOR DefaultVote where
   toCBOR DefaultNoConfidence = encodeWord8 2
 
 instance EncCBOR DefaultVote
+
 instance DecCBOR DefaultVote
 
 defaultStakePoolVote ::
+  ConwayEraAccounts era =>
   -- | Specify the key hash of the pool whose default vote should be returned.
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   -- | Registered Stake Pools
-  Map (KeyHash 'StakePool) PoolParams ->
+  Map (KeyHash StakePool) StakePoolState ->
   -- | Delegations of staking credneitals to a DRep
-  Map (Credential 'Staking) DRep ->
+  Accounts era ->
   DefaultVote
-defaultStakePoolVote poolId poolParams dRepDelegations =
-  toDefaultVote $
-    Map.lookup poolId poolParams >>= \d ->
-      Map.lookup (raCredential $ ppRewardAccount d) dRepDelegations
+defaultStakePoolVote poolId poolParams accounts =
+  toDefaultVote $ do
+    spp <- Map.lookup poolId poolParams
+    accountState <- Map.lookup (unAccountId (spsAccountId spp)) (accounts ^. accountsMapL)
+    accountState ^. dRepDelegationAccountStateL
   where
     toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain
     toDefaultVote (Just DRepAlwaysNoConfidence) = DefaultNoConfidence
     toDefaultVote _ = DefaultNo
 
+-- | Extract all unique hot credential authorizations for the current committee
+-- that is elected.
 authorizedElectedHotCommitteeCredentials ::
-  (ConwayEraGov era, EraCertState era) =>
-  LedgerState era ->
-  Set.Set (Credential 'HotCommitteeRole)
-authorizedElectedHotCommitteeCredentials ledgerState =
-  case ledgerState ^. lsUTxOStateL . utxosGovStateL . committeeGovStateL of
+  StrictMaybe (Committee era) ->
+  CommitteeState era ->
+  Set.Set (Credential HotCommitteeRole)
+authorizedElectedHotCommitteeCredentials committee committeeState =
+  case committee of
     SNothing -> Set.empty
     SJust electedCommiteee ->
-      collectAuthorizedHotCreds $
-        csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee
-  where
-    committeeState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
-    collectAuthorizedHotCreds =
-      let toHotCredSet !acc = \case
-            CommitteeHotCredential hotCred -> Set.insert hotCred acc
-            CommitteeMemberResigned {} -> acc
-       in F.foldl' toHotCredSet Set.empty
+      authorizedHotCommitteeCredentials $
+        CommitteeState $
+          csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee

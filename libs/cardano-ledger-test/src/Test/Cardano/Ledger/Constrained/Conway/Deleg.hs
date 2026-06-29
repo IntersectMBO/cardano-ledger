@@ -1,11 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -13,20 +12,23 @@
 -- for the DELEG rule
 module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
+import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.CertState
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Core (Era (..), EraPParams (..), ppKeyDepositL)
-import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
-import Constrained
+import Cardano.Ledger.Shelley.TxCert
+import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -37,198 +39,177 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
--- | Specify that some of the rewards in the RDPair's are zero.
---   without this in the DState, it is hard to generate the ConwayUnRegCert
---   certificate, since it requires a rewards balance of 0.
---   We also specify that both reward and deposit are greater than (Coin 0)
-someZeros :: forall fn. IsConwayUniv fn => Specification fn RDPair
-someZeros = constrained $ \ [var| someRdpair |] ->
-  match someRdpair $ \ [var| rewardx |] [var|deposit|] ->
-    [ satisfies rewardx (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, gtSpec 0))
-    , satisfies deposit (geqSpec 0)
-    ]
-
--- | Specification for the RewardDepositMap of the Umap in the DState
---   It must be witnessed, and conform to some properties relating to the
---   withdrawals map, which is part of the context, so passed as an arg.
-rewDepMapSpec ::
-  (Era era, IsConwayUniv fn) =>
-  WitUniv era ->
-  Map RewardAccount Coin ->
-  Specification fn (Map (Credential 'Staking) RDPair)
-rewDepMapSpec univ wdrl =
-  let n = wvSize univ
-      m = Map.size wdrl
-      maxRewDepSize = fromIntegral (2 * n - (m + 2))
-   in constrained $ \ [var|rdmap|] ->
-        [ -- can't be bigger than the witness set (n keys + n scripts)
-          -- must also have enough slack to accomodate the credentials in wdrl (m)
-          assert $ sizeOf_ (dom_ rdmap) <=. lit maxRewDepSize -- If this is too large
-        , assert $ subset_ (lit (wdrlCredentials wdrl)) (dom_ rdmap) -- it is hard to satisfy this
-        , forAll' rdmap $ \ [var|cred|] [var| rdpair|] ->
-            [ witness univ cred
-            , satisfies rdpair someZeros
-            ]
-        ]
-
-rewDepMapSpec2 ::
-  forall fn era.
-  (Era era, IsConwayUniv fn) =>
-  WitUniv era ->
-  Map RewardAccount Coin ->
-  Specification fn (Map (Credential 'Staking) RDPair)
-rewDepMapSpec2 univ wdrl =
-  let n = wvSize univ
-      m = Map.size wdrl
-      maxRewDepSize = fromIntegral (n - (m + 2)) -- (2 * n - (m + 2))
-      withdrawalPairs :: [(Credential 'Staking, Word64)]
-      withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 wdrl))
-      withdrawalKeys :: Set (Credential 'Staking)
-      withdrawalKeys = Map.keysSet (Map.mapKeys raCredential wdrl)
-   in constrained $ \ [var|rdmap|] ->
-        [ -- size of rdmap, can't be bigger than the witness set (n keys + n scripts)
-          -- must also have enough slack to accomodate the credentials in wdrl (m)
-          assert $ sizeOf_ (dom_ rdmap) <=. lit maxRewDepSize
-        , assertExplain (pure "some rewards (not in withdrawals) are zero") $
-            forAll rdmap $
-              \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
-                -- Apply this only to entries NOT IN the withdrawal set, since entries in the withdrawal set
-                -- already force the reward in the RDPair to the withdrawal amount.
-                [ witness univ cred
-                , whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
-                ]
-        , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
-            match pair $ \ [var| wcred |] [var| coin |] ->
-              [ assertExplain (pure "withdrawalKeys are a subset of the rdMap") $ member_ wcred (dom_ rdmap)
-              , -- Force the reward in the RDPair to the withdrawal amount.
-                onJust (lookup_ wcred rdmap) $ \ [var|rdpair|] ->
-                  match rdpair $ \rew _deposit -> assert $ rew ==. coin
-              ]
-        ]
-
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-wdrlCredentials :: Map RewardAccount Coin -> Set (Credential 'Staking)
-wdrlCredentials m = Set.map raCredential (Map.keysSet m)
+wdrlCredentials :: Map AccountAddress Coin -> Set (Credential Staking)
+wdrlCredentials m = Set.map (unAccountId . aaId) (Map.keysSet m)
 
-keyHashWdrl :: Map RewardAccount Coin -> Set (Credential 'Staking)
+keyHashWdrl :: Map AccountAddress Coin -> Set (Credential Staking)
 keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
+
+isKeyHash :: Credential Staking -> Bool
+isKeyHash (KeyHashObj _) = True
+isKeyHash (ScriptHashObj _) = False
+
+accountBalanceSpec :: (HasSpec a, Monoid a) => Term a -> Pred
+accountBalanceSpec balance =
+  satisfies
+    balance
+    ( chooseSpec
+        (1, constrained $ \ [var| x |] -> assert $ x ==. lit mempty)
+        (3, constrained (const True))
+    )
+
+dRepMembershipPred :: Map (Credential DRepRole) a -> Term DRep -> Pred
+dRepMembershipPred dRepsMap dRep =
+  assert $
+    (caseOn dRep)
+      (branchW 5 (`member_` lit (dRepsSet credKeyHash)))
+      (branchW 5 (`member_` lit (dRepsSet credScriptHash)))
+      (branchW 1 $ const True)
+      (branchW 1 $ const True)
   where
-    isKeyHash (KeyHashObj _) = True
-    isKeyHash (ScriptHashObj _) = False
+    dRepsSet :: Ord a => (Credential DRepRole -> Maybe a) -> Set a
+    dRepsSet f = Set.fromList [k' | k <- Map.keys dRepsMap, Just k' <- [f k]]
+
+-- | The DState needs a witnessed set of delegations to be usefull. Use this Spec to obtain a random one
+witnessedKeyHashStakePoolMapSpec ::
+  Era era => WitUniv era -> Specification (Map (KeyHash StakePool) StakePoolState)
+witnessedKeyHashStakePoolMapSpec univ =
+  constrained $ \keyPoolMap ->
+    [witness univ (dom_ keyPoolMap), witness univ (rng_ keyPoolMap)]
+
+conwayAccountsSpec ::
+  Era era =>
+  WitUniv era ->
+  Term (Map (KeyHash StakePool) StakePoolParams) ->
+  Specification (ConwayAccounts era)
+conwayAccountsSpec univ poolreg = constrained $ \ [var|conwayAccounts|] ->
+  match conwayAccounts $ \ [var|accountmap|] ->
+    [ witness univ (dom_ accountmap)
+    , forAll accountmap $ \ [var|pair|] ->
+        match pair $ \ [var|stakecred|] [var|accountstate|] ->
+          [ witness univ stakecred
+          , witness univ accountstate
+          , match accountstate $ \ [var|_rewardbal|] [var|_depositbal|] [var|mStakeDelegKeyhash|] [var|mDRep|] ->
+              [ ( caseOn
+                    (mStakeDelegKeyhash :: Term (Maybe (KeyHash StakePool)))
+                    (branchW 1 $ \_ -> True)
+                    (branchW 3 $ \ [var|stakekeyhash|] -> mapMember_ stakekeyhash poolreg)
+                )
+              , (caseOn mDRep) -- This case only adds frequency info, the (witness univ accountstate) ensures witnessing
+                  (branchW 1 $ \_ -> True)
+                  ( branchW 3 $ \(drep :: Term DRep) ->
+                      (caseOn drep)
+                        (branchW 3 $ \_keyhash -> True)
+                        (branchW 3 $ \_scripthash -> True)
+                        (branchW 1 $ \_abstain -> True)
+                        (branchW 1 $ \_noconfidence -> True)
+                  )
+              ]
+          ]
+    ]
+
+stakePoolDelegationsSpec ::
+  Era era =>
+  WitUniv era ->
+  Specification (Map (Credential Staking) (KeyHash StakePool))
+stakePoolDelegationsSpec univ =
+  constrained $ \ [var|stakePoolDelegations|] -> witness univ stakePoolDelegations
+
+dRepDelegationsSpec ::
+  Era era =>
+  WitUniv era ->
+  Specification (Map (Credential Staking) DRep)
+dRepDelegationsSpec univ =
+  constrained $ \ [var|dRepDelegations|] ->
+    [ witness univ (dom_ dRepDelegations)
+    , forAll (rng_ dRepDelegations) $ \ [var|dRepDelegation|] ->
+        caseOn
+          dRepDelegation
+          (branchW 5 (witness univ))
+          (branchW 3 (witness univ))
+          (branchW 1 $ const True)
+          (branchW 1 $ const True)
+    ]
 
 dStateSpec ::
-  forall fn era.
-  (IsConwayUniv fn, EraSpecDeleg era) =>
+  (Era era, HasSpec (Accounts era)) =>
   WitUniv era ->
-  Map (RewardAccount) Coin ->
-  Specification fn (DState era)
-dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
-  match dstate $ \ [var| uMap |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
+  Map AccountAddress Coin ->
+  Specification (DState era)
+dStateSpec _univ _wdrls = constrained $ \ [var| dstate |] ->
+  match dstate $ \_ [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
-      assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+      assert $ sizeOf_ futureGenDelegs ==. 0
     , -- genDelegs
       match genDelegs $ \gd ->
-        [ witness univ (dom_ gd)
-        , witness univ (rng_ gd)
-        , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
+        [ assert $ sizeOf_ gd ==. 0
         ]
     , -- irewards
       match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-    , match uMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
-        [ -- rdMap
-          satisfies rdMap (rewDepMapSpec2 univ wdrls)
-        , -- dRepMap
-          dependsOn dRepMap rdMap
-        , reify rdMap id $ \ [var|rdm|] ->
-            [ witness univ (dom_ dRepMap)
-            , assert $ subset_ (lit (keyHashWdrl wdrls)) (dom_ dRepMap)
-            , witness univ (rng_ dRepMap)
-            , assert $ subset_ (dom_ dRepMap) (dom_ rdm)
-            ]
-        , -- sPoolMap
-          reify rdMap id $ \ [var|rdmp|] ->
-            assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
-        , -- ptrMapo
-          assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
-        ]
     ]
 
 conwayDelegCertSpec ::
-  forall fn era.
-  (EraPParams era, IsConwayUniv fn, EraCertState era) =>
+  forall era.
+  (EraPParams era, ConwayEraCertState era) =>
   ConwayDelegEnv era ->
   CertState era ->
-  Specification fn ConwayDelegCert
+  Specification ConwayDelegCert
 conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
   let ds = certState ^. certDStateL
       vs = certState ^. certVStateL
-      rewardMap = unUnify $ rewards ds
+      accountsMap = ds ^. accountsL . accountsMapL
       dReps = vsDReps vs
-      delegMap = unUnify $ delegations ds
-      zeroReward = (== 0) . fromCompact . rdReward
-      depositOf k =
-        case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
-          Just d | d > 0 -> SJust d
-          _ -> SNothing
-      delegateeInPools :: Term fn Delegatee -> Pred fn
+      depositOf cred =
+        case Map.lookup cred accountsMap of
+          Just accountState -> SJust $ fromCompact (accountState ^. depositAccountStateL)
+          Nothing -> SNothing
+      delegateeInPools :: Term Delegatee -> Pred
       delegateeInPools delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
-          (branch $ \drep -> isInDReps drep)
-          (branch $ \kh drep -> [assert $ isInPools kh, assert $ isInDReps drep])
+          (branch $ \dRep -> dRepMembershipPred dReps dRep)
+          (branch $ \kh dRep -> [assert $ isInPools kh, dRepMembershipPred dReps dRep])
         where
           isInPools = (`member_` lit (Map.keysSet pools))
-          drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
-          isInDReps :: Term fn DRep -> Pred fn
-          isInDReps drep =
-            (caseOn drep)
-              ( branch $ \drepKeyHash ->
-                  drepKeyHash `member_` lit (drepsSet credKeyHash dReps)
-              )
-              ( branch $ \drepScriptHash ->
-                  drepScriptHash `member_` lit (drepsSet credScriptHash dReps)
-              )
-              (branch $ const True)
-              (branch $ const True)
    in constrained $ \dc ->
         (caseOn dc)
           -- The weights on each 'branchW' case try to make it likely
           -- that each branch is choosen with similar frequency
 
-          -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
+          -- ConwayRegCert !((Credential Staking) c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
-              [ assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
+              [ assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))
               , assert $ mc ==. lit (SJust (pp ^. ppKeyDepositL))
               ]
           )
-          -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
+          -- ConwayUnRegCert !((Credential Staking) c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
               [ -- You can only unregister things with 0 reward
-                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
-              , assert $ elem_ sc $ lit (Map.keys delegMap)
+                assert $ elem_ sc $ lit (Map.keys $ Map.filter isZeroAccountBalance accountsMap)
               , -- The `StrictMaybe` needs to be precisely what is in the delegation map
                 reify sc depositOf (==. mc)
               ]
           )
-          -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
+          -- ConwayDelegCert !((Credential Staking) c) !(Delegatee c)
           ( branchW 1 $ \sc delegatee ->
-              [ assert . member_ sc $ lit (Map.keysSet delegMap)
+              [ assert . member_ sc $ lit (Map.keysSet accountsMap)
               , delegateeInPools delegatee
               ]
           )
-          -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
+          -- ConwayRegDelegCert !((Credential Staking) c) !(Delegatee c) !Coin
           ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
-              , assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
+              , assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))
               , delegateeInPools delegatee
               ]
           )
 
 delegEnvSpec ::
-  (EraSpecPParams era, IsConwayUniv fn) =>
-  Specification fn (ConwayDelegEnv era)
+  EraSpecPParams era =>
+  Specification (ConwayDelegEnv era)
 delegEnvSpec = constrained $ \env ->
   match env $ \pp _ ->
     pp `satisfies` pparamsSpec
@@ -237,47 +218,47 @@ delegEnvSpec = constrained $ \env ->
 -- Pre-Conway Deleg Certs
 
 shelleyDelegCertSpec ::
-  forall fn era.
-  (EraPParams era, IsConwayUniv fn) =>
+  forall era.
+  (EraPParams era, EraAccounts era) =>
   WitUniv era ->
   ConwayDelegEnv era ->
   DState era ->
-  Specification fn (ShelleyDelegCert)
+  Specification ShelleyDelegCert
 shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
-  let rewardMap = unUnify $ rewards ds
-      delegMap = unUnify $ delegations ds
-      zeroReward = (== 0) . fromCompact . rdReward
+  let accountsMap = ds ^. accountsL . accountsMapL
    in constrained $ \dc ->
         (caseOn dc)
           -- The weights on each 'branchW' case try to make it likely
           -- that each branch is choosen with similar frequency
 
-          -- ShelleyRegCert !(StakeCredential c)
+          -- ShelleyRegCert !((Credential Staking) c)
           ( branchW 2 $ \sc ->
-              [witness univ sc, assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))]
+              [witness univ sc, assert $ not_ (member_ sc (lit (Map.keysSet accountsMap)))]
           )
-          -- ShelleyUnRegCert !(StakeCredential c)
+          -- ShelleyUnRegCert !((Credential Staking) c)
           ( branchW 3 $ \sc ->
-              [ -- You can only unregister things with 0 reward
-                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
-              , assert $ elem_ sc $ lit (Map.keys delegMap)
+              [ -- You can only unregister credentials with 0 balance
+                assert $ member_ sc $ lit (Map.keysSet $ Map.filter isZeroAccountBalance accountsMap)
               , witness univ sc
               ]
           )
-          -- ShelleyDelegCert !(StakeCredential c) (KeyHash StakePool c)
+          -- ShelleyDelegCert !((Credential Staking) c) (KeyHash StakePool c)
           ( branchW 2 $ \sc kh ->
               [ dependsOn sc dc
               , dependsOn kh dc
-              , assert . elem_ sc $ lit (Map.keys delegMap)
-              , assert $ elem_ kh (lit (Map.keys pools))
+              , assert $ member_ sc (lit (Map.keysSet accountsMap))
+              , assert $ member_ kh (lit (Map.keysSet pools))
               , witness univ sc
               , witness univ kh
               ]
           )
 
+isZeroAccountBalance :: EraAccounts era => AccountState era -> Bool
+isZeroAccountBalance accountState = accountState ^. balanceAccountStateL == mempty
+
 -- =============================================
 
-class (Era era, EraPParams era) => EraSpecDeleg era where
+class (Era era, EraPParams era, HasSpec (Accounts era), IsNormalType (Accounts era)) => EraSpecDeleg era where
   hasGenDelegs :: proxy era -> Bool
 
 instance EraSpecDeleg ShelleyEra where

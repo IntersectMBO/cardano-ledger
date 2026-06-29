@@ -16,9 +16,11 @@ module Test.Cardano.Ledger.TreeDiff (
 ) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.BHeaderView
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
+import Cardano.Ledger.Block
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.HKD
@@ -29,13 +31,12 @@ import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Plutus.TxInfo
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
-import Cardano.Ledger.UMap
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import GHC.TypeLits
+import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Data.VMap.TreeDiff ()
 
@@ -48,6 +49,10 @@ instance ToExpr (CompactForm Coin) where
   toExpr x = toExpr (fromCompact x)
 
 deriving newtype instance ToExpr (CompactForm DeltaCoin)
+
+deriving newtype instance ToExpr a => ToExpr (Inclusive a)
+
+deriving newtype instance ToExpr a => ToExpr (Exclusive a)
 
 -- HKD
 instance ToExpr (NoUpdate a)
@@ -112,7 +117,6 @@ instance ToExpr CostModels
 instance ToExpr (WitVKey kr)
 
 -- Keys/Bootstrap
-instance ToExpr BootstrapWitnessRaw
 instance ToExpr BootstrapWitness
 
 instance ToExpr ChainCode
@@ -176,11 +180,13 @@ deriving newtype instance
 deriving newtype instance
   ToExpr (PParamsHKD StrictMaybe era) => ToExpr (PParamsUpdate era)
 
+deriving newtype instance ToExpr CoinPerByte
+
 instance ToExpr TxIn
 
 instance ToExpr TxId
 
-instance ToExpr AccountState
+instance ToExpr ChainAccountState
 
 -- CertState
 instance ToExpr DRep
@@ -190,30 +196,29 @@ instance ToExpr DRepState
 -- Address
 instance ToExpr Addr
 
-instance ToExpr RewardAccount
+instance ToExpr AccountAddress
+
+instance ToExpr AccountId
 
 instance ToExpr BootstrapAddress where
   toExpr = defaultExprViaShow
 
 instance ToExpr Withdrawals
 
+instance ToExpr DirectDeposits
+
 instance ToExpr CompactAddr
 
 -- PoolParams
 instance ToExpr PoolMetadata
 
-instance ToExpr PoolParams
+instance ToExpr StakePoolParams
+
+instance ToExpr StakePoolState
 
 instance ToExpr StakePoolRelay
 
 instance ToExpr PoolCert
-
--- UMap
-instance ToExpr RDPair
-
-instance ToExpr UMElem
-
-instance ToExpr UMap
 
 instance ToExpr (PlutusData era) where
   toExpr = trimExprViaShow 30
@@ -233,13 +238,17 @@ instance ToExpr SnapShots
 
 instance ToExpr SnapShot
 
+instance ToExpr StakePoolSnapShot
+
 deriving newtype instance ToExpr Stake
+
+instance ToExpr StakeWithDelegation
+
+deriving newtype instance ToExpr ActiveStake
 
 instance ToExpr (PState era)
 
-instance ToExpr (DState era)
-
-instance ToExpr (VState era)
+instance ToExpr (Accounts era) => ToExpr (DState era)
 
 instance ToExpr FutureGenDeleg
 
@@ -258,3 +267,10 @@ instance ToExpr TxOutSource
 
 instance ToExpr a => ToExpr (NonZero a) where
   toExpr x = App "NonZero" [toExpr $ unNonZero x]
+
+instance ToExpr PositiveInterval where
+  toExpr = toExpr . unboundRational
+
+instance ToExpr BHeaderView
+
+instance (ToExpr h, ToExpr (BlockBody era)) => ToExpr (Block h era)

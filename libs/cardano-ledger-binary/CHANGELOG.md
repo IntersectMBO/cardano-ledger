@@ -1,5 +1,49 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.8.1.0
+
+* Add `DecShareCBOR` instance for `VMap VB VS`
+
+## 1.8.0.0
+
+* Add `Uniform`, `UniformRange` instances and fix `Random` instance
+* Change `Version` from `Word64` to `Word32`
+  - Add `mkVersion32` and `getVersion32`
+* Remove `listLenBound` from `EncCBORGroup`
+* Change type of `listLen` in `EncCBORGroup` to accept a `Proxy` instead of a concrete value
+* Add `decodeNonEmptySetLikeEnforceNoDuplicatesAnn` to `Annotated` module
+* Add `ofieldA` and `fieldAGuarded` to `Coders` module
+* Change `Density` type to only be available at the type level
+* Change `Wrapped` type to only be available at the type level
+* Make `decodeAnnSet` fail when there are duplicates, starting with protocol version `12`.
+* Provide ability for `Annotator` to fail, by changing its type signature to return `Either` and adding `MonadFail` instance.
+* Remove `encodedSizeExpr` and `encodedListSizeExpr` from `EncCBOR`
+* Remove `Typeable` superconstraint from `EncCBOR`
+* Remove `Range`, `szEval`, `Size`, `Case`, `caseValue`, `LengthOf`, `SizeOverride`, `isTodo`, `szCases`, `szLazy`, `szGreedy`, `szForce`, `szWithCtx`, `szSimplify`, `apMono`, `szBounds`, `encodedVerKeyDSIGNSizeExpr`, `encodedSignKeyDSIGNSizeExpr`, `encodedSigDSIGNSizeExpr`, `encodedSignedDSIGNSizeExpr`, `encodedVerKeyKESSizeExpr`, `encodedSignKeyKESSizeExpr`, `encodedSigKESSizeExpr`, `encodedVerKeyVRFSizeExpr`, `encodedSignKeyVRFSizeExpr` and `encodedCertVRFSizeExpr`
+
+### `testlib`
+
+* Remove `Arbitrary` instances for `BlockNo`, `EpochInterval`, `EpochSize`, `SystemStart`, `WithOrigin`.
+  These have been moved to `cardano-slotting:testlib`.
+* Remove `genByteArray`, `genByteString`, `genLazyByteString`, `genShortByteString`.
+  These have been moved to `cardano-base:testlib`.
+* Remove `Arbitrary` instances for `CertifiedVRF`, `SigDSIGN`, `SignKeyDSIGN`, `SignedDSIGN`, `VerKeyDSIGN`.
+  These have been moved to `cardano-crypto-class:testlib`.
+* Remove `Arbitrary` instances for `StrictSeq`, `StrictMaybe`.
+  These have been moved to `cardano-strict-containers:testlib`.
+* Add `huddleRoundTripGenValidate`
+* Remove `Test.Cardano.Ledger.Binary.Cddl`
+* Add `ToExpr` instances to `DeserialiseFailure` and `DecoderError`
+* Remove `assertExprEqualWithMessage`
+
+## 1.7.0.0
+
+* Add `Random` instance for `Version`.
+* Add `liftST`
+* Bump `MaxVersion` to `12`
+* Add `decodeFullFromHexText`
+* Moved `Annotator` orphan instance for plutus `Data` into `testlib`
+
 ## 1.6.0.0
 
 * Add `Typeable` constraint to `invalidKey`
@@ -9,9 +53,9 @@
 * Add `mapCoder` as a replacement for `fmap`
 * Remove `Functor` and `Applicative` instance for `Decode`
 * Add to `Plain`:
-  * `assertTag`
-  * `decodeTagMaybe`
-  * `encodeRatioWithTag`,
+  - `assertTag`
+  - `decodeTagMaybe`
+  - `encodeRatioWithTag`,
 * Add `DecCBOR` instance for `Data.IntMap`
 * Add `decodeIntMap`
 * Add `ToCBOR` instance for `PV1.Data`
@@ -32,8 +76,8 @@
 * Add `getOriginalBytes`
 * `toPlainDecoder` now optionally expects one extra argument for the original `ByteString`
 * Extend `Coders` to accommodate `{Enc|Dec}CBORGroup`. #4666
-  * Add `ToGroup` to `Encode`
-  * Add `FromGroup` to `Decode`
+  - Add `ToGroup` to `Encode`
+  - Add `FromGroup` to `Decode`
 * Add `{Enc|Dec}CBORGroup` instance for `(a, a)`. #4666
 
 ### `testlib`
@@ -45,11 +89,11 @@
 ### `testlib`
 
 * Add:
-  * `decoderEquivalenceSpec`
-  * `decoderEquivalenceExpectation`
-  * `decoderEquivalenceProp`
-  * `cddlDecoderEquivalenceSpec`
-  * `huddleDecoderEquivalenceSpec`
+  - `decoderEquivalenceSpec`
+  - `decoderEquivalenceExpectation`
+  - `decoderEquivalenceProp`
+  - `cddlDecoderEquivalenceSpec`
+  - `huddleDecoderEquivalenceSpec`
 * Re-export types `Doc` and `AnsiStyle` in `Test.Cardano.Ledger.Binary.TreeDiff`
 * `diffExpr` and `diffExprCompact` changed type signature
 * Add `diffExprString` and `diffExprCompactString`, which replace the old implementations
@@ -76,10 +120,10 @@
 ### `testlib`
 
 * Re-export:
-  * `Pretty`
-  * `ansiWlPretty`
-  * `ppEditExpr`
-  * `ediff`
+  - `Pretty`
+  - `ansiWlPretty`
+  - `ppEditExpr`
+  - `ediff`
 
 ## 1.3.2.0
 
@@ -128,8 +172,8 @@
 ## 1.1.3.0
 
 * Add `ToExpr` instance for:
-  * `Sized`
-  * `SignedDSIGN`
+  - `Sized`
+  - `SignedDSIGN`
 * Add `Generic` instance for `CompactValue`
 * Add `fieldGuarded` to be able to conditionally construct a `Field` #3712
 * Expose `showDecoderError` from `Cardano.Ledger.Binary.Plain`
@@ -179,13 +223,13 @@
 
 * Add `Arbitrary` instance for `Term`
 * Renamed:
-  * `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
-  * `roundTripFailureCborRangeExpectation` -> `roundTripCborRangeFailureExpectation`
-  * `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
+  - `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
+  - `roundTripFailureCborRangeExpectation` -> `roundTripCborRangeFailureExpectation`
+  - `roundTripAnnFailureRangeExpectation` -> `roundTripAnnRangeFailureExpectation`
 * Added:
-  * `embedTripFailureExpectation`
-  * `embedTripRangeFailureExpectation`
-  * `roundTripRangeFailureExpectation`
+  - `embedTripFailureExpectation`
+  - `embedTripRangeFailureExpectation`
+  - `roundTripRangeFailureExpectation`
 
 ## 1.0.0.0
 

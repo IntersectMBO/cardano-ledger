@@ -5,26 +5,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- |
--- Module      : Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
--- Description : Genesis Delegation Example
---
--- Example demonstrating Genesis Delegation
+-- | Example demonstrating Genesis Delegation
 module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
   genesisDelegExample,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, Tx (..), TxBody (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -40,8 +34,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Examples.Chain (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
 import Test.Cardano.Ledger.Shelley.Examples.Federation (
   coreNodeKeysBySchedule,
@@ -90,8 +84,8 @@ initStGenesisDeleg ::
   , EraGov era
   , EraStake era
   , EraCertState era
-  , ProtVerAtMost era 4
-  , ProtVerAtMost era 6
+  , AtMostEra "Mary" era
+  , AtMostEra "Alonzo" era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -101,18 +95,18 @@ initStGenesisDeleg = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-newGenDelegate :: KeyPair 'GenesisDelegate
+newGenDelegate :: KeyPair GenesisDelegate
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
-newGenesisVrfKH :: VRFVerKeyHash 'GenDelegVRF
+newGenesisVrfKH :: VRFVerKeyHash GenDelegVRF
 newGenesisVrfKH = hashVerKeyVRF @MockCrypto (vrfVerKey (mkVRFKeyPair @MockCrypto (RawSeed 9 8 7 6 5)))
 
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: ShelleyTxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -133,7 +127,7 @@ txbodyEx1 =
     aliceCoinEx1 = aliceInitCoin <-> Val.inject feeTx1
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 = ShelleyTx txbodyEx1 txwits SNothing
   where
     txwits :: ShelleyTxWits ShelleyEra
@@ -144,9 +138,9 @@ txEx1 = ShelleyTx txbodyEx1 txwits SNothing
               (hashAnnotated txbodyEx1)
               ( [asWitness Cast.alicePay]
                   <> [ asWitness $
-                        KeyPair @'Genesis
-                          (coreNodeVK 0)
-                          (coreNodeSK 0)
+                         KeyPair @GenesisRole
+                           (coreNodeVK 0)
+                           (coreNodeSK 0)
                      ]
               )
         }
@@ -156,7 +150,7 @@ blockEx1 =
   mkBlockFakeVRF @ShelleyEra
     lastByronHeaderHash
     (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
-    [txEx1]
+    [MkShelleyTx txEx1]
     (SlotNo 10)
     (BlockNo 1)
     nonce0
@@ -176,7 +170,7 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce @ShelleyEra blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [] []
+    . C.addFees feeTx1
     . C.newUTxO txbodyEx1
     . C.setFutureGenDeleg newGenDeleg
     $ initStGenesisDeleg
@@ -194,7 +188,7 @@ genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStE
 blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF @ShelleyEra
-    (bhHash $ bheader blockEx1)
+    (bhHash $ blockHeader blockEx1)
     (coreNodeKeysBySchedule @ShelleyEra ppEx 50)
     []
     (SlotNo 50)

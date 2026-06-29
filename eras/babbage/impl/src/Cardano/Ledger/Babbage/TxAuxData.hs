@@ -7,9 +7,8 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   metadataAlonzoTxAuxDataL,
+  nativeScriptsAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
-  timelockScriptsAlonzoTxAuxDataL,
-  translateAlonzoTxAuxData,
   validateAlonzoTxAuxData,
  )
 import Cardano.Ledger.Babbage.Era
@@ -21,13 +20,10 @@ instance EraTxAuxData BabbageEra where
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
 
   metadataTxAuxDataL = metadataAlonzoTxAuxDataL
-
-  upgradeTxAuxData = translateAlonzoTxAuxData
-
   validateTxAuxData = validateAlonzoTxAuxData
 
 instance AllegraEraTxAuxData BabbageEra where
-  timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
+  nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
 
 instance AlonzoEraTxAuxData BabbageEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL

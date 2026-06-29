@@ -60,8 +60,7 @@ module Control.Provenance (
   -- * For testing invariants
   preservesNothing,
   preservesJust,
-)
-where
+) where
 
 import Control.Monad.State.Strict (MonadState (..), MonadTrans (..), StateT (..))
 import Data.Aeson (ToJSON (..))

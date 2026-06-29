@@ -7,8 +7,7 @@ module Cardano.Chain.UTxO.UTxOConfiguration (
   UTxOConfiguration (..),
   defaultUTxOConfiguration,
   mkUTxOConfiguration,
-)
-where
+) where
 
 import Cardano.Chain.Common.Address (Address)
 import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)

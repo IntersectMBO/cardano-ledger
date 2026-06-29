@@ -30,8 +30,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   validateMetadata,
   validateMIRInsufficientGenesisSigs,
   validateNeededWitnesses,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -43,7 +42,6 @@ import Cardano.Ledger.BaseTypes (
   (==>),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
-import Cardano.Ledger.CertState (EraCertState (..), dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -70,7 +68,6 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEvent,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
@@ -79,10 +76,10 @@ import Cardano.Ledger.Shelley.UTxO (
   UTxO,
   verifyWitVKey,
  )
+import Cardano.Ledger.State (EraCertState (..), dsGenDelegs)
 import Control.DeepSeq
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (∩))
 import Control.State.Transition (
   Embed,
   IRC (..),
@@ -90,6 +87,8 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
+  failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
   trans,
@@ -97,11 +96,13 @@ import Control.State.Transition (
   wrapFailed,
  )
 import Data.Foldable (sequenceA_)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
@@ -112,27 +113,26 @@ import Validation
 -- =========================================
 
 data ShelleyUtxowPredFailure era
-  = InvalidWitnessesUTXOW
-      [VKey 'Witness]
+  = InvalidWitnessesUTXOW (NonEmpty (VKey Witness))
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
-      (Set (KeyHash 'Witness)) -- witnesses which were needed and not supplied
+      (NonEmptySet (KeyHash Witness)) -- witnesses which were needed and not supplied
   | MissingScriptWitnessesUTXOW
-      (Set ScriptHash) -- missing scripts
+      (NonEmptySet ScriptHash) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
-      (Set ScriptHash) -- failed scripts
+      (NonEmptySet ScriptHash) -- failed scripts
   | UtxoFailure (PredicateFailure (EraRule "UTXO" era))
-  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness))
+  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash Witness))
   | MissingTxBodyMetadataHash
       TxAuxDataHash -- hash of the full metadata
   | MissingTxMetadata
       TxAuxDataHash -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      (Mismatch 'RelEQ TxAuxDataHash)
+      (Mismatch RelEQ TxAuxDataHash)
   | -- Contains out of range values (strings too long)
     InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW
-      (Set ScriptHash) -- extraneous scripts
+      (NonEmptySet ScriptHash) -- extraneous scripts
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" ShelleyEra = ShelleyUtxowPredFailure ShelleyEra
@@ -179,8 +179,6 @@ deriving stock instance
 
 instance
   ( Era era
-  , Typeable (Script era)
-  , Typeable (TxAuxData era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
   EncCBOR (ShelleyUtxowPredFailure era)
@@ -288,10 +286,10 @@ transitionRulesUTXOW ::
   , Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , STS (EraRule "UTXOW" era)
   , EraCertState era
@@ -303,7 +301,7 @@ transitionRulesUTXOW = do
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
-      witsKeyHashes = witsFromTxWitnesses tx
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
       scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts
@@ -356,7 +354,7 @@ instance
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , EraRule "UTXOW" era ~ ShelleyUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , EraGov era
@@ -365,7 +363,7 @@ instance
   STS (ShelleyUTXOW era)
   where
   type State (ShelleyUTXOW era) = UTxOState era
-  type Signal (ShelleyUTXOW era) = Tx era
+  type Signal (ShelleyUTXOW era) = Tx TopTx era
   type Environment (ShelleyUTXOW era) = UtxoEnv era
   type BaseM (ShelleyUTXOW era) = ShelleyBase
   type PredicateFailure (ShelleyUTXOW era) = ShelleyUtxowPredFailure era
@@ -375,14 +373,13 @@ instance
 
 {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 validateFailedNativeScripts ::
-  EraTx era => ScriptsProvided era -> Tx era -> Test (ShelleyUtxowPredFailure era)
+  EraTx era => ScriptsProvided era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateFailedNativeScripts (ScriptsProvided scriptsProvided) tx = do
   let failedScripts =
         Map.filter -- we keep around only non-validating native scripts
           (maybe False (not . validateNativeScript tx) . getNativeScript)
           scriptsProvided
-  failureUnless (Map.null failedScripts) $
-    ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
+  failureOnNonEmptySet (Map.keysSet failedScripts) ScriptWitnessNotValidatingUTXOW
 
 {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)    -}
 {-  sNeeded := scriptsNeeded utxo tx                             -}
@@ -393,20 +390,16 @@ validateMissingScripts ::
   Test (ShelleyUtxowPredFailure era)
 validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
   sequenceA_
-    [ failureUnless (sNeeded `Set.isSubsetOf` sProvided) $
-        MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sProvided)
-    , failureUnless (sProvided `Set.isSubsetOf` sNeeded) $
-        ExtraneousScriptWitnessesUTXOW (sProvided `Set.difference` sNeeded)
+    [ failureOnNonEmptySet (sNeeded `Set.difference` sProvided) MissingScriptWitnessesUTXOW
+    , failureOnNonEmptySet (sProvided `Set.difference` sNeeded) ExtraneousScriptWitnessesUTXOW
     ]
   where
     sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
 
 -- | Determine if the UTxO witnesses in a given transaction are correct.
-validateVerifiedWits :: EraTx era => Tx era -> Test (ShelleyUtxowPredFailure era)
+validateVerifiedWits :: EraTx era => Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateVerifiedWits tx =
-  case failed <> failedBootstrap of
-    [] -> pure ()
-    nonEmpty -> failure $ InvalidWitnessesUTXOW nonEmpty
+  failureOnNonEmpty (failed <> failedBootstrap) InvalidWitnessesUTXOW
   where
     txBody = tx ^. bodyTxL
     txBodyHash = extractHash (hashAnnotated txBody)
@@ -428,20 +421,19 @@ validateVerifiedWits tx =
 validateNeededWitnesses ::
   EraUTxO era =>
   -- | Provided witness
-  Set (KeyHash 'Witness) ->
+  Set (KeyHash Witness) ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody t era ->
   Test (ShelleyUtxowPredFailure era)
 validateNeededWitnesses witsKeyHashes certState utxo txBody =
   let needed = getWitsVKeyNeeded certState utxo txBody
       missingWitnesses = Set.difference needed witsKeyHashes
-   in failureUnless (Set.null missingWitnesses) $
-        MissingVKeyWitnessesUTXOW missingWitnesses
+   in failureOnNonEmptySet missingWitnesses MissingVKeyWitnessesUTXOW
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
-validateMetadata :: EraTx era => PParams era -> Tx era -> Test (ShelleyUtxowPredFailure era)
+validateMetadata :: EraTx era => PParams era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
 validateMetadata pp tx =
   let txBody = tx ^. bodyTxL
       pv = pp ^. ppProtocolVersionL
@@ -470,14 +462,14 @@ validateMIRInsufficientGenesisSigs ::
   ) =>
   GenDelegs ->
   Word64 ->
-  Set (KeyHash 'Witness) ->
-  Tx era ->
+  Set (KeyHash Witness) ->
+  Tx TopTx era ->
   Test (ShelleyUtxowPredFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =
         Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
       khAsSet = witsKeyHashes
-      genSig = eval (genDelegates ∩ khAsSet)
+      genSig = Set.intersection genDelegates khAsSet
       txBody = tx ^. bodyTxL
       mirCerts =
         StrictSeq.forceToStrict

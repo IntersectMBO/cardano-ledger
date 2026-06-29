@@ -6,8 +6,7 @@ module Cardano.Ledger.Binary.FlatTerm (
   toFlatTerm,
   fromFlatTerm,
   C.validFlatTerm,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding

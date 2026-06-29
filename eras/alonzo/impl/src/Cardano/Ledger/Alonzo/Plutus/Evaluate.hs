@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -29,8 +30,7 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   RedeemerReport,
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
-)
-where
+) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))
@@ -58,6 +58,8 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Bifunctor (first)
 import Data.List (intercalate)
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
@@ -149,9 +151,9 @@ collectPlutusScriptsWithContext ::
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
-  Either [CollectError era] [PlutusWithContext]
+  Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
   merge
     apply
@@ -194,20 +196,22 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
           (redeemerData, exUnits)
           costModel
 
--- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
---   but if there are none, use 'f' to construct a success.
-merge :: forall t b a. (t -> Either a b) -> [Either a t] -> Either [a] [b] -> Either [a] [b]
-merge _f [] answer = answer
-merge f (x : xs) zs = merge f xs (gg x zs)
-  where
-    gg :: Either a t -> Either [a] [b] -> Either [a] [b]
-    gg (Right t) (Right cs) =
-      case f t of
-        Right c -> Right $ c : cs
-        Left e -> Left [e]
-    gg (Left a) (Right _) = Left [a]
-    gg (Right _) (Left cs) = Left cs
-    gg (Left a) (Left cs) = Left (a : cs)
+    -- \| Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
+    --   but if there are none, use 'f' to construct a success.
+    merge ::
+      forall t b a.
+      (t -> Either a b) -> [Either a t] -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
+    merge _f [] answer = answer
+    merge f (x : xs) zs = merge f xs (gg x zs)
+      where
+        gg :: Either a t -> Either (NonEmpty a) [b] -> Either (NonEmpty a) [b]
+        gg (Right t) (Right cs) =
+          case f t of
+            Right c -> Right $ c : cs
+            Left e -> Left [e]
+        gg (Left a) (Right _) = Left [a]
+        gg (Right _) (Left cs) = Left cs
+        gg (Left a) (Left cs) = Left $ NonEmpty.cons a cs
 
 -- | Evaluate a list of Plutus scripts. All scripts in the list must evaluate to `True`.
 evalPlutusScripts :: [PlutusWithContext] -> ScriptResult
@@ -243,8 +247,8 @@ data TransactionScriptFailure era
       -- | Map of pointers which can be resolved together with PlutusScripts and their
       -- respective contexts
       !( Map
-          (PlutusPurpose AsIx era)
-          (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash)
+           (PlutusPurpose AsIx era)
+           (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash)
        )
   | -- | Missing datum.
     MissingDatum !DataHash
@@ -269,6 +273,7 @@ data TransactionScriptFailure era
     NoCostModelInLedgerState !Language
   | -- | Error that can happen during plutus context translation
     ContextError !(ContextError era)
+  deriving (Generic)
 
 deriving instance
   ( Era era
@@ -314,7 +319,7 @@ evalTxExUnits ::
   ) =>
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
   UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.
@@ -341,7 +346,7 @@ evalTxExUnitsWithLogs ::
   ) =>
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
   UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.

@@ -15,8 +15,7 @@ module Cardano.Chain.Delegation.Validation.Interface (
   initialState,
   tickDelegation,
   updateDelegation,
-)
-where
+) where
 
 import Cardano.Chain.Common (BlockCount (..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation

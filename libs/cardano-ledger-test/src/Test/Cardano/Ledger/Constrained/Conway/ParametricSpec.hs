@@ -32,30 +32,29 @@ module Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   EraSpecDeleg (..),
   delegatedStakeReference,
   CertKey (..),
+  testir,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..), StashedAVVMAddresses)
-import Constrained hiding (Value)
-import Constrained.Base (Pred (..))
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
+import Constrained.API
+import Data.Foldable
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert (CertKey (..), EraSpecCert (..))
 import Test.Cardano.Ledger.Constrained.Conway.Deleg (EraSpecDeleg (..))
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (
-  IsConwayUniv,
   maryValueCoin_,
   toDelta_,
  )
@@ -75,31 +74,30 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (
 --   Additional support for phased out Type Families like InstantaneousRewards,
 --   GenDelegs, FutureGenDelegs, StashedAVVMAddresses, and Ptrs, are also provided
 class
-  ( HasSpec fn (StashedAVVMAddresses era)
+  ( HasSpec (StashedAVVMAddresses era)
   , EraSpecPParams era
   , EraSpecDeleg era
-  , HasSpec fn (TxOut era)
+  , HasSpec (TxOut era)
   , IsNormalType (TxOut era)
   , EraTxOut era
   , GenScript era
-  , IsConwayUniv fn
   ) =>
-  EraSpecTxOut era fn
+  EraSpecTxOut era
   where
   irewardSpec ::
-    WitUniv era -> Term fn AccountState -> Specification fn InstantaneousRewards
-  hasPtrs :: proxy era -> Term fn Bool
+    WitUniv era -> Term ChainAccountState -> Specification InstantaneousRewards
+  hasPtrs :: proxy era -> Term Bool
 
   -- | Extract a Value from a TxOut
-  txOutValue_ :: Term fn (TxOut era) -> Term fn (Value era)
+  txOutValue_ :: Term (TxOut era) -> Term (Value era)
 
   -- | Extract a Coin from a TxOut
-  txOutCoin_ :: Term fn (TxOut era) -> Term fn Coin
+  txOutCoin_ :: Term (TxOut era) -> Term Coin
 
   -- | Extract an Addr from a TxOut
-  txOutAddr_ :: Term fn (TxOut era) -> Term fn Addr
+  txOutAddr_ :: Term (TxOut era) -> Term Addr
 
-instance IsConwayUniv fn => EraSpecTxOut ShelleyEra fn where
+instance EraSpecTxOut ShelleyEra where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -107,7 +105,7 @@ instance IsConwayUniv fn => EraSpecTxOut ShelleyEra fn where
   txOutCoin_ x = sel @1 x
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut AllegraEra fn where
+instance EraSpecTxOut AllegraEra where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -115,7 +113,7 @@ instance IsConwayUniv fn => EraSpecTxOut AllegraEra fn where
   txOutCoin_ x = sel @1 x
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut MaryEra fn where
+instance EraSpecTxOut MaryEra where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -123,7 +121,7 @@ instance IsConwayUniv fn => EraSpecTxOut MaryEra fn where
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut AlonzoEra fn where
+instance EraSpecTxOut AlonzoEra where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -131,7 +129,7 @@ instance IsConwayUniv fn => EraSpecTxOut AlonzoEra fn where
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut BabbageEra fn where
+instance EraSpecTxOut BabbageEra where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -139,7 +137,7 @@ instance IsConwayUniv fn => EraSpecTxOut BabbageEra fn where
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut ConwayEra fn where
+instance EraSpecTxOut ConwayEra where
   irewardSpec _ _ = constrained $ \ [var|irewards|] ->
     match irewards $ \ [var|reserves|] [var|treasury|] [var|deltaRes|] [var|deltaTreas|] ->
       [ reserves ==. lit Map.empty
@@ -157,14 +155,14 @@ instance IsConwayUniv fn => EraSpecTxOut ConwayEra fn where
 
 -- | An Era polymorhic Specification for type family TxOut
 txOutSpec ::
-  forall fn era.
-  EraSpecTxOut era fn =>
+  forall era.
+  EraSpecTxOut era =>
   WitUniv era ->
-  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
-  Term fn (TxOut era) ->
-  Pred fn
+  Term (Map (Credential Staking) (KeyHash StakePool)) ->
+  Term (TxOut era) ->
+  Pred
 txOutSpec univ delegs txOut =
-  Block
+  fold
     [ assert $ 0 <. txOutCoin_ @era txOut
     , assert $ txOutCoin_ @era txOut <=. fromIntegral (maxBound :: Word64)
     , (caseOn (txOutAddr_ @era txOut))
@@ -181,23 +179,22 @@ txOutSpec univ delegs txOut =
 
 -- | Generate random Stake references that have a high probability of being delegated.
 delegatedStakeReference ::
-  IsConwayUniv fn =>
-  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
-  Specification fn StakeReference
+  Term (Map (Credential Staking) (KeyHash StakePool)) ->
+  Specification StakeReference
 delegatedStakeReference delegs =
   constrained $ \ [var|ref|] ->
     caseOn
       ref
-      (branchW 9 $ \ [var|base|] -> member_ base (dom_ delegs))
+      (branchW 9 $ \ [var|base|] -> mapMember_ base delegs)
       (branchW 1 $ \_ptr -> True)
       (branchW 1 $ \_null -> True) -- just an occaisional NullRef
 
 instantaneousRewardsSpec ::
-  forall era fn.
-  (IsConwayUniv fn, Era era) =>
+  forall era.
+  Era era =>
   WitUniv era ->
-  Term fn AccountState ->
-  Specification fn InstantaneousRewards
+  Term ChainAccountState ->
+  Specification InstantaneousRewards
 instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
   match acct $ \ [var| acctRes |] [var| acctTreas |] ->
     match irewards $ \ [var| reserves |] [var| treasury |] [var| deltaRes |] [var| deltaTreas |] ->
@@ -208,8 +205,11 @@ instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
       , witness univ (dom_ reserves)
       , witness univ (dom_ treasury)
       , assertExplain (pure "deltaTreausry and deltaReserves sum to 0") $ negate deltaRes ==. deltaTreas
-      , forAll (rng_ reserves) (\ [var| x |] -> x >=. (lit (Coin 0)))
-      , forAll (rng_ treasury) (\ [var| y |] -> y >=. (lit (Coin 0)))
+      , forAll (rng_ reserves) (\ [var| x |] -> x >=. lit (Coin 0))
+      , forAll (rng_ treasury) (\ [var| y |] -> y >=. lit (Coin 0))
       , assert $ toDelta_ (foldMap_ id (rng_ reserves)) - deltaRes <=. toDelta_ acctRes
       , assert $ toDelta_ (foldMap_ id (rng_ treasury)) - deltaTreas <=. toDelta_ acctTreas
       ]
+
+testir :: Era era => WitUniv era -> Specification (InstantaneousRewards, ChainAccountState)
+testir univ = constrained' $ \ir chainAcct -> satisfies ir (instantaneousRewardsSpec univ chainAcct)

@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
+module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec, alonzoEraSpecificSpec) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
-import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
@@ -31,12 +31,14 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   withSLanguage,
  )
-import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (epochStateStakePoolsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
@@ -49,36 +51,23 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid transactions" $ do
   it "Phase 1 script failure" $ do
     -- Script will be invalid because slot 100 will be in the future
     scriptHash <- impAddNativeScript $ mkTimeStart 100
     txIn <- produceScript scriptHash
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
-    submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+    submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
   let resetAddrWits tx = updateAddrTxWits $ tx & witsTxL . addrTxWitsL .~ []
       fixupResetAddrWits = fixupPPHash >=> resetAddrWits
-      -- PlutusPurpose serialization wasn't fixed until Conway
-      withPlutusPurposeRoundTripFailures =
-        if eraProtVerLow @era < natVersion @9
-          then withCborRoundTripFailures
-          else id
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
         let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
             alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
-            alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang
 
         it "MissingRedeemers" $ do
           let scriptHash = redeemerSameAsDatumHash
@@ -101,7 +90,7 @@ spec = describe "Invalid transactions" $ do
           withPostFixup (fixupResetAddrWits . (witsTxL . datsTxWitsL .~ mempty)) $
             submitFailingTx
               tx
-              [injectFailure $ MissingRequiredDatums [missingDatum] []]
+              [injectFailure $ MissingRequiredDatums (NES.singleton missingDatum) []]
 
         it "NotAllowedSupplementalDatums" $ do
           txIn <- produceScript redeemerSameAsDatumHash
@@ -113,7 +102,7 @@ spec = describe "Invalid transactions" $ do
                   & witsTxL . datsTxWitsL .~ TxDats (Map.singleton extraDatumHash extraDatum)
           submitFailingTx
             tx
-            [injectFailure $ NotAllowedSupplementalDatums [extraDatumHash] []]
+            [injectFailure $ NotAllowedSupplementalDatums (NES.singleton extraDatumHash) []]
 
         describe "PPViewHashesDontMatch" $ do
           let
@@ -130,9 +119,9 @@ spec = describe "Invalid transactions" $ do
                       PPViewHashesDontMatch Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
                   ]
 
-          it "Mismatched" $
+          it "Mismatched" . whenMajorVersionAtMost @10 $
             testHashMismatch . SJust =<< arbitrary
-          it "Missing" $
+          it "Missing" . whenMajorVersionAtMost @10 $
             testHashMismatch SNothing
 
         it "UnspendableUTxONoDatumHash" $ do
@@ -146,11 +135,11 @@ spec = describe "Invalid transactions" $ do
             let resetTxOutDataHash =
                   bodyTxL . outputsTxBodyL
                     %~ ( \case
-                          h :<| r -> resetDataHash h :<| r
-                          _ -> error "Expected non-empty outputs"
+                           h :<| r -> resetDataHash h :<| r
+                           _ -> error "Expected non-empty outputs"
                        )
 
-            txInAt (0 :: Int)
+            txInAt 0
               <$> withPostFixup
                 (fixupResetAddrWits <$> resetTxOutDataHash)
                 (submitTx tx)
@@ -159,26 +148,7 @@ spec = describe "Invalid transactions" $ do
           -- actual script expects it
           if lang >= PlutusV3
             then submitPhase2Invalid_ tx
-            else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
-
-        it "No ExtraRedeemers on same script certificates" $ do
-          Positive n <- arbitrary
-          replicateM_ n $ freshKeyHash >>= registerPool
-          pools <- getsNES $ nesEsL . epochStatePoolParamsL
-          poolId <- elements $ Map.keys pools
-          let scriptHash = alwaysSucceedsNoDatumHash
-              cred = ScriptHashObj scriptHash
-              certs =
-                [ mkRegTxCert cred
-                , mkDelegStakeTxCert cred poolId
-                , mkUnRegTxCert cred
-                ]
-          tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
-          let redeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
-          Map.keys redeemers
-            `shouldBe` [ mkCertifyingPurpose $ AsIx 1
-                       , mkCertifyingPurpose $ AsIx 2
-                       ]
+            else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash $ NES.singleton txIn]
 
         it "Missing phase-2 script witness" $ do
           let scriptHash = alwaysSucceedsWithDatumHash
@@ -191,7 +161,7 @@ spec = describe "Invalid transactions" $ do
                   . (witsTxL . rdmrsTxWitsL .~ mempty)
               resetScriptHash = pure . (bodyTxL . scriptIntegrityHashTxBodyL .~ SNothing)
           withPostFixup (dropScriptWitnesses >=> resetScriptHash >=> resetAddrWits) $
-            submitFailingTx tx [injectFailure $ MissingScriptWitnessesUTXOW [scriptHash]]
+            submitFailingTx tx [injectFailure $ MissingScriptWitnessesUTXOW $ NES.singleton scriptHash]
 
         it "Redeemer with incorrect purpose" $ do
           let scriptHash = alwaysSucceedsWithDatumHash
@@ -205,16 +175,15 @@ spec = describe "Invalid transactions" $ do
               removeSpenders = Map.filterWithKey (const . not . isSpender)
               dropSpendingRedeemers = pure . (witsTxL . rdmrsTxWitsL . unRedeemersL %~ removeSpenders)
           withPostFixup (dropSpendingRedeemers >=> fixupPPHash >=> resetAddrWits) $
-            withPlutusPurposeRoundTripFailures $
-              submitFailingTx
-                tx
-                [ injectFailure $
-                    ExtraRedeemers [mkMintingPurpose $ AsIx 0]
-                , injectFailure $
-                    MissingRedeemers [(mkSpendingPurpose $ AsItem txIn, scriptHash)]
-                , injectFailure $
-                    CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
-                ]
+            submitFailingTx
+              tx
+              [ injectFailure $
+                  ExtraRedeemers [mkMintingPurpose $ AsIx 0]
+              , injectFailure $
+                  MissingRedeemers [(mkSpendingPurpose $ AsItem txIn, scriptHash)]
+              , injectFailure $
+                  CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
+              ]
 
         it "Missing witness for collateral input" $ do
           let scriptHash = alwaysSucceedsWithDatumHash
@@ -231,7 +200,7 @@ spec = describe "Invalid transactions" $ do
           withPostFixup (pure . dropCollateralWitness) $
             submitFailingTx
               tx
-              [injectFailure $ MissingVKeyWitnessesUTXOW [asWitness collateralHash]]
+              [injectFailure $ MissingVKeyWitnessesUTXOW $ NES.singleton $ asWitness collateralHash]
 
         -- Post-Alonzo eras produce additional post-Alonzo predicate failures that we can't include here
         unless (lang > eraMaxLanguage @AlonzoEra) $ do
@@ -247,23 +216,55 @@ spec = describe "Invalid transactions" $ do
                 txFixed <- fixupTx tx
                 -- The `Ix` of the redeemer may have been changed by `fixupRedeemerIndices`
                 let fixedRedeemers = txFixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL
-                    extraRedeemers = Map.keys $ Map.filter (== redeemer) fixedRedeemers
+                    extraRedeemers = NonEmpty.fromList $ Map.keys $ Map.filter (== redeemer) fixedRedeemers
                 withNoFixup $
-                  withPlutusPurposeRoundTripFailures $
-                    submitFailingTx
-                      txFixed
-                      [injectFailure $ ExtraRedeemers extraRedeemers]
+                  submitFailingTx
+                    txFixed
+                    [injectFailure $ ExtraRedeemers extraRedeemers]
 
             it "Minting" $
               testPurpose (mkMintingPurpose $ AsIx 2)
             it "Spending" $
               testPurpose (mkSpendingPurpose $ AsIx 99)
 
+alonzoEraSpecificSpec ::
+  forall era.
+  (AlonzoEraImp era, ShelleyEraTxCert era) =>
+  SpecWith (ImpInit (LedgerSpec era))
+alonzoEraSpecificSpec = describe "Invalid transactions" $ do
+  forM_ (eraLanguages @era) $ \lang ->
+    withSLanguage lang $ \slang ->
+      describe (show lang) $ do
+        let alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
+            alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang
+
+        it "No ExtraRedeemers on same script certificates" $ do
+          Positive n <- arbitrary
+          replicateM_ n $ freshKeyHash >>= registerPool
+          pools <- getsNES $ nesEsL . epochStateStakePoolsL
+          poolId <- elements $ Map.keys pools
+          let scriptHash = alwaysSucceedsNoDatumHash
+              cred = ScriptHashObj scriptHash
+              certs =
+                [ mkRegTxCert cred
+                , mkDelegStakeTxCert cred poolId
+                , mkUnRegTxCert cred
+                ]
+          tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
+          let redeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+          Map.keys redeemers
+            `shouldBe` [ mkCertifyingPurpose $ AsIx 1
+                       , mkCertifyingPurpose $ AsIx 2
+                       ]
+
+        -- Post-Alonzo eras produce additional post-Alonzo predicate failures that we can't include here
+        unless (lang > eraMaxLanguage @AlonzoEra) $ do
+          describe "Extra Redeemer" $ do
             it "Multiple equal plutus-locked certs" $ do
               let scriptHash = alwaysSucceedsWithDatumHash
               Positive n <- arbitrary
               replicateM_ n $ freshKeyHash >>= registerPool
-              pools <- getsNES $ nesEsL . epochStatePoolParamsL
+              pools <- getsNES $ nesEsL . epochStateStakePoolsL
               poolId <- elements $ Map.keys pools
               let cred = ScriptHashObj scriptHash
                   certs =
@@ -271,13 +272,12 @@ spec = describe "Invalid transactions" $ do
                     , mkDelegStakeTxCert cred poolId -- 1: Needs a redeemer
                     , mkDelegStakeTxCert cred poolId -- 2: Duplicate, ignored, no redeemer needed
                     ]
-                  redeemer = (Data (P.I 32), ExUnits 5000 1_000_000)
+                  redeemer = (Data (P.I 32), ExUnits 15_000 5_000_000)
                   redeemers = Map.fromList [(mkCertifyingPurpose (AsIx i), redeemer) | i <- [1 .. 2]]
                   tx =
                     mkBasicTx mkBasicTxBody
                       & bodyTxL . certsTxBodyL <>~ certs
                       & witsTxL . rdmrsTxWitsL . unRedeemersL <>~ redeemers
-              withPlutusPurposeRoundTripFailures $
-                submitFailingTx
-                  tx
-                  [injectFailure $ ExtraRedeemers [mkCertifyingPurpose (AsIx 2)]]
+              submitFailingTx
+                tx
+                [injectFailure $ ExtraRedeemers [mkCertifyingPurpose (AsIx 2)]]

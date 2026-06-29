@@ -22,19 +22,13 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
   smartUTxOState,
   filterAllRewards,
   FilteredRewards (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.CertState (
-  DState (..),
-  EraCertState (..),
-  dsUnifiedL,
-  rewards,
- )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Rewards
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (
@@ -43,8 +37,6 @@ import Cardano.Ledger.Shelley.Rewards (
   filterRewards,
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (member)
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -88,7 +80,7 @@ smartUTxOState _pp utxo c1 c2 st =
 -- | Apply a RewardUpdate to the EpochState. Does several things
 --   1) Adds reward coins to Rewards component of the UMap field of the DState,
 --      for actively delegated Stake
---   2) Adds to the Treasury of the AccountState for non-actively delegated stake
+--   2) Adds to the Treasury of the ChainAccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
   (EraGov era, EraCertState era) =>
@@ -96,7 +88,7 @@ applyRUpd ::
   EpochState era ->
   EpochState era
 applyRUpd ru es =
-  let (!es', _) = applyRUpdFiltered ru es
+  let !(!es', _) = applyRUpdFiltered ru es
    in es'
 
 -- TO IncrementalStake
@@ -126,25 +118,25 @@ applyRUpdFiltered
       -- Note: domain registeredAggregated is a subset of domain (rewards dstate)
       as' =
         as
-          { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered
-          , asReserves = addDeltaCoin (asReserves as) (deltaR ru)
+          { casTreasury = addDeltaCoin (casTreasury as) (deltaT ru) <> frTotalUnregistered
+          , casReserves = addDeltaCoin (casReserves as) (deltaR ru)
           }
       ls' =
         ls
           & lsUTxOStateL . utxosFeesL %~ (`addDeltaCoin` deltaF ru)
-          & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards dState UM.∪+ registeredAggregated)
+          & lsCertStateL . certDStateL . accountsL %~ addToBalanceAccounts registeredAggregated
       nm' = nonMyopic ru
 
 data FilteredRewards era = FilteredRewards
   { -- Only the first component is strict on purpose. The others are lazy because in most instances
     -- they are never used, so this keeps them from being evaluated.
 
-    frRegistered :: !(Map (Credential 'Staking) (Set Reward))
+    frRegistered :: !(Map (Credential Staking) (Set Reward))
   -- ^ These are registered, in the current Unified map of the CertState
-  , frShelleyIgnored :: Map (Credential 'Staking) (Set Reward)
+  , frShelleyIgnored :: Map (Credential Staking) (Set Reward)
   -- ^ These are registered, but ignored in the ShelleyEra because of backward
   --   compatibility in non-Shelley Eras, this field will be Map.empty
-  , frUnregistered :: Set (Credential 'Staking)
+  , frUnregistered :: Set (Credential Staking)
   -- ^ These are NOT registered in the current Unified map of the CertState
   , frTotalUnregistered :: Coin
   -- ^ Total Coin of the unregistered rewards. These will end up in the Treasury or Reserves.
@@ -160,23 +152,25 @@ instance NFData (FilteredRewards era) where
 --   'prevPParams' is the ProtocolParams of the previous Epoch
 --   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
 filterAllRewards' ::
-  Map (Credential 'Staking) (Set Reward) ->
+  EraAccounts era =>
+  Map (Credential Staking) (Set Reward) ->
   ProtVer ->
   DState era ->
   FilteredRewards era
-filterAllRewards' rs protVer dState =
+filterAllRewards' rewards protVer dState =
   FilteredRewards registered shelleyIgnored unregistered totalUnregistered
   where
-    (regRU, unregRU) = Map.partitionWithKey (\k _ -> member k (rewards dState)) rs
+    (registeredRewardsUpdate, unregisteredRewardsUpdate) =
+      Map.partitionWithKey (\cred _ -> isAccountRegistered cred (dState ^. accountsL)) rewards
     -- Partition on memebership in the rewards view of the unified map of DState
     -- Note that only registered rewards appear in 'regRU' because of this 'member' check.
-    totalUnregistered = fold $ aggregateRewards protVer unregRU
-    unregistered = Map.keysSet unregRU
-    (registered, shelleyIgnored) = filterRewards protVer regRU
+    totalUnregistered = fold $ aggregateRewards protVer unregisteredRewardsUpdate
+    unregistered = Map.keysSet unregisteredRewardsUpdate
+    (registered, shelleyIgnored) = filterRewards protVer registeredRewardsUpdate
 
 filterAllRewards ::
   (EraGov era, EraCertState era) =>
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential Staking) (Set Reward) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState

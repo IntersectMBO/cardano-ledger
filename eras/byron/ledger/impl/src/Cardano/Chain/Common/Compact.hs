@@ -9,8 +9,7 @@ module Cardano.Chain.Common.Compact (
   toCompactAddress,
   fromCompactAddress,
   unsafeGetCompactAddress,
-)
-where
+) where
 
 import Cardano.Chain.Common.Address (Address (..))
 import Cardano.HeapWords (HeapWords)

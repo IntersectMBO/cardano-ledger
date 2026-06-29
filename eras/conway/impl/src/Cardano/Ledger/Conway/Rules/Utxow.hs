@@ -21,9 +21,9 @@ module Cardano.Ledger.Conway.Rules.Utxow (
   ConwayUTXOW,
   ConwayUtxowPredFailure (..),
   shelleyToConwayUtxowPredFailure,
-)
-where
+) where
 
+import Cardano.Crypto.Hash (ByteString)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
@@ -40,7 +40,7 @@ import Cardano.Ledger.Babbage.Rules (
   babbageUtxowTransition,
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Conway.Core
@@ -61,9 +61,13 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
 import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (Embed (..), STS (..))
-import Data.Maybe.Strict (StrictMaybe)
+import Control.State.Transition.Extended (
+  Embed (..),
+  STS (..),
+ )
+import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
@@ -72,18 +76,17 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 -- | Predicate failure type for the Conway Era
 data ConwayUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
-  | InvalidWitnessesUTXOW
-      [VKey 'Witness]
+  | InvalidWitnessesUTXOW (NonEmpty (VKey Witness))
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
-      (Set (KeyHash 'Witness))
+      (NonEmptySet (KeyHash Witness))
   | -- | missing scripts
     MissingScriptWitnessesUTXOW
-      (Set ScriptHash)
+      (NonEmptySet ScriptHash)
   | -- | failed scripts
     ScriptWitnessNotValidatingUTXOW
-      (Set ScriptHash)
+      (NonEmptySet ScriptHash)
   | -- | hash of the full metadata
     MissingTxBodyMetadataHash
       TxAuxDataHash
@@ -91,42 +94,40 @@ data ConwayUtxowPredFailure era
     MissingTxMetadata
       TxAuxDataHash
   | ConflictingMetadataHash
-      (Mismatch 'RelEQ TxAuxDataHash)
+      (Mismatch RelEQ TxAuxDataHash)
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
     ExtraneousScriptWitnessesUTXOW
-      (Set ScriptHash)
-  | MissingRedeemers
-      [(PlutusPurpose AsItem era, ScriptHash)]
+      (NonEmptySet ScriptHash)
+  | MissingRedeemers (NonEmpty (PlutusPurpose AsItem era, ScriptHash))
   | MissingRequiredDatums
-      -- TODO: Make this NonEmpty #4066
-
       -- | Set of missing data hashes
-      (Set DataHash)
+      (NonEmptySet DataHash)
       -- | Set of received data hashes
       (Set DataHash)
   | NotAllowedSupplementalDatums
-      -- TODO: Make this NonEmpty #4066
-
       -- | Set of unallowed data hashes.
-      (Set DataHash)
+      (NonEmptySet DataHash)
       -- | Set of acceptable supplemental data hashes
       (Set DataHash)
   | PPViewHashesDontMatch
-      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
-      -- TODO: Make this NonEmpty #4066
-      (Set TxIn)
+      (NonEmptySet TxIn)
   | -- | List of redeemers not needed
-    ExtraRedeemers [PlutusPurpose AsIx era]
+    ExtraRedeemers (NonEmpty (PlutusPurpose AsIx era))
   | -- | Embed UTXO rule failures
     MalformedScriptWitnesses
-      (Set ScriptHash)
+      (NonEmptySet ScriptHash)
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      (Set ScriptHash)
+      (NonEmptySet ScriptHash)
+  | -- | The computed script integrity hash does not match the provided script integrity hash
+    ScriptIntegrityHashMismatch
+      (Mismatch RelEQ (StrictMaybe ScriptIntegrityHash))
+      (StrictMaybe ByteString)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" ConwayEra = ConwayUtxowPredFailure ConwayEra
@@ -154,9 +155,6 @@ instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure ConwayEra where
-  injectFailure = UtxoFailure . injectFailure
-
-instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
 instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure ConwayEra where
@@ -203,18 +201,19 @@ instance
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" ConwayUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ConwayUTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (ConwayUTXOW era)
   where
   type State (ConwayUTXOW era) = Shelley.UTxOState era
-  type Signal (ConwayUTXOW era) = Tx era
+  type Signal (ConwayUTXOW era) = Tx TopTx era
   type Environment (ConwayUTXOW era) = Shelley.UtxoEnv era
   type BaseM (ConwayUTXOW era) = ShelleyBase
   type PredicateFailure (ConwayUTXOW era) = ConwayUtxowPredFailure era
@@ -266,6 +265,7 @@ instance
       ExtraRedeemers x -> Sum ExtraRedeemers 15 !> To x
       MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
       MalformedReferenceScripts x -> Sum MalformedReferenceScripts 17 !> To x
+      ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 18 !> To x !> To y
 
 instance
   ( ConwayEraScript era
@@ -292,6 +292,7 @@ instance
     15 -> SumD ExtraRedeemers <! From
     16 -> SumD MalformedScriptWitnesses <! From
     17 -> SumD MalformedReferenceScripts <! From
+    18 -> SumD ScriptIntegrityHashMismatch <! From <! From
     n -> Invalid n
 
 -- =====================================================
@@ -306,6 +307,7 @@ babbageToConwayUtxowPredFailure = \case
   Babbage.UtxoFailure x -> UtxoFailure x
   Babbage.MalformedScriptWitnesses xs -> MalformedScriptWitnesses xs
   Babbage.MalformedReferenceScripts xs -> MalformedReferenceScripts xs
+  Babbage.ScriptIntegrityHashMismatch x y -> ScriptIntegrityHashMismatch x y
 
 alonzoToConwayUtxowPredFailure ::
   forall era.
@@ -317,10 +319,9 @@ alonzoToConwayUtxowPredFailure = \case
   Alonzo.MissingRequiredDatums mds rds -> MissingRequiredDatums mds rds
   Alonzo.NotAllowedSupplementalDatums uds ads -> NotAllowedSupplementalDatums uds ads
   Alonzo.PPViewHashesDontMatch m -> PPViewHashesDontMatch m
-  Alonzo.MissingRequiredSigners _xs ->
-    error "Impossible case. It will be removed once we are in Conway. See #3972"
   Alonzo.UnspendableUTxONoDatumHash ins -> UnspendableUTxONoDatumHash ins
   Alonzo.ExtraRedeemers xs -> ExtraRedeemers xs
+  Alonzo.ScriptIntegrityHashMismatch x y -> ScriptIntegrityHashMismatch x y
 
 shelleyToConwayUtxowPredFailure :: ShelleyUtxowPredFailure era -> ConwayUtxowPredFailure era
 shelleyToConwayUtxowPredFailure = \case
@@ -336,3 +337,6 @@ shelleyToConwayUtxowPredFailure = \case
   Shelley.ConflictingMetadataHash mm -> ConflictingMetadataHash mm
   Shelley.InvalidMetadata -> InvalidMetadata
   Shelley.ExtraneousScriptWitnessesUTXOW xs -> ExtraneousScriptWitnessesUTXOW xs
+
+instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure ConwayEra where
+  injectFailure = UtxoFailure . injectFailure

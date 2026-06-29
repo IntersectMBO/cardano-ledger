@@ -10,8 +10,7 @@ module Cardano.Protocol.TPraos.Rules.Tickn (
   TicknState (..),
   TicknPredicateFailure,
   PredicateFailure,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)

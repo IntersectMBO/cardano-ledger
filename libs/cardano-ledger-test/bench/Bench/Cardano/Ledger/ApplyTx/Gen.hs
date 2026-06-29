@@ -53,14 +53,14 @@ applyTxMempoolEnv pp =
     , ledgerEpochNo = Nothing
     , ledgerIx = minBound
     , ledgerPp = pp
-    , ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
+    , ledgerAccount = ChainAccountState (Coin 45000000000) (Coin 45000000000)
     }
 
 data ApplyTxEnv era = ApplyTxEnv
   { ateGlobals :: Globals
   , ateMempoolEnv :: MempoolEnv era
   , ateState :: LedgerState era
-  , ateTx :: Tx era
+  , ateTx :: Tx TopTx era
   }
   deriving (Generic)
 
@@ -73,7 +73,7 @@ generateApplyTxEnvForEra ::
   ( EraGen era
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraStake era

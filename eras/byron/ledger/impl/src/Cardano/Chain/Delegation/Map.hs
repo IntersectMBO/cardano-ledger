@@ -17,8 +17,7 @@ module Cardano.Chain.Delegation.Map (
   -- * Conversion/traversal
   fromList,
   keysSet,
-)
-where
+) where
 
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import Cardano.Ledger.Binary (

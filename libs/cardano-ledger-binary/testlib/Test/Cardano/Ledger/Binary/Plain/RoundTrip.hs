@@ -26,8 +26,7 @@ module Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   roundTrip,
   embedTrip,
   embedTripLabel,
-)
-where
+) where
 
 import Cardano.Ledger.Binary.Plain
 import qualified Codec.CBOR.FlatTerm as CBOR

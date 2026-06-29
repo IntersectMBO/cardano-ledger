@@ -21,11 +21,9 @@ module Cardano.Ledger.Shelley.API.Validation (
   applyBlockEitherNoEvents,
   applyBlockNoValidaton,
   applyTickNoEvents,
-  TickTransitionError (..),
   BlockTransitionError (..),
   chainChecks,
-)
-where
+) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
@@ -53,7 +51,7 @@ import NoThunks.Class (NoThunks (..))
   Block validation API
 -------------------------------------------------------------------------------}
 
-class (EraGov era, EraSegWits era) => ApplyBlock era where
+class (EraGov era, EraBlockBody era) => ApplyBlock era where
   -- | Run the `BBODY` rule with `globalAssertionPolicy`. This function always succeeds, but
   -- whenever validation is turned on it is necessary to check for presence of predicate failures
   -- before a call can be marked successful. Therefore it is recommended to call `applyBlockEither`
@@ -213,7 +211,7 @@ mkBbodyEnv
     } =
     STS.BbodyEnv
       { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
-      , STS.bbodyAccount = LedgerState.esAccountState nesEs
+      , STS.bbodyAccount = LedgerState.esChainAccountState nesEs
       }
 
 updateNewEpochState ::
@@ -223,22 +221,6 @@ updateNewEpochState ::
   NewEpochState era
 updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
-
-newtype TickTransitionError era
-  = TickTransitionError (NonEmpty (STS.PredicateFailure (EraRule "TICK" era)))
-  deriving (Generic)
-
-instance
-  NoThunks (STS.PredicateFailure (EraRule "TICK" era)) =>
-  NoThunks (TickTransitionError era)
-
-deriving stock instance
-  Eq (STS.PredicateFailure (EraRule "TICK" era)) =>
-  Eq (TickTransitionError era)
-
-deriving stock instance
-  Show (STS.PredicateFailure (EraRule "TICK" era)) =>
-  Show (TickTransitionError era)
 
 newtype BlockTransitionError era
   = BlockTransitionError (NonEmpty (STS.PredicateFailure (EraRule "BBODY" era)))

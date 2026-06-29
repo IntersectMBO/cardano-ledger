@@ -11,7 +11,6 @@ module Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRUPD,
   RupdEnv (..),
   PredicateFailure,
-  ShelleyRupdPredFailure,
   epochInfoRange,
   PulsingRewUpdate (..),
   startStep,
@@ -20,8 +19,7 @@ module Cardano.Ledger.Shelley.Rules.Rupd (
   lift,
   Identity (..),
   RupdEvent (..),
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade,
@@ -33,10 +31,10 @@ import Cardano.Ledger.BaseTypes (
   randomnessStabilisationWindow,
   securityParameter,
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.Era (ShelleyRUPD)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -55,6 +53,7 @@ import Cardano.Ledger.Slot (
   epochInfoSize,
   (+*),
  )
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Slotting.EpochInfo.API (epochInfoRange)
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity (..))
@@ -71,18 +70,11 @@ import Control.State.Transition (
  )
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Data.Void (Void)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data RupdEnv era
   = RupdEnv BlocksMade (EpochState era)
-
-data ShelleyRupdPredFailure era -- No predicate failures
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (ShelleyRupdPredFailure era)
-
-instance NFData (ShelleyRupdPredFailure era)
 
 instance
   ( Era era
@@ -95,7 +87,7 @@ instance
   type Signal (ShelleyRUPD era) = SlotNo
   type Environment (ShelleyRUPD era) = RupdEnv era
   type BaseM (ShelleyRUPD era) = ShelleyBase
-  type PredicateFailure (ShelleyRUPD era) = ShelleyRupdPredFailure era
+  type PredicateFailure (ShelleyRUPD era) = Void
   type Event (ShelleyRUPD era) = RupdEvent
 
   initialRules = [pure SNothing]
@@ -104,7 +96,7 @@ instance
 data RupdEvent
   = RupdEvent
       !EpochNo
-      !(Map.Map (Credential 'Staking) (Set Reward))
+      !(Map.Map (Credential Staking) (Set Reward))
   deriving (Generic, Eq)
 
 instance NFData RupdEvent

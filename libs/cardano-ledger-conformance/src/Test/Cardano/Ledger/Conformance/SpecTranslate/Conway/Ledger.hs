@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,17 +14,33 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger () where
 
 import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Conway.Core (EraPParams (..), EraRule, ScriptHash)
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure, EnactState)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (
+  AllegraEraTxBody (..),
+  AlonzoEraTx (..),
+  AlonzoEraTxBody (..),
+  BabbageEraTxBody (..),
+  ConwayEraTxBody (..),
+  EraPParams (..),
+  EraTx (..),
+  EraTxBody (..),
+  ScriptHash,
+  TxLevel (..),
+  txIdTx,
+ )
+import Cardano.Ledger.Conway.Rules (EnactState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Control.State.Transition.Extended (STS (..))
+import Cardano.Ledger.Shelley.State (ChainAccountState (..))
+import Cardano.Ledger.TxIn (TxId)
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
-import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), askCtx, showOpaqueErrorString)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
+import Lens.Micro ((^.))
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import Test.Cardano.Ledger.Conformance (askCtx, withCtx)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
+  SpecTranslate (..),
+ )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 
 instance
   ( EraPParams era
@@ -44,15 +61,50 @@ instance
       <*> toSpecRep policyHash
       <*> toSpecRep ledgerPp
       <*> toSpecRep enactState
-      <*> toSpecRep (asTreasury ledgerAccount)
+      <*> toSpecRep (casTreasury ledgerAccount)
 
 instance
-  ( ToExpr (PredicateFailure (EraRule "GOV" era))
-  , ToExpr (PredicateFailure (EraRule "CERTS" era))
-  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  ) =>
-  SpecTranslate ctx (ConwayLedgerPredFailure era)
+  Inject ctx TxId =>
+  SpecTranslate ctx (TxBody TopTx ConwayEra)
   where
-  type SpecRep (ConwayLedgerPredFailure era) = OpaqueErrorString
+  type SpecRep (TxBody TopTx ConwayEra) = Agda.TxBody
 
-  toSpecRep = pure . showOpaqueErrorString
+  toSpecRep txb = do
+    txId <- askCtx @TxId
+    Agda.MkTxBody
+      <$> toSpecRep (txb ^. inputsTxBodyL)
+      <*> toSpecRep (txb ^. referenceInputsTxBodyL)
+      <*> toSpecRep (txb ^. collateralInputsTxBodyL)
+      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
+      <*> toSpecRep txId
+      <*> toSpecRep (txb ^. certsTxBodyL)
+      <*> toSpecRep (txb ^. feeTxBodyL)
+      <*> toSpecRep (txb ^. withdrawalsTxBodyL)
+      <*> toSpecRep (txb ^. vldtTxBodyL)
+      <*> toSpecRep (txb ^. auxDataHashTxBodyL)
+      <*> toSpecRep (txb ^. treasuryDonationTxBodyL)
+      <*> toSpecRep (txb ^. votingProceduresTxBodyL)
+      <*> toSpecRep (txb ^. proposalProceduresTxBodyL)
+      <*> toSpecRep (txb ^. networkIdTxBodyL)
+      <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
+      <*> pure 0
+      <*> toSpecRep (txb ^. reqSignerHashesTxBodyL)
+      -- The script integrity hash is computed using @const 0@ on the Agda
+      -- side (@Hashable-ScriptIntegrity = record { hash = λ x → 0 }@).
+      -- Until a proper hash function is used in Agda, we emulate the same
+      -- behavior here.
+      --
+      -- The following PR documents the discrepancy on the Agda side:
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
+      <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
+
+instance SpecTranslate ctx (Tx TopTx ConwayEra) where
+  type SpecRep (Tx TopTx ConwayEra) = Agda.Tx
+
+  toSpecRep tx =
+    Agda.MkTx
+      <$> withCtx (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
+      <*> toSpecRep (tx ^. witsTxL)
+      <*> toSpecRep (tx ^. sizeTxF)
+      <*> toSpecRep (tx ^. isValidTxL)
+      <*> toSpecRep (tx ^. auxDataTxL)

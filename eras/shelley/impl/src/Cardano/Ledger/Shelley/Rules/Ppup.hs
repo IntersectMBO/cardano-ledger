@@ -21,8 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   PredicateFailure,
   VotingPeriod (..),
   votedFuturePParams,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (
   Globals (quorum),
@@ -55,7 +54,6 @@ import Cardano.Ledger.Slot (
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
 import qualified Data.Foldable as F (find)
 import qualified Data.Map as Map
@@ -90,7 +88,7 @@ data ShelleyPpupPredFailure era
     --  `mismatchSupplied` ~ key hashes which were a part of the update.
     --  `mismatchExpected` ~ key hashes of the genesis keys.
     NonGenesisUpdatePPUP
-      (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+      (Mismatch RelSubset (Set (KeyHash GenesisRole)))
   | -- | An update was proposed for the wrong epoch.
     --  The first 'EpochNo' is the current epoch.
     --  The second 'EpochNo' is the epoch listed in the update.
@@ -122,7 +120,7 @@ newtype PpupEvent era = PpupNewEpoch EpochNo
 
 instance NFData (PpupEvent era)
 
-instance (EraPParams era, ProtVerAtMost era 8) => STS (ShelleyPPUP era) where
+instance (EraPParams era, AtMostEra "Babbage" era) => STS (ShelleyPPUP era) where
   type State (ShelleyPPUP era) = ShelleyGovState era
   type Signal (ShelleyPPUP era) = StrictMaybe (Update era)
   type Environment (ShelleyPPUP era) = PpupEnv era
@@ -148,7 +146,8 @@ instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
     2 -> SumD PVCannotFollowPPUP <! From
     k -> Invalid k
 
-ppupTransitionNonEmpty :: (EraPParams era, ProtVerAtMost era 8) => TransitionRule (ShelleyPPUP era)
+ppupTransitionNonEmpty ::
+  (EraPParams era, AtMostEra "Babbage" era) => TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs genDelegs)
@@ -164,11 +163,11 @@ ppupTransitionNonEmpty = do
   case update of
     SNothing -> pure pps
     SJust (Update (ProposedPPUpdates pup) targetEpochNo) -> do
-      eval (dom pup ⊆ dom genDelegs)
+      Map.isSubmapOfBy (\_ _ -> True) pup genDelegs
         ?! NonGenesisUpdatePPUP
           Mismatch
-            { mismatchSupplied = eval $ dom pup
-            , mismatchExpected = eval $ dom genDelegs
+            { mismatchSupplied = Map.keysSet pup
+            , mismatchExpected = Map.keysSet genDelegs
             }
 
       let firstIllegalProtVerUpdate = do
@@ -185,7 +184,7 @@ ppupTransitionNonEmpty = do
         then do
           (curEpochNo == targetEpochNo)
             ?! PPUpdateWrongEpoch curEpochNo targetEpochNo VoteForThisEpoch
-          let curProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+          let curProposals = ProposedPPUpdates (Map.union pup pupS)
           !coreNodeQuorum <- liftSTS $ asks quorum
           pure $
             pps
@@ -200,7 +199,7 @@ ppupTransitionNonEmpty = do
           pure $
             pps
               { sgsCurProposals = ProposedPPUpdates pupS
-              , sgsFutureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
+              , sgsFutureProposals = ProposedPPUpdates (Map.union pup fpupS)
               }
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to

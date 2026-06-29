@@ -15,28 +15,21 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
   CERTS,
   genTxCerts,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParams,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
-  AccountState,
   DelplEnv (..),
   Ptr (..),
   ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.State
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (
@@ -104,7 +97,7 @@ instance
   ) =>
   STS (CERTS era)
   where
-  type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
+  type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, ChainAccountState)
   type State (CERTS era) = (CertState era, CertIx)
   type Signal (CERTS era) = Maybe (TxCert era, CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
@@ -160,7 +153,7 @@ instance
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
   , Signal (Core.EraRule "DELPL" era) ~ TxCert era
-  , ProtVerAtMost era 8
+  , AtMostEra "Babbage" era
   , EraCertState era
   , Crypto c
   ) =>
@@ -205,21 +198,21 @@ genTxCerts ::
   CertState era ->
   SlotNo ->
   TxIx ->
-  AccountState ->
+  ChainAccountState ->
   Gen
     ( [TxCert era]
     , Coin
     , Coin
     , CertState era
-    , [KeyPair 'Witness]
+    , [KeyPair Witness]
     , [(Core.Script era, Core.Script era)]
     )
 genTxCerts
   ge@( GenEnv
-        KeySpace_ {ksIndexedStakingKeys}
-        _scriptspace
-        Constants {maxCertsPerTx}
-      )
+         KeySpace_ {ksIndexedStakingKeys}
+         _scriptspace
+         Constants {maxCertsPerTx}
+       )
   pp
   certState
   slot
@@ -229,7 +222,6 @@ genTxCerts
         st0 = (certState, minBound)
         certDState = certState ^. certDStateL
         certPState = certState ^. certPStateL
-        certVState = certState ^. certVStateL
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
@@ -244,10 +236,10 @@ genTxCerts
           getTotalRefundsTxCerts
             pp
             (lookupDepositDState certDState)
-            (lookupDepositVState certVState)
+            (const Nothing)
             certs
 
-        deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams certPState) certs
+        deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePools certPState) certs
 
         certWits = concat (keyCredAsWitness <$> keyCreds')
         certScripts = extractScriptCred <$> scriptCreds
@@ -286,7 +278,7 @@ extractScriptCred x =
 keyCredAsWitness ::
   (HasCallStack, Era era, Show (Core.Script era)) =>
   CertCred era ->
-  [KeyPair 'Witness]
+  [KeyPair Witness]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]

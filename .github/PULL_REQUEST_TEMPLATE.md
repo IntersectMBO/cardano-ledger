@@ -16,5 +16,6 @@ to the issue. -->
       **NOTE: _If bounds change in a cabal file, that package itself must have a version increase._** (See [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#versioning-process)).
 - [x] Code formatted (use `scripts/fourmolize.sh`).
 - [x] Cabal files formatted (use `scripts/cabal-format.sh`).
+- [x] CDDL files are up to date (use `scripts/gen-cddl.sh`)
 - [x] [`hie.yaml`](https://github.com/intersectmbo/cardano-ledger/blob/master/hie.yaml) updated (use `scripts/gen-hie.sh`).
 - [ ] Self-reviewed the diff.

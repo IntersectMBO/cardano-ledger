@@ -1,17 +1,23 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Besides capturing all configuration that is necessary to progress to a specific era,
@@ -19,24 +25,35 @@
 -- benchmarking in order to initilize a chain in a particular era without going through
 -- the trouble of generating all the history for preceeding eras.
 module Cardano.Ledger.Shelley.Transition (
-  EraTransition (..),
+  EraTransition (
+    TransitionConfig,
+    mkTransitionConfig,
+    injectIntoTestState,
+    tcPreviousEraConfigL,
+    tcTranslationContextL,
+    tcShelleyGenesisL,
+    tcInitialPParamsG
+  ),
+  pattern ShelleyTransitionConfig,
   tcInitialFundsL,
   tcInitialStakingL,
   mkShelleyTransitionConfig,
   createInitialState,
-  registerInitialFundsThenStaking,
-  toShelleyTransitionConfigPairs,
+  shelleyRegisterInitialFundsThenStaking,
+  shelleyRegisterInitialAccounts,
+  registerInitialStakePools,
+  registerInitialFunds,
+  resetStakeDistribution,
   protectMainnet,
   protectMainnetLens,
 ) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Genesis (EraGenesis)
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
@@ -47,27 +64,41 @@ import Cardano.Ledger.Shelley.Translation (
   FromByronTranslationContext (..),
   toFromByronTranslationContext,
  )
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
-import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
+import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, withObject, (.:))
+import qualified Data.Aeson as Aeson (Value (..))
+import Data.Aeson.Key (Key, fromString)
+import Data.Aeson.Types (Parser)
+import Data.Char (toLower)
 import Data.Default
 import Data.Kind
-import qualified Data.ListMap as LM
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Typeable
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Stack
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
+-- | Register the initial information in the 'NewEpochState'.
+--
+-- HERE BE DRAGONS! This interface is intended to help in testing and benchmarking.
+--
+-- In production, the genesis should /not/ contain any initial information about accounts, stake
+-- pools or dreps.
+--
+-- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
+-- when NetworkId is set to Mainnet
 class
   ( EraTxOut era
   , EraGov era
   , EraStake era
   , EraGenesis era
   , EraCertState era
-  , ToJSON (TransitionConfig era)
+  , Eq (TransitionConfig era)
+  , Show (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)
   ) =>
@@ -136,18 +167,71 @@ class
         (tc ^. tcTranslationContextL)
         (tc ^. tcPreviousEraConfigL . tcInitialPParamsG)
 
+  toTransitionConfigKeyValuePairs ::
+    KeyValue e a =>
+    TransitionConfig era ->
+    [a]
+  default toTransitionConfigKeyValuePairs ::
+    ( EraTransition (PreviousEra era)
+    , ToKeyValuePairs (TranslationContext era)
+    , ToKeyValuePairs (TransitionConfig (PreviousEra era))
+    , Typeable (TranslationContext era)
+    , KeyValue e a
+    ) =>
+    TransitionConfig era ->
+    [a]
+  toTransitionConfigKeyValuePairs config =
+    toKeyValuePairs (config ^. tcPreviousEraConfigL) ++ translationContextPairs
+    where
+      translationContextPairs =
+        case eqT :: Maybe (TranslationContext era :~: NoGenesis era) of
+          Nothing ->
+            [ eraNameKey @era .= object (toKeyValuePairs (config ^. tcTranslationContextL))
+            ]
+          Just Refl -> []
+
+  parseTransitionConfigJSON :: Aeson.Value -> Parser (TransitionConfig era)
+  default parseTransitionConfigJSON ::
+    ( Typeable (TranslationContext era)
+    , FromJSON (TranslationContext era)
+    , FromJSON (TransitionConfig (PreviousEra era))
+    ) =>
+    Aeson.Value ->
+    Parser (TransitionConfig era)
+  parseTransitionConfigJSON = withObject (eraName @era <> "TransitionConfig") $ \o -> do
+    prevTransitionConfig :: TransitionConfig (PreviousEra era) <- parseJSON (Aeson.Object o)
+    genesis <- mkGenesisWith @era (o .: eraNameKey @era)
+    pure $ mkTransitionConfig genesis prevTransitionConfig
+
+eraNameKey :: forall era. Era era => Key
+eraNameKey = fromString (map toLower (eraName @era))
+
+instance EraTransition era => ToKeyValuePairs (TransitionConfig era) where
+  toKeyValuePairs = toTransitionConfigKeyValuePairs
+
+deriving via
+  KeyValuePairs (TransitionConfig era)
+  instance
+    ToKeyValuePairs (TransitionConfig era) => ToJSON (TransitionConfig era)
+
+instance EraTransition era => FromJSON (TransitionConfig era) where
+  parseJSON = parseTransitionConfigJSON
+
 tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
-registerInitialFundsThenStaking ::
-  EraTransition era =>
+shelleyRegisterInitialFundsThenStaking ::
+  (EraTransition era, ShelleyEraAccounts era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
-registerInitialFundsThenStaking cfg =
+shelleyRegisterInitialFundsThenStaking cfg =
   -- We must first register the initial funds, because the stake
   -- information depends on it.
-  registerInitialStaking cfg . registerInitialFunds cfg
+  resetStakeDistribution
+    . shelleyRegisterInitialAccounts (cfg ^. tcInitialStakingL)
+    . registerInitialStakePools (cfg ^. tcInitialStakingL)
+    . registerInitialFunds cfg
 
 instance EraTransition ShelleyEra where
   newtype TransitionConfig ShelleyEra = ShelleyTransitionConfig
@@ -158,7 +242,7 @@ instance EraTransition ShelleyEra where
   mkTransitionConfig =
     error "Impossible: There is no EraTransition instance for ByronEra"
 
-  injectIntoTestState = registerInitialFundsThenStaking
+  injectIntoTestState = shelleyRegisterInitialFundsThenStaking
 
   tcPreviousEraConfigL = notSupportedInThisEraL
 
@@ -176,6 +260,13 @@ instance EraTransition ShelleyEra where
 
   tcInitialPParamsG = to (sgProtocolParams . stcShelleyGenesis)
 
+  toTransitionConfigKeyValuePairs stc@(ShelleyTransitionConfig _) =
+    ["shelley" .= object (toKeyValuePairs (stcShelleyGenesis stc))]
+
+  parseTransitionConfigJSON = withObject "ShelleyTransitionConfig" $ \o -> do
+    sg <- o .: "shelley"
+    pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
+
 -- | Get the initial funds from the `TransitionConfig`. This value must be non-empty
 -- only during testing and benchmarking, it must never contain anything on a real system.
 --
@@ -183,7 +274,7 @@ instance EraTransition ShelleyEra where
 -- when NetworkId is set to Mainnet
 tcInitialFundsL ::
   (HasCallStack, EraTransition era) =>
-  Lens' (TransitionConfig era) (LM.ListMap Addr Coin)
+  Lens' (TransitionConfig era) (ListMap.ListMap Addr Coin)
 tcInitialFundsL =
   protectMainnetLens "InitialFunds" null $
     tcShelleyGenesisL . sgInitialFundsL
@@ -229,22 +320,6 @@ protectMainnet name g isMainnetSafe m =
 
 deriving instance NoThunks (TransitionConfig ShelleyEra)
 
-instance ToJSON (TransitionConfig ShelleyEra) where
-  toJSON = object . toShelleyTransitionConfigPairs
-  toEncoding = pairs . mconcat . toShelleyTransitionConfigPairs
-
-instance FromJSON (TransitionConfig ShelleyEra) where
-  parseJSON = withObject "ShelleyTransitionConfig" $ \o -> do
-    sg <- o .: "shelley"
-    pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
-
-toShelleyTransitionConfigPairs ::
-  KeyValue e a =>
-  TransitionConfig ShelleyEra ->
-  [a]
-toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
-  ["shelley" .= object (toShelleyGenesisPairs (stcShelleyGenesis stc))]
-
 -- | Helper function for constructing the initial state for any era
 --
 -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
@@ -267,23 +342,26 @@ createInitialState tc =
       , nesBcur = BlocksMade Map.empty
       , nesEs =
           EpochState
-            { esAccountState = AccountState zero reserves
+            { esChainAccountState =
+                ChainAccountState
+                  { casTreasury = zero
+                  , casReserves = reserves
+                  }
             , esSnapshots = emptySnapShots
             , esLState =
                 LedgerState
                   { lsUTxOState =
                       smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState = mkCertState def def (dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)})
+                  , lsCertState =
+                      def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
                   }
             , esNonMyopic = def
             }
       , nesRu = SNothing
-      , nesPd = PoolDistr Map.empty mempty
+      , nesPd = def
       , stashedAVVMAddresses = def
       }
   where
-    dState :: DState era
-    dState = def
     govState :: GovState era
     govState =
       emptyGovState
@@ -298,94 +376,80 @@ createInitialState tc =
     initialUtxo :: UTxO era
     initialUtxo = mempty
     reserves :: Coin
-    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
+    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> sumCoinUTxO initialUtxo
 
--- | Register the initial staking information in the 'NewEpochState'.
---
--- HERE BE DRAGONS! This function is intended to help in testing.
---
--- In production, the genesis should /not/ contain any initial staking.
---
--- Any existing staking information is overridden, but the UTxO is left
--- untouched.
---
--- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
--- when NetworkId is set to Mainnet
-registerInitialStaking ::
+-- | Register initial stake pools from the `ShelleyGenesisStaking`
+registerInitialStakePools ::
   forall era.
-  (HasCallStack, EraTransition era) =>
-  TransitionConfig era ->
+  (EraCertState era, EraGov era) =>
+  ShelleyGenesisStaking ->
   NewEpochState era ->
   NewEpochState era
-registerInitialStaking tc nes =
+registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
-    { nesEs =
-        epochState
-          { esLState =
-              ledgerState
-                { lsCertState =
-                    dpState
-                      & certDStateL .~ dState'
-                      & certPStateL .~ pState'
-                }
-          , esSnapshots =
-              (esSnapshots epochState)
-                { ssStakeMark = initSnapShot
-                , ssStakeMarkPoolDistr = calculatePoolDistr initSnapShot
-                }
-          }
-    , -- Note that this is only applicable in the initial configuration where
-      -- there is no existing stake distribution, since it would completely
-      -- overwrite any such thing.
-      nesPd = calculatePoolDistr initSnapShot
-    }
+    & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+      .~ ListMap.toMap (mkStakePoolState deposit mempty <$> sgsPools)
   where
-    ShelleyGenesisStaking {sgsPools, sgsStake} = tc ^. tcInitialStakingL
-    NewEpochState {nesEs = epochState} = nes
-    ledgerState = esLState epochState
-    dpState = lsCertState ledgerState
+    deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
 
-    -- New delegation state. Since we're using base addresses, we only care
-    -- about updating the '_delegations' field.
-    --
-    -- See STS DELEG for details
-    dState' :: DState era
-    dState' =
-      (dpState ^. certDStateL)
-        { dsUnified =
-            UM.unify
-              ( Map.map (const $ UM.RDPair (CompactCoin 0) (CompactCoin 0))
-                  . Map.mapKeys KeyHashObj
-                  $ sgsStakeMap
-              )
-              mempty
-              (Map.mapKeys KeyHashObj sgsStakeMap)
-              mempty
-        }
-      where
-        sgsStakeMap = ListMap.toMap sgsStake
+-- | Register all staking credentials and apply delegations. Make sure StakePools that are being
+-- delegated to are already registered, which can be done with `registerInitialStakePools`.
+shelleyRegisterInitialAccounts ::
+  forall era.
+  (HasCallStack, ShelleyEraAccounts era, EraCertState era, EraGov era) =>
+  ShelleyGenesisStaking ->
+  NewEpochState era ->
+  NewEpochState era
+shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
+  nes
+    & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ updatedAccounts
+    & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ updatedStakePoolStates
+  where
+    stakePools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+    initialAccounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+    deposit = compactCoinOrError $ nes ^. nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
-    -- We consider pools as having been registered in slot 0
-    -- See STS POOL for details
-    pState' :: PState era
-    pState' =
-      (dpState ^. certPStateL)
-        { psStakePoolParams = ListMap.toMap sgsPools
-        }
+    !(!updatedAccounts, !updatedStakePoolStates) =
+      foldr registerAndDelegate (initialAccounts, stakePools) (zip (ListMap.toList sgsStake) ptrs)
+    registerAndDelegate ((stakeKeyHash, stakePool), ptr) (!accounts, !stakePoolMap)
+      | stakePool `Map.member` stakePools =
+          ( registerShelleyAccount (KeyHashObj stakeKeyHash) ptr deposit (Just stakePool) accounts
+          , Map.adjust (spsDelegatorsL %~ Set.insert (KeyHashObj stakeKeyHash)) stakePool stakePoolMap
+          )
+      | otherwise =
+          error $
+            "Invariant of a delegation of "
+              ++ show stakeKeyHash
+              ++ " to an unregistered stake pool "
+              ++ show stakePool
+              ++ " is being violated."
+    ptrs =
+      [ Ptr minBound txIx certIx | txIx <- [minBound .. maxBound], certIx <- [minBound .. maxBound]
+      ]
 
-    _pp = nes ^. nesEsL . curPParamsEpochStateL
+-- NOTE: it seems like this is only used for testing, so hardcoding `Testnet` as a Network for now
 
+-- | Having initial funds, stake pools and accounts with delegations, we need to reset the stake
+-- distribution, otherwise those initial stake pools will not be able to produce blocks
+resetStakeDistribution ::
+  (EraCertState era, EraStake era) =>
+  NewEpochState era ->
+  NewEpochState era
+resetStakeDistribution nes =
+  nes
+    & nesEsL . esSnapshotsL . ssStakeMarkL .~ initSnapShot
+    & nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL .~ poolDistr
+    & nesPdL .~ poolDistr
+  where
+    dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
+    pState = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+    poolDistr = calculatePoolDistr initSnapShot
     -- The new stake distribution is made on the basis of a snapshot taken
     -- during the previous epoch. We create a "fake" snapshot in order to
     -- establish an initial stake distribution.
     initSnapShot :: SnapShot
     initSnapShot =
-      -- Since we build a stake from nothing, we first initialise an
-      -- 'IncrementalStake' as empty, and then:
-      --
-      -- 1. Add the initial UTxO.
-      -- 2. Update the stake map given the initial delegation.
-      snapShotFromInstantStake (addInstantStake (ledgerState ^. utxoL) mempty) dState' pState'
+      snapShotFromInstantStake (addInstantStake (nes ^. utxoL) mempty) dState pState
 
 -- | Register the initial funds in the 'NewEpochState'.
 --
@@ -419,17 +483,16 @@ registerInitialFunds tc nes =
   nes
     { nesEs =
         epochState
-          { esAccountState = accountState'
+          { esChainAccountState = accountState'
           , esLState = ledgerState'
           }
     }
   where
     epochState = nesEs nes
-    accountState = esAccountState epochState
+    accountState = esChainAccountState epochState
     ledgerState = esLState epochState
     utxoState = lsUTxOState ledgerState
     utxo = utxosUtxo utxoState
-    reserves = asReserves accountState
 
     initialFundsUtxo :: UTxO era
     initialFundsUtxo =
@@ -446,7 +509,7 @@ registerInitialFunds tc nes =
     -- Update the reserves
     accountState' =
       accountState
-        { asReserves = reserves <-> coin (balance initialFundsUtxo)
+        { casReserves = casReserves accountState <-> sumCoinUTxO initialFundsUtxo
         }
 
     ledgerState' =

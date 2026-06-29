@@ -25,10 +25,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "Resigning proposed CC key" $ do

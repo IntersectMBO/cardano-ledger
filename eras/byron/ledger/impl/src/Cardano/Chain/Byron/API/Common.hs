@@ -24,8 +24,7 @@ module Cardano.Chain.Byron.API.Common (
 
   -- * Headers
   abobMatchesBody,
-)
-where
+) where
 
 import qualified Cardano.Chain.Block as CC
 import qualified Cardano.Chain.Common as CC

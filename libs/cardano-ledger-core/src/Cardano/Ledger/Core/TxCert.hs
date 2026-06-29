@@ -1,13 +1,11 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -21,8 +19,7 @@ module Cardano.Ledger.Core.TxCert (
   poolCertKeyHashWitness,
   isRegStakeTxCert,
   isUnRegStakeTxCert,
-)
-where
+) where
 
 import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
@@ -34,8 +31,8 @@ import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
-import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State.StakePool (StakePoolParams (sppId))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Kind (Type)
@@ -74,29 +71,29 @@ class
     Either (TxCertUpgradeError era) (TxCert era)
 
   -- | Return a witness key whenever a certificate requires one
-  getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash 'Witness)
+  getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash Witness)
 
   -- | Return a ScriptHash for certificate types that require a witness
   getScriptWitnessTxCert :: TxCert era -> Maybe ScriptHash
 
-  mkRegPoolTxCert :: PoolParams -> TxCert era
-  getRegPoolTxCert :: TxCert era -> Maybe PoolParams
+  mkRegPoolTxCert :: StakePoolParams -> TxCert era
+  getRegPoolTxCert :: TxCert era -> Maybe StakePoolParams
 
-  mkRetirePoolTxCert :: KeyHash 'StakePool -> EpochNo -> TxCert era
-  getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool, EpochNo)
+  mkRetirePoolTxCert :: KeyHash StakePool -> EpochNo -> TxCert era
+  getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash StakePool, EpochNo)
 
   -- | Extract staking credential from any certificate that can register such credential
-  lookupRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking)
+  lookupRegStakeTxCert :: TxCert era -> Maybe (Credential Staking)
 
   -- | Extract staking credential from any certificate that can unregister such credential
-  lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking)
+  lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential Staking)
 
   -- | Compute the total deposits from a list of certificates.
   getTotalDepositsTxCerts ::
     Foldable f =>
     PParams era ->
     -- | Check whether stake pool is registered or not
-    (KeyHash 'StakePool -> Bool) ->
+    (KeyHash StakePool -> Bool) ->
     f (TxCert era) ->
     Coin
 
@@ -105,20 +102,20 @@ class
     Foldable f =>
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered
-    (Credential 'Staking -> Maybe Coin) ->
+    (Credential Staking -> Maybe Coin) ->
     -- | Lookup current deposit for DRep credential if one is registered
-    (Credential 'DRepRole -> Maybe Coin) ->
+    (Credential DRepRole -> Maybe Coin) ->
     f (TxCert era) ->
     Coin
 
-pattern RegPoolTxCert :: EraTxCert era => PoolParams -> TxCert era
+pattern RegPoolTxCert :: EraTxCert era => StakePoolParams -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
   where
     RegPoolTxCert d = mkRegPoolTxCert d
 
 pattern RetirePoolTxCert ::
   EraTxCert era =>
-  KeyHash 'StakePool ->
+  KeyHash StakePool ->
   EpochNo ->
   TxCert era
 pattern RetirePoolTxCert poolId epochNo <- (getRetirePoolTxCert -> Just (poolId, epochNo))
@@ -133,9 +130,9 @@ getPoolCertTxCert = \case
 
 data PoolCert
   = -- | A stake pool registration certificate.
-    RegPool !PoolParams
+    RegPool !StakePoolParams
   | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool) !EpochNo
+    RetirePool !(KeyHash StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)
 
 instance EncCBOR PoolCert where
@@ -154,14 +151,15 @@ instance ToJSON PoolCert where
     RegPool poolParams ->
       kindObject "RegPool" ["poolParams" .= toJSON poolParams]
     RetirePool poolId epochNo ->
-      kindObject "RetirePool" $
+      kindObject
+        "RetirePool"
         [ "poolId" .= toJSON poolId
         , "epochNo" .= toJSON epochNo
         ]
 
-poolCertKeyHashWitness :: PoolCert -> KeyHash 'Witness
+poolCertKeyHashWitness :: PoolCert -> KeyHash Witness
 poolCertKeyHashWitness = \case
-  RegPool poolParams -> asWitness $ ppId poolParams
+  RegPool stakePoolParams -> asWitness $ sppId stakePoolParams
   RetirePool poolId _ -> asWitness poolId
 
 -- | Check if supplied TxCert is a stake registering certificate
