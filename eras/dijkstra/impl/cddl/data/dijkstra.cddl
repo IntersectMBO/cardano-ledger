@@ -909,8 +909,8 @@ auxiliary_data_map =
 starting_account_balance_intervals = {+ credential => account_balance_interval}
 
 leios_certificate =
-  [ signers              : bytes           ;bitfield
-  , aggregated_signature : leios_signature
+  [ signers   : bytes .size (0 .. 8192) ;bitfield with up to 65536 entries
+  , signature : leios_signature
   ]
 
 leios_signature = bytes .size 48

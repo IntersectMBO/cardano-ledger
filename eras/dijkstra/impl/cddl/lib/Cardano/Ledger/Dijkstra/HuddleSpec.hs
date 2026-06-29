@@ -33,7 +33,7 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 ) where
 
 import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
-import Cardano.Ledger.Binary (rawEncodeFixedSized)
+import Cardano.Ledger.Binary (maxLeiosCertSignersBytes, rawEncodeFixedSized)
 import Cardano.Ledger.Conway.HuddleSpec hiding (poolParamsGroup)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Huddle.Gen (
@@ -63,6 +63,7 @@ import Data.Function ((&))
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
+import Data.String (fromString)
 import Data.Text ()
 import Data.Text qualified as T
 import Data.Word (Word16, Word64)
@@ -1057,9 +1058,12 @@ instance HuddleRule "leios_certificate" DijkstraEra where
   huddleRuleNamed pname era =
     pname
       =.= arr
-        [ "signers" ==> VBytes & comment "bitfield"
-        , "aggregated_signature" ==> huddleRule @"leios_signature" era
+        [ "signers" ==> VBytes `sized` (0 :: Word64, maxBytes)
+            & comment (fromString $ "bitfield with up to " <> show (maxBytes * 8) <> " entries")
+        , "signature" ==> huddleRule @"leios_signature" era
         ]
+    where
+      maxBytes = fromIntegral @Int @Word64 maxLeiosCertSignersBytes
 
 instance HuddleRule "leios_signature" DijkstraEra where
   huddleRuleNamed pname _era =

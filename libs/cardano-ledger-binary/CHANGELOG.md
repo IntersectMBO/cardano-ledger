@@ -7,6 +7,7 @@
 * Add `decodeStringIndefLen`, `decodeStringDefOrIndef`, `decodeBytesIndefLen`, `decodeBytesDefOrIndef`, `decodeByteArrayIndefLen` and `decodeByteArrayDefOrIndef`
 * Change `DecCBOR` instances for `Text` and tuples to accept indefinite-length encoding starting with protocol version 12
 * Add `EncCBOR` and `DecCBOR` instances for `ScriptContext` for PlutusV4
+* Change `DecCBOR` instance for `LeiosCert` to reject a signers bitfield larger than `maxLeiosCertSignersBytes`
 
 ### `testlib`
 

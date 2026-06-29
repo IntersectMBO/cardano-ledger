@@ -18,6 +18,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   fromByronCBOR,
   decodeScriptContextFromData,
   decodeIntegralRational,
+  maxLeiosCertSignersBytes,
 
   -- *** Network
   decodeIPv4,
@@ -69,7 +70,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
-import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..), maxLeiosCommitteeSize)
 import Control.Monad (when)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Fixed (Fixed (..))
@@ -686,6 +687,13 @@ decodeScriptContextFromData scriptContextData =
 -- Leios
 --------------------------------------------------------------------------------
 
+-- | Ceiling on a certificate's signers bitfield, for want of the committee that
+-- would pin its length exactly: enough bits for the largest committee a
+-- 'Cardano.Crypto.Leios.LeiosSeatId' can address.
+-- 'Cardano.Crypto.Leios.verifyLeiosCert' does the exact check.
+maxLeiosCertSignersBytes :: Int
+maxLeiosCertSignersBytes = (maxLeiosCommitteeSize + 7) `div` 8
+
 instance DecCBOR BitField where
   decCBOR = BitField <$> decCBOR
 
@@ -693,5 +701,16 @@ instance DecCBOR LeiosCert where
   decCBOR =
     decodeRecordNamed "LeiosCert" (const 2) $
       LeiosCert
-        <$> decCBOR
+        <$> decodeSigners
         <*> decCBOR
+    where
+      decodeSigners = do
+        signers <- decCBOR
+        let numBytes = Prim.sizeofByteArray (bitFieldBytes signers)
+        when (numBytes > maxLeiosCertSignersBytes) $
+          fail $
+            "LeiosCert signers of "
+              <> show numBytes
+              <> " bytes exceeds the maximum of "
+              <> show maxLeiosCertSignersBytes
+        pure signers
