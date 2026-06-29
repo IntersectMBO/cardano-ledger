@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.12.0.0
+
+* Bump aeson dependency lower bound to avoid DoS issue.
+
 ## 1.11.0.0
 
 * Add `ApplyTick` instance for `MaryEra`

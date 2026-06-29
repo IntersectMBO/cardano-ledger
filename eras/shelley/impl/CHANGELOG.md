@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.20.0.0
+
+* Bump aeson dependency lower bound to avoid DoS issue.
+
 ## 1.19.0.0
 
 * Add `defaultApplyTxWithValidation` and `defaultReapplyValidatedTx` helpers to `Mempool` module
