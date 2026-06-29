@@ -21,7 +21,7 @@ import Cardano.Crypto.DSIGN (rawSerialiseSigDSIGN)
 import Cardano.Crypto.Leios (LeiosCert (..), encodeBitField)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary.Plain (serialize)
+import Cardano.Ledger.Binary.Plain (serialize')
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
@@ -60,7 +60,7 @@ import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
-import Test.Cardano.Ledger.TreeDiff (ToExpr (..))
+import Test.Cardano.Ledger.TreeDiff (HexBytes (..), ToExpr (..))
 
 instance
   (forall a b. (ToExpr a, ToExpr b) => ToExpr (f a b)) =>
@@ -78,7 +78,7 @@ instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
 instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraTxBodyRaw {}) ->
       let DijkstraTxBodyRaw {..} = txBody
        in Rec "DijkstraTxBodyRaw" $
             OMap.fromList
@@ -105,7 +105,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrDirectDeposits", toExpr dtbrDirectDeposits)
               , ("dtbrAccountBalanceIntervals", toExpr dtbrAccountBalanceIntervals)
               ]
-    txBody@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ->
+    txBody@(DijkstraSubTxBodyRaw {}) ->
       let DijkstraSubTxBodyRaw {..} = txBody
        in Rec "DijkstraSubTxBodyRaw" $
             OMap.fromList
@@ -141,8 +141,8 @@ instance ToExpr LeiosCert where
   toExpr LeiosCert {leiosCertSigners, leiosCertSignature} =
     Rec "LeiosCert" $
       OMap.fromList
-        [ ("signers", toExpr (serialize (encodeBitField leiosCertSigners)))
-        , ("aggregatedSignature", toExpr (rawSerialiseSigDSIGN leiosCertSignature))
+        [ ("leiosCertSigners", toExpr . HexBytes . serialize' $ encodeBitField leiosCertSigners)
+        , ("leiosCertSignature", toExpr . HexBytes $ rawSerialiseSigDSIGN leiosCertSignature)
         ]
 
 instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)
@@ -151,7 +151,7 @@ instance (AlonzoEraTx era, ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (D
 
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTx _ _ _ _) ->
+    txBody@(DijkstraTx {}) ->
       let DijkstraTx {..} = txBody
        in Rec "DijkstraTx" $
             OMap.fromList
@@ -160,7 +160,7 @@ instance ToExpr (DijkstraTx l DijkstraEra) where
               , ("dtIsValid", toExpr dtIsValid)
               , ("dtAuxData", toExpr dtAuxData)
               ]
-    txBody@(DijkstraSubTx _ _ _) ->
+    txBody@(DijkstraSubTx {}) ->
       let DijkstraSubTx {..} = txBody
        in Rec "DijkstraSubTx" $
             OMap.fromList
