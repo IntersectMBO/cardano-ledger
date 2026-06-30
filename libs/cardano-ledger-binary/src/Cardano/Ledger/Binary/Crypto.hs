@@ -26,10 +26,15 @@ module Cardano.Ledger.Binary.Crypto (
   decodeSignKeyVRF,
   encodeCertVRF,
   decodeCertVRF,
+
+  -- * Leios
+  encodeLeiosCert,
+  decodeLeiosCert,
 ) where
 
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
+import qualified Cardano.Crypto.Leios as C
 import qualified Cardano.Crypto.VRF.Class as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, fromPlainDecoder)
 import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, fromPlainEncoding)
@@ -125,3 +130,15 @@ encodeCertVRF = fromPlainEncoding . C.encodeCertVRF
 decodeCertVRF :: C.VRFAlgorithm v => Decoder s (C.CertVRF v)
 decodeCertVRF = fromPlainDecoder C.decodeCertVRF
 {-# INLINE decodeCertVRF #-}
+
+--------------------------------------------------------------------------------
+-- Leios
+--------------------------------------------------------------------------------
+
+encodeLeiosCert :: C.LeiosCert -> Encoding
+encodeLeiosCert = fromPlainEncoding . C.encodeLeiosCert
+{-# INLINE encodeLeiosCert #-}
+
+decodeLeiosCert :: Decoder s C.LeiosCert
+decodeLeiosCert = fromPlainDecoder C.decodeLeiosCert
+{-# INLINE decodeLeiosCert #-}

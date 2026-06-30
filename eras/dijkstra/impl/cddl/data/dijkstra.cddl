@@ -97,7 +97,8 @@ major_protocol_version = 0 .. 13
 block_body =
   [ invalid_transactions : invalid_transactions/ nil
   , transactions      : [* transaction]
-  , peras_certificate : peras_certificate
+  , leios_certificate : leios_certificate/ nil
+  , peras_certificate : peras_certificate/ nil
   ]
 
 invalid_transactions = nonempty_set<transaction_index>
@@ -888,5 +889,12 @@ auxiliary_data_map =
     }
   )
 
-peras_certificate = bytes/ nil
+leios_certificate =
+  [ signers              : bytes           ;bitfield
+  , aggregated_signature : leios_signature
+  ]
+
+leios_signature = bytes .size 48
+
+peras_certificate = bytes
 

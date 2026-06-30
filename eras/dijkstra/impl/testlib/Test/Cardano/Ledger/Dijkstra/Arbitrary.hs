@@ -14,14 +14,21 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Dijkstra.Arbitrary (genNonEmptyAccountBalanceIntervals, genSmallDijkstraBlockBody) where
+module Test.Cardano.Ledger.Dijkstra.Arbitrary (
+  genNonEmptyAccountBalanceIntervals,
+  genSmallDijkstraTxsBlockBody,
+  genSmallDijkstraCertBlockBody,
+) where
 
+import Cardano.Crypto.Leios (
+  LeiosCert (..),
+ )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
@@ -43,6 +50,7 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
+import Test.Cardano.Crypto.Leios.Gen (genLeiosCert)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -294,6 +302,9 @@ instance
 instance Arbitrary PerasCert where
   arbitrary = PerasCert <$> arbitrary
 
+instance Arbitrary LeiosCert where
+  arbitrary = genLeiosCert
+
 instance
   ( EraBlockBody era
   , AlonzoEraTx era
@@ -302,14 +313,25 @@ instance
   ) =>
   Arbitrary (DijkstraBlockBody era)
   where
-  arbitrary = DijkstraBlockBody <$> arbitrary <*> arbitrary
+  arbitrary =
+    DijkstraBlockBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
-genSmallDijkstraBlockBody ::
+-- | Generate the "TxsRB" form of a Dijkstra block body: a few transactions are
+-- present and no Leios certificate is attached. Transaction count and per-tx
+-- size are kept small so the round-trip is fast under shrinking.
+genSmallDijkstraTxsBlockBody ::
   ( AlonzoEraTx era
   , Arbitrary (Tx TopTx era)
   ) =>
   Gen (DijkstraBlockBody era)
-genSmallDijkstraBlockBody = DijkstraBlockBody <$> genFewTxs <*> arbitrary
+genSmallDijkstraTxsBlockBody =
+  DijkstraBlockBody
+    <$> genFewTxs
+    <*> pure SNothing
+    <*> arbitrary
   where
     genFewTxs = sized $ \sz -> do
       numTxs <-
@@ -318,6 +340,18 @@ genSmallDijkstraBlockBody = DijkstraBlockBody <$> genFewTxs <*> arbitrary
           , (1, pure 0)
           ]
       SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
+
+-- | Generate the "CertRB" form of a Dijkstra block body: a Leios certificate is
+-- present and the transaction sequence is empty (per CIP-164, a CertRB never
+-- carries Dijkstra-era transactions). The Peras certificate is also omitted so
+-- the wire form is minimal.
+genSmallDijkstraCertBlockBody ::
+  AlonzoEraTx era =>
+  Gen (DijkstraBlockBody era)
+genSmallDijkstraCertBlockBody =
+  DijkstraBlockBody mempty
+    <$> (SJust <$> arbitrary)
+    <*> pure SNothing
 
 deriving newtype instance Arbitrary (ApplyTxError DijkstraEra)
 
