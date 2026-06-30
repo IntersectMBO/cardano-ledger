@@ -2,6 +2,12 @@
 
 ## 0.3.0.0
 
+* Add `SubEntitiesEvent` to `DijkstraSubLedgerEvent`
+* Remove `SubCertsEvent` from `DijkstraSubLedgerEvent`
+* Add `SubEntitiesFailure` to `DijkstraSubLedgerPredFailure`
+* Remove constructors from `DijkstraSubLedgerPredFailure`:
+  - `SubCertsFailure`
+  - `SubWdrlNotDelegatedToDRep`
 * Add `plutusLegacyModeStAnnTxG` method to `DijkstraEraUTxO`
 * Remove constructors from `DijkstraLedgerPredicateFailure`:
   - `DijkstraCertsFailure`

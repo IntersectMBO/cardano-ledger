@@ -241,10 +241,16 @@ instance
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "SUBGOV" era))
-  , Arbitrary (PredicateFailure (EraRule "SUBCERTS" era))
+  , Arbitrary (PredicateFailure (EraRule "SUBENTITIES" era))
   , Arbitrary (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   Arbitrary (DijkstraSubLedgerPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  Arbitrary (PredicateFailure (EraRule "SUBCERTS" era)) =>
+  Arbitrary (SubEntitiesPredFailure era)
   where
   arbitrary = genericArbitraryU
 
