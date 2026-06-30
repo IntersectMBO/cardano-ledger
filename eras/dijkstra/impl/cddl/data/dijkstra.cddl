@@ -60,8 +60,9 @@ header_body =
   , block_body_hash    : hash32                   ; merkle triple root
   , operational_cert
   , protocol_version
-  , leios_announcement : leios_announcement/ nil
-  , leios_certified    : bool
+  , leios_certified    : bool                     ; whether the block certifies the previous announcement
+  , leios_announcement : leios_announcement
+                         / nil ; optional announcement of an EB
   ]
 
 block_number = uint .size 8

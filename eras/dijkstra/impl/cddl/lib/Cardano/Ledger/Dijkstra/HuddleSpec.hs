@@ -969,8 +969,13 @@ dijkstraHeaderBodyRule pname p =
       , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
       , a $ huddleRule @"operational_cert" p
       , a $ huddleRule @"protocol_version" p
-      , "leios_announcement" ==> huddleRule @"leios_announcement" p / VNil
-      , "leios_certified" ==> VBool
+      , "leios_certified"
+          ==> VBool
+          //- "whether the block certifies the previous announcement"
+      , "leios_announcement"
+          ==> huddleRule @"leios_announcement" p
+          / VNil
+          //- "optional announcement of an EB"
       ]
 
 instance HuddleRule "leios_announcement" DijkstraEra where
