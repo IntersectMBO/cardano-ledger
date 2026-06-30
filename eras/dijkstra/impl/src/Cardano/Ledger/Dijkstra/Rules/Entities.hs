@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesEvent (..),
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
@@ -31,6 +32,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
@@ -70,6 +72,7 @@ data EntitiesPredFailure era
   | WithdrawalsMissingAccounts Withdrawals
   | IncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | WithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | DirectDepositsToMissingAccounts DirectDeposits
   deriving (Generic)
 
 deriving stock instance
@@ -95,6 +98,7 @@ instance
       WithdrawalsMissingAccounts x -> Sum (WithdrawalsMissingAccounts @era) 2 !> To x
       IncompleteWithdrawals x -> Sum (IncompleteWithdrawals @era) 3 !> To x
       WithdrawalAmountsExceedAccountBalances x -> Sum (WithdrawalAmountsExceedAccountBalances @era) 4 !> To x
+      DirectDepositsToMissingAccounts x -> Sum (DirectDepositsToMissingAccounts @era) 5 !> To x
 
 instance
   ( Era era
@@ -108,6 +112,7 @@ instance
     2 -> SumD WithdrawalsMissingAccounts <! From
     3 -> SumD IncompleteWithdrawals <! From
     4 -> SumD WithdrawalAmountsExceedAccountBalances <! From
+    5 -> SumD DirectDepositsToMissingAccounts <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
@@ -146,7 +151,7 @@ instance InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure DijkstraEra
 
 instance
   ( EraTx era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraPParams era
   , ConwayEraCertState era
   , Embed (EraRule "CERTS" era) (ENTITIES era)
@@ -172,7 +177,7 @@ instance
 dijkstraEntitiesTransition ::
   forall era.
   ( EraTx era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraCertState era
   , Embed (EraRule "CERTS" era) (ENTITIES era)
   , State (EraRule "CERTS" era) ~ CertState era
@@ -211,12 +216,20 @@ dijkstraEntitiesTransition = do
       failOnNonEmptyMap exceededWithdrawals $ injectFailure . WithdrawalAmountsExceedAccountBalances
 
   let applyToAccounts = if legacyMode then drainAccounts else applyWithdrawals
-      finalCertState =
+      certStateBeforeCerts =
         certState
           & Conway.updateDormantDRepExpiries tx curEpoch
           & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
           & certDStateL . accountsL %~ applyToAccounts withdrawals
-  trans @(EraRule "CERTS" era) $ TRC (certsEnv, finalCertState, certificates)
+  certStateAfterCerts <-
+    trans @(EraRule "CERTS" era) $ TRC (certsEnv, certStateBeforeCerts, certificates)
+
+  let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
+      accountsAfterCerts = certStateAfterCerts ^. certDStateL . accountsL
+  failOnJust (directDepositsMissingAccounts directDeposits accountsAfterCerts) $
+    injectFailure . DirectDepositsToMissingAccounts
+
+  pure $ certStateAfterCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
