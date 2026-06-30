@@ -15,8 +15,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubEntities (
-  SubEntitiesPredFailure,
-  SubEntitiesEvent,
+  SubEntitiesPredFailure (..),
+  SubEntitiesEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
@@ -102,6 +102,9 @@ instance InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBENTITIES" DijkstraSubCertsPredFailure DijkstraEra where
   injectFailure = SubCertsFailure
+
+instance InjectRuleFailure "SUBENTITIES" Conway.ConwayCertsPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure @"SUBCERTS"
 
 instance InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraSubEntitiesPredFailure
