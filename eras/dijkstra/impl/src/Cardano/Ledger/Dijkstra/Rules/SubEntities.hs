@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubEntities (
   SubEntitiesEvent (..),
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
@@ -32,6 +33,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSubCertsPredFailure,
   SubCertsEnv (..),
  )
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -49,6 +51,7 @@ data SubEntitiesPredFailure era
   | SubWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | SubWithdrawalsMissingAccounts Withdrawals
   | SubWithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | SubDirectDepositsToMissingAccounts DirectDeposits
   deriving (Generic)
 
 deriving stock instance
@@ -73,6 +76,7 @@ instance
       SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 1 !> To x
       SubWithdrawalsMissingAccounts x -> Sum (SubWithdrawalsMissingAccounts @era) 2 !> To x
       SubWithdrawalAmountsExceedAccountBalances x -> Sum (SubWithdrawalAmountsExceedAccountBalances @era) 3 !> To x
+      SubDirectDepositsToMissingAccounts x -> Sum (SubDirectDepositsToMissingAccounts @era) 4 !> To x
 
 instance
   ( Era era
@@ -85,6 +89,7 @@ instance
     1 -> SumD SubWdrlNotDelegatedToDRep <! From
     2 -> SumD SubWithdrawalsMissingAccounts <! From
     3 -> SumD SubWithdrawalAmountsExceedAccountBalances <! From
+    4 -> SumD SubDirectDepositsToMissingAccounts <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -111,7 +116,7 @@ instance InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure Dijkstra
 
 instance
   ( EraTx era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraCertState era
   , Embed (EraRule "SUBCERTS" era) (SUBENTITIES era)
   , State (EraRule "SUBCERTS" era) ~ CertState era
@@ -136,7 +141,7 @@ instance
 dijkstraSubEntitiesTransition ::
   forall era.
   ( EraTx era
-  , ConwayEraTxBody era
+  , DijkstraEraTxBody era
   , ConwayEraCertState era
   , Embed (EraRule "SUBCERTS" era) (SUBENTITIES era)
   , State (EraRule "SUBCERTS" era) ~ CertState era
@@ -164,10 +169,18 @@ dijkstraSubEntitiesTransition = do
     injectFailure . SubWithdrawalsMissingAccounts . Withdrawals . NEM.toMap
   failOnNonEmptyMap exceededWithdrawals $ injectFailure . SubWithdrawalAmountsExceedAccountBalances
 
-  let certState' =
+  let certStateBeforeSubCerts =
         certState
           & certDStateL . accountsL %~ applyWithdrawals withdrawals
-  trans @(EraRule "SUBCERTS" era) $ TRC (subCertsEnv, certState', certificates)
+  certStateAfterSubCerts <-
+    trans @(EraRule "SUBCERTS" era) $ TRC (subCertsEnv, certStateBeforeSubCerts, certificates)
+
+  let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
+      accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
+  failOnJust (directDepositsMissingAccounts directDeposits accountsAfterSubCerts) $
+    injectFailure . SubDirectDepositsToMissingAccounts
+
+  pure $ certStateAfterSubCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
 
 conwayToDijkstraSubEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> SubEntitiesPredFailure era
