@@ -27,16 +27,18 @@ module Cardano.Ledger.State.Account (
   withdrawalsThatExceedAccountBalance,
   drainAccounts,
   applyWithdrawals,
+  applyDirectDeposits,
+  directDepositsMissingAccounts,
   removeStakePoolDelegations,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network, Relation (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Data.Aeson (ToJSON)
@@ -266,7 +268,7 @@ drainAccounts ::
   Withdrawals ->
   Accounts era ->
   Accounts era
-drainAccounts = updateAccountBalancesFromWithdrawals (\_ _ -> mempty)
+drainAccounts (Withdrawals wdrls) = updateAccountBalances (\_ _ -> mempty) wdrls
 
 -- | Subtract each withdrawal amount from the matching account balance.
 --
@@ -277,34 +279,68 @@ applyWithdrawals ::
   Withdrawals ->
   Accounts era ->
   Accounts era
-applyWithdrawals =
-  updateAccountBalancesFromWithdrawals $ \withdrawalAmount account ->
-    compactCoinOrError $ fromCompact (account ^. balanceAccountStateL) <-> withdrawalAmount
+applyWithdrawals (Withdrawals wdrls) =
+  updateAccountBalances
+    (\amount account -> subtractCompactCoin amount (account ^. balanceAccountStateL))
+    wdrls
 
--- | Fold over a `Withdrawals` map, applying the supplied balance update to each registered
--- account. Skips withdrawals whose credential is not present in `Accounts`.
+-- | Add each direct-deposit amount to the matching account balance.
 --
--- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
--- `NetworkId`. Callers must pre-validate the withdrawals before calling this function.
-updateAccountBalancesFromWithdrawals ::
+-- /Note/ - There are no checks that direct deposits mention only registered accounts.
+applyDirectDeposits ::
   EraAccounts era =>
-  -- | Balance update: given the withdrawal amount and the account, returns the new balance for the account.
-  (Coin -> AccountState era -> CompactForm Coin) ->
-  Withdrawals ->
+  DirectDeposits ->
   Accounts era ->
   Accounts era
-updateAccountBalancesFromWithdrawals setBalance (Withdrawals withdrawalsMap) accounts =
-  accounts
-    & accountsMapL %~ \accountsMap ->
-      Map.foldrWithKey'
-        ( \(AccountAddress _ (AccountId credential)) withdrawalAmount ->
-            Map.adjust
-              (\account -> account & balanceAccountStateL .~ setBalance withdrawalAmount account)
-              credential
-        )
-        accountsMap
-        withdrawalsMap
-{-# INLINE updateAccountBalancesFromWithdrawals #-}
+applyDirectDeposits (DirectDeposits dd) =
+  updateAccountBalances
+    (\amount account -> addCompactCoin amount (account ^. balanceAccountStateL))
+    dd
+
+-- | Fold over a `Map AccountAddress Coin`, applying the supplied balance update to each registered
+-- account. Skips entries whose credential is not present in `Accounts`.
+--
+-- /Note/ - There are no checks that entries mention only registered accounts with correct
+-- `NetworkId`. Callers must pre-validate before calling this function.
+updateAccountBalances ::
+  EraAccounts era =>
+  -- | Balance update: given a coin amount and the account, returns the new balance.
+  (CompactForm Coin -> AccountState era -> CompactForm Coin) ->
+  Map AccountAddress Coin ->
+  Accounts era ->
+  Accounts era
+updateAccountBalances updateBalance balanceMap =
+  accountsMapL %~ \accountsMap ->
+    Map.foldrWithKey'
+      ( \(AccountAddress _ (AccountId credential)) amount ->
+          Map.adjust
+            ( \account ->
+                account & balanceAccountStateL .~ updateBalance (compactCoinOrError amount) account
+            )
+            credential
+      )
+      accountsMap
+      balanceMap
+{-# INLINE updateAccountBalances #-}
+
+-- | Returns `Nothing` iff every credential targeted by the supplied
+-- `DirectDeposits` is a registered account. Otherwise it returns the subset of
+-- direct deposits whose target credential is not registered.
+directDepositsMissingAccounts ::
+  EraAccounts era =>
+  DirectDeposits ->
+  Accounts era ->
+  Maybe DirectDeposits
+directDepositsMissingAccounts (DirectDeposits dds) accounts
+  | Map.foldrWithKey' checkRegistered True dds = Nothing
+  | otherwise = Just $ DirectDeposits $ Map.foldrWithKey' collectMissing Map.empty dds
+  where
+    isRegistered (AccountAddress _ (AccountId credential)) =
+      isAccountRegistered credential accounts
+    checkRegistered addr _ acc = acc && isRegistered addr
+    collectMissing addr amount acc
+      | isRegistered addr = acc
+      | otherwise = Map.insert addr amount acc
 
 -- | Remove delegations of supplied credentials
 removeStakePoolDelegations ::
