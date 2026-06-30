@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.15.0.0
+
+* Bump aeson dependency lower bound to avoid DoS issue.
+
 ## 1.14.0.0
 
 * Rename rule types and deprecate the old names:

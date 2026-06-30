@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.14.0.0
+
+* Bump aeson dependency lower bound to avoid DoS issue.
+
 ## 1.13.1.0
 
 * Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names

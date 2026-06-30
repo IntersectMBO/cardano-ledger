@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-core
-version: 1.21.0.0
+version: 1.22.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -110,7 +110,7 @@ library
   default-language: Haskell2010
   build-depends:
     FailT,
-    aeson >=2,
+    aeson >=2.3,
     base >=4.18 && <5,
     base-deriving-via,
     base16-bytestring,

@@ -118,6 +118,12 @@ if impl(ghc >=9.14)
     location: https://github.com/snowleopard/alga/
     --sha256: sha256-sQRAjHV+bor/SBt/zDtcw3tN1ir7xjjevEdyYqilNWg=
     tag: d4e43fb42db05413459fb2df493361d5a666588a
+allow-newer:
+  , aeson:text-iso8601
+  , deriving-aeson:aeson
+  , http-api-data:text-iso8601
+  , microstache:aeson
+  , persistent:aeson
 
 if impl(ghc >=9.14)
   constraints:
@@ -132,10 +138,13 @@ if impl(ghc >=9.14)
     , cborg:containers
     , constrained-generators:QuickCheck
     , dependent-map:containers
+    , deriving-aeson:aeson
     , dictionary-sharing:containers
-    , hedgehog-quickcheck:QuickCheck
+    , http-api-data:text-iso8601
+    , microstache:aeson
     , ordered-containers:containers
     , partial-order:containers
+    , persistent:aeson
     , persistent:template-haskell
     , safe-wild-cards:template-haskell
     , serialise:base

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-data
-version: 1.3.0.0
+version: 1.4.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -48,7 +48,7 @@ library
     ghc-options:
       -Wno-pattern-namespace-specifier
   build-depends:
-    aeson >=2.2,
+    aeson >=2.3,
     base >=4.18 && <5,
     cardano-ledger-binary >=1.8,
     cardano-strict-containers >=0.1.2.1,

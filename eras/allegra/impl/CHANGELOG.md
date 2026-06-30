@@ -2,6 +2,10 @@
 
 ## 1.10.0.0
 
+* Bump aeson dependency lower bound to avoid DoS issue.
+
+## 1.10.0.0
+
 * Rename rule types and deprecate the old names:
   - `AllegraUTXO` -> `UTXO`
   - `AllegraUTXOW` -> `UTXOW`

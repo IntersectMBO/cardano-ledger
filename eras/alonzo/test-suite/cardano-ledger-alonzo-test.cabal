@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-alonzo-test
-version: 1.4.0.1
+version: 1.5.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -86,7 +86,7 @@ test-suite cardano-ledger-alonzo-test
     -rtsopts
 
   build-depends:
-    aeson >=2,
+    aeson >=2.3,
     base,
     base16-bytestring,
     bytestring,

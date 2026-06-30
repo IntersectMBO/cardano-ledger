@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.24.0.0
+
+* Bump aeson dependency lower bound to avoid DoS issue.
+
 ## 1.23.0.0
 
 * Rename `ConwayRewarding` to `ConwayWithdrawing` and deprecate the old name

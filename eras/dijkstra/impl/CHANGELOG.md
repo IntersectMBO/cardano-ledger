@@ -1,5 +1,9 @@
 # Revision history for cardano-ledger-dijkstra
 
+## 0.4.0.0
+
+* Bump aeson dependency lower bound to avoid DoS issue.
+
 ## 0.3.0.0
 
 * Rename `DijkstraRewarding` to `DijkstraWithdrawing` and deprecate the old name
