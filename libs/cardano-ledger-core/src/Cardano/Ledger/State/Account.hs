@@ -191,9 +191,6 @@ lookupStakePoolDelegation cred accounts =
 -- withdrawals match the respective balances exactly. It returns a 2-tuple where
 -- the `fst` is withdrawals with missing account addresses or the wrong network,
 -- and `snd` is incomplete withdrawals.
---
--- NOTE: We simply `checkBadWithdrawals` to avoid allocating new variables for
--- the most likely case.
 withdrawalsThatDoNotDrainAccounts ::
   EraAccounts era =>
   Withdrawals ->
@@ -204,34 +201,12 @@ withdrawalsThatDoNotDrainAccounts ::
   -- incomplete withdrawal = that which does not withdraw the exact account
   -- balance.
   Maybe (Withdrawals, Map AccountAddress (Mismatch RelEQ Coin))
-withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
-  -- @withdrawals@ is small and @accounts@ big, better to traverse the former than the latter.
-  | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
-  | otherwise =
-      Just $
-        first Withdrawals $
-          Map.foldrWithKey collectBadWithdrawals (Map.empty, Map.empty) withdrawals
+withdrawalsThatDoNotDrainAccounts =
+  categorizeWithdrawals
+    (\withdrawalAmount account -> withdrawalAmount == balanceOf account)
+    (\withdrawalAmount account -> Mismatch withdrawalAmount (balanceOf account))
   where
-    checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
-      noBadWithdrawals && isGoodWithdrawal accountAddress withdrawalAmount
-    collectBadWithdrawals accountAddress withdrawalAmount accum@(!_, !_) =
-      case lookupAccount accountAddress of
-        Nothing -> first (Map.insert accountAddress withdrawalAmount) accum
-        Just account
-          | isBalanceZero withdrawalAmount account -> accum
-          | otherwise ->
-              second
-                ( Map.insert accountAddress $
-                    Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL)
-                )
-                accum
-    isGoodWithdrawal accountAddress withdrawalAmount =
-      maybe False (isBalanceZero withdrawalAmount) (lookupAccount accountAddress)
-    isBalanceZero withdrawalAmount accountState =
-      withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL)
-    lookupAccount (AccountAddress aaNetworkId (AccountId credential))
-      | aaNetworkId == networkId = lookupAccountState credential accounts
-      | otherwise = Nothing
+    balanceOf accountState = fromCompact (accountState ^. balanceAccountStateL)
 
 withdrawalsThatExceedAccountBalance ::
   EraAccounts era =>
@@ -239,7 +214,23 @@ withdrawalsThatExceedAccountBalance ::
   Network ->
   Accounts era ->
   Maybe (Withdrawals, Map AccountAddress (Mismatch RelLTEQ Coin))
-withdrawalsThatExceedAccountBalance (Withdrawals withdrawals) networkId accounts
+withdrawalsThatExceedAccountBalance =
+  categorizeWithdrawals
+    (\withdrawalAmount account -> withdrawalAmount <= balanceOf account)
+    (\withdrawalAmount account -> Mismatch withdrawalAmount (balanceOf account))
+  where
+    balanceOf accountState = fromCompact (accountState ^. balanceAccountStateL)
+
+categorizeWithdrawals ::
+  EraAccounts era =>
+  (Coin -> AccountState era -> Bool) ->
+  (Coin -> AccountState era -> mismatch) ->
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  Maybe (Withdrawals, Map AccountAddress mismatch)
+categorizeWithdrawals amountAcceptable mkMismatch (Withdrawals withdrawals) networkId accounts
+  -- We simply `checkBadWithdrawals` to avoid allocating new variables for the most likely case
   | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
   | otherwise =
       Just $
@@ -248,64 +239,72 @@ withdrawalsThatExceedAccountBalance (Withdrawals withdrawals) networkId accounts
   where
     checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
       noBadWithdrawals && isGoodWithdrawal accountAddress withdrawalAmount
+    isGoodWithdrawal accountAddress withdrawalAmount =
+      maybe False (amountAcceptable withdrawalAmount) (lookupAccount accountAddress)
     collectBadWithdrawals accountAddress withdrawalAmount accum@(!_, !_) =
       case lookupAccount accountAddress of
         Nothing -> first (Map.insert accountAddress withdrawalAmount) accum
         Just account
-          | withdrawalAmount <= balanceOf account -> accum
+          | amountAcceptable withdrawalAmount account -> accum
           | otherwise ->
               second
-                ( Map.insert accountAddress $
-                    Mismatch withdrawalAmount (balanceOf account)
-                )
+                (Map.insert accountAddress $ mkMismatch withdrawalAmount account)
                 accum
-    isGoodWithdrawal accountAddress withdrawalAmount =
-      maybe False (\account -> withdrawalAmount <= balanceOf account) (lookupAccount accountAddress)
-    balanceOf accountState = fromCompact (accountState ^. balanceAccountStateL)
     lookupAccount (AccountAddress aaNetworkId (AccountId credential))
       | aaNetworkId == networkId = lookupAccountState credential accounts
       | otherwise = Nothing
+{-# INLINE categorizeWithdrawals #-}
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
 --
 -- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
 -- `NetworkId`. Nor there are any checks that amounts in withdrawals match up the balance in the
--- corresponding accounts. Use `withdrawalsThatDoNotDrainAccounts` to verify that calling
--- `drainAccounts` is actually safe on the supplied arguments
+-- corresponding accounts.
+-- Verify that it's safe to call on the supplied arguments before calling it.
 drainAccounts ::
   EraAccounts era =>
   Withdrawals ->
   Accounts era ->
   Accounts era
-drainAccounts (Withdrawals withdrawalsMap) accounts =
-  accounts
-    & accountsMapL %~ \accountsMap ->
-      Map.foldrWithKey'
-        ( \(AccountAddress _ (AccountId credential)) _withdrawalAmount ->
-            Map.adjust (balanceAccountStateL .~ mempty) credential
-        )
-        accountsMap
-        withdrawalsMap
+drainAccounts = updateAccountBalancesFromWithdrawals (\_ _ -> mempty)
 
 -- | Subtract each withdrawal amount from the matching account balance.
+--
+-- /Note/ - No checks on the accounts or amount being withdrawn are made in this function.
+-- Verify that it's safe to call on the supplied arguments before calling it.
 applyWithdrawals ::
   EraAccounts era =>
   Withdrawals ->
   Accounts era ->
   Accounts era
-applyWithdrawals (Withdrawals withdrawalsMap) accounts =
+applyWithdrawals =
+  updateAccountBalancesFromWithdrawals $ \withdrawalAmount account ->
+    compactCoinOrError $ fromCompact (account ^. balanceAccountStateL) <-> withdrawalAmount
+
+-- | Fold over a `Withdrawals` map, applying the supplied balance update to each registered
+-- account. Skips withdrawals whose credential is not present in `Accounts`.
+--
+-- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
+-- `NetworkId`. Callers must pre-validate the withdrawals before calling this function.
+updateAccountBalancesFromWithdrawals ::
+  EraAccounts era =>
+  -- | Balance update: given the withdrawal amount and the account, returns the new balance for the account.
+  (Coin -> AccountState era -> CompactForm Coin) ->
+  Withdrawals ->
+  Accounts era ->
+  Accounts era
+updateAccountBalancesFromWithdrawals setBalance (Withdrawals withdrawalsMap) accounts =
   accounts
     & accountsMapL %~ \accountsMap ->
       Map.foldrWithKey'
         ( \(AccountAddress _ (AccountId credential)) withdrawalAmount ->
             Map.adjust
-              ( balanceAccountStateL
-                  %~ \balance -> compactCoinOrError (fromCompact balance <-> withdrawalAmount)
-              )
+              (\account -> account & balanceAccountStateL .~ setBalance withdrawalAmount account)
               credential
         )
         accountsMap
         withdrawalsMap
+{-# INLINE updateAccountBalancesFromWithdrawals #-}
 
 -- | Remove delegations of supplied credentials
 removeStakePoolDelegations ::
