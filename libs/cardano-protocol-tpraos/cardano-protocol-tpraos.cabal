@@ -45,8 +45,6 @@ library
       -Wredundant-constraints
   build-depends:
     base >=4.18 && <5,
-    bytestring,
-    cardano-base >=0.1.2,
     cardano-crypto-class ^>=2.5,
     cardano-ledger-allegra >=1.10,
     cardano-ledger-alonzo >=1.16,
@@ -64,7 +62,6 @@ library
     deepseq,
     microlens,
     mtl,
-    non-integral,
     nothunks,
     small-steps >=1.1,
     transformers,
@@ -109,6 +106,7 @@ library testlib
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-protocol,
     cardano-protocol-tpraos,
     cardano-strict-containers,
     containers,
@@ -147,5 +145,6 @@ test-suite tests
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, cddl, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, cddl, testlib},
-    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
+    cardano-protocol,
+    cardano-protocol-tpraos:testlib,
     cuddle,

@@ -48,7 +48,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Val ((<+>), (<->))
-import Cardano.Protocol.TPraos.BHeader (BHeader (..))
+import Cardano.Protocol.BlockHeader.TPraos (BHeader (..))
 import Control.State.Transition.Extended (BaseM, Environment, STS, Signal, State)
 import Data.Foldable as F (fold, foldl', toList)
 import Data.Map (Map)

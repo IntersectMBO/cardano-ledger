@@ -20,15 +20,15 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Protocol.Crypto (VRF)
-import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHeader (..),
   LastAppliedBlock (..),
   hashHeaderToNonce,
   mkSeed,
   seedL,
  )
+import Cardano.Protocol.Crypto (VRF)
+import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCertEnv (..), currentIssueNo, kesPeriod)
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot (..), lookupInOverlaySchedule)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))

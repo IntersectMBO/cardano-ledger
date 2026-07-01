@@ -15,6 +15,7 @@ source-repository head
 
 library
   exposed-modules:
+    Cardano.Protocol.BlockHeader.TPraos
     Cardano.Protocol.Crypto
     Cardano.Protocol.TPraos.OCert
 
@@ -41,7 +42,11 @@ library
     cardano-crypto-praos ^>=2.2,
     cardano-ledger-binary >=1.8,
     cardano-ledger-core >=1.21,
+    cardano-slotting,
     containers,
+    deepseq,
+    microlens,
+    non-integral,
     nothunks,
     quiet,
     transformers,

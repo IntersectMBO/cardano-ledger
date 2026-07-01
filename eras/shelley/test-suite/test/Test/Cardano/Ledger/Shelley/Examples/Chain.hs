@@ -15,7 +15,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, nesPdL)
 import Cardano.Ledger.State
-import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Cardano.Protocol.BlockHeader.TPraos (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack

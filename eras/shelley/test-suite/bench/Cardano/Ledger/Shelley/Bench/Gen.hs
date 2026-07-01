@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (LEDGERS)
 import Cardano.Ledger.Shelley.State
-import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Cardano.Protocol.BlockHeader.TPraos (BHeader)
 import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map

@@ -22,8 +22,8 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.BlockHeader.TPraos (BHeader, bhHash)
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
-import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (Default)
 import qualified Data.Sequence.Strict as StrictSeq

@@ -69,7 +69,7 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
+import Cardano.Protocol.BlockHeader.TPraos (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (def)
 import Data.Group (invert)

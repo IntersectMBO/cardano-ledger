@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.TxCert (
   isTreasuryMIRCert,
  )
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHeader,
   bhbody,
   bheaderSlotNo,

@@ -55,8 +55,7 @@ import Cardano.Ledger.State (
   IndividualPoolStake (..),
   PoolDistr (..),
  )
-import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHBody (..),
   BHeader (BHeader),
   checkLeaderValue,
@@ -65,6 +64,7 @@ import Cardano.Protocol.TPraos.BHeader (
   seedEta,
   seedL,
  )
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.Rules.OCert (OCERT, OCertEnv (..))
 import Cardano.Slotting.Slot
 import Control.DeepSeq (NFData)

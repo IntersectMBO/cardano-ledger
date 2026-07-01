@@ -40,8 +40,7 @@ import Cardano.Ledger.Binary.Plain (ToCBOR (..))
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
 import Cardano.Ledger.State (PoolDistr)
-import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHBody (..),
   BHeader (..),
   LastAppliedBlock (..),
@@ -50,6 +49,7 @@ import Cardano.Protocol.TPraos.BHeader (
   bnonce,
   lastAppliedHash,
  )
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY, OverlayEnv (..))
 import Cardano.Protocol.TPraos.Rules.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))

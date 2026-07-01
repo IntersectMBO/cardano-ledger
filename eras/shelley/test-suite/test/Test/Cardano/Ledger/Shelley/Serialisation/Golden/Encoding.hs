@@ -87,8 +87,7 @@ import Cardano.Ledger.State (
   StakePoolRelay (..),
  )
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHBody (..),
   BHeader (..),
   PrevHash (..),
@@ -107,6 +106,7 @@ import Cardano.Protocol.TPraos.BHeader (
   seedEta,
   seedL,
  )
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.OCert (
   KESPeriod (..),
   OCert,
