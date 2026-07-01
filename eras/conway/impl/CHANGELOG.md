@@ -58,6 +58,7 @@
 * Remove `NoThunks` instance for `ConwayContextError`
 * Make `ConwayContextError` constructors lazy
 * Make `ZeroTreasuryWithdrawals` a permanent check for all eras (not just post-Babbage).
+* Add `ToJSON` instance for `DefaultVote`.
 
 ### cddl
 

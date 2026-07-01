@@ -57,6 +57,7 @@
 * Make `AlonzoContextError` constructors lazy
 * Add `FromJSON (AlonzoScript era)` instance
 * Add `EncCBOR` and `ToCBOR` instances for `PlutusScript era`
+* Add `ToJSON` and `FromJSON` instances for `AlonzoTxAuxData era`
 
 ### `cddl`
 
