@@ -32,8 +32,8 @@ import Cardano.Ledger.Plutus.ExUnits (
   Prices (..),
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Protocol.BlockHeader.TPraos (BHeader)
 import Cardano.Protocol.Crypto (StandardCrypto)
-import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L

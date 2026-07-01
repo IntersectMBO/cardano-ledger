@@ -51,6 +51,7 @@ packages:
   libs/cardano-ledger-binary
   libs/cardano-ledger-canonical-state
   libs/cardano-ledger-core
+  libs/cardano-protocol
   libs/cardano-protocol-tpraos
   libs/non-integral
   libs/small-steps

@@ -15,8 +15,8 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Rules as STS
+import qualified Cardano.Protocol.BlockHeader.TPraos as TP
 import Cardano.Protocol.Crypto (StandardCrypto)
-import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Control.State.Transition (PredicateFailure)
 import Test.Cardano.Ledger.Binary.RoundTrip

@@ -81,7 +81,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Val ((<+>), (<->))
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHBody (..),
   BHeader,
   LastAppliedBlock (..),

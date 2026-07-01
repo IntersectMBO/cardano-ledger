@@ -13,8 +13,8 @@ import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Protocol.BlockHeader.TPraos (BHeader)
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Proxy
 import Data.Typeable (typeRep)
 import qualified Test.Cardano.Base.QuickCheck as BaseQC

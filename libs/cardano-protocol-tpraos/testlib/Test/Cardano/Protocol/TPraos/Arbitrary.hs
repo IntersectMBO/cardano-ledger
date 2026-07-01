@@ -24,13 +24,13 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
-import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
-import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.BlockHeader.TPraos (
   BHBody (BHBody),
   BHeader (BHeader),
   PrevHash (BlockHash, GenesisHash),
  )
+import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
+import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)

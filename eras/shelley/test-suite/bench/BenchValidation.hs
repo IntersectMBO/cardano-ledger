@@ -37,6 +37,10 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
+import Cardano.Protocol.BlockHeader.TPraos (
+  BHeader (..),
+  LastAppliedBlock (..),
+ )
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API (
   ChainDepState (..),
@@ -45,10 +49,6 @@ import Cardano.Protocol.TPraos.API (
   forecastToTPraosLedgerView,
   tickChainDepState,
   updateChainDepState,
- )
-import Cardano.Protocol.TPraos.BHeader (
-  BHeader (..),
-  LastAppliedBlock (..),
  )
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))

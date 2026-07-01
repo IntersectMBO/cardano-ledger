@@ -1,0 +1,55 @@
+cabal-version: 3.0
+name: cardano-protocol
+version: 0.1.0.0
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Cardano Protocol: shared crypto and block-header definitions
+extra-source-files: CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: libs/cardano-protocol
+
+library
+  exposed-modules:
+    Cardano.Protocol.BlockHeader.Praos
+    Cardano.Protocol.BlockHeader.TPraos
+    Cardano.Protocol.Crypto
+    Cardano.Protocol.Praos.VRF
+    Cardano.Protocol.TPraos.OCert
+
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wunused-packages
+
+  -- ghc-9.14 gives redundant constraint warnings on some constraints
+  -- that are needed for earlier compilers.
+  if impl(ghc <9.14)
+    ghc-options:
+      -Wredundant-constraints
+  build-depends:
+    base >=4.18 && <5,
+    bytestring,
+    cardano-base >=0.1.2,
+    cardano-binary,
+    cardano-crypto-class ^>=2.5,
+    cardano-crypto-praos ^>=2.2,
+    cardano-ledger-binary >=1.8,
+    cardano-ledger-core >=1.21,
+    cardano-slotting,
+    containers,
+    deepseq,
+    microlens,
+    non-integral,
+    nothunks,
+    quiet,
+    transformers,
