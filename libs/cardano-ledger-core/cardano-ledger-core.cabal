@@ -218,6 +218,7 @@ library testlib
     Test.Cardano.Ledger.Core.Binary
     Test.Cardano.Ledger.Core.Binary.Annotator
     Test.Cardano.Ledger.Core.Binary.RoundTrip
+    Test.Cardano.Ledger.Core.Gen
     Test.Cardano.Ledger.Core.JSON
     Test.Cardano.Ledger.Core.KeyPair
     Test.Cardano.Ledger.Core.Rational
@@ -319,6 +320,7 @@ test-suite tests
     Test.Cardano.Ledger.AddressSpec
     Test.Cardano.Ledger.BaseTypesSpec
     Test.Cardano.Ledger.BinarySpec
+    Test.Cardano.Ledger.GenSpec
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
     Test.Cardano.Ledger.State.StakePoolSpec
@@ -328,6 +330,7 @@ test-suite tests
   default-language: Haskell2010
   build-depends:
     FailT,
+    ImpSpec,
     aeson,
     base,
     base16-bytestring,
@@ -341,11 +344,15 @@ test-suite tests
     containers,
     genvalidity,
     genvalidity-scientific,
+    mtl,
     plutus-ledger-api,
+    primitive,
     quickcheck-classes,
     quickcheck-instances,
     scientific,
     testlib,
+    vector,
+    vector-algorithms,
 
 benchmark addr
   import: warnings, rtsopts
