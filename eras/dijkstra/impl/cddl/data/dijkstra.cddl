@@ -890,8 +890,8 @@ auxiliary_data_map =
   )
 
 leios_certificate =
-  [ signers              : bytes           ;bitfield
-  , aggregated_signature : leios_signature
+  [ signers   : bytes .size (0 .. 8192) ;bitfield with up to 65537 entries
+  , signature : leios_signature
   ]
 
 leios_signature = bytes .size 48
