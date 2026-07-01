@@ -28,6 +28,7 @@ $purposeIsWellformedWithDatumQ
 $datumIsWellformedQ
 $inputsOutputsAreNotEmptyNoDatumQ
 $inputsOutputsAreNotEmptyWithDatumQ
+$txInfoTranslationSpecScriptQ
 $inputsOverlapsWithRefInputsQ
 
 -- ================================================================
@@ -110,6 +111,12 @@ inputsOutputsAreNotEmptyWithDatumBytes :: (Q [Dec], PlutusBinary)
 inputsOutputsAreNotEmptyWithDatumBytes =
   ( inputsOutputsAreNotEmptyWithDatumQ
   , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyWithDatum||])
+  )
+
+txInfoTranslationSpecScriptBytes :: (Q [Dec], PlutusBinary)
+txInfoTranslationSpecScriptBytes =
+  ( txInfoTranslationSpecScriptQ
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||txInfoTranslationSpecScript||])
   )
 
 inputsOverlapsWithRefInputsBytes :: (Q [Dec], PlutusBinary)

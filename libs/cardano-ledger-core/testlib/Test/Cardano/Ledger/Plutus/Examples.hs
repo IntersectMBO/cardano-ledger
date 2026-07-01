@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Plutus.Examples (
   inputsOutputsAreNotEmptyNoDatum,
   inputsOutputsAreNotEmptyWithDatum,
   inputsOverlapsWithRefInputs,
+  txInfoTranslationSpecScript,
 ) where
 
 import Cardano.Ledger.Plutus.Language (Plutus (..), PlutusBinary (..), SLanguage (..))
@@ -1239,4 +1240,137 @@ inputsOverlapsWithRefInputs =
       , "c80d8c068008c070004dd5000980c000980b800980b000980a800980a000980980098090009808800980800098"
       , "07800980700098068009806000980580098041baa300730083754008444b30010018801c4cc008c01c004c0280"
       , "050054526899319801a4810350543500800200c1"
+      ]
+
+-- | Script that validates TxInfo translation by comparing expected values passed via the redeemer
+-- Redeemer is Constr tag [payload]: tag 0 checks txInfoInputs outRefs, tag 1 checks txInfoOutputs
+txInfoTranslationSpecScript :: SLanguage l -> Plutus l
+txInfoTranslationSpecScript =
+  decodeHexPlutus . mconcat . \case
+    -- ScriptHash "1d1c632ec72a8dff173b93e8c6de29ce8e3d49a311fdd289d5358f0a"
+    -- Preprocessed PlutusV1 Script:
+    -- @@@
+    -- txInfoTranslationSpecScript_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                  PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                  PlutusTx.Builtins.Internal.BuiltinData -> ()
+    -- txInfoTranslationSpecScript_0 datum_1 redeemer_2 context_3 = case PlutusTx.IsData.Class.unsafeFromBuiltinData datum_1 of
+    --                                                              {PlutusLedgerApi.V1.Scripts.Datum _ -> case PlutusTx.IsData.Class.unsafeFromBuiltinData redeemer_2 of
+    --                                                                                                     {PlutusLedgerApi.V1.Scripts.Redeemer redData_4 -> case PlutusTx.IsData.Class.unsafeFromBuiltinData context_3 of
+    --                                                                                                                                                       {PlutusLedgerApi.V1.Data.Contexts.ScriptContext txInfo_5
+    --                                                                                                                                                                                                       (PlutusLedgerApi.V1.Data.Contexts.Spending _) -> let redConstr_6 = PlutusTx.Builtins.unsafeDataAsConstr redData_4
+    --                                                                                                                                                                                                                                                         in case redConstr_6 of
+    --                                                                                                                                                                                                                                                            {(0,
+    --                                                                                                                                                                                                                                                              payload_7 GHC.Types.: _) -> if PlutusTx.IsData.Class.unsafeFromBuiltinData payload_7 PlutusTx.Eq.Class.== PlutusTx.Data.List.map PlutusLedgerApi.V1.Data.Contexts.txInInfoOutRef (PlutusLedgerApi.V1.Data.Contexts.txInfoInputs txInfo_5)
+    --                                                                                                                                                                                                                                                                                           then GHC.Tuple.Prim.()
+    --                                                                                                                                                                                                                                                                                           else PlutusTx.Builtins.error GHC.Tuple.Prim.();
+    --                                                                                                                                                                                                                                                             (1,
+    --                                                                                                                                                                                                                                                              payload_8 GHC.Types.: _) -> if PlutusTx.IsData.Class.unsafeFromBuiltinData payload_8 PlutusTx.Eq.Class.== PlutusLedgerApi.V1.Data.Contexts.txInfoOutputs txInfo_5
+    --                                                                                                                                                                                                                                                                                           then GHC.Tuple.Prim.()
+    --                                                                                                                                                                                                                                                                                           else PlutusTx.Builtins.error GHC.Tuple.Prim.();
+    --                                                                                                                                                                                                                                                             _ -> PlutusTx.Builtins.error GHC.Tuple.Prim.()};
+    --                                                                                                                                                        _ -> PlutusTx.Builtins.error GHC.Tuple.Prim.()}}}
+    -- @@@
+    SPlutusV1 ->
+      [ "5901830100003333333222222232323232322223232533300e3370e900118089baa300c300f002132323232533"
+      , "30123370e90000018a99a80109800a4c442a66602866ebcdd39bac002374e601e66601c00e44444444440144c2"
+      , "01a2c26002931299980919b874800800c54cd4008588854ccc050cdd79ba737580046e9cccc03801c888888888"
+      , "80249840345858d4020c03c008c048004dd50020b180580098059baa0013233001001120012213300612200222"
+      , "321223300100500335330040041200100112001222323232323232323232333333333300b375860200126eb0c0"
+      , "40020dd598080039bab30100063758602000a6eb0c040010c04000cdd618080011bac301000132353330133370"
+      , "e9000180b000891bae3012001163012001375460206026002602400260220026020002601e002601c002601a00"
+      , "26018002601600260106ea800cc8c00400488ccc00d2f5c04466016600e60106ea8008cc0100100040048894cc"
+      , "c010004400c4cc008c014004c02000555ceaba05744ae6955cf2ba15573f"
+      ]
+    -- ScriptHash "343b8ed4662e6a098f20ebfc71a0f62a6e6717373d8805444d527669"
+    -- Preprocessed PlutusV2 Script:
+    -- @@@
+    -- txInfoTranslationSpecScript_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                  PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                  PlutusTx.Builtins.Internal.BuiltinData -> ()
+    -- txInfoTranslationSpecScript_0 datum_1 redeemer_2 context_3 = case PlutusTx.IsData.Class.unsafeFromBuiltinData datum_1 of
+    --                                                              {PlutusLedgerApi.V1.Scripts.Datum _ -> case PlutusTx.IsData.Class.unsafeFromBuiltinData redeemer_2 of
+    --                                                                                                     {PlutusLedgerApi.V1.Scripts.Redeemer redData_4 -> case PlutusTx.IsData.Class.unsafeFromBuiltinData context_3 of
+    --                                                                                                                                                       {PlutusLedgerApi.V2.Data.Contexts.ScriptContext txInfo_5
+    --                                                                                                                                                                                                       (PlutusLedgerApi.V1.Data.Contexts.Spending _) -> let redConstr_6 = PlutusTx.Builtins.unsafeDataAsConstr redData_4
+    --                                                                                                                                                                                                                                                         in case redConstr_6 of
+    --                                                                                                                                                                                                                                                            {(0,
+    --                                                                                                                                                                                                                                                              payload_7 GHC.Types.: _) -> if PlutusTx.IsData.Class.unsafeFromBuiltinData payload_7 PlutusTx.Eq.Class.== PlutusTx.Data.List.map PlutusLedgerApi.V2.Data.Contexts.txInInfoOutRef (PlutusLedgerApi.V2.Data.Contexts.txInfoInputs txInfo_5)
+    --                                                                                                                                                                                                                                                                                           then GHC.Tuple.Prim.()
+    --                                                                                                                                                                                                                                                                                           else PlutusTx.Builtins.error GHC.Tuple.Prim.();
+    --                                                                                                                                                                                                                                                             (1,
+    --                                                                                                                                                                                                                                                              payload_8 GHC.Types.: _) -> if PlutusTx.IsData.Class.unsafeFromBuiltinData payload_8 PlutusTx.Eq.Class.== PlutusLedgerApi.V2.Data.Contexts.txInfoOutputs txInfo_5
+    --                                                                                                                                                                                                                                                                                           then GHC.Tuple.Prim.()
+    --                                                                                                                                                                                                                                                                                           else PlutusTx.Builtins.error GHC.Tuple.Prim.();
+    --                                                                                                                                                                                                                                                             _ -> PlutusTx.Builtins.error GHC.Tuple.Prim.()};
+    --                                                                                                                                                        _ -> PlutusTx.Builtins.error GHC.Tuple.Prim.()}}}
+    -- @@@
+    SPlutusV2 ->
+      [ "59019a0100003333333222222232323232322223232533300e3370e900118089baa300c300f002132323232533"
+      , "30123370e90000018a99a80109800a4c442a66602866ebcdd39bac002374e601e66601c00e4444444444440184"
+      , "c201a2c26002931299980919b874800800c54cd4008588854ccc050cdd79ba737580046e9cccc03801c8888888"
+      , "888880289840345858d4020c03c008c048004dd50020b180580098059baa001323300100112001221330061220"
+      , "0222321223300100500335330040041200100112001222323232323232323232323233333333333300d3758602"
+      , "40166eb0c048028dd618090049bab30120083756602400e6eb0c048018dd5980900298090021bac30120033756"
+      , "60240046eacc048004c8d4ccc054cdc3a40006030002246eb8c05000458c050004dd51809180a800980a000980"
+      , "98009809000980880098080009807800980700098068009806000980580098041baa003323001001223330034b"
+      , "d701119805980398041baa0023300400400100122253330040011003133002300500130080015573aae815d12b"
+      , "9a5573cae8555cf9"
+      ]
+    -- ScriptHash "a7bb5d72ffc3260d7a71f7f3963fe897388126ac4c90d1c853f185d0"
+    -- Preprocessed PlutusV3 Script:
+    -- @@@
+    -- txInfoTranslationSpecScript_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                  PlutusTx.Builtins.Internal.BuiltinUnit
+    -- txInfoTranslationSpecScript_0 arg_1 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1 of
+    --                                                                          {PlutusLedgerApi.V3.Data.Contexts.ScriptContext (PlutusLedgerApi.V3.Data.Contexts.TxInfo {PlutusLedgerApi.V3.Data.Contexts.txInfoInputs = inputs_2,
+    --                                                                                                                                                                    PlutusLedgerApi.V3.Data.Contexts.txInfoOutputs = outputs_3})
+    --                                                                                                                          (PlutusLedgerApi.V1.Scripts.Redeemer redData_4)
+    --                                                                                                                          (PlutusLedgerApi.V3.Data.Contexts.SpendingScript _
+    --                                                                                                                                                                           (GHC.Maybe.Just _)) -> let redConstr_5 = PlutusTx.Builtins.unsafeDataAsConstr redData_4
+    --                                                                                                                                                                                                   in case redConstr_5 of
+    --                                                                                                                                                                                                      {(0,
+    --                                                                                                                                                                                                        payload_6 GHC.Types.: _) -> PlutusTx.IsData.Class.unsafeFromBuiltinData payload_6 PlutusTx.Eq.Class.== PlutusTx.Data.List.map PlutusLedgerApi.V3.Data.Contexts.txInInfoOutRef inputs_2;
+    --                                                                                                                                                                                                       (1,
+    --                                                                                                                                                                                                        payload_7 GHC.Types.: _) -> PlutusTx.IsData.Class.unsafeFromBuiltinData payload_7 PlutusTx.Eq.Class.== outputs_3;
+    --                                                                                                                                                                                                       _ -> GHC.Types.False};
+    --                                                                           _ -> GHC.Types.False})
+    -- @@@
+    SPlutusV3 ->
+      [ "59013f0101009800aab9daba0aba2ab9aaab9eaba1ab9caab9f488888888c8c8c896600264646464b30013370e"
+      , "90011808000c4c8ca4d6600266e1d2000001894004c03800515980099b8748008006250028b201e403c601c005"
+      , "2323232325980099b874800000e32005300149a4466ebcdd39bac002374e60206eb0c05002d1300149901412cc"
+      , "004cdc3a400400719002a509119baf374e6eb0008dd39bac30143017301700b452820283500b30110023014001"
+      , "3754601c00d4a0301100137546016601c601800314a08068dd51805180680118051baa3009002300b001300837"
+      , "54003149a264c6600c9201035054350080020123233001001120012213300480011400c00a6a66008008240020"
+      , "02323001001229800a5eb824466018601060126ea8008cc0100100060028018889660020031003899801180300"
+      , "09804800a00801"
+      ]
+    -- ScriptHash "98dac76ba3f36651b750ebf880d753414148a57f9e5be3ac63ac44bb"
+    -- Preprocessed PlutusV4 Script:
+    -- @@@
+    -- txInfoTranslationSpecScript_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                  PlutusTx.Builtins.Internal.BuiltinUnit
+    -- txInfoTranslationSpecScript_0 arg_1 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1 of
+    --                                                                          {PlutusLedgerApi.V3.Data.Contexts.ScriptContext (PlutusLedgerApi.V3.Data.Contexts.TxInfo {PlutusLedgerApi.V3.Data.Contexts.txInfoInputs = inputs_2,
+    --                                                                                                                                                                    PlutusLedgerApi.V3.Data.Contexts.txInfoOutputs = outputs_3})
+    --                                                                                                                          (PlutusLedgerApi.V1.Scripts.Redeemer redData_4)
+    --                                                                                                                          (PlutusLedgerApi.V3.Data.Contexts.SpendingScript _
+    --                                                                                                                                                                           (GHC.Maybe.Just _)) -> let redConstr_5 = PlutusTx.Builtins.unsafeDataAsConstr redData_4
+    --                                                                                                                                                                                                   in case redConstr_5 of
+    --                                                                                                                                                                                                      {(0,
+    --                                                                                                                                                                                                        payload_6 GHC.Types.: _) -> PlutusTx.IsData.Class.unsafeFromBuiltinData payload_6 PlutusTx.Eq.Class.== PlutusTx.Data.List.map PlutusLedgerApi.V3.Data.Contexts.txInInfoOutRef inputs_2;
+    --                                                                                                                                                                                                       (1,
+    --                                                                                                                                                                                                        payload_7 GHC.Types.: _) -> PlutusTx.IsData.Class.unsafeFromBuiltinData payload_7 PlutusTx.Eq.Class.== outputs_3;
+    --                                                                                                                                                                                                       _ -> GHC.Types.False};
+    --                                                                           _ -> GHC.Types.False})
+    -- @@@
+    SPlutusV4 ->
+      [ "59013f0101009800aab9daba0aba2ab9aaab9eaba1ab9caab9f488888888c8c8c896600264646464b30013370e"
+      , "90011808000c4c8ca4d6600266e1d2000001894004c03800515980099b8748008006250028b201e403c601c005"
+      , "2323232325980099b874800000e32005300149a4466ebcdd39bac002374e60206eb0c05002d1300149901412cc"
+      , "004cdc3a400400719002a509119baf374e6eb0008dd39bac30143017301700b452820283500b30110023014001"
+      , "3754601c00d4a0301100137546016601c601800314a08068dd51805180680118051baa3009002300b001300837"
+      , "54003149a264c6600c9201035054350080020123233001001120012213300480011400c00a6a66008008240020"
+      , "02323001001229800a5eb824466018601060126ea8008cc0100100060028018889660020031003899801180300"
+      , "09804800a00801"
       ]
