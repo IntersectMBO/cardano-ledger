@@ -16,7 +16,6 @@ library
   exposed-modules:
     Cardano.Protocol.TPraos.API
     Cardano.Protocol.TPraos.BHeader
-    Cardano.Protocol.TPraos.OCert
     Cardano.Protocol.TPraos.Rules.OCert
     Cardano.Protocol.TPraos.Rules.Overlay
     Cardano.Protocol.TPraos.Rules.Prtcl
@@ -26,7 +25,8 @@ library
   -- Moved to the `cardano-protocol` package; re-exported here under its
   -- original name for backwards compatibility.
   reexported-modules:
-    Cardano.Protocol.Crypto
+    Cardano.Protocol.Crypto,
+    Cardano.Protocol.TPraos.OCert,
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -66,7 +66,6 @@ library
     mtl,
     non-integral,
     nothunks,
-    quiet,
     small-steps >=1.1,
     transformers,
 

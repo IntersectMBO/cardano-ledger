@@ -16,6 +16,7 @@ source-repository head
 library
   exposed-modules:
     Cardano.Protocol.Crypto
+    Cardano.Protocol.TPraos.OCert
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -34,6 +35,13 @@ library
       -Wredundant-constraints
   build-depends:
     base >=4.18 && <5,
+    bytestring,
+    cardano-base >=0.1.2,
     cardano-crypto-class ^>=2.5,
     cardano-crypto-praos ^>=2.2,
+    cardano-ledger-binary >=1.8,
     cardano-ledger-core >=1.21,
+    containers,
+    nothunks,
+    quiet,
+    transformers,
