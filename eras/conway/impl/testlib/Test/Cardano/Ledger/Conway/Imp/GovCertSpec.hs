@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
@@ -11,12 +13,14 @@ module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (Vote (..), Voter (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..), ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Val (Val (..))
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -167,3 +171,93 @@ spec = describe "GOVCERT" $ do
         failingTx
         [ injectFailure $ ConwayCommitteeIsUnknown nonExistentColdKey
         ]
+  describe "Potential future committee members" $ do
+    let
+      setupGovEnv = do
+        modifyPParams $ \pp ->
+          pp
+            & ppCommitteeMinSizeL .~ 1
+            & ppCommitteeMaxTermLengthL .~ EpochInterval 30
+            & ppGovActionLifetimeL .~ EpochInterval 30
+        disableTreasuryExpansion
+        donateToTreasury $ Coin 1_000
+        (drep, _, _) <- setupSingleDRep 1_000_000_000
+        (spo, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+        pure (drep, spo)
+      proposeWithdrawalAndMember drep = do
+        accountAddr <- registerAccountAddress
+        gaiWithdrawal <- submitTreasuryWithdrawals [(accountAddr, Coin 1)]
+        submitYesVote_ (DRepVoter drep) gaiWithdrawal
+        initialMembers <- getCommitteeMembers
+        proposedMember <- KeyHashObj <$> freshKeyHash
+        gaiUpdateCommittee <-
+          submitUpdateCommittee Nothing initialMembers [(proposedMember, EpochInterval 20)] (1 %! 2)
+        pure (gaiWithdrawal, initialMembers, proposedMember, gaiUpdateCommittee)
+    it "can authorize a hot key, but an unknown cold credential cannot" $
+      whenPostBootstrap $ do
+        unknownColdCred <- KeyHashObj <$> freshKeyHash
+        unknownHotCred <- KeyHashObj <$> freshKeyHash
+        let
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (AuthCommitteeHotKeyTxCert unknownColdCred unknownHotCred)
+        submitFailingTx
+          tx
+          [injectFailure $ ConwayCommitteeIsUnknown unknownColdCred]
+        void $ submitUpdateCommittee Nothing mempty [(unknownColdCred, EpochInterval 20)] (1 %! 2)
+        submitTx_ tx
+    it "at protocol version 10, the vote is counted once the committee update is enacted" $
+      whenMajorVersion @10 $ do
+        (drep, spo) <- setupGovEnv
+        (gaiWithdrawal, initialMembers, proposedMember, gaiUpdateCommittee) <-
+          proposeWithdrawalAndMember drep
+        submitYesVote_ (DRepVoter drep) gaiUpdateCommittee
+        submitYesVote_ (StakePoolVoter spo) gaiUpdateCommittee
+        passEpoch
+        expectMembers initialMembers
+        proposedMemberHotKey <- registerCommitteeHotKey proposedMember
+        submitYesVote_ (CommitteeVoter proposedMemberHotKey) gaiWithdrawal
+        isCommitteeAccepted gaiWithdrawal `shouldReturn` False
+        passEpoch
+        expectMembers $ Set.singleton proposedMember
+        ccShouldNotBeExpired proposedMember
+        isCommitteeAccepted gaiWithdrawal `shouldReturn` True
+        passNEpochs 2
+        expectMissingGovActionId gaiUpdateCommittee
+        expectMissingGovActionId gaiWithdrawal
+    it "at protocol version 10, the vote is discarded when the committee update is rejected" $
+      whenMajorVersion @10 $ do
+        (drep, spo) <- setupGovEnv
+        (gaiWithdrawal, initialMembers, proposedMember, gaiUpdateCommittee) <-
+          proposeWithdrawalAndMember drep
+        submitVote_ VoteNo (DRepVoter drep) gaiUpdateCommittee
+        submitVote_ VoteNo (StakePoolVoter spo) gaiUpdateCommittee
+        passEpoch
+        expectMembers initialMembers
+        proposedMemberHotKey <- registerCommitteeHotKey proposedMember
+        submitYesVote_ (CommitteeVoter proposedMemberHotKey) gaiWithdrawal
+        isCommitteeAccepted gaiWithdrawal `shouldReturn` False
+        passNEpochs 2
+        expectPresentGovActionId gaiUpdateCommittee
+        expectCommitteeMemberAbsence proposedMember
+        isCommitteeAccepted gaiWithdrawal `shouldReturn` False
+        expectPresentGovActionId gaiWithdrawal
+    it "from protocol version 11, cannot vote until elected" $
+      whenMajorVersionAtLeast @11 $ do
+        accountAddr <- registerAccountAddress
+        gaiWithdrawal <- submitTreasuryWithdrawals [(accountAddr, Coin 1)]
+        proposedMember <- KeyHashObj <$> freshKeyHash
+        void $ submitUpdateCommittee Nothing mempty [(proposedMember, EpochInterval 20)] (1 %! 2)
+        proposedMemberHotKey <- registerCommitteeHotKey proposedMember
+        submitFailingVote
+          (CommitteeVoter proposedMemberHotKey)
+          gaiWithdrawal
+          [injectFailure $ UnelectedCommitteeVoters [proposedMemberHotKey]]
+        passNEpochs . fromIntegral =<< choose (1, 5 :: Int)
+        submitFailingVote
+          (CommitteeVoter proposedMemberHotKey)
+          gaiWithdrawal
+          [ injectFailure $ UnelectedCommitteeVoters [proposedMemberHotKey]
+          , injectFailure $ VotersDoNotExist [CommitteeVoter proposedMemberHotKey]
+          ]
