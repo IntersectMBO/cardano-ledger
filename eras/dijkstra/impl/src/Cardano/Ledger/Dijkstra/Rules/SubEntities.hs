@@ -155,6 +155,8 @@ dijkstraSubEntitiesTransition ::
 dijkstraSubEntitiesTransition = do
   TRC (subCertsEnv, certState, certificates) <- judgmentContext
   let tx = certsTx subCertsEnv
+      pp = certsPParams subCertsEnv
+      curEpoch = certsCurrentEpoch subCertsEnv
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
 
@@ -171,6 +173,8 @@ dijkstraSubEntitiesTransition = do
 
   let certStateBeforeSubCerts =
         certState
+          & Conway.updateDormantDRepExpiries tx curEpoch
+          & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
           & certDStateL . accountsL %~ applyWithdrawals withdrawals
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $ TRC (subCertsEnv, certStateBeforeSubCerts, certificates)
