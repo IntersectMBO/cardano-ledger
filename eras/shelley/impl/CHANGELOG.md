@@ -59,6 +59,7 @@
   - `calculatePoolDistr`
   - `calculatePoolDistr'`
   - `epochFromSlot`
+* Update `encodePoolCert` and `poolTxCertDecoder` to use `encodeStakePoolParamsFlat`/`decodeStakePoolParamsFlat` instead of `EncCBORGroup`/`DecCBORGroup`
 * Change `NoThunks` instance for `BlockTransitionError` to not check for thunks in its contents
 * Add `NFData` constraint to `BlockTransitionError` constructor.
 * Add `injectStakeCredentials`, `injectStakePools`, `resolveInjectionSource`, `injectInitialFundsAndStaking` to `Cardano.Ledger.Shelley.Transition`
