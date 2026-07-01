@@ -41,6 +41,8 @@ library
   default-language: Haskell2010
   exposed-modules:
     Cardano.Ledger.CanonicalState.BasicTypes
+    Cardano.Ledger.CanonicalState.Export
+    Cardano.Ledger.CanonicalState.Import
     Cardano.Ledger.CanonicalState.LedgerCBOR
     Cardano.Ledger.CanonicalState.Namespace
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
@@ -72,6 +74,8 @@ library
     scls-cardano,
     scls-cbor,
     scls-core,
+    scls-format,
+    streaming,
     text,
 
 library conway
@@ -79,19 +83,26 @@ library conway
   default-language: Haskell2010
   exposed-modules:
     Cardano.Ledger.CanonicalState.Conway
+    Cardano.Ledger.CanonicalState.Conway.Export
+    Cardano.Ledger.CanonicalState.Conway.Import
 
   hs-source-dirs: conway
   build-depends:
     base,
+    cardano-data,
     cardano-ledger-binary,
     cardano-ledger-canonical-state,
     cardano-ledger-conway,
     cardano-ledger-core,
+    cardano-ledger-shelley,
     cborg,
     containers,
+    data-default,
     microlens,
     scls-cbor,
     scls-core,
+    scls-format,
+    streaming,
     text,
 
 library testlib
