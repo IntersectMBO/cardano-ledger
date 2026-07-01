@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -11,6 +12,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
   CERTS,
@@ -82,6 +87,10 @@ newtype CertsEvent era
 deriving stock instance
   Eq (PredicateFailure (Core.EraRule "DELPL" era)) =>
   Eq (CertsPredicateFailure era)
+
+deriving stock instance
+  Ord (PredicateFailure (Core.EraRule "DELPL" era)) =>
+  Ord (CertsPredicateFailure era)
 
 deriving stock instance
   Show (PredicateFailure (Core.EraRule "DELPL" era)) =>

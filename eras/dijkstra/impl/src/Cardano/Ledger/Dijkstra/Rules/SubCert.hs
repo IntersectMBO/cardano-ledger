@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Dijkstra.Rules.SubCert (
   SUBCERT,
@@ -64,6 +69,13 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "SUBGOVCERT" era))
   ) =>
   Eq (DijkstraSubCertPredFailure era)
+
+deriving stock instance
+  ( Ord (PredicateFailure (EraRule "SUBDELEG" era))
+  , Ord (PredicateFailure (EraRule "SUBPOOL" era))
+  , Ord (PredicateFailure (EraRule "SUBGOVCERT" era))
+  ) =>
+  Ord (DijkstraSubCertPredFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "SUBDELEG" era))

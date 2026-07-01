@@ -29,7 +29,7 @@ data EPOCH deriving (Data)
 
 data EpochPredicateFailure
   = UPIECFailure (PredicateFailure UPIEC)
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS EPOCH where
   type

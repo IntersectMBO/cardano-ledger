@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Rules.Bbody (
   BBODY,
@@ -126,6 +131,10 @@ deriving instance
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (AlonzoBbodyPredFailure era)
+
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  Ord (AlonzoBbodyPredFailure era)
 
 instance
   (Era era, EncCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>

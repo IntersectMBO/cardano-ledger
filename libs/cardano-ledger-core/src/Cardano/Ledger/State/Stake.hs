@@ -168,7 +168,7 @@ sumCredentialsCompactActiveStake (ActiveStake m) =
 
 class
   ( EraAccounts era
-  , Eq (InstantStake era)
+  , Ord (InstantStake era)
   , Show (InstantStake era)
   , Monoid (InstantStake era)
   , Default (InstantStake era)

@@ -978,7 +978,7 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 
 -- | This is called @wdrl@ in the spec.
 newtype Withdrawals = Withdrawals {unWithdrawals :: Map AccountAddress Coin}
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
 
 instance Semigroup Withdrawals where
@@ -989,7 +989,7 @@ instance Monoid Withdrawals where
 
 -- | Direct deposits to account addresses.
 newtype DirectDeposits = DirectDeposits {unDirectDeposits :: Map AccountAddress Coin}
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
 
 instance Semigroup DirectDeposits where

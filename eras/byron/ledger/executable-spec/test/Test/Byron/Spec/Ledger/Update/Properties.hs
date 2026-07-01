@@ -345,7 +345,7 @@ data UBlockPredicateFailure
   | UPIVOTESFailure (PredicateFailure UPIVOTES)
   | UPIENDFailure (PredicateFailure UPIEND)
   | NotIncreasingBlockSlot
-  deriving (Eq, Show, Data)
+  deriving (Eq, Ord, Show, Data)
 
 instance STS UBLOCK where
   type Environment UBLOCK = UPIEnv

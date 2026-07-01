@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,6 +14,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Dijkstra.Rules.Ledger (
   LEDGER,
@@ -184,6 +189,15 @@ deriving instance
   , Eq (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   Eq (DijkstraLedgerPredFailure era)
+
+deriving instance
+  ( Era era
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
+  , Ord (PredicateFailure (EraRule "CERTS" era))
+  , Ord (PredicateFailure (EraRule "GOV" era))
+  , Ord (PredicateFailure (EraRule "SUBLEDGERS" era))
+  ) =>
+  Ord (DijkstraLedgerPredFailure era)
 
 deriving instance
   ( Era era

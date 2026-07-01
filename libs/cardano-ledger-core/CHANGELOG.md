@@ -2,6 +2,13 @@
 
 ## 1.21.0.0
 
+* Add `Ord` constraint to `Val` class
+* Add `Ord (CompactForm a)` constraint to `Compactible` class
+* Add `Ord (Script era)`, `Ord (NativeScript era)` constraints to `EraScript` class
+* Add `Ord (InstantStake era)` constraint to `EraStake` class
+* Add `Ord (TxOut era)` constraint to `EraTxOut` class
+* Add `Ord` instances for `CompactForm DeltaCoin`, `DirectDeposits`, `ExUnits`, `FuturePParams`,
+  `MemoBytes`, `TxOutSource`, `VKey`, `Withdrawals`
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Dijkstra.Rules.Mempool (
   MEMPOOL,
@@ -95,6 +100,10 @@ instance InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure DijkstraEra where
 deriving instance
   Eq (PredicateFailure (EraRule "LEDGER" era)) =>
   Eq (DijkstraMempoolPredFailure era)
+
+deriving instance
+  Ord (PredicateFailure (EraRule "LEDGER" era)) =>
+  Ord (DijkstraMempoolPredFailure era)
 
 deriving instance
   Show (PredicateFailure (EraRule "LEDGER" era)) =>

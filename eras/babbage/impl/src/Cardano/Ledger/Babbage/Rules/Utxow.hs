@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -13,6 +14,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Babbage.Rules.Utxow (
   UTXOW,
@@ -139,6 +144,16 @@ deriving instance
   , Eq (TxCert era)
   ) =>
   Eq (BabbageUtxowPredFailure era)
+
+deriving instance
+  ( AlonzoEraScript era
+  , Ord (Shelley.ShelleyUtxowPredFailure era)
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
+  , Ord (TxOut era)
+  , Ord (TxCert era)
+  ) =>
+  Ord (BabbageUtxowPredFailure era)
 
 instance
   ( AlonzoEraScript era
@@ -398,7 +413,7 @@ instance
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
-  , Eq (PredicateFailure (EraRule "UTXOS" era))
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , EraCertState era
   ) =>

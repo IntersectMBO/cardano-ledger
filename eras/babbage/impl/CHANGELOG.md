@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `Ord` instances for `BabbageContextError`, `BabbageTxOut`, `BabbageUtxoPredFailure`, `BabbageUtxowPredFailure`
 * Rename rule types and deprecate the old names:
   - `BabbageLEDGER` -> `LEDGER`
   - `BabbageUTXO` -> `UTXO`

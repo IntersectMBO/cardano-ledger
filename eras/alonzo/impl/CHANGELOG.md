@@ -2,6 +2,12 @@
 
 ## 1.16.0.0
 
+* Add `Ord` constraints to `AlonzoEraScript` and `EraPlutusContext` classes
+* Add `Ord` instances for `AlonzoBbodyPredFailure`, `AlonzoUtxoPredFailure`,
+  `AlonzoUtxosPredFailure`, `AlonzoUtxowPredFailure`
+* Add `Ord` instances for `Addr28Extra`, `AlonzoContextError`, `AlonzoPlutusPurpose AsItem`,
+  `AlonzoPlutusPurpose AsIxItem`, `AlonzoScript`, `AlonzoTxOut`, `CollectError`, `DataHash32`,
+  `FailureDescription`, `IsValid`, `TagMismatchDescription`
 * Remove `ueUtxo` field from `UtxoEnv`
 * Introduce `LEDGERS` and `STS` instance and wire it to `EraRule LEDGERS`
 * Export `alonzoPlutusScriptDecoder` from `Cardano.Ledger.Alonzo.TxWits`

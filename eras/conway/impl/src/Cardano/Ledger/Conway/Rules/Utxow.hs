@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Conway.Rules.Utxow (
   alonzoToConwayUtxowPredFailure,
@@ -153,6 +158,12 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (ConwayUtxowPredFailure era)
+
+deriving instance
+  ( ConwayEraScript era
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  ) =>
+  Ord (ConwayUtxowPredFailure era)
 
 instance
   ( ConwayEraScript era

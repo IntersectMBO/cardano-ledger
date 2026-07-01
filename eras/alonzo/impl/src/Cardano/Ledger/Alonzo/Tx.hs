@@ -76,7 +76,7 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
   ppPricesL,
  )
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModel,
@@ -146,7 +146,7 @@ import NoThunks.Class (InspectHeap (..), NoThunks)
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON, FromJSON)
 
 data AlonzoTx l era where
@@ -504,19 +504,19 @@ data AlonzoStAnnTx l era where
 
 deriving instance
   ( AlonzoEraScript era
-  , Eq (Tx l era)
+  , Eq (Tx TopTx era)
   , Eq (ScriptsNeeded era)
   , Eq (ScriptsProvided era)
-  , Eq (ContextError era)
+  , Eq (CollectError era)
   ) =>
   Eq (AlonzoStAnnTx l era)
 
 deriving instance
   ( AlonzoEraScript era
-  , Show (Tx l era)
+  , Show (Tx TopTx era)
   , Show (ScriptsNeeded era)
   , Show (ScriptsProvided era)
-  , Show (ContextError era)
+  , Show (CollectError era)
   ) =>
   Show (AlonzoStAnnTx l era)
 
@@ -528,10 +528,10 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , NFData (Tx l era)
+  , NFData (Tx TopTx era)
   , NFData (ScriptsNeeded era)
   , NFData (ScriptsProvided era)
-  , NFData (ContextError era)
+  , NFData (CollectError era)
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
@@ -543,5 +543,5 @@ instance
               asatPlutusLanguagesUsed `deepseq`
                 rnf asatPlutusScriptsWithContext
 
-instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
+instance EncCBOR (Tx TopTx era) => EncCBOR (AlonzoStAnnTx l era) where
   encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx

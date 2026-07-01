@@ -117,6 +117,10 @@ deriving instance
   VRF.VRFAlgorithm (VRF c) =>
   Eq (PrtclPredicateFailure c)
 
+deriving instance
+  VRF.VRFAlgorithm (VRF c) =>
+  Ord (PrtclPredicateFailure c)
+
 instance Crypto c => NoThunks (PrtclPredicateFailure c)
 
 instance
@@ -211,7 +215,7 @@ data PrtlSeqFailure
       PrevHash
       -- | Current block's previous hash
       PrevHash
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks PrtlSeqFailure
 

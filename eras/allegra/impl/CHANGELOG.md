@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `Ord` instances for `AllegraUtxoPredFailure`, `Timelock`, `TimelockRaw`
 * Rename rule types and deprecate the old names:
   - `AllegraUTXO` -> `UTXO`
   - `AllegraUTXOW` -> `UTXOW`
