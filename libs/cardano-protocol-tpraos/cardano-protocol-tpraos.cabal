@@ -14,7 +14,6 @@ source-repository head
 
 library
   exposed-modules:
-    Cardano.Protocol.Crypto
     Cardano.Protocol.TPraos.API
     Cardano.Protocol.TPraos.BHeader
     Cardano.Protocol.TPraos.OCert
@@ -23,6 +22,11 @@ library
     Cardano.Protocol.TPraos.Rules.Prtcl
     Cardano.Protocol.TPraos.Rules.Tickn
     Cardano.Protocol.TPraos.Rules.Updn
+
+  -- Moved to the `cardano-protocol` package; re-exported here under its
+  -- original name for backwards compatibility.
+  reexported-modules:
+    Cardano.Protocol.Crypto
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -44,7 +48,6 @@ library
     bytestring,
     cardano-base >=0.1.2,
     cardano-crypto-class ^>=2.5,
-    cardano-crypto-praos ^>=2.2,
     cardano-ledger-allegra >=1.10,
     cardano-ledger-alonzo >=1.16,
     cardano-ledger-babbage >=1.13.1,
@@ -54,6 +57,7 @@ library
     cardano-ledger-dijkstra >=0.3,
     cardano-ledger-mary >=1.10.1,
     cardano-ledger-shelley >=1.19,
+    cardano-protocol >=0.1,
     cardano-slotting,
     containers,
     data-default,
