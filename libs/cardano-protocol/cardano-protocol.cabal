@@ -17,6 +17,7 @@ library
   exposed-modules:
     Cardano.Protocol.BlockHeader.TPraos
     Cardano.Protocol.Crypto
+    Cardano.Protocol.Praos.VRF
     Cardano.Protocol.TPraos.OCert
 
   hs-source-dirs: src
@@ -38,6 +39,7 @@ library
     base >=4.18 && <5,
     bytestring,
     cardano-base >=0.1.2,
+    cardano-binary,
     cardano-crypto-class ^>=2.5,
     cardano-crypto-praos ^>=2.2,
     cardano-ledger-binary >=1.8,
