@@ -259,7 +259,7 @@ updateDormantDRepExpiries ::
   , ConwayEraTxBody era
   , ConwayEraCertState era
   ) =>
-  Tx TopTx era -> EpochNo -> CertState era -> CertState era
+  Tx l era -> EpochNo -> CertState era -> CertState era
 updateDormantDRepExpiries tx currentEpoch =
   let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
    in if hasProposals
@@ -274,7 +274,7 @@ updateVotingDRepExpiries ::
   , ConwayEraTxBody era
   , ConwayEraCertState era
   ) =>
-  Tx TopTx era -> EpochNo -> EpochInterval -> CertState era -> CertState era
+  Tx l era -> EpochNo -> EpochInterval -> CertState era -> CertState era
 updateVotingDRepExpiries tx currentEpoch drepActivity certState =
   let numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
       updateVSDReps vsDReps =

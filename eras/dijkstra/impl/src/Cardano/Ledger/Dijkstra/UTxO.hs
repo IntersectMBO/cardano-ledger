@@ -55,11 +55,12 @@ import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
-import Lens.Micro ((^.))
+import Lens.Micro (SimpleGetter, to, (^.))
 import Lens.Micro.Extras (view)
 
 class AlonzoEraUTxO era => DijkstraEraUTxO era where
   subTransactionsStAnnTx :: StAnnTx TopTx era -> [StAnnTx SubTx era]
+  plutusLegacyModeStAnnTxG :: SimpleGetter (StAnnTx TopTx era) Bool
 
 getConsumedDijkstraValue ::
   forall era l.
@@ -242,6 +243,7 @@ plutusLanguagesUsedDijkstraStAnnTx stAnnTx =
 
 instance DijkstraEraUTxO DijkstraEra where
   subTransactionsStAnnTx = subTransactionsDijkstraStAnnTx
+  plutusLegacyModeStAnnTxG = to (\DijkstraStAnnTopTx {dsattPlutusLegacyMode} -> dsattPlutusLegacyMode)
 
 subTransactionsDijkstraStAnnTx ::
   DijkstraStAnnTx TopTx era -> [DijkstraStAnnTx SubTx era]

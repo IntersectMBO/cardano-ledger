@@ -26,7 +26,14 @@ import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  EraAccounts,
+  EraStake,
+  addToBalanceAccounts,
+  adjustAccountState,
+  balanceAccountStateL,
+  isAccountRegistered,
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..))
