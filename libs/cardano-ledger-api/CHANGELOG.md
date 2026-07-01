@@ -2,6 +2,8 @@
 
 ## 1.13.1.0
 
+* Add `queryAccountSummary` (`QueryResultAccountSummary`, `StakeAccountSummary`): one-query account summary
+* Add `queryDelegationsAndRewards` (`QueryResultDelegationsAndRewards`), deprecating `queryStakePoolDelegsAndRewards`.
 * Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names
 * Re-export the new `pattern WithdrawingPurpose` and `toWithdrawingPurpose`
 * Add `generate-cbor` executable.

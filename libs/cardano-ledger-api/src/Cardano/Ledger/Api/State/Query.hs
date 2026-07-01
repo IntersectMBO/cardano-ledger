@@ -162,6 +162,7 @@ queryStakePoolDelegsAndRewards nes creds =
    in ( Map.mapMaybe (^. stakePoolDelegationAccountStateL) accountsMapFiltered
       , Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
       )
+{-# DEPRECATED queryStakePoolDelegsAndRewards "Use queryDelegationsAndRewards" #-}
 
 queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
 queryConstitution = (^. constitutionGovStateL) . queryGovState
