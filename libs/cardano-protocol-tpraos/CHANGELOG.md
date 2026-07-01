@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Move `Cardano.Protocol.Crypto` and `Cardano.Protocol.TPraos.OCert` to the new `cardano-protocol` package. They are re-exported here unchanged.
+* Move the contents of `Cardano.Protocol.TPraos.BHeader` to `Cardano.Protocol.BlockHeader.TPraos` in the new `cardano-protocol` package, and deprecate `Cardano.Protocol.TPraos.BHeader` in its favour.
 * Remove `FromCBOR` instances for `KESPeriod`, `PrtclState`, `TicknState`
 * Deprecate `GetLedgerView` and related `LedgerView` in favour of `*EraForecast` typeclasses from Shelley and Babbage eras.
   - Add `forecastToTPraosLedgerView` for backwards compatibility.
