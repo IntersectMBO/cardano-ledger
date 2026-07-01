@@ -233,7 +233,7 @@ dijkstraSubLedgersTransition ::
 dijkstraSubLedgersTransition = do
   TRC
     ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsValid
-      , ledgerState@(LedgerState utxoState certState)
+      , LedgerState utxoState certState
       , stAnnTx
       ) <-
     judgmentContext
@@ -245,49 +245,53 @@ dijkstraSubLedgersTransition = do
   let committee = govState ^. committeeGovStateL
   let proposals = govState ^. proposalsGovStateL
 
-  runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+  (utxoStateBeforeSubUtxow, certStateFinal) <-
+    if topIsValid == IsValid True
+      then do
+        runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
 
-  certStateAfterSubEntities <-
-    trans @(EraRule "SUBENTITIES" era) $
-      TRC
-        ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
-        , certState
-        , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
-        )
-  let govEnv =
-        Conway.GovEnv
-          (txIdTxBody txBody)
-          curEpochNo
-          pp
-          (govState ^. constitutionGovStateL . constitutionGuardrailsScriptHashL)
-          certStateAfterSubEntities
-          committee
-  let govSignal =
-        Conway.GovSignal
-          { Conway.gsVotingProcedures = txBody ^. votingProceduresTxBodyL
-          , Conway.gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
-          , Conway.gsCertificates = txBody ^. certsTxBodyL
-          }
-  proposalsState <-
-    trans @(EraRule "SUBGOV" era) $
-      TRC
-        ( govEnv
-        , proposals
-        , govSignal
-        )
+        certStateAfterSubEntities <-
+          trans @(EraRule "SUBENTITIES" era) $
+            TRC
+              ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
+              , certState
+              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              )
+        let govEnv =
+              Conway.GovEnv
+                (txIdTxBody txBody)
+                curEpochNo
+                pp
+                (govState ^. constitutionGovStateL . constitutionGuardrailsScriptHashL)
+                certStateAfterSubEntities
+                committee
+        let govSignal =
+              Conway.GovSignal
+                { Conway.gsVotingProcedures = txBody ^. votingProceduresTxBodyL
+                , Conway.gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
+                , Conway.gsCertificates = txBody ^. certsTxBodyL
+                }
+        proposalsState <-
+          trans @(EraRule "SUBGOV" era) $
+            TRC
+              ( govEnv
+              , proposals
+              , govSignal
+              )
+        pure
+          ( utxoState & utxosGovStateL . proposalsGovStateL .~ proposalsState
+          , certStateAfterSubEntities
+          )
+      else pure (utxoState, certState)
 
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
         ( SubUtxoEnv slot pp certState originalUtxo topIsValid
-        , utxoState
+        , utxoStateBeforeSubUtxow
         , stAnnTx
         )
-  pure $
-    ledgerState
-      & lsUTxOStateL .~ utxoStateAfterSubUtxow
-      & lsUTxOStateL . utxosGovStateL . proposalsGovStateL .~ proposalsState
-      & lsCertStateL .~ certStateAfterSubEntities
+  pure $ LedgerState utxoStateAfterSubUtxow certStateFinal
 
 instance
   ( STS (SUBGOV era)
