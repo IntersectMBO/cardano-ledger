@@ -4,6 +4,10 @@
 
 * Replace `CBORGroup`-derived `EncCBOR`/`DecCBOR` instances for `StakePoolParams` with manual instances
 * Add `encodeStakePoolParamsFlat` and `decodeStakePoolParamsFlat` for flat (non-nested) CBOR encoding/decoding
+* Add `stakePoolParamsListLen` for version-dependent CBOR list length
+* Add `sppLeiosKey` field to `StakePoolParams`
+* Add `LeiosKey`, `LeiosPubKey`, `LeiosPossessionProof` types with `EncCBOR`/`DecCBOR`, `ToJSON`/`FromJSON` instances
+* Make `FromJSON StakePoolParams` backward-compatible: `leiosKey` field is optional (defaults to `SNothing`)
 * Change `ChainCode` type to use `ByteArray` instead of `ByteString`
 * Change `bwAttributes` field to use `ByteArray` instead of `ByteString`
 * Add `StAnnTx` type family and `txStAnnTxG` to `Tx` type class

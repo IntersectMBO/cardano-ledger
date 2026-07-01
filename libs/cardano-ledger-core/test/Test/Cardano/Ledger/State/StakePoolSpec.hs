@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe (SNothing))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -26,4 +27,6 @@ spec = do
               network = aaNetworkId $ sppAccountAddress stakePoolParams
               stakePoolState = mkStakePoolState deposit delegs stakePoolParams
               stakePoolParams' = stakePoolStateToStakePoolParams network poolId stakePoolState
-           in stakePoolParams === stakePoolParams'
+           in -- StakePoolState doesn't carry sppLeiosKey, so the roundtrip loses it
+              -- FIXME Once we update StakePoolState to include the leios key
+              stakePoolParams {sppLeiosKey = SNothing} === stakePoolParams'

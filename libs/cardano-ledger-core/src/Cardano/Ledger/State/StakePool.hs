@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module provides the 'StakePoolState' data type, which represents the
@@ -59,12 +60,16 @@ module Cardano.Ledger.State.StakePool (
     ppAccountAddress,
     ppOwners,
     ppRelays,
-    ppMetadata
+    ppMetadata,
+    ppLeiosKey
   ),
   encodeStakePoolParamsFlat,
   decodeStakePoolParamsFlat,
   stakePoolParamsListLen,
   PoolMetadata (..),
+  LeiosKey (..),
+  LeiosPubKey (..),
+  LeiosPossessionProof (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
@@ -74,6 +79,15 @@ module Cardano.Ledger.State.StakePool (
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Crypto.DSIGN (
+  BLS12381MinSigDSIGN,
+  DSIGNAggregatable (
+    PossessionProofDSIGN,
+    rawDeserialisePossessionProofDSIGN,
+    rawSerialisePossessionProofDSIGN
+  ),
+  DSIGNAlgorithm (VerKeyDSIGN, rawDeserialiseVerKeyDSIGN, rawSerialiseVerKeyDSIGN),
+ )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
@@ -99,6 +113,9 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeNullStrictMaybe,
   getDecoderVersion,
+  ifDecoderVersionAtLeast,
+  ifEncodingVersionAtLeast,
+  natVersion,
   withCurrentEncodingVersion,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -108,6 +125,12 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
   (<!),
+ )
+import Cardano.Ledger.Binary.Crypto (
+  decodePossessionProofDSIGN,
+  decodeVerKeyDSIGN,
+  encodePossessionProofDSIGN,
+  encodeVerKeyDSIGN,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential)
@@ -291,6 +314,7 @@ stakePoolStateToStakePoolParams networkId poolId sps =
     , sppOwners = spsOwners sps
     , sppRelays = spsRelays sps
     , sppMetadata = spsMetadata sps
+    , sppLeiosKey = SNothing
     }
 
 data PoolMetadata = PoolMetadata
@@ -434,8 +458,78 @@ data StakePoolParams = StakePoolParams
   , sppOwners :: !(Set (KeyHash Staking))
   , sppRelays :: !(StrictSeq StakePoolRelay)
   , sppMetadata :: !(StrictMaybe PoolMetadata)
+  , sppLeiosKey :: !(StrictMaybe LeiosKey)
   }
   deriving (Show, Generic, Eq, Ord)
+
+data LeiosKey = LeiosKey
+  { leiosPubKey :: !LeiosPubKey
+  , leiosPossessionProof :: !LeiosPossessionProof
+  }
+  deriving (Show, Generic, Eq, Ord, NoThunks, NFData)
+
+instance ToJSON LeiosKey where
+  toJSON leiosKey =
+    Aeson.object
+      [ "leiosPubKey"
+          .= Text.decodeLatin1 (B16.encode (rawSerialiseVerKeyDSIGN $ unLeiosPubKey $ leiosPubKey leiosKey))
+      , "leiosPossessionProof"
+          .= Text.decodeLatin1
+            ( B16.encode
+                (rawSerialisePossessionProofDSIGN $ unLeiosPossessionProof $ leiosPossessionProof leiosKey)
+            )
+      ]
+
+instance FromJSON LeiosKey where
+  parseJSON = Aeson.withObject "LeiosKey" $ \obj -> do
+    pubKeyHex <- Text.encodeUtf8 <$> obj .: "leiosPubKey"
+    leiosPossessionProofHex <- Text.encodeUtf8 <$> obj .: "leiosPossessionProof"
+    leiosPubKey <-
+      case rawDeserialiseVerKeyDSIGN =<< either (const Nothing) Just (B16.decode pubKeyHex) of
+        Nothing -> fail "Invalid hex for LeiosPubKey"
+        Just vk -> pure (LeiosPubKey vk)
+    leiosPossessionProof <-
+      case rawDeserialisePossessionProofDSIGN
+        =<< either (const Nothing) Just (B16.decode leiosPossessionProofHex) of
+        Nothing -> fail "Invalid hex for LeiosPossessionProof"
+        Just p -> pure (LeiosPossessionProof p)
+    pure $ LeiosKey {leiosPubKey, leiosPossessionProof}
+
+-- TODO Should be moved to cardano-base
+newtype LeiosPubKey = LeiosPubKey
+  { unLeiosPubKey :: VerKeyDSIGN BLS12381MinSigDSIGN
+  }
+  deriving (Show, Generic, Eq, NoThunks, NFData)
+
+instance Ord LeiosPubKey where
+  compare a b =
+    compare
+      (rawSerialiseVerKeyDSIGN (unLeiosPubKey a))
+      (rawSerialiseVerKeyDSIGN (unLeiosPubKey b))
+
+-- TODO Should be moved to cardano-base
+newtype LeiosPossessionProof = LeiosPossessionProof
+  { unLeiosPossessionProof :: PossessionProofDSIGN BLS12381MinSigDSIGN
+  }
+  deriving (Show, Generic, Eq, NoThunks, NFData)
+
+instance Ord LeiosPossessionProof where
+  compare a b =
+    compare
+      (rawSerialisePossessionProofDSIGN (unLeiosPossessionProof a))
+      (rawSerialisePossessionProofDSIGN (unLeiosPossessionProof b))
+
+instance EncCBOR LeiosKey where
+  encCBOR lk =
+    encodeListLen 2
+      <> encodeVerKeyDSIGN (unLeiosPubKey $ leiosPubKey lk)
+      <> encodePossessionProofDSIGN (unLeiosPossessionProof $ leiosPossessionProof lk)
+
+instance DecCBOR LeiosKey where
+  decCBOR = decodeRecordNamed "LeiosKey" (const 2) $ do
+    pubKey <- LeiosPubKey <$> decodeVerKeyDSIGN
+    proof <- LeiosPossessionProof <$> decodePossessionProofDSIGN
+    pure LeiosKey {leiosPubKey = pubKey, leiosPossessionProof = proof}
 
 sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
@@ -447,7 +541,7 @@ sppMetadataL :: Lens' StakePoolParams (StrictMaybe PoolMetadata)
 sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
 
 instance Default StakePoolParams where
-  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def
+  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def def
 
 instance NoThunks StakePoolParams
 
@@ -465,6 +559,7 @@ instance ToJSON StakePoolParams where
       , "owners" .= sppOwners spp
       , "relays" .= sppRelays spp
       , "metadata" .= sppMetadata spp
+      , "leiosKey" .= sppLeiosKey spp
       ]
 
 instance FromJSON StakePoolParams where
@@ -482,6 +577,7 @@ instance FromJSON StakePoolParams where
         <*> obj .: "owners"
         <*> obj .: "relays"
         <*> obj .: "metadata"
+        <*> obj .:? "leiosKey" .!= SNothing
 
 type PoolParams = StakePoolParams
 
@@ -495,9 +591,31 @@ pattern PoolParams ::
   Set (KeyHash Staking) ->
   StrictSeq StakePoolRelay ->
   StrictMaybe PoolMetadata ->
+  StrictMaybe LeiosKey ->
   PoolParams
-pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, ppOwners, ppRelays, ppMetadata} =
-  StakePoolParams ppId ppVrf ppPledge ppCost ppMargin ppAccountAddress ppOwners ppRelays ppMetadata
+pattern PoolParams
+  { ppId
+  , ppVrf
+  , ppPledge
+  , ppCost
+  , ppMargin
+  , ppAccountAddress
+  , ppOwners
+  , ppRelays
+  , ppMetadata
+  , ppLeiosKey
+  } =
+  StakePoolParams
+    ppId
+    ppVrf
+    ppPledge
+    ppCost
+    ppMargin
+    ppAccountAddress
+    ppOwners
+    ppRelays
+    ppMetadata
+    ppLeiosKey
 
 {-# COMPLETE PoolParams #-}
 
@@ -513,6 +631,7 @@ pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, p
   , ppOwners
   , ppRelays
   , ppMetadata
+  , ppLeiosKey
   "In favor of fields with `spp*` prefix"
   #-}
 
@@ -565,6 +684,10 @@ encodeStakePoolParamsFlat poolParams =
     <> encCBOR (sppOwners poolParams)
     <> encCBOR (sppRelays poolParams)
     <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
+    <> ifEncodingVersionAtLeast
+      (natVersion @12)
+      (encCBOR (sppLeiosKey poolParams))
+      mempty
 
 instance DecCBOR StakePoolParams where
   decCBOR = do
@@ -585,6 +708,11 @@ decodeStakePoolParamsFlat = do
   sppOwners <- decCBOR
   sppRelays <- decCBOR
   sppMetadata <- decodeNullStrictMaybe decCBOR
+  sppLeiosKey <-
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      decCBOR
+      (pure SNothing)
   pure $
     StakePoolParams
       { sppId
@@ -596,7 +724,10 @@ decodeStakePoolParamsFlat = do
       , sppOwners
       , sppRelays
       , sppMetadata
+      , sppLeiosKey
       }
 
 stakePoolParamsListLen :: Version -> Word
-stakePoolParamsListLen _v = 9
+stakePoolParamsListLen v
+  | v >= natVersion @12 = 10
+  | otherwise = 9
