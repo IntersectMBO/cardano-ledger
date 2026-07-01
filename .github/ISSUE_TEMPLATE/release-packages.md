@@ -45,6 +45,7 @@ $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <C
   libs/cardano-ledger-api \
   libs/cardano-ledger-binary \
   libs/cardano-ledger-core \
+  libs/cardano-protocol \
   libs/cardano-protocol-tpraos \
   libs/non-integral \
   libs/small-steps \
