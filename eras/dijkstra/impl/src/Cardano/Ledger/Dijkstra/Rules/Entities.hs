@@ -22,7 +22,7 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
-import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
@@ -197,23 +197,8 @@ dijkstraEntitiesTransition = do
   runTest $ Conway.validateWithdrawalsDelegated accounts tx
 
   network <- liftSTS $ asks networkId
-  if legacyMode
-    then do
-      let (missingWithdrawals, incompleteWithdrawals) =
-            case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-              Nothing -> (Map.empty, Map.empty)
-              Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
-      failOnNonEmptyMap missingWithdrawals $
-        injectFailure . WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
-      failOnNonEmptyMap incompleteWithdrawals $ injectFailure . IncompleteWithdrawals
-    else do
-      let (missingWithdrawals, exceededWithdrawals) =
-            case withdrawalsThatExceedAccountBalance withdrawals network accounts of
-              Nothing -> (Map.empty, Map.empty)
-              Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
-      failOnNonEmptyMap missingWithdrawals $
-        injectFailure . WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
-      failOnNonEmptyMap exceededWithdrawals $ injectFailure . WithdrawalAmountsExceedAccountBalances
+
+  validateWithdrawals legacyMode network withdrawals accounts
 
   let certStateBeforeCerts =
         certState
@@ -229,6 +214,33 @@ dijkstraEntitiesTransition = do
     injectFailure . DirectDepositsToMissingAccounts
 
   pure $ certStateAfterCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
+
+validateWithdrawals ::
+  EraAccounts era =>
+  Bool ->
+  Network ->
+  Withdrawals ->
+  Accounts era ->
+  Rule (ENTITIES era) ctx ()
+validateWithdrawals legacyMode network withdrawals accounts = do
+  missingWithdrawals <-
+    if legacyMode
+      then do
+        let (missingWithdrawals, incompleteWithdrawals) =
+              case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+                Nothing -> (Map.empty, Map.empty)
+                Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
+        failOnNonEmptyMap incompleteWithdrawals IncompleteWithdrawals
+        pure missingWithdrawals
+      else do
+        let (missingWithdrawals, exceededWithdrawals) =
+              case withdrawalsThatExceedAccountBalance withdrawals network accounts of
+                Nothing -> (Map.empty, Map.empty)
+                Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
+        failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
+        pure missingWithdrawals
+  failOnNonEmptyMap missingWithdrawals $
+    WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
