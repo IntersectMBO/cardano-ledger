@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,6 +11,8 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo () where
 
+import Cardano.Ledger.Alonzo.Tx
+import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Shelley.Rules (utxoEnvCertStateL)
 import Control.State.Transition.Extended (TRC (..))
@@ -42,3 +45,6 @@ instance ExecSpecRule "UTXO" ConwayEra where
     withSpecTransM (view utxoEnvCertStateL . uecUtxoEnv) . toSpecRep
 
   runAgdaRule = runFromAgdaFunction (Agda.utxoStep externalFunctions)
+
+instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
+  encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx

@@ -542,6 +542,3 @@ instance
             asatScriptsProvided `deepseq`
               asatPlutusLanguagesUsed `deepseq`
                 rnf asatPlutusScriptsWithContext
-
-instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
-  encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx
