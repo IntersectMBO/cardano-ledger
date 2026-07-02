@@ -58,4 +58,9 @@ overrideCostModels ::
   NewEpochState era
 overrideCostModels = \case
   Nothing -> id
-  Just cms -> nesEsL . curPParamsEpochStateL . ppCostModelsL %~ updateCostModels cms
+  -- The injected cost models must OVERRIDE the era-translated ones (including the
+  -- count-locked PlutusV1/PlutusV3 genesis fields), so a testnet/benchmark can carry
+  -- full cost models without an on-chain parameter update. `updateCostModels` lets its
+  -- SECOND argument win, so the injected `cms` must be passed second (via `flip`).
+  -- See IntersectMBO/cardano-ledger#5342.
+  Just cms -> nesEsL . curPParamsEpochStateL . ppCostModelsL %~ flip updateCostModels cms
