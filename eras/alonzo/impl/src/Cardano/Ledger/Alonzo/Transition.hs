@@ -58,4 +58,8 @@ overrideCostModels ::
   NewEpochState era
 overrideCostModels = \case
   Nothing -> id
-  Just cms -> nesEsL . curPParamsEpochStateL . ppCostModelsL %~ updateCostModels cms
+  -- Injected cost models override the era-translated ones (the fixed-length
+  -- PlutusV1/PlutusV3 genesis fields), so a testnet can carry full cost models
+  -- without an on-chain parameter update. `cms` is passed second because
+  -- `updateCostModels` lets its second argument win. See #5342 and #5896.
+  Just cms -> nesEsL . curPParamsEpochStateL . ppCostModelsL %~ flip updateCostModels cms
