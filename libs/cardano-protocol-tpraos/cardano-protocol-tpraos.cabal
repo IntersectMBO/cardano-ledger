@@ -15,6 +15,7 @@ source-repository head
 library
   exposed-modules:
     Cardano.Protocol.TPraos.API
+    Cardano.Protocol.TPraos.BHeader
     Cardano.Protocol.TPraos.Rules.OCert
     Cardano.Protocol.TPraos.Rules.Overlay
     Cardano.Protocol.TPraos.Rules.Prtcl
