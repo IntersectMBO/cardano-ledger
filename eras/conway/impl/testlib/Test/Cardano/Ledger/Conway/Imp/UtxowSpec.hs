@@ -54,7 +54,7 @@ spec ::
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
-  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
   -- TODO: Re-enable after issue is resolved, by removing this override
   disableInConformanceIt "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
     fixedTx <- fixupTx =<< setupBadPPViewHashTx
@@ -71,29 +71,33 @@ spec = describe "UTXOW" $ do
               , mismatchExpected = scriptIntegrityHash
               }
         ]
-  it "Fails with PPViewHashesDontMatchInformative after PV 11" . whenMajorVersionAtLeast @11 $ do
-    fixedTx <- fixupTx =<< setupBadPPViewHashTx
-    pp <- getsPParams id
-    badScriptIntegrityHash <- arbitrary
-    let
-      langView = [getLanguageView pp PlutusV2]
-      scriptIntegrity = ScriptIntegrity @era redeemers dats langView
-      redeemers = fixedTx ^. witsTxL . rdmrsTxWitsL
-      dats = fixedTx ^. witsTxL . datsTxWitsL
-    tx <- substituteIntegrityHashAndFixWits badScriptIntegrityHash fixedTx
-    scriptIntegrityHash <- computeScriptIntegrityHash tx
-    let
-      mismatch =
-        Mismatch
-          { mismatchSupplied = badScriptIntegrityHash
-          , mismatchExpected = scriptIntegrityHash
-          }
-    impAnn "Submit a transaction with an invalid script integrity hash"
-      . withNoFixup
-      $ submitFailingTx
-        tx
-        [ injectFailure $ ScriptIntegrityHashMismatch mismatch (SJust $ originalBytes scriptIntegrity)
-        ]
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Fails with PPViewHashesDontMatchInformative after PV 11"
+    . whenMajorVersionAtLeast @11
+    $ do
+      fixedTx <- fixupTx =<< setupBadPPViewHashTx
+      pp <- getsPParams id
+      badScriptIntegrityHash <- arbitrary
+      let
+        langView = [getLanguageView pp PlutusV2]
+        scriptIntegrity = ScriptIntegrity @era redeemers dats langView
+        redeemers = fixedTx ^. witsTxL . rdmrsTxWitsL
+        dats = fixedTx ^. witsTxL . datsTxWitsL
+      tx <- substituteIntegrityHashAndFixWits badScriptIntegrityHash fixedTx
+      scriptIntegrityHash <- computeScriptIntegrityHash tx
+      let
+        mismatch =
+          Mismatch
+            { mismatchSupplied = badScriptIntegrityHash
+            , mismatchExpected = scriptIntegrityHash
+            }
+      impAnn "Submit a transaction with an invalid script integrity hash"
+        . withNoFixup
+        $ submitFailingTx
+          tx
+          [ injectFailure $ ScriptIntegrityHashMismatch mismatch (SJust $ originalBytes scriptIntegrity)
+          ]
   it "Transaction containing SPO vote but no witness for it fails" $ do
     spoKh <- freshKeyHash
     registerPool spoKh
