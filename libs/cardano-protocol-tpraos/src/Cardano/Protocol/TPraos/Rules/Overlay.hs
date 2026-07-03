@@ -56,7 +56,7 @@ import Cardano.Ledger.State (
   PoolDistr (..),
  )
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (..),
   BHeader (BHeader),
   checkLeaderValue,

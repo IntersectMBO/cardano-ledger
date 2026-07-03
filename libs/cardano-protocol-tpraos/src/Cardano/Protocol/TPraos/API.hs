@@ -91,7 +91,7 @@ import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo, isOverlaySlot)
 import Cardano.Ledger.State (EraCertState (..), EraGov, PoolDistr (..), individualPoolStake)
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHBody,
   BHeader,
   bhbody,

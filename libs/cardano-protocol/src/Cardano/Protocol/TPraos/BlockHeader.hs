@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Cardano.Protocol.TPraos.BHeader (
+module Cardano.Protocol.TPraos.BlockHeader (
   HashHeader (..),
   PrevHash (..),
   BHeader (BHeader, ..),

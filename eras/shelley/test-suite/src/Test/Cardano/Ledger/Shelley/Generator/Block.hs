@@ -22,7 +22,7 @@ import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.Crypto (VRF)
 import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHeader (..),
   LastAppliedBlock (..),
   hashHeaderToNonce,

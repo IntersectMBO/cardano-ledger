@@ -26,7 +26,7 @@ import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
 import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (BHBody),
   BHeader (BHeader),
   PrevHash (BlockHash, GenesisHash),

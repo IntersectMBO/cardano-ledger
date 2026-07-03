@@ -33,7 +33,7 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
+import Cardano.Protocol.TPraos.BlockHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq

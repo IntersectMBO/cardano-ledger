@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.Rules (
   ledgerPpL,
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHeader (..),
   bhbody,
   bheaderSlotNo,

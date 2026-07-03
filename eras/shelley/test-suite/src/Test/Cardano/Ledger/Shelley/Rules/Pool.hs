@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (POOL, PoolEvent, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
+import Cardano.Protocol.TPraos.BlockHeader (bhbody, bheaderSlotNo)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)

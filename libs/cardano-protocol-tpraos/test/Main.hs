@@ -8,7 +8,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Protocol.Crypto (StandardCrypto)
-import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Cardano.Protocol.TPraos.BlockHeader (BHeader)
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Common

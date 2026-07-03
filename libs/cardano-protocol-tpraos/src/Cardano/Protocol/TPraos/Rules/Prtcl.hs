@@ -41,7 +41,7 @@ import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
 import Cardano.Ledger.State (PoolDistr)
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (..),
   BHeader (..),
   LastAppliedBlock (..),
