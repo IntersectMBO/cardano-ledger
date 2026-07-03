@@ -367,7 +367,9 @@ spec = describe "DELEG" $ do
       expectNotDelegatedVote cred
       expectNotDelegatedToAnyPool cred
 
-    it "Delegate vote and unregister after hardfork" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1249
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Delegate vote and unregister after hardfork" $ do
       let
         bootstrapVer = ProtVer (natVersion @9) 0
         setProtVer pv = modifyNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ pv
