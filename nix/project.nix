@@ -1,7 +1,7 @@
 { inputs, system, pkgs, lib, }:
 
 let
-  inherit (import ./utils.nix) defaultCompiler;
+  inherit (import ./utils.nix { inherit pkgs lib; }) defaultCompiler;
   # We use cabalProject' to ensure we don't build the plan for
   # all systems.
 in pkgs.haskell-nix.cabalProject' ({ config, ... }: {

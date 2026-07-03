@@ -1,6 +1,11 @@
 { inputs, system, nixpkgs, lib, config, }:
 
-let inherit (import ./utils.nix) defaultCompiler fourmoluVersion nixfmtVersion;
+let
+  inherit (import ./utils.nix {
+    pkgs = nixpkgs;
+    inherit lib;
+  })
+    defaultCompiler fourmoluVersion nixfmtVersion;
 in {
   # Due to plutus-tx-plugin being a bit special, we need to augment the default package selection.
   packages = ps:

@@ -4,7 +4,11 @@ let
   nixpkgs = import ./pkgs.nix { inherit inputs system; };
   inherit (nixpkgs) lib;
 
-  inherit (import ./utils.nix) fourmoluVersion cabalGildVersion nixfmtVersion;
+  utils = import ./utils.nix {
+    pkgs = nixpkgs;
+    inherit lib;
+  };
+  inherit (utils) fourmoluVersion cabalGildVersion nixfmtVersion;
 
   cabalProject = import ./project.nix {
     inherit inputs system lib;
@@ -20,13 +24,13 @@ let
 in lib.recursiveUpdate flake rec {
   project = cabalProject;
   # add a required job, that's basically all hydraJobs.
-  hydraJobs = nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates {
-    ciJobs = flake.hydraJobs // {
+  hydraJobs = {
+    required = utils.makeHydraRequiredJob (flake.hydraJobs // {
       inherit (legacyPackages) doc specs;
 
       # This ensure hydra send a status for the required job (even if no change other than commit hash)
       revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
-    };
+    });
   };
   legacyPackages = rec {
     inherit cabalProject nixpkgs;
