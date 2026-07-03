@@ -30,6 +30,7 @@ module Cardano.Ledger.Coin (
   decodePositiveCoin,
   compactCoinOrError,
   addCompactCoin,
+  subtractCompactCoin,
   sumCompactCoin,
   partialCompactCoinL,
   -- NonZero helpers
@@ -203,6 +204,18 @@ addCompactCoin (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
 
 sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
 sumCompactCoin = F.foldl' addCompactCoin (CompactCoin 0)
+
+-- | /Warning/ - Be careful about integer overflow.
+-- Amount to be subtracted must be smaller or equal to the value that is being adjusted.
+-- This function does not protect against this.
+subtractCompactCoin ::
+  -- | Amount to be subtracted
+  CompactForm Coin ->
+  -- | Value from which it will be subtracted
+  CompactForm Coin ->
+  CompactForm Coin
+subtractCompactCoin (CompactCoin amount) (CompactCoin source) =
+  CompactCoin $ subtract amount source
 
 newtype CoinPerByte = CoinPerByte {unCoinPerByte :: CompactForm Coin}
   deriving stock (Eq, Ord)

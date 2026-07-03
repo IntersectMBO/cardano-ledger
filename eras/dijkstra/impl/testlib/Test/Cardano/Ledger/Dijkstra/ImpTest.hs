@@ -33,6 +33,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure (..),
   DijkstraMempoolPredFailure,
   DijkstraUtxoPredFailure,
+  EntitiesPredFailure (..),
  )
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
@@ -96,6 +97,7 @@ class
   ( ConwayEraImp era
   , DijkstraEraTest era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" EntitiesPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraUtxoPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
@@ -107,7 +109,10 @@ instance DijkstraEraImp DijkstraEra
 
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegPredFailure DijkstraEra where
-  injectFailure = DijkstraCertsFailure . injectFailure
+  injectFailure = DijkstraEntitiesFailure . injectFailure @"ENTITIES"
+
+instance InjectRuleFailure "ENTITIES" Shelley.ShelleyDelegPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
 
 instance InjectRuleFailure "CERTS" Shelley.ShelleyDelegPredFailure DijkstraEra where
   injectFailure = Conway.CertFailure . injectFailure

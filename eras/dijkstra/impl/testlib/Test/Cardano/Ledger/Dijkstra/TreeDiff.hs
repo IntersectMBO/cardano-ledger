@@ -198,18 +198,26 @@ instance
 instance
   ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , ToExpr (PredicateFailure (EraRule "GOV" era))
-  , ToExpr (PredicateFailure (EraRule "CERTS" era))
+  , ToExpr (PredicateFailure (EraRule "ENTITIES" era))
   , ToExpr (PredicateFailure (EraRule "SUBLEDGERS" era))
   ) =>
   ToExpr (DijkstraLedgerPredFailure era)
 
 instance
   ( ToExpr (Event (EraRule "UTXOW" era))
-  , ToExpr (Event (EraRule "CERTS" era))
+  , ToExpr (Event (EraRule "ENTITIES" era))
   , ToExpr (Event (EraRule "GOV" era))
   , ToExpr (Event (EraRule "SUBLEDGERS" era))
   ) =>
   ToExpr (DijkstraLedgerEvent era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "CERTS" era)) =>
+  ToExpr (EntitiesPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "CERTS" era)) =>
+  ToExpr (EntitiesEvent era)
 
 instance
   ( ToExpr (Value era)
@@ -255,18 +263,26 @@ instance
   ToExpr (Event (EraRule "SUBCERT" era)) =>
   ToExpr (DijkstraSubCertsEvent era)
 
+instance
+  ToExpr (PredicateFailure (EraRule "SUBCERTS" era)) =>
+  ToExpr (SubEntitiesPredFailure era)
+
+instance
+  ToExpr (Event (EraRule "SUBCERTS" era)) =>
+  ToExpr (SubEntitiesEvent era)
+
 instance ToExpr (DijkstraSubDelegPredFailure era)
 
 instance
   ( ToExpr (PredicateFailure (EraRule "SUBGOV" era))
-  , ToExpr (PredicateFailure (EraRule "SUBCERTS" era))
+  , ToExpr (PredicateFailure (EraRule "SUBENTITIES" era))
   , ToExpr (PredicateFailure (EraRule "SUBUTXOW" era))
   ) =>
   ToExpr (DijkstraSubLedgerPredFailure era)
 
 instance
   ( ToExpr (Event (EraRule "SUBGOV" era))
-  , ToExpr (Event (EraRule "SUBCERTS" era))
+  , ToExpr (Event (EraRule "SUBENTITIES" era))
   , ToExpr (Event (EraRule "SUBUTXOW" era))
   ) =>
   ToExpr (DijkstraSubLedgerEvent era)

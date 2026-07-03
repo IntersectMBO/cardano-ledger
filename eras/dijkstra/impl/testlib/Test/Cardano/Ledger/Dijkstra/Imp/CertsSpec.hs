@@ -13,12 +13,17 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (DijkstraLedgerPredFailure (..), DijkstraUtxoPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules (
+  DijkstraUtxoPredFailure (..),
+  EntitiesPredFailure (..),
+ )
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NE
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "CERTS" $ do
@@ -40,9 +45,9 @@ spec = describe "CERTS" $ do
             WithdrawalsExceedAccountBalance @era $
               NE.singleton accountAddress $
                 Mismatch (Coin 20) mempty
-        , injectFailure . DijkstraWithdrawalsMissingAccounts @era $
+        , injectFailure (WdrlNotDelegatedToDRep [stakeKey])
+        , injectFailure . WithdrawalsMissingAccounts @era $
             Withdrawals [(accountAddress, Coin 20)]
-        , injectFailure (DijkstraWdrlNotDelegatedToDRep [stakeKey])
         ]
       (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
       void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
@@ -54,9 +59,9 @@ spec = describe "CERTS" $ do
                 .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
       submitFailingTx
         tx2
-        [ injectFailure . DijkstraWithdrawalsMissingAccounts @era $
+        [ injectFailure (WdrlNotDelegatedToDRep [stakeKey])
+        , injectFailure . WithdrawalsMissingAccounts @era $
             Withdrawals [(accountAddress, zero)]
-        , injectFailure (DijkstraWdrlNotDelegatedToDRep [stakeKey])
         ]
 
     it "Withdrawing the wrong amount" $ do
@@ -80,22 +85,32 @@ spec = describe "CERTS" $ do
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         , injectFailure $
-            DijkstraIncompleteWithdrawals @era $
+            WithdrawalAmountsExceedAccountBalances @era $
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         ]
 
+      -- in legacy mode, we produce `IncompleteWithdrawals` failure
+      txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
       submitFailingTx
         ( mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
                 .~ Withdrawals
                   [(accountAddress1, zero)]
+              & inputsTxBodyL .~ [txIn]
         )
-        [ injectFailure . DijkstraIncompleteWithdrawals @era $
+        [ injectFailure . IncompleteWithdrawals @era $
             NE.singleton accountAddress1 $
               Mismatch zero reward1
         ]
+
+      submitTx_ $
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals
+                [(accountAddress1, zero)]
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
     setupAccountAddress = do

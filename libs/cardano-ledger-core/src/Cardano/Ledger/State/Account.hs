@@ -24,10 +24,15 @@ module Cardano.Ledger.State.Account (
   sumDepositsAccounts,
   addToBalanceAccounts,
   withdrawalsThatDoNotDrainAccounts,
+  withdrawalsThatExceedAccountBalance,
   drainAccounts,
+  applyWithdrawals,
+  applyDirectDeposits,
+  directDepositsMissingAccounts,
   removeStakePoolDelegations,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network, Relation (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
@@ -188,9 +193,6 @@ lookupStakePoolDelegation cred accounts =
 -- withdrawals match the respective balances exactly. It returns a 2-tuple where
 -- the `fst` is withdrawals with missing account addresses or the wrong network,
 -- and `snd` is incomplete withdrawals.
---
--- NOTE: We simply `checkBadWithdrawals` to avoid allocating new variables for
--- the most likely case.
 withdrawalsThatDoNotDrainAccounts ::
   EraAccounts era =>
   Withdrawals ->
@@ -201,55 +203,144 @@ withdrawalsThatDoNotDrainAccounts ::
   -- incomplete withdrawal = that which does not withdraw the exact account
   -- balance.
   Maybe (Withdrawals, Map AccountAddress (Mismatch RelEQ Coin))
-withdrawalsThatDoNotDrainAccounts (Withdrawals withdrawals) networkId accounts
-  -- @withdrawals@ is small and @accounts@ big, better to traverse the former than the latter.
-  | Map.foldrWithKey checkBadWithdrawals True withdrawals = Nothing
+withdrawalsThatDoNotDrainAccounts =
+  categorizeWithdrawals
+    ( \withdrawalAmount account ->
+        withdrawalAmount == fromCompact (account ^. balanceAccountStateL)
+    )
+
+withdrawalsThatExceedAccountBalance ::
+  EraAccounts era =>
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  Maybe (Withdrawals, Map AccountAddress (Mismatch RelLTEQ Coin))
+withdrawalsThatExceedAccountBalance =
+  categorizeWithdrawals
+    ( \withdrawalAmount account ->
+        withdrawalAmount <= fromCompact (account ^. balanceAccountStateL)
+    )
+
+categorizeWithdrawals ::
+  EraAccounts era =>
+  (Coin -> AccountState era -> Bool) ->
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  Maybe (Withdrawals, Map AccountAddress (Mismatch r Coin))
+categorizeWithdrawals amountAcceptable (Withdrawals withdrawals) networkId accounts
+  -- We simply `checkBadWithdrawals` to avoid allocating new variables for the most likely case
+  | Map.foldrWithKey' checkBadWithdrawals True withdrawals = Nothing
   | otherwise =
       Just $
         first Withdrawals $
-          Map.foldrWithKey collectBadWithdrawals (Map.empty, Map.empty) withdrawals
+          Map.foldrWithKey' collectBadWithdrawals (Map.empty, Map.empty) withdrawals
   where
     checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
       noBadWithdrawals && isGoodWithdrawal accountAddress withdrawalAmount
+    isGoodWithdrawal accountAddress withdrawalAmount =
+      maybe False (amountAcceptable withdrawalAmount) (lookupAccount accountAddress)
     collectBadWithdrawals accountAddress withdrawalAmount accum@(!_, !_) =
       case lookupAccount accountAddress of
         Nothing -> first (Map.insert accountAddress withdrawalAmount) accum
         Just account
-          | isBalanceZero withdrawalAmount account -> accum
+          | amountAcceptable withdrawalAmount account -> accum
           | otherwise ->
               second
-                ( Map.insert accountAddress $
-                    Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL)
+                ( Map.insert
+                    accountAddress
+                    $ Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL)
                 )
                 accum
-    isGoodWithdrawal accountAddress withdrawalAmount =
-      maybe False (isBalanceZero withdrawalAmount) (lookupAccount accountAddress)
-    isBalanceZero withdrawalAmount accountState =
-      withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL)
     lookupAccount (AccountAddress aaNetworkId (AccountId credential))
       | aaNetworkId == networkId = lookupAccountState credential accounts
       | otherwise = Nothing
+{-# INLINE categorizeWithdrawals #-}
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
 --
 -- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
 -- `NetworkId`. Nor there are any checks that amounts in withdrawals match up the balance in the
--- corresponding accounts. Use `withdrawalsThatDoNotDrainAccounts` to verify that calling
--- `drainAccounts` is actually safe on the supplied arguments
+-- corresponding accounts.
+-- Verify that it's safe to call on the supplied arguments before calling it.
 drainAccounts ::
   EraAccounts era =>
   Withdrawals ->
   Accounts era ->
   Accounts era
-drainAccounts (Withdrawals withdrawalsMap) accounts =
-  accounts
-    & accountsMapL %~ \accountsMap ->
-      Map.foldrWithKey'
-        ( \(AccountAddress _ (AccountId credential)) _withdrawalAmount ->
-            Map.adjust (balanceAccountStateL .~ mempty) credential
-        )
-        accountsMap
-        withdrawalsMap
+drainAccounts (Withdrawals wdrls) = updateAccountBalances (\_ _ -> mempty) wdrls
+
+-- | Subtract each withdrawal amount from the matching account balance.
+--
+-- /Note/ - No checks on the accounts or amount being withdrawn are made in this function.
+-- Verify that it's safe to call on the supplied arguments before calling it.
+applyWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Accounts era
+applyWithdrawals (Withdrawals wdrls) =
+  updateAccountBalances
+    (\amount account -> subtractCompactCoin amount (account ^. balanceAccountStateL))
+    wdrls
+
+-- | Add each direct-deposit amount to the matching account balance.
+--
+-- /Note/ - There are no checks that direct deposits mention only registered accounts.
+applyDirectDeposits ::
+  EraAccounts era =>
+  DirectDeposits ->
+  Accounts era ->
+  Accounts era
+applyDirectDeposits (DirectDeposits dd) =
+  updateAccountBalances
+    (\amount account -> addCompactCoin amount (account ^. balanceAccountStateL))
+    dd
+
+-- | Fold over a `Map AccountAddress Coin`, applying the supplied balance update to each registered
+-- account. Skips entries whose credential is not present in `Accounts`.
+--
+-- /Note/ - There are no checks that entries mention only registered accounts with correct
+-- `NetworkId`. Callers must pre-validate before calling this function.
+updateAccountBalances ::
+  EraAccounts era =>
+  -- | Balance update: given a coin amount and the account, returns the new balance.
+  (CompactForm Coin -> AccountState era -> CompactForm Coin) ->
+  Map AccountAddress Coin ->
+  Accounts era ->
+  Accounts era
+updateAccountBalances updateBalance balanceMap =
+  accountsMapL %~ \accountsMap ->
+    Map.foldrWithKey'
+      ( \(AccountAddress _ (AccountId credential)) amount ->
+          Map.adjust
+            ( \account ->
+                account & balanceAccountStateL .~ updateBalance (compactCoinOrError amount) account
+            )
+            credential
+      )
+      accountsMap
+      balanceMap
+{-# INLINE updateAccountBalances #-}
+
+-- | Returns `Nothing` iff every credential targeted by the supplied
+-- `DirectDeposits` is a registered account. Otherwise it returns the subset of
+-- direct deposits whose target credential is not registered.
+directDepositsMissingAccounts ::
+  EraAccounts era =>
+  DirectDeposits ->
+  Accounts era ->
+  Maybe DirectDeposits
+directDepositsMissingAccounts (DirectDeposits dds) accounts
+  | Map.foldrWithKey' checkRegistered True dds = Nothing
+  | otherwise = Just $ DirectDeposits $ Map.foldrWithKey' collectMissing Map.empty dds
+  where
+    isRegistered (AccountAddress _ (AccountId credential)) =
+      isAccountRegistered credential accounts
+    checkRegistered addr _ acc = acc && isRegistered addr
+    collectMissing addr amount acc
+      | isRegistered addr = acc
+      | otherwise = Map.insert addr amount acc
 
 -- | Remove delegations of supplied credentials
 removeStakePoolDelegations ::
