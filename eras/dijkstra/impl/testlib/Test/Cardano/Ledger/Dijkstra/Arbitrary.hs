@@ -109,6 +109,7 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> (choose (0, 4) >>= \n -> OMap.fromFoldable <$> vectorOf n arbitrary)
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU

@@ -129,6 +129,7 @@ transaction_body =
   , ? 21 : coin                            ; current treasury value
   , ? 22 : positive_coin                   ; donation
   , ? 23 : sub_transactions                ; sub-transactions (NEW)
+  , ? 24 : required_top_level_guards       ; required top-level guards
   , ? 25 : direct_deposits                 ; direct deposits
   , ? 26 : account_balance_intervals       ; account balance intervals
   }
