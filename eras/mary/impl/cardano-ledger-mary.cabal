@@ -122,7 +122,9 @@ library cddl
   build-depends:
     base,
     cardano-ledger-allegra:cddl,
+    cardano-ledger-core:cddl,
     cardano-ledger-mary,
+    heredoc,
 
 executable generate-cddl
   main-is: Main.hs

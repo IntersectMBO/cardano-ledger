@@ -21,9 +21,17 @@ module Cardano.Ledger.Mary.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Allegra.HuddleSpec
+import Cardano.Ledger.Huddle.Gen (
+  faultyBool,
+  genMapTerm,
+  unwrapSingle,
+  validateArrayTerm,
+  validateMapTerm,
+ )
 import Cardano.Ledger.Mary (MaryEra)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import Text.Heredoc
 import Prelude hiding ((/))
 
 maryCDDL :: Huddle
@@ -43,13 +51,30 @@ maryMultiasset ::
   a ->
   GRuleCall
 maryMultiasset pname p =
-  binding $ \x ->
-    pname
-      =.= mp
-        [ 0
-            <+ asKey (huddleRule @"policy_id" p)
-            ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
-        ]
+  binding $
+    \x ->
+      comment
+        [str| There is an additional constraint on multiassets that cannot be 
+            | expressed in CDDL.
+            |]
+        . withCBORGen (generator x)
+        $ withValidator (validator x) rule
+  where
+    generator x = do
+      withinSizeLimits <- faultyBool True
+      kvs <- _
+      genMapTerm _
+    validator x term = do
+      sTerm <- unwrapSingle term
+      assetMap <- validateMapTerm sTerm
+      pure ()
+    rule =
+      pname
+        =.= mp
+          [ 0
+              <+ asKey (huddleRule @"policy_id" p)
+              ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
+          ]
 
 maryValueRule ::
   forall era.
