@@ -1604,6 +1604,77 @@ delayingActionsSpec =
         -- and nothing gets enacted
         getLastEnactedParameterChange `shouldReturn` SNothing
         getParameterChangeProposals `shouldReturn` Map.empty
+      it "A HardForkInitiation delays a TreasuryWithdrawal by one epoch" $
+        whenPostBootstrap $ do
+          committeeMembers' <- registerInitialCommittee
+          (dRep, _, _) <- setupSingleDRep 1_000_000
+          (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+          disableTreasuryExpansion
+          let withdrawalAmount = Coin 100_000_000
+          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ withdrawalAmount)
+          rewardAccount <- registerRewardAccountWithDeposit
+          -- Pass an epoch so the donation lands in the treasury before snapshotting
+          passEpoch
+          treasury <- getsNES treasuryL
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
+          curProtVer <- getProtVer
+          nextMajorVersion <- succVersion $ pvMajor curProtVer
+          let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+          hfGai <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+          twGai <- submitTreasuryWithdrawals [(rewardAccount, withdrawalAmount)]
+          -- Both have sufficient votes to ratify in their last epoch (gasExpiresAfter = E+1).
+          -- HF (priority 3) is ratified first: rsDelayed = True, TW blocked.
+          -- Expiry check: E+1 < E+1 = False, so TW survives into epoch E+2.
+          -- At epoch E+2: HF enacted. rsDelayed = False (fresh start), TW ratified.
+          -- TW enacted one epoch later than it would have been without the HF.
+          submitYesVoteCCs_ committeeMembers' hfGai
+          submitYesVote_ (StakePoolVoter spoC) hfGai
+          submitYesVote_ (DRepVoter dRep) hfGai
+          submitYesVoteCCs_ committeeMembers' twGai
+          submitYesVote_ (DRepVoter dRep) twGai
+          -- HF enacted; TW ratified at E+2 but not yet enacted
+          passNEpochs 2
+          getProtVer `shouldReturn` nextProtVer
+          getsNES treasuryL `shouldReturn` treasury
+          -- TW enacted one epoch after HF
+          passEpoch
+          getsNES treasuryL `shouldReturn` treasury <-> withdrawalAmount
+      it "Consecutive delaying actions do not give non-delaying actions extra epochs beyond gasExpiresAfter+1" $
+        whenPostBootstrap $
+          do
+            committeeMembers' <- registerInitialCommittee
+            (dRep, _, _) <- setupSingleDRep 1_000_000
+            -- With lifetime 1, gasExpiresAfter = startEpoch + 1 for all proposals.
+            -- At the first RATIFY (reCurrentEpoch = startEpoch+1):
+            --   cGai0 is enacted (rsDelayed = True), cGai1 and pGai are blocked.
+            --   gasExpiresAfter < reCurrentEpoch = (startEpoch+1) < (startEpoch+1) = False
+            --   so both survive into the next epoch.
+            -- At the second RATIFY (reCurrentEpoch = startEpoch+2):
+            --   cGai1 is enacted (rsDelayed = True), pGai is blocked.
+            --   gasExpiresAfter < reCurrentEpoch = (startEpoch+1) < (startEpoch+2) = True
+            --   so pGai expires -- the delay extension is NOT cumulative.
+            modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
+            cGai0 <- submitConstitution SNothing
+            cGai1 <- submitConstitution $ SJust (GovPurposeId cGai0)
+            pGai <-
+              submitParameterChange SNothing $
+                def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
+            submitYesVote_ (DRepVoter dRep) cGai0
+            submitYesVoteCCs_ committeeMembers' cGai0
+            submitYesVote_ (DRepVoter dRep) cGai1
+            submitYesVoteCCs_ committeeMembers' cGai1
+            submitYesVote_ (DRepVoter dRep) pGai
+            submitYesVoteCCs_ committeeMembers' pGai
+            -- cGai0 enacted; cGai1 and pGai blocked but not expired (E+1 < E+1 = False)
+            passNEpochs 2
+            getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai0)
+            getLastEnactedParameterChange `shouldReturn` SNothing
+            -- cGai1 enacted; pGai blocked and now expired (E+1 < E+2 = True)
+            -- The second consecutive delay does NOT grant pGai another surviving epoch.
+            passEpoch
+            getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai1)
+            getLastEnactedParameterChange `shouldReturn` SNothing
+            getParameterChangeProposals `shouldReturn` Map.empty
       it "proposals to update the committee get delayed if the expiration exceeds the max term" $ whenPostBootstrap $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
