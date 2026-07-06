@@ -36,7 +36,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Credential (Credential, credScriptHash)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBUTXOW,
@@ -46,6 +46,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
+  malformedGuardDatums,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
@@ -57,9 +58,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -207,32 +206,8 @@ validateGuardDatums ::
   ScriptsProvided era ->
   TxBody SubTx era ->
   Test (DijkstraSubUtxowPredFailure era)
-validateGuardDatums (ScriptsProvided scripts) txBody =
-  failureOnNonEmptySet malformed SubMalformedGuardDatums
-  where
-    malformed =
-      Map.foldlWithKey' accum mempty (txBody ^. requiredTopLevelGuardsL)
-    accum acc cred mbDatum =
-      case credScriptHash cred of
-        Nothing ->
-          -- Key hash: datum must be SNothing
-          case mbDatum of
-            SNothing -> acc
-            SJust _ -> Set.insert cred acc
-        Just scriptHash ->
-          case Map.lookup scriptHash scripts of
-            Just script
-              | isNativeScript script ->
-                  -- Native script: datum must be SNothing
-                  case mbDatum of
-                    SNothing -> acc
-                    SJust _ -> Set.insert cred acc
-              | otherwise ->
-                  -- Plutus script: datum must be SJust
-                  case mbDatum of
-                    SJust _ -> acc
-                    SNothing -> Set.insert cred acc
-            Nothing -> acc
+validateGuardDatums scriptsProvided txBody =
+  failureOnNonEmptySet (malformedGuardDatums scriptsProvided txBody) SubMalformedGuardDatums
 
 dijkstraSubUtxowTransition ::
   forall era.
@@ -381,3 +356,4 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
   ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
   MissingRequiredGuards _ -> error "Impossible: `MissingRequiredGuards` for SUBUTXOW"
+  MalformedGuardDatums _ -> error "Impossible: `MalformedGuardDatums` for SUBUTXOW"
