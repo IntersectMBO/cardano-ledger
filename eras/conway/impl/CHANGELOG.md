@@ -62,6 +62,7 @@
 
 ### cddl
 
+* Use non-empty list instead of `nonempty_set` for fields 0 (`vkey_witness`), 1 (`native_script`), 2 (`bootstrap_witness`), 4 (`plutus_data`) in `transaction_witness_set` to match decoder behavior pre-Dijkstra
 * Change the second argument of `mkMaybeTaggedSet` to `Int`
 * Add `generateMaybeTaggedSet`
 * Extend `constr` CDDL rule to include tags 1280–1400 for Plutus `Data` constructor indexes

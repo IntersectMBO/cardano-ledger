@@ -758,15 +758,17 @@ constitution = [anchor, guardrails_script_hash/ nil]
 info_action = 6
 
 transaction_witness_set =
-  { ? 0 : nonempty_set<vkeywitness>
-  , ? 1 : nonempty_set<native_script>
-  , ? 2 : nonempty_set<bootstrap_witness>
+  { ? 0 : nonempty_list<vkeywitness>
+  , ? 1 : nonempty_list<native_script>
+  , ? 2 : nonempty_list<bootstrap_witness>
   , ? 3 : nonempty_set<plutus_v1_script>
-  , ? 4 : nonempty_set<plutus_data>
+  , ? 4 : nonempty_list<plutus_data>
   , ? 5 : redeemers
   , ? 6 : nonempty_set<plutus_v2_script>
   , ? 7 : nonempty_set<plutus_v3_script>
   }
+
+nonempty_list<a0> = #6.258([+ a0])/ [+ a0]
 
 vkeywitness = [vkey, signature]
 
