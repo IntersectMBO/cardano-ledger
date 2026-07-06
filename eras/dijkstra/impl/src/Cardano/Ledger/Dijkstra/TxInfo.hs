@@ -89,7 +89,8 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Strict (Map)
+import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import Data.Proxy (Proxy (..))
@@ -114,7 +115,7 @@ data DijkstraContextError era
   | -- | Attempt to use PlutusV1-V3 with script hashes in guards will result in this failure
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
-    RequiredTopLevelGuardsNotSupported (Map (Credential Guard) (StrictMaybe (Data era)))
+    RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
   deriving (Generic)
 
 deriving instance
@@ -447,10 +448,12 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
     Left $
       inject $
         AccountBalanceIntervalsNotSupported @era accountBalanceIntervals
-  unless (Map.null requiredTopLevelGuards) $
-    Left $
-      inject $
-        RequiredTopLevelGuardsNotSupported @era requiredTopLevelGuards
+  case NEMap.fromMap requiredTopLevelGuards of
+    Nothing -> Right ()
+    Just neRequiredTopLevelGuards ->
+      Left $
+        inject $
+          RequiredTopLevelGuardsNotSupported @era neRequiredTopLevelGuards
   case NE.nonEmpty scriptHashes of
     Nothing -> Right ()
     Just neScriptHashes ->

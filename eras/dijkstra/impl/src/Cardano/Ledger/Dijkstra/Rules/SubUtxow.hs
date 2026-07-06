@@ -46,14 +46,14 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
-  malformedGuardDatums,
+  validateGuardDatums,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -184,7 +184,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   STS (SUBUTXOW era)
@@ -198,17 +198,6 @@ instance
 
   transitionRules = [dijkstraSubUtxowTransition @era]
 
--- | Validate that requiredTopLevelGuards datums are consistent with the credential type:
--- Plutus script credentials must have a datum, key/native script credentials must not.
-validateGuardDatums ::
-  forall era.
-  DijkstraEraTxBody era =>
-  ScriptsProvided era ->
-  TxBody SubTx era ->
-  Test (DijkstraSubUtxowPredFailure era)
-validateGuardDatums scriptsProvided txBody =
-  failureOnNonEmptySet (malformedGuardDatums scriptsProvided txBody) SubMalformedGuardDatums
-
 dijkstraSubUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
@@ -220,7 +209,7 @@ dijkstraSubUtxowTransition ::
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
@@ -356,4 +345,4 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
   ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
   MissingRequiredGuards _ -> error "Impossible: `MissingRequiredGuards` for SUBUTXOW"
-  MalformedGuardDatums _ -> error "Impossible: `MalformedGuardDatums` for SUBUTXOW"
+  MalformedGuardDatums x -> SubMalformedGuardDatums x

@@ -20,7 +20,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxow (
   UTXOW,
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
-  malformedGuardDatums,
+  validateGuardDatums,
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
@@ -56,7 +56,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPre
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Keys (VKey)
-import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
@@ -301,8 +301,7 @@ dijkstraUtxowTransition = do
   runTestOnSignal $ failureOnNonEmptySet missingGuards MissingRequiredGuards
 
   {- TODO: Fill in from the formal spec -}
-  runTest $
-    failureOnNonEmptySet (malformedGuardDatums scriptsProvided txBody) MalformedGuardDatums
+  runTest $ validateGuardDatums scriptsProvided txBody
 
   -- Pass through to UTXO sub-rule, carrying the original UTxO
   trans @(EraRule "UTXO" era) $
@@ -441,29 +440,38 @@ conwayToDijkstraUtxowPredFailure = \case
   Conway.MalformedReferenceScripts hs -> MalformedReferenceScripts hs
   Conway.ScriptIntegrityHashMismatch mm f -> ScriptIntegrityHashMismatch mm f
 
--- | Guard credentials whose datum presence in @requiredTopLevelGuards@ is
--- inconsistent with the credential kind: Plutus-script credentials must carry a
--- datum; key-hash and native-script credentials must not. Shared by the
--- top-level UTXOW rule and the sub-transaction SUBUTXOW rule.
-malformedGuardDatums ::
+-- | Validate that @requiredTopLevelGuards@ datums are consistent with the
+-- credential kind: Plutus-script credentials must carry a datum; key-hash and
+-- native-script credentials must not. Shared by the top-level UTXOW rule and the
+-- sub-transaction SUBUTXOW rule (injected there as a `DijkstraUtxowPredFailure`).
+validateGuardDatums ::
   DijkstraEraTxBody era =>
   ScriptsProvided era ->
   TxBody l era ->
-  Set (Credential Guard)
-malformedGuardDatums (ScriptsProvided scripts) txBody =
-  Map.foldlWithKey' accum mempty (txBody ^. requiredTopLevelGuardsL)
+  Test (DijkstraUtxowPredFailure era)
+validateGuardDatums (ScriptsProvided scripts) txBody =
+  failureOnNonEmptySet malformed MalformedGuardDatums
   where
+    malformed =
+      Map.foldlWithKey' accum mempty (txBody ^. requiredTopLevelGuardsL)
     accum acc cred mbDatum =
       case credScriptHash cred of
-        Nothing -> case mbDatum of
-          SNothing -> acc
-          SJust _ -> Set.insert cred acc
-        Just scriptHash -> case Map.lookup scriptHash scripts of
-          Just script
-            | isNativeScript script -> case mbDatum of
-                SNothing -> acc
-                SJust _ -> Set.insert cred acc
-            | otherwise -> case mbDatum of
-                SJust _ -> acc
-                SNothing -> Set.insert cred acc
-          Nothing -> acc
+        Nothing ->
+          -- Key hash: datum must be SNothing
+          case mbDatum of
+            SNothing -> acc
+            SJust _ -> Set.insert cred acc
+        Just scriptHash ->
+          case Map.lookup scriptHash scripts of
+            Just script
+              | isNativeScript script ->
+                  -- Native script: datum must be SNothing
+                  case mbDatum of
+                    SNothing -> acc
+                    SJust _ -> Set.insert cred acc
+              | otherwise ->
+                  -- Plutus script: datum must be SJust
+                  case mbDatum of
+                    SJust _ -> acc
+                    SNothing -> Set.insert cred acc
+            Nothing -> acc
