@@ -29,6 +29,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject, StrictMaybe (..))
+import Cardano.Ledger.Plutus.CostModels (CostModelsUpdate (..), updateCostModels)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (
   UTxO (..),
@@ -55,7 +56,9 @@ import Test.Cardano.Ledger.Plutus (testingCostModels)
 instance ShelleyEraImp BabbageEra where
   initNewEpochState =
     defaultInitNewEpochState
-      (nesEsL . curPParamsEpochStateL . ppCostModelsL <>~ testingCostModels [PlutusV2])
+      ( nesEsL . curPParamsEpochStateL . ppCostModelsL
+          %~ \old -> updateCostModels old (CostModelsUpdate (testingCostModels [PlutusV2]))
+      )
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = babbageFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess

@@ -78,8 +78,8 @@ mkCostModel' lang params =
 
 -- | Test CostModels for all available languages with zero values for all parameters
 zeroTestingCostModels :: HasCallStack => [Language] -> CostModels
-zeroTestingCostModels =
-  foldMap $ \lang -> mkCostModels (Map.singleton lang (zeroTestingCostModel lang))
+zeroTestingCostModels langs =
+  mkCostModels $ Map.fromList [(lang, zeroTestingCostModel lang) | lang <- langs]
 
 zeroTestingCostModel :: HasCallStack => Language -> CostModel
 zeroTestingCostModel lang = mkCostModelConst lang 0
@@ -95,8 +95,8 @@ zeroTestingCostModelV3 = zeroTestingCostModel PlutusV3
 
 -- | Test CostModels for all available languages
 testingCostModels :: HasCallStack => [Language] -> CostModels
-testingCostModels =
-  foldMap $ \lang -> mkCostModels (Map.singleton lang (testingCostModel lang))
+testingCostModels langs =
+  mkCostModels $ Map.fromList [(lang, testingCostModel lang) | lang <- langs]
 
 testingCostModel :: HasCallStack => Language -> CostModel
 testingCostModel = \case

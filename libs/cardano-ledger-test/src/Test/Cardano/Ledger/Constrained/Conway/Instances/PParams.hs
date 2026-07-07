@@ -77,7 +77,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Plutus.CostModels (CostModels)
+import Cardano.Ledger.Plutus.CostModels (CostModels, emptyCostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Constrained.API
@@ -176,7 +176,7 @@ dropShelley pp =
       decentral = unitI -- in some Eras, dropAtMost6 will over ride this default
     , minUTxOValue = Coin 0 -- in some Eras, dropAtMost4 will over ride this default
     , coinsPerUTxOWord = Coin 0
-    , costModels = mempty
+    , costModels = emptyCostModels
     , prices = makePrices 0 0
     , maxTxExUnits = mempty
     , maxBlockExUnits = mempty
@@ -549,5 +549,5 @@ simplePParamsSpec = constrained $ \pp ->
   , assert $ govActionDeposit_ pp /=. lit mempty
   , assert $ dRepDeposit_ pp /=. lit mempty
   , match (eMax_ pp) (\epochInterval -> lit 0 <. epochInterval)
-  , assert $ costModels_ pp ==. lit mempty -- This makes examples soo much more readable.
+  , assert $ costModels_ pp ==. lit emptyCostModels -- This makes examples soo much more readable.
   ]

@@ -29,7 +29,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Plutus (ExUnits (..), Language (..))
+import Cardano.Ledger.Plutus (ExUnits (..), Language (..), emptyCostModels)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
@@ -257,7 +257,7 @@ instance EraGenericGen ShelleyEra where
   genExUnits = const $ pure []
   ppMaxCollateralInputsT = dummyLens 0
   ppCollateralPercentageT = dummyLens 0
-  ppCostModelsT = dummyLens mempty
+  ppCostModelsT = dummyLens emptyCostModels
   ppMaxTxExUnitsT = dummyLens mempty
   ppMaxBlockExUnitsT = dummyLens mempty
   ppMaxValSizeT = dummyLens 0
@@ -276,7 +276,7 @@ instance EraGenericGen MaryEra where
   genExUnits = const $ pure []
   ppMaxCollateralInputsT = dummyLens 0
   ppCollateralPercentageT = dummyLens 0
-  ppCostModelsT = dummyLens mempty
+  ppCostModelsT = dummyLens emptyCostModels
   ppMaxTxExUnitsT = dummyLens mempty
   ppMaxBlockExUnitsT = dummyLens mempty
   ppMaxValSizeT = dummyLens 0
@@ -295,7 +295,7 @@ instance EraGenericGen AllegraEra where
   genExUnits = const $ pure []
   ppMaxCollateralInputsT = dummyLens 0
   ppCollateralPercentageT = dummyLens 0
-  ppCostModelsT = dummyLens mempty
+  ppCostModelsT = dummyLens emptyCostModels
   ppMaxTxExUnitsT = dummyLens mempty
   ppMaxBlockExUnitsT = dummyLens mempty
   ppMaxValSizeT = dummyLens 0

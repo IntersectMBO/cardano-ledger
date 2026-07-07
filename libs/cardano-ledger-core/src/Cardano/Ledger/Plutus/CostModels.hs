@@ -161,8 +161,8 @@ parseCostModels isLenient languages =
           unknown <- o .:? "Unknown" .!= mempty
           mkCostModelsLenient unknown
         else
-          pure mempty
-    pure $ mkCostModels cmsMap <> unknownCostModels
+          pure emptyCostModels
+    pure $ updateCostModels (mkCostModels cmsMap) (CostModelsUpdate unknownCostModels)
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does no longer
 -- require the map as a parameter to `mkEvaluationContext`, but the list of integers representing
@@ -387,12 +387,6 @@ data CostModels = CostModels
 newtype CostModelsUpdate = CostModelsUpdate {unCostModelsUpdate :: CostModels}
   deriving stock (Show)
   deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, ToJSON)
-
-instance Semigroup CostModels where
-  a <> b = updateCostModels a (CostModelsUpdate b)
-
-instance Monoid CostModels where
-  mempty = emptyCostModels
 
 costModelsValid :: CostModels -> Map Language CostModel
 costModelsValid = _costModelsValid
