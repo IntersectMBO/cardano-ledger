@@ -19,7 +19,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
-import Cardano.Ledger.Plutus.CostModels (updateCostModels)
+import Cardano.Ledger.Plutus.CostModels (CostModelsUpdate (..), updateCostModels)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -79,7 +79,8 @@ unknownCostModelsSpec =
       submitYesVoteCCs_ hotCommitteeCs gai
       passNEpochs 2
       getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
-      getsPParams ppCostModelsL `shouldReturn` updateCostModels costModels newCostModels
+      getsPParams ppCostModelsL
+        `shouldReturn` updateCostModels costModels (CostModelsUpdate newCostModels)
 
 predicateFailuresSpec ::
   forall era.

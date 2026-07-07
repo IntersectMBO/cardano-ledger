@@ -57,6 +57,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.HKD (HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
 import Cardano.Ledger.Plutus (
   CostModels,
+  CostModelsUpdate (..),
   ExUnits (..),
   Prices (..),
   emptyCostModels,
@@ -198,7 +199,7 @@ dijkstraApplyPPUpdates pp ppu = do
         case dppCostModels ppu of
           THKD SNothing -> dppCostModels pp
           THKD (SJust costModelUpdate) ->
-            THKD $ updateCostModels (unTHKD (dppCostModels pp)) costModelUpdate
+            THKD $ updateCostModels (unTHKD (dppCostModels pp)) (CostModelsUpdate costModelUpdate)
     , dppPrices = ppApplyUpdate dppPrices
     , dppMaxTxExUnits = ppApplyUpdate dppMaxTxExUnits
     , dppMaxBlockExUnits = ppApplyUpdate dppMaxBlockExUnits

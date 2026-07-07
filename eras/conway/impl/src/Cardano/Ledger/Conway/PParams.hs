@@ -98,6 +98,7 @@ module Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
+  CostModelsUpdate (..),
   ExUnits (..),
   Prices (Prices),
   emptyCostModels,
@@ -1120,7 +1121,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
         THKD $
           -- We add the PlutusV3 CostModel from ConwayGenesis to the ConwayPParams here
           hkdLiftA2 @f
-            updateCostModels
+            (\old new -> updateCostModels old (CostModelsUpdate new))
             bppCostModels
             ( hkdMap
                 (Proxy @f)
@@ -1205,7 +1206,7 @@ conwayApplyPPUpdates pp ppu =
         case cppCostModels ppu of
           THKD SNothing -> cppCostModels pp
           THKD (SJust costModelUpdate) ->
-            THKD $ updateCostModels (unTHKD (cppCostModels pp)) costModelUpdate
+            THKD $ updateCostModels (unTHKD (cppCostModels pp)) (CostModelsUpdate costModelUpdate)
     , cppPrices = ppApplyUpdate cppPrices
     , cppMaxTxExUnits = ppApplyUpdate cppMaxTxExUnits
     , cppMaxBlockExUnits = ppApplyUpdate cppMaxBlockExUnits

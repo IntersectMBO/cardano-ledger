@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -31,6 +32,7 @@ module Cardano.Ledger.Plutus.CostModels (
 
   -- * Cost Models
   CostModels,
+  CostModelsUpdate (..),
   mkCostModels,
   emptyCostModels,
   updateCostModels,
@@ -379,8 +381,15 @@ data CostModels = CostModels
   }
   deriving stock (Eq, Ord, Show, Generic)
 
+-- | A wrapper around `CostModels` representing an update to be applied on top of an
+-- existing `CostModels` value. Exists solely to prevent accidentally swapping the
+-- argument order of `updateCostModels`.
+newtype CostModelsUpdate = CostModelsUpdate {unCostModelsUpdate :: CostModels}
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, ToJSON)
+
 instance Semigroup CostModels where
-  (<>) = updateCostModels
+  a <> b = updateCostModels a (CostModelsUpdate b)
 
 instance Monoid CostModels where
   mempty = emptyCostModels
@@ -401,10 +410,10 @@ emptyCostModels = CostModels mempty mempty
 updateCostModels ::
   -- | Old CostModels that will be overwritten
   CostModels ->
-  -- | New CostModels that will overwrite
-  CostModels ->
+  -- | New CostModels that will overwrite individual `CostModel`s
+  CostModelsUpdate ->
   CostModels
-updateCostModels (CostModels oldValid oldUnk) (CostModels modValid modUnk) =
+updateCostModels (CostModels oldValid oldUnk) (CostModelsUpdate (CostModels modValid modUnk)) =
   CostModels
     newValid
     (Map.union modUnk oldUnk Map.\\ Map.mapKeys languageToWord8 newValid)

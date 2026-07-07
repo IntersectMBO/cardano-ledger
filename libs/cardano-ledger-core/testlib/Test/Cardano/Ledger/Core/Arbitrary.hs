@@ -79,6 +79,7 @@ import Cardano.Ledger.MemoBytes (Memoized (..), getMemoRawType, mkMemoizedEra)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
+  CostModelsUpdate (..),
   costModelInitParamCount,
   mkCostModel,
   mkCostModels,
@@ -864,7 +865,7 @@ genValidAndUnknownCostModels = do
   langs <- sublistOf nonNativeLanguages
   validCms <- genValidCostModels $ Set.fromList langs
   unknownCms <- errorFail . mkCostModelsLenient <$> genUnknownCostModels
-  pure $ updateCostModels validCms unknownCms
+  pure $ updateCostModels validCms (CostModelsUpdate unknownCms)
 
 -- | This Arbitrary instance assumes the inflexible deserialization
 -- scheme prior to version 9.
