@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-api`
 
-## 1.13.1.0
+## 1.14.0.0
 
+* Change `queryConstitution` to return the new `QueryResultConstitution` type instead of `Constitution`
+* Add `QueryResultConstitution` and `toQueryResultConstitution`
 * Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names
 * Re-export the new `pattern WithdrawingPurpose` and `toWithdrawingPurpose`
 * Add `generate-cbor` executable.
@@ -15,6 +17,7 @@
 
 ### `testlib`
 
+* Change the type of `queryConstitutionExamples` to `[QueryResultConstitution era]`
 * Change constraints on `queryCurrentPParamsExamples`, `queryFuturePParamsExamples`, `queryRatifyStateExamples`, `queryGovStateExamples` to `EraTest era`.
 * Tighten `queryProposalsExamples` constraint to `ConwayEraPParams era` (via `exampleProposalProcedureParameterChange`).
 * Populate `ensCurPParams`, `cgsCurPParams`, `cgsFuturePParams` with `examplePParams`.

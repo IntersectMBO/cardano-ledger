@@ -52,8 +52,10 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   QueryPoolStateResult (..),
+  QueryResultConstitution,
   StakeSnapshot (..),
   StakeSnapshots (..),
+  toQueryResultConstitution,
  )
 import Cardano.Ledger.BaseTypes (
   AnchorData,
@@ -110,17 +112,18 @@ import Test.Cardano.Ledger.Shelley.Examples (
   mkScriptHash,
  )
 
-queryConstitutionExamples :: [Constitution era]
+queryConstitutionExamples :: [QueryResultConstitution era]
 queryConstitutionExamples =
-  [ Constitution
-      { constitutionAnchor = exampleAnchor
-      , constitutionGuardrailsScriptHash = SJust (mkScriptHash 1)
-      }
-  , Constitution
-      { constitutionAnchor = exampleAnchor
-      , constitutionGuardrailsScriptHash = SNothing
-      }
-  ]
+  toQueryResultConstitution
+    <$> [ Constitution
+            { constitutionAnchor = exampleAnchor
+            , constitutionGuardrailsScriptHash = SJust (mkScriptHash 1)
+            }
+        , Constitution
+            { constitutionAnchor = exampleAnchor
+            , constitutionGuardrailsScriptHash = SNothing
+            }
+        ]
 
 queryCurrentEpochNoExamples :: [EpochNo]
 queryCurrentEpochNoExamples =

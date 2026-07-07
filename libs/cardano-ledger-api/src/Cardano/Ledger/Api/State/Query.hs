@@ -31,6 +31,8 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetConstitution@
   queryConstitution,
+  QueryResultConstitution (..),
+  toQueryResultConstitution,
 
   -- * @GetConstitutionHash@
   queryConstitutionHash,
@@ -106,7 +108,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
   Committee (committeeMembers),
-  Constitution (constitutionAnchor),
+  Constitution (..),
   ConwayEraGov (..),
   DRepPulser (..),
   DRepPulsingState (..),
@@ -133,7 +135,7 @@ import Cardano.Ledger.DRep (credToDRep, dRepToCred)
 import Cardano.Ledger.Shelley.LedgerState
 import Control.DeepSeq
 import Control.Monad (guard)
-import Data.Aeson (ToJSON (..), object, pairs, (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable (fold, foldMap')
 import Data.Map (Map)
@@ -163,15 +165,56 @@ queryStakePoolDelegsAndRewards nes creds =
       , Map.map (fromCompact . (^. balanceAccountStateL)) accountsMapFiltered
       )
 
-queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
-queryConstitution = (^. constitutionGovStateL) . queryGovState
+data QueryResultConstitution era = QueryResultConstitution
+  { qrcAnchor :: !Anchor
+  , qrcGuardrailsScriptHash :: !(Maybe ScriptHash)
+  }
+  deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs (QueryResultConstitution era)
+
+toQueryResultConstitution :: Constitution era -> QueryResultConstitution era
+toQueryResultConstitution (Constitution anchor guardrails) =
+  QueryResultConstitution anchor (strictMaybeToMaybe guardrails)
+
+instance ToKeyValuePairs (QueryResultConstitution era) where
+  toKeyValuePairs (QueryResultConstitution anchor guardrails) =
+    ["anchor" .= anchor]
+      <> ["script" .= s | Just s <- [guardrails]]
+
+instance Era era => FromJSON (QueryResultConstitution era) where
+  parseJSON = withObject "Constitution" $ \o ->
+    QueryResultConstitution
+      <$> o .: "anchor"
+      <*> o .:? "script"
+
+instance Era era => EncCBOR (QueryResultConstitution era) where
+  encCBOR (QueryResultConstitution anchor guardrails) =
+    encodeListLen 2
+      <> encCBOR anchor
+      <> encodeNullMaybe encCBOR guardrails
+
+instance Era era => DecCBOR (QueryResultConstitution era) where
+  decCBOR =
+    decodeRecordNamed "Constitution" (const 2) $
+      QueryResultConstitution <$> decCBOR <*> decodeNullMaybe decCBOR
+
+instance Era era => ToCBOR (QueryResultConstitution era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (QueryResultConstitution era) where
+  fromCBOR = fromEraCBOR @era
+
+instance NFData (QueryResultConstitution era)
+
+queryConstitution :: ConwayEraGov era => NewEpochState era -> QueryResultConstitution era
+queryConstitution = toQueryResultConstitution . (^. constitutionGovStateL) . queryGovState
 
 queryConstitutionHash ::
   ConwayEraGov era =>
   NewEpochState era ->
   SafeHash AnchorData
 queryConstitutionHash nes =
-  anchorDataHash . constitutionAnchor $ queryConstitution nes
+  anchorDataHash . qrcAnchor $ queryConstitution nes
 
 -- | This query returns all of the state related to governance
 queryGovState :: NewEpochState era -> GovState era
