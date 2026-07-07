@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Remove `Semigroup` and `Monoid` instances for `CostModels`
+* Change `updateCostModels` to take `CostModelsUpdate` as its second argument
+* Add `CostModelsUpdate`
 * Add `directDepositsMissingAccounts` and `applyDirectDeposits`
 * Add `subtractCompactCoin`
 * Add `withdrawalsThatExceedAccountBalance` and `applyWithdrawals`
