@@ -121,9 +121,11 @@ library cddl
 
   build-depends:
     base,
+    bytestring,
     cardano-ledger-allegra:cddl,
     cardano-ledger-core:cddl,
     cardano-ledger-mary,
+    containers,
     heredoc,
 
 executable generate-cddl

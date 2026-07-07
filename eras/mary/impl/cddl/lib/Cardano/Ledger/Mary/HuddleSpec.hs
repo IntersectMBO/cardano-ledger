@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -22,13 +23,29 @@ module Cardano.Ledger.Mary.HuddleSpec (
 
 import Cardano.Ledger.Allegra.HuddleSpec
 import Cardano.Ledger.Huddle.Gen (
+  Name (..),
+  RuleTerm (..),
   faultyBool,
   genMapTerm,
+  genRule,
+  genVectorOfUnique,
+  generateFromGRef,
+  liftAntiGen,
+  replicateMNorm,
   unwrapSingle,
-  validateArrayTerm,
+  unwrapSingleOrError,
+  validateBytesTerm,
+  validateFromGRef,
+  validateFromName,
   validateMapTerm,
+  validateNonEmpty,
+  validateUniqueOn,
  )
+import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Cardano.Ledger.Mary (MaryEra)
+import Control.Monad (forM, replicateM, unless)
+import Data.ByteString qualified as BS
+import Data.Containers.ListUtils (nubOrd)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Text.Heredoc
@@ -51,30 +68,101 @@ maryMultiasset ::
   a ->
   GRuleCall
 maryMultiasset pname p =
-  binding $
-    \x ->
-      comment
-        [str| There is an additional constraint on multiassets that cannot be 
-            | expressed in CDDL.
-            |]
-        . withCBORGen (generator x)
-        $ withValidator (validator x) rule
-  where
-    generator x = do
-      withinSizeLimits <- faultyBool True
-      kvs <- _
-      genMapTerm _
-    validator x term = do
-      sTerm <- unwrapSingle term
-      assetMap <- validateMapTerm sTerm
-      pure ()
-    rule =
-      pname
+  binding $ \x ->
+    comment
+      [str| There is an additional constraint on multiassets that cannot be
+          | expressed in CDDL:
+          | 12 * total_assets + sum of policy id lengths + sum of unique asset name lengths
+          | must not exceed 65535
+          |]
+      . withCBORGen (generator x)
+      . withValidator (validator x)
+      $ pname
         =.= mp
           [ 0
               <+ asKey (huddleRule @"policy_id" p)
               ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
           ]
+  where
+    -- The compact multi-asset representation lays its variable-length data out
+    -- behind 'Word16' offsets, so its total size in bytes must fit a 'Word16'.
+    -- See 'Cardano.Ledger.Mary.Value.representationSize'.
+    compactLimit :: Int
+    compactLimit = 65535
+
+    -- Fixed per-asset overhead of the compact representation: an 8-byte
+    -- quantity plus two 2-byte offsets (@8n + 2n + 2n@).
+    perAssetOverhead :: Int
+    perAssetOverhead = 12
+
+    -- Conservative caps for the common (within-limit) case. Even at the maxima
+    -- the representation stays well under 'compactLimit':
+    -- @12 * 900 + 28 * 30 + 32 * 900 = 40440 <= 65535@, while keeping generated
+    -- terms small.
+    maxPolicies, maxAssetsPerPolicy :: Int
+    maxPolicies = 30
+    maxAssetsPerPolicy = 30
+
+    -- Smallest number of single-asset policies whose representation is
+    -- guaranteed to overflow regardless of the (possibly empty) asset names:
+    -- @(perAssetOverhead + policyIdSize) * p = 40 * p > 65535@ requires
+    -- @p >= 1639@ (policy ids are 28-byte hashes).
+    overLimitPolicies :: Int
+    overLimitPolicies = compactLimit `div` 40 + 1
+
+    -- Generate the per-policy asset counts, then build the value from them. In
+    -- the common case the counts stay within the compact bound; when the
+    -- anti-generator zaps the size fault we instead emit enough single-asset
+    -- policies to overflow the representation, so the validator (and the
+    -- decoder) are exercised.
+    generator x = do
+      withinLimits <- liftAntiGen (faultyBool True)
+      assetCounts <-
+        if withinLimits
+          then Gen.sized $ \sz -> do
+            nPolicies <- Gen.choose (0, min maxPolicies sz)
+            liftAntiGen . replicateMNorm nPolicies $
+              Gen.choose (1, max 1 (min maxAssetsPerPolicy sz))
+          else pure (replicate overLimitPolicies 1)
+      buildMultiAsset x assetCounts
+
+    buildMultiAsset x assetCounts = do
+      policyIds <- genVectorOfUnique (length assetCounts) (genRule @"policy_id" @era)
+      assetMaps <- forM assetCounts $ \nAssets -> do
+        assetNames <- genVectorOfUnique nAssets (genRule @"asset_name" @era)
+        entries <- forM assetNames $ \assetName -> do
+          amount <- unwrapSingleOrError <$> generateFromGRef x
+          pure (assetName, amount)
+        genMapTerm entries
+      SingleTerm <$> genMapTerm (zip policyIds assetMaps)
+
+    -- The custom validator replaces the structural CDDL validation for this
+    -- rule, so it must check the whole shape in addition to the size bound.
+    -- Rather than estimate, it measures the compact representation byte-for-byte
+    -- the same way 'Cardano.Ledger.Mary.Value.representationSize' does.
+    validator x term = do
+      policies <- validateMapTerm =<< unwrapSingle term
+      validateUniqueOn fst policies
+      policyBytes <- forM policies $ \(policyId, assetMapTerm) -> do
+        validateFromName (Name "policy_id") policyId
+        policyIdBytes <- validateBytesTerm policyId
+        assets <- validateMapTerm assetMapTerm
+        validateNonEmpty assets
+        validateUniqueOn fst assets
+        assetNameBytes <- forM assets $ \(assetName, amount) -> do
+          validateFromName (Name "asset_name") assetName
+          validateFromGRef x amount
+          validateBytesTerm assetName
+        pure (policyIdBytes, assetNameBytes)
+      let totalAssets = sum (map (length . snd) policyBytes)
+          -- Policy ids are unique map keys; asset names are shared across the
+          -- whole value, so they are de-duplicated globally.
+          policyIdSizes = sum (map (BS.length . fst) policyBytes)
+          assetNameSizes = sum (map BS.length (nubOrd (concatMap snd policyBytes)))
+          representationSize =
+            perAssetOverhead * totalAssets + policyIdSizes + assetNameSizes
+      unless (representationSize <= compactLimit) $
+        fail "MultiAsset is too big to compact"
 
 maryValueRule ::
   forall era.

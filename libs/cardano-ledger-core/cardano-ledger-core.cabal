@@ -201,6 +201,7 @@ library cddl
     cardano-ledger-binary,
     cardano-ledger-core,
     cborg,
+    containers,
     cuddle >=1.8,
     heredoc,
     mempack,

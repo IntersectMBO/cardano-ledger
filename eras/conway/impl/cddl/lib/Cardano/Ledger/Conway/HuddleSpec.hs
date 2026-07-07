@@ -87,12 +87,12 @@ import Cardano.Ledger.Huddle.Gen (
   RuleTerm (..),
   Term (..),
   antiChoose,
-  antiVectorOfUnique,
   arbitrary,
   faultyNum,
   genArrayTerm,
   genMapTerm,
   genRule,
+  genVectorOfUnique,
   generateFromGRef,
   liftAntiGen,
   oneof,
@@ -102,19 +102,16 @@ import Cardano.Ledger.Huddle.Gen (
   unwrapSingleOrError,
   validateArrayTerm,
   validateFromGRef,
+  validateUnique,
   withAntiGen,
   (|!),
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
-import Control.Monad (unless)
-import Data.Containers.ListUtils (nubOrd)
 import Data.Foldable (traverse_)
-import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Traversable (forM)
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
-import Test.QuickCheck qualified as QC
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -725,7 +722,7 @@ conwayRedeemer pname p =
 
 generateMaybeTaggedSet :: Int -> CBORGen Term -> CBORGen Term
 generateMaybeTaggedSet nElems gen = do
-  elems <- fromMaybe QC.discard <$> withAntiGen (antiVectorOfUnique nElems) gen
+  elems <- genVectorOfUnique nElems gen
   elemsArr <- genArrayTerm elems
   tagged <- arbitrary
   if tagged
@@ -752,8 +749,7 @@ mkMaybeTaggedSet pname n = binding $ \x ->
       let
         validateInner t = do
           elems <- validateArrayTerm t
-          unless (length elems == length (nubOrd elems)) $
-            fail "not all elements are unique"
+          validateUnique elems
           traverse_ (validateFromGRef ref) elems
       case term_ of
         TTagged t x | t == 258 -> validateInner x
