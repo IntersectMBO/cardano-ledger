@@ -165,7 +165,7 @@ data AlonzoTxBodyRaw l era where
     , atbrTxFee :: !Coin
     , atbrValidityInterval :: !ValidityInterval
     , atbrUpdate :: !(StrictMaybe (Update era))
-    , atbrReqSignerHashes :: Set (KeyHash Guard)
+    , atbrReqSignerHashes :: !(Set (KeyHash Guard))
     , atbrMint :: !MultiAsset
     , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
     , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
