@@ -14,15 +14,19 @@ source-repository head
 
 library
   exposed-modules:
-    Cardano.Protocol.Crypto
     Cardano.Protocol.TPraos.API
     Cardano.Protocol.TPraos.BHeader
-    Cardano.Protocol.TPraos.OCert
     Cardano.Protocol.TPraos.Rules.OCert
     Cardano.Protocol.TPraos.Rules.Overlay
     Cardano.Protocol.TPraos.Rules.Prtcl
     Cardano.Protocol.TPraos.Rules.Tickn
     Cardano.Protocol.TPraos.Rules.Updn
+
+  -- Moved to the `cardano-protocol` package; re-exported here under its
+  -- original name for backwards compatibility.
+  reexported-modules:
+    Cardano.Protocol.Crypto,
+    Cardano.Protocol.TPraos.OCert,
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -41,10 +45,7 @@ library
       -Wredundant-constraints
   build-depends:
     base >=4.18 && <5,
-    bytestring,
-    cardano-base >=0.1.2,
     cardano-crypto-class ^>=2.5,
-    cardano-crypto-praos ^>=2.2,
     cardano-ledger-allegra >=1.10,
     cardano-ledger-alonzo >=1.16,
     cardano-ledger-babbage >=1.13.1,
@@ -54,15 +55,14 @@ library
     cardano-ledger-dijkstra >=0.3,
     cardano-ledger-mary >=1.10.1,
     cardano-ledger-shelley >=1.19,
+    cardano-protocol >=0.1,
     cardano-slotting,
     containers,
     data-default,
     deepseq,
     microlens,
     mtl,
-    non-integral,
     nothunks,
-    quiet,
     small-steps >=1.1,
     transformers,
 
@@ -106,6 +106,7 @@ library testlib
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-protocol,
     cardano-protocol-tpraos,
     cardano-strict-containers,
     containers,
@@ -144,5 +145,6 @@ test-suite tests
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, cddl, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, cddl, testlib},
-    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
+    cardano-protocol,
+    cardano-protocol-tpraos:testlib,
     cuddle,

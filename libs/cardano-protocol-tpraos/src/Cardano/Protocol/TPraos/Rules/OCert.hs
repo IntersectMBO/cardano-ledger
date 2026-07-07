@@ -16,7 +16,7 @@ import Cardano.Crypto.KES (Signable, verifySignedKES)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Keys
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader
+import Cardano.Protocol.TPraos.BlockHeader
 import Cardano.Protocol.TPraos.OCert
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition

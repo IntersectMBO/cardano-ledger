@@ -46,7 +46,7 @@ import Cardano.Protocol.TPraos.API (
   tickChainDepState,
   updateChainDepState,
  )
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHeader (..),
   LastAppliedBlock (..),
  )

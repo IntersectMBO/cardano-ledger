@@ -88,7 +88,7 @@ import Cardano.Ledger.State (
  )
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (..),
   BHeader (..),
   PrevHash (..),

@@ -72,7 +72,7 @@ import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Protocol.Crypto (Crypto)
-import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
+import Cardano.Protocol.TPraos.BlockHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Slotting.EpochInfo (
   epochInfoEpoch,
   epochInfoFirst,

@@ -41,7 +41,7 @@ import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), signedDSIGN)
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader (
+import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (..),
   BHeader (..),
   PrevHash (BlockHash),

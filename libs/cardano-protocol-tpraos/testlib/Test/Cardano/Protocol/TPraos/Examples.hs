@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State (EraGov, InstantStake)
 import Cardano.Protocol.Crypto (Crypto, StandardCrypto, VRF)
 import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader
+import Cardano.Protocol.TPraos.BlockHeader
 import Cardano.Protocol.TPraos.OCert
 import Cardano.Protocol.TPraos.Rules.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn

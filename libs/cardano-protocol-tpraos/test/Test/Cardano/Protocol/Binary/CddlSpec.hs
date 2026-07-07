@@ -18,7 +18,7 @@ import Cardano.Ledger.Mary.HuddleSpec (maryCDDL)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.HuddleSpec (shelleyCDDL)
 import Cardano.Protocol.Crypto (StandardCrypto)
-import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
+import Cardano.Protocol.TPraos.BlockHeader (BHBody, BHeader)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Codec.CBOR.Cuddle.Huddle (Huddle)
 import Test.Cardano.Ledger.Binary.Cuddle

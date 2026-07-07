@@ -13,7 +13,7 @@ module Test.Cardano.Protocol.Binary.Annotator (
 
 import Cardano.Ledger.Binary
 import Cardano.Protocol.Crypto
-import Cardano.Protocol.TPraos.BHeader
+import Cardano.Protocol.TPraos.BlockHeader
 import Test.Cardano.Ledger.Conway.Binary.Annotator
 
 deriving newtype instance Crypto c => DecCBOR (BHeader c)
