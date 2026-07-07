@@ -57,10 +57,14 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.UTxO (conwayProducedValue)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
+import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -90,6 +94,7 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data DijkstraUtxoEnv era = DijkstraUtxoEnv
   { dueSlot :: SlotNo
@@ -315,13 +320,40 @@ validateWrongNetworkInDirectDeposit netId txb =
           (\a _ -> aaNetworkId a /= netId)
           (unDirectDeposits $ txb ^. directDepositsTxBodyL)
 
+-- | Value conservation restricted to the top-level transaction
+validateValueConservationTopTx ::
+  ( ConwayEraTxBody era
+  , ConwayEraCertState era
+  , Value era ~ MaryValue
+  ) =>
+  PParams era ->
+  UTxO era ->
+  CertState era ->
+  TxBody TopTx era ->
+  Test (Shelley.ShelleyUtxoPredFailure era)
+validateValueConservationTopTx pp utxo certState txBody =
+  failureUnless (consumedValue == producedValue) $
+    Shelley.ValueNotConservedUTxO
+      Mismatch {mismatchSupplied = consumedValue, mismatchExpected = producedValue}
+  where
+    consumedValue =
+      getConsumedMaryValue
+        pp
+        (lookupDepositDState (certState ^. certDStateL))
+        (lookupDepositVState (certState ^. certVStateL))
+        utxo
+        txBody
+    producedValue = conwayProducedValue pp isRegPoolId txBody
+    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
+
 dijkstraUtxoTransition ::
   forall era.
-  ( EraUTxO era
-  , EraCertState era
+  ( ConwayEraCertState era
   , DijkstraEraTxBody era
+  , DijkstraEraUTxO era
   , AlonzoEraTx era
   , EraStake era
+  , Value era ~ MaryValue
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Alonzo.AlonzoUtxoPredFailure era
@@ -379,6 +411,11 @@ dijkstraUtxoTransition = do
 
   {- consumed pp utxo₀ txb = produced pp certState txb -}
   runTest $ Shelley.validateValueNotConservedUTxO pp originalUtxo certState txBody
+
+  {- legacyMode ≡ true → consumed pp certState txTop utxo ≡ produced pp certState txTop -}
+  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+    runTest $
+      validateValueConservationTopTx pp originalUtxo certState txBody
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
@@ -453,7 +490,9 @@ instance
   , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
-  , EraCertState era
+  , ConwayEraCertState era
+  , DijkstraEraUTxO era
+  , Value era ~ MaryValue
   , EraRule "UTXO" era ~ UTXO era
   , SafeToHash (TxWits era)
   ) =>
