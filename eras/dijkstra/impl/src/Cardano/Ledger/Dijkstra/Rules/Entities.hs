@@ -26,13 +26,18 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Dijkstra.TxBody (
+  DijkstraEraTxBody,
+  directDepositsTxBodyL,
+  subTransactionsTxBodyL,
+ )
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
@@ -42,6 +47,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -192,10 +198,14 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (EntitiesEnv legacyMode certsEnv _originalAccounts, certState, certificates) <- judgmentContext
+  TRC (EntitiesEnv legacyMode certsEnv originalAccounts, certState, certificates) <- judgmentContext
   let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = certsEnv
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
+
+  {- Aggregated withdrawals across the batch must not exceed each account's
+     pre-batch balance, and every withdrawn account must exist pre-batch. -}
+  validateBatchWithdrawals originalAccounts tx
 
   runTest $ Conway.validateWithdrawalsDelegated accounts tx
 
@@ -217,6 +227,44 @@ dijkstraEntitiesTransition = do
     injectFailure . DirectDepositsToMissingAccounts
 
   pure $ certStateAfterCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
+
+-- | Aggregate withdrawals across the top tx and all its subtransactions. For each
+-- account, the total withdrawn must not exceed its pre-batch balance, and every
+-- account referenced by a withdrawal must exist pre-batch.
+validateBatchWithdrawals ::
+  ( EraTx era
+  , EraAccounts era
+  , DijkstraEraTxBody era
+  ) =>
+  Accounts era ->
+  Tx TopTx era ->
+  Rule (ENTITIES era) ctx ()
+validateBatchWithdrawals originalAccounts tx = do
+  let allWithdrawals =
+        Map.unionsWith (<>) $
+          unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
+            : [ unWithdrawals $ subTx ^. bodyTxL . withdrawalsTxBodyL
+              | subTx <- OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
+              ]
+      categorize acctAddr@(AccountAddress _ (AccountId cred)) withdrawn (missing, exceeded) =
+        case lookupAccountState cred originalAccounts of
+          Nothing -> (Map.insert acctAddr withdrawn missing, exceeded)
+          Just accountState ->
+            let balance = fromCompact (accountState ^. balanceAccountStateL)
+             in if withdrawn > balance
+                  then
+                    ( missing
+                    , Map.insert
+                        acctAddr
+                        Mismatch {mismatchSupplied = withdrawn, mismatchExpected = balance}
+                        exceeded
+                    )
+                  else (missing, exceeded)
+      (missingWithdrawals, exceededWithdrawals) =
+        Map.foldrWithKey categorize (Map.empty, Map.empty) allWithdrawals
+  failOnNonEmptyMap missingWithdrawals $
+    WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+  failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
 
 validateWithdrawals ::
   EraAccounts era =>
