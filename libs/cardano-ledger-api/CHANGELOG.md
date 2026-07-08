@@ -7,7 +7,7 @@
 * Add `generate-cbor` executable.
 * Add `ToJSON` instances for `StakeSnapshot` and `StakeSnapshots`.
 * Add `ToJSON` instance for `QueryPoolStateResult`.
-* Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`).
+* Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`), returning the stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`.
 * Add `queryDRepDelegatees` (`GetFilteredVoteDelegatees`).
 * Add `queryStakePoolRelays` (`GetLedgerPeerSnapshot`).
 * Add `queryAccountsDeposits` (`GetStakeDelegDeposits`).

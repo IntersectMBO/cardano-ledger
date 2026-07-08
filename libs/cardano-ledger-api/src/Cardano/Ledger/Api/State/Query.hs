@@ -77,6 +77,10 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetPoolDistr2@
   querySetSnapshotStakePoolDistr,
+  QueryResultPoolDistr (..),
+  QueryResultIndividualPoolStake (..),
+  toQueryResultPoolDistr,
+  toQueryResultIndividualPoolStake,
 
   -- * @GetStakeSnapshots@
   queryStakeSnapshots,
@@ -735,6 +739,70 @@ queryStakePoolRelays nes =
             then Nothing
             else Just (individualPoolStake ips, allRelays)
 
+data QueryResultIndividualPoolStake = QueryResultIndividualPoolStake
+  { qripsStake :: !Rational
+  , qripsTotalStake :: !(CompactForm Coin)
+  , qripsVrf :: !(VRFVerKeyHash StakePoolVRF)
+  }
+  deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs QueryResultIndividualPoolStake
+
+data QueryResultPoolDistr = QueryResultPoolDistr
+  { qrpdDistr :: !(Map (KeyHash StakePool) QueryResultIndividualPoolStake)
+  , qrpdTotalActiveStake :: !(NonZero Coin)
+  }
+  deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs QueryResultPoolDistr
+
+toQueryResultIndividualPoolStake :: IndividualPoolStake -> QueryResultIndividualPoolStake
+toQueryResultIndividualPoolStake ips =
+  QueryResultIndividualPoolStake
+    (individualPoolStake ips)
+    (individualTotalPoolStake ips)
+    (individualPoolStakeVrf ips)
+
+toQueryResultPoolDistr :: PoolDistr -> QueryResultPoolDistr
+toQueryResultPoolDistr pd =
+  QueryResultPoolDistr
+    (Map.map toQueryResultIndividualPoolStake (unPoolDistr pd))
+    (pdTotalActiveStake pd)
+
+instance ToKeyValuePairs QueryResultIndividualPoolStake where
+  toKeyValuePairs (QueryResultIndividualPoolStake stake totalStake vrf) =
+    [ "individualPoolStake" .= stake
+    , "individualTotalPoolStake" .= totalStake
+    , "individualPoolStakeVrf" .= vrf
+    ]
+
+instance ToKeyValuePairs QueryResultPoolDistr where
+  toKeyValuePairs (QueryResultPoolDistr distr total) =
+    [ "unPoolDistr" .= distr
+    , "pdTotalActiveStake" .= total
+    ]
+
+instance EncCBOR QueryResultIndividualPoolStake where
+  encCBOR (QueryResultIndividualPoolStake stake totalStake vrf) =
+    encodeListLen 3
+      <> encCBOR stake
+      <> encCBOR totalStake
+      <> encCBOR vrf
+
+instance DecCBOR QueryResultIndividualPoolStake where
+  decCBOR =
+    decodeRecordNamed "IndividualPoolStake" (const 3) $
+      QueryResultIndividualPoolStake <$> decCBOR <*> decCBOR <*> decCBOR
+
+instance EncCBOR QueryResultPoolDistr where
+  encCBOR (QueryResultPoolDistr distr total) =
+    encodeListLen 2
+      <> encCBOR distr
+      <> encCBOR total
+
+instance DecCBOR QueryResultPoolDistr where
+  decCBOR =
+    decodeRecordNamed "PoolDistr" (const 2) $
+      QueryResultPoolDistr <$> decCBOR <*> decCBOR
+
 -- | Query the pool distribution derived from the set-snapshot.
 --
 -- Returns the pre-computed 'PoolDistr' stored in 'NewEpochState'
@@ -743,9 +811,9 @@ queryStakePoolRelays nes =
 querySetSnapshotStakePoolDistr ::
   NewEpochState era ->
   Set (KeyHash StakePool) ->
-  PoolDistr
+  QueryResultPoolDistr
 querySetSnapshotStakePoolDistr nes poolIds
-  | Set.null poolIds = nesPd nes
+  | Set.null poolIds = toQueryResultPoolDistr (nesPd nes)
   | otherwise =
       let pd = nesPd nes
-       in pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds}
+       in toQueryResultPoolDistr (pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds})
