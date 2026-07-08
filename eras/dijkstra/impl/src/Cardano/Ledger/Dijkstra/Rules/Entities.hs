@@ -41,6 +41,7 @@ import Cardano.Ledger.Dijkstra.TxBody (
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
@@ -211,7 +212,7 @@ dijkstraEntitiesTransition = do
 
   network <- liftSTS $ asks networkId
 
-  validateWithdrawals legacyMode network withdrawals accounts
+  when legacyMode $ validateLegacyDrain network withdrawals accounts
 
   let certStateBeforeCerts =
         certState
@@ -266,32 +267,18 @@ validateBatchWithdrawals originalAccounts tx = do
     WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
   failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
 
-validateWithdrawals ::
+validateLegacyDrain ::
   EraAccounts era =>
-  Bool ->
   Network ->
   Withdrawals ->
   Accounts era ->
   Rule (ENTITIES era) ctx ()
-validateWithdrawals legacyMode network withdrawals accounts = do
-  missingWithdrawals <-
-    if legacyMode
-      then do
-        let (missingWithdrawals, incompleteWithdrawals) =
-              case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
-        failOnNonEmptyMap incompleteWithdrawals IncompleteWithdrawals
-        pure missingWithdrawals
-      else do
-        let (missingWithdrawals, exceededWithdrawals) =
-              case withdrawalsThatExceedAccountBalance withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
-        failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
-        pure missingWithdrawals
-  failOnNonEmptyMap missingWithdrawals $
-    WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+validateLegacyDrain network withdrawals accounts = do
+  let incompleteWithdrawals =
+        case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+          Nothing -> Map.empty
+          Just (_missing, incomplete) -> incomplete
+  failOnNonEmptyMap incompleteWithdrawals IncompleteWithdrawals
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
