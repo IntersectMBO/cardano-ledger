@@ -5,7 +5,7 @@ module Data.CanonicalMaps (
   canonicalInsert,
   canonicalMapUnion,
   canonicalMap,
-  pointWise,
+  pointwise,
   Map.Map,
 ) where
 
@@ -95,17 +95,17 @@ canonicalMap f = Map.foldrWithKey accum Map.empty
 -- Pointwise comparison assuming the map is CanonicalZero, and we assume semantically that
 -- the value for keys not appearing in the map is 'zeroC'
 
-pointWise ::
+pointwise ::
   (Ord k, CanonicalZero v) =>
   (v -> v -> Bool) ->
   Map k v ->
   Map k v ->
   Bool
-pointWise _ Tip Tip = True
-pointWise p Tip m@Bin {} = all (zeroC `p`) m
-pointWise p m@Bin {} Tip = all (`p` zeroC) m
-pointWise p m (Bin _ k v2 ls rs) =
+pointwise _ Tip Tip = True
+pointwise p Tip m@Bin {} = all (zeroC `p`) m
+pointwise p m@Bin {} Tip = all (`p` zeroC) m
+pointwise p m (Bin _ k v2 ls rs) =
   case Map.splitLookup k m of
-    (lm, Just v1, rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
+    (lm, Just v1, rm) -> p v1 v2 && pointwise p ls lm && pointwise p rs rm
     _ -> False
-{-# INLINEABLE pointWise #-}
+{-# INLINEABLE pointwise #-}
