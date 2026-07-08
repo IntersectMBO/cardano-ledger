@@ -768,6 +768,13 @@ maybeTaggedNonemptySet pname = mkMaybeTaggedSet pname 1
 maybeTaggedNonemptyOset :: IsType0 a => Proxy "nonempty_oset" -> a -> GRuleCall
 maybeTaggedNonemptyOset pname = mkMaybeTaggedSet pname 1
 
+-- | A non-empty list with optional tag 258, without set uniqueness enforcement.
+-- Use this for fields where the decoder accepts the set tag but does not check
+-- for duplicate elements.
+maybeTaggedNonemptyList :: IsType0 a => Proxy "nonempty_list" -> a -> GRuleCall
+maybeTaggedNonemptyList pname = binding $ \x ->
+  pname =.= tag 258 (arr [1 <+ a x]) / sarr [1 <+ a x]
+
 instance HuddleRule "bounded_bytes" ConwayEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
 
@@ -1275,11 +1282,11 @@ instance HuddleRule "transaction_witness_set" ConwayEra where
   huddleRuleNamed pname p =
     pname
       =.= mp
-        [ opt $ idx 0 ==> huddleRule1 @"nonempty_set" p (huddleRule @"vkeywitness" p)
-        , opt $ idx 1 ==> huddleRule1 @"nonempty_set" p (huddleRule @"native_script" p)
-        , opt $ idx 2 ==> huddleRule1 @"nonempty_set" p (huddleRule @"bootstrap_witness" p)
+        [ opt $ idx 0 ==> huddleRule1 @"nonempty_list" p (huddleRule @"vkeywitness" p)
+        , opt $ idx 1 ==> huddleRule1 @"nonempty_list" p (huddleRule @"native_script" p)
+        , opt $ idx 2 ==> huddleRule1 @"nonempty_list" p (huddleRule @"bootstrap_witness" p)
         , opt $ idx 3 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v1_script" p)
-        , opt $ idx 4 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_data" p)
+        , opt $ idx 4 ==> huddleRule1 @"nonempty_list" p (huddleRule @"plutus_data" p)
         , opt $ idx 5 ==> huddleRule @"redeemers" p
         , opt $ idx 6 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v2_script" p)
         , opt $ idx 7 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v3_script" p)
@@ -1422,6 +1429,9 @@ instance HuddleRule1 "nonempty_set" ConwayEra where
 
 instance HuddleRule1 "nonempty_oset" ConwayEra where
   huddleRule1Named pname _ = maybeTaggedNonemptyOset pname
+
+instance HuddleRule1 "nonempty_list" ConwayEra where
+  huddleRule1Named pname _ = maybeTaggedNonemptyList pname
 
 instance HuddleRule1 "multiasset" ConwayEra where
   huddleRule1Named = conwayMultiasset
