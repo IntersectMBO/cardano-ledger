@@ -49,22 +49,25 @@ import Lens.Micro
 data EntitiesEnv era = EntitiesEnv
   { eePlutusLegacyMode :: Bool
   , eeCertsEnv :: Conway.CertsEnv era
+  , eeOriginalAccounts :: Accounts era
   }
   deriving (Generic)
 
-deriving instance (EraPParams era, Eq (Tx TopTx era)) => Eq (EntitiesEnv era)
+deriving instance (EraPParams era, Eq (Tx TopTx era), Eq (Accounts era)) => Eq (EntitiesEnv era)
 
-deriving instance (EraPParams era, Show (Tx TopTx era)) => Show (EntitiesEnv era)
+deriving instance
+  (EraPParams era, Show (Tx TopTx era), Show (Accounts era)) => Show (EntitiesEnv era)
 
-instance (EraPParams era, NFData (Tx TopTx era)) => NFData (EntitiesEnv era)
+instance (EraPParams era, NFData (Tx TopTx era), NFData (Accounts era)) => NFData (EntitiesEnv era)
 
-instance EraTx era => EncCBOR (EntitiesEnv era) where
-  encCBOR x@(EntitiesEnv _ _) =
+instance (EraTx era, EncCBOR (Accounts era)) => EncCBOR (EntitiesEnv era) where
+  encCBOR x@(EntitiesEnv _ _ _) =
     let EntitiesEnv {..} = x
      in encode $
           Rec EntitiesEnv
             !> To eePlutusLegacyMode
             !> To eeCertsEnv
+            !> To eeOriginalAccounts
 
 data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
@@ -189,7 +192,7 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (EntitiesEnv legacyMode certsEnv, certState, certificates) <- judgmentContext
+  TRC (EntitiesEnv legacyMode certsEnv _originalAccounts, certState, certificates) <- judgmentContext
   let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = certsEnv
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
