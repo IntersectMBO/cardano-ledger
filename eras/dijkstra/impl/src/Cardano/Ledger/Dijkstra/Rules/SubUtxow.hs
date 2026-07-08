@@ -36,7 +36,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Credential (Credential, credScriptHash)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBUTXOW,
@@ -46,20 +46,19 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
+  validateGuardDatums,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -185,7 +184,7 @@ instance
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   STS (SUBUTXOW era)
@@ -199,41 +198,6 @@ instance
 
   transitionRules = [dijkstraSubUtxowTransition @era]
 
--- | Validate that requiredTopLevelGuards datums are consistent with the credential type:
--- Plutus script credentials must have a datum, key/native script credentials must not.
-validateGuardDatums ::
-  forall era.
-  DijkstraEraTxBody era =>
-  ScriptsProvided era ->
-  TxBody SubTx era ->
-  Test (DijkstraSubUtxowPredFailure era)
-validateGuardDatums (ScriptsProvided scripts) txBody =
-  failureOnNonEmptySet malformed SubMalformedGuardDatums
-  where
-    malformed =
-      Map.foldlWithKey' accum mempty (txBody ^. requiredTopLevelGuardsL)
-    accum acc cred mbDatum =
-      case credScriptHash cred of
-        Nothing ->
-          -- Key hash: datum must be SNothing
-          case mbDatum of
-            SNothing -> acc
-            SJust _ -> Set.insert cred acc
-        Just scriptHash ->
-          case Map.lookup scriptHash scripts of
-            Just script
-              | isNativeScript script ->
-                  -- Native script: datum must be SNothing
-                  case mbDatum of
-                    SNothing -> acc
-                    SJust _ -> Set.insert cred acc
-              | otherwise ->
-                  -- Plutus script: datum must be SJust
-                  case mbDatum of
-                    SJust _ -> acc
-                    SNothing -> Set.insert cred acc
-            Nothing -> acc
-
 dijkstraSubUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
@@ -245,7 +209,7 @@ dijkstraSubUtxowTransition ::
   , InjectRuleFailure "SUBUTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "SUBUTXOW" Babbage.BabbageUtxowPredFailure era
-  , InjectRuleFailure "SUBUTXOW" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "SUBUTXOW" DijkstraUtxowPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
@@ -381,3 +345,4 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   MalformedReferenceScripts hs -> SubMalformedReferenceScripts hs
   ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
   MissingRequiredGuards _ -> error "Impossible: `MissingRequiredGuards` for SUBUTXOW"
+  MalformedGuardDatums x -> SubMalformedGuardDatums x

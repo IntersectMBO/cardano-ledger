@@ -136,7 +136,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
           x <- decCBOR
           when (OMap.null x) $ fail (emptyFailure "Subtransactions" "non-empty")
           pure $ subTransactionsDijkstraTxBodyRawL .~ x $ acc
-        24 | SSubTx <- sTxLevel -> Just $ do
+        24 -> Just $ do
           x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
           when (Map.null x) $ fail (emptyFailure "RequiredTopLevelGuards" "non-empty")
           pure $ requiredTopLevelGuardsDijkstraTxBodyRawL .~ x $ acc

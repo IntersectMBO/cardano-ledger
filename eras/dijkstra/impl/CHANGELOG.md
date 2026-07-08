@@ -2,6 +2,14 @@
 
 ## 0.3.0.0
 
+* Make `requiredTopLevelGuards` available on the top-level transaction body:
+  - Change the type of `requiredTopLevelGuardsL` to `Lens' (TxBody l era) (Map (Credential Guard) (StrictMaybe (Data era)))`
+  - Change the type of `requiredTopLevelGuardsDijkstraTxBodyRawL` to `Lens' (DijkstraTxBodyRaw l era) (Map (Credential Guard) (StrictMaybe (Data era)))`
+  - Add `dtbRequiredTopLevelGuards` to `TxBody`
+  - Add `dtbrRequiredTopLevelGuards` to `DijkstraTxBodyRaw`
+* Add `MalformedGuardDatums` constructor to `DijkstraUtxowPredFailure`
+* Add `validateGuardDatums`
+* Add `RequiredTopLevelGuardsNotSupported` constructor to `DijkstraContextError`
 * Add `SubEntitiesEvent` to `DijkstraSubLedgerEvent`
 * Remove `SubCertsEvent` from `DijkstraSubLedgerEvent`
 * Add `SubEntitiesFailure` to `DijkstraSubLedgerPredFailure`

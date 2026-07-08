@@ -1067,6 +1067,7 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 21 ==> huddleRule @"coin" p) //- "current treasury value"
         , opt (idx 22 ==> huddleRule @"positive_coin" p) //- "donation"
         , opt (idx 23 ==> huddleRule @"sub_transactions" p) //- "sub-transactions (NEW)"
+        , opt (idx 24 ==> huddleRule @"required_top_level_guards" p) //- "required top-level guards"
         , opt (idx 25 ==> huddleRule @"direct_deposits" p) //- "direct deposits"
         , opt (idx 26 ==> huddleRule @"account_balance_intervals" p) //- "account balance intervals"
         ]

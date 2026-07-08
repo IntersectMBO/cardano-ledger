@@ -641,6 +641,7 @@ instance EraApi DijkstraEra where
             , dtbVotingProcedures = coerce ctbrVotingProcedures
             , dtbTreasuryDonation = ctbrTreasuryDonation
             , dtbSubTransactions = mempty
+            , dtbRequiredTopLevelGuards = mempty
             , dtbDirectDeposits = DirectDeposits mempty
             , dtbAccountBalanceIntervals = AccountBalanceIntervals mempty
             }

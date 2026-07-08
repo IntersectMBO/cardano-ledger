@@ -47,6 +47,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbTreasuryDonation,
     dtbGuards,
     dtbSubTransactions,
+    dtbRequiredTopLevelGuards,
     dtbDirectDeposits,
     dtbAccountBalanceIntervals,
     dstbSpendInputs,
@@ -182,6 +183,7 @@ data DijkstraTxBodyRaw l era where
     , dtbrCurrentTreasuryValue :: !(StrictMaybe Coin)
     , dtbrTreasuryDonation :: !Coin
     , dtbrSubTransactions :: !(OMap TxId (Tx SubTx era))
+    , dtbrRequiredTopLevelGuards :: !(Map (Credential Guard) (StrictMaybe (Data era)))
     , dtbrDirectDeposits :: !DirectDeposits
     , dtbrAccountBalanceIntervals :: !(AccountBalanceIntervals era)
     } ->
@@ -226,7 +228,7 @@ deriving via
     (Typeable l, EraTxBody era) => NoThunks (DijkstraTxBodyRaw l era)
 
 instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l era) where
-  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraTxBodyRaw {..} = txBodyRaw
      in dtbrSpendInputs `deepseq`
           dtbrCollateralInputs `deepseq`
@@ -248,8 +250,9 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                           dtbrCurrentTreasuryValue `deepseq`
                                             dtbrTreasuryDonation `deepseq`
                                               dtbrSubTransactions `deepseq`
-                                                dtbrDirectDeposits `deepseq`
-                                                  rnf dtbrAccountBalanceIntervals
+                                                dtbrRequiredTopLevelGuards `deepseq`
+                                                  dtbrDirectDeposits `deepseq`
+                                                    rnf dtbrAccountBalanceIntervals
   rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraSubTxBodyRaw {..} = txBodyRaw
      in dstbrSpendInputs `deepseq`
@@ -296,6 +299,7 @@ basicDijkstraTxBodyRaw STopTx =
     SNothing
     mempty
     OMap.Empty
+    mempty
     (DirectDeposits mempty)
     (AccountBalanceIntervals mempty)
 basicDijkstraTxBodyRaw SSubTx =
@@ -421,14 +425,13 @@ instance
         23
           | STopTx <- sTxLevel ->
               Just $ decodeAccA acc (subTransactionsDijkstraTxBodyRawL .~) decodeSubTransactions
-        24
-          | SSubTx <- sTxLevel ->
-              Just $
-                decodeAccA acc (requiredTopLevelGuardsDijkstraTxBodyRawL .~) $
-                  pure <$> do
-                    x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
-                    failOnNull x $ emptyNamedFailure "RequiredTopLevelGuards" "non-empty"
-                    pure x
+        24 ->
+          Just $
+            decodeAccA acc (requiredTopLevelGuardsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
+                failOnNull x $ emptyNamedFailure "RequiredTopLevelGuards" "non-empty"
+                pure x
         25 ->
           Just $
             decodeAccA acc (directDepositsDijkstraTxBodyRawL .~) $
@@ -487,6 +490,9 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 21 dtbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
         !> Omit null (Key 23 $ To dtbrSubTransactions)
+        !> Omit
+          (== mempty)
+          (Key 24 $ E (encodeMap encCBOR (encodeNullStrictMaybe encCBOR)) dtbrRequiredTopLevelGuards)
         !> Omit (null . unDirectDeposits) (Key 25 (To dtbrDirectDeposits))
         !> Omit (null . unAccountBalanceIntervals) (Key 26 (To dtbrAccountBalanceIntervals))
 encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
@@ -594,6 +600,7 @@ pattern DijkstraTxBody ::
   StrictMaybe Coin ->
   Coin ->
   OMap TxId (Tx SubTx DijkstraEra) ->
+  Map (Credential Guard) (StrictMaybe (Data DijkstraEra)) ->
   DirectDeposits ->
   AccountBalanceIntervals DijkstraEra ->
   TxBody TopTx DijkstraEra
@@ -618,6 +625,7 @@ pattern DijkstraTxBody
   , dtbCurrentTreasuryValue
   , dtbTreasuryDonation
   , dtbSubTransactions
+  , dtbRequiredTopLevelGuards
   , dtbDirectDeposits
   , dtbAccountBalanceIntervals
   } <-
@@ -643,6 +651,7 @@ pattern DijkstraTxBody
         , dtbrCurrentTreasuryValue = dtbCurrentTreasuryValue
         , dtbrTreasuryDonation = dtbTreasuryDonation
         , dtbrSubTransactions = dtbSubTransactions
+        , dtbrRequiredTopLevelGuards = dtbRequiredTopLevelGuards
         , dtbrDirectDeposits = dtbDirectDeposits
         , dtbrAccountBalanceIntervals = dtbAccountBalanceIntervals
         }
@@ -669,6 +678,7 @@ pattern DijkstraTxBody
       currentTreasuryValue
       treasuryDonation
       subTransactions
+      requiredTopLevelGuards
       directDeposits
       accountBalanceIntervals =
         mkMemoizedEra @DijkstraEra $
@@ -693,6 +703,7 @@ pattern DijkstraTxBody
             currentTreasuryValue
             treasuryDonation
             subTransactions
+            requiredTopLevelGuards
             directDeposits
             accountBalanceIntervals
 
@@ -1314,7 +1325,7 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
   subTransactionsTxBodyL :: Lens' (TxBody TopTx era) (OMap TxId (Tx SubTx era))
 
   requiredTopLevelGuardsL ::
-    Lens' (TxBody SubTx era) (Map (Credential Guard) (StrictMaybe (Data era)))
+    Lens' (TxBody l era) (Map (Credential Guard) (StrictMaybe (Data era)))
 
   directDepositsTxBodyL :: Lens' (TxBody l era) DirectDeposits
 
@@ -1336,9 +1347,17 @@ subTransactionsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) (OMap T
 subTransactionsDijkstraTxBodyRawL = lens dtbrSubTransactions (\x y -> x {dtbrSubTransactions = y})
 
 requiredTopLevelGuardsDijkstraTxBodyRawL ::
-  Lens' (DijkstraTxBodyRaw SubTx era) (Map (Credential Guard) (StrictMaybe (Data era)))
+  Lens' (DijkstraTxBodyRaw l era) (Map (Credential Guard) (StrictMaybe (Data era)))
 requiredTopLevelGuardsDijkstraTxBodyRawL =
-  lens dstbrRequiredTopLevelGuards (\x y -> x {dstbrRequiredTopLevelGuards = y})
+  lens
+    ( \case
+        DijkstraTxBodyRaw {dtbrRequiredTopLevelGuards} -> dtbrRequiredTopLevelGuards
+        DijkstraSubTxBodyRaw {dstbrRequiredTopLevelGuards} -> dstbrRequiredTopLevelGuards
+    )
+    ( \case
+        x@DijkstraTxBodyRaw {} -> (\y -> x {dtbrRequiredTopLevelGuards = y})
+        x@DijkstraSubTxBodyRaw {} -> (\y -> x {dstbrRequiredTopLevelGuards = y})
+    )
 
 instance
   ( NFData (Tx SubTx DijkstraEra)
