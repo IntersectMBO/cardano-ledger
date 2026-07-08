@@ -255,6 +255,7 @@ test-suite tests
     Paths_cardano_ledger_dijkstra
     Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec
     Test.Cardano.Ledger.Dijkstra.GoldenSpec
+    Test.Cardano.Ledger.Dijkstra.UtxoSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -278,4 +279,7 @@ test-suite tests
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, cddl, testlib},
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:testlib,
+    cardano-strict-containers,
+    microlens,
