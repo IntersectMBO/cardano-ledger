@@ -205,8 +205,9 @@ dijkstraEntitiesTransition = do
       accounts = certState ^. certDStateL . accountsL
 
   {- Aggregated withdrawals across the batch must not exceed each account's
-     pre-batch balance, and every withdrawn account must exist pre-batch. -}
-  validateBatchWithdrawals originalAccounts tx
+     pre-batch balance, and every withdrawn account must exist pre-batch.
+     In legacy mode, top-tx withdrawals are excluded (CIP-118 escape hatch). -}
+  validateBatchWithdrawals legacyMode originalAccounts tx
 
   runTest $ Conway.validateWithdrawalsDelegated accounts tx
 
@@ -232,18 +233,27 @@ dijkstraEntitiesTransition = do
 -- | Aggregate withdrawals across the top tx and all its subtransactions. For each
 -- account, the total withdrawn must not exceed its pre-batch balance, and every
 -- account referenced by a withdrawal must exist pre-batch.
+--
+-- In legacy mode, top-tx's own withdrawals are excluded from the batch sum
+-- (CIP-118 escape hatch): top's withdrawal is validated separately by
+-- 'validateLegacyDrain' against post-sub-ledger accounts, allowing a top-tx
+-- to withdraw from an account funded mid-batch by a sub-tx's direct deposit.
 validateBatchWithdrawals ::
   ( EraTx era
   , EraAccounts era
   , DijkstraEraTxBody era
   ) =>
+  Bool ->
   Accounts era ->
   Tx TopTx era ->
   Rule (ENTITIES era) ctx ()
-validateBatchWithdrawals originalAccounts tx = do
-  let allWithdrawals =
+validateBatchWithdrawals legacyMode originalAccounts tx = do
+  let topWithdrawals
+        | legacyMode = Map.empty
+        | otherwise = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
+      allWithdrawals =
         Map.unionsWith (<>) $
-          unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
+          topWithdrawals
             : [ unWithdrawals $ subTx ^. bodyTxL . withdrawalsTxBodyL
               | subTx <- OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
               ]
