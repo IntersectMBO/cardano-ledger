@@ -52,8 +52,8 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
+  Decode (D, From, RecD),
+  Encode (Rec, To),
   decode,
   encode,
   (!>),
@@ -78,8 +78,8 @@ import qualified Data.ByteString.Short as SBS
 import Data.CanonicalMaps (
   canonicalMap,
   canonicalMapUnion,
-  pointWise,
  )
+import qualified Data.CanonicalMaps as CM
 import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
@@ -91,10 +91,9 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.MemPack
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
-import qualified Data.Monoid as M (Sum (Sum, getSum))
+import Data.Monoid (Sum (..))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
-import qualified Data.Semigroup as Semigroup (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -156,7 +155,7 @@ newtype MultiAsset = MultiAsset (Map PolicyID (Map AssetName Integer))
   deriving (Show, Generic, ToJSON, EncCBOR)
 
 instance Eq MultiAsset where
-  MultiAsset x == MultiAsset y = pointWise (pointWise (==)) x y
+  MultiAsset x == MultiAsset y = CM.pointwise (CM.pointwise (==)) x y
 
 instance NFData MultiAsset where
   rnf (MultiAsset m) = rnf m
@@ -220,7 +219,7 @@ instance Val MaryValue where
   coin (MaryValue c _) = c
   modifyCoin f (MaryValue c m) = MaryValue (f c) m
   pointwise p (MaryValue (Coin c) (MultiAsset x)) (MaryValue (Coin d) (MultiAsset y)) =
-    p c d && pointWise (pointWise p) x y
+    p c d && CM.pointwise (CM.pointwise p) x y
 
   -- returns the size, in Word64's, of the CompactValue representation of MaryValue
   size vv@(MaryValue _ (MultiAsset m))
@@ -709,7 +708,7 @@ to v@(MaryValue _ ma) = do
 -- where: n = total number of assets, p = number of unique policy ids
 isMultiAssetSmallEnough :: MultiAsset -> Bool
 isMultiAssetSmallEnough (MultiAsset ma) =
-  44 * M.getSum (foldMap' (M.Sum . length) ma) + 28 * length ma <= 65535
+  44 * getSum (foldMap' (Sum . length) ma) + 28 * length ma <= 65535
 
 representationSize ::
   [(PolicyID, AssetName, Integer)] ->
@@ -725,7 +724,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
-      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetNameBytes) assetNames
+      getSum $ foldMap' (Sum . SBS.length . assetNameBytes) assetNames
 
 from :: CompactValue -> MaryValue
 from (CompactValueAdaOnly c) = MaryValue (fromCompact c) (MultiAsset Map.empty)
