@@ -44,6 +44,10 @@
 * Move `EncCBOR PoolCert` instance to `cardano-ledger-conformance`
 * Remove `[Enc|Dec]CBORGRoup` instances for `StakePoolParams`
 * Add `withStakePoolParamsFlatEncoding` and `decodeStakePoolParamsFlat` for flat (non-nested) CBOR encoding/decoding
+* Add `sppLeiosKey` field to `StakePoolParams`
+* Add `spsBlsKey` field and `spsBlsKeyL` lens to `StakePoolState`
+* Add `LeiosKey`, `LeiosPubKey`, `LeiosPossessionProof` types with `EncCBOR`/`DecCBOR`, `ToJSON`/`FromJSON` instances
+* Make `FromJSON StakePoolParams` backward-compatible: `leiosKey` field is optional (defaults to `SNothing`)
 
 ### `cddl`
 

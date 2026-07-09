@@ -458,18 +458,22 @@ pool_registration_cert = (3, pool_params)
 
 ; Pool parameters for stake pool registration
 pool_params =
-  ( operator       : pool_keyhash
-  , vrf_keyhash    : vrf_keyhash
-  , pledge         : coin
-  , cost           : coin
-  , margin         : unit_interval
-  , reward_account : reward_account
-  , pool_owners    : set<addr_keyhash>
-  , relays         : [* relay]
-  , pool_metadata  : pool_metadata/ nil
+  (   operator       : pool_keyhash
+  ,   vrf_keyhash    : vrf_keyhash
+  , ? bls_key        : bls_key/ nil
+  ,   pledge         : coin
+  ,   cost           : coin
+  ,   margin         : unit_interval
+  ,   reward_account : reward_account
+  ,   pool_owners    : set<addr_keyhash>
+  ,   relays         : [* relay]
+  ,   pool_metadata  : pool_metadata/ nil
   )
 
 vrf_keyhash = hash32
+
+; BLS key
+bls_key = [bls_pubkey : bytes .size 96, bls_possessionproof : bytes .size 48]
 
 ; A unit interval is a number in the range between 0 and 1, which
 ; means there are two extra constraints:

@@ -154,6 +154,7 @@ genChainInEpoch epoch = do
                         , sppOwners = Set.singleton owner
                         , sppRelays = StrictSeq.empty
                         , sppMetadata = SNothing
+                        , sppBlsKey = SNothing
                         }
               ]
         , sgsStake =
