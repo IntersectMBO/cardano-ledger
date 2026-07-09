@@ -84,10 +84,10 @@ genOutputCoin :: (MonadGen m, HasStatefulGen g m) => m Coin
 genOutputCoin = genCoin outputCoinGenRange
 
 -- Exposed for testing
---
+
 -- | With this range, the deciles (in ADA) are approximately:
 -- >>> (`div` 1000000) . unCoin <$> [outputCoinGenQuantile p | p <- [0.1, 0.2 .. 0.9]]
--- [22,82,213,477,1014,2156,4831,12418,45982]
+-- [19,68,169,366,753,1550,3354,8279,28978]
 outputCoinGenRange :: (Coin, Coin)
 outputCoinGenRange = (Coin 1_000_000, Coin 5_000_000_000_000)
 
@@ -102,10 +102,10 @@ genBalanceCoin :: (MonadGen m, HasStatefulGen g m) => m Coin
 genBalanceCoin = genCoin balanceCoinGenRange
 
 -- Exposed for testing
---
+
 -- | With this range, the deciles (in ADA) are approximately:
 -- >>> (`div` 1000000) . unCoin <$> [balanceCoinGenQuantile p | p <- [0.1, 0.2 .. 0.9]]
--- [22398,82938,213160,477526,1014857,2156814,4831732,12418130,45982295]
+-- [19595,68586,169263,366259,753558,1550403,3354831,8279312,28978724]
 balanceCoinGenRange :: (Coin, Coin)
 balanceCoinGenRange = (Coin 1_000_000_000, Coin 5_000_000_000_000_000)
 
