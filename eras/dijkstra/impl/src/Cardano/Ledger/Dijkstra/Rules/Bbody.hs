@@ -26,7 +26,7 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (OrdExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
@@ -78,7 +78,7 @@ data DijkstraBbodyPredFailure era
   | InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
+  | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | PerasCertValidationFailed PerasCert Nonce
   deriving (Generic)

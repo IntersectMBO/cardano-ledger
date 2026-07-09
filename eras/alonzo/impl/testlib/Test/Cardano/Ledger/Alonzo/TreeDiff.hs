@@ -64,7 +64,6 @@ instance ToExpr (NativeScript era) => ToExpr (AlonzoTxAuxDataRaw era)
 
 instance ToExpr (NativeScript era) => ToExpr (AlonzoTxAuxData era)
 
--- PParams
 deriving newtype instance ToExpr OrdExUnits
 
 instance ToExpr (AlonzoPParams StrictMaybe era)

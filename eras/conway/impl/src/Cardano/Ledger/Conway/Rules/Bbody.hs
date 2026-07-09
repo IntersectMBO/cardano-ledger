@@ -30,7 +30,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
@@ -99,7 +99,7 @@ data ConwayBbodyPredFailure era
   | InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
+  | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | HeaderProtVerTooHigh (Mismatch RelLTEQ Version)
   deriving (Generic)

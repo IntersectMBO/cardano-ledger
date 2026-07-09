@@ -52,7 +52,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra, UTXO, UTXOS)
 import Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUtxosPredFailure (..),
  )
-import Cardano.Ledger.Plutus (ExUnits)
+import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraCertState (..), EraStake, EraUTxO)
@@ -115,7 +115,7 @@ data ConwayUtxoPredFailure era
     ScriptsNotPaidUTxO
       (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
-      (Mismatch RelLTEQ ExUnits) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ OrdExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body

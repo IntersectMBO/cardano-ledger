@@ -61,7 +61,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Plutus (ExUnits)
+import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -138,7 +138,7 @@ data DijkstraUtxoPredFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
-      (Mismatch RelLTEQ ExUnits)
+      (Mismatch RelLTEQ OrdExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body

@@ -59,6 +59,7 @@ import Cardano.Ledger.Plutus (
   CostModels,
   CostModelsUpdate (..),
   ExUnits (..),
+  OrdExUnits (..),
   Prices (..),
   emptyCostModels,
   updateCostModels,
