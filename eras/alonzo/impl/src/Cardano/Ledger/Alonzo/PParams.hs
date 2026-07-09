@@ -53,7 +53,6 @@ module Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
   LangDepView (..),
   encodeLangViews,
-  OrdExUnits (..),
   CoinPerWord (..),
 
   -- * PParam
@@ -105,8 +104,8 @@ import Cardano.Ledger.Plutus.CostModels (
  )
 import Cardano.Ledger.Plutus.ExUnits (
   ExUnits (..),
+  OrdExUnits (..),
   Prices (..),
-  zipSemiExUnits,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -115,7 +114,6 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import Data.Function (on)
 import Data.Functor.Identity (Identity (..))
@@ -270,9 +268,11 @@ data AlonzoPParams f era = AlonzoPParams
   , appPrices :: !(HKD f Prices)
   -- ^ Prices of execution units (for non-native script languages)
   , appMaxTxExUnits :: !(HKD f OrdExUnits)
-  -- ^ Max total script execution resources units allowed per tx
+  -- ^ Max total script execution resources units allowed per tx.
+  -- Wrapped in a newtype to allow ordering and then unwrapped in the lens.
   , appMaxBlockExUnits :: !(HKD f OrdExUnits)
-  -- ^ Max total script execution resources units allowed per block
+  -- ^ Max total script execution resources units allowed per block.
+  -- Wrapped in a newtype to allow ordering and then unwrapped in the lens.
   , appMaxValSize :: !(HKD f Word32)
   -- ^ Max size of a Value in an output
   , appCollateralPercentage :: !(HKD f Word16)
@@ -405,17 +405,6 @@ newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
 instance ToPlutusData CoinPerWord where
   toPlutusData = error "unsupported"
   fromPlutusData = error "unsupported"
-
--- | This is a helper type that allows us to define an `Ord` instance for executions units
--- without affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance`
--- for PParams. This is just a helper type and should not be used directly. Both lenses
--- that operate on TxExUnits and BlockExUnits use the `ExUnits` type, not this one.
-newtype OrdExUnits = OrdExUnits {unOrdExUnits :: ExUnits}
-  deriving (Eq)
-  deriving newtype (Show, NoThunks, NFData, DecCBOR, EncCBOR, FromJSON, ToJSON)
-
-instance Ord OrdExUnits where
-  compare = coerce (zipSemiExUnits compare)
 
 -- | Parameters that were added in Alonzo
 data UpgradeAlonzoPParams f = UpgradeAlonzoPParams

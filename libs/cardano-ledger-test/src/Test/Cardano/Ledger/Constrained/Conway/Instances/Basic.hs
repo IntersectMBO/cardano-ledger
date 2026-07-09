@@ -37,7 +37,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
   prettyE,
 ) where
 
-import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (Compactible (..), toCompactPartial)
