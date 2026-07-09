@@ -100,12 +100,13 @@ if impl(ghc >=9.12)
     -- Unique: https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
 
+-- TODO Revert to github:tweag/cardano-cls once the Pr is merged
 source-repository-package
   type: git
-  location: https://github.com/tweag/cardano-cls.git
+  location: https://github.com/koslambrou/cardano-cls.git
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
-  --sha256: sha256-3rAc99T2/MZk7Rd2gb9zq7iUM9hMDOzNvehOq/8hpfs=
-  tag: 8e2bba9442cb388089f53d708cc4aedcb47726ea
+  --sha256: sha256-VnZyMoleberx2gyoCkhwVgYo9Mab5+4RUO/MTzElN3U=
+  tag: a7ddf62e6291b297889e78b4df95e2fb605c312f
 
 constraints:
   -- Happy version 2.2.1 fails to compile haskell-src-exts

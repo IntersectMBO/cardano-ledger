@@ -137,6 +137,7 @@ aliceStakePoolParams =
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = byteArrayFromShortByteString "{}"
             }
+    , sppLeiosKey = SNothing
     }
 
 -- | Alice's VRF key hash
@@ -187,6 +188,7 @@ bobStakePoolParams =
     , sppOwners = Set.singleton $ hashKey (vKey bobStake)
     , sppRelays = StrictSeq.empty
     , sppMetadata = SNothing
+    , sppLeiosKey = SNothing
     }
 
 -- | Bob's VRF key hash

@@ -7,6 +7,7 @@
 
 module Test.Cardano.Ledger.CanonicalState.Arbitrary () where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe (SNothing))
 import Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalCoin (..),
   CanonicalExUnits (..),
@@ -63,7 +64,18 @@ instance Arbitrary EntitiesStakePools.V0.CanonicalStakePool where
   arbitrary = genericArbitraryU
 
 instance Arbitrary EntitiesStakePools.V0.CanonicalStakePoolParams where
-  arbitrary = genericArbitraryU
+  arbitrary =
+    EntitiesStakePools.V0.CanonicalStakePoolParams
+      <$> arbitrary
+      <*> arbitrary
+      <*> pure SNothing -- csppLeiosKey: only supported in Dijkstra+
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary EntitiesStakePools.V0.EntitiesStakePoolsOut where
   arbitrary = genericArbitraryU

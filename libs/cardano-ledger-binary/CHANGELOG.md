@@ -10,6 +10,7 @@
 * Remove default implementation for `DecCBOR` class
 * Remove `binaryGetDecoder` from exports
 * Change `decodeIPv4` and `decodeIPv6` to reject leftover bytes unconditionally, regardless of protocol version
+* Add `encodePossessionProofDSIGN` and `decodePossessionProofDSIGN` to `Cardano.Ledger.Binary.Crypto`
 
 ### `testlib`
 
