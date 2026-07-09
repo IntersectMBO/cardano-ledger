@@ -6,6 +6,13 @@
 
 ## 1.23.0.0
 
+* Add `Ord` instances for `ConwayBbodyPredFailure`, `ConwayCertPredFailure`,
+  `ConwayCertsPredFailure`, `ConwayUtxoPredFailure`, `ConwayUtxosPredFailure`,
+  `ConwayUtxowPredFailure`, `ConwayDelegPredFailure`, `ConwayGovCertPredFailure`,
+  `ConwayGovPredFailure`, `ConwayLedgerPredFailure`
+* Add `Ord` instances for
+  `ConwayPlutusPurpose AsItem`, `ConwayPlutusPurpose AsIxItem`, `ConwayContextError`,
+  `VotingProcedure`, `VotingProcedures`
 * Restrict `conwayCertsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Change `EraRule "LEDGERS" ConwayEra` from `Shelley.LEDGERS` to `Babbage.LEDGERS`
 * Add `TranslateEra` instance for `SnapShots`

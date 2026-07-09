@@ -6,6 +6,7 @@
 
 ## 1.11.0.0
 
+* Add `Ord` instances for `MaryValue`, `CompactForm MaryValue`
 * Add `TranslateEra` instance for `SnapShots`
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
