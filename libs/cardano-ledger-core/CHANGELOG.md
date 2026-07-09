@@ -30,6 +30,13 @@
 
 ## 1.21.0.0
 
+* Add `Ord` constraint to `Val` class
+* Add `Ord (CompactForm a)` constraint to `Compactible` class
+* Add `Ord (Script era)`, `Ord (NativeScript era)` constraints to `EraScript` class
+* Add `Ord (InstantStake era)` constraint to `EraStake` class
+* Add `Ord (TxOut era)` constraint to `EraTxOut` class
+* Add `Ord` instances for `CompactForm DeltaCoin`, `DirectDeposits`, `ExUnits`, `FuturePParams`,
+  `MemoBytes`, `TxOutSource`, `VKey`, `Withdrawals`
 * Restrict `getTotalDepositsTxBody` and `certsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Add `StAnnTxCache` as an argument to `validateTxAuxData`
 * Add `isValidPlutusRunnable`

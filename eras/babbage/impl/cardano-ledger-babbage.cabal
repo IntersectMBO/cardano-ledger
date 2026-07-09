@@ -105,7 +105,7 @@ library
     microlens,
     nothunks,
     plutus-ledger-api >=1.33,
-    small-steps >=1.1,
+    small-steps >=1.2,
     text,
     transformers,
     validation-selective,
@@ -213,7 +213,7 @@ library testlib
     microlens,
     microlens-ghc,
     plutus-ledger-api,
-    small-steps >=1.1,
+    small-steps >=1.2,
     time,
     tree-diff,
 

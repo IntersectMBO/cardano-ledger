@@ -11,6 +11,7 @@
 
 ## 1.14.0.0
 
+* Add `Ord` instances for `BabbageContextError`, `BabbageTxOut`, `BabbageUtxoPredFailure`, `BabbageUtxowPredFailure`
 * Rename `updateUTxOStateByTxValidity` to `updateUTxOState`
 * `validateScriptsWellFormed` / `validateScriptsWellFormedTxOuts` gained a cache parameter
 * Introduce `LEDGERS` rule with `STS` and `Embed (LEDGER era) (LEDGERS era)` instances, and wire it to `EraRule "LEDGERS" BabbageEra` (previously `Shelley.LEDGERS`)

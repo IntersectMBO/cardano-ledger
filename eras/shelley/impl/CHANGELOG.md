@@ -15,6 +15,12 @@
 
 ## 1.19.0.0
 
+* Add `Ord` instances for `ShelleyBbodyPredFailure`, `ShelleyDelegPredFailure`,
+  `ShelleyDelegsPredFailure`, `ShelleyDelplPredFailure`, `ShelleyLedgerPredFailure`,
+  `ShelleyLedgersPredFailure`, `ShelleyPoolPredFailure`, `ShelleyPpupPredFailure`,
+  `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
+* Add `Ord` instances for `MultiSigRaw`, `MultiSig`, `ProposedPPUpdates`, `ShelleyGovState`,
+  `ShelleyTxOut`, `VotingPeriod`
 * Restrict `shelleyCertsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Switch parameter order of `updateUTxOState`
 * Add `updateUTxOStateDeposits` and `updateUTxOAndInstantStake`

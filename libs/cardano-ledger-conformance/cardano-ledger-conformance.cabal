@@ -120,7 +120,7 @@ library
     mtl,
     prettyprinter,
     prettyprinter-ansi-terminal,
-    small-steps >=1.1,
+    small-steps >=1.2,
     text,
     tree-diff,
     unliftio,
