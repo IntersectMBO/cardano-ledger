@@ -359,17 +359,15 @@ unsafeMakeSafeHash = SafeHash
 
 -- =====================================================================
 
--- | Only Types that preserve their serialisation bytes are members of the
---   class 'SafeToHash'. There are only a limited number of primitive direct
---   instances of 'SafeToHash', all but two of them are present in this file. Instead
---   of making explicit instances, we almost always use a newtype (around a type @S@)
---   where their is already an instance @(SafeToHash S)@. In that case the newtype
---   has its SafeToHash instance derived using newtype deriving. The prime example of @s@ is 'MemoBytes'.
---   The only exceptions are the legacy Shelley types: @Metadata@ and @ShelleyTx@, that
---   preserve their serialization bytes
---   using a different mechanism than the use of 'MemoBytes'.  'SafeToHash' is a superclass
---   requirement of the classes 'HashAnnotated' which
---   provide more convenient ways to construct SafeHashes than using 'makeHashWithExplicitProxys'.
+-- | Only Types that preserve their serialisation bytes are members of the class 'SafeToHash'. There
+--   are only a limited number of primitive direct instances of 'SafeToHash', all but two of them
+--   are present in this file. Instead of making explicit instances, we almost always use a newtype
+--   (around a type @S@) where there is already an instance @(SafeToHash S)@. In that case the
+--   newtype has its SafeToHash instance derived using newtype deriving. The prime example of @s@ is
+--   'MemoBytes'.
+--
+--  'SafeToHash' is a superclass requirement of the 'HashAnnotated' class which provides more
+--   convenient ways to construct SafeHashes than using 'makeHashWithExplicitProxys'.
 class SafeToHash t where
   -- | Extract the original bytes from 't'
   originalBytes :: t -> ByteString
