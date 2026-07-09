@@ -22,6 +22,7 @@ module Cardano.Ledger.Plutus.ExUnits (
   zipSemiExUnits,
   ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
   ExUnits' (..),
+  OrdExUnits (..),
   Prices (..),
 ) where
 
@@ -59,6 +60,7 @@ import Data.Aeson (
   (.:),
   (.=),
  )
+import Data.Coerce (coerce)
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Measure (BoundedMeasure, Measure)
@@ -80,7 +82,7 @@ data ExUnits' a = ExUnits'
   { exUnitsMem' :: !a
   , exUnitsSteps' :: !a
   }
-  deriving (Eq, Ord, Generic, Show, Functor)
+  deriving (Eq, Generic, Show, Functor)
   -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
   deriving
     (Measure, BoundedMeasure)
@@ -100,7 +102,7 @@ deriving instance FromJSON a => FromJSON (ExUnits' a)
 -- | This newtype wrapper of ExUnits' is used to hide
 --  an implementation detail inside the ExUnits pattern.
 newtype ExUnits = WrapExUnits {unWrapExUnits :: ExUnits' Natural}
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Generic, Show)
   deriving newtype (Monoid, Semigroup)
 
 instance NoThunks ExUnits
@@ -145,13 +147,24 @@ pattern ExUnits {exUnitsMem, exUnitsSteps} <-
 
 -- | It is deliberate that there is no `Ord` instance for `ExUnits`. Use this function to
 --   compare if one `ExUnit` is pointwise compareable to another. In case when `Ord`
---   instance like comparison is necessary you can use @`zipSemiExUnits` `compare`@
+--   instance like comparison is necessary you can use @`zipSemiExUnits` `compare`@,
+--   or the `OrdExUnits` newtype defined below.
 pointWiseExUnits :: (Natural -> Natural -> Bool) -> ExUnits -> ExUnits -> Bool
 pointWiseExUnits f ex1 ex2 = getAll (zipSemiExUnits (\x y -> All (f x y)) ex1 ex2)
 
 -- | Pointwise combine units into a semigroup and mappened the results.
 zipSemiExUnits :: Semigroup a => (Natural -> Natural -> a) -> ExUnits -> ExUnits -> a
 zipSemiExUnits f (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `f` m2) <> (s1 `f` s2)
+
+-- | This is a helper type that allows us to define an `Ord` instance for executions units without
+-- affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance` for types
+-- that need to contain an `ExUnits`. This is just a helper type and should not be used directly.
+newtype OrdExUnits = OrdExUnits {unOrdExUnits :: ExUnits}
+  deriving (Eq)
+  deriving newtype (Show, NoThunks, NFData, DecCBOR, EncCBOR, FromJSON, ToJSON)
+
+instance Ord OrdExUnits where
+  compare = coerce (zipSemiExUnits compare)
 
 -- ==================================
 

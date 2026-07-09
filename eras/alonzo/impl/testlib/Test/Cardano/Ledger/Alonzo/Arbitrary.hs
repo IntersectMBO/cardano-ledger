@@ -39,7 +39,6 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoExtraConfig (..), AlonzoGenesis (..)
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams (AlonzoPParams),
   LangDepView (..),
-  OrdExUnits (OrdExUnits),
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (ContextError),
@@ -81,7 +80,7 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), hashData)
-import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
   asSLanguage,
