@@ -379,6 +379,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
             StakePoolParams
               (hashKey . vKey $ aikCold allPoolKeys)
               (hashVerKeyVRF @c . vrfVerKey $ aikVrf allPoolKeys)
+              SNothing
               pledge
               cost
               interval

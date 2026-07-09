@@ -179,9 +179,12 @@
 * Add `transaction_mempool` rule
 * Add `peras_certificate`, `block_body`
 * Extend `constr` CDDL rule to include tags 1280–1400 for Plutus `Data` constructor indexes
+* Add optional `bls_key` field to `pool_params`
+* Add `bls_key` rule with `bls_pubkey` (96 bytes) and `bls_possession_proof` (48 bytes)
 
 ### testlib
 
+* Add `exampleBlsKey` to `Test.Cardano.Ledger.Dijkstra.Examples`
 * Add `genSmallDijkstraBlockBody`
 * Add to `Test.Cardano.Ledger.Dijkstra.Examples`:
   - `exampleDijkstraOnwardsEraPParams`

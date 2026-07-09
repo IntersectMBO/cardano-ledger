@@ -343,6 +343,7 @@ mkStakePoolParams keys =
     , sppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
     , sppRelays = StrictSeq.empty
     , sppMetadata = SNothing
+    , sppBlsKey = SNothing
     }
 
 -- Create stake pool registration certs

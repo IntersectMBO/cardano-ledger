@@ -17,8 +17,14 @@ module Test.Cardano.Ledger.TreeDiff (
   module Test.Cardano.Ledger.Binary.TreeDiff,
 ) where
 
+import Cardano.Crypto.DSIGN (
+  DSIGNAggregatable (PossessionProofDSIGN),
+  DSIGNAlgorithm,
+  VerKeyDSIGN,
+ )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (rawEncodeFixedSized)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
@@ -61,6 +67,16 @@ instance ToExpr (NoUpdate a)
 instance ToExpr (VKey r) where
   toExpr vk =
     Rec "VKey" $ OMap.fromList [("VKey (hashOf)", toExpr $ hashKey vk)]
+
+instance DSIGNAlgorithm r => ToExpr (VerKeyDSIGN r) where
+  toExpr vk =
+    Rec "VerKeyDSIGN" $
+      OMap.fromList [("VerKeyDSIGN", toExpr $ HexBytes $ rawEncodeFixedSized vk)]
+
+instance DSIGNAggregatable r => ToExpr (PossessionProofDSIGN r) where
+  toExpr proof =
+    Rec "PossessionProofDSIGN" $
+      OMap.fromList [("PossessionProofDSIGN", toExpr $ HexBytes $ rawEncodeFixedSized proof)]
 
 instance ToExpr GenDelegs
 
@@ -251,6 +267,8 @@ instance ToExpr CompactAddr
 instance ToExpr PoolMetadata
 
 instance ToExpr StakePoolParams
+
+instance ToExpr BlsKey
 
 instance ToExpr StakePoolState
 
