@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -66,11 +67,18 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
 import qualified Codec.Serialise as Cborg (Serialise (..))
+import Control.Applicative (asum)
 import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON (..), Value (Null))
+import Control.Monad ((<$!>))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (Null), object, withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser)
+import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
 import Data.MemPack
+import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Text.Encoding as Text (decodeUtf8)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -93,6 +101,12 @@ instance Typeable era => DecCBOR (PlutusData era) where
 
 instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
   decCBOR = pure <$> fromPlainDecoder Cborg.decode
+
+instance ToJSON (PlutusData era) where
+  toJSON (PlutusData d) = plutusDataToJson d
+
+instance FromJSON (PlutusData era) where
+  parseJSON v = PlutusData <$> plutusDataFromJson v
 
 newtype Data era = MkData (MemoBytes (PlutusData era))
   deriving (Eq, Generic)
@@ -118,6 +132,56 @@ instance HashAnnotated (Data era) EraIndependentData where
   hashAnnotated = getMemoSafeHash
 
 instance Typeable era => NoThunks (Data era)
+
+instance ToJSON (Data era) where
+  toJSON = toJSON . getMemoRawType
+
+instance Era era => FromJSON (Data era) where
+  parseJSON v = mkMemoizedEra @era <$> parseJSON v
+
+plutusDataToJson :: PV1.Data -> Aeson.Value
+plutusDataToJson = \case
+  PV1.Constr n fields ->
+    object ["constructor" .= n, "fields" .= map plutusDataToJson fields]
+  PV1.Map kvs ->
+    object
+      [ "map"
+          .= [ object ["k" .= plutusDataToJson k, "v" .= plutusDataToJson v]
+             | (k, v) <- kvs
+             ]
+      ]
+  PV1.List elems ->
+    object ["list" .= map plutusDataToJson elems]
+  PV1.I n ->
+    object ["int" .= n]
+  PV1.B bs ->
+    object ["bytes" .= Text.decodeUtf8 (BS16.encode bs)]
+
+plutusDataFromJson :: Aeson.Value -> Parser PV1.Data
+plutusDataFromJson = withObject "Data" $ \o ->
+  asum
+    [ do
+        !n <- o .: "constructor"
+        !fields <- o .: "fields" >>= mapM plutusDataFromJson
+        pure $ PV1.Constr n fields
+    , do
+        !kvs <-
+          o .: "map"
+            >>= mapM
+              ( withObject "MapEntry" $ \kv -> do
+                  !k <- kv .: "k" >>= plutusDataFromJson
+                  !v <- kv .: "v" >>= plutusDataFromJson
+                  pure (k, v)
+              )
+        pure $ PV1.Map kvs
+    , PV1.List <$!> (o .: "list" >>= mapM plutusDataFromJson)
+    , PV1.I <$!> o .: "int"
+    , PV1.B <$!> (o .: "bytes" >>= parsePlutusByteStringData)
+    ]
+  where
+    parsePlutusByteStringData t = case BS16.decode (encodeUtf8 t) of
+      Left e -> fail $ "bytes: invalid hex: " <> e
+      Right bs -> pure bs
 
 pattern Data :: forall era. Era era => PV1.Data -> Data era
 pattern Data p <- (getMemoRawType -> PlutusData p)
