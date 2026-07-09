@@ -29,6 +29,7 @@ $datumIsWellformedQ
 $inputsOutputsAreNotEmptyNoDatumQ
 $inputsOutputsAreNotEmptyWithDatumQ
 $inputsOverlapsWithRefInputsQ
+$txInfoTranslationSpecScriptQ
 $ensureTreasuryReserveQ
 
 -- ================================================================
@@ -117,6 +118,12 @@ inputsOverlapsWithRefInputsBytes :: (Q [Dec], PlutusBinary)
 inputsOverlapsWithRefInputsBytes =
   ( inputsOverlapsWithRefInputsQ
   , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||inputsOverlapsWithRefInputs||])
+  )
+
+txInfoTranslationSpecScriptBytes :: (Q [Dec], PlutusBinary)
+txInfoTranslationSpecScriptBytes =
+  ( txInfoTranslationSpecScriptQ
+  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||txInfoTranslationSpecScript||])
   )
 
 ensureTreasuryReserveBytes :: (Q [Dec], PlutusBinary)
