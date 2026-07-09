@@ -2,6 +2,13 @@
 
 ## 1.21.0.0
 
+* Add `Ord` constraint to `Val` class
+* Add `Ord (CompactForm a)` constraint to `Compactible` class
+* Add `Ord (Script era)`, `Ord (NativeScript era)` constraints to `EraScript` class
+* Add `Ord (InstantStake era)` constraint to `EraStake` class
+* Add `Ord (TxOut era)` constraint to `EraTxOut` class
+* Add `Ord` instances for `CompactForm DeltaCoin`, `DirectDeposits`, `ExUnits`, `FuturePParams`,
+  `MemoBytes`, `TxOutSource`, `VKey`, `Withdrawals`
 * Remove `Semigroup` and `Monoid` instances for `CostModels`
 * Change `updateCostModels` to take `CostModelsUpdate` as its second argument
 * Add `CostModelsUpdate`

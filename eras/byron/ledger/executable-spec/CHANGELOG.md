@@ -1,8 +1,16 @@
 # Version history for `byron-spec-ledger`
 
-## 1.1.0.2
+## 1.2.0.0
 
-*
+* Add `Ord` instances for `AddvotePredicateFailure`, `AdelegPredicateFailure`,
+  `AdelegsPredicateFailure`, `ApplyVotesPredicateFailure`, `DelegPredicateFailure`,
+  `FadsPredicateFailure`, `MsdelegPredicateFailure`, `PvbumpPredicateFailure`,
+  `SdelegPredicateFailure`, `SdelegsPredicateFailure`, `UpiecPredicateFailure`,
+  `UpiendPredicateFailure`, `UpiregPredicateFailure`, `UpivotePredicateFailure`,
+  `UpivotesPredicateFailure`, `UppvvPredicateFailure`, `UpregPredicateFailure`,
+  `UpsvvPredicateFailure`, `UpvPredicateFailure`, `UpvotePredicateFailure`,
+  `UtxoPredicateFailure`, `UtxowPredicateFailure`, `UtxowsPredicateFailure`
+* Add `Ord` instance for `EpochDiff`
 
 ## 1.1.0.1
 
