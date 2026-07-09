@@ -36,6 +36,7 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   SLanguage (..),
+  emptyCostModels,
   hashPlutusScript,
   withSLanguage,
  )
@@ -207,7 +208,7 @@ spec = describe "UTXOS" $ do
         it "No cost model" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
           let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL <>~ [txIn]
-          modifyPParams $ ppCostModelsL .~ mempty
+          modifyPParams $ ppCostModelsL .~ emptyCostModels
           submitFailingTx
             tx
             [injectFailure (CollectErrors [NoCostModel lang])]

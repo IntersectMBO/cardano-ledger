@@ -52,7 +52,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Plutus.CostModels (mkCostModels)
+import Cardano.Ledger.Plutus.CostModels (CostModelsUpdate (..), mkCostModels, updateCostModels)
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
@@ -349,9 +349,9 @@ exampleConwayOnwardsEraPParams :: forall era. ConwayEraPParams era => PParams er
 exampleConwayOnwardsEraPParams =
   exampleBabbageOnwardsEraPParams
     & ppCostModelsL
-      .~ ( testingCostModels [PlutusV1, PlutusV2]
-             <> mkCostModels (Map.singleton PlutusV3 zeroTestingCostModelV3)
-         )
+      .~ updateCostModels
+        (testingCostModels [PlutusV1, PlutusV2])
+        (CostModelsUpdate (mkCostModels (Map.singleton PlutusV3 zeroTestingCostModelV3)))
     -- conway
     & ppPoolVotingThresholdsL
       .~ PoolVotingThresholds
@@ -387,8 +387,9 @@ exampleConwayOnwardsEraPParamsUpdate =
   exampleBabbageOnwardsEraPParamsUpdate
     & ppuCostModelsL
       .~ SJust
-        ( testingCostModels [PlutusV1, PlutusV2]
-            <> mkCostModels (Map.singleton PlutusV3 zeroTestingCostModelV3)
+        ( updateCostModels
+            (testingCostModels [PlutusV1, PlutusV2])
+            (CostModelsUpdate (mkCostModels (Map.singleton PlutusV3 zeroTestingCostModelV3)))
         )
     -- conway
     & ppuPoolVotingThresholdsL

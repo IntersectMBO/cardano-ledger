@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -31,6 +32,7 @@ module Cardano.Ledger.Plutus.CostModels (
 
   -- * Cost Models
   CostModels,
+  CostModelsUpdate (..),
   mkCostModels,
   emptyCostModels,
   updateCostModels,
@@ -159,8 +161,8 @@ parseCostModels isLenient languages =
           unknown <- o .:? "Unknown" .!= mempty
           mkCostModelsLenient unknown
         else
-          pure mempty
-    pure $ mkCostModels cmsMap <> unknownCostModels
+          pure emptyCostModels
+    pure $ updateCostModels (mkCostModels cmsMap) (CostModelsUpdate unknownCostModels)
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does no longer
 -- require the map as a parameter to `mkEvaluationContext`, but the list of integers representing
@@ -379,11 +381,12 @@ data CostModels = CostModels
   }
   deriving stock (Eq, Ord, Show, Generic)
 
-instance Semigroup CostModels where
-  (<>) = updateCostModels
-
-instance Monoid CostModels where
-  mempty = emptyCostModels
+-- | A wrapper around `CostModels` representing an update to be applied on top of an
+-- existing `CostModels` value. Exists solely to prevent accidentally swapping the
+-- argument order of `updateCostModels`.
+newtype CostModelsUpdate = CostModelsUpdate {unCostModelsUpdate :: CostModels}
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, ToJSON)
 
 costModelsValid :: CostModels -> Map Language CostModel
 costModelsValid = _costModelsValid
@@ -401,10 +404,10 @@ emptyCostModels = CostModels mempty mempty
 updateCostModels ::
   -- | Old CostModels that will be overwritten
   CostModels ->
-  -- | New CostModels that will overwrite
-  CostModels ->
+  -- | New CostModels that will overwrite individual `CostModel`s
+  CostModelsUpdate ->
   CostModels
-updateCostModels (CostModels oldValid oldUnk) (CostModels modValid modUnk) =
+updateCostModels (CostModels oldValid oldUnk) (CostModelsUpdate (CostModels modValid modUnk)) =
   CostModels
     newValid
     (Map.union modUnk oldUnk Map.\\ Map.mapKeys languageToWord8 newValid)

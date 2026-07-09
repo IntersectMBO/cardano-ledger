@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Transition (TransitionConfig (MaryTransitionConfig))
-import Cardano.Ledger.Plutus.CostModels (CostModels, updateCostModels)
+import Cardano.Ledger.Plutus.CostModels (CostModels, CostModelsUpdate (..), updateCostModels)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Transition
 import GHC.Generics
@@ -60,6 +60,6 @@ overrideCostModels = \case
   Nothing -> id
   -- Injected cost models override the era-translated ones (the fixed-length
   -- PlutusV1/PlutusV3 genesis fields), so a testnet can carry full cost models
-  -- without an on-chain parameter update. `cms` is passed second because
-  -- `updateCostModels` lets its second argument win. See #5342 and #5896.
-  Just cms -> nesEsL . curPParamsEpochStateL . ppCostModelsL %~ flip updateCostModels cms
+  -- without an on-chain parameter update.
+  Just cms ->
+    nesEsL . curPParamsEpochStateL . ppCostModelsL %~ flip updateCostModels (CostModelsUpdate cms)

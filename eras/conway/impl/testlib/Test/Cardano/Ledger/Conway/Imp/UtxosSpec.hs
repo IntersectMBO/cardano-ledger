@@ -663,7 +663,7 @@ enactCostModels prevGovId cms dRep committeeMembers' = do
   submitYesVoteCCs_ committeeMembers' govId
   passNEpochs 2
   enactedCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
-  enactedCms `shouldBe` (initialCms <> cms)
+  enactedCms `shouldBe` updateCostModels initialCms (CostModelsUpdate cms)
   pure $ GovPurposeId govId
 
 spendDatum :: P1.Data
