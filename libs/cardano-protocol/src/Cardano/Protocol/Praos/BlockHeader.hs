@@ -52,6 +52,8 @@ import Cardano.Ledger.Binary.Crypto (
   encodeVerKeyVRF,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
@@ -61,7 +63,7 @@ import Cardano.Ledger.Hashes (
   extractHash,
   originalBytesSize,
  )
-import Cardano.Ledger.Keys (KeyRole (BlockIssuer), VKey)
+import Cardano.Ledger.Keys (KeyRole (BlockIssuer), VKey, hashKey)
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
@@ -79,6 +81,7 @@ import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro (lens, to)
 import NoThunks.Class (NoThunks (..))
 
 -- | The body of the header is the part which gets hashed to form the hash
@@ -238,3 +241,33 @@ deriving via
   Mem (HeaderRaw crypto)
   instance
     Crypto crypto => DecCBOR (Annotator (Header crypto))
+
+instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
+  blockIssuerBlockHeaderG =
+    to (\(Block (Header hb _) _) -> hashKey (hbVk hb))
+  blockHeaderSizeBlockHeaderG =
+    to (\(Block hdr _) -> originalBytesSize hdr)
+  blockBodySizeBlockHeaderL =
+    lens
+      (\(Block (Header hb _) _) -> hbBodySize hb)
+      ( \(Block (Header hb sig) body) sz ->
+          Block (Header hb {hbBodySize = sz} sig) body
+      )
+  blockBodyHashBlockHeaderL =
+    lens
+      (\(Block (Header hb _) _) -> hbBodyHash hb)
+      ( \(Block (Header hb sig) body) h ->
+          Block (Header hb {hbBodyHash = h} sig) body
+      )
+  slotNoBlockHeaderL =
+    lens
+      (\(Block (Header hb _) _) -> hbSlotNo hb)
+      ( \(Block (Header hb sig) body) s ->
+          Block (Header hb {hbSlotNo = s} sig) body
+      )
+  protVerBlockHeaderL =
+    lens
+      (\(Block (Header hb _) _) -> hbProtVer hb)
+      ( \(Block (Header hb sig) body) pv ->
+          Block (Header hb {hbProtVer = pv} sig) body
+      )
