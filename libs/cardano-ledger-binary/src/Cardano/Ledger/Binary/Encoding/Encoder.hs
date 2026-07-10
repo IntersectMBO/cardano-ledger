@@ -156,6 +156,7 @@ enforceEncodingVersion version encoding = fromPlainEncoding (toPlainEncoding ver
 encodeFixedSized :: FixedSizeCodec a => a -> Encoding
 encodeFixedSized = fromPlainEncoding . FSC.encodeFixedSized
 
+-- | Conditionally choose the newer or older encoder, depending on the current
 -- version. Supplied version acts as a pivot.
 --
 -- =====__Example__

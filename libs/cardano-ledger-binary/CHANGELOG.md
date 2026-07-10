@@ -2,7 +2,7 @@
 
 ## 1.9.0.0
 
-* Re-export `fixedSize`
+* Re-export `fixedSize`, `guardFixedSized`
 * Add `decodeAccA`, `failOnNull`, `failOnMempty`
 * Add `decodeSparseKeyed`
 * Add `decodeIntegralRational`
