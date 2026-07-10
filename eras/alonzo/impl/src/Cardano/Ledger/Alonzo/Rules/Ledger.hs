@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Rules.Delegs ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowEvent, AlonzoUtxowPredFailure, UTXOW)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -117,7 +117,7 @@ ledgerTransition = do
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
   certState' <-
-    if tx ^. isValidTxL == IsValid True
+    if tx ^. isPhase2ValidTxL == Phase2Valid
       then do
         let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
         Shelley.testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals

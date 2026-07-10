@@ -128,7 +128,7 @@ instance ToExpr (TxBody TopTx AlonzoEra)
 instance ToExpr (Tx TopTx era) => ToExpr (AlonzoBlockBody era)
 
 -- Tx
-instance ToExpr IsValid
+instance ToExpr IsPhase2Valid
 
 instance
   (ToExpr (TxBody TopTx era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
@@ -139,7 +139,7 @@ instance
       OMap.fromList
         [ ("atBody", toExpr atBody)
         , ("atWits", toExpr atWits)
-        , ("atIsValid", toExpr atIsValid)
+        , ("atIsPhase2Valid", toExpr atIsPhase2Valid)
         , ("atAuxData", toExpr atAuxData)
         ]
 

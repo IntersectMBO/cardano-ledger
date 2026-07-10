@@ -178,8 +178,8 @@ spec = describe "UTXOS" $ do
               passEpoch
 
         it "Valid transaction marked as invalid" $ do
-          let tx = mkBasicTx mkBasicTxBody & isValidTxL .~ IsValid False
-          submitFailingTx tx [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
+          let tx = mkBasicTx mkBasicTxBody & isPhase2ValidTxL .~ Phase2Invalid
+          submitFailingTx tx [injectFailure (ValidationTagMismatch Phase2Invalid PassedUnexpectedly)]
 
         it "Invalid transaction marked as valid" $ do
           txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum slang
@@ -191,7 +191,7 @@ spec = describe "UTXOS" $ do
           submitTxAnn_ "Submitting consuming transaction" $
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-              & isValidTxL .~ IsValid False
+              & isPhase2ValidTxL .~ Phase2Invalid
               & witsTxL . rdmrsTxWitsL . unRedeemersL
                 .~ Map.singleton (mkSpendingPurpose $ AsIx 0) (Data $ P.I 32, exUnits)
 

@@ -33,7 +33,7 @@ module Cardano.Ledger.Alonzo.BlockBody.Internal (
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -88,7 +88,7 @@ data AlonzoBlockBody era = AlonzoBlockBodyInternal
   -- 'SNothing' for metadata
   , abbTxsIsValidBytes :: BSL.ByteString
   -- ^ Bytes representing a set of integers. These are the indices of
-  -- transactions with 'isValid' == False.
+  -- transactions that are 'Phase2Invalid'.
   }
   deriving (Generic)
 
@@ -193,7 +193,7 @@ hashAlonzoSegWits ::
   BSL.ByteString ->
   -- | Bytes for transaction auxiliary datas
   BSL.ByteString ->
-  -- | Bytes for transaction isValid flags
+  -- | Bytes for transaction phase-2 validity flags
   Hash HASH EraIndependentBlockBody
 hashAlonzoSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids =
   coerce . hashLazy . toLazyByteString $
@@ -268,7 +268,7 @@ nonValidatingIndices :: AlonzoEraTx era => StrictSeq (Tx TopTx era) -> [Int]
 nonValidatingIndices (StrictSeq.fromStrict -> xs) =
   Seq.foldrWithIndex
     ( \idx tx acc ->
-        if tx ^. isValidTxL == IsValid False
+        if tx ^. isPhase2ValidTxL == Phase2Invalid
           then idx : acc
           else acc
     )
@@ -276,17 +276,17 @@ nonValidatingIndices (StrictSeq.fromStrict -> xs) =
     xs
 
 -- | Given the number of transactions, and the set of indices for which these
--- transactions do not validate, create an aligned sequence of `IsValid`
+-- transactions do not validate, create an aligned sequence of `IsPhase2Valid`
 -- flags.
 --
 -- This function operates much as the inverse of 'nonValidatingIndices'.
-alignedValidFlags :: Int -> [Int] -> Seq.Seq IsValid
+alignedValidFlags :: Int -> [Int] -> Seq.Seq IsPhase2Valid
 alignedValidFlags = alignedValidFlags' (-1)
   where
-    alignedValidFlags' _ n [] = Seq.replicate n $ IsValid True
+    alignedValidFlags' _ n [] = Seq.replicate n Phase2Valid
     alignedValidFlags' prev n (x : xs) =
-      Seq.replicate (x - prev - 1) (IsValid True)
-        Seq.>< IsValid False
+      Seq.replicate (x - prev - 1) Phase2Valid
+        Seq.>< Phase2Invalid
         Seq.<| alignedValidFlags' x (n - (x - prev)) xs
 
 -- | Construct an annotated Alonzo style transaction.
@@ -294,10 +294,10 @@ alonzoSegwitTx ::
   AlonzoEraTx era =>
   Annotator (TxBody TopTx era) ->
   Annotator (TxWits era) ->
-  IsValid ->
+  IsPhase2Valid ->
   Maybe (Annotator (TxAuxData era)) ->
   Annotator (Tx TopTx era)
-alonzoSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes -> do
+alonzoSegwitTx txBodyAnn txWitsAnn txIsPhase2Valid txAuxDataAnn = Annotator $ \bytes -> do
   txBody <- runAnnotator txBodyAnn bytes
   txWits <- runAnnotator txWitsAnn bytes
   txAuxData <- mapM (`runAnnotator` bytes) txAuxDataAnn
@@ -305,4 +305,4 @@ alonzoSegwitTx txBodyAnn txWitsAnn txIsValid txAuxDataAnn = Annotator $ \bytes -
     mkBasicTx txBody
       & witsTxL .~ txWits
       & auxDataTxL .~ maybeToStrictMaybe txAuxData
-      & isValidTxL .~ txIsValid
+      & isPhase2ValidTxL .~ txIsPhase2Valid
