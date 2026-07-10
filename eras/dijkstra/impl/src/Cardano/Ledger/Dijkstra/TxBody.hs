@@ -1012,9 +1012,21 @@ upgradeProposals ProposalProcedure {..} =
     }
 
 dijkstraTotalDepositsTxBody ::
-  ConwayEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
+  ( DijkstraEraTxBody era
+  , EraTx era
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
 dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
-  getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
+  withBothTxLevels
+    txBody
+    ( \t ->
+        getTotalDepositsTxCerts
+          pp
+          isPoolRegisted
+          (t ^. certsTxBodyL <> foldMap (^. bodyTxL . certsTxBodyL) (t ^. subTransactionsTxBodyL))
+    )
+    mempty
     <+> conwayProposalsDeposits pp txBody
 
 -- | This newtype wrapper lets us index into the guards with a ScriptHash. It
