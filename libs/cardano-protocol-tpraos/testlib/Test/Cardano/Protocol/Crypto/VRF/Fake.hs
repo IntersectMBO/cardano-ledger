@@ -39,6 +39,7 @@ import Cardano.Ledger.Binary (
   FixedSizeCodec (..),
   decodeFixedSized,
   encodeFixedSized,
+  guardFixedSized,
   hashWithEncoder,
  )
 import Control.DeepSeq (NFData (..))
@@ -130,16 +131,11 @@ instance VRFAlgorithm FakeVRF where
 instance FixedSizeCodec (VerKeyVRF FakeVRF) where
   type FixedSize (VerKeyVRF FakeVRF) = 8
 
-  rawDecodeFixedSized bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        pure $! VerKeyFakeVRF k
-    | otherwise =
-        fail "VerKeyVRF FakeVRF: failed to deserialise"
+  rawDecodeFixedSized bs = guardFixedSized bs $ pure $! VerKeyFakeVRF (readBinaryWord64 bs)
   rawEncodeFixedSized (VerKeyFakeVRF k) = writeBinaryWord64 k
 
 instance FixedSizeCodec (CertVRF FakeVRF) where
-  type FixedSize (CertVRF FakeVRF) = 32
+  type FixedSize (CertVRF FakeVRF) = 26
 
   rawDecodeFixedSized bs
     | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
@@ -154,12 +150,7 @@ instance FixedSizeCodec (CertVRF FakeVRF) where
 instance FixedSizeCodec (SignKeyVRF FakeVRF) where
   type FixedSize (SignKeyVRF FakeVRF) = 8
 
-  rawDecodeFixedSized bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        pure $! SignKeyFakeVRF k
-    | otherwise =
-        fail "SignKeyVRF FakeVRF: failed to deserialise"
+  rawDecodeFixedSized bs = guardFixedSized bs $ pure $! SignKeyFakeVRF (readBinaryWord64 bs)
   rawEncodeFixedSized (SignKeyFakeVRF k) = writeBinaryWord64 k
 
 evalFakeVRF ::

@@ -35,6 +35,8 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   PerasCert (..),
   PerasKey (..),
   validatePerasCert,
+  encodeLeiosCert,
+  decodeLeiosCert,
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)

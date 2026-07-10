@@ -11,9 +11,10 @@ module Cardano.Ledger.Binary (
   translateViaCBORAnnotator,
   toLazyByteString,
   fixedSize,
+  guardFixedSized,
 ) where
 
-import Cardano.Binary.FixedSizeCodec (fixedSize)
+import Cardano.Binary.FixedSizeCodec (fixedSize, guardFixedSized)
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Binary.Group
