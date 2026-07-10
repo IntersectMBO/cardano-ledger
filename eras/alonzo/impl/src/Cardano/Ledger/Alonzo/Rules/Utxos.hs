@@ -159,9 +159,9 @@ utxosTransition ::
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, stAnnTx)) -> do
     let tx = stAnnTx ^. txStAnnTxG
-    case tx ^. isValidTxL of
-      IsValid True -> alonzoEvalScriptsTxValid
-      IsValid False -> alonzoEvalScriptsTxInvalid
+    case tx ^. isPhase2ValidTxL of
+      Phase2Valid -> alonzoEvalScriptsTxValid
+      Phase2Invalid -> alonzoEvalScriptsTxInvalid
 
 -- ===================================================================
 
@@ -211,7 +211,7 @@ alonzoEvalScriptsTxValid = do
     Fails _ps fs ->
       failBecause $
         ValidationTagMismatch
-          (tx ^. isValidTxL)
+          (tx ^. isPhase2ValidTxL)
           (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
     Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
 
@@ -235,7 +235,7 @@ alonzoEvalScriptsTxInvalid = do
   scriptsTransition stAnnTx $ \case
     Passes _ps ->
       failBecause $
-        ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
+        ValidationTagMismatch (tx ^. isPhase2ValidTxL) PassedUnexpectedly
     Fails ps fs -> do
       mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
       tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
@@ -321,10 +321,10 @@ instance ToJSON TagMismatchDescription where
         ]
 
 data AlonzoUtxosPredFailure era
-  = -- | The 'isValid' tag on the transaction is incorrect. The tag given
+  = -- | The 'isPhase2Valid' tag on the transaction is incorrect. The tag given
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.). The Text tries to explain why it failed.
-    ValidationTagMismatch IsValid TagMismatchDescription
+    ValidationTagMismatch IsPhase2Valid TagMismatchDescription
   | -- | We could not find all the necessary inputs for a Plutus Script.
     --         Previous PredicateFailure tests should make this impossible, but the
     --         consequences of not detecting this means scripts get dropped, so things

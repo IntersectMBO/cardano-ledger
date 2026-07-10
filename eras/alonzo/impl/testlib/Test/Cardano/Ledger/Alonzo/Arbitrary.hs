@@ -193,7 +193,8 @@ instance Arbitrary (TxBody TopTx AlonzoEra) where
       <*> arbitrary
       <*> arbitrary
 
-deriving newtype instance Arbitrary IsValid
+instance Arbitrary IsPhase2Valid where
+  arbitrary = elements [Phase2Invalid, Phase2Valid]
 
 instance
   ( Arbitrary (TxWits era)

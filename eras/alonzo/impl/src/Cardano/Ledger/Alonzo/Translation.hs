@@ -80,12 +80,12 @@ instance TranslateEra AlonzoEra (Tx TopTx) where
     txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
     txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
-    let validating = IsValid True
+    let validating = Phase2Valid
     pure $
       mkBasicTx txBody
         & witsTxL .~ txWits
         & auxDataTxL .~ txAuxData
-        & isValidTxL .~ validating
+        & isPhase2ValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

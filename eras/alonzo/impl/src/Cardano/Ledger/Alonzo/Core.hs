@@ -3,7 +3,7 @@
 module Cardano.Ledger.Alonzo.Core (
   AlonzoBlockBody (..),
   AlonzoEraTx (..),
-  IsValid (..),
+  IsPhase2Valid (..),
   AlonzoEraTxOut (..),
   AlonzoEraScript (..),
   AsIx (..),
@@ -71,7 +71,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   pattern SpendingPurpose,
   pattern WithdrawingPurpose,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))

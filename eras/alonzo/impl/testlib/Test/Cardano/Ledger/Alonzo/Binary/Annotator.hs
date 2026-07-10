@@ -79,11 +79,11 @@ instance
           ++ ", "
           ++ show isValidIdxs
 
-    let mkTx body wit isValid aData =
+    let mkTx body wit isPhase2Valid aData =
           mkBasicTx body
             & witsTxL .~ wit
             & auxDataTxL .~ maybeToStrictMaybe aData
-            & isValidTxL .~ isValid
+            & isPhase2ValidTxL .~ isPhase2Valid
     let txs =
           StrictSeq.forceToStrict $
             Seq.zipWith4 mkTx bodies wits validFlags auxData
@@ -109,9 +109,9 @@ instance
   decCBOR = decodeRecordNamed "AlonzoTx" (const 4) $ do
     body <- decCBOR
     wits <- decCBOR
-    isValid <- decCBOR
+    isPhase2Valid <- decCBOR
     auxData <- decodeNullStrictMaybe decCBOR
-    pure $ AlonzoTx body wits isValid auxData
+    pure $ AlonzoTx body wits isPhase2Valid auxData
   {-# INLINE decCBOR #-}
 
 instance
