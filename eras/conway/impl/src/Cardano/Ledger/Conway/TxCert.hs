@@ -846,27 +846,16 @@ conwayTotalRefundsTxCerts ::
   (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-conwayTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit certs =
+conwayTotalRefundsTxCerts pp lookupStakingDeposit _lookupDRepDeposit certs =
   shelleyTotalRefundsTxCerts pp lookupStakingDeposit certs
-    <+> conwayDRepRefundsTxCerts lookupDRepDeposit certs
+    <+> conwayDRepRefundsTxCerts certs
 
 -- | Compute the Refunds from a TxBody, given a function that computes a partial Coin for
 -- known Credentials.
 conwayDRepRefundsTxCerts ::
   (Foldable f, ConwayEraTxCert era) =>
-  (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-conwayDRepRefundsTxCerts lookupDRepDeposit = snd . F.foldl' go (Map.empty, Coin 0)
-  where
-    go accum@(!drepRegsInTx, !totalRefund) = \case
-      RegDRepTxCert cred deposit _ ->
-        -- Track registrations
-        (Map.insert cred deposit drepRegsInTx, totalRefund)
-      UnRegDRepTxCert cred _
-        -- DRep previously registered in the same tx.
-        | Just deposit <- Map.lookup cred drepRegsInTx ->
-            (Map.delete cred drepRegsInTx, totalRefund <+> deposit)
-        -- DRep previously registered in some other tx.
-        | Just deposit <- lookupDRepDeposit cred -> (drepRegsInTx, totalRefund <+> deposit)
-      _ -> accum
+conwayDRepRefundsTxCerts = foldMap' $ \case
+  UnRegDRepTxCert _ refund -> refund
+  _ -> mempty
