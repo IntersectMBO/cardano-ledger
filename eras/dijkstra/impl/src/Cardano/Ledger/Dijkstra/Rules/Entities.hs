@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -33,12 +32,10 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
-import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -68,7 +65,6 @@ instance EraTx era => EncCBOR (EntitiesEnv era) where
 
 data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
-  | WdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | WithdrawalsMissingAccounts Withdrawals
   | IncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | WithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
@@ -94,11 +90,10 @@ instance
   encCBOR =
     encode . \case
       CertsFailure x -> Sum (CertsFailure @era) 0 !> To x
-      WdrlNotDelegatedToDRep x -> Sum (WdrlNotDelegatedToDRep @era) 1 !> To x
-      WithdrawalsMissingAccounts x -> Sum (WithdrawalsMissingAccounts @era) 2 !> To x
-      IncompleteWithdrawals x -> Sum (IncompleteWithdrawals @era) 3 !> To x
-      WithdrawalAmountsExceedAccountBalances x -> Sum (WithdrawalAmountsExceedAccountBalances @era) 4 !> To x
-      DirectDepositsToMissingAccounts x -> Sum (DirectDepositsToMissingAccounts @era) 5 !> To x
+      WithdrawalsMissingAccounts x -> Sum (WithdrawalsMissingAccounts @era) 1 !> To x
+      IncompleteWithdrawals x -> Sum (IncompleteWithdrawals @era) 2 !> To x
+      WithdrawalAmountsExceedAccountBalances x -> Sum (WithdrawalAmountsExceedAccountBalances @era) 3 !> To x
+      DirectDepositsToMissingAccounts x -> Sum (DirectDepositsToMissingAccounts @era) 4 !> To x
 
 instance
   ( Era era
@@ -108,11 +103,10 @@ instance
   where
   decCBOR = decode . Summands "EntitiesPredFailure" $ \case
     0 -> SumD CertsFailure <! From
-    1 -> SumD WdrlNotDelegatedToDRep <! From
-    2 -> SumD WithdrawalsMissingAccounts <! From
-    3 -> SumD IncompleteWithdrawals <! From
-    4 -> SumD WithdrawalAmountsExceedAccountBalances <! From
-    5 -> SumD DirectDepositsToMissingAccounts <! From
+    1 -> SumD WithdrawalsMissingAccounts <! From
+    2 -> SumD IncompleteWithdrawals <! From
+    3 -> SumD WithdrawalAmountsExceedAccountBalances <! From
+    4 -> SumD DirectDepositsToMissingAccounts <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
@@ -194,8 +188,6 @@ dijkstraEntitiesTransition = do
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
 
-  runTest $ Conway.validateWithdrawalsDelegated accounts tx
-
   network <- liftSTS $ asks networkId
 
   validateWithdrawals legacyMode network withdrawals accounts
@@ -245,7 +237,7 @@ validateWithdrawals legacyMode network withdrawals accounts = do
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
 conwayToDijkstraEntitiesPredFailure = \case
-  Conway.ConwayWdrlNotDelegatedToDRep khs -> WdrlNotDelegatedToDRep khs
+  Conway.ConwayWdrlNotDelegatedToDRep _ -> impossible "ConwayWdrlNotDelegatedToDRep"
   Conway.ConwayUtxowFailure _ -> impossible "ConwayUtxowFailure"
   Conway.ConwayCertsFailure _ -> impossible "ConwayCertsFailure"
   Conway.ConwayGovFailure _ -> impossible "ConwayGovFailure"

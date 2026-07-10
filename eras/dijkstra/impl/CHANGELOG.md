@@ -113,6 +113,9 @@
 * Make `DijkstraContextError` constructors lazy
 * Add `ToJSON` and `FromJSON` instances for `DijkstraNativeScript era`
 * Export `dijkstraBasedEraNativeScriptToJSON` and `dijkstraBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Dijkstra.Scripts`
+* Remove DRep requirement for reward withdrawals
+  - Remove `WdrlNotDelegatedToDRep` constructor from `EntitiesPredFailure`
+  - Remove `SubWdrlNotDelegatedToDRep` constructor from `SubEntitiesPredFailure`
 
 ### cddl
 

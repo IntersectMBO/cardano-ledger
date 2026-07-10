@@ -221,9 +221,9 @@ instance
       DijkstraUtxowFailure x -> Sum (DijkstraUtxowFailure @era) 1 !> To x
       DijkstraEntitiesFailure x -> Sum (DijkstraEntitiesFailure @era) 2 !> To x
       DijkstraGovFailure x -> Sum (DijkstraGovFailure @era) 3 !> To x
-      DijkstraTreasuryValueMismatch mm -> Sum (DijkstraTreasuryValueMismatch @era) 5 !> To mm
-      DijkstraTxRefScriptsSizeTooBig mm -> Sum DijkstraTxRefScriptsSizeTooBig 6 !> To mm
-      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 9 !> To w
+      DijkstraTreasuryValueMismatch mm -> Sum (DijkstraTreasuryValueMismatch @era) 4 !> To mm
+      DijkstraTxRefScriptsSizeTooBig mm -> Sum DijkstraTxRefScriptsSizeTooBig 5 !> To mm
+      DijkstraSubLedgersFailure w -> Sum DijkstraSubLedgersFailure 6 !> To w
 
 instance
   ( Era era
@@ -238,9 +238,9 @@ instance
     1 -> SumD DijkstraUtxowFailure <! From
     2 -> SumD DijkstraEntitiesFailure <! From
     3 -> SumD DijkstraGovFailure <! From
-    5 -> SumD DijkstraTreasuryValueMismatch <! From
-    6 -> SumD DijkstraTxRefScriptsSizeTooBig <! From
-    9 -> SumD DijkstraSubLedgersFailure <! From
+    4 -> SumD DijkstraTreasuryValueMismatch <! From
+    5 -> SumD DijkstraTxRefScriptsSizeTooBig <! From
+    6 -> SumD DijkstraSubLedgersFailure <! From
     n -> Invalid n
 
 data DijkstraLedgerEvent era
@@ -491,7 +491,7 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayUtxowFailure f -> DijkstraUtxowFailure f
   Conway.ConwayCertsFailure f -> DijkstraEntitiesFailure (CertsFailure f)
   Conway.ConwayGovFailure f -> DijkstraGovFailure f
-  Conway.ConwayWdrlNotDelegatedToDRep kh -> DijkstraEntitiesFailure (WdrlNotDelegatedToDRep kh)
+  Conway.ConwayWdrlNotDelegatedToDRep _ -> error "Impossible: WdrlNotDelegatedToDRep has been removed in Dijkstra"
   Conway.ConwayTreasuryValueMismatch mm -> DijkstraTreasuryValueMismatch mm
   Conway.ConwayTxRefScriptsSizeTooBig mm -> DijkstraTxRefScriptsSizeTooBig mm
   Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
