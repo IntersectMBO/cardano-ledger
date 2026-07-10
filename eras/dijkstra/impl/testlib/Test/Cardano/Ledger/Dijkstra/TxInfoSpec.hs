@@ -167,3 +167,23 @@ spec = describe "TxInfo" $ do
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (GuardScriptHashesNotSupported @era neScriptHashes)
+      prop "RequiredTopLevelGuardsNotSupported" $ \neRequiredTopLevelGuards ->
+        let
+          tx =
+            mkBasicTx @era @TopTx $
+              mkBasicTxBody & requiredTopLevelGuardsL .~ NEM.toMap neRequiredTopLevelGuards
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+              , ltiEpochInfo = epochInfo testGlobals
+              , ltiSystemStart = systemStart testGlobals
+              , ltiUTxO = mempty
+              , ltiTx = tx
+              , ltiMemoizedSubTransactions = mempty
+              }
+          txInfoResult =
+            ($ SpendingPurpose AsPurpose)
+              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+         in
+          txInfoResult
+            `shouldBeLeft` inject (RequiredTopLevelGuardsNotSupported @era neRequiredTopLevelGuards)
