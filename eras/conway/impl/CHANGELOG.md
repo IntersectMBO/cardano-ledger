@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Remove an unnecessary argument to `conwayDRepRefundsTxCerts` function.
 * Allow any tx level in `updateDormantDRepExpiries` and `updateVotingDRepExpiries`
 * Rename `ConwayRewarding` to `ConwayWithdrawing` and deprecate the old name
 * Rename rule types and deprecate the old names:
