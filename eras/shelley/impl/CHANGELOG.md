@@ -2,6 +2,12 @@
 
 ## 1.19.0.0
 
+* Add `Ord` instances for `ShelleyBbodyPredFailure`, `ShelleyDelegPredFailure`,
+  `ShelleyDelegsPredFailure`, `ShelleyDelplPredFailure`, `ShelleyLedgerPredFailure`,
+  `ShelleyLedgersPredFailure`, `ShelleyPoolPredFailure`, `ShelleyPpupPredFailure`,
+  `ShelleyUtxoPredFailure`, `ShelleyUtxowPredFailure`
+* Add `Ord` instances for `MultiSigRaw`, `MultiSig`, `ProposedPPUpdates`, `ShelleyGovState`,
+  `ShelleyTxOut`, `VotingPeriod`
 * Add `defaultApplyTxWithValidation` and `defaultReapplyValidatedTx` helpers to `Mempool` module
 * Deprecate:
   - `Validated`

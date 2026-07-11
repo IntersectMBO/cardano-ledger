@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -11,6 +12,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Conway.Rules.Mempool (
   MEMPOOL,
@@ -68,9 +73,9 @@ instance
   , EraCertState era
   , Embed (EraRule "LEDGER" era) (MEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Eq (PredicateFailure (EraRule "CERTS" era))
-  , Eq (PredicateFailure (EraRule "GOV" era))
-  , Eq (PredicateFailure (EraRule "UTXOW" era))
+  , Ord (PredicateFailure (EraRule "CERTS" era))
+  , Ord (PredicateFailure (EraRule "GOV" era))
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
   , Show (PredicateFailure (EraRule "CERTS" era))
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))

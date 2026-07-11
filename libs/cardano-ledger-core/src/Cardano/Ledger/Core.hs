@@ -304,6 +304,7 @@ class
   , NFData (TxOut era)
   , Show (TxOut era)
   , Eq (TxOut era)
+  , Ord (TxOut era)
   , MemPack (TxOut era)
   , EraPParams era
   ) =>
@@ -553,6 +554,7 @@ class
   ( Era era
   , Show (Script era)
   , Eq (Script era)
+  , Ord (Script era)
   , EqRaw (Script era)
   , ToJSON (Script era)
   , FromJSON (Script era)
@@ -563,6 +565,7 @@ class
   , NoThunks (Script era)
   , SafeToHash (Script era)
   , Eq (NativeScript era)
+  , Ord (NativeScript era)
   , Show (NativeScript era)
   , NFData (NativeScript era)
   , NoThunks (NativeScript era)

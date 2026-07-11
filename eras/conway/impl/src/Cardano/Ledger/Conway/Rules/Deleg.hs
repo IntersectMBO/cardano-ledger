@@ -111,7 +111,7 @@ data ConwayDelegPredFailure era
   | DelegateeStakePoolNotRegisteredDELEG (KeyHash StakePool)
   | DepositIncorrectDELEG (Mismatch RelEQ Coin)
   | RefundIncorrectDELEG (Mismatch RelEQ Coin)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 type instance EraRuleFailure "DELEG" ConwayEra = ConwayDelegPredFailure ConwayEra
 

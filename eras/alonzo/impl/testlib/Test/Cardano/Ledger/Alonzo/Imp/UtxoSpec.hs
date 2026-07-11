@@ -15,7 +15,13 @@ import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Metadata as M
-import Cardano.Ledger.Plutus (Data (..), ExUnits (..), hashPlutusScript, withSLanguage)
+import Cardano.Ledger.Plutus (
+  Data (..),
+  ExUnits (..),
+  OrdExUnits (..),
+  hashPlutusScript,
+  withSLanguage,
+ )
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Control.Monad (forM)
 import qualified Data.Map.Strict as Map
@@ -52,7 +58,8 @@ spec = describe "UTXO" $ do
           submitFailingTx
             tx
             [ injectFailure $
-                ExUnitsTooBigUTxO Mismatch {mismatchSupplied = txExUnits, mismatchExpected = maxExUnits}
+                ExUnitsTooBigUTxO
+                  Mismatch {mismatchSupplied = OrdExUnits txExUnits, mismatchExpected = OrdExUnits maxExUnits}
             ]
 
         it "Insufficient collateral" $ do

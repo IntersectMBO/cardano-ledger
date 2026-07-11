@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: small-steps
-version: 1.1.4.0
+version: 1.2.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -85,7 +85,7 @@ library testlib
     microlens-th,
     mtl,
     nothunks,
-    small-steps >=1.0,
+    small-steps,
     transformers >=0.5,
 
 test-suite tests

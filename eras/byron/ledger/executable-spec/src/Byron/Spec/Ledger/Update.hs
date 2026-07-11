@@ -392,7 +392,7 @@ data UpsvvPredicateFailure
   | CannotFollowSv
   | InvalidApplicationName
   | InvalidSystemTags
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPSVV where
   type Environment UPSVV = Map ApName (ApVer, Core.Slot, Metadata)
@@ -427,7 +427,7 @@ data UppvvPredicateFailure
   = CannotFollowPv
   | CannotUpdatePv [UpdateConstraintViolation]
   | AlreadyProposedPv
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPPVV where
   type
@@ -462,7 +462,7 @@ data UpvPredicateFailure
   | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
   | ParamsChangedInSVUpdate
   | PVChangedInSVUpdate
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPV where
   type
@@ -532,7 +532,7 @@ data UpregPredicateFailure
   = UPVFailure (PredicateFailure UPV)
   | NotGenesisDelegate
   | DoesNotVerify
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPREG where
   type
@@ -603,7 +603,7 @@ data AddvotePredicateFailure
   | NoUpdateProposal UpId
   | VoteByNonGenesisDelegate VKey
   | RepeatVoteByGenesisDelegate VKey
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS ADDVOTE where
   type
@@ -647,7 +647,7 @@ data UpvotePredicateFailure
   | S_HigherThanThdAndNotAlreadyConfirmed
   | S_CfmThdNotReached
   | S_AlreadyConfirmed
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPVOTE where
   type
@@ -708,7 +708,7 @@ instance Embed ADDVOTE UPVOTE where
 data FADS deriving (Generic, Data)
 
 data FadsPredicateFailure
-  deriving (Eq, Show, Data, Generic)
+  deriving (Eq, Ord, Show, Data, Generic)
 
 instance STS FADS where
   type Environment FADS = ()
@@ -753,7 +753,7 @@ data UpendPredicateFailure
   | CannotAdopt ProtVer
   | NotADelegate VKey
   | UnconfirmedProposal UpId
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPEND where
   type
@@ -988,7 +988,7 @@ data UPIREG deriving (Generic, Data)
 
 data UpiregPredicateFailure
   = UPREGFailure (PredicateFailure UPREG)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPIREG where
   type Environment UPIREG = UPIEnv
@@ -1386,7 +1386,7 @@ data UPIVOTE deriving (Generic, Data)
 
 data UpivotePredicateFailure
   = UPVOTEFailure (PredicateFailure UPVOTE)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPIVOTE where
   type Environment UPIVOTE = UPIEnv
@@ -1448,7 +1448,7 @@ data APPLYVOTES deriving (Generic, Data)
 
 data ApplyVotesPredicateFailure
   = UpivoteFailure (PredicateFailure UPIVOTE)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS APPLYVOTES where
   type Environment APPLYVOTES = UPIEnv
@@ -1476,7 +1476,7 @@ data UPIVOTES deriving (Generic, Data)
 
 data UpivotesPredicateFailure
   = ApplyVotesFailure (PredicateFailure APPLYVOTES)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPIVOTES where
   type Environment UPIVOTES = UPIEnv
@@ -1625,7 +1625,7 @@ data UPIEND deriving (Generic, Data)
 
 data UpiendPredicateFailure
   = UPENDFailure (PredicateFailure UPEND)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPIEND where
   type Environment UPIEND = UPIEnv
@@ -1700,7 +1700,7 @@ data PVBUMP deriving (Generic, Data)
 
 -- PVBUMP has no predicate failures
 data PvbumpPredicateFailure = NoPVBUMPFailure
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS PVBUMP where
   type
@@ -1734,7 +1734,7 @@ data UPIEC deriving (Generic, Data)
 
 data UpiecPredicateFailure
   = PVBUMPFailure (PredicateFailure PVBUMP)
-  deriving (Eq, Show, Data, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 instance STS UPIEC where
   type

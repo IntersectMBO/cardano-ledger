@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -15,6 +16,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Rules.Utxow (
   UTXOW,
@@ -150,6 +155,13 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (AlonzoUtxowPredFailure era)
+
+deriving instance
+  ( AlonzoEraScript era
+  , Ord (TxCert era)
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  ) =>
+  Ord (AlonzoUtxowPredFailure era)
 
 instance
   ( AlonzoEraScript era

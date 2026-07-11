@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -16,6 +17,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Babbage.Rules.Utxo (
   UTXO,
@@ -138,6 +143,16 @@ deriving instance
   , Eq TxIn
   ) =>
   Eq (BabbageUtxoPredFailure era)
+
+deriving instance
+  ( Era era
+  , Ord (Alonzo.AlonzoUtxoPredFailure era)
+  , Ord (PredicateFailure (EraRule "UTXO" era))
+  , Ord (TxOut era)
+  , Ord (Script era)
+  , Ord TxIn
+  ) =>
+  Ord (BabbageUtxoPredFailure era)
 
 instance
   ( Era era

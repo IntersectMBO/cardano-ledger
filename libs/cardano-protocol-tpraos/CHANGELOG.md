@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add `Ord` instances for `FutureLedgerViewError`, `LastAppliedBlock`, `OcertPredicateFailure`,
+  `OverlayPredicateFailure`, `PrtclPredicateFailure`, `PrtlSeqFailure`, `UpdnPredicateFailure`
 * Move `Cardano.Protocol.Crypto` and `Cardano.Protocol.TPraos.OCert` to the new `cardano-protocol` package. They are re-exported here unchanged.
 * Move the contents of `Cardano.Protocol.TPraos.BHeader` to `Cardano.Protocol.TPraos.BlockHeader` in the new `cardano-protocol` package, and deprecate `Cardano.Protocol.TPraos.BHeader` in its favour.
 * Remove `FromCBOR` instances for `KESPeriod`, `PrtclState`, `TicknState`

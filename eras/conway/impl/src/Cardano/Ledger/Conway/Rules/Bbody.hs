@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -16,6 +17,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Conway.Rules.Bbody (
   BBODY,
@@ -30,7 +35,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
@@ -99,7 +104,7 @@ data ConwayBbodyPredFailure era
   | InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
+  | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | HeaderProtVerTooHigh (Mismatch RelLTEQ Version)
   deriving (Generic)
@@ -111,6 +116,10 @@ deriving instance
 deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (ConwayBbodyPredFailure era)
+
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  Ord (ConwayBbodyPredFailure era)
 
 deriving anyclass instance
   (Era era, NFData (PredicateFailure (EraRule "LEDGERS" era))) =>

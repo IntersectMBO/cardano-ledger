@@ -211,7 +211,7 @@ instance EraPlutusContext AlonzoEra where
 data AlonzoContextError era
   = TranslationLogicMissingInput TxIn
   | TimeTranslationPastHorizon Text
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance Era era => NFData (AlonzoContextError era)
 

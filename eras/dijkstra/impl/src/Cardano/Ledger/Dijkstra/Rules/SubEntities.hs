@@ -58,6 +58,9 @@ deriving stock instance
   Eq (PredicateFailure (EraRule "SUBCERTS" era)) => Eq (SubEntitiesPredFailure era)
 
 deriving stock instance
+  Ord (PredicateFailure (EraRule "SUBCERTS" era)) => Ord (SubEntitiesPredFailure era)
+
+deriving stock instance
   Show (PredicateFailure (EraRule "SUBCERTS" era)) => Show (SubEntitiesPredFailure era)
 
 instance

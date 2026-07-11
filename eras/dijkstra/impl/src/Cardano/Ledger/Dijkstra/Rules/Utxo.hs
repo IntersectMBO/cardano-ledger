@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Dijkstra.Rules.Utxo (
   UTXO,
@@ -61,7 +66,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Plutus (ExUnits)
+import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -138,7 +143,7 @@ data DijkstraUtxoPredFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
-      (Mismatch RelLTEQ ExUnits)
+      (Mismatch RelLTEQ OrdExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
@@ -224,6 +229,16 @@ deriving instance
   , Eq TxIn
   ) =>
   Eq (DijkstraUtxoPredFailure era)
+
+deriving instance
+  ( Era era
+  , Ord (Value era)
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
+  , Ord (TxOut era)
+  , Ord (Script era)
+  , Ord TxIn
+  ) =>
+  Ord (DijkstraUtxoPredFailure era)
 
 instance
   ( Era era

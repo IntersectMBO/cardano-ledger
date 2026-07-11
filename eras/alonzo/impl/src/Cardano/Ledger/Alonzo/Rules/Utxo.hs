@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -16,6 +17,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Rules.Utxo (
   UTXO,
@@ -48,7 +53,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (
   UTXOS,
   UtxosEnv (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
@@ -160,7 +165,7 @@ data AlonzoUtxoPredFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       (NonEmptyMap TxIn (TxOut era))
-  | ExUnitsTooBigUTxO (Mismatch RelLTEQ ExUnits)
+  | ExUnitsTooBigUTxO (Mismatch RelLTEQ OrdExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
@@ -205,6 +210,14 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Eq (AlonzoUtxoPredFailure era)
+
+deriving stock instance
+  ( Era era
+  , Ord (Value era)
+  , Ord (TxOut era)
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  Ord (AlonzoUtxoPredFailure era)
 
 instance
   ( Era era
@@ -458,7 +471,8 @@ validateExUnitsTooBigUTxO ::
   Test (AlonzoUtxoPredFailure era)
 validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
-    ExUnitsTooBigUTxO Mismatch {mismatchSupplied = totalExUnits, mismatchExpected = maxTxExUnits}
+    ExUnitsTooBigUTxO
+      Mismatch {mismatchSupplied = OrdExUnits totalExUnits, mismatchExpected = OrdExUnits maxTxExUnits}
   where
     maxTxExUnits = pp ^. ppMaxTxExUnitsL
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:

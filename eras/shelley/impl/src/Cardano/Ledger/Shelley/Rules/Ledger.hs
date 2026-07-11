@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -15,6 +16,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Shelley.Rules.Ledger (
   LEDGER,
@@ -199,6 +204,13 @@ deriving stock instance
   , Era era
   ) =>
   Eq (ShelleyLedgerPredFailure era)
+
+deriving stock instance
+  ( Ord (PredicateFailure (EraRule "DELEGS" era))
+  , Ord (PredicateFailure (EraRule "UTXOW" era))
+  , Era era
+  ) =>
+  Ord (ShelleyLedgerPredFailure era)
 
 instance
   ( NFData (PredicateFailure (EraRule "DELEGS" era))

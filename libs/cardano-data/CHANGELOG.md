@@ -1,7 +1,8 @@
 # Version history for `cardano-data`
 
-## 1.3.0.1
+## 1.4.0.0
 
+* Add `Ord` instances for `NonEmptyMap`, `NonEmptySet`
 * Add `ToJSON` and `FromJSON` instances for `Data.Map.NonEmpty` and `Data.Set.NonEmpty`
 
 ## 1.3.0.0
