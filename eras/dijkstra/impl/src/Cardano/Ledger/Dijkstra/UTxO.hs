@@ -31,9 +31,9 @@ import Cardano.Ledger.Babbage.UTxO (
  )
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   conwayConsumed,
-  conwayProducedValue,
   getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
@@ -91,6 +91,7 @@ getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
         (topTxBody ^. subTransactionsTxBodyL)
 
 dijkstraProducedValue ::
+  forall era.
   ( DijkstraEraTxBody era
   , EraUTxO era
   , Value era ~ MaryValue
@@ -99,11 +100,23 @@ dijkstraProducedValue ::
   (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   MaryValue
-dijkstraProducedValue pp isRegPoolId txBody =
-  conwayProducedValue pp isRegPoolId txBody
-    <> foldMap'
-      (getProducedValue pp isRegPoolId . view bodyTxL)
-      (txBody ^. subTransactionsTxBodyL)
+dijkstraProducedValue pp isRegPoolId topTxBody =
+  commonProduced topTxBody
+    <> foldMap' (commonProduced . (^. bodyTxL)) subTxs
+    <> inject (topTxBody ^. feeTxBodyL)
+    <> inject (getTotalDepositsTxCerts pp isRegPoolId batchTxCerts)
+  where
+    -- add all produced values that are common across transaction levels
+    commonProduced :: TxBody l era -> MaryValue
+    commonProduced txBody =
+      sumAllValue (txBody ^. outputsTxBodyL)
+        <> inject (txBody ^. treasuryDonationTxBodyL)
+        <> inject (conwayProposalsDeposits pp txBody)
+        <> burnedMultiAssets txBody
+    batchTxCerts =
+      foldMap' (^. bodyTxL . certsTxBodyL) subTxs
+        <> (topTxBody ^. certsTxBodyL)
+    subTxs = topTxBody ^. subTransactionsTxBodyL
 
 getProducedDijkstraValue ::
   ( STxLevel l era ~ STxBothLevels l era
