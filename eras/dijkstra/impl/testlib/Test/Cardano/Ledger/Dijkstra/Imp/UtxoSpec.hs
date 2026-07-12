@@ -1,33 +1,39 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Dijkstra.Core (
-  BabbageEraTxBody (..),
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  InjectRuleFailure (..),
- )
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxoPredFailure (..))
-import Cardano.Ledger.Tools (ensureMinCoinTxOut)
-import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Dijkstra.ImpTest (
-  DijkstraEraImp,
-  ImpInit,
-  LedgerSpec,
-  freshKeyHash,
-  getsPParams,
-  submitFailingTx,
+import Cardano.Ledger.Mary.Value (
+  AssetName,
+  MaryValue (..),
+  MultiAsset,
+  PolicyID,
+  multiAssetFromList,
  )
-import Test.Cardano.Ledger.Imp.Common (SpecWith, arbitrary, describe, it)
+import Cardano.Ledger.Shelley.LedgerState (
+  esLStateL,
+  lsCertStateL,
+  nesEsL,
+ )
+import Cardano.Ledger.Shelley.UTxO (produced)
+import Cardano.Ledger.Tools (ensureMinCoinTxOut)
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.Val
+import Data.Typeable (Typeable)
+import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.Dijkstra.ImpTest
+import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
@@ -46,3 +52,144 @@ spec = describe "UTXO" $ do
           mkBasicTx mkBasicTxBody
             & bodyTxL . collateralReturnTxBodyL .~ SJust ptrOutput
       submitFailingTx tx [injectFailure $ PtrPresentInCollateralReturn ptrOutput]
+
+  describe "value produced by a transaction" $ do
+    it "counts each new pool deposit at most once across the batch" $ do
+      poolDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ ppPoolDepositL .~ poolDeposit
+      cert <- RegPoolTxCert <$> arbitrary
+      txIn1 <- arbitrary
+      txIn2 <- arbitrary
+      let topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL .~ [cert]
+                -- distinguish subs by an input
+                & subTransactionsTxBodyL .~ [mkSubTx txIn1 cert, mkSubTx txIn2 cert]
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      -- just the pool deposits are in `produced` because the transaction is not fixed up
+      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+
+    it "counts distinct pool deposits in top and sub separately" $ do
+      poolDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ ppPoolDepositL .~ poolDeposit
+      poolA <- RegPoolTxCert <$> arbitrary
+      poolB <- RegPoolTxCert <$> arbitrary
+      txIn1 <- arbitrary
+      txIn2 <- arbitrary
+      txIn3 <- arbitrary
+      let topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL .~ [poolB, poolA, poolB]
+                & subTransactionsTxBodyL .~ [mkSubTx txIn1 poolA, mkSubTx txIn2 poolA, mkSubTx txIn3 poolB]
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject ((2 :: Int) <×> poolDeposit)
+
+    it "includes sub-tx cert deposits when top has no certs" $ do
+      poolDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ ppPoolDepositL .~ poolDeposit
+      poolParams <- arbitrary
+      let subTx = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [RegPoolTxCert poolParams]
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & subTransactionsTxBodyL .~ [subTx]
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+
+    it "does not count re-registrations of an already-registered pool across the batch" $ do
+      poolDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ ppPoolDepositL .~ poolDeposit
+      kh <- freshKeyHash
+      poolParams <- registerAccountAddress >>= freshPoolParams kh
+      let cert = RegPoolTxCert poolParams
+          regTx :: forall l. Typeable l => Tx l era
+          regTx = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert]
+          topTx = regTx & bodyTxL . subTransactionsTxBodyL .~ [regTx :: Tx SubTx era]
+      submitTx_ (regTx :: Tx TopTx era)
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      produced pp certState (topTx ^. bodyTxL) `shouldBe` mempty
+
+    it "dedupes across multiple subtransactions registering the same fresh pool" $ do
+      poolDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ ppPoolDepositL .~ poolDeposit
+      cert <- RegPoolTxCert <$> arbitrary
+      txInA <- arbitrary @TxIn
+      txInB <- arbitrary @TxIn
+      let topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & subTransactionsTxBodyL
+                  .~ [mkSubTx txInA cert, mkSubTx txInB cert]
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+
+    it "sums outputs, fee, treasury donations, pool/DRep deposits and burned assets across the batch" $ do
+      poolDeposit <- (Coin 1 <>) <$> arbitrary
+      drepDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ (ppPoolDepositL .~ poolDeposit) . (ppDRepDepositL .~ drepDeposit)
+      poolParams <- arbitrary
+      drepA <- arbitrary
+      drepB <- arbitrary
+      topAddr <- arbitrary
+      subAddr <- arbitrary
+      policyA <- arbitrary @PolicyID
+      asset <- arbitrary @AssetName
+      topOutValue <- arbitrary
+      subOutValue <- arbitrary
+      topFee <- arbitrary
+      topTreasury <- arbitrary
+      subTreasury <- arbitrary
+      topBurnAmount <- getPositive <$> arbitrary
+      subBurnAmount <- getPositive <$> arbitrary
+      let topMint = multiAssetFromList [(policyA, asset, -topBurnAmount)]
+          subMint = multiAssetFromList [(policyA, asset, -subBurnAmount)]
+          expectedBurned :: MultiAsset
+          expectedBurned =
+            multiAssetFromList
+              [ (policyA, asset, topBurnAmount + subBurnAmount)
+              ]
+          regPool :: TxCert era
+          regPool = RegPoolTxCert poolParams
+          topOut = mkBasicTxOut topAddr (inject topOutValue)
+          subOut = mkBasicTxOut subAddr (inject subOutValue)
+          subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL .~ [subOut]
+                & certsTxBodyL
+                  .~ [regPool, RegDRepTxCert drepB drepDeposit SNothing]
+                & treasuryDonationTxBodyL .~ subTreasury
+                & mintTxBodyL .~ subMint
+          topTx :: Tx TopTx era
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL .~ [topOut]
+                & feeTxBodyL .~ topFee
+                & certsTxBodyL
+                  .~ [regPool, RegDRepTxCert drepA drepDeposit SNothing]
+                & treasuryDonationTxBodyL .~ topTreasury
+                & mintTxBodyL .~ topMint
+                & subTransactionsTxBodyL .~ [subTx]
+          expectedCoin =
+            topOutValue
+              <> subOutValue
+              <> topFee
+              <> topTreasury
+              <> subTreasury
+              <> poolDeposit
+              <> ((2 :: Int) <×> drepDeposit)
+          expected = MaryValue expectedCoin expectedBurned
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      produced pp certState (topTx ^. bodyTxL) `shouldBe` expected
+  where
+    mkSubTx i cert = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert] & inputsTxBodyL .~ [i]
