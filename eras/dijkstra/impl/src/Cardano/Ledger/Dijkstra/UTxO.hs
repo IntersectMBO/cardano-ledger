@@ -118,22 +118,6 @@ dijkstraProducedValue pp isRegPoolId topTxBody =
         <> (topTxBody ^. certsTxBodyL)
     subTxs = topTxBody ^. subTransactionsTxBodyL
 
-getProducedDijkstraValue ::
-  ( STxLevel l era ~ STxBothLevels l era
-  , DijkstraEraTxBody era
-  , EraUTxO era
-  , Value era ~ MaryValue
-  ) =>
-  PParams era ->
-  (KeyHash StakePool -> Bool) ->
-  TxBody l era ->
-  MaryValue
-getProducedDijkstraValue pp isRegPoolId txBody =
-  withBothTxLevels
-    txBody
-    (dijkstraProducedValue pp isRegPoolId)
-    (dijkstraSubTxProducedValue pp isRegPoolId)
-
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
 
@@ -141,7 +125,7 @@ instance EraUTxO DijkstraEra where
 
   getConsumedValue = getConsumedDijkstraValue
 
-  getProducedValue = getProducedDijkstraValue
+  getProducedValue = dijkstraProducedValue
 
   getScriptsProvided = getDijkstraScriptsProvided
 
@@ -261,17 +245,6 @@ instance DijkstraEraUTxO DijkstraEra where
 subTransactionsDijkstraStAnnTx ::
   DijkstraStAnnTx TopTx era -> [DijkstraStAnnTx SubTx era]
 subTransactionsDijkstraStAnnTx DijkstraStAnnTopTx {dsattSubTransactions} = dsattSubTransactions
-
-dijkstraSubTxProducedValue ::
-  (ConwayEraTxBody era, Value era ~ MaryValue) =>
-  PParams era ->
-  (KeyHash StakePool -> Bool) ->
-  TxBody SubTx era ->
-  Value era
-dijkstraSubTxProducedValue pp isRegPoolId txBody =
-  sumAllValue (txBody ^. outputsTxBodyL)
-    <> inject (getTotalDepositsTxBody pp isRegPoolId txBody <> txBody ^. treasuryDonationTxBodyL)
-    <> burnedMultiAssets txBody
 
 -- | Total size of reference scripts across a top-level transaction and all its subtransactions.
 batchNonDistinctRefScriptsSize ::

@@ -44,8 +44,7 @@ instance EraUTxO MaryEra where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue pp isRegPoolId txBody =
-    withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
+  getProducedValue = getProducedMaryValue
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
