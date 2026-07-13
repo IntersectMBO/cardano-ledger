@@ -1582,7 +1582,7 @@ instance
 type AlonzoTxTypes era =
   '[ TxBody TopTx era
    , TxWits era
-   , IsValid
+   , IsPhase2Valid
    , Maybe (TxAuxData era)
    ]
 
@@ -1601,7 +1601,7 @@ instance
     inject @"AlonzoTx" @'["AlonzoTx" ::: AlonzoTxTypes era]
       atBody
       atWits
-      atIsValid
+      atIsPhase2Valid
       (strictMaybeToMaybe atAuxData)
   fromSimpleRep rep =
     algebra @'["AlonzoTx" ::: AlonzoTxTypes era]
@@ -1659,9 +1659,9 @@ instance (EraTx era, EraTxOut era, EraSpecPParams era) => HasSimpleRep (ShelleyT
       rep
       (\body wits aux -> ShelleyTx body wits (maybeToStrictMaybe aux))
 
-instance HasSimpleRep IsValid
+instance HasSimpleRep IsPhase2Valid
 
-instance HasSpec IsValid
+instance HasSpec IsPhase2Valid
 
 -- ===============================================================
 -- All the TxAuxData instances

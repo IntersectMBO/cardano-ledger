@@ -141,11 +141,11 @@ maxRefInputs :: Proof era -> Int
 maxRefInputs Babbage = 3
 maxRefInputs _ = 0
 
-isValid' :: Proof era -> Tx TopTx era -> IsValid
-isValid' Conway x = x ^. isValidTxL
-isValid' Babbage x = x ^. isValidTxL
-isValid' Alonzo x = x ^. isValidTxL
-isValid' _ _ = IsValid True
+isValid' :: Proof era -> Tx TopTx era -> IsPhase2Valid
+isValid' Conway x = x ^. isPhase2ValidTxL
+isValid' Babbage x = x ^. isPhase2ValidTxL
+isValid' Alonzo x = x ^. isPhase2ValidTxL
+isValid' _ _ = Phase2Valid
 {-# NOINLINE isValid' #-}
 
 -- | Does the TxOut have evidence of credentials and data.
