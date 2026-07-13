@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Tx (
   alonzoTxEqRaw,
   auxDataAlonzoTxL,
   bodyAlonzoTxL,
-  isValidAlonzoTxL,
+  isPhase2ValidAlonzoTxL,
   mkBasicAlonzoTx,
   sizeAlonzoTxF,
   witsAlonzoTxL,
@@ -136,8 +136,8 @@ tierRefScriptFee multiplier sizeIncrement
     sizeIncrementRational = toRational sizeIncrement
 
 instance AlonzoEraTx ConwayEra where
-  isValidTxL = conwayTxL . isValidAlonzoTxL
-  {-# INLINE isValidTxL #-}
+  isPhase2ValidTxL = conwayTxL . isPhase2ValidAlonzoTxL
+  {-# INLINE isPhase2ValidTxL #-}
 
 instance Typeable l => DecCBOR (Annotator (Tx l ConwayEra)) where
   decCBOR = fmap MkConwayTx <$> decCBOR
