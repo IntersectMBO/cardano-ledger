@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   ScriptIntegrity (..),
   hashScriptIntegrity,
+  toIsPhase2Valid,
   totExUnits,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
@@ -479,7 +480,7 @@ instance EraGen AlonzoEra where
                   Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
-  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (IsValid v) auxdata
+  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (toIsPhase2Valid v) auxdata
     where
       v = all twoPhaseValidates (wit ^. scriptTxWitsL)
       twoPhaseValidates script =
@@ -532,12 +533,12 @@ instance EraGen AlonzoEra where
                 <> " instead of "
                 <> show (unWrapExUnits ppMax)
 
-  hasFailedScripts tx = IsValid False == tx ^. isValidTxL
+  hasFailedScripts tx = Phase2Invalid == tx ^. isPhase2ValidTxL
 
   feeOrCollateral tx utxo =
-    case tx ^. isValidTxL of
-      IsValid True -> tx ^. bodyTxL . feeTxBodyL
-      IsValid False -> sumCollateral tx utxo
+    case tx ^. isPhase2ValidTxL of
+      Phase2Valid -> tx ^. bodyTxL . feeTxBodyL
+      Phase2Invalid -> sumCollateral tx utxo
 
 sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx TopTx era -> UTxO era -> Coin
 sumCollateral tx utxo =

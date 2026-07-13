@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 -- | Transaction building and inspecting relies heavily on lenses (`microlens`). Therefore, some
 -- familiarity with those is necessary. However, you can probably go a long way by simply
@@ -43,7 +45,7 @@ module Cardano.Ledger.Api.Tx (
   module Cardano.Ledger.Api.Tx.Wits,
 
   -- * Any era
-  AnyEraTx (isValidTxG),
+  AnyEraTx (isPhase2ValidTxG),
   producedTxOuts,
 
   -- * Shelley onwards
@@ -62,8 +64,8 @@ module Cardano.Ledger.Api.Tx (
 
   -- * Alonzo onwards
   AlonzoEraTx,
-  isValidTxL,
-  IsValid (..),
+  isPhase2ValidTxL,
+  IsPhase2Valid (..),
 
   -- ** Execution units
   evalTxExUnits,
@@ -75,9 +77,21 @@ module Cardano.Ledger.Api.Tx (
   -- * Upgrade
   binaryUpgradeTx,
   upgradeTx,
+
+  -- * Deprecated
+  isValidTxG,
+  isValidTxL,
+  IsValid,
+  pattern IsValid,
 ) where
 
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoEraTx (..),
+  IsPhase2Valid (..),
+  IsValid,
+  isValidTxL,
+  pattern IsValid,
+ )
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts.ExUnits (
   RedeemerReport,
@@ -99,18 +113,18 @@ import qualified Data.Map as Map
 import Lens.Micro
 
 class (EraTx era, AnyEraTxBody era, AnyEraTxWits era, AnyEraTxAuxData era) => AnyEraTx era where
-  isValidTxG :: SimpleGetter (Tx TopTx era) (Maybe IsValid)
-  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsValid)
-  isValidTxG = isValidTxL . to Just
+  isPhase2ValidTxG :: SimpleGetter (Tx TopTx era) (Maybe IsPhase2Valid)
+  default isPhase2ValidTxG :: AlonzoEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsPhase2Valid)
+  isPhase2ValidTxG = isPhase2ValidTxL . to Just
 
 instance AnyEraTx ShelleyEra where
-  isValidTxG = to (const Nothing)
+  isPhase2ValidTxG = to (const Nothing)
 
 instance AnyEraTx AllegraEra where
-  isValidTxG = to (const Nothing)
+  isPhase2ValidTxG = to (const Nothing)
 
 instance AnyEraTx MaryEra where
-  isValidTxG = to (const Nothing)
+  isPhase2ValidTxG = to (const Nothing)
 
 instance AnyEraTx AlonzoEra
 
@@ -123,8 +137,8 @@ instance AnyEraTx DijkstraEra
 -- | Construct all of the unspent outputs that will be produced by this transaction
 producedTxOuts :: AnyEraTx era => Tx TopTx era -> UTxO era
 producedTxOuts tx =
-  case tx ^. isValidTxG of
-    Just (IsValid False) ->
+  case tx ^. isPhase2ValidTxG of
+    Just Phase2Invalid ->
       UTxO $
         case join (txBody ^. collateralReturnTxBodyG) of
           Nothing -> mempty
@@ -132,3 +146,7 @@ producedTxOuts tx =
     _ -> txouts txBody
   where
     txBody = tx ^. bodyTxL
+
+isValidTxG :: AnyEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsPhase2Valid)
+isValidTxG = isPhase2ValidTxG
+{-# DEPRECATED isValidTxG "In favor of `isPhase2ValidTxG`" #-}

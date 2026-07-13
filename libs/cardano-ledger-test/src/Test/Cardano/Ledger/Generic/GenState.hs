@@ -88,7 +88,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.Tx (IsPhase2Valid (..), ScriptIntegrityHash, toIsPhase2Valid)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
@@ -252,7 +252,7 @@ data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
   , gsKeys :: !(Map (KeyHash Witness) (KeyPair Witness))
   , gsScripts :: !(Map ScriptHash (Script era))
-  , gsPlutusScripts :: !(Map (ScriptHash, PlutusPurposeTag) (IsValid, Script era))
+  , gsPlutusScripts :: !(Map (ScriptHash, PlutusPurposeTag) (IsPhase2Valid, Script era))
   , gsDatums :: !(Map DataHash (Data era))
   , gsVI :: !(Map ValidityInterval (Set ScriptHash))
   , gsModel :: !(ModelNewEpochState era)
@@ -446,8 +446,8 @@ modifyGenStateScripts f =
   modify $ \gs -> gs {gsScripts = f (gsScripts gs)}
 
 modifyPlutusScripts ::
-  ( Map.Map (ScriptHash, PlutusPurposeTag) (IsValid, Script era) ->
-    Map.Map (ScriptHash, PlutusPurposeTag) (IsValid, Script era)
+  ( Map.Map (ScriptHash, PlutusPurposeTag) (IsPhase2Valid, Script era) ->
+    Map.Map (ScriptHash, PlutusPurposeTag) (IsPhase2Valid, Script era)
   ) ->
   GenRS era ()
 modifyPlutusScripts f = modify (\gs -> gs {gsPlutusScripts = f (gsPlutusScripts gs)})
@@ -851,7 +851,7 @@ genPlutusScript tag = do
       else pure $ alwaysFalse mlanguage numArgs
 
   let scriptHash = hashScript @era script
-  modifyPlutusScripts (Map.insert (scriptHash, tag) (IsValid isValid, script))
+  modifyPlutusScripts (Map.insert (scriptHash, tag) (toIsPhase2Valid isValid, script))
   pure scriptHash
 
 -- ======================================================================
