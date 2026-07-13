@@ -31,9 +31,9 @@ import Cardano.Ledger.Babbage.UTxO (
  )
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   conwayConsumed,
-  conwayProducedValue,
   getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
@@ -91,6 +91,7 @@ getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
         (topTxBody ^. subTransactionsTxBodyL)
 
 dijkstraProducedValue ::
+  forall era.
   ( DijkstraEraTxBody era
   , EraUTxO era
   , Value era ~ MaryValue
@@ -99,27 +100,23 @@ dijkstraProducedValue ::
   (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   MaryValue
-dijkstraProducedValue pp isRegPoolId txBody =
-  conwayProducedValue pp isRegPoolId txBody
-    <> foldMap'
-      (getProducedValue pp isRegPoolId . view bodyTxL)
-      (txBody ^. subTransactionsTxBodyL)
-
-getProducedDijkstraValue ::
-  ( STxLevel l era ~ STxBothLevels l era
-  , DijkstraEraTxBody era
-  , EraUTxO era
-  , Value era ~ MaryValue
-  ) =>
-  PParams era ->
-  (KeyHash StakePool -> Bool) ->
-  TxBody l era ->
-  MaryValue
-getProducedDijkstraValue pp isRegPoolId txBody =
-  withBothTxLevels
-    txBody
-    (dijkstraProducedValue pp isRegPoolId)
-    (dijkstraSubTxProducedValue pp isRegPoolId)
+dijkstraProducedValue pp isRegPoolId topTxBody =
+  commonProduced topTxBody
+    <> foldMap' (commonProduced . (^. bodyTxL)) subTxs
+    <> inject (topTxBody ^. feeTxBodyL)
+    <> inject (getTotalDepositsTxCerts pp isRegPoolId batchTxCerts)
+  where
+    -- add all produced values that are common across transaction levels
+    commonProduced :: TxBody l era -> MaryValue
+    commonProduced txBody =
+      sumAllValue (txBody ^. outputsTxBodyL)
+        <> inject (txBody ^. treasuryDonationTxBodyL)
+        <> inject (conwayProposalsDeposits pp txBody)
+        <> burnedMultiAssets txBody
+    batchTxCerts =
+      foldMap' (^. bodyTxL . certsTxBodyL) subTxs
+        <> (topTxBody ^. certsTxBodyL)
+    subTxs = topTxBody ^. subTransactionsTxBodyL
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
@@ -128,7 +125,7 @@ instance EraUTxO DijkstraEra where
 
   getConsumedValue = getConsumedDijkstraValue
 
-  getProducedValue = getProducedDijkstraValue
+  getProducedValue = dijkstraProducedValue
 
   getScriptsProvided = getDijkstraScriptsProvided
 
@@ -248,17 +245,6 @@ instance DijkstraEraUTxO DijkstraEra where
 subTransactionsDijkstraStAnnTx ::
   DijkstraStAnnTx TopTx era -> [DijkstraStAnnTx SubTx era]
 subTransactionsDijkstraStAnnTx DijkstraStAnnTopTx {dsattSubTransactions} = dsattSubTransactions
-
-dijkstraSubTxProducedValue ::
-  (ConwayEraTxBody era, Value era ~ MaryValue) =>
-  PParams era ->
-  (KeyHash StakePool -> Bool) ->
-  TxBody SubTx era ->
-  Value era
-dijkstraSubTxProducedValue pp isRegPoolId txBody =
-  sumAllValue (txBody ^. outputsTxBodyL)
-    <> inject (getTotalDepositsTxBody pp isRegPoolId txBody <> txBody ^. treasuryDonationTxBodyL)
-    <> burnedMultiAssets txBody
 
 -- | Total size of reference scripts across a top-level transaction and all its subtransactions.
 batchNonDistinctRefScriptsSize ::

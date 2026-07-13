@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.13.1.0
+## 1.14.0.0
 
+* Restrict `evalBalanceTxBody` to `TxBody TopTx era`.
 * Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names
 * Re-export the new `pattern WithdrawingPurpose` and `toWithdrawingPurpose`
 * Add `generate-cbor` executable.

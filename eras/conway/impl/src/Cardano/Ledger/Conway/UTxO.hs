@@ -137,8 +137,7 @@ instance EraUTxO ConwayEra where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue pp isRegPoolId txBody =
-    withTopTxLevelOnly txBody (conwayProducedValue pp isRegPoolId)
+  getProducedValue = conwayProducedValue
 
   getScriptsProvided = getBabbageScriptsProvided
 

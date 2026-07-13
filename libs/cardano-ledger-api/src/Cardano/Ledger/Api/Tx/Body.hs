@@ -333,7 +333,7 @@ evalBalanceTxBody ::
   -- | The UTxO relevant to the transaction.
   UTxO era ->
   -- | The transaction being evaluated for balance.
-  TxBody l era ->
+  TxBody TopTx era ->
   -- | The difference between what the transaction consumes and what it produces.
   Value era
 evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =

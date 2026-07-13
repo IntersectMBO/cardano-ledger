@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Restrict `produced` to `TxBody TopTx era`.
 * Add `defaultApplyTxWithValidation` and `defaultReapplyValidatedTx` helpers to `Mempool` module
 * Deprecate:
   - `Validated`

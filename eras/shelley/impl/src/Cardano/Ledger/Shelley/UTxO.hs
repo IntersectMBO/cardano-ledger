@@ -132,7 +132,7 @@ produced ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Value era
 produced pp certState =
   getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
@@ -177,8 +177,7 @@ instance EraUTxO ShelleyEra where
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
-  getProducedValue pp isRegPoolId txBody =
-    withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
+  getProducedValue = shelleyProducedValue
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 

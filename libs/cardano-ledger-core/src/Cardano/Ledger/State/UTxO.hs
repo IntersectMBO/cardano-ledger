@@ -261,7 +261,7 @@ class EraTx era => EraUTxO era where
     PParams era ->
     -- | Check whether a pool with a supplied PoolStakeId is already registered.
     (KeyHash StakePool -> Bool) ->
-    TxBody t era ->
+    TxBody TopTx era ->
     Value era
 
   -- | Initial eras will look into witness set to find all of the available scripts, but

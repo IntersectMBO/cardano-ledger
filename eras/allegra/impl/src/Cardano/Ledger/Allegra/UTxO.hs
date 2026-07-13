@@ -28,8 +28,7 @@ instance EraUTxO AllegraEra where
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
-  getProducedValue pp isRegPoolId txBody =
-    withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
+  getProducedValue = shelleyProducedValue
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
