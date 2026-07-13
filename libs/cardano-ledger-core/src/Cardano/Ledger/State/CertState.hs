@@ -397,7 +397,7 @@ class
   --
   -- This is the contribution of a TxBody towards the total 'Obligations' of the system
   -- See `Obligations` and `obligationCertState` for more information.
-  certsTotalRefundsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody t era -> Coin
+  certsTotalRefundsTxBody :: EraTxBody era => PParams era -> Accounts era -> TxBody t era -> Coin
 
 instance EncCBOR InstantaneousRewards where
   encCBOR (InstantaneousRewards irR irT dR dT) =

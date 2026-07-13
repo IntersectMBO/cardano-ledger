@@ -2,6 +2,11 @@
 
 ## 1.21.0.0
 
+* Remove no longer needed `(Credential DRepRole -> Maybe Coin)` argument from:
+  - `getTotalRefundsTxCerts`
+  - `getTotalRefundsTxBody`
+  - `getConsumedValue`
+* Change `certsTotalRefundsTxBody` to accept `Accounts` instead of `CertState`
 * Restrict `getProducedValue` to `TxBody TopTx era`.
 * Remove `Semigroup` and `Monoid` instances for `CostModels`
 * Change `updateCostModels` to take `CostModelsUpdate` as its second argument

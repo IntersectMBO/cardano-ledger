@@ -320,12 +320,6 @@ evalBalanceTxBody ::
   -- there is no requirement to know about all of the delegation certificates in the
   -- ledger state, just the ones this transaction cares about.
   (Credential Staking -> Maybe Coin) ->
-  -- | Lookup current deposit amount for a registered DRep credential. This
-  -- function must produce valid answer for all of the DRep credentials present in any of
-  -- the `UnRegDRep` certificates in the supplied `TxBody`. In other words,
-  -- there is no requirement to know about all of the DRep registrations in the
-  -- ledger state, just the ones this transaction cares about.
-  (Credential DRepRole -> Maybe Coin) ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered. There is no
   -- requirement to answer this question for all stake pool credentials, just for the ones
   -- that have the registration certificates included in the supplied `TxBody`
@@ -336,6 +330,6 @@ evalBalanceTxBody ::
   TxBody TopTx era ->
   -- | The difference between what the transaction consumes and what it produces.
   Value era
-evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =
-  getConsumedValue pp lookupKeyRefund lookupDRepRefund utxo txBody
+evalBalanceTxBody pp lookupKeyRefund isRegPoolId utxo txBody =
+  getConsumedValue pp lookupKeyRefund utxo txBody
     <-> getProducedValue pp isRegPoolId txBody

@@ -91,11 +91,10 @@ getDepositRefund ::
   PParams era -> CertState era -> [TxCert era] -> (DeltaCoin, DeltaCoin)
 getDepositRefund pp certState certs =
   ( delta $ getTotalDepositsTxCerts pp (`Map.member` psStakePools ps) certs
-  , delta $ getTotalRefundsTxCerts pp (lookupDepositDState ds) (lookupDepositVState vs) certs
+  , delta $ getTotalRefundsTxCerts pp (lookupDepositDState ds) certs
   )
   where
     delta (Coin n) = DeltaCoin n
-    vs = certState ^. certVStateL
     ps = certState ^. certPStateL
     ds = certState ^. certDStateL
 

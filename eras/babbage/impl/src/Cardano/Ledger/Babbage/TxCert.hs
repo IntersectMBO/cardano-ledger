@@ -36,7 +36,7 @@ instance EraTxCert BabbageEra where
 
   getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
 
-  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
+  getTotalRefundsTxCerts = shelleyTotalRefundsTxCerts
 
 instance ShelleyEraTxCert BabbageEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert

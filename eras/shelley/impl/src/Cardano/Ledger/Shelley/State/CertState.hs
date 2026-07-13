@@ -89,12 +89,11 @@ shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePools shelleyCertPState)
 
 shelleyCertsTotalRefundsTxBody ::
-  (EraTxBody era, EraAccounts era) => PParams era -> ShelleyCertState era -> TxBody t era -> Coin
-shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
+  (EraTxBody era, EraAccounts era) => PParams era -> Accounts era -> TxBody t era -> Coin
+shelleyCertsTotalRefundsTxBody pp accounts =
   getTotalRefundsTxBody
     pp
-    (lookupDepositDState shelleyCertDState)
-    (const Nothing)
+    (fmap (fromCompact . (^. depositAccountStateL)) . (`lookupAccountState` accounts))
 
 instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
