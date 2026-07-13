@@ -258,6 +258,7 @@ validateBatchWithdrawals legacyMode originalAccounts tx = do
             : [ unWithdrawals $ subTx ^. bodyTxL . withdrawalsTxBodyL
               | subTx <- OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
               ]
+      -- TODO: this looks suspiciously similar to categorizeWithdrawals in Account. Can we reuse it?
       categorize acctAddr@(AccountAddress _ (AccountId cred)) withdrawn (!missing, !exceeded) =
         case lookupAccountState cred originalAccounts of
           Nothing -> (Map.insert acctAddr withdrawn missing, exceeded)

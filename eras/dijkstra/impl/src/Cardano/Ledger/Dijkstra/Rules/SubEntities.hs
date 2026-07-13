@@ -149,6 +149,7 @@ dijkstraSubEntitiesTransition = do
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
 
+  -- TODO: check for missing accounts, in case a sibling has unregistered the account
   runTest $ Conway.validateWithdrawalsDelegated accounts tx
 
   let certStateBeforeSubCerts =
