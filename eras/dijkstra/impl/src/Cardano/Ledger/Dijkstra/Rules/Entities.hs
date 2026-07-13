@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -257,7 +258,7 @@ validateBatchWithdrawals legacyMode originalAccounts tx = do
             : [ unWithdrawals $ subTx ^. bodyTxL . withdrawalsTxBodyL
               | subTx <- OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
               ]
-      categorize acctAddr@(AccountAddress _ (AccountId cred)) withdrawn (missing, exceeded) =
+      categorize acctAddr@(AccountAddress _ (AccountId cred)) withdrawn (!missing, !exceeded) =
         case lookupAccountState cred originalAccounts of
           Nothing -> (Map.insert acctAddr withdrawn missing, exceeded)
           Just accountState ->
@@ -272,7 +273,7 @@ validateBatchWithdrawals legacyMode originalAccounts tx = do
                     )
                   else (missing, exceeded)
       (missingWithdrawals, exceededWithdrawals) =
-        Map.foldrWithKey categorize (Map.empty, Map.empty) allWithdrawals
+        Map.foldrWithKey' categorize (Map.empty, Map.empty) allWithdrawals
   failOnNonEmptyMap missingWithdrawals $
     WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
   failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
