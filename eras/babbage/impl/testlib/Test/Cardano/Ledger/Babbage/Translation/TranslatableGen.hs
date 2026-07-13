@@ -76,12 +76,12 @@ genTx ::
 genTx txbGen = do
   txb <- txbGen
   wits <- genTxWits @era
-  isValid <- arbitrary
+  isPhase2Valid <- arbitrary
   auxData <- arbitrary
   pure $
     mkBasicTx txb
       & witsTxL .~ wits
-      & isValidTxL .~ isValid
+      & isPhase2ValidTxL .~ isPhase2Valid
       & auxDataTxL .~ auxData
 
 genTxOut ::
