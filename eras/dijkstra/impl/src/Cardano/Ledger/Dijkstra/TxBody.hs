@@ -146,6 +146,7 @@ import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
@@ -1012,10 +1013,11 @@ upgradeProposals ProposalProcedure {..} =
     }
 
 dijkstraTotalDepositsTxBody ::
-  ConwayEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
+  DijkstraEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
 dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
     <+> conwayProposalsDeposits pp txBody
+    <+> fold (unDirectDeposits (txBody ^. directDepositsTxBodyL))
 
 -- | This newtype wrapper lets us index into the guards with a ScriptHash. It
 -- will return the index of the credential when using `indexOf` and the `fromIndex`

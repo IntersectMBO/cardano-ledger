@@ -259,7 +259,7 @@ class
 
   -- | Compute the total deposits from the certificates in a TxBody.
   --
-  -- This is the contribution of a TxBody towards the consumed amount by the transaction
+  -- This is the contribution of a TxBody towards the produced amount by the transaction
   getTotalDepositsTxBody ::
     PParams era ->
     -- | Check whether stake pool is registered or not
@@ -271,7 +271,7 @@ class
 
   -- | Compute the total refunds from the Certs of a TxBody.
   --
-  -- This is the contribution of a TxBody towards produced amount by the transaction
+  -- This is the contribution of a TxBody towards consumed amount by the transaction
   getTotalRefundsTxBody ::
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered

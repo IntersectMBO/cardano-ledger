@@ -26,22 +26,29 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Dijkstra.TxBody (
+  DijkstraEraTxBody,
+  directDepositsTxBodyL,
+  subTransactionsTxBodyL,
+ )
 import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -49,22 +56,25 @@ import Lens.Micro
 data EntitiesEnv era = EntitiesEnv
   { eePlutusLegacyMode :: Bool
   , eeCertsEnv :: Conway.CertsEnv era
+  , eeOriginalAccounts :: Accounts era
   }
   deriving (Generic)
 
-deriving instance (EraPParams era, Eq (Tx TopTx era)) => Eq (EntitiesEnv era)
+deriving instance (EraPParams era, Eq (Tx TopTx era), Eq (Accounts era)) => Eq (EntitiesEnv era)
 
-deriving instance (EraPParams era, Show (Tx TopTx era)) => Show (EntitiesEnv era)
+deriving instance
+  (EraPParams era, Show (Tx TopTx era), Show (Accounts era)) => Show (EntitiesEnv era)
 
-instance (EraPParams era, NFData (Tx TopTx era)) => NFData (EntitiesEnv era)
+instance (EraPParams era, NFData (Tx TopTx era), NFData (Accounts era)) => NFData (EntitiesEnv era)
 
-instance EraTx era => EncCBOR (EntitiesEnv era) where
-  encCBOR x@(EntitiesEnv _ _) =
+instance (EraTx era, EncCBOR (Accounts era)) => EncCBOR (EntitiesEnv era) where
+  encCBOR x@(EntitiesEnv _ _ _) =
     let EntitiesEnv {..} = x
      in encode $
           Rec EntitiesEnv
             !> To eePlutusLegacyMode
             !> To eeCertsEnv
+            !> To eeOriginalAccounts
 
 data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
@@ -189,16 +199,21 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (EntitiesEnv legacyMode certsEnv, certState, certificates) <- judgmentContext
+  TRC (EntitiesEnv legacyMode certsEnv originalAccounts, certState, certificates) <- judgmentContext
   let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = certsEnv
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
+
+  {- Aggregated withdrawals across the batch must not exceed each account's
+     pre-batch balance, and every withdrawn account must exist pre-batch.
+     In legacy mode, top-tx withdrawals are excluded (CIP-118 escape hatch). -}
+  validateBatchWithdrawals legacyMode originalAccounts tx
 
   runTest $ Conway.validateWithdrawalsDelegated accounts tx
 
   network <- liftSTS $ asks networkId
 
-  validateWithdrawals legacyMode network withdrawals accounts
+  when legacyMode $ validateLegacyDrain network withdrawals accounts
 
   let certStateBeforeCerts =
         certState
@@ -215,32 +230,65 @@ dijkstraEntitiesTransition = do
 
   pure $ certStateAfterCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
 
-validateWithdrawals ::
-  EraAccounts era =>
+-- | Aggregate withdrawals across the top tx and all its subtransactions. For each
+-- account, the total withdrawn must not exceed its pre-batch balance, and every
+-- account referenced by a withdrawal must exist pre-batch.
+--
+-- In legacy mode, top-tx's own withdrawals are excluded from the batch sum
+-- (CIP-118 escape hatch): top's withdrawal is validated separately by
+-- 'validateLegacyDrain' against post-sub-ledger accounts, allowing a top-tx
+-- to withdraw from an account funded mid-batch by a sub-tx's direct deposit.
+validateBatchWithdrawals ::
+  ( EraTx era
+  , EraAccounts era
+  , DijkstraEraTxBody era
+  ) =>
   Bool ->
+  Accounts era ->
+  Tx TopTx era ->
+  Rule (ENTITIES era) ctx ()
+validateBatchWithdrawals legacyMode originalAccounts tx = do
+  let topWithdrawals
+        | legacyMode = Map.empty
+        | otherwise = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
+      allWithdrawals =
+        Map.unionsWith (<>) $
+          topWithdrawals
+            : [ unWithdrawals $ subTx ^. bodyTxL . withdrawalsTxBodyL
+              | subTx <- OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
+              ]
+      categorize acctAddr@(AccountAddress _ (AccountId cred)) withdrawn (missing, exceeded) =
+        case lookupAccountState cred originalAccounts of
+          Nothing -> (Map.insert acctAddr withdrawn missing, exceeded)
+          Just accountState ->
+            let balance = fromCompact (accountState ^. balanceAccountStateL)
+             in if withdrawn > balance
+                  then
+                    ( missing
+                    , Map.insert
+                        acctAddr
+                        Mismatch {mismatchSupplied = withdrawn, mismatchExpected = balance}
+                        exceeded
+                    )
+                  else (missing, exceeded)
+      (missingWithdrawals, exceededWithdrawals) =
+        Map.foldrWithKey categorize (Map.empty, Map.empty) allWithdrawals
+  failOnNonEmptyMap missingWithdrawals $
+    WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+  failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
+
+validateLegacyDrain ::
+  EraAccounts era =>
   Network ->
   Withdrawals ->
   Accounts era ->
   Rule (ENTITIES era) ctx ()
-validateWithdrawals legacyMode network withdrawals accounts = do
-  missingWithdrawals <-
-    if legacyMode
-      then do
-        let (missingWithdrawals, incompleteWithdrawals) =
-              case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
-        failOnNonEmptyMap incompleteWithdrawals IncompleteWithdrawals
-        pure missingWithdrawals
-      else do
-        let (missingWithdrawals, exceededWithdrawals) =
-              case withdrawalsThatExceedAccountBalance withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
-        failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedAccountBalances
-        pure missingWithdrawals
-  failOnNonEmptyMap missingWithdrawals $
-    WithdrawalsMissingAccounts . Withdrawals . NEM.toMap
+validateLegacyDrain network withdrawals accounts = do
+  let incompleteWithdrawals =
+        case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
+          Nothing -> Map.empty
+          Just (_missing, incomplete) -> incomplete
+  failOnNonEmptyMap incompleteWithdrawals IncompleteWithdrawals
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era

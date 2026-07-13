@@ -53,14 +53,17 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.UTxO (conwayProducedValue)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
+import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -75,7 +78,6 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
-  failureOnNonEmptyMap,
   failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
@@ -85,11 +87,11 @@ import Control.State.Transition.Extended (
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data DijkstraUtxoEnv era = DijkstraUtxoEnv
   { dueSlot :: SlotNo
@@ -167,8 +169,6 @@ data DijkstraUtxoPredFailure era
       Network
       -- | the set of account addresses with incorrect network IDs
       (NonEmptySet AccountAddress)
-  | -- | Total withdrawals per account that exceed the original account balance
-    WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -246,39 +246,6 @@ validateNoPtrInCollateralReturn txBody = do
         Just collateralReturn
   failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
 
--- | For each account, the total withdrawals across the entire batch should not exceed the original account balance.
--- Unregistered accounts are treated as having 0 balance.
-validateBatchWithdrawals ::
-  ( EraTx era
-  , EraAccounts era
-  , DijkstraEraTxBody era
-  ) =>
-  Accounts era ->
-  Tx TopTx era ->
-  Test (DijkstraUtxoPredFailure era)
-validateBatchWithdrawals accounts tx =
-  let allWithdrawals =
-        Map.unionsWith (<>) $
-          unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
-            : [ unWithdrawals $ subTx ^. bodyTxL . withdrawalsTxBodyL
-              | subTx <- OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
-              ]
-      badWithdrawals =
-        Map.mapMaybeWithKey
-          ( \acctAddr withdrawn ->
-              let balance = getAccountBalance acctAddr
-               in if withdrawn > balance
-                    then Just Mismatch {mismatchSupplied = withdrawn, mismatchExpected = balance}
-                    else Nothing
-          )
-          allWithdrawals
-   in failureOnNonEmptyMap badWithdrawals WithdrawalsExceedAccountBalance
-  where
-    getAccountBalance (AccountAddress _ (AccountId cred)) =
-      case lookupAccountState cred accounts of
-        Nothing -> mempty -- unregistered account, 0 balance
-        Just accountState -> fromCompact $ accountState ^. balanceAccountStateL
-
 -- | Validate collateral if any transaction in the batch has redeemers.
 validateBatchCollateral ::
   forall era rule.
@@ -315,13 +282,40 @@ validateWrongNetworkInDirectDeposit netId txb =
           (\a _ -> aaNetworkId a /= netId)
           (unDirectDeposits $ txb ^. directDepositsTxBodyL)
 
+-- | Value conservation restricted to the top-level transaction
+validateValueConservationTopTx ::
+  ( ConwayEraTxBody era
+  , ConwayEraCertState era
+  , Value era ~ MaryValue
+  ) =>
+  PParams era ->
+  UTxO era ->
+  CertState era ->
+  TxBody TopTx era ->
+  Test (Shelley.ShelleyUtxoPredFailure era)
+validateValueConservationTopTx pp utxo certState txBody =
+  failureUnless (consumedValue == producedValue) $
+    Shelley.ValueNotConservedUTxO
+      Mismatch {mismatchSupplied = consumedValue, mismatchExpected = producedValue}
+  where
+    consumedValue =
+      getConsumedMaryValue
+        pp
+        (lookupDepositDState (certState ^. certDStateL))
+        (lookupDepositVState (certState ^. certVStateL))
+        utxo
+        txBody
+    producedValue = conwayProducedValue pp isRegPoolId txBody
+    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
+
 dijkstraUtxoTransition ::
   forall era.
-  ( EraUTxO era
-  , EraCertState era
+  ( ConwayEraCertState era
   , DijkstraEraTxBody era
+  , DijkstraEraUTxO era
   , AlonzoEraTx era
   , EraStake era
+  , Value era ~ MaryValue
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Alonzo.AlonzoUtxoPredFailure era
@@ -344,8 +338,6 @@ dijkstraUtxoTransition = do
   TRC (DijkstraUtxoEnv slot pp certState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
-  -- this is the original Accounts, before any transactions were applied
-  let accounts = certState ^. certDStateL . accountsL
 
   let txBody = tx ^. bodyTxL
 
@@ -375,10 +367,13 @@ dijkstraUtxoTransition = do
   {- (RedeemersOf txTop ≠ ∅ ⊎ Any (λ txSub → RedeemersOf txSub ≠ ∅) subtxs) → collateralCheck -}
   validate $ validateBatchCollateral pp tx originalUtxo
 
-  runTest $ validateBatchWithdrawals accounts tx
-
   {- consumed pp utxo₀ txb = produced pp certState txb -}
   runTest $ Shelley.validateValueNotConservedUTxO pp originalUtxo certState txBody
+
+  {- legacyMode ≡ true → consumed pp certState txTop utxo ≡ produced pp certState txTop -}
+  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+    runTest $
+      validateValueConservationTopTx pp originalUtxo certState txBody
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
@@ -453,7 +448,9 @@ instance
   , Environment (EraRule "UTXOS" era) ~ ()
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
-  , EraCertState era
+  , ConwayEraCertState era
+  , DijkstraEraUTxO era
+  , Value era ~ MaryValue
   , EraRule "UTXO" era ~ UTXO era
   , SafeToHash (TxWits era)
   ) =>
@@ -520,7 +517,6 @@ instance
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
       WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
-      WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
 
 instance
   ( Era era
@@ -556,7 +552,6 @@ instance
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
     23 -> SumD WrongNetworkInDirectDeposit <! From <! From
-    24 -> SumD WithdrawalsExceedAccountBalance <! From
     n -> Invalid n
 
 -- =====================================================

@@ -14,7 +14,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraUtxoPredFailure (..),
   EntitiesPredFailure (..),
  )
 import Cardano.Ledger.Plutus
@@ -41,13 +40,9 @@ spec = describe "CERTS" $ do
                 .~ Withdrawals [(accountAddress, Coin 20)]
       submitFailingTx
         tx
-        [ injectFailure $
-            WithdrawalsExceedAccountBalance @era $
-              NE.singleton accountAddress $
-                Mismatch (Coin 20) mempty
-        , injectFailure (WdrlNotDelegatedToDRep [stakeKey])
-        , injectFailure . WithdrawalsMissingAccounts @era $
+        [ injectFailure . WithdrawalsMissingAccounts @era $
             Withdrawals [(accountAddress, Coin 20)]
+        , injectFailure (WdrlNotDelegatedToDRep [stakeKey])
         ]
       (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
       void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
@@ -59,9 +54,9 @@ spec = describe "CERTS" $ do
                 .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
       submitFailingTx
         tx2
-        [ injectFailure (WdrlNotDelegatedToDRep [stakeKey])
-        , injectFailure . WithdrawalsMissingAccounts @era $
+        [ injectFailure . WithdrawalsMissingAccounts @era $
             Withdrawals [(accountAddress, zero)]
+        , injectFailure (WdrlNotDelegatedToDRep [stakeKey])
         ]
 
     it "Withdrawing the wrong amount" $ do
@@ -81,10 +76,6 @@ spec = describe "CERTS" $ do
                   ]
         )
         [ injectFailure $
-            WithdrawalsExceedAccountBalance @era $
-              NE.singleton accountAddress1 $
-                Mismatch (reward1 <+> Coin 1) reward1
-        , injectFailure $
             WithdrawalAmountsExceedAccountBalances @era $
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
