@@ -31,7 +31,7 @@ import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError, TxInfoResult)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
-  IsValid (..),
+  IsPhase2Valid (..),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), integralToBounded)
 import Cardano.Ledger.Binary (
@@ -83,7 +83,7 @@ data DijkstraTx l era where
   DijkstraTx ::
     { dtBody :: !(TxBody TopTx era)
     , dtWits :: !(TxWits era)
-    , dtIsValid :: !IsValid
+    , dtIsPhase2Valid :: !IsPhase2Valid
     , dtAuxData :: !(StrictMaybe (TxAuxData era))
     } ->
     DijkstraTx TopTx era
@@ -108,7 +108,7 @@ instance
   rnf DijkstraTx {..} =
     dtBody `deepseq`
       dtWits `deepseq`
-        dtIsValid `deepseq`
+        dtIsPhase2Valid `deepseq`
           rnf dtAuxData
   rnf DijkstraSubTx {..} =
     dstBody `deepseq`
@@ -130,29 +130,30 @@ instance EraTx era => EncCBOR (DijkstraTx l era) where
   encCBOR = toCBORForMempoolSubmission
 
 decodeDijkstraTopTx :: EraTx era => Bool -> Decoder s (Annotator (DijkstraTx TopTx era))
-decodeDijkstraTopTx allowIsValid =
+decodeDijkstraTopTx allowIsPhase2Valid =
   fst <$> do
-    let isValidBackwardsCompatibleLength isValidFlagSupplied = if isValidFlagSupplied then 4 else 3
-    decodeRecordNamed "DijkstraTx" (isValidBackwardsCompatibleLength . snd) $ do
+    let isPhase2ValidBackwardsCompatibleLength isPhase2ValidFlagSupplied =
+          if isPhase2ValidFlagSupplied then 4 else 3
+    decodeRecordNamed "DijkstraTx" (isPhase2ValidBackwardsCompatibleLength . snd) $ do
       bodyAnn <- decCBOR
       witsAnn <- decCBOR
-      isValidFlagSupplied <-
-        if allowIsValid
+      isPhase2ValidFlagSupplied <-
+        if allowIsPhase2Valid
           then
             peekTokenType >>= \case
               TypeBool ->
                 decCBOR >>= \case
                   True -> pure True
-                  False -> fail "Value `false` not allowed for `isValid`"
+                  False -> fail "Value `false` not allowed for `isPhase2Valid`"
               _ -> pure False
           else pure False
       auxAnn <- decodeNullStrictMaybe decCBOR
       let
-        -- `isValid == False` can no longer be supplied in an encoded transaction.
-        isValid = IsValid True
+        -- `Phase2Invalid` can no longer be supplied in an encoded transaction.
+        isPhase2Valid = Phase2Valid
         dijkstraTopTx =
-          DijkstraTx <$> bodyAnn <*> witsAnn <*> pure isValid <*> sequence auxAnn
-      pure (dijkstraTopTx, isValidFlagSupplied)
+          DijkstraTx <$> bodyAnn <*> witsAnn <*> pure isPhase2Valid <*> sequence auxAnn
+      pure (dijkstraTopTx, isPhase2ValidFlagSupplied)
 
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case
@@ -178,7 +179,7 @@ mkBasicDijkstraTx txBody =
       DijkstraTx
         txBody
         mempty
-        (IsValid True)
+        Phase2Valid
         SNothing
     SSubTx ->
       DijkstraSubTx
@@ -240,11 +241,11 @@ witsDijkstraTxL =
         tx@DijkstraSubTx {} -> \x -> tx {dstWits = x}
     )
 
-isValidDijkstraTxL :: Lens' (DijkstraTx TopTx era) IsValid
-isValidDijkstraTxL =
-  lens (\DijkstraTx {dtIsValid} -> dtIsValid) $ \tx txIsValid ->
+isPhase2ValidDijkstraTxL :: Lens' (DijkstraTx TopTx era) IsPhase2Valid
+isPhase2ValidDijkstraTxL =
+  lens (\DijkstraTx {dtIsPhase2Valid} -> dtIsPhase2Valid) $ \tx txIsPhase2Valid ->
     case tx of
-      DijkstraTx {} -> tx {dtIsValid = txIsValid}
+      DijkstraTx {} -> tx {dtIsPhase2Valid = txIsPhase2Valid}
 
 auxDataDijkstraTxL :: Lens' (DijkstraTx l era) (StrictMaybe (TxAuxData era))
 auxDataDijkstraTxL =
@@ -297,7 +298,7 @@ dijkstraTxEqRaw tx1 tx2 =
       ( \tx1' ->
           withBothTxLevels
             tx2
-            (\tx2' -> tx1' ^. isValidTxL == tx2' ^. isValidTxL)
+            (\tx2' -> tx1' ^. isPhase2ValidTxL == tx2' ^. isPhase2ValidTxL)
             (const True)
       )
       (const True)
@@ -309,8 +310,8 @@ dijkstraTxL :: Lens' (Tx l DijkstraEra) (DijkstraTx l DijkstraEra)
 dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})
 
 instance AlonzoEraTx DijkstraEra where
-  isValidTxL = dijkstraTxL . isValidDijkstraTxL
-  {-# INLINE isValidTxL #-}
+  isPhase2ValidTxL = dijkstraTxL . isPhase2ValidDijkstraTxL
+  {-# INLINE isPhase2ValidTxL #-}
 
 instance Typeable l => DecCBOR (Annotator (Tx l DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR
@@ -336,7 +337,7 @@ validateDijkstraNativeScript tx =
 --   we do not worry about the serialisation changing and thus seeing a new
 --   hash.
 -- - The three principal components of this Tx already store their own bytes;
---   here we simply concatenate them. The final component, `IsValid`, is
+--   here we simply concatenate them. The final component, `IsPhase2Valid`, is
 --   just a flag and very cheap to serialise.
 --------------------------------------------------------------------------------
 
@@ -345,7 +346,7 @@ validateDijkstraNativeScript tx =
 --
 -- Note that this serialisation is neither the serialisation used on-chain
 -- (where Txs are deconstructed using segwit), nor the serialisation used for
--- computing the transaction size (which omits the `IsValid` field for
+-- computing the transaction size (which omits the `IsPhase2Valid` field for
 -- compatibility with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
   ( EncCBOR (TxBody l era)
@@ -355,12 +356,12 @@ toCBORForMempoolSubmission ::
   DijkstraTx l era ->
   Encoding
 toCBORForMempoolSubmission = \case
-  DijkstraTx {dtBody, dtWits, dtAuxData, dtIsValid} ->
+  DijkstraTx {dtBody, dtWits, dtAuxData, dtIsPhase2Valid} ->
     encode $
       Rec DijkstraTx
         !> To dtBody
         !> To dtWits
-        !> OmitC dtIsValid
+        !> OmitC dtIsPhase2Valid
         !> E (encodeNullStrictMaybe encCBOR) dtAuxData
   DijkstraSubTx {dstBody, dstWits, dstAuxData} ->
     encode $

@@ -215,24 +215,25 @@ decodeDijkstraTopTx ::
   , DecCBOR (TxAuxData era)
   ) =>
   Bool -> Decoder s (DijkstraTx TopTx era)
-decodeDijkstraTopTx allowIsValid =
+decodeDijkstraTopTx allowIsPhase2Valid =
   fst <$> do
-    let isValidBackwardsCompatibleLength isValidFlagSupplied = if isValidFlagSupplied then 4 else 3
-    decodeRecordNamed "DijkstraTx" (isValidBackwardsCompatibleLength . snd) $ do
+    let isPhase2ValidBackwardsCompatibleLength isPhase2ValidFlagSupplied =
+          if isPhase2ValidFlagSupplied then 4 else 3
+    decodeRecordNamed "DijkstraTx" (isPhase2ValidBackwardsCompatibleLength . snd) $ do
       body <- decCBOR
       wits <- decCBOR
-      isValidFlagSupplied <-
-        if allowIsValid
+      isPhase2ValidFlagSupplied <-
+        if allowIsPhase2Valid
           then
             peekTokenType >>= \case
               TypeBool ->
                 decCBOR >>= \case
                   True -> pure True
-                  False -> fail "Value `false` not allowed for `isValid`"
+                  False -> fail "Value `false` not allowed for `isPhase2Valid`"
               _ -> pure False
           else pure False
       aux <- decodeNullStrictMaybe decCBOR
-      pure (DijkstraTx body wits (IsValid True) aux, isValidFlagSupplied)
+      pure (DijkstraTx body wits Phase2Valid aux, isPhase2ValidFlagSupplied)
 
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
   decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
@@ -254,8 +255,8 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
         "index is out of range: " <> show i
     let
       validityFlags = alignedValidFlags txsLength invalidTxs
-      txsWithIsValid = Seq.zipWith (set isValidTxL) validityFlags (coerce <$> txs)
-    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) mbLeiosCert mbPerasCert
+      txsWithIsPhase2Valid = Seq.zipWith (set isPhase2ValidTxL) validityFlags (coerce <$> txs)
+    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsPhase2Valid) mbLeiosCert mbPerasCert
 
 instance DecCBOR (DijkstraBlockBody DijkstraEra) where
   decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR

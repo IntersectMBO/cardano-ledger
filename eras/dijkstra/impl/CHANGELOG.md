@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Rename the phase-2 validity field on `DijkstraTx`: `dtIsValid` -> `dtIsPhase2Valid`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Make `requiredTopLevelGuards` available on the top-level transaction body:
   - Change the type of `requiredTopLevelGuardsL` to `Lens' (TxBody l era) (Map (Credential Guard) (StrictMaybe (Data era)))`
