@@ -55,6 +55,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (verifySignedDSIGN)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.State.Account (Accounts)
 import Cardano.Ledger.State.CertState (CertState)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -244,15 +245,13 @@ class EraTx era => EraUTxO era where
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
 
-  consumed :: PParams era -> CertState era -> UTxO era -> TxBody t era -> Value era
+  consumed :: PParams era -> Accounts era -> UTxO era -> TxBody t era -> Value era
 
   -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue ::
     PParams era ->
     -- | Function that can lookup current delegation deposits
     (Credential Staking -> Maybe Coin) ->
-    -- | Function that can lookup current drep deposits
-    (Credential DRepRole -> Maybe Coin) ->
     UTxO era ->
     TxBody t era ->
     Value era

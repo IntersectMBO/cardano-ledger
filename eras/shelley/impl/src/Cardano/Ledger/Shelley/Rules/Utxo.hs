@@ -514,7 +514,8 @@ validateValueNotConservedUTxO pp utxo certState txBody =
   failureUnless (consumedValue == producedValue) $
     ValueNotConservedUTxO Mismatch {mismatchSupplied = consumedValue, mismatchExpected = producedValue}
   where
-    consumedValue = consumed pp certState utxo txBody
+    accounts = certState ^. certDStateL . accountsL
+    consumedValue = consumed pp accounts utxo txBody
     producedValue = produced pp certState txBody
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@
@@ -624,7 +625,7 @@ updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUt
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
       deletedUTxO = UTxO utxoDel
-      totalRefunds = certsTotalRefundsTxBody pp certState txBody
+      totalRefunds = certsTotalRefundsTxBody pp (certState ^. certDStateL . accountsL) txBody
       totalDeposits = certsTotalDepositsTxBody pp certState txBody
       depositChange = totalDeposits <-> totalRefunds
   depositChangeEvent depositChange

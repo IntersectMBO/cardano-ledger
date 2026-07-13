@@ -10,7 +10,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.UTxO (
-  conwayConsumed,
   conwayProducedValue,
   getConwayWitsVKeyNeeded,
   getConwayScriptsNeeded,
@@ -52,7 +51,7 @@ import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
+import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyConsumed)
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -105,19 +104,6 @@ getConwayScriptsNeeded utxo txBody =
             TreasuryWithdrawals _ (SJust guardrailsScriptHash) -> Just guardrailsScriptHash
             _ -> Nothing
 
-conwayConsumed ::
-  (EraUTxO era, ConwayEraCertState era) =>
-  PParams era ->
-  CertState era ->
-  UTxO era ->
-  TxBody l era ->
-  Value era
-conwayConsumed pp certState =
-  getConsumedValue
-    pp
-    (lookupDepositDState $ certState ^. certDStateL)
-    (lookupDepositVState $ certState ^. certVStateL)
-
 conwayProducedValue ::
   ( ConwayEraTxBody era
   , Value era ~ MaryValue
@@ -133,7 +119,7 @@ conwayProducedValue pp isStakePool txBody =
 instance EraUTxO ConwayEra where
   type ScriptsNeeded ConwayEra = AlonzoScriptsNeeded ConwayEra
 
-  consumed = conwayConsumed
+  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 

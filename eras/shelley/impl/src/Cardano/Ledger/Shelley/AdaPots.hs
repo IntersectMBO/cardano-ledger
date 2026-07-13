@@ -139,11 +139,11 @@ consumedTxBody ::
   CertState era ->
   UTxO era ->
   Consumed
-consumedTxBody txBody pp dpstate utxo =
+consumedTxBody txBody pp certState utxo =
   Consumed
     { conInputs =
         sumCoinUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
-    , conRefunds = certsTotalRefundsTxBody pp dpstate txBody
+    , conRefunds = certsTotalRefundsTxBody pp (certState ^. certDStateL . accountsL) txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
 

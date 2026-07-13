@@ -91,8 +91,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
-import Data.Foldable as F (foldMap', foldl')
-import qualified Data.Map.Strict as Map
+import Data.Foldable as F (foldMap')
 import Data.Monoid (Sum (getSum))
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -842,11 +841,9 @@ conwayTotalRefundsTxCerts ::
   PParams era ->
   -- | Function that can lookup current deposit, in case when the Staking credential is registered.
   (Credential Staking -> Maybe Coin) ->
-  -- | Function that can lookup current deposit, in case when the DRep credential is registered.
-  (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-conwayTotalRefundsTxCerts pp lookupStakingDeposit _lookupDRepDeposit certs =
+conwayTotalRefundsTxCerts pp lookupStakingDeposit certs =
   shelleyTotalRefundsTxCerts pp lookupStakingDeposit certs
     <+> conwayDRepRefundsTxCerts certs
 

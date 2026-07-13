@@ -148,7 +148,7 @@ propEvalBalanceTxBody pp certState utxo = do
   property $
     forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
       forAll arbitrary $ \network ->
-        evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
+        evalBalanceTxBody pp lookupKeyDeposit isRegPoolId utxo txBody
           `shouldBe` evaluateTransactionBalance network pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
@@ -164,7 +164,7 @@ propEvalBalanceShelleyTxBody ::
 propEvalBalanceShelleyTxBody network pp certState utxo =
   property $
     forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
+      evalBalanceTxBody pp lookupKeyDeposit isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalanceShelley network pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)

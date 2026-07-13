@@ -1797,7 +1797,7 @@ showConwayTxBalance pp certState utxo tx =
     , "\tInputs:     \t" <> show (coin inputs)
     , "\tRefunds:    \t" <> show refunds
     , "\tWithdrawals \t" <> show withdrawals
-    , "\tTotal:      \t" <> (show . coin $ consumed pp certState utxo txBody)
+    , "\tTotal:      \t" <> (show . coin $ consumed pp accounts utxo txBody)
     , ""
     , "Produced:"
     , "\tOutputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
@@ -1809,11 +1809,11 @@ showConwayTxBalance pp certState utxo tx =
   where
     txBody = tx ^. bodyTxL
     inputs = sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
+    accounts = certState ^. certDStateL . accountsL
     refunds =
       getTotalRefundsTxBody
         pp
-        (lookupDepositDState $ certState ^. certDStateL)
-        (lookupDepositVState $ certState ^. certVStateL)
+        (fmap (fromCompact . (^. depositAccountStateL)) . (`lookupAccountState` accounts))
         txBody
     isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL

@@ -23,7 +23,6 @@ module Cardano.Ledger.Conway.State.CertState (
   conwayCertVStateL,
   conwayObligationCertState,
   conwayCertsTotalDepositsTxBody,
-  conwayCertsTotalRefundsTxBody,
 ) where
 
 import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
@@ -121,14 +120,6 @@ conwayCertsTotalDepositsTxBody ::
 conwayCertsTotalDepositsTxBody pp ConwayCertState {conwayCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePools conwayCertPState)
 
-conwayCertsTotalRefundsTxBody ::
-  (EraTxBody era, EraAccounts era) => PParams era -> ConwayCertState era -> TxBody l era -> Coin
-conwayCertsTotalRefundsTxBody pp ConwayCertState {conwayCertDState, conwayCertVState} =
-  getTotalRefundsTxBody
-    pp
-    (lookupDepositDState conwayCertDState)
-    (lookupDepositVState conwayCertVState)
-
 instance EraCertState ConwayEra where
   type CertState ConwayEra = ConwayCertState ConwayEra
 
@@ -142,7 +133,7 @@ instance EraCertState ConwayEra where
 
   certsTotalDepositsTxBody = conwayCertsTotalDepositsTxBody
 
-  certsTotalRefundsTxBody = conwayCertsTotalRefundsTxBody
+  certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
 instance ConwayEraCertState ConwayEra where
   certVStateL = conwayCertVStateL

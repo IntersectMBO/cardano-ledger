@@ -102,8 +102,6 @@ class
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered
     (Credential Staking -> Maybe Coin) ->
-    -- | Lookup current deposit for DRep credential if one is registered
-    (Credential DRepRole -> Maybe Coin) ->
     f (TxCert era) ->
     Coin
 

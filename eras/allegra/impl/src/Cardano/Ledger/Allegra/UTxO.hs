@@ -26,7 +26,7 @@ instance EraUTxO AllegraEra where
 
   consumed = shelleyConsumed
 
-  getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
+  getConsumedValue pp lookupKeyDeposit = getConsumedCoin pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
 

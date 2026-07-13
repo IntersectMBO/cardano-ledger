@@ -33,7 +33,7 @@ import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
-  conwayConsumed,
+  conwayProducedValue,
   getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
@@ -48,6 +48,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
+import Cardano.Ledger.Shelley.UTxO (shelleyConsumed)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -71,11 +72,10 @@ getConsumedDijkstraValue ::
   ) =>
   PParams era ->
   (Credential Staking -> Maybe Coin) ->
-  (Credential DRepRole -> Maybe Coin) ->
   UTxO era ->
   TxBody l era ->
   Value era
-getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
+getConsumedDijkstraValue pp lookupStakingDeposit utxo txBody =
   withBothTxLevels
     txBody
     ( \topTxBody ->
@@ -84,10 +84,10 @@ getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
     txBodyConsumedValue
   where
     txBodyConsumedValue :: forall m. TxBody m era -> Value era
-    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo
+    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit utxo
     subTransactionsConsumedValue topTxBody =
       foldMap'
-        (getConsumedValue pp lookupStakingDeposit lookupDRepDeposit utxo . view bodyTxL)
+        (getConsumedValue pp lookupStakingDeposit utxo . view bodyTxL)
         (topTxBody ^. subTransactionsTxBodyL)
 
 dijkstraProducedValue ::
@@ -121,7 +121,7 @@ dijkstraProducedValue pp isRegPoolId topTxBody =
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
 
-  consumed = conwayConsumed
+  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedDijkstraValue
 

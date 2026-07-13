@@ -148,7 +148,7 @@ instance EraTxCert ShelleyEra where
 
   getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
 
-  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
+  getTotalRefundsTxCerts = shelleyTotalRefundsTxCerts
 
 -- | All of the Shelley related certificate functionality that has been fully deprecated in Dijkstra.
 class (EraTxCert era, AtMostEra "Conway" era) => ShelleyEraTxCert era where

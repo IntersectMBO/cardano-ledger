@@ -276,12 +276,10 @@ class
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered
     (Credential Staking -> Maybe Coin) ->
-    -- | Lookup current deposit for DRep credential if one is registered
-    (Credential DRepRole -> Maybe Coin) ->
     TxBody l era ->
     Coin
-  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
-    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+  getTotalRefundsTxBody pp lookupStakingDeposit txBody =
+    getTotalRefundsTxCerts pp lookupStakingDeposit (txBody ^. certsTxBodyL)
 
   -- | This function is not used in the ledger rules. It is only used by the downstream
   -- tooling to figure out how many witnesses should be supplied for Genesis keys.

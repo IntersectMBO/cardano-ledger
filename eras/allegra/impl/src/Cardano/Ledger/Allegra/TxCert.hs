@@ -36,7 +36,7 @@ instance EraTxCert AllegraEra where
 
   getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
 
-  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
+  getTotalRefundsTxCerts = shelleyTotalRefundsTxCerts
 
 instance ShelleyEraTxCert AllegraEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
