@@ -66,7 +66,7 @@ data SubUtxoEnv era = SubUtxoEnv
   , suePParams :: PParams era
   , sueCertState :: CertState era
   , sueOriginalUtxo :: UTxO era
-  , sueTopTxIsValid :: IsValid
+  , sueTopTxIsPhase2Valid :: IsPhase2Valid
   }
 
 data DijkstraSubUtxoPredFailure era
@@ -228,7 +228,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot pp _ originalUtxo (IsValid isValid), utxoState, stAnnTx) <-
+  TRC (SubUtxoEnv slot pp _ originalUtxo topTxIsPhase2Valid, utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -261,13 +261,13 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ validateWrongNetworkInDirectDeposit netId txBody
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
-  if isValid
-    then
+  case topTxIsPhase2Valid of
+    Phase2Valid ->
       Shelley.updateUTxOAndInstantStake
         txBody
         (\a b -> tellEvent $ TxUTxODiff a b)
         (utxoState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL)
-    else
+    Phase2Invalid ->
       pure utxoState
 
 instance
