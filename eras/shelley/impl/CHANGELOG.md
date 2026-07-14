@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `updateUTxOStateDeposits` and `updateUTxOAndInstantStake`
 * Remove `GovState` parameter from `updateUTxOState`
 * Change argument to `validateMetadata` from `Tx` to `StAnnTx`
 * Add `EraUTxO era` as a superclass constraint to `ApplyTx`
