@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `updateUTxOStateDeposits` and `updateUTxOAndInstantStake`
 * Remove `GovState` parameter from `updateUTxOState`
 * Change `produced` to accept `PState`, instead of `CertState`
 * Remove `consumed` in favor of `shelleyConsumed`
