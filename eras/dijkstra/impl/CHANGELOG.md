@@ -1,4 +1,4 @@
-# Revision history for cardano-ledger-dijkstra
+# Revision history for `cardano-ledger-dijkstra`
 
 ## 0.3.0.0
 

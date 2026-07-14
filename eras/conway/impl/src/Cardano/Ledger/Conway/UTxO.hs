@@ -51,7 +51,7 @@ import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyConsumed)
+import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -118,8 +118,6 @@ conwayProducedValue pp isStakePool txBody =
 
 instance EraUTxO ConwayEra where
   type ScriptsNeeded ConwayEra = AlonzoScriptsNeeded ConwayEra
-
-  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 

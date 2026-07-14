@@ -224,7 +224,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEsL,
   prevPParamsEpochStateL,
-  produced,
   utxosDonationL,
   utxosUtxo,
  )
@@ -247,6 +246,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
+import Cardano.Ledger.Shelley.UTxO (produced, shelleyConsumed)
 import Cardano.Ledger.Slot (epochFromSlot, epochInfoFirst, getTheSlotOfNoReturn)
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
@@ -1160,7 +1160,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   let
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
     accounts = certState ^. certDStateL . accountsL
-    consumedValue = consumed pp accounts utxo (tx ^. bodyTxL)
+    consumedValue = shelleyConsumed pp accounts utxo (tx ^. bodyTxL)
     producedValue = produced pp certState (tx ^. bodyTxL)
     ensureNonNegativeCoin v
       | pointwise (<=) zero v = pure v

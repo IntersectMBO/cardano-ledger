@@ -107,7 +107,8 @@ getShelleyScriptsNeeded u txBody =
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
     certificates = toList (txBody ^. certsTxBodyL)
 
--- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
+-- | Shelley version of consumed will work for all eras, however, starting with Dijkstra era it
+-- becomes simpler, because it will no longer require access to Accounts.
 shelleyConsumed ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
@@ -165,8 +166,6 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
 
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
-
-  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedCoin
 
