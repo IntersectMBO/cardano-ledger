@@ -14,7 +14,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.State hiding (consumed)
+import Cardano.Ledger.State
 import Cardano.Ledger.Val
 import Data.Foldable
 import qualified Data.Map.Strict as Map

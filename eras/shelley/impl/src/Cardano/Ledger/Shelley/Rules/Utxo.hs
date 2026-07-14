@@ -65,7 +65,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.UTxO (produced)
+import Cardano.Ledger.Shelley.UTxO (produced, shelleyConsumed)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -515,7 +515,7 @@ validateValueNotConservedUTxO pp utxo certState txBody =
     ValueNotConservedUTxO Mismatch {mismatchSupplied = consumedValue, mismatchExpected = producedValue}
   where
     accounts = certState ^. certDStateL . accountsL
-    consumedValue = consumed pp accounts utxo txBody
+    consumedValue = shelleyConsumed pp accounts utxo txBody
     producedValue = produced pp certState txBody
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@

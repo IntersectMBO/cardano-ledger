@@ -22,7 +22,6 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
-  shelleyConsumed,
   shelleyProducedValue,
  )
 import Cardano.Ledger.State (
@@ -39,8 +38,6 @@ import Lens.Micro
 
 instance EraUTxO MaryEra where
   type ScriptsNeeded MaryEra = ShelleyScriptsNeeded MaryEra
-
-  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 

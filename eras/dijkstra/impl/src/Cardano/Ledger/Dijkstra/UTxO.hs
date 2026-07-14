@@ -48,7 +48,6 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
-import Cardano.Ledger.Shelley.UTxO (shelleyConsumed)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -120,8 +119,6 @@ dijkstraProducedValue pp isRegPoolId topTxBody =
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
-
-  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedDijkstraValue
 

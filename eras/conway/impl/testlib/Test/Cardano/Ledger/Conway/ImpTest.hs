@@ -201,10 +201,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   nesPdL,
   newEpochStateGovStateL,
-  produced,
   utxosGovStateL,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.UTxO (produced, shelleyConsumed)
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
@@ -1797,14 +1797,14 @@ showConwayTxBalance pp certState utxo tx =
     , "\tInputs:     \t" <> show (coin inputs)
     , "\tRefunds:    \t" <> show refunds
     , "\tWithdrawals \t" <> show withdrawals
-    , "\tTotal:      \t" <> (show . coin $ consumed pp accounts utxo txBody)
+    , "\tTotal:      \t" <> show (coin $ shelleyConsumed pp accounts utxo txBody)
     , ""
     , "Produced:"
     , "\tOutputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
     , "\tDonations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
     , "\tDeposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
     , "\tFees:      \t" <> show (txBody ^. feeTxBodyL)
-    , "\tTotal:     \t" <> (show . coin $ produced pp certState txBody)
+    , "\tTotal:     \t" <> show (coin $ produced pp certState txBody)
     ]
   where
     txBody = tx ^. bodyTxL
