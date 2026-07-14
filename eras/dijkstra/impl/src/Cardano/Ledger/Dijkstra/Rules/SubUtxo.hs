@@ -47,7 +47,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosGovState, utxosUtxo)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -270,7 +270,6 @@ dijkstraSubUtxoTransition = do
           utxoState
           txBody
           certState
-          (utxosGovState utxoState)
           (tellEvent . TotalDeposits (hashAnnotated txBody))
           (\a b -> tellEvent $ TxUTxODiff a b)
       pure $ newState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
