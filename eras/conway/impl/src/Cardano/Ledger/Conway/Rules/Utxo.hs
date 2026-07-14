@@ -240,7 +240,6 @@ conwayUtxoTransition = do
   Babbage.updateUTxOStateByTxValidity
     pp
     certState
-    (utxosGovState utxos)
     tx
     (updateTreasuryDonation tx utxos)
 

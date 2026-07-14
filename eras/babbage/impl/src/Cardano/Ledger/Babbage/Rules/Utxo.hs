@@ -54,7 +54,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -444,7 +444,7 @@ utxoTransition = do
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
       TRC (Alonzo.UtxosEnv slot pp certState, utxosGovState utxos, stAnnTx)
-  updateUTxOStateByTxValidity pp certState updatedGovState tx utxos
+  updateUTxOStateByTxValidity pp certState tx (utxos & utxosGovStateL .~ updatedGovState)
 
 updateUTxOStateByTxValidity ::
   forall era.
@@ -456,11 +456,10 @@ updateUTxOStateByTxValidity ::
   ) =>
   PParams era ->
   CertState era ->
-  GovState era ->
   Tx TopTx era ->
   UTxOState era ->
   Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
-updateUTxOStateByTxValidity pp certState govState tx utxoState =
+updateUTxOStateByTxValidity pp certState tx utxoState =
   let txBody = tx ^. bodyTxL
       utxo = utxosUtxo utxoState
    in case tx ^. isValidTxL of
@@ -470,7 +469,6 @@ updateUTxOStateByTxValidity pp certState govState tx utxoState =
             utxoState
             txBody
             certState
-            govState
             (tellEvent . Alonzo.TotalDeposits (hashAnnotated txBody))
             (\a b -> tellEvent $ Alonzo.TxUTxODiff a b)
         IsValid False ->

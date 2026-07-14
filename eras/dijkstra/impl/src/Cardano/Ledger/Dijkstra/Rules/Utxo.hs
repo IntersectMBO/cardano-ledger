@@ -447,7 +447,6 @@ dijkstraUtxoTransition = do
   Babbage.updateUTxOStateByTxValidity
     pp
     certState
-    (utxosGovState utxos)
     tx
     (Conway.updateTreasuryDonation tx utxos)
 
