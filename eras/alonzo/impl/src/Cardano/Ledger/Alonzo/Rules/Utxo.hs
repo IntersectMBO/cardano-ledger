@@ -88,7 +88,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (ShelleyGovState, UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -577,10 +577,9 @@ utxoTransition = do
     IsValid True ->
       Shelley.updateUTxOState
         pp
-        utxos
+        (utxos & utxosGovStateL .~ updatedGovState)
         txBody
         certState
-        updatedGovState
         (tellEvent . TotalDeposits (hashAnnotated txBody))
         (\a b -> tellEvent (TxUTxODiff a b))
     IsValid False ->
