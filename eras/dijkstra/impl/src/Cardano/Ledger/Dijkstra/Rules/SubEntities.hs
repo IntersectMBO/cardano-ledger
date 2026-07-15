@@ -34,11 +34,9 @@ import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   SubCertsEnv (..),
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
-import Cardano.Ledger.Rules.ValidationMode (runTest)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -48,7 +46,6 @@ import Lens.Micro
 
 data SubEntitiesPredFailure era
   = SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
-  | SubWdrlNotDelegatedToDRep (NonEmpty (KeyHash Staking))
   | SubWithdrawalsMissingAccounts Withdrawals
   | SubWithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | SubDirectDepositsToMissingAccounts DirectDeposits
@@ -73,10 +70,9 @@ instance
   encCBOR =
     encode . \case
       SubCertsFailure x -> Sum (SubCertsFailure @era) 0 !> To x
-      SubWdrlNotDelegatedToDRep x -> Sum (SubWdrlNotDelegatedToDRep @era) 1 !> To x
-      SubWithdrawalsMissingAccounts x -> Sum (SubWithdrawalsMissingAccounts @era) 2 !> To x
-      SubWithdrawalAmountsExceedAccountBalances x -> Sum (SubWithdrawalAmountsExceedAccountBalances @era) 3 !> To x
-      SubDirectDepositsToMissingAccounts x -> Sum (SubDirectDepositsToMissingAccounts @era) 4 !> To x
+      SubWithdrawalsMissingAccounts x -> Sum (SubWithdrawalsMissingAccounts @era) 1 !> To x
+      SubWithdrawalAmountsExceedAccountBalances x -> Sum (SubWithdrawalAmountsExceedAccountBalances @era) 2 !> To x
+      SubDirectDepositsToMissingAccounts x -> Sum (SubDirectDepositsToMissingAccounts @era) 3 !> To x
 
 instance
   ( Era era
@@ -86,10 +82,9 @@ instance
   where
   decCBOR = decode . Summands "SubEntitiesPredFailure" $ \case
     0 -> SumD SubCertsFailure <! From
-    1 -> SumD SubWdrlNotDelegatedToDRep <! From
-    2 -> SumD SubWithdrawalsMissingAccounts <! From
-    3 -> SumD SubWithdrawalAmountsExceedAccountBalances <! From
-    4 -> SumD SubDirectDepositsToMissingAccounts <! From
+    1 -> SumD SubWithdrawalsMissingAccounts <! From
+    2 -> SumD SubWithdrawalAmountsExceedAccountBalances <! From
+    3 -> SumD SubDirectDepositsToMissingAccounts <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -160,8 +155,6 @@ dijkstraSubEntitiesTransition = do
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
 
-  runTest $ Conway.validateWithdrawalsDelegated accounts tx
-
   network <- liftSTS $ asks networkId
   let (missingWithdrawals, exceededWithdrawals) =
         case withdrawalsThatExceedAccountBalance withdrawals network accounts of
@@ -189,7 +182,7 @@ dijkstraSubEntitiesTransition = do
 conwayToDijkstraSubEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> SubEntitiesPredFailure era
 conwayToDijkstraSubEntitiesPredFailure = \case
-  Conway.ConwayWdrlNotDelegatedToDRep khs -> SubWdrlNotDelegatedToDRep khs
+  Conway.ConwayWdrlNotDelegatedToDRep _ -> impossible "ConwayWdrlNotDelegatedToDRep"
   Conway.ConwayUtxowFailure _ -> impossible "ConwayUtxowFailure"
   Conway.ConwayCertsFailure _ -> impossible "ConwayCertsFailure"
   Conway.ConwayGovFailure _ -> impossible "ConwayGovFailure"

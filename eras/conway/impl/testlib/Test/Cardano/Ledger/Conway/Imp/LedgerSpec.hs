@@ -87,19 +87,22 @@ spec = describe "LEDGER" $ do
     let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
     pv <- getProtVer
-    if hardforkConwayBootstrapPhase pv
-      then submitTx_ tx
-      else
+    -- In bootstrap phase and in post-Conway eras (CIP-181), the DRep delegation check
+    -- does not apply, so the withdrawal succeeds without delegation.
+    let drepCheckActive = not (hardforkConwayBootstrapPhase pv) && pvMajor pv < natVersion @12
+    if drepCheckActive
+      then
         submitFailingTx
           tx
           [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
+      else submitTx_ tx
     _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitTx_ $
       mkBasicTx $
         mkBasicTxBody
           & withdrawalsTxBodyL
             .~ Withdrawals
-              [(ra, if hardforkConwayBootstrapPhase pv then mempty else balance)]
+              [(ra, if drepCheckActive then balance else mempty)]
 
   it "Withdraw from a key delegated to an unregistered DRep" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -119,8 +122,12 @@ spec = describe "LEDGER" $ do
               & withdrawalsTxBodyL
                 .~ Withdrawals
                   [(ra, balance)]
-    ifBootstrap (submitTx_ tx >> (getBalance cred `shouldReturn` mempty)) $ do
-      submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
+    pv <- getProtVer
+    -- In bootstrap phase and post-Conway eras (CIP-181), the DRep delegation check
+    -- does not apply, so the withdrawal succeeds.
+    if not (hardforkConwayBootstrapPhase pv) && pvMajor pv < natVersion @12
+      then submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
+      else submitTx_ tx >> (getBalance cred `shouldReturn` mempty)
 
   -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
   -- TODO: Re-enable after issue is resolved, by removing this override
