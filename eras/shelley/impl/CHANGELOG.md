@@ -79,7 +79,6 @@
 * Remove `ToCBOR` and `FromCBOR` instances for `UTxOState`, `LedgerState`, `ShelleyTxOut`
 * Add `ApplyTick` typeclass with `applyTick` method, extracted from `ApplyBlock`.
 * Remove `validMetadata` from `SoftForks`
-* Add `updateUTxOStateNoFees`
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:
   - Add `EraForecast` and `ShelleyEraForecast` typeclasses to deprecate `GetLedgerView` from `cardano-ledger-tpraos`.
   - Add `currentForecast` and `futureForecast` functions to deprecate `currentLedgerView` and `futureLedgerView`.
