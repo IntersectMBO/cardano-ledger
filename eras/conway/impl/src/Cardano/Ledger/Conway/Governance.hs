@@ -566,9 +566,9 @@ defaultStakePoolVote ::
   -- | Delegations of staking credneitals to a DRep
   Accounts era ->
   DefaultVote
-defaultStakePoolVote poolId poolParams accounts =
+defaultStakePoolVote poolId stakePools accounts =
   toDefaultVote $ do
-    spp <- Map.lookup poolId poolParams
+    spp <- Map.lookup poolId stakePools
     accountState <- Map.lookup (unAccountId (spsAccountId spp)) (accounts ^. accountsMapL)
     accountState ^. dRepDelegationAccountStateL
   where

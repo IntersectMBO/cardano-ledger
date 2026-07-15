@@ -61,10 +61,12 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.UTxO (dijkstraConsumed)
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
@@ -90,6 +92,7 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data DijkstraUtxoEnv era = DijkstraUtxoEnv
   { dueSlot :: SlotNo
@@ -315,6 +318,28 @@ validateWrongNetworkInDirectDeposit netId txb =
           (\a _ -> aaNetworkId a /= netId)
           (unDirectDeposits $ txb ^. directDepositsTxBodyL)
 
+-- | Ensure that value consumed and produced matches up exactly,  aggregated across the entire batch
+-- (top-level transaction and all its sub-transactions).
+--
+-- > consumed pp utxo txb = produced pp poolParams txb
+validateValueNotConservedUTxO ::
+  (EraUTxO era, EraCertState era) =>
+  PParams era ->
+  UTxO era ->
+  CertState era ->
+  TxBody TopTx era ->
+  Test (Shelley.ShelleyUtxoPredFailure era)
+validateValueNotConservedUTxO pp utxo certState txBody =
+  failureUnless (consumedValue == producedValue) $
+    Shelley.ValueNotConservedUTxO
+      Mismatch
+        { mismatchSupplied = consumedValue
+        , mismatchExpected = producedValue
+        }
+  where
+    consumedValue = dijkstraConsumed pp utxo txBody
+    producedValue = produced pp certState txBody
+
 dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
@@ -378,7 +403,7 @@ dijkstraUtxoTransition = do
   runTest $ validateBatchWithdrawals accounts tx
 
   {- consumed pp utxo₀ txb = produced pp certState txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp originalUtxo certState txBody
+  runTest $ validateValueNotConservedUTxO pp originalUtxo certState txBody
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
