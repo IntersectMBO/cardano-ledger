@@ -26,7 +26,6 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   updateUTxOState,
   updateUTxOStateDeposits,
   updateUTxOAndInstantStake,
-  updateUTxOStateNoFees,
 
   -- * Validations
   validateInputSetEmptyUTxO,
@@ -599,25 +598,6 @@ updateUTxOState pp utxoState txBody certState depositChangeEvent utxoDiffEvent =
   withDeposits <- updateUTxOStateDeposits pp certState txBody depositChangeEvent utxoState
   withUtxo <- updateUTxOAndInstantStake txBody utxoDiffEvent withDeposits
   pure $ withUtxo & utxosFeesL <>~ (txBody ^. feeTxBodyL)
-
--- | Like 'updateUTxOState', but does not collect fees. This is used for sub-transactions
--- where fees are not applicable.
-updateUTxOStateNoFees ::
-  ( EraTxBody era
-  , EraStake era
-  , EraCertState era
-  , Monad m
-  ) =>
-  PParams era ->
-  UTxOState era ->
-  TxBody l era ->
-  CertState era ->
-  (Coin -> m ()) ->
-  (UTxO era -> UTxO era -> m ()) ->
-  m (UTxOState era)
-updateUTxOStateNoFees pp utxoState txBody certState depositChangeEvent utxoDiffEvent = do
-  withDeposits <- updateUTxOStateDeposits pp certState txBody depositChangeEvent utxoState
-  updateUTxOAndInstantStake txBody utxoDiffEvent withDeposits
 
 -- | Apply the txBody's inputs/outputs to the UTxO map and to the instant stake,
 -- firing the diff event.
