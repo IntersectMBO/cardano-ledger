@@ -35,7 +35,7 @@ instance EraCertState DijkstraEra where
 
   certsTotalDepositsTxBody = dijkstraCertsTotalDepositsTxBody
 
-  certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
+  certsTotalRefundsTxBody = dijkstraCertsTotalRefundsTxBody
 
 instance ConwayEraCertState DijkstraEra where
   certVStateL = conwayCertVStateL
@@ -82,3 +82,27 @@ dijkstraBatchDepositsTxBody pp isPoolReg topTxBody =
         <+> foldMap'
           (fold . unDirectDeposits . (^. bodyTxL . directDepositsTxBodyL))
           subTxs
+
+-- | Total refunds for a transaction, summed across the top-level and its subtransactions
+dijkstraCertsTotalRefundsTxBody ::
+  forall era l.
+  ( EraTx era
+  , EraCertState era
+  , DijkstraEraTxBody era
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  PParams era ->
+  Accounts era ->
+  TxBody l era ->
+  Coin
+dijkstraCertsTotalRefundsTxBody pp accounts txBody =
+  -- TODO: restrict to TopTx
+  withBothTxLevels
+    txBody
+    ( \topTxBody ->
+        shelleyCertsTotalRefundsTxBody pp accounts topTxBody
+          <+> foldMap'
+            (shelleyCertsTotalRefundsTxBody pp accounts . (^. bodyTxL))
+            (topTxBody ^. subTransactionsTxBodyL)
+    )
+    (shelleyCertsTotalRefundsTxBody pp accounts)
