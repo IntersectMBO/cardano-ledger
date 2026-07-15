@@ -4,7 +4,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.State.CertState () where
+module Cardano.Ledger.Dijkstra.State.CertState (
+  dijkstraBatchDepositsTxBody,
+) where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.State
@@ -53,15 +55,25 @@ dijkstraCertsTotalDepositsTxBody pp certState = \txBody ->
   -- TODO: restrict to TopTx, once certsTotalDepositsTxBody is restricted to TopTx
   withBothTxLevels
     txBody
-    ( \topTxBody ->
-        let subTxs = topTxBody ^. subTransactionsTxBodyL
-            batchTxCerts =
-              foldMap' (^. bodyTxL . certsTxBodyL) subTxs
-                <> (topTxBody ^. certsTxBodyL)
-         in getTotalDepositsTxCerts pp isPoolReg batchTxCerts
-              <+> conwayProposalsDeposits pp topTxBody
-              <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
-    )
+    (dijkstraBatchDepositsTxBody pp isPoolReg)
     (conwayCertsTotalDepositsTxBody pp certState)
   where
     isPoolReg = (`Map.member` psStakePools (conwayCertPState certState))
+
+-- | Total deposits for a top-level transaction, summed across the top-level and its subtransactions
+dijkstraBatchDepositsTxBody ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  PParams era ->
+  (KeyHash StakePool -> Bool) ->
+  TxBody TopTx era ->
+  Coin
+dijkstraBatchDepositsTxBody pp isPoolReg topTxBody =
+  let subTxs = topTxBody ^. subTransactionsTxBodyL
+      batchTxCerts =
+        foldMap' (^. bodyTxL . certsTxBodyL) subTxs
+          <> (topTxBody ^. certsTxBodyL)
+   in getTotalDepositsTxCerts pp isPoolReg batchTxCerts
+        <+> conwayProposalsDeposits pp topTxBody
+        <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
