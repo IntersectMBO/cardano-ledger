@@ -29,7 +29,6 @@ import Cardano.Ledger.CanonicalState.BasicTypes ()
 import Cardano.Ledger.TxIn
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Entry.IsKey
 import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),
@@ -66,6 +65,8 @@ instance MemPack CanonicalGovActionIx where
     g <- unpackBigEndianM
     return (CanonicalGovActionIx g)
 
+type instance NamespaceKeySize "gov/proposals/v0" = 34
+
 instance IsKey GovProposalIn where
   keySize = namespaceKeySize @"gov/proposals/v0"
   packKeyM (GovProposalIn CanonicalGovActionId {..}) = do
@@ -83,8 +84,6 @@ data GovProposalOut v = GovProposalOut
   , gpoProposal :: !v
   }
   deriving (Eq, Show, Generic)
-
-type instance NamespaceKeySize "gov/proposals/v0" = 34
 
 instance ToCanonicalCBOR v p => ToCanonicalCBOR v (GovProposalOut p) where
   toCanonicalCBOR v (GovProposalOut {..}) =

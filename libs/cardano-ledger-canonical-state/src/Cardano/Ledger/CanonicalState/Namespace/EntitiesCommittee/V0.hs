@@ -35,6 +35,7 @@ import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),
   CanonicalCBOREntryEncoder (..),
   KnownNamespace (..),
+  NamespaceKeySize,
   namespaceKeySize,
  )
 import Cardano.SCLS.Versioned (Versioned (..))
@@ -65,6 +66,8 @@ data EntitiesCommitteeIn = EntitiesCommitteeIn
 
 newtype EntitiesCommitteeOut = EntitiesCommitteeOut CanonicalCommitteeState
   deriving (Eq, Show, Generic)
+
+type instance NamespaceKeySize "entities/committee/v0" = 1
 
 instance IsKey EntitiesCommitteeIn where
   keySize = namespaceKeySize @"entities/committee/v0"
