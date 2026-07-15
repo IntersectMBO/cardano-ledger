@@ -147,7 +147,7 @@ import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
-import Data.Foldable (foldMap')
+import Data.Foldable (fold, foldMap')
 import Data.Map.Strict (Map)
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
@@ -1015,10 +1015,15 @@ dijkstraTotalDepositsTxBody pp isPoolRegistered txBody =
          in getTotalDepositsTxCerts pp isPoolRegistered batchTxCerts
               <+> conwayProposalsDeposits pp topTxBody
               <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
+              <+> fold (unDirectDeposits (topTxBody ^. directDepositsTxBodyL))
+              <+> foldMap'
+                (fold . unDirectDeposits . (^. bodyTxL . directDepositsTxBodyL))
+                subTxs
     )
     ( \subTxBody ->
         getTotalDepositsTxCerts pp isPoolRegistered (subTxBody ^. certsTxBodyL)
           <+> conwayProposalsDeposits pp subTxBody
+          <+> fold (unDirectDeposits (subTxBody ^. directDepositsTxBodyL))
     )
 
 -- | This newtype wrapper lets us index into the guards with a ScriptHash. It
