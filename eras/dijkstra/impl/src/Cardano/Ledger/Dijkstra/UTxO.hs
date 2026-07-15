@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.Dijkstra.UTxO (
   DijkstraEraUTxO (..),
+  dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
   scriptsProvidedDijkstraStAnnTx,
@@ -33,7 +34,6 @@ import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
-  conwayProducedValue,
   getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
@@ -61,6 +61,17 @@ import Lens.Micro.Extras (view)
 class AlonzoEraUTxO era => DijkstraEraUTxO era where
   subTransactionsStAnnTx :: StAnnTx TopTx era -> [StAnnTx SubTx era]
   plutusLegacyModeStAnnTxG :: SimpleGetter (StAnnTx TopTx era) Bool
+
+-- | Unlike `shelleyConsumed`, this function does not need access to `Accounts` to produce accurate
+-- information about refunds, hence is this simplification. Note that using `shelleyConsumed` in
+-- Dijkstra era onwards will produce the same result as this one.
+dijkstraConsumed ::
+  EraUTxO era =>
+  PParams era ->
+  UTxO era ->
+  TxBody l era ->
+  Value era
+dijkstraConsumed pp = getConsumedValue pp (const Nothing)
 
 getConsumedDijkstraValue ::
   forall era l.
