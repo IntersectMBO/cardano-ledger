@@ -16,6 +16,7 @@ source-repository head
 library
   exposed-modules:
     Cardano.Protocol.Crypto
+    Cardano.Protocol.Leios.BlockHeader
     Cardano.Protocol.Praos.BlockHeader
     Cardano.Protocol.Praos.VRF
     Cardano.Protocol.TPraos.BlockHeader
@@ -46,6 +47,7 @@ library
     cardano-ledger-binary >=1.8,
     cardano-ledger-core >=1.21,
     cardano-slotting,
+    cardano-strict-containers,
     containers,
     deepseq,
     microlens,
