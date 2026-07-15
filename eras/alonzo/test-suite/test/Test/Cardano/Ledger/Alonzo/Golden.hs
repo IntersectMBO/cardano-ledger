@@ -333,7 +333,7 @@ expectedGenesis =
     , agMaxValSize = 5000
     , agCollateralPercentage = 150
     , agMaxCollateralInputs = 3
-    , agExtraConfig = Nothing
+    , agExtraConfig = SNothing
     }
 
 expectedCostModel :: CostModel

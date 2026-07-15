@@ -49,7 +49,12 @@ import Cardano.Ledger.Alonzo.Scripts (
   flattenCostModels,
   mkCostModels,
  )
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), ToKeyValuePairs (..))
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  StrictMaybe (..),
+  ToKeyValuePairs (..),
+  maybeToStrictMaybe,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -75,8 +80,8 @@ import NoThunks.Class (NoThunks)
 
 -- | All configuration that is necessary to bootstrap AlonzoEra from ShelleyGenesis
 data AlonzoGenesis = AlonzoGenesisWrapper
-  { unAlonzoGenesisWrapper :: UpgradeAlonzoPParams Identity
-  , extraConfig :: Maybe AlonzoExtraConfig
+  { unAlonzoGenesisWrapper :: !(UpgradeAlonzoPParams Identity)
+  , extraConfig :: !(StrictMaybe AlonzoExtraConfig)
   }
   deriving stock (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs AlonzoGenesis
@@ -120,7 +125,7 @@ pattern AlonzoGenesis ::
   Word32 ->
   Word16 ->
   Word16 ->
-  Maybe AlonzoExtraConfig ->
+  StrictMaybe AlonzoExtraConfig ->
   AlonzoGenesis
 pattern AlonzoGenesis
   { agCoinsPerUTxOWord
@@ -224,7 +229,7 @@ instance FromJSON AlonzoGenesis where
     agMaxValSize <- o .: "maxValueSize"
     agCollateralPercentage <- o .: "collateralPercentage"
     agMaxCollateralInputs <- o .: "maxCollateralInputs"
-    agExtraConfig <- o .:? "extraConfig"
+    agExtraConfig <- maybeToStrictMaybe <$> o .:? "extraConfig"
     agPlutusV1CostModel <-
       case Map.toList (costModelsValid cms) of
         [] -> fail "Expected \"PlutusV1\" cost model to be supplied"
@@ -247,4 +252,4 @@ instance ToKeyValuePairs AlonzoGenesis where
     , "collateralPercentage" .= agCollateralPercentage ag
     , "maxCollateralInputs" .= agMaxCollateralInputs ag
     ]
-      ++ ["extraConfig" .= extraConfig | Just extraConfig <- [agExtraConfig ag]]
+      ++ ["extraConfig" .= extraConfig | SJust extraConfig <- [agExtraConfig ag]]
