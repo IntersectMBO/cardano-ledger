@@ -2,6 +2,7 @@
 
 ## 0.1.0.0
 
+* Add `Cardano.Protocol.Leios.BlockHeader`
 * Initial release. Provides:
   - `Cardano.Protocol.Crypto`
   - `Cardano.Protocol.TPraos.OCert`
