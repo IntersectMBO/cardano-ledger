@@ -355,7 +355,7 @@ decodeBytesDefOrIndef =
   peekTokenType >>= \case
     C.TypeBytesIndef -> do
       decodeBytesIndef
-      let go acc =
+      let go !acc =
             decodeBreakOr >>= \case
               True -> pure $! BS.concat (reverse acc)
               False -> do
