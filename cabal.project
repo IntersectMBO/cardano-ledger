@@ -27,7 +27,7 @@ source-repository-package
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
-  , hackage.haskell.org 2026-05-26T19:31:06Z
+  , hackage.haskell.org 2026-07-15T21:58:35Z
   , cardano-haskell-packages 2026-06-29T12:05:19Z
 
 packages:
