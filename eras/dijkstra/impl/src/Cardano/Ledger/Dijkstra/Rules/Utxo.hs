@@ -323,13 +323,13 @@ validateWrongNetworkInDirectDeposit netId txb =
 --
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
-  (EraUTxO era, EraCertState era) =>
+  EraUTxO era =>
   PParams era ->
   UTxO era ->
-  CertState era ->
+  PState era ->
   TxBody TopTx era ->
   Test (Shelley.ShelleyUtxoPredFailure era)
-validateValueNotConservedUTxO pp utxo certState txBody =
+validateValueNotConservedUTxO pp utxo pState txBody =
   failureUnless (consumedValue == producedValue) $
     Shelley.ValueNotConservedUTxO
       Mismatch
@@ -338,7 +338,7 @@ validateValueNotConservedUTxO pp utxo certState txBody =
         }
   where
     consumedValue = dijkstraConsumed pp utxo txBody
-    producedValue = produced pp certState txBody
+    producedValue = produced pp pState txBody
 
 dijkstraUtxoTransition ::
   forall era.
@@ -371,6 +371,7 @@ dijkstraUtxoTransition = do
   let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied
   let accounts = certState ^. certDStateL . accountsL
+  let originalPState = certState ^. certPStateL
 
   let txBody = tx ^. bodyTxL
 
@@ -403,7 +404,7 @@ dijkstraUtxoTransition = do
   runTest $ validateBatchWithdrawals accounts tx
 
   {- consumed pp utxo₀ txb = produced pp certState txb -}
-  runTest $ validateValueNotConservedUTxO pp originalUtxo certState txBody
+  runTest $ validateValueNotConservedUTxO pp originalUtxo originalPState txBody
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF

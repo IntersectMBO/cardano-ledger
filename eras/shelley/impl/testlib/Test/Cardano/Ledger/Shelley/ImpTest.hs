@@ -1161,7 +1161,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
     accounts = certState ^. certDStateL . accountsL
     consumedValue = shelleyConsumed pp accounts utxo (tx ^. bodyTxL)
-    producedValue = produced pp certState (tx ^. bodyTxL)
+    producedValue = produced pp (certState ^. certPStateL) (tx ^. bodyTxL)
     ensureNonNegativeCoin v
       | pointwise (<=) zero v = pure v
       | otherwise = do

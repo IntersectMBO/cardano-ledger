@@ -123,13 +123,13 @@ shelleyConsumed pp accounts =
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
 produced ::
-  (EraUTxO era, EraCertState era) =>
+  EraUTxO era =>
   PParams era ->
-  CertState era ->
+  PState era ->
   TxBody TopTx era ->
   Value era
-produced pp certState =
-  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
+produced pp pState =
+  getProducedValue pp (flip Map.member $ pState ^. psStakePoolsL)
 
 shelleyProducedValue ::
   EraTxBody era =>

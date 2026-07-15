@@ -14,6 +14,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxoPredFailure (..))
+import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Mary.Value (
   AssetName,
   MaryValue (..),
@@ -67,9 +68,9 @@ spec = describe "UTXO" $ do
                 -- distinguish subs by an input
                 & subTransactionsTxBodyL .~ [mkSubTx txIn1 cert, mkSubTx txIn2 cert]
       pp <- getsPParams id
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       -- just the pool deposits are in `produced` because the transaction is not fixed up
-      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
 
     it "counts distinct pool deposits in top and sub separately" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
@@ -85,8 +86,8 @@ spec = describe "UTXO" $ do
                 & certsTxBodyL .~ [poolB, poolA, poolB]
                 & subTransactionsTxBodyL .~ [mkSubTx txIn1 poolA, mkSubTx txIn2 poolA, mkSubTx txIn3 poolB]
       pp <- getsPParams id
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject ((2 :: Int) <×> poolDeposit)
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject ((2 :: Int) <×> poolDeposit)
 
     it "includes sub-tx cert deposits when top has no certs" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
@@ -98,8 +99,8 @@ spec = describe "UTXO" $ do
               mkBasicTxBody
                 & subTransactionsTxBodyL .~ [subTx]
       pp <- getsPParams id
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
 
     it "does not count re-registrations of an already-registered pool across the batch" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
@@ -112,8 +113,8 @@ spec = describe "UTXO" $ do
           topTx = regTx & bodyTxL . subTransactionsTxBodyL .~ [regTx :: Tx SubTx era]
       submitTx_ (regTx :: Tx TopTx era)
       pp <- getsPParams id
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-      produced pp certState (topTx ^. bodyTxL) `shouldBe` mempty
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` mempty
 
     it "dedupes across multiple subtransactions registering the same fresh pool" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
@@ -127,13 +128,13 @@ spec = describe "UTXO" $ do
                 & subTransactionsTxBodyL
                   .~ [mkSubTx txInA cert, mkSubTx txInB cert]
       pp <- getsPParams id
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-      produced pp certState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
 
     it "sums outputs, fee, treasury donations, pool/DRep deposits and burned assets across the batch" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
-      drepDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ (ppPoolDepositL .~ poolDeposit) . (ppDRepDepositL .~ drepDeposit)
+      dRepDeposit <- (Coin 1 <>) <$> arbitrary
+      modifyPParams $ (ppPoolDepositL .~ poolDeposit) . (ppDRepDepositL .~ dRepDeposit)
       poolParams <- arbitrary
       drepA <- arbitrary
       drepB <- arbitrary
@@ -165,7 +166,7 @@ spec = describe "UTXO" $ do
               mkBasicTxBody
                 & outputsTxBodyL .~ [subOut]
                 & certsTxBodyL
-                  .~ [regPool, RegDRepTxCert drepB drepDeposit SNothing]
+                  .~ [regPool, RegDRepTxCert drepB dRepDeposit SNothing]
                 & treasuryDonationTxBodyL .~ subTreasury
                 & mintTxBodyL .~ subMint
           topTx :: Tx TopTx era
@@ -175,7 +176,7 @@ spec = describe "UTXO" $ do
                 & outputsTxBodyL .~ [topOut]
                 & feeTxBodyL .~ topFee
                 & certsTxBodyL
-                  .~ [regPool, RegDRepTxCert drepA drepDeposit SNothing]
+                  .~ [regPool, RegDRepTxCert drepA dRepDeposit SNothing]
                 & treasuryDonationTxBodyL .~ topTreasury
                 & mintTxBodyL .~ topMint
                 & subTransactionsTxBodyL .~ [subTx]
@@ -186,10 +187,10 @@ spec = describe "UTXO" $ do
               <> topTreasury
               <> subTreasury
               <> poolDeposit
-              <> ((2 :: Int) <×> drepDeposit)
+              <> ((2 :: Int) <×> dRepDeposit)
           expected = MaryValue expectedCoin expectedBurned
       pp <- getsPParams id
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-      produced pp certState (topTx ^. bodyTxL) `shouldBe` expected
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
   where
     mkSubTx i cert = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert] & inputsTxBodyL .~ [i]

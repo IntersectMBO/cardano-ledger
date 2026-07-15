@@ -516,7 +516,7 @@ validateValueNotConservedUTxO pp utxo certState txBody =
   where
     accounts = certState ^. certDStateL . accountsL
     consumedValue = shelleyConsumed pp accounts utxo txBody
-    producedValue = produced pp certState txBody
+    producedValue = produced pp (certState ^. certPStateL) txBody
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@
 --
