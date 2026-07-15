@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Change `produced` to accept `PState`, instead of `CertState`
 * Remove `consumed` in favor of `shelleyConsumed`
 * Restrict `produced` to `TxBody TopTx era`.
 * Add `defaultApplyTxWithValidation` and `defaultReapplyValidatedTx` helpers to `Mempool` module
