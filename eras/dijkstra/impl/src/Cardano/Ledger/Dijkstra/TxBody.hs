@@ -16,6 +16,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -146,6 +147,7 @@ import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
+import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import Data.OMap.Strict (OMap)
 import qualified Data.OMap.Strict as OMap
@@ -213,11 +215,7 @@ data DijkstraTxBodyRaw l era where
 deriving instance (EraTxBody era, Eq (Tx SubTx era)) => Eq (DijkstraTxBodyRaw l era)
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  ( EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   EqRaw (TxBody l DijkstraEra)
@@ -533,47 +531,32 @@ instance
 
 deriving instance
   ( Typeable l
-  , Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  , EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   NoThunks (TxBody l DijkstraEra)
 
 deriving instance
-  ( Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  ( EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Eq (TxBody l DijkstraEra)
 
 deriving newtype instance
-  ( NFData (Tx SubTx DijkstraEra)
-  , Eq (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  ( EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   NFData (TxBody l DijkstraEra)
 
 deriving instance
-  ( Show (Tx SubTx DijkstraEra)
-  , Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+  ( EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Show (TxBody l DijkstraEra)
 
 pattern DijkstraTxBody ::
-  ( EncCBOR (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , EncCBOR (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
@@ -708,7 +691,8 @@ pattern DijkstraTxBody
             accountBalanceIntervals
 
 pattern DijkstraSubTxBody ::
-  ( EncCBOR (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , EncCBOR (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
@@ -833,11 +817,7 @@ deriving via
   Mem (DijkstraTxBodyRaw l DijkstraEra)
   instance
     ( Typeable l
-    , Eq (Tx SubTx DijkstraEra)
-    , NFData (Tx SubTx DijkstraEra)
-    , Show (Tx SubTx DijkstraEra)
-    , EncCBOR (Tx SubTx DijkstraEra)
-    , DecCBOR (Annotator (Tx SubTx DijkstraEra))
+    , EraTx DijkstraEra
     , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
     ) =>
     DecCBOR (Annotator (TxBody l DijkstraEra))
@@ -941,7 +921,8 @@ accountBalanceIntervalsDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1011,11 +992,34 @@ upgradeProposals ProposalProcedure {..} =
     , pProcAnchor = pProcAnchor
     }
 
+-- | Batch-aware total deposits for a transaction.
 dijkstraTotalDepositsTxBody ::
-  ConwayEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
-dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
-  getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
-    <+> conwayProposalsDeposits pp txBody
+  forall era l.
+  ( EraTx era
+  , DijkstraEraTxBody era
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  PParams era ->
+  (KeyHash StakePool -> Bool) ->
+  TxBody l era ->
+  Coin
+dijkstraTotalDepositsTxBody pp isPoolRegistered txBody =
+  -- TODO: restrict to TopTx, once certsTotalDepositsTxBody is restricted to TopTx
+  withBothTxLevels
+    txBody
+    ( \topTxBody ->
+        let subTxs = topTxBody ^. subTransactionsTxBodyL
+            batchTxCerts =
+              foldMap' (^. bodyTxL . certsTxBodyL) subTxs
+                <> (topTxBody ^. certsTxBodyL)
+         in getTotalDepositsTxCerts pp isPoolRegistered batchTxCerts
+              <+> conwayProposalsDeposits pp topTxBody
+              <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
+    )
+    ( \subTxBody ->
+        getTotalDepositsTxCerts pp isPoolRegistered (subTxBody ^. certsTxBodyL)
+          <+> conwayProposalsDeposits pp subTxBody
+    )
 
 -- | This newtype wrapper lets us index into the guards with a ScriptHash. It
 -- will return the index of the credential when using `indexOf` and the `fromIndex`
@@ -1088,7 +1092,8 @@ vldtDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1113,7 +1118,8 @@ mintDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1155,7 +1161,8 @@ networkIdDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1212,7 +1219,8 @@ referenceInputsDijkstraTxBodyRawL =
     )
 
 instance
-  ( NFData (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , NFData (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1301,7 +1309,8 @@ currentTreasuryValueDijkstraTxBodyRawL =
     )
 
 instance
-  ( NFData (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , NFData (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1360,7 +1369,8 @@ requiredTopLevelGuardsDijkstraTxBodyRawL =
     )
 
 instance
-  ( NFData (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , NFData (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
