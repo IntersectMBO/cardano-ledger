@@ -94,6 +94,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Containers.ListUtils (nubOrdOn)
 import Data.Foldable (toList)
 import Data.GenValidity
 import Data.Int (Int64)
@@ -833,7 +834,8 @@ instance Arbitrary PV1.Data where
             oneof
               [ PV1.I <$> arbitrary
               , PV1.B <$> arbitrary
-              , PV1.Map <$> listOf ((,) <$> genData (n `div` 2) <*> genData (n `div` 2))
+              , PV1.Map . nubOrdOn fst
+                  <$> listOf ((,) <$> genData (n `div` 2) <*> genData (n `div` 2))
               , PV1.Constr
                   <$> fmap fromIntegral (arbitrary :: Gen Natural)
                   <*> listOf (genData (n `div` 2))
