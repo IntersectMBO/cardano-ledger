@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -31,7 +30,6 @@ import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.TxIn
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Entry.IsKey
 import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),
@@ -64,6 +62,8 @@ keyGovProposalsRootsIn = fromIntegral . fromEnum
 
 mapGovProposalsRootsIn :: Map Word8 GovProposalsRootsIn
 mapGovProposalsRootsIn = boundedEnumMap keyGovProposalsRootsIn
+
+type instance NamespaceKeySize "gov/proposals/roots/v0" = 1
 
 instance IsKey GovProposalsRootsIn where
   keySize = namespaceKeySize @"gov/proposals/roots/v0"
@@ -109,8 +109,6 @@ deriving via
   instance
     (Era era, NamespaceEra v ~ era) =>
     FromCanonicalCBOR v TxId
-
-type instance NamespaceKeySize "gov/proposals/roots/v0" = 1
 
 instance
   (Era era, NamespaceEra "gov/proposals/roots/v0" ~ era) =>

@@ -258,6 +258,12 @@ cradle:
     - path: "libs/cardano-ledger-canonical-state/test"
       component: "cardano-ledger-canonical-state:test:tests"
 
+    - path: "libs/cardano-ledger-canonical-state/gen-cddl/Main.hs"
+      component: "cardano-ledger-canonical-state:exe:gen-cddl"
+
+    - path: "libs/cardano-ledger-canonical-state/cddl-validate"
+      component: "cardano-ledger-canonical-state:lib:validate"
+
     - path: "libs/cardano-ledger-conformance/src"
       component: "lib:cardano-ledger-conformance"
 

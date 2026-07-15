@@ -25,7 +25,6 @@ import Cardano.Ledger.Core (EraScript, EraTxOut, TxOut, eraProtVerLow)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder
-import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
 import Cardano.SCLS.NamespaceCodec
 import Data.MemPack
@@ -37,6 +36,8 @@ newtype UtxoIn
   = UtxoKeyIn TxIn
   deriving (Eq, Ord, Show)
   deriving (Generic)
+
+type instance NamespaceKeySize "utxo/v0" = 34
 
 instance IsKey UtxoIn where
   keySize = namespaceKeySize @"utxo/v0"

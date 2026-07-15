@@ -46,6 +46,7 @@ library
     Cardano.Ledger.CanonicalState.LedgerCBOR
     Cardano.Ledger.CanonicalState.Namespace
     Cardano.Ledger.CanonicalState.Namespace.Blocks.V0
+    Cardano.Ledger.CanonicalState.Namespace.CDDL
     Cardano.Ledger.CanonicalState.Namespace.EntitiesAccounts.V0
     Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0
     Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0
@@ -57,6 +58,21 @@ library
     Cardano.Ledger.CanonicalState.Namespace.GovProposals.Roots.V0
     Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0
     Cardano.Ledger.CanonicalState.Namespace.UTxO.V0
+
+  other-modules:
+    Cardano.Ledger.CanonicalState.Namespace.Blocks.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.CDDL.Common
+    Cardano.Ledger.CanonicalState.Namespace.EntitiesAccounts.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.VRFKeyHashes.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.GovCommittee.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.GovConstitution.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.GovPParams.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.GovProposals.Roots.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.GovProposals.V0.CDDL
+    Cardano.Ledger.CanonicalState.Namespace.UTxO.V0.CDDL
 
   hs-source-dirs: src
   build-depends:
@@ -70,8 +86,9 @@ library
     cardano-strict-containers,
     cborg,
     containers,
+    cuddle,
+    heredoc >=0.2,
     mempack-scls,
-    scls-cardano,
     scls-cbor,
     scls-core,
     scls-format,
@@ -109,6 +126,7 @@ library testlib
   import: warnings
   exposed-modules:
     Test.Cardano.Ledger.CanonicalState.Arbitrary
+    Test.Cardano.Ledger.CanonicalState.Testlib
     Test.Cardano.Ledger.Conway.CanonicalState.Arbitrary
 
   visibility: public
@@ -117,10 +135,19 @@ library testlib
   build-depends:
     QuickCheck,
     base,
-    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway},
+    base16-bytestring,
+    bytestring,
+    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, validate},
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core,
+    cborg,
+    cuddle,
     generic-random,
+    hspec,
+    hspec-expectations,
+    scls-cbor,
+    scls-core,
+    text,
 
 test-suite tests
   import: warnings
@@ -129,6 +156,8 @@ test-suite tests
   hs-source-dirs: test
   other-modules:
     Paths_cardano_ledger_canonical_state
+    Test.Cardano.Ledger.CanonicalState.Conformance
+    Test.Cardano.Ledger.CanonicalState.Reference
     Test.Cardano.Ledger.CanonicalState.Spec
 
   default-language: Haskell2010
@@ -138,10 +167,55 @@ test-suite tests
     -with-rtsopts=-N
 
   build-depends:
+    QuickCheck,
+    antigen,
     base,
-    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, testlib},
+    base16-bytestring,
+    bytestring,
+    cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, testlib, validate},
     cardano-ledger-conway,
     cardano-ledger-core,
     cardano-ledger-core:testlib,
-    scls-cardano:testlib,
+    cborg,
+    containers,
+    cuddle,
+    directory,
+    filepath,
+    megaparsec,
     scls-cbor,
+    text,
+
+executable gen-cddl
+  import: warnings
+  default-language: Haskell2010
+  hs-source-dirs: gen-cddl
+  main-is: Main.hs
+  build-depends:
+    base,
+    cardano-ledger-canonical-state,
+    cuddle,
+    directory >=1,
+    filepath >=1.4,
+    prettyprinter,
+    scls-core,
+    text,
+
+library validate
+  import: warnings
+  visibility: public
+  exposed-modules:
+    Cardano.Ledger.CanonicalState.CDDL.Validate
+
+  build-depends:
+    base,
+    bytestring,
+    cardano-ledger-canonical-state,
+    containers,
+    cuddle,
+    scls-core,
+    text,
+
+  hs-source-dirs:
+    cddl-validate
+
+  default-language: Haskell2010

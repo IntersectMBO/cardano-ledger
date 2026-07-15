@@ -5,18 +5,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.CanonicalState.Spec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval, NonNegativeInterval, NonZero, UnitInterval)
 import Cardano.Ledger.CanonicalState.BasicTypes (CanonicalExUnits (..))
+import Cardano.Ledger.CanonicalState.CDDL.Validate (invalidSpecs, validSpecs)
 import Cardano.Ledger.CanonicalState.Conway (CanonicalGovActionState)
 import qualified Cardano.Ledger.CanonicalState.Namespace.Blocks.V0 as Blocks.V0
+import Cardano.Ledger.CanonicalState.Namespace.CDDL (namespaceSymbolFromText)
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesAccounts.V0 as EntitiesAccounts.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesCommittee.V0 as Committee.V0
 import qualified Cardano.Ledger.CanonicalState.Namespace.EntitiesDReps.V0 as EntitiesDReps.V0
@@ -44,16 +44,34 @@ import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.State (PoolMetadata, StakePoolRelay)
 import Cardano.Ledger.TxIn (TxId)
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
-import Cardano.SCLS.Testlib
+import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
+import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Data.Typeable
 import Data.Word (Word64)
-import GHC.TypeLits
 import Test.Cardano.Ledger.CanonicalState.Arbitrary ()
+import Test.Cardano.Ledger.CanonicalState.Conformance (Direction (..), propReferenceAcceptsCBOR)
+import Test.Cardano.Ledger.CanonicalState.Reference (LoadError)
+import Test.Cardano.Ledger.CanonicalState.Testlib
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.CanonicalState.Arbitrary ()
 
-spec :: Spec
-spec = do
+spec ::
+  Maybe [(T.Text, Either LoadError (CTreeRoot MonoReferenced))] -> Integer -> Spec
+spec mReferenceCDDLs sampleCount = do
+  describe "Basic checks" $ do
+    it "has no invalid namespaces" $
+      invalidSpecs `shouldSatisfy` Map.null
+
+  describe "Conformance test" $ do
+    case mReferenceCDDLs of
+      Nothing ->
+        it "loads reference CDDL specs" $
+          pendingWith "REFERENCE_CDDL_DIR environment variable is not set"
+      Just referenceCDDLs ->
+        forM_ referenceCDDLs runConformanceTest
+
   describe "types" $ do
     describe "blocks/v0" $ do
       isCanonical @"blocks/v0" @Blocks.V0.BlockOut
@@ -170,9 +188,29 @@ spec = do
     testNS @"gov/pparams/v0"
     testNS @"gov/proposals/v0"
     testNS @"gov/proposals/roots/v0"
+  where
+    runConformanceTest (nsText, mRef) =
+      context (T.unpack nsText) $ it "passes bidirectional conformance tests" $ do
+        case mRef of
+          Left err ->
+            expectationFailure $
+              "Failed to load reference CDDL: " ++ show err
+          Right refCDDL -> do
+            case namespaceSymbolFromText nsText >>= flip Map.lookup validSpecs of
+              Nothing ->
+                expectationFailure $
+                  "No valid Huddle CDDL spec found for namespace: " ++ T.unpack nsText
+              Just huddleSpec -> do
+                mapM_
+                  (\_ -> propReferenceAcceptsCBOR refCDDL huddleSpec HuddleValidating `shouldReturn` Right ())
+                  [1 .. sampleCount]
+
+                mapM_
+                  (\_ -> propReferenceAcceptsCBOR huddleSpec refCDDL ReferenceValidating `shouldReturn` Right ())
+                  [1 .. sampleCount]
 
 isCanonical ::
-  forall ns a. (KnownSymbol ns, ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec
+  forall ns a. (ToCanonicalCBOR ns a, Typeable a, Arbitrary a, Show a) => Spec
 isCanonical = prop propName $ propTypeIsCanonical @ns @a
   where
     propName = showsTypeRep (typeRep (Proxy @a)) " is canonical"
