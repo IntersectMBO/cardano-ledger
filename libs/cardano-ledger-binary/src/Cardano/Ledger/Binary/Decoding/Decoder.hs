@@ -365,11 +365,7 @@ decodeBytesDefOrIndef =
     _ -> decodeBytes
 
 decodeFixedSized :: FSC.FixedSizeCodec a => Decoder s a
-decodeFixedSized =
-  ifDecoderVersionAtLeast
-    (natVersion @12)
-    (FSC.rawDecodeFixedSized =<< decodeBytesDefOrIndef)
-    (fromPlainDecoder FSC.decodeFixedSized)
+decodeFixedSized = FSC.rawDecodeFixedSized =<< decodeBytes
 
 -- | Lookup the original bytes that are being used for deserialization. This action will
 -- fail deserialization whenever original bytes are not available.
