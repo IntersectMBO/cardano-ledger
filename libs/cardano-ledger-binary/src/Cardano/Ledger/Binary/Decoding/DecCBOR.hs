@@ -65,6 +65,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
 import Control.Monad (when)
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -72,6 +73,7 @@ import qualified Data.IntMap as IntMap
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
+import qualified Data.MemPack as MP
 import qualified Data.Primitive.ByteArray as Prim
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
@@ -618,3 +620,17 @@ decodeScriptContextFromData scriptContextData =
   case PV3.fromData scriptContextData of
     Nothing -> fail $ "ScriptContext cannot be decoded from Data: " <> show scriptContextData
     Just scriptContext -> pure scriptContext
+
+--------------------------------------------------------------------------------
+-- Leios
+--------------------------------------------------------------------------------
+
+instance DecCBOR BitField where
+  decCBOR = BitField . MP.pack <$> decodeBytes
+
+instance DecCBOR LeiosCert where
+  decCBOR =
+    decodeRecordNamed "LeiosCert" (const 2) $
+      LeiosCert
+        <$> decCBOR
+        <*> decCBOR

@@ -35,21 +35,16 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   PerasCert (..),
   PerasKey (..),
   validatePerasCert,
-  encodeLeiosCert,
-  decodeLeiosCert,
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)
-import qualified Cardano.Crypto.Leios as C
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
-  Decoder,
   EncCBOR,
   EncCBORGroup (..),
-  Encoding,
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNullMaybe,
   decodeNullStrictMaybe,
@@ -59,8 +54,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeNullMaybe,
   encodeNullStrictMaybe,
-  fromPlainDecoder,
-  fromPlainEncoding,
   serialize',
  )
 import Cardano.Ledger.Core
@@ -200,7 +193,7 @@ instance
     encodeListLen 4
       <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
@@ -226,7 +219,7 @@ instance
 
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @era False)
-    mbLeiosCert <- decodeNullStrictMaybe decodeLeiosCert
+    mbLeiosCert <- decodeNullStrictMaybe decCBOR
     mbPerasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
@@ -260,7 +253,7 @@ instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBloc
     encodeListLen 4
       <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
@@ -302,11 +295,3 @@ data PerasKey = PerasKey
 -- 'cardano-base' once it's ready.
 validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
 validatePerasCert _ _ _ = True
-
-encodeLeiosCert :: C.LeiosCert -> Encoding
-encodeLeiosCert = fromPlainEncoding . C.encodeLeiosCert
-{-# INLINE encodeLeiosCert #-}
-
-decodeLeiosCert :: Decoder s C.LeiosCert
-decodeLeiosCert = fromPlainDecoder C.decodeLeiosCert
-{-# INLINE decodeLeiosCert #-}
