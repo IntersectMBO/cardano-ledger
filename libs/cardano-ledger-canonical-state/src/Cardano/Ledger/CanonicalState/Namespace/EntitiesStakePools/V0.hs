@@ -160,27 +160,37 @@ data CanonicalStakePoolState = CanonicalStakePoolState
   , cspsMetadata :: !(StrictMaybe PoolMetadata)
   , cspsDeposit :: !CanonicalCoin
   , cspsDelegators :: !(Set (Credential Staking))
+  , cspsLeiosKey :: !(StrictMaybe LeiosKey)
   }
   deriving (Show, Eq, Generic)
 
 instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalStakePoolState where
   toCanonicalCBOR v CanonicalStakePoolState {..} =
-    encodeAsMap
+    encodeAsMap $
       [ mkEncodablePair v ("account_id" :: Text) cspsAccountId
       , mkEncodablePair v ("cost" :: Text) cspsCost
       , mkEncodablePair v ("delegators" :: Text) cspsDelegators
       , mkEncodablePair v ("deposit" :: Text) cspsDeposit
-      , mkEncodablePair v ("margin" :: Text) cspsMargin
-      , mkEncodablePair v ("metadata" :: Text) cspsMetadata
-      , mkEncodablePair v ("owners" :: Text) cspsOwners
-      , mkEncodablePair v ("pledge" :: Text) cspsPledge
-      , mkEncodablePair v ("relays" :: Text) cspsRelays
-      , mkEncodablePair v ("vrf" :: Text) cspsVrf
       ]
+        ++ ( case cspsLeiosKey of
+              SJust _ -> [mkEncodablePair v ("leios_key" :: Text) cspsLeiosKey]
+              SNothing -> []
+           )
+        ++ [ mkEncodablePair v ("margin" :: Text) cspsMargin
+           , mkEncodablePair v ("metadata" :: Text) cspsMetadata
+           , mkEncodablePair v ("owners" :: Text) cspsOwners
+           , mkEncodablePair v ("pledge" :: Text) cspsPledge
+           , mkEncodablePair v ("relays" :: Text) cspsRelays
+           , mkEncodablePair v ("vrf" :: Text) cspsVrf
+           ]
 
 instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePoolState where
   fromCanonicalCBOR = do
-    decodeMapLenCanonicalOf 10
+    mapLen <- decodeMapLenCanonical
+    case mapLen of
+      10 -> pure ()
+      11 -> pure ()
+      n -> fail $ "Expected 10 or 11 map entries for CanonicalStakePoolState, got " ++ show n
     Versioned cspsVrf <- decodeNamespacedField @v "vrf"
     Versioned cspsCost <- decodeNamespacedField @v "cost"
     Versioned cspsMargin <- decodeNamespacedField @v "margin"
@@ -189,6 +199,10 @@ instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePo
     Versioned cspsRelays <- decodeNamespacedField @v "relays"
     Versioned cspsDeposit <- decodeNamespacedField @v "deposit"
     Versioned cspsMetadata <- decodeNamespacedField @v "metadata"
+    Versioned cspsLeiosKey <-
+      if mapLen == 11
+        then decodeNamespacedField @v "leios_key"
+        else pure (Versioned SNothing)
     Versioned cspsAccountId <- decodeNamespacedField @v "account_id"
     Versioned cspsDelegators <- decodeNamespacedField @v "delegators"
     pure $ Versioned CanonicalStakePoolState {..}
@@ -206,6 +220,7 @@ mkCanonicalStakePoolState (StakePoolState {..}) =
     , cspsMetadata = spsMetadata
     , cspsDeposit = CanonicalCoin spsDeposit
     , cspsDelegators = spsDelegators
+    , cspsLeiosKey = spsLeiosKey
     }
 
 fromCanonicalStakePoolState :: CanonicalStakePoolState -> StakePoolState
@@ -221,6 +236,7 @@ fromCanonicalStakePoolState (CanonicalStakePoolState {..}) =
     , spsMetadata = cspsMetadata
     , spsDeposit = unCoin cspsDeposit
     , spsDelegators = cspsDelegators
+    , spsLeiosKey = cspsLeiosKey
     }
 
 data CanonicalStakePoolParams = CanonicalStakePoolParams

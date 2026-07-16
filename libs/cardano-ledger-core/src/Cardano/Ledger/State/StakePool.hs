@@ -32,6 +32,7 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Lenses
   spsVrfL,
+  spsLeiosKeyL,
   spsPledgeL,
   spsCostL,
   spsMarginL,
@@ -164,6 +165,7 @@ import NoThunks.Class (NoThunks (..))
 data StakePoolState = StakePoolState
   { spsVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ VRF verification key hash for leader election
+  , spsLeiosKey :: !(StrictMaybe LeiosKey)
   , spsPledge :: !Coin
   -- ^ Pledge amount committed by the pool operator
   , spsCost :: !Coin
@@ -187,6 +189,9 @@ data StakePoolState = StakePoolState
 
 spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
+
+spsLeiosKeyL :: Lens' StakePoolState (StrictMaybe LeiosKey)
+spsLeiosKeyL = lens spsLeiosKey $ \sps leiosKey -> sps {spsLeiosKey = leiosKey}
 
 spsPledgeL :: Lens' StakePoolState Coin
 spsPledgeL = lens spsPledge $ \sps c -> sps {spsPledge = c}
@@ -220,6 +225,7 @@ instance EncCBOR StakePoolState where
     encode $
       Rec StakePoolState
         !> To (spsVrf sps)
+        !> To (spsLeiosKey sps)
         !> To (spsPledge sps)
         !> To (spsCost sps)
         !> To (spsMargin sps)
@@ -244,13 +250,15 @@ instance DecCBOR StakePoolState where
         <! From
         <! From
         <! From
+        <! From
 
 instance DecShareCBOR StakePoolState where
   type Share StakePoolState = Interns (Credential Staking)
   decSharePlusCBOR =
-    decodeRecordNamedT "StakePoolState" (const 10) $
+    decodeRecordNamedT "StakePoolState" (const 11) $
       StakePoolState
         <$> lift decCBOR
+        <*> lift decCBOR
         <*> lift decCBOR
         <*> lift decCBOR
         <*> lift decCBOR
@@ -265,6 +273,7 @@ instance Default StakePoolState where
   def =
     StakePoolState
       { spsVrf = def
+      , spsLeiosKey = def
       , spsPledge = Coin 0
       , spsCost = Coin 0
       , spsMargin = def
@@ -284,6 +293,7 @@ mkStakePoolState ::
 mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
+    , spsLeiosKey = sppLeiosKey spp
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
@@ -303,7 +313,7 @@ stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
-    , sppLeiosKey = SNothing
+    , sppLeiosKey = spsLeiosKey sps
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
