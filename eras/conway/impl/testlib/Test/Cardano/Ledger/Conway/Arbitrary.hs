@@ -59,10 +59,10 @@ import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
 import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (Event))
+import Data.Containers.ListUtils (nubOrdOn)
 import Data.Default (def)
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
-import Data.List (nubBy)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -282,7 +282,7 @@ instance
 _uniqueIdGovActions ::
   (Era era, Arbitrary (PParamsUpdate era)) =>
   Gen (SSeq.StrictSeq (GovActionState era))
-_uniqueIdGovActions = SSeq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
+_uniqueIdGovActions = SSeq.fromList . nubOrdOn gasId <$> arbitrary
 
 instance
   (forall p. Arbitrary (f (GovPurposeId (p :: GovActionPurpose)))) =>
