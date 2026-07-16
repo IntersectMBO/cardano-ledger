@@ -57,7 +57,7 @@ dijkstraCertsTotalDepositsTxBody pp certState = \txBody ->
   withBothTxLevels
     txBody
     (dijkstraBatchDepositsTxBody pp isPoolReg)
-    (conwayCertsTotalDepositsTxBody pp certState)
+    (getTotalDepositsTxBody pp isPoolReg)
   where
     isPoolReg = (`Map.member` psStakePools (conwayCertPState certState))
 

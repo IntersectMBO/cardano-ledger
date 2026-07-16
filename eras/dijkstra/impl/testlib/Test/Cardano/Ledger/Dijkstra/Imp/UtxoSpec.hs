@@ -22,15 +22,13 @@ import Cardano.Ledger.Mary.Value (
   PolicyID,
   multiAssetFromList,
  )
-import Cardano.Ledger.Shelley.LedgerState (
-  esLStateL,
-  lsCertStateL,
-  nesEsL,
- )
+import qualified Cardano.Ledger.Shelley.AdaPots as AdaPots
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val
+import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -200,5 +198,18 @@ spec = describe "UTXO" $ do
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
+      checkDepositCalculation
+        (topTx ^. bodyTxL)
+        (poolDeposit <> ((2 :: Int) <×> dRepDeposit) <> topDDAmount <> subDDAmount)
+        (poolDeposit <> dRepDeposit <> topDDAmount)
   where
     mkSubTx i cert = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert] & inputsTxBodyL .~ [i]
+    -- Check that `certsTotalDepositsTxBody` (used to set deposits in `UTxOState` and `AdaPots` calculations)
+    -- returns the batch deposits, while `getTotalDepositsTxBody` returns the top-level deposits
+    checkDepositCalculation topBody batchDeposits topLevelDeposits = do
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      AdaPots.proDeposits (AdaPots.producedTxBody topBody pp certState)
+        `shouldBe` batchDeposits
+      let isPoolReg = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
+      getTotalDepositsTxBody pp isPoolReg topBody `shouldBe` topLevelDeposits
