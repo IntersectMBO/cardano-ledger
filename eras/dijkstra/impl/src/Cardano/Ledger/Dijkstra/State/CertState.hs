@@ -8,6 +8,7 @@ module Cardano.Ledger.Dijkstra.State.CertState (
   dijkstraBatchDepositsTxBody,
 ) where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
@@ -17,7 +18,7 @@ import Cardano.Ledger.Dijkstra.State.Account ()
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Val ((<+>))
-import Data.Foldable (foldMap')
+import Data.Foldable (fold, foldMap')
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
 
@@ -77,3 +78,7 @@ dijkstraBatchDepositsTxBody pp isPoolReg topTxBody =
    in getTotalDepositsTxCerts pp isPoolReg batchTxCerts
         <+> conwayProposalsDeposits pp topTxBody
         <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
+        <+> fold (unDirectDeposits (topTxBody ^. directDepositsTxBodyL))
+        <+> foldMap'
+          (fold . unDirectDeposits . (^. bodyTxL . directDepositsTxBodyL))
+          subTxs

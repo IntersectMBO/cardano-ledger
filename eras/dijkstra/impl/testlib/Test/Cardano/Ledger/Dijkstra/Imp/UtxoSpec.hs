@@ -131,7 +131,7 @@ spec = describe "UTXO" $ do
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
 
-    it "sums outputs, fee, treasury donations, pool/DRep deposits and burned assets across the batch" $ do
+    it "sums outputs, fee, treasury donations, deposits and burned assets across the batch" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
       dRepDeposit <- (Coin 1 <>) <$> arbitrary
       modifyPParams $ (ppPoolDepositL .~ poolDeposit) . (ppDRepDepositL .~ dRepDeposit)
@@ -149,6 +149,10 @@ spec = describe "UTXO" $ do
       subTreasury <- arbitrary
       topBurnAmount <- getPositive <$> arbitrary
       subBurnAmount <- getPositive <$> arbitrary
+      topDDAddr <- arbitrary
+      subDDAddr <- arbitrary
+      topDDAmount <- (Coin 1 <>) <$> arbitrary
+      subDDAmount <- (Coin 1 <>) <$> arbitrary
       let topMint = multiAssetFromList [(policyA, asset, -topBurnAmount)]
           subMint = multiAssetFromList [(policyA, asset, -subBurnAmount)]
           expectedBurned :: MultiAsset
@@ -169,6 +173,7 @@ spec = describe "UTXO" $ do
                   .~ [regPool, RegDRepTxCert drepB dRepDeposit SNothing]
                 & treasuryDonationTxBodyL .~ subTreasury
                 & mintTxBodyL .~ subMint
+                & directDepositsTxBodyL .~ DirectDeposits [(subDDAddr, subDDAmount)]
           topTx :: Tx TopTx era
           topTx =
             mkBasicTx $
@@ -179,6 +184,7 @@ spec = describe "UTXO" $ do
                   .~ [regPool, RegDRepTxCert drepA dRepDeposit SNothing]
                 & treasuryDonationTxBodyL .~ topTreasury
                 & mintTxBodyL .~ topMint
+                & directDepositsTxBodyL .~ DirectDeposits [(topDDAddr, topDDAmount)]
                 & subTransactionsTxBodyL .~ [subTx]
           expectedCoin =
             topOutValue
@@ -188,6 +194,8 @@ spec = describe "UTXO" $ do
               <> subTreasury
               <> poolDeposit
               <> ((2 :: Int) <×> dRepDeposit)
+              <> topDDAmount
+              <> subDDAmount
           expected = MaryValue expectedCoin expectedBurned
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
