@@ -14,7 +14,7 @@
 * Add `encodeFixedSized`
 * Add `decodeFixedSized`
 * Make `decodeBytes` and `decodeByteArray` handle indefinite length encoding
-* Remove `Cardano.Ledger.Binary.Crypto`
+* Deprecated `Cardano.Ledger.Binary.Crypto`
 
 ### `testlib`
 
