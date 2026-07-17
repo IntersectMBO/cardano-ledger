@@ -42,6 +42,7 @@ import Cardano.Crypto.KES.Sum (
   Sum6KES,
   Sum7KES,
  )
+import Cardano.Crypto.Leios (LeiosCert (..))
 import Cardano.Crypto.VRF.Class (CertVRF, CertifiedVRF, OutputVRF, SignKeyVRF, VerKeyVRF)
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import Cardano.Crypto.VRF.Praos (PraosVRF)
@@ -146,6 +147,7 @@ spec = do
     roundTripSpec @ByteArray cborTrip
     roundTripSpec @SlicedByteArray cborTrip
     roundTripSpec @SubBytes cborTrip
+    roundTripSpec @LeiosCert cborTrip
     roundTripSpec @(Maybe Integer) $
       mkTrip (encodeNullMaybe encCBOR) (decodeNullMaybe decCBOR)
     roundTripSpec @(StrictMaybe Integer) $
