@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -117,7 +118,9 @@ spec = describe "UTXO" $ do
       let txAmount = Coin 2000000
       txIn <- sendCoinTo addr1 txAmount
       addr2 <- freshKeyAddr_
+      (_, rootTxOut) <- getImpRootTxOut
       let
+        rootTxOutValue = rootTxOut ^. valueTxOutL
         txBody =
           mkBasicTxBody
             & inputsTxBodyL .~ [txIn]
@@ -130,7 +133,12 @@ spec = describe "UTXO" $ do
       withPostFixup (updateAddrTxWits . addUnRegDRepTxCert) $
         submitFailingTx
           (mkBasicTx txBody)
-          [ injectFailure $ Conway.ConwayDRepNotRegistered dRepCred
+          [ injectFailure $
+              Shelley.ValueNotConservedUTxO $
+                Mismatch
+                  (rootTxOutValue <> inject txAmount <> inject dRepDeposit)
+                  (rootTxOutValue <> inject txAmount)
+          , injectFailure $ Conway.ConwayDRepNotRegistered dRepCred
           ]
   describe "Reference scripts" $ do
     let
