@@ -73,7 +73,6 @@ import qualified Data.IntMap as IntMap
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
-import qualified Data.MemPack as MP
 import qualified Data.Primitive.ByteArray as Prim
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
