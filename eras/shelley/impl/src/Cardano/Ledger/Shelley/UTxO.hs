@@ -32,7 +32,6 @@ module Cardano.Ledger.Shelley.UTxO (
 import Cardano.Ledger.Address (accountAddressCredentialL, bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (
   GenDelegs (..),
@@ -116,9 +115,7 @@ shelleyConsumed ::
   UTxO era ->
   TxBody l era ->
   Value era
-shelleyConsumed pp accounts =
-  getConsumedValue pp $
-    fmap (fromCompact . (^. depositAccountStateL)) . (`lookupAccountState` accounts)
+shelleyConsumed pp accounts = getConsumedValue pp (`lookupAccountDeposit` accounts)
 
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.

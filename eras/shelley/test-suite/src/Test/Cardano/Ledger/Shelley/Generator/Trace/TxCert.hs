@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (SlotNo32 (..))
@@ -232,11 +231,7 @@ genTxCerts
         keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
 
         accounts = certState ^. certDStateL . accountsL
-        refunds =
-          getTotalRefundsTxCerts
-            pp
-            (fmap (fromCompact . (^. depositAccountStateL)) . (`lookupAccountState` accounts))
-            certs
+        refunds = getTotalRefundsTxCerts pp (`lookupAccountDeposit` accounts) certs
 
         deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePools certPState) certs
 
