@@ -1811,11 +1811,7 @@ showConwayTxBalance pp certState utxo tx =
     inputs = sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
     accounts = certState ^. certDStateL . accountsL
     pState = certState ^. certPStateL
-    refunds =
-      getTotalRefundsTxBody
-        pp
-        (fmap (fromCompact . (^. depositAccountStateL)) . (`lookupAccountState` accounts))
-        txBody
+    refunds = getTotalRefundsTxBody pp (`lookupAccountDeposit` accounts) txBody
     isRegPoolId = (`Map.member` (pState ^. psStakePoolsL))
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 

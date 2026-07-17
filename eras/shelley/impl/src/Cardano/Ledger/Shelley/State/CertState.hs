@@ -91,9 +91,7 @@ shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
 shelleyCertsTotalRefundsTxBody ::
   (EraTxBody era, EraAccounts era) => PParams era -> Accounts era -> TxBody t era -> Coin
 shelleyCertsTotalRefundsTxBody pp accounts =
-  getTotalRefundsTxBody
-    pp
-    (fmap (fromCompact . (^. depositAccountStateL)) . (`lookupAccountState` accounts))
+  getTotalRefundsTxBody pp (`lookupAccountDeposit` accounts)
 
 instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
