@@ -58,6 +58,13 @@
 * Add `FromJSON (AlonzoScript era)` instance
 * Add `EncCBOR` and `ToCBOR` instances for `PlutusScript era`
 * Add `ToJSON` and `FromJSON` instances for `AlonzoTxAuxData era`
+* Add `ToJSON` and `FromJSON` instances for
+  - `TxDats era`
+  - `Redeemers era`
+  - `AlonzoTxWits era`
+* Add `FromJSON` instance for
+  - `AsIx ix it`
+  - `AlonzoPlutusPurpose AsIx era`
 
 ### `cddl`
 

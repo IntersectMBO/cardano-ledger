@@ -44,6 +44,13 @@
 * Move `EncCBOR PoolCert` instance to `cardano-ledger-conformance`
 * Remove `[Enc|Dec]CBORGRoup` instances for `StakePoolParams`
 * Add `withStakePoolParamsFlatEncoding` and `decodeStakePoolParamsFlat` for flat (non-nested) CBOR encoding/decoding
+* Add `ToJSON`, `FromJSON` and `NFData` as `EraTxWits` superclass constraints
+* Add `ToJSONKey` and `FromJSONKey` instances to `AccountId`
+* Add `ToJSON` and `FromJSON` instances for `Inclusive a` and `Exclusive a`
+* Add `ToJSON` and `FromJSON` instances for `WitVKey kr`
+* Add `ToJSON` and `FromJSON` instances for `BootstrapWitness`
+* Add `FromJSON` instance for `TxIn`; fix `txInToText` to use `unTxIx` instead of `show`
+* Add `FromJSON` instance for `PoolCert`
 
 ### `cddl`
 
@@ -82,6 +89,7 @@
 * Add `Arbitrary (NativeScript era)` and `ToExpr (NativeScript era)` constraints to `EraConstraints`
 * Add round-trip JSON property test for `NativeScript era` and `Script era` to the shared era spec
 * Add round-trip JSON property test for `TxAuxData era` to the shared era spec
+* Add round-trip JSON property test for `TxWits era` to the shared era spec
 
 ## 1.20.0.0
 
