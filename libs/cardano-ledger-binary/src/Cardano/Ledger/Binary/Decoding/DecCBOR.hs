@@ -626,7 +626,7 @@ decodeScriptContextFromData scriptContextData =
 --------------------------------------------------------------------------------
 
 instance DecCBOR BitField where
-  decCBOR = BitField . MP.pack <$> decodeBytes
+  decCBOR = BitField <$> decCBOR
 
 instance DecCBOR LeiosCert where
   decCBOR =
