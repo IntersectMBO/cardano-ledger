@@ -106,6 +106,7 @@ instance SpecTranslate DijkstraEra (TxBody TopTx DijkstraEra) where
         <*> pure 0
         <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
         <*> traverse toSpecRep (toList $ OMap.toMap $ txb ^. subTransactionsTxBodyL)
+        <*> (Agda.MkHSSet <$> traverse toSpecRepTuple (Map.toList $ txb ^. requiredTopLevelGuardsL))
         <*> (Agda.MkHSSet <$> toSpecRep (txb ^. guardsTxBodyL))
         <*> toSpecRep (txb ^. directDepositsTxBodyL)
         <*> toSpecRep (txb ^. accountBalanceIntervalsTxBodyL)
