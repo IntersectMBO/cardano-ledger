@@ -12,7 +12,8 @@
 * Remove `binaryGetDecoder` from exports
 * Change `decodeIPv4` and `decodeIPv6` to reject leftover bytes unconditionally, regardless of protocol version
 * Add `encodeFixedSized`
-* Add `decodeFixedSized`, `decodeBytesDefOrIndef`
+* Add `decodeFixedSized`
+* Make `decodeBytes` and `decodeByteArray` handle indefinite length encoding
 * Remove `Cardano.Ledger.Binary.Crypto`
 
 ### `testlib`
