@@ -28,7 +28,7 @@ source-repository-package
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
   , hackage.haskell.org 2026-07-15T21:58:35Z
-  , cardano-haskell-packages 2026-06-29T12:05:19Z
+  , cardano-haskell-packages 2026-07-09T14:13:51Z
 
 packages:
   -- == Byron era ==
@@ -107,6 +107,13 @@ source-repository-package
   subdir: merkle-tree-incremental mempack-scls scls-cbor scls-cardano scls-format scls-core
   --sha256: sha256-3rAc99T2/MZk7Rd2gb9zq7iUM9hMDOzNvehOq/8hpfs=
   tag: 8e2bba9442cb388089f53d708cc4aedcb47726ea
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  subdir: cardano-crypto-leios
+  --sha256: sha256-8JHMbFkVMLvw1PBKiVBm4+sC1lD2sBlcGqlJ/Ji6DOE=
+  tag: 95229507a241ca6559fc172e590c2cc0ceddc10f
 
 constraints:
   -- Happy version 2.2.1 fails to compile haskell-src-exts

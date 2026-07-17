@@ -32,11 +32,11 @@ import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FixedSizeCodec (..),
   encodeListLen,
   natVersion,
   whenDecoderVersionAtLeast,
  )
-import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
 import Cardano.Ledger.Binary.Plain (
   serialize',
@@ -102,7 +102,7 @@ instance EncCBOR BootstrapWitness where
 instance DecCBOR BootstrapWitness where
   decCBOR =
     decodeRecordNamed "BootstrapWitness" (const 4) $
-      BootstrapWitness <$> decCBOR <*> decodeSignedDSIGN <*> decCBOR <*> decCBOR
+      BootstrapWitness <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR
   {-# INLINE decCBOR #-}
 
 instance Ord BootstrapWitness where
@@ -132,7 +132,7 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
     -- This is normally naughty. However, this is a blob of bytes -- serializing
     -- it amounts to wrapping the underlying byte array in a ByteString
     -- constructor.
-    keyBytes = DSIGN.rawSerialiseVerKeyDSIGN key
+    keyBytes = rawEncodeFixedSized key
     bytes =
       BSL.toStrict $
         B.toLazyByteString $
@@ -151,7 +151,7 @@ unpackByronVKey ::
 unpackByronVKey
   ( Byron.VerificationKey
       (WC.XPub vkeyBytes (WC.ChainCode chainCodeBytes))
-    ) = case DSIGN.rawDeserialiseVerKeyDSIGN vkeyBytes of
+    ) = case rawDecodeFixedSized vkeyBytes of
     -- This maybe is produced by a check that the length of the public key
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
@@ -171,7 +171,7 @@ verifyBootstrapWit txbodyHash witness =
 coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN
 coerceSignature sig =
   fromMaybe (error "coerceSignature: impossible! signature size mismatch") $
-    DSIGN.rawDeserialiseSigDSIGN (WC.unXSignature sig)
+    rawDecodeFixedSized (WC.unXSignature sig)
 
 makeBootstrapWitness ::
   Hash HASH EraIndependentTxBody ->

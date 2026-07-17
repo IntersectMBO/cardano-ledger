@@ -22,10 +22,6 @@ module Cardano.Ledger.Keys.Internal (
   KeyRole (..),
   HasKeyRole (..),
   asWitness,
-
-  -- * Re-exports from cardano-crypto-class
-  decodeSignedDSIGN,
-  encodeSignedDSIGN,
 ) where
 
 import Cardano.Crypto.DSIGN hiding (
@@ -38,15 +34,11 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
  )
-import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -118,13 +110,6 @@ newtype VKey (kd :: KeyRole) = VKey {unVKey :: DSIGN.VerKeyDSIGN DSIGN}
 deriving via Quiet (VKey kd) instance Show (VKey kd)
 
 instance HasKeyRole VKey
-
-instance Typeable kd => FromCBOR (VKey kd) where
-  fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
-  {-# INLINE fromCBOR #-}
-
-instance Typeable kd => ToCBOR (VKey kd) where
-  toCBOR = DSIGN.encodeVerKeyDSIGN . unVKey
 
 -- | Produce a digital signature
 signedDSIGN ::

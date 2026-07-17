@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `encodeLeiosCert`, `decodeLeiosCert`
 * Make `requiredTopLevelGuards` available on the top-level transaction body:
   - Change the type of `requiredTopLevelGuardsL` to `Lens' (TxBody l era) (Map (Credential Guard) (StrictMaybe (Data era)))`
   - Change the type of `requiredTopLevelGuardsDijkstraTxBodyRawL` to `Lens' (DijkstraTxBodyRaw l era) (Map (Credential Guard) (StrictMaybe (Data era)))`

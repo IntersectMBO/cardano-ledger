@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -17,11 +18,10 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
-import Cardano.Crypto.DSIGN (rawSerialiseSigDSIGN)
-import Cardano.Crypto.Leios (LeiosCert (..), encodeBitField)
+import Cardano.Crypto.Leios (LeiosCert (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary.Plain (serialize')
+import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
@@ -141,8 +141,8 @@ instance ToExpr LeiosCert where
   toExpr LeiosCert {leiosCertSigners, leiosCertSignature} =
     Rec "LeiosCert" $
       OMap.fromList
-        [ ("leiosCertSigners", toExpr . HexBytes . serialize' $ encodeBitField leiosCertSigners)
-        , ("leiosCertSignature", toExpr . HexBytes $ rawSerialiseSigDSIGN leiosCertSignature)
+        [ ("leiosCertSigners", toExpr . HexBytes . serialize' (natVersion @12) $ encCBOR leiosCertSigners)
+        , ("leiosCertSignature", toExpr . HexBytes $ rawEncodeFixedSized leiosCertSignature)
         ]
 
 instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)

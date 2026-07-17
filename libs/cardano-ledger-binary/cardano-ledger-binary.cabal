@@ -18,7 +18,6 @@ library
   exposed-modules:
     Cardano.Ledger.Binary
     Cardano.Ledger.Binary.Coders
-    Cardano.Ledger.Binary.Crypto
     Cardano.Ledger.Binary.Decoding
     Cardano.Ledger.Binary.Encoding
     Cardano.Ledger.Binary.FlatTerm
@@ -56,9 +55,9 @@ library
     binary,
     bytestring,
     cardano-base >=0.1.2,
-    cardano-binary >=1.7.3,
-    cardano-crypto-class >=2.3 && <2.6,
-    cardano-crypto-leios >=0.1,
+    cardano-binary >=1.9.1,
+    cardano-crypto-class >=2.3 && <2.7,
+    cardano-crypto-leios >=0.2.0,
     cardano-crypto-praos >=2.2.2,
     cardano-slotting >=0.2,
     cardano-strict-containers >=0.1.2,
@@ -122,6 +121,7 @@ library testlib
     cardano-base:testlib,
     cardano-binary:{cardano-binary, testlib} >=1.9,
     cardano-crypto-class,
+    cardano-crypto-leios:{cardano-crypto-leios, testlib},
     cardano-ledger-binary,
     cardano-prelude-test,
     cardano-slotting:testlib,
@@ -179,6 +179,7 @@ test-suite tests
     bytestring,
     cardano-base,
     cardano-crypto-class:{cardano-crypto-class, testlib},
+    cardano-crypto-leios,
     cardano-crypto-praos:{cardano-crypto-praos, testlib},
     cardano-ledger-binary,
     cardano-prelude-test,
