@@ -20,9 +20,6 @@ module Test.Cardano.Ledger.Dijkstra.Arbitrary (
   genSmallDijkstraCertBlockBody,
 ) where
 
-import Cardano.Crypto.Leios (
-  LeiosCert (..),
- )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -50,7 +47,6 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
-import Test.Cardano.Crypto.Leios.Gen (genLeiosCert)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -316,9 +312,6 @@ instance
 
 instance Arbitrary PerasCert where
   arbitrary = PerasCert <$> arbitrary
-
-instance Arbitrary LeiosCert where
-  arbitrary = genLeiosCert
 
 instance
   ( EraBlockBody era
