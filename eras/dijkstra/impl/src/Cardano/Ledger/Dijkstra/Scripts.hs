@@ -57,14 +57,16 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   EncCBORGroup (..),
   ToCBOR (..),
+  TokenType (..),
   cborError,
   decodeNullMaybe,
+  decodeRecordNamed,
   decodeRecordSum,
   decodeWord8,
   encodeListLen,
   encodeNull,
   encodeWord8,
-  enforceSize,
+  peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (
   Encode (..),
@@ -632,6 +634,7 @@ data AccountBalanceInterval era
   = AccountBalanceLowerBound !(Inclusive Coin)
   | AccountBalanceUpperBound !(Exclusive Coin)
   | AccountBalanceBothBounds !(Inclusive Coin) !(Exclusive Coin)
+  | AccountBalanceExact !Coin
   deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
 
 instance EncCBOR (AccountBalanceInterval era) where
@@ -639,17 +642,21 @@ instance EncCBOR (AccountBalanceInterval era) where
     AccountBalanceLowerBound l -> encodeListLen 2 <> encCBOR l <> encodeNull
     AccountBalanceUpperBound u -> encodeListLen 2 <> encodeNull <> encCBOR u
     AccountBalanceBothBounds l u -> encodeListLen 2 <> encCBOR l <> encCBOR u
+    AccountBalanceExact exactCoin -> encCBOR exactCoin
 
 instance Typeable era => DecCBOR (AccountBalanceInterval era) where
-  decCBOR = do
-    enforceSize "AccountBalanceInterval" 2
-    lower <- decodeNullMaybe decCBOR
-    upper <- decodeNullMaybe decCBOR
-    case (lower, upper) of
-      (Just l, Just u) -> pure $ AccountBalanceBothBounds l u
-      (Just l, Nothing) -> pure $ AccountBalanceLowerBound l
-      (Nothing, Just u) -> pure $ AccountBalanceUpperBound u
-      _ -> cborError $ DecoderErrorCustom "AccountBalanceInterval" "Both interval bounds cannot be nil."
+  decCBOR =
+    peekTokenType >>= \case
+      TypeUInt -> AccountBalanceExact <$> decCBOR
+      TypeUInt64 -> AccountBalanceExact <$> decCBOR
+      _ -> decodeRecordNamed "AccountBalanceInterval" (const 2) $ do
+        lower <- decodeNullMaybe decCBOR
+        upper <- decodeNullMaybe decCBOR
+        case (lower, upper) of
+          (Just l, Just u) -> pure $! AccountBalanceBothBounds l u
+          (Just l, Nothing) -> pure $! AccountBalanceLowerBound l
+          (Nothing, Just u) -> pure $! AccountBalanceUpperBound u
+          _ -> cborError $ DecoderErrorCustom "AccountBalanceInterval" "Both interval bounds cannot be nil."
 
 newtype AccountBalanceIntervals era
   = AccountBalanceIntervals

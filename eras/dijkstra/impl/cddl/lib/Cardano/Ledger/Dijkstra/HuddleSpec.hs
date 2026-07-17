@@ -272,14 +272,15 @@ accountBalanceIntervalRule ::
   Rule
 accountBalanceIntervalRule pname p =
   pname
-    =.= arr
+    =.= sarr
       [ "inclusive_lower_bound" ==> huddleRule @"coin" p
       , "exclusive_upper_bound" ==> huddleRule @"coin" p / VNil
       ]
-    / arr
+    / sarr
       [ "inclusive_lower_bound" ==> huddleRule @"coin" p / VNil
       , "exclusive_upper_bound" ==> huddleRule @"coin" p
       ]
+    / huddleRule @"coin" p
 
 scriptRequireGuardGroup ::
   forall era.
@@ -844,12 +845,12 @@ instance HuddleRule "transaction_mempool" DijkstraEra where
   huddleRuleNamed pname p =
     comment
       [str| In Dijkstra we're deprecating the `is_valid` flag, but for backwards
-          | compatibility we still allow this flag to be present in incoming 
+          | compatibility we still allow this flag to be present in incoming
           | transactions. Once the transaction is added to a block, the flag will
           | be stripped, so the `is_valid` flag cannot appear in transactions that
           | are in a block.
           |
-          | In the next era `is_valid` flags will not be allowed even in mempool 
+          | In the next era `is_valid` flags will not be allowed even in mempool
           | transactions, so it's strongly recommended to encode transactions
           | according to the `transaction` rule.
           |]
