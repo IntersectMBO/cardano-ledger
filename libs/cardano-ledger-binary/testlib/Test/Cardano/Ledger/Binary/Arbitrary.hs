@@ -6,10 +6,12 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
   genVersion,
 ) where
 
+import Cardano.Crypto.Leios (LeiosCert)
 import Cardano.Ledger.Binary.Version
 import GHC.Stack
 import Test.Cardano.Base.Arbitrary ()
 import Test.Cardano.Binary.Arbitrary ()
+import Test.Cardano.Crypto.Leios.Gen (genLeiosCert)
 import Test.Data.VMap.Arbitrary ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
@@ -26,3 +28,6 @@ genVersion minVersion maxVersion =
       case mkVersion32 v32 of
         Nothing -> error $ "Impossible: Invalid version generated: " ++ show v32
         Just v -> pure v
+
+instance Arbitrary LeiosCert where
+  arbitrary = genLeiosCert
