@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Remove a no longer necessary argument to `evalBalanceTxBody` that looked up DRep deposits
 * Restrict `evalBalanceTxBody` to `TxBody TopTx era`.
 * Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names
 * Re-export the new `pattern WithdrawingPurpose` and `toWithdrawingPurpose`

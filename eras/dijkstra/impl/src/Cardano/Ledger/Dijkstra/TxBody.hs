@@ -985,8 +985,8 @@ instance
 
   getTotalDepositsTxBody = dijkstraTotalDepositsTxBody
 
-  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
-    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+  getTotalRefundsTxBody pp lookupStakingDeposit txBody =
+    getTotalRefundsTxCerts pp lookupStakingDeposit (txBody ^. certsTxBodyL)
 
 upgradeGovAction ::
   forall era.

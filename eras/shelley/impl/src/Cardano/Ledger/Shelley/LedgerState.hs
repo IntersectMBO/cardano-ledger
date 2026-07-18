@@ -36,10 +36,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   -- * Genesis State
   genesisState,
 
-  -- * Validation
-  consumed,
-  produced,
-
   -- * DelegationState
   totalObligation,
   allObligations,
@@ -125,4 +121,3 @@ import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyGovState (..))
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Shelley.UTxO (produced)

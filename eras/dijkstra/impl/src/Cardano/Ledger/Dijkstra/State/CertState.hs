@@ -3,17 +3,7 @@
 
 module Cardano.Ledger.Dijkstra.State.CertState () where
 
-import Cardano.Ledger.Conway.State (
-  ConwayCertState,
-  ConwayEraCertState (..),
-  EraCertState (..),
-  conwayCertDStateL,
-  conwayCertPStateL,
-  conwayCertVStateL,
-  conwayCertsTotalDepositsTxBody,
-  conwayCertsTotalRefundsTxBody,
-  conwayObligationCertState,
- )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.State.Account ()
 
@@ -30,7 +20,7 @@ instance EraCertState DijkstraEra where
 
   certsTotalDepositsTxBody = conwayCertsTotalDepositsTxBody
 
-  certsTotalRefundsTxBody = conwayCertsTotalRefundsTxBody
+  certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
 instance ConwayEraCertState DijkstraEra where
   certVStateL = conwayCertVStateL

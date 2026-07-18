@@ -50,7 +50,7 @@ instance EraTxCert MaryEra where
 
   getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
 
-  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
+  getTotalRefundsTxCerts = shelleyTotalRefundsTxCerts
 
 instance ShelleyEraTxCert MaryEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert

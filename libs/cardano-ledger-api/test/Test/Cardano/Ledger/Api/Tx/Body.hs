@@ -14,7 +14,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.State hiding (consumed)
+import Cardano.Ledger.State
 import Cardano.Ledger.Val
 import Data.Foldable
 import qualified Data.Map.Strict as Map
@@ -148,7 +148,7 @@ propEvalBalanceTxBody pp certState utxo = do
   property $
     forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
       forAll arbitrary $ \network ->
-        evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
+        evalBalanceTxBody pp lookupKeyDeposit isRegPoolId utxo txBody
           `shouldBe` evaluateTransactionBalance network pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
@@ -164,7 +164,7 @@ propEvalBalanceShelleyTxBody ::
 propEvalBalanceShelleyTxBody network pp certState utxo =
   property $
     forAll (genTxBodyFrom @_ @TopTx certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
+      evalBalanceTxBody pp lookupKeyDeposit isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalanceShelley network pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)

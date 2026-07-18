@@ -225,7 +225,8 @@ instance Era era => EncCBOR (DijkstraTxCert era) where
     DijkstraTxCertPool poolCert -> encodePoolCert poolCert
     DijkstraTxCertGov govCert -> encCBOR govCert
 
--- | Unlike previous eras, we no longer need to lookup refunds from the ledger state, since all of the certificates specify the actual refund and ledger rules will validate that they are accurate.
+-- | Unlike previous eras, we no longer need to lookup refunds from the ledger state, since all of
+-- the certificates specify the actual refund and ledger rules will validate that they are accurate.
 dijkstraTotalRefundsTxCerts ::
   ( Foldable f
   , ConwayEraTxCert era
@@ -282,7 +283,7 @@ instance EraTxCert DijkstraEra where
     UnRegDepositTxCert c _ -> Just c
     _ -> Nothing
 
-  getTotalRefundsTxCerts _ _ _ = dijkstraTotalRefundsTxCerts
+  getTotalRefundsTxCerts _ _ = dijkstraTotalRefundsTxCerts
 
   getTotalDepositsTxCerts = conwayTotalDepositsTxCerts
 

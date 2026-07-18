@@ -219,7 +219,6 @@ genTxCerts
   acnt = do
     let env = (slot, txIx, pp, acnt)
         st0 = (certState, minBound)
-        certDState = certState ^. certDStateL
         certPState = certState ^. certPStateL
 
     certsTrace <-
@@ -231,12 +230,8 @@ genTxCerts
         (scriptCreds, keyCreds) = partition isScript creds
         keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
 
-        refunds =
-          getTotalRefundsTxCerts
-            pp
-            (lookupDepositDState certDState)
-            (const Nothing)
-            certs
+        accounts = certState ^. certDStateL . accountsL
+        refunds = getTotalRefundsTxCerts pp (`lookupAccountDeposit` accounts) certs
 
         deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePools certPState) certs
 

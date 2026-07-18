@@ -91,8 +91,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
-import Data.Foldable as F (foldMap', foldl')
-import qualified Data.Map.Strict as Map
+import Data.Foldable as F (foldMap')
 import Data.Monoid (Sum (getSum))
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -842,31 +841,18 @@ conwayTotalRefundsTxCerts ::
   PParams era ->
   -- | Function that can lookup current deposit, in case when the Staking credential is registered.
   (Credential Staking -> Maybe Coin) ->
-  -- | Function that can lookup current deposit, in case when the DRep credential is registered.
-  (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-conwayTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit certs =
+conwayTotalRefundsTxCerts pp lookupStakingDeposit certs =
   shelleyTotalRefundsTxCerts pp lookupStakingDeposit certs
-    <+> conwayDRepRefundsTxCerts lookupDRepDeposit certs
+    <+> conwayDRepRefundsTxCerts certs
 
 -- | Compute the Refunds from a TxBody, given a function that computes a partial Coin for
 -- known Credentials.
 conwayDRepRefundsTxCerts ::
   (Foldable f, ConwayEraTxCert era) =>
-  (Credential DRepRole -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-conwayDRepRefundsTxCerts lookupDRepDeposit = snd . F.foldl' go (Map.empty, Coin 0)
-  where
-    go accum@(!drepRegsInTx, !totalRefund) = \case
-      RegDRepTxCert cred deposit _ ->
-        -- Track registrations
-        (Map.insert cred deposit drepRegsInTx, totalRefund)
-      UnRegDRepTxCert cred _
-        -- DRep previously registered in the same tx.
-        | Just deposit <- Map.lookup cred drepRegsInTx ->
-            (Map.delete cred drepRegsInTx, totalRefund <+> deposit)
-        -- DRep previously registered in some other tx.
-        | Just deposit <- lookupDRepDeposit cred -> (drepRegsInTx, totalRefund <+> deposit)
-      _ -> accum
+conwayDRepRefundsTxCerts = foldMap' $ \case
+  UnRegDRepTxCert _ refund -> refund
+  _ -> mempty

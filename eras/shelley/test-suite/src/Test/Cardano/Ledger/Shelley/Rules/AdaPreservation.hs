@@ -295,7 +295,7 @@ checkPreservation SourceSignalTarget {source, target, signal = block} count =
         ++ "total deposits "
         ++ show (certsTotalDepositsTxBody currPP oldCertState (tx ^. bodyTxL))
         ++ "\ntotal refunds "
-        ++ show (certsTotalRefundsTxBody currPP oldCertState (tx ^. bodyTxL))
+        ++ show (certsTotalRefundsTxBody currPP oldAccounts (tx ^. bodyTxL))
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
@@ -503,9 +503,10 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
           sumCoinUTxO u'
             <+> (txb ^. feeTxBodyL)
             <+> certsTotalDepositsTxBody pp_ certState txb
+        accounts = certState ^. certDStateL . accountsL
         consumed_ =
           sumCoinUTxO u
-            <+> certsTotalRefundsTxBody pp_ certState txb
+            <+> certsTotalRefundsTxBody pp_ accounts txb
             <+> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
@@ -538,9 +539,10 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
         inps === outs
         where
           txb = stAnnTx ^. txStAnnTxG . bodyTxL
+          accounts = certState ^. certDStateL . accountsL
           inps =
             sumCoinUTxO @era (txInsFilter utxo (txb ^. inputsTxBodyL))
-              <> certsTotalRefundsTxBody pp_ certState txb
+              <> certsTotalRefundsTxBody pp_ accounts txb
               <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =
             sumCoinUTxO (txouts @era txb)

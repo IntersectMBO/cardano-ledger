@@ -16,6 +16,7 @@ module Cardano.Ledger.State.Account (
   EraAccounts (..),
   lookupAccountState,
   lookupAccountStateIntern,
+  lookupAccountDeposit,
   updateLookupAccountState,
   isAccountRegistered,
   adjustAccountState,
@@ -156,6 +157,11 @@ lookupAccountStateIntern ::
   Credential Staking -> Accounts era -> Maybe (Credential Staking, AccountState era)
 lookupAccountStateIntern cred accounts =
   lookupInternMap cred (accounts ^. accountsMapL)
+
+-- | Lookup an account state by its credential and return the deposit amount.
+lookupAccountDeposit :: EraAccounts era => Credential Staking -> Accounts era -> Maybe Coin
+lookupAccountDeposit cred accounts =
+  fromCompact . (^. depositAccountStateL) <$> lookupAccountState cred accounts
 
 -- | Update account state. Returns Nothing if the value is not present and modified value otherwise
 updateLookupAccountState ::

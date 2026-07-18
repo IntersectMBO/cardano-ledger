@@ -22,7 +22,6 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
-  shelleyConsumed,
   shelleyProducedValue,
  )
 import Cardano.Ledger.State (
@@ -39,8 +38,6 @@ import Lens.Micro
 
 instance EraUTxO MaryEra where
   type ScriptsNeeded MaryEra = ShelleyScriptsNeeded MaryEra
-
-  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 
@@ -69,11 +66,10 @@ getConsumedMaryValue ::
   (MaryEraTxBody era, Value era ~ MaryValue) =>
   PParams era ->
   (Credential Staking -> Maybe Coin) ->
-  (Credential DRepRole -> Maybe Coin) ->
   UTxO era ->
   TxBody l era ->
   MaryValue
-getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
+getConsumedMaryValue pp lookupStakingDeposit utxo txBody =
   consumedValue <> MaryValue mempty mintedMultiAsset
   where
     mintedMultiAsset = filterMultiAsset (\_ _ -> (> 0)) $ txBody ^. mintTxBodyL
@@ -81,7 +77,7 @@ getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
     consumedValue =
       sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
-    refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
+    refunds = getTotalRefundsTxBody pp lookupStakingDeposit txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 getProducedMaryValue ::

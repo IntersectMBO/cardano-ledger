@@ -355,8 +355,8 @@ instance EraTxBody ConwayEra where
 
   getTotalDepositsTxBody = conwayTotalDepositsTxBody
 
-  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
-    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+  getTotalRefundsTxBody pp lookupStakingDeposit txBody =
+    getTotalRefundsTxCerts pp lookupStakingDeposit (txBody ^. certsTxBodyL)
 
 -- ==========================================
 -- Deposits and Refunds for Conway TxBody

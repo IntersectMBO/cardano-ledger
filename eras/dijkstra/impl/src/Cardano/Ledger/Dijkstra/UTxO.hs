@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.Dijkstra.UTxO (
   DijkstraEraUTxO (..),
+  dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
   scriptsProvidedDijkstraStAnnTx,
@@ -33,7 +34,6 @@ import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
-  conwayConsumed,
   getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
@@ -62,6 +62,17 @@ class AlonzoEraUTxO era => DijkstraEraUTxO era where
   subTransactionsStAnnTx :: StAnnTx TopTx era -> [StAnnTx SubTx era]
   plutusLegacyModeStAnnTxG :: SimpleGetter (StAnnTx TopTx era) Bool
 
+-- | Unlike `shelleyConsumed`, this function does not need access to `Accounts` to produce accurate
+-- information about refunds, hence is this simplification. Note that using `shelleyConsumed` in
+-- Dijkstra era onwards will produce the same result as this one.
+dijkstraConsumed ::
+  EraUTxO era =>
+  PParams era ->
+  UTxO era ->
+  TxBody l era ->
+  Value era
+dijkstraConsumed pp = getConsumedValue pp (const Nothing)
+
 getConsumedDijkstraValue ::
   forall era l.
   ( DijkstraEraTxBody era
@@ -71,11 +82,10 @@ getConsumedDijkstraValue ::
   ) =>
   PParams era ->
   (Credential Staking -> Maybe Coin) ->
-  (Credential DRepRole -> Maybe Coin) ->
   UTxO era ->
   TxBody l era ->
   Value era
-getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
+getConsumedDijkstraValue pp lookupStakingDeposit utxo txBody =
   withBothTxLevels
     txBody
     ( \topTxBody ->
@@ -84,10 +94,10 @@ getConsumedDijkstraValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
     txBodyConsumedValue
   where
     txBodyConsumedValue :: forall m. TxBody m era -> Value era
-    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo
+    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit utxo
     subTransactionsConsumedValue topTxBody =
       foldMap'
-        (getConsumedValue pp lookupStakingDeposit lookupDRepDeposit utxo . view bodyTxL)
+        (getConsumedValue pp lookupStakingDeposit utxo . view bodyTxL)
         (topTxBody ^. subTransactionsTxBodyL)
 
 dijkstraProducedValue ::
@@ -120,8 +130,6 @@ dijkstraProducedValue pp isRegPoolId topTxBody =
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
-
-  consumed = conwayConsumed
 
   getConsumedValue = getConsumedDijkstraValue
 

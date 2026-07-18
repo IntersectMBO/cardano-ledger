@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -19,10 +20,12 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -31,7 +34,7 @@ import Cardano.Ledger.State
 import Cardano.Ledger.Val
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
@@ -107,6 +110,36 @@ spec = describe "UTXO" $ do
       passEpoch
       -- Check for successfull pool refund
       getBalance cred0 `shouldReturn` stakePoolDeposit
+    it "DRepNotRegistered" $ do
+      dRepCred <- KeyHashObj <$> freshKeyHash
+      -- Make sure deposit is positive
+      dRepDeposit <- (<> Coin 1) <$> arbitrary
+      addr1 <- freshKeyAddr_
+      let txAmount = Coin 2000000
+      txIn <- sendCoinTo addr1 txAmount
+      addr2 <- freshKeyAddr_
+      (_, rootTxOut) <- getImpRootTxOut
+      let
+        rootTxOutValue = rootTxOut ^. valueTxOutL
+        txBody =
+          mkBasicTxBody
+            & inputsTxBodyL .~ [txIn]
+            & outputsTxBodyL .~ [mkBasicTxOut addr2 mempty]
+        addUnRegDRepTxCert :: Tx TopTx era -> Tx TopTx era
+        addUnRegDRepTxCert tx =
+          tx
+            & bodyTxL . certsTxBodyL <>~ [UnRegDRepTxCert dRepCred dRepDeposit :: TxCert era]
+            & witsTxL .~ mkBasicTxWits
+      withPostFixup (updateAddrTxWits . addUnRegDRepTxCert) $
+        submitFailingTx
+          (mkBasicTx txBody)
+          [ injectFailure $
+              Shelley.ValueNotConservedUTxO $
+                Mismatch
+                  (rootTxOutValue <> inject txAmount <> inject dRepDeposit)
+                  (rootTxOutValue <> inject txAmount)
+          , injectFailure $ Conway.ConwayDRepNotRegistered dRepCred
+          ]
   describe "Reference scripts" $ do
     let
       nativeScript = RequireSignature @era <$> freshKeyHash

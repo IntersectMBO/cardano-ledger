@@ -42,13 +42,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.State ()
-import Cardano.Ledger.State (
-  EraCertState (..),
-  StakePoolParams (..),
-  dsGenDelegs,
-  lookupDepositDState,
-  psStakePoolsL,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.State as UTxO (
   CanGetUTxO (..),
   CanSetUTxO (..),
@@ -112,30 +106,27 @@ getShelleyScriptsNeeded u txBody =
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
     certificates = toList (txBody ^. certsTxBodyL)
 
--- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
+-- | Shelley version of consumed will work for all eras, however, starting with Dijkstra era it
+-- becomes simpler, because it will no longer require access to Accounts.
 shelleyConsumed ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
-  CertState era ->
+  Accounts era ->
   UTxO era ->
   TxBody l era ->
   Value era
-shelleyConsumed pp certState =
-  getConsumedValue
-    pp
-    (lookupDepositDState $ certState ^. certDStateL)
-    (const Nothing)
+shelleyConsumed pp accounts = getConsumedValue pp (`lookupAccountDeposit` accounts)
 
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
 produced ::
-  (EraUTxO era, EraCertState era) =>
+  EraUTxO era =>
   PParams era ->
-  CertState era ->
+  PState era ->
   TxBody TopTx era ->
   Value era
-produced pp certState =
-  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
+produced pp pState =
+  getProducedValue pp (flip Map.member $ pState ^. psStakePoolsL)
 
 shelleyProducedValue ::
   EraTxBody era =>
@@ -164,7 +155,7 @@ getConsumedCoin pp lookupRefund utxo txBody =
     <> refunds
     <> withdrawals
   where
-    refunds = getTotalRefundsTxBody pp lookupRefund (const Nothing) txBody
+    refunds = getTotalRefundsTxBody pp lookupRefund txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
@@ -173,9 +164,7 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
 
-  consumed = shelleyConsumed
-
-  getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
+  getConsumedValue = getConsumedCoin
 
   getProducedValue = shelleyProducedValue
 
