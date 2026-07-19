@@ -91,12 +91,15 @@ instance TranslateEra AlonzoEra (Tx TopTx) where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
+instance TranslateEra AlonzoEra SnapShots where
+  translateEra _ctxt _ss@SnapShots {..} = pure SnapShots {..}
+
 instance TranslateEra AlonzoEra EpochState where
   translateEra ctxt es =
     return
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = esSnapshots es
+        , esSnapshots = translateEra' ctxt $ esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }

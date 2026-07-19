@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `TranslateEra` instance for `SnapShots`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`
 * Make `requiredTopLevelGuards` available on the top-level transaction body:

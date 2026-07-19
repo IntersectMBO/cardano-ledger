@@ -338,7 +338,7 @@ instance ToKeyValuePairs SnapShot where
 -- purpose since we only want to force the thunk after one stability window
 -- when we know that they are stable (so that we do not compute them if we do not have to).
 -- See more info in the [Optimize TICKF ADR](https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
-data SnapShots = SnapShots
+data SnapShots era = SnapShots
   { ssStakeMark :: SnapShot -- Lazy on purpose
   , ssStakeMarkPoolDistr :: PoolDistr -- Lazy on purpose
   , ssStakeSet :: !SnapShot
@@ -346,13 +346,13 @@ data SnapShots = SnapShots
   , ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
-  deriving (ToJSON) via KeyValuePairs SnapShots
+  deriving (ToJSON) via KeyValuePairs (SnapShots era)
   -- TODO: switch `AllowThunksIn` to `OnlyCheckWhnfNamed`
-  deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] SnapShots
+  deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots era)
 
-instance NFData SnapShots
+instance NFData (SnapShots era)
 
-instance EncCBOR SnapShots where
+instance EncCBOR (SnapShots era) where
   encCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
     encodeListLen 4
       <> encCBOR ssStakeMark
@@ -361,11 +361,11 @@ instance EncCBOR SnapShots where
       <> encCBOR ssStakeGo
       <> encCBOR ssFee
 
-instance DecCBOR SnapShots where
+instance Era era => DecCBOR (SnapShots era) where
   decCBOR = decNoShareCBOR
 
-instance DecShareCBOR SnapShots where
-  type Share SnapShots = Share SnapShot
+instance DecShareCBOR (SnapShots era) where
+  type Share (SnapShots era) = Share SnapShot
   decSharePlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
     !ssStakeMark <- decSharePlusCBOR
     ssStakeSet <- decSharePlusCBOR
@@ -374,10 +374,10 @@ instance DecShareCBOR SnapShots where
     let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
     pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}
 
-instance Default SnapShots where
+instance Default (SnapShots era) where
   def = emptySnapShots
 
-instance ToKeyValuePairs SnapShots where
+instance ToKeyValuePairs (SnapShots era) where
   toKeyValuePairs ss@(SnapShots !_ _ _ _ _) =
     -- ssStakeMarkPoolDistr is omitted on purpose
     let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss
@@ -390,7 +390,7 @@ instance ToKeyValuePairs SnapShots where
 emptySnapShot :: SnapShot
 emptySnapShot = SnapShot (ActiveStake VMap.empty) (knownNonZeroCoin @1) mempty
 
-emptySnapShots :: SnapShots
+emptySnapShots :: SnapShots era
 emptySnapShots =
   SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
 
@@ -470,19 +470,19 @@ calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
 
 -- SnapShots
 
-ssStakeMarkL :: Lens' SnapShots SnapShot
+ssStakeMarkL :: Lens' (SnapShots era) SnapShot
 ssStakeMarkL = lens ssStakeMark (\ds u -> ds {ssStakeMark = u})
 
-ssStakeMarkPoolDistrL :: Lens' SnapShots PoolDistr
+ssStakeMarkPoolDistrL :: Lens' (SnapShots era) PoolDistr
 ssStakeMarkPoolDistrL = lens ssStakeMarkPoolDistr (\ds u -> ds {ssStakeMarkPoolDistr = u})
 
-ssStakeSetL :: Lens' SnapShots SnapShot
+ssStakeSetL :: Lens' (SnapShots era) SnapShot
 ssStakeSetL = lens ssStakeSet (\ds u -> ds {ssStakeSet = u})
 
-ssStakeGoL :: Lens' SnapShots SnapShot
+ssStakeGoL :: Lens' (SnapShots era) SnapShot
 ssStakeGoL = lens ssStakeGo (\ds u -> ds {ssStakeGo = u})
 
-ssFeeL :: Lens' SnapShots Coin
+ssFeeL :: Lens' (SnapShots era) Coin
 ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
 
 -- SnapShot

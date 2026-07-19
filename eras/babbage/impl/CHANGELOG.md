@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Add `TranslateEra` instance for `SnapShots`
 * Rename rule types and deprecate the old names:
   - `BabbageLEDGER` -> `LEDGER`
   - `BabbageUTXO` -> `UTXO`

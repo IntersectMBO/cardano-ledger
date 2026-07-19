@@ -148,7 +148,7 @@ instance
   , EraCertState era
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
-  , State (EraRule "SNAP" era) ~ SnapShots
+  , State (EraRule "SNAP" era) ~ SnapShots era
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
@@ -247,7 +247,7 @@ epochTransition ::
   , ConwayEraCertState era
   , EraTxOut era
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
-  , State (EraRule "SNAP" era) ~ SnapShots
+  , State (EraRule "SNAP" era) ~ SnapShots era
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Embed (EraRule "POOLREAP" era) (EPOCH era)

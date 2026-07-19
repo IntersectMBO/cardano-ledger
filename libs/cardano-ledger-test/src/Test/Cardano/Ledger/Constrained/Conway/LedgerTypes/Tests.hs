@@ -184,7 +184,7 @@ spec = do
   describe "Soundness of WellFormed types from the Cardano Ledger: " $ do
     soundSpecWith @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
 
-    soundSpecWith @SnapShots 10 $ do
+    soundSpecWith @(SnapShots ConwayEra) 10 $ do
       pp <- genConwayFn pparamsSpec
       ls <- lsX pp
       pure (snapShotsSpec (lit (getMarkSnapShot ls)))

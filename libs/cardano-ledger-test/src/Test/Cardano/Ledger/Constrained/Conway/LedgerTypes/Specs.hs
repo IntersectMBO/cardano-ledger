@@ -513,7 +513,7 @@ snapShotSpec =
       ]
 
 snapShotsSpec ::
-  Term SnapShot -> Specification SnapShots
+  Era era => Term SnapShot -> Specification (SnapShots era)
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|_go|] _fee ->

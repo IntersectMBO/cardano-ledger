@@ -55,7 +55,7 @@ instance NFData (SnapEvent era)
 data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
 instance (EraTxOut era, EraStake era, EraCertState era) => STS (SNAP era) where
-  type State (SNAP era) = SnapShots
+  type State (SNAP era) = SnapShots era
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = SnapEnv era
   type BaseM (SNAP era) = ShelleyBase

@@ -243,7 +243,7 @@ instance ToExpr (Datum era) where
   toExpr (Datum bd) = App "Datum" [toExpr bd]
 
 -- EpochBoundary
-instance ToExpr SnapShots
+instance ToExpr (SnapShots era)
 
 instance ToExpr SnapShot
 

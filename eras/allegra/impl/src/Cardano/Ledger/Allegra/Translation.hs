@@ -156,12 +156,15 @@ instance TranslateEra AllegraEra LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
+instance TranslateEra AllegraEra SnapShots where
+  translateEra _ctxt _ss@SnapShots {..} = pure SnapShots {..}
+
 instance TranslateEra AllegraEra EpochState where
   translateEra ctxt es =
     return
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = esSnapshots es
+        , esSnapshots = translateEra' ctxt $ esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }

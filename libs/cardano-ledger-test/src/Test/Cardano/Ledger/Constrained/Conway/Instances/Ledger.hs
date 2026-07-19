@@ -1465,9 +1465,9 @@ instance
   ) =>
   HasSpec (VMap vk vv k v)
 
-instance HasSimpleRep SnapShots
+instance HasSimpleRep (SnapShots era)
 
-instance HasSpec SnapShots
+instance Era era => HasSpec (SnapShots era)
 
 instance (Typeable (CertState era), EraTxOut era) => HasSimpleRep (LedgerState era)
 

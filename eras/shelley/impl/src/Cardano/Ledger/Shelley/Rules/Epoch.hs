@@ -98,7 +98,7 @@ instance
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
-  , State (EraRule "SNAP" era) ~ SnapShots
+  , State (EraRule "SNAP" era) ~ SnapShots era
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
@@ -124,7 +124,7 @@ epochTransition ::
   forall era.
   ( Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
-  , State (EraRule "SNAP" era) ~ SnapShots
+  , State (EraRule "SNAP" era) ~ SnapShots era
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()

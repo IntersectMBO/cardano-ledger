@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `TranslateEra` instance for `SnapShots`
 * Change `extraConfig` and `agExtraConfig` from `Maybe` to `StrictMaybe`
 * Remove `ueUtxo` field from `UtxoEnv`
 * Introduce `LEDGERS` and `STS` instance and wire it to `EraRule LEDGERS`

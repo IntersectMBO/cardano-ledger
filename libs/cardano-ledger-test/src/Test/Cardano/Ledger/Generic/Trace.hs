@@ -184,7 +184,8 @@ makeEpochState gstate ledgerstate =
     & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
     & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
 
-snaps :: (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots
+snaps ::
+  (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots era
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where

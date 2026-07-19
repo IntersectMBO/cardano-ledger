@@ -78,12 +78,15 @@ instance TranslateEra MaryEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
+instance TranslateEra MaryEra SnapShots where
+  translateEra _ctxt _ss@SnapShots {..} = pure SnapShots {..}
+
 instance TranslateEra MaryEra EpochState where
   translateEra ctxt es =
     return
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = esSnapshots es
+        , esSnapshots = translateEra' ctxt $ esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
