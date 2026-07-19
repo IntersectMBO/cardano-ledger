@@ -118,6 +118,8 @@
 
 ### `cddl`
 
+* Remove `shelleyProtocolVersionGroup`
+* Remove re-exported `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
 * Remove `withAntiGen` re-export, since it's deprecated
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 

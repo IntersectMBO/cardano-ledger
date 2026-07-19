@@ -11,8 +11,6 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.TxIn
-import Data.Word (Word32, Word64)
-import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -30,15 +28,6 @@ spec = do
     prop "Encode Coin - Decode CompactCoin" $
       roundTripExpectation @Coin (mkTrip encCBOR (fromCompact <$> decCBOR))
     roundTripCborSpec @ProtVer
-    prop "ProtVer/Word32" $ do
-      let badProtVerGen =
-            ProtVer
-              <$> arbitrary
-              <*> ( fromIntegral @Word64 @Natural
-                      <$> choose (fromIntegral (maxBound :: Word32) + 1, fromIntegral (maxBound :: Word64) * 2)
-                  )
-      forAll badProtVerGen $
-        roundTripCborRangeFailureExpectation (natVersion @12) maxBound
     roundTripCborSpec @Nonce
     roundTripCborSpec @Url
     roundTripCborSpec @DnsName

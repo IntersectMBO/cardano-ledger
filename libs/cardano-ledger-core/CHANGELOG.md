@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`
 * Remove `consumed ` from `EraUTxO`
 * Remove no longer needed `(Credential DRepRole -> Maybe Coin)` argument from:
@@ -54,6 +55,9 @@
 
 ### `cddl`
 
+* Add `HuddleRule` instance for `"protocol_version"` and `"major_protocol_version"`
+* Add `HuddleGroup` instance for `"protocol_version"`
+* Remove `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
 * Added various custom generator and validator helpers:
   - `validateFromName`
   - `validateFromGRef`

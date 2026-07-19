@@ -17,7 +17,6 @@ module Cardano.Ledger.Babbage.HuddleSpec (
   BabbageEra,
   babbageCDDL,
   babbageOperationalCertRule,
-  babbageProtocolVersionRule,
   babbageTransactionOutput,
   babbageScript,
   alonzoTransactionOutputRule,
@@ -30,7 +29,6 @@ module Cardano.Ledger.Babbage.HuddleSpec (
 import Cardano.Ledger.Alonzo.HuddleSpec hiding (
   shelleyHeaderBodyRule,
   shelleyOperationalCertGroup,
-  shelleyProtocolVersionGroup,
  )
 import Cardano.Ledger.Babbage (BabbageEra)
 import Data.Proxy (Proxy (..))
@@ -47,15 +45,6 @@ babbageCDDL =
     , HIRule $ huddleRule @"language" (Proxy @BabbageEra)
     , HIRule $ huddleRule @"signkey_kes" (Proxy @BabbageEra)
     ]
-
--- | Babbage changed protocol_version from GroupDef to Rule to match actual block
--- serialization. See 'header_body' instance for full explanation.
--- Ref: PR #3762, Issue #3559
-babbageProtocolVersionRule ::
-  forall era.
-  HuddleRule "major_protocol_version" era => Proxy "protocol_version" -> Proxy era -> Rule
-babbageProtocolVersionRule pname p =
-  pname =.= arr [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
 -- | Babbage changed operational_cert from GroupDef to Rule to match actual block
 -- serialization. See 'header_body' instance for full explanation.
@@ -307,12 +296,6 @@ instance HuddleRule "positive_interval" BabbageEra where
 instance HuddleRule "operational_cert" BabbageEra where
   huddleRuleNamed = babbageOperationalCertRule
 
-instance HuddleRule "protocol_version" BabbageEra where
-  huddleRuleNamed = babbageProtocolVersionRule
-
-instance HuddleRule "major_protocol_version" BabbageEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
 instance HuddleRule "block" BabbageEra where
   huddleRuleNamed pname p =
     comment
@@ -357,7 +340,7 @@ instance HuddleRule "header" BabbageEra where
 -- blocks serialize with Rule (nested arrays). This change corrects the CDDL spec to
 -- match the actual CBOR serialization.
 --
--- See 'babbageProtocolVersionRule' and 'operational_cert' instance for details.
+-- See 'babbageOperationalCertRule' for details.
 -- References: PR #3762, Issue #3559
 instance HuddleRule "header_body" BabbageEra where
   huddleRuleNamed pname p = babbageHeaderBodyRule pname p //- "nonce_vrf and leader_vrf are replaced by vrf_result"

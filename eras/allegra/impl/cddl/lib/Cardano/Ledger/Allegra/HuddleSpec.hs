@@ -174,12 +174,6 @@ scriptInvalidHereafterGroup pname p =
     $ pname
       =.~ grp [5, a (huddleRule @"slot" p)]
 
-instance HuddleRule "major_protocol_version" AllegraEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
-instance HuddleGroup "protocol_version" AllegraEra where
-  huddleGroupNamed = shelleyProtocolVersionGroup
-
 instance HuddleRule "protocol_param_update" AllegraEra where
   huddleRuleNamed = protocolParamUpdateRule
 

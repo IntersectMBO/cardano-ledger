@@ -80,13 +80,6 @@ dijkstraCDDL =
     , HIRule $ huddleRule @"certificate" (Proxy @DijkstraEra)
     ]
 
--- | Dijkstra constrains the minor protocol version to Word32 (uint .size 4).
-dijkstraProtocolVersionRule ::
-  forall era.
-  HuddleRule "major_protocol_version" era => Proxy "protocol_version" -> Proxy era -> Rule
-dijkstraProtocolVersionRule pname p =
-  pname =.= arr [a $ huddleRule @"major_protocol_version" p, a $ VUInt `sized` (4 :: Word64)]
-
 guardsRule ::
   forall era.
   ( HuddleRule "addr_keyhash" era
@@ -481,9 +474,6 @@ instance HuddleRule "dns_name" DijkstraEra where
 instance HuddleRule "url" DijkstraEra where
   huddleRuleNamed pname _ = urlRule pname
 
-instance HuddleRule "major_protocol_version" DijkstraEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
 instance HuddleRule "genesis_hash" DijkstraEra where
   huddleRuleNamed = genesisHashRule
 
@@ -541,9 +531,6 @@ instance HuddleRule "voter" DijkstraEra where
 
 instance HuddleRule "operational_cert" DijkstraEra where
   huddleRuleNamed = babbageOperationalCertRule
-
-instance HuddleRule "protocol_version" DijkstraEra where
-  huddleRuleNamed = dijkstraProtocolVersionRule
 
 instance HuddleRule "policy_id" DijkstraEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p

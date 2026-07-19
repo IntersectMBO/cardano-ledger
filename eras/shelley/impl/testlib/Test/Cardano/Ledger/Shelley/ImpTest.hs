@@ -2197,18 +2197,17 @@ genCantFollow pv@ProtVer {pvMajor, pvMinor} =
     , cantFollowMinor
     , do
         Positive newMinor <- arbitrary
-        pure $ (majorFollow pv) {pvMinor = fromIntegral @Word32 @Natural newMinor}
+        pure $ (majorFollow pv) {pvMinor = newMinor}
     ]
   where
-    maxMinor = fromIntegral @Word32 @Natural maxBound
+    maxMinor = maxBound @Word32
     cantFollowMinor
-      | pvMinor > maxMinor = error $ "Minor version is too big: " ++ show pvMinor
       | pvMinor == pred maxMinor = do
-          newMinor <- choose (minBound, pred $ fromIntegral @Natural @Word32 pvMinor)
-          pure pv {pvMinor = fromIntegral @Word32 @Natural newMinor}
+          newMinor <- choose (minBound, pred $ pvMinor)
+          pure pv {pvMinor = newMinor}
       | otherwise = do
-          newMinor <- choose (succ $ succ $ fromIntegral @Natural @Word32 pvMinor, maxBound)
-          pure pv {pvMinor = fromIntegral @Word32 @Natural newMinor}
+          newMinor <- choose (succ $ succ $ pvMinor, maxBound)
+          pure pv {pvMinor = newMinor}
     -- For major version we can only go backwards
     cantFollowMajor = do
       let pvMajor32 = getVersion32 pvMajor
