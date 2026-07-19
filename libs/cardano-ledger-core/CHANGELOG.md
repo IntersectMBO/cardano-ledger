@@ -55,6 +55,9 @@
 
 ### `cddl`
 
+* Add `HuddleRule` instance for `"protocol_version"` and `"major_protocol_version"`
+* Add `HuddleGroup` instance for `"protocol_version"`
+* Remove `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
 * Added various custom generator and validator helpers:
   - `validateFromName`
   - `validateFromGRef`

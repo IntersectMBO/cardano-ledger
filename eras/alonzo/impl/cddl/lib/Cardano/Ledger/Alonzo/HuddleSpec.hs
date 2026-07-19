@@ -327,12 +327,6 @@ instance HuddleRule "header" AlonzoEra where
 instance HuddleRule "header_body" AlonzoEra where
   huddleRuleNamed = shelleyHeaderBodyRule
 
-instance HuddleGroup "protocol_version" AlonzoEra where
-  huddleGroupNamed = shelleyProtocolVersionGroup
-
-instance HuddleRule "major_protocol_version" AlonzoEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
 instance HuddleRule "transaction" AlonzoEra where
   huddleRuleNamed pname p =
     pname

@@ -15,7 +15,6 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   module Cardano.Ledger.Core.HuddleSpec,
   ShelleyEra,
   shelleyCDDL,
-  shelleyProtocolVersionGroup,
   headerRule,
   proposedProtocolParameterUpdatesRule,
   updateRule,
@@ -55,7 +54,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
   untaggedSet,
 ) where
 
-import Cardano.Ledger.Core.HuddleSpec (majorProtocolVersionRule, plutusScriptGen)
+import Cardano.Ledger.Core.HuddleSpec (plutusScriptGen)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Data.Int (Int32)
@@ -71,11 +70,6 @@ shelleyCDDL =
     , HIRule $ huddleRule @"transaction" (Proxy @ShelleyEra)
     , HIRule $ huddleRule @"signkey_kes" (Proxy @ShelleyEra)
     ]
-
-shelleyProtocolVersionGroup ::
-  forall era.
-  HuddleRule "major_protocol_version" era => Proxy "protocol_version" -> Proxy era -> GroupDef
-shelleyProtocolVersionGroup pname p = pname =.~ grp [a $ huddleRule @"major_protocol_version" p, a VUInt]
 
 headerRule ::
   forall era. HuddleRule "header_body" era => Proxy "header" -> Proxy era -> Rule
@@ -100,8 +94,7 @@ updateRule pname p =
     =.= arr [a $ huddleRule @"proposed_protocol_parameter_updates" p, a $ huddleRule @"epoch" p]
 
 protocolParamUpdateRule ::
-  forall era.
-  HuddleGroup "protocol_version" era => Proxy "protocol_param_update" -> Proxy era -> Rule
+  forall era. Era era => Proxy "protocol_param_update" -> Proxy era -> Rule
 protocolParamUpdateRule pname p =
   pname
     =.= mp
@@ -126,9 +119,7 @@ protocolParamUpdateRule pname p =
 
 shelleyHeaderBodyRule ::
   forall era.
-  ( HuddleGroup "operational_cert" era
-  , HuddleGroup "protocol_version" era
-  ) =>
+  HuddleGroup "operational_cert" era =>
   Proxy "header_body" ->
   Proxy era ->
   Rule
@@ -491,12 +482,6 @@ instance HuddleRule "certificate" ShelleyEra where
 
 instance HuddleRule "withdrawals" ShelleyEra where
   huddleRuleNamed = shelleyWithdrawalsRule
-
-instance HuddleRule "major_protocol_version" ShelleyEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
-instance HuddleGroup "protocol_version" ShelleyEra where
-  huddleGroupNamed = shelleyProtocolVersionGroup
 
 instance HuddleRule "protocol_param_update" ShelleyEra where
   huddleRuleNamed = protocolParamUpdateRule

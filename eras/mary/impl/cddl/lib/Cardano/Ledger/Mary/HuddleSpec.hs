@@ -85,12 +85,6 @@ instance HuddleRule "header" MaryEra where
 instance HuddleRule "header_body" MaryEra where
   huddleRuleNamed = shelleyHeaderBodyRule
 
-instance HuddleGroup "protocol_version" MaryEra where
-  huddleGroupNamed = shelleyProtocolVersionGroup
-
-instance HuddleRule "major_protocol_version" MaryEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
 instance HuddleRule "transaction_id" MaryEra where
   huddleRuleNamed = transactionIdRule
 

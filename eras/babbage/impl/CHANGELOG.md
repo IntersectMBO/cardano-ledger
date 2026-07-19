@@ -30,6 +30,8 @@
 
 ### `cddl`
 
+* Remove re-exported `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
+* Remove `babbageProtocolVersionRule`
 * Change `ipv4` and `ipv6` to use exact byte sizes (4 and 16 respectively), no longer allowing leftover bytes
 * Fix `ex_unit_prices` CDDL to use `nonnegative_interval` instead of `positive_interval`
 * Extend `constr` CDDL rule to include tags 1280–1400 for Plutus `Data` constructor indexes

@@ -467,7 +467,7 @@ parameterChangeActionGroup pname p =
 
 hardForkInitiationActionGroup ::
   forall era.
-  (HuddleRule "gov_action_id" era, HuddleRule "protocol_version" era) =>
+  HuddleRule "gov_action_id" era =>
   Proxy "hard_fork_initiation_action" ->
   Proxy era ->
   GroupDef
@@ -796,9 +796,6 @@ instance HuddleRule "dns_name" ConwayEra where
 instance HuddleRule "url" ConwayEra where
   huddleRuleNamed pname _ = urlRule pname
 
-instance HuddleRule "major_protocol_version" ConwayEra where
-  huddleRuleNamed = majorProtocolVersionRule
-
 instance HuddleRule "genesis_hash" ConwayEra where
   huddleRuleNamed = genesisHashRule
 
@@ -854,9 +851,6 @@ instance (Era era, HuddleRule "transaction_id" era) => HuddleRule "gov_action_id
 
 instance HuddleRule "operational_cert" ConwayEra where
   huddleRuleNamed = babbageOperationalCertRule
-
-instance HuddleRule "protocol_version" ConwayEra where
-  huddleRuleNamed = babbageProtocolVersionRule
 
 instance Era era => HuddleRule "plutus_v3_script" era where
   huddleRuleNamed pname _ =

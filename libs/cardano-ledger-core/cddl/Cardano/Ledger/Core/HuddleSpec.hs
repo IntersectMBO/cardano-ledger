@@ -16,33 +16,28 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Core.HuddleSpec where
+module Cardano.Ledger.Core.HuddleSpec (
+  plutusScriptGen,
+) where
 
 import Cardano.Ledger.BaseTypes (getVersion)
 import Cardano.Ledger.Core (ByronEra, eraProtVerHigh, eraProtVerLow)
 import Cardano.Ledger.Huddle
 import Cardano.Ledger.Huddle.Gen (
-  CBORGen,
-  CustomValidatorResult (..),
-  MonadGen (..),
+  MonadGen (choose),
   RuleTerm (..),
   arbitrary,
   genArrayTerm,
-  liftAntiGen,
   oneof,
   vectorOf,
-  (|!),
  )
-import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
-import qualified Data.Text as T
 import Data.Word (Word16, Word32, Word64)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import Text.Heredoc
@@ -107,28 +102,6 @@ instance Era era => HuddleRule "unit_interval" era where
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
     pname =.= tag 30 (arr [a VUInt, a (huddleRule @"positive_int" p)])
-
-distinct :: IsSizeable s => Value s -> HuddleItem
-distinct x =
-  HIRule
-    $ comment
-      [str| A type for distinct values.
-          | The type parameter must support .size, for example: bytes or uint
-          |]
-    $ "distinct_"
-      <> Name (show' x)
-        =:= (x `H.sized` (8 :: Word64))
-        / (x `H.sized` (16 :: Word64))
-        / (x `H.sized` (20 :: Word64))
-        / (x `H.sized` (24 :: Word64))
-        / (x `H.sized` (30 :: Word64))
-        / (x `H.sized` (32 :: Word64))
-  where
-    show' :: Value s -> T.Text
-    show' = \case
-      VBytes -> T.pack "bytes"
-      VUInt -> T.pack "uint"
-      _ -> error "Unsupported Value for `distinct`"
 
 instance Era era => HuddleRule "nonce" era where
   huddleRuleNamed pname p = pname =.= arr [0] / arr [1, a (huddleRule @"hash32" p)]
@@ -313,19 +286,6 @@ instance Era era => HuddleRule "stake_credential" era where
 instance Era era => HuddleRule "port" era where
   huddleRuleNamed pname _ = pname =.= VUInt `le` 65535
 
-ipGen :: Int -> CBORGen RuleTerm
-ipGen n = do
-  l <- liftAntiGen $ choose (n, 1024) |! choose (0, pred n)
-  bs <- genByteString l
-  -- TODO Also generate with TBytesI
-  pure . SingleTerm $ TBytes bs
-
-ipValidator :: Int -> Term -> CustomValidatorResult
-ipValidator n = \case
-  TBytes bs | BS.length bs >= n -> CustomValidatorSuccess
-  TBytesI bs | LBS.length bs >= fromIntegral n -> CustomValidatorSuccess
-  _ -> CustomValidatorFailure $ "Expected bytes with length >=" <> T.pack (show n)
-
 ipRule ::
   forall era (r :: Symbol).
   KnownSymbol r => Int -> Proxy r -> Proxy era -> Rule
@@ -337,9 +297,16 @@ instance Era era => HuddleRule "ipv4" era where
 instance Era era => HuddleRule "ipv6" era where
   huddleRuleNamed = ipRule 16
 
-majorProtocolVersionRule ::
-  forall era. Era era => Proxy "major_protocol_version" -> Proxy era -> Rule
-majorProtocolVersionRule pname _ =
-  pname
-    =.= getVersion @Integer (eraProtVerLow @ByronEra)
-    ... succ (getVersion @Integer (eraProtVerHigh @era))
+instance Era era => HuddleRule "major_protocol_version" era where
+  huddleRuleNamed pname _ =
+    pname
+      =.= getVersion @Integer (eraProtVerLow @ByronEra)
+      ... succ (getVersion @Integer (eraProtVerHigh @era))
+
+instance Era era => HuddleRule "protocol_version" era where
+  huddleRuleNamed pname p =
+    pname =.= arr [a $ huddleRule @"major_protocol_version" p, a $ VUInt `sized` (4 :: Word64)]
+
+instance Era era => HuddleGroup "protocol_version" era where
+  huddleGroupNamed pname p =
+    pname =.~ grp [a $ huddleRule @"major_protocol_version" p, a $ VUInt `sized` (4 :: Word64)]
