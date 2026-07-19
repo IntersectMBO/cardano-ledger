@@ -208,7 +208,7 @@ import System.Random.Stateful (isInRangeOrd)
 maxDecimalsWord64 :: Int
 maxDecimalsWord64 = 19
 
-data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
+data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Word32}
   deriving (Show, Eq, Generic, Ord, NFData)
   deriving (EncCBOR) via (CBORGroup ProtVer)
   deriving (DecCBOR) via (CBORGroup ProtVer)
@@ -241,13 +241,7 @@ instance EncCBORGroup ProtVer where
   listLen _ = 2
 
 instance DecCBORGroup ProtVer where
-  decCBORGroup =
-    ProtVer
-      <$> decCBOR
-      <*> ifDecoderVersionAtLeast
-        (natVersion @12)
-        (fromIntegral @Word32 @Natural <$> decCBOR @Word32)
-        (decCBOR @Natural)
+  decCBORGroup = ProtVer <$> decCBOR <*> decCBOR
 
 -- | Decoder for `ProtVer` that only accepts versions where the major fits in
 -- the bounds of what's allowed for the provided Era.

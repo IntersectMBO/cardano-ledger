@@ -216,7 +216,7 @@ genDecentralisationParam = unsafeBoundRational <$> QC.elements [0.1, 0.2 .. 1]
 
 genProtocolVersion :: HasCallStack => Version -> Version -> Gen ProtVer
 genProtocolVersion minMajPV maxMajPV =
-  ProtVer <$> genVersion minMajPV maxMajPV <*> genNatural 1 50
+  ProtVer <$> genVersion minMajPV maxMajPV <*> choose (1, 50)
 
 genMinUTxOValue :: HasCallStack => Gen Coin
 genMinUTxOValue = Coin <$> genInteger 1 20

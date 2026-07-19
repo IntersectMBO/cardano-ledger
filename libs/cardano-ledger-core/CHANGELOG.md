@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`
 * Remove `consumed ` from `EraUTxO`
 * Remove no longer needed `(Credential DRepRole -> Maybe Coin)` argument from:
