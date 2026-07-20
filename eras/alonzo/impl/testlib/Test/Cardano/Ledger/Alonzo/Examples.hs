@@ -105,7 +105,7 @@ ledgerExamples =
         , agMaxValSize = 1234
         , agCollateralPercentage = 20
         , agMaxCollateralInputs = 30
-        , agExtraConfig = Nothing
+        , agExtraConfig = SNothing
         }
 
 exampleAlonzoTx :: Tx TopTx AlonzoEra

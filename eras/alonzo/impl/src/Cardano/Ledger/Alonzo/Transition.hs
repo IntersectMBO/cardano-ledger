@@ -14,6 +14,7 @@ import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams, ppCostModelsL)
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.Translation ()
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Transition (TransitionConfig (MaryTransitionConfig))
 import Cardano.Ledger.Plutus.CostModels (CostModels, CostModelsUpdate (..), updateCostModels)
@@ -48,8 +49,8 @@ alonzoInjectCostModels ::
   TransitionConfig AlonzoEra -> NewEpochState era -> NewEpochState era
 alonzoInjectCostModels cfg =
   case agExtraConfig $ cfg ^. tcTranslationContextL of
-    Nothing -> id
-    Just aec -> overrideCostModels (aecCostModels aec)
+    SNothing -> id
+    SJust aec -> overrideCostModels (aecCostModels aec)
 
 overrideCostModels ::
   (EraTransition era, AlonzoEraPParams era) =>

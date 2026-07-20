@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -56,7 +57,7 @@ import Data.Functor.Identity (Identity)
 import Data.ListMap (ListMap)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
-import NoThunks.Class (NoThunks)
+import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 -- | Extra configuration for injecting Conway-specific Genesis data
 data ConwayExtraConfig = ConwayExtraConfig
@@ -122,7 +123,10 @@ cgExtraConfigL = lens cgExtraConfig (\x y -> x {cgExtraConfig = y})
 instance EraGenesis ConwayEra where
   type Genesis ConwayEra = ConwayGenesis
 
-instance NoThunks ConwayGenesis
+deriving via
+  AllowThunksIn '["cgDelegs", "cgInitialDReps"] ConwayGenesis
+  instance
+    NoThunks ConwayGenesis
 
 instance NFData ConwayGenesis
 

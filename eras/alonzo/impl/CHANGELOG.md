@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Change `extraConfig` and `agExtraConfig` from `Maybe` to `StrictMaybe`
 * Remove `ueUtxo` field from `UtxoEnv`
 * Introduce `LEDGERS` and `STS` instance and wire it to `EraRule LEDGERS`
 * Export `alonzoPlutusScriptDecoder` from `Cardano.Ledger.Alonzo.TxWits`
