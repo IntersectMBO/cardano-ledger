@@ -75,11 +75,15 @@ instance TranslateEra DijkstraEra (Tx TopTx) where
 instance TranslateEra DijkstraEra NewEpochState where
   translateEra ctxt nes = do
     let es = translateEra' ctxt $ nesEs nes
-        -- We need to ensure that we have the same initial EnactState in the pulser as
-        -- well as in the current EnactState, otherwise in the very first EPOCH rule call
-        -- the pulser will reset it.
+        -- Carry over the translated pulser's ratify state, overriding only its
+        -- EnactState so the first EPOCH rule sees a consistent one. Starting from
+        -- `def` instead would drop rsEnacted/rsExpired/rsDelayed, silently losing
+        -- the enactment (removal, deposit refund, GovInfoEvent) of any action due
+        -- to enact at the era boundary.
+        (_, carriedRatifyState) =
+          finishDRepPulser (cgsDRepPulsingState (es ^. epochStateGovStateL))
         ratifyState =
-          def
+          carriedRatifyState
             & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
     pure $
       NewEpochState
