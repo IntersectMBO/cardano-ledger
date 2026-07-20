@@ -6,6 +6,7 @@
 
 module Cardano.Ledger.Dijkstra.State.CertState () where
 
+import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
@@ -15,7 +16,7 @@ import Cardano.Ledger.Dijkstra.State.Account ()
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Val ((<+>))
-import Data.Foldable (foldMap')
+import Data.Foldable (fold, foldMap')
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
 
@@ -59,9 +60,13 @@ dijkstraCertsTotalDepositsTxBody pp certState = \txBody ->
               foldMap' (^. bodyTxL . certsTxBodyL) subTxs
                 <> (topTxBody ^. certsTxBodyL)
          in getTotalDepositsTxCerts pp isPoolReg batchTxCerts
-              <+> conwayProposalsDeposits pp topTxBody
-              <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
+              <+> depositPerTxBody topTxBody
+              <+> foldMap' (depositPerTxBody . (^. bodyTxL)) subTxs
     )
     (getTotalDepositsTxBody pp isPoolReg)
   where
     isPoolReg = (`Map.member` psStakePools (conwayCertPState certState))
+    depositPerTxBody :: TxBody ll era -> Coin
+    depositPerTxBody body =
+      conwayProposalsDeposits pp body
+        <+> fold (unDirectDeposits (body ^. directDepositsTxBodyL))
