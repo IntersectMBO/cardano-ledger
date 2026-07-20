@@ -111,18 +111,19 @@ dijkstraProducedValue ::
   TxBody TopTx era ->
   MaryValue
 dijkstraProducedValue pp isRegPoolId topTxBody =
-  commonProduced topTxBody
-    <> foldMap' (commonProduced . (^. bodyTxL)) subTxs
+  producedPerTxBody topTxBody
+    <> foldMap' (producedPerTxBody . (^. bodyTxL)) subTxs
     <> inject (topTxBody ^. feeTxBodyL)
     <> inject (getTotalDepositsTxCerts pp isRegPoolId batchTxCerts)
   where
-    -- add all produced values that are common across transaction levels
-    commonProduced :: TxBody l era -> MaryValue
-    commonProduced txBody =
+    -- add all values that are produced by both top and sub-transactions
+    producedPerTxBody :: TxBody l era -> MaryValue
+    producedPerTxBody txBody =
       sumAllValue (txBody ^. outputsTxBodyL)
         <> inject (txBody ^. treasuryDonationTxBodyL)
         <> inject (conwayProposalsDeposits pp txBody)
         <> burnedMultiAssets txBody
+        <> inject (fold (unDirectDeposits (txBody ^. directDepositsTxBodyL)))
     batchTxCerts =
       foldMap' (^. bodyTxL . certsTxBodyL) subTxs
         <> (topTxBody ^. certsTxBodyL)
