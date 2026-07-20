@@ -578,6 +578,7 @@ aliceStakePoolParamsSmallCost =
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = byteArrayFromShortByteString "{}"
             }
+    , sppLeiosKey = SNothing
     }
   where
     vkVrf = vrfVerKey $ mkVRFKeyPair @MockCrypto (RawSeed 0 0 0 0 2)

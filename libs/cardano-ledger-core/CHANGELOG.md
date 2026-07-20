@@ -31,6 +31,13 @@
 * Rename `kindObject` (which returned `Value`) to `kindObjectValue`
 * Add `kindObject :: Text -> [Pair] -> Object` returning an `Aeson.Object`
 * Add `NFData (Script era)`, `ToJSON (Script era)`, `FromJSON (Script era)`, `ToJSON (NativeScript era)`, and `FromJSON (NativeScript era)` as superclass constraints to `EraScript`
+* Move `EncCBOR PoolCert` instance to `cardano-ledger-conformance`
+* Remove `[Enc|Dec]CBORGRoup` instances for `StakePoolParams`
+* Add `withStakePoolParamsFlatEncoding` and `decodeStakePoolParamsFlat` for flat (non-nested) CBOR encoding/decoding
+* Add `sppLeiosKey` field to `StakePoolParams`
+* Add `spsLeiosKey` field and `spsLeiosKeyL` lens to `StakePoolState`
+* Add `LeiosKey`, `LeiosPubKey`, `LeiosPossessionProof` types with `EncCBOR`/`DecCBOR`, `ToJSON`/`FromJSON` instances
+* Make `FromJSON StakePoolParams` backward-compatible: `leiosKey` field is optional (defaults to `SNothing`)
 
 ### `cddl`
 

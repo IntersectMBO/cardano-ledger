@@ -9,6 +9,7 @@
                 "network": "Testnet"
             },
             "cost": 5,
+            "leiosKey": null,
             "margin": 0.1,
             "metadata": {
                 "hash": "7b7d",
@@ -49,6 +50,7 @@
                 "network": "Testnet"
             },
             "cost": 340000000,
+            "leiosKey": null,
             "margin": 0.1,
             "metadata": {
                 "hash": "7b7d",
@@ -83,6 +85,7 @@
                 "network": "Testnet"
             },
             "cost": 170000000,
+            "leiosKey": null,
             "margin": 0.1,
             "metadata": null,
             "owners": [

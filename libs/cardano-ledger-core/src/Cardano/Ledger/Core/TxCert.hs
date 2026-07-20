@@ -23,7 +23,6 @@ module Cardano.Ledger.Core.TxCert (
 
 import Cardano.Ledger.BaseTypes (kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core.Era (Era)
 import Cardano.Ledger.Core.PParams (PParams)
@@ -134,12 +133,6 @@ data PoolCert
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)
-
-instance EncCBOR PoolCert where
-  encCBOR =
-    encode . \case
-      RegPool pp -> Sum RegPool 0 !> To pp
-      RetirePool kh eNo -> Sum RetirePool 1 !> To kh !> To eNo
 
 instance NoThunks PoolCert
 

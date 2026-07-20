@@ -218,9 +218,10 @@ library cddl
   build-depends:
     antigen,
     base,
+    cardano-crypto-class,
     cardano-crypto-leios:{cardano-crypto-leios, testlib},
     cardano-ledger-conway:cddl,
-    cardano-ledger-core:cddl,
+    cardano-ledger-core:{cardano-ledger-core, cddl, testlib},
     cardano-ledger-dijkstra,
     cborg,
     heredoc,

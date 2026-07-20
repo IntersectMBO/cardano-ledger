@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,6 +11,8 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
 import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -35,6 +38,16 @@ instance SpecTranslate ConwayEra (PState ConwayEra) where
       <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
       <*> toSpecRepMap psFutureStakePoolParams
       <*> toSpecRepMap psRetiring
+
+-- | This instance is only used for conformance testing (e.g. @ExecSpecRule@).
+-- This instance uses arbitrary tags (0 and 1) that don't match the CDDL spec.
+--
+-- The actual spec-compliant CBOR encoding that follows the CDDL is handled by 'encodePoolCert'.
+instance EncCBOR PoolCert where
+  encCBOR =
+    encode . \case
+      RegPool pp -> Sum RegPool 0 !> To pp
+      RetirePool kh eNo -> Sum RetirePool 1 !> To kh !> To eNo
 
 instance SpecTranslate ConwayEra PoolCert where
   type SpecRep ConwayEra PoolCert = Agda.DCert
