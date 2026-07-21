@@ -162,13 +162,13 @@ ledgerTraceFromBlock chainSt block =
       Trace.closureWith @(EraRule "LEDGER" era)
         ledgerEnv
         ledgerSt0
-        ( \ls tx ->
+        ( \ls ->
             mkStAnnTx
               (epochInfo testGlobals)
               (systemStart testGlobals)
               (ledgerEnv ^. ledgerPpL)
               (ls ^. lsUTxOStateL . utxoG)
-              tx
+              mempty
         )
         txs
   )
@@ -197,13 +197,13 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
       Trace.closureWith @(EraRule "LEDGER" era)
         ledgerEnv
         restrictedSt0
-        ( \ls tx ->
+        ( \ls ->
             mkStAnnTx
               (epochInfo testGlobals)
               (systemStart testGlobals)
               (ledgerEnv ^. ledgerPpL)
               (ls ^. lsUTxOStateL . utxoG)
-              tx
+              mempty
         )
         txs
   )

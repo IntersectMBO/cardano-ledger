@@ -583,6 +583,7 @@ constrainedUtxo =
             (systemStart testGlobals)
             (uePParams uecUtxoEnv)
             uecUTxO
+            mempty
             tx
     )
 

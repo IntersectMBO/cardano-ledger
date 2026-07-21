@@ -64,7 +64,7 @@ import Cardano.Ledger.Plutus (
   PlutusArgs,
   PlutusBinary,
   PlutusLanguage,
-  PlutusRunnable,
+  PlutusRunnable (..),
   PlutusScriptContext,
   SLanguage (..),
   asSLanguage,
@@ -74,7 +74,7 @@ import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..))
 import Control.Monad (join)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
@@ -288,10 +288,27 @@ mkSupportedBinaryPlutusScript supportedLanguage plutus =
     SupportedLanguage sLang ->
       mkSupportedPlutusScript (asSLanguage sLang (Plutus plutus))
 
+-- | Invariant of this type is that it cannot be used between different protocol versions. In other
+-- words `SupportedPlutusRunnable` constructed from the same script, but two separate protocol
+-- versions, is not guaranteed to be the same, i.e. one of the could fail decoding, while the other
+-- would not.
 data SupportedPlutusRunnable era where
   SupportedPlutusRunnable ::
     EraPlutusTxInfo l era =>
     !(PlutusRunnable l) -> SupportedPlutusRunnable era
+
+instance Show (SupportedPlutusRunnable era) where
+  show (SupportedPlutusRunnable spr) = "(SupportedPlutusRunnable (" ++ show spr ++ "))"
+
+-- | As long as the language and the script hash are the same, we can conclude equality, because of
+-- the type invariant
+instance Eq (SupportedPlutusRunnable era) where
+  SupportedPlutusRunnable spr1 == SupportedPlutusRunnable spr2 =
+    plutusLanguage spr1 == plutusLanguage spr2
+      && plutusRunnableScriptHash spr1 == plutusRunnableScriptHash spr2
+
+instance NFData (SupportedPlutusRunnable era) where
+  rnf (SupportedPlutusRunnable spr) = rnf spr
 
 data SupportedLanguage era where
   SupportedLanguage :: EraPlutusTxInfo l era => SLanguage l -> SupportedLanguage era

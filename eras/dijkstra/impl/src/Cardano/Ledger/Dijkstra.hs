@@ -112,19 +112,22 @@ mkDijkstraStAnnTopTx ::
   SystemStart ->
   PParams era ->
   UTxO era ->
+  Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   Tx TopTx era ->
   DijkstraStAnnTx TopTx era
-mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
+mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
   let
     txBody = tx ^. bodyTxL
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo txBody
     scriptsProvided = getScriptsProvided utxo tx
-    (plutusScriptsCache, plutusScriptsUsed) =
-      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded mempty
+    (newStAnnTxCache, plutusScriptsUsed) =
+      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded stAnnTxCache
+    -- We do not need to fold over sub-transactions in order to get updated cache, since
+    -- `getScriptsProvided` is recursive and will collect all scripts from sub-transactions
     stAnnSubTxs =
       map
-        (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache)
+        (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided newStAnnTxCache)
         (toList (txBody ^. subTransactionsTxBodyL))
     ledgerTxInfo =
       LedgerTxInfo
@@ -147,6 +150,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
       , dsattPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed
+      , dsattPlutusRunnableCache = newStAnnTxCache
       , dsattPlutusLanguagesUsed = languagesUsed
       , dsattPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed

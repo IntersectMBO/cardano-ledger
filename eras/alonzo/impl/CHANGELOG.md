@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `asatPlutusRunnableCache` field to `AlonzoStAnnTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Add `SupportedPlutusRunnable` type and add `mkSupportedPlutusRunnable` to `EraPlutusContext`
 * Remove `mkPlutusWithContext` from `EraPlutusContext`
 * Make `AlonzoTx` decoder that used for Mempool backwards compatible with prior-eras

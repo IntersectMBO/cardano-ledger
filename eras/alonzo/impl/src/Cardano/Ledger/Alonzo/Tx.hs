@@ -76,7 +76,7 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
   ppPricesL,
  )
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError, SupportedPlutusRunnable)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModel,
@@ -130,6 +130,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -488,6 +489,7 @@ data AlonzoStAnnTx l era where
     , asatScriptsNeeded :: ScriptsNeeded era
     , asatScriptsProvided :: ScriptsProvided era
     , asatPlutusLanguagesUsed :: Set Language
+    , asatPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , asatPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     } ->
     AlonzoStAnnTx TopTx era
@@ -525,10 +527,11 @@ instance
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
-  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _) =
+  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in asatTx `deepseq`
           asatScriptsNeeded `deepseq`
             asatScriptsProvided `deepseq`
-              asatPlutusLanguagesUsed `deepseq`
-                rnf asatPlutusScriptsWithContext
+              asatPlutusRunnableCache `deepseq`
+                asatPlutusLanguagesUsed `deepseq`
+                  rnf asatPlutusScriptsWithContext

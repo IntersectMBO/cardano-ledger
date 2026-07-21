@@ -40,7 +40,7 @@ instance ApplyTx AllegraEra where
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
 
-  mkStAnnTx _ _ _ _ = id
+  mkStAnnTx _ _ _ _ _ = id
 
   internalApplyTxWithValidation = defaultApplyTxWithValidation @"LEDGER" AllegraApplyTxError
 

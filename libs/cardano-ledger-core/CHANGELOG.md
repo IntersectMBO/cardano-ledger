@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `StAnnTxCache` associated type and `getCacheStAnnTx` method to `EraUTxO`, together with a new `Monoid (StAnnTxCache era)` superclass constraint
 * Restructure `PlutusRunnable` from a `newtype` over `ScriptForEvaluation` into a record with fields `plutusRunnableBinary`, `plutusRunnableScriptHash` and `plutusRunnableResult`
 * Change `decodePlutusRunnable` to return `PlutusRunnable l` instead of `Either ScriptDecodeError (PlutusRunnable l)`
 * Change `evaluatePlutusRunnable`, `evaluatePlutusRunnableBudget` and `mkTermToEvaluate` to accept a `ScriptForEvaluation` instead of a `PlutusRunnable l`

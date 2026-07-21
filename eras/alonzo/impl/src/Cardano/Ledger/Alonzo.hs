@@ -68,6 +68,7 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.State.Transition.Extended (ValidationPolicy (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -87,6 +88,7 @@ instance ApplyTx AlonzoEra where
             (systemStart globals)
             (env ^. ledgerPpL)
             (state ^. utxoG)
+            mempty
             tx
      in first AlonzoApplyTxError $
           ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
@@ -126,15 +128,16 @@ mkAlonzoStAnnTx ::
   SystemStart ->
   PParams era ->
   UTxO era ->
+  Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   Tx TopTx era ->
   AlonzoStAnnTx TopTx era
-mkAlonzoStAnnTx ei sysStart pp utxo tx =
+mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
   let
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     scriptsProvided = getScriptsProvided utxo tx
-    (_, plutusScriptsUsed) =
-      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded mempty
+    (newStAnnTxCache, plutusScriptsUsed) =
+      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded stAnnTxCache
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -149,6 +152,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
       { asatTx = tx
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
+      , asatPlutusRunnableCache = newStAnnTxCache
       , asatPlutusLanguagesUsed =
           Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
       , asatPlutusScriptsWithContext =

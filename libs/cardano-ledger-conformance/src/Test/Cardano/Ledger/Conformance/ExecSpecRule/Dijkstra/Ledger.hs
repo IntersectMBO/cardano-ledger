@@ -125,15 +125,16 @@ instance
   ) =>
   NFData (DijkstraStAnnTx TopTx era)
   where
-  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _) =
+  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in dsattTx `deepseq`
           dsattScriptsNeeded `deepseq`
             dsattScriptsProvided `deepseq`
               dsattPlutusLegacyMode `deepseq`
-                dsattPlutusLanguagesUsed `deepseq`
-                  dsattPlutusScriptsWithContext `deepseq`
-                    rnf dsattSubTransactions
+                dsattPlutusRunnableCache `deepseq`
+                  dsattPlutusLanguagesUsed `deepseq`
+                    dsattPlutusScriptsWithContext `deepseq`
+                      rnf dsattSubTransactions
 
 instance
   ( AlonzoEraTx era
@@ -167,7 +168,7 @@ instance
   ) =>
   ToExpr (DijkstraStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _) =
+  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in TD.Rec "DijkstraStAnnTopTx" $
           OMap.fromList
@@ -175,6 +176,7 @@ instance
             , ("dsattScriptsNeeded", toExpr dsattScriptsNeeded)
             , ("dsattScriptsProvided", toExpr dsattScriptsProvided)
             , ("dsattPlutusLegacyMode", toExpr dsattPlutusLegacyMode)
+            , ("dsattPlutusRunnableCache", toExpr dsattPlutusRunnableCache)
             , ("dsattPlutusLanguagesUsed", toExpr dsattPlutusLanguagesUsed)
             , ("dsattPlutusScriptsWithContext", toExpr dsattPlutusScriptsWithContext)
             , ("dsattSubTransactions", toExpr dsattSubTransactions)

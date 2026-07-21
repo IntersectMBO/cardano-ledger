@@ -1274,6 +1274,7 @@ trySubmitTx tx = do
           (systemStart globals)
           (lEnv ^. ledgerPpL)
           (utxosUtxo (lsUTxOState lState))
+          mempty
           txFixed
   res <- tryRunImpRule @"LEDGER" lEnv lState stAnnTx
 

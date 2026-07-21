@@ -111,6 +111,7 @@ deriving instance AlonzoEraScript era => NFData (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
+  type StAnnTxCache AlonzoEra = Map.Map ScriptHash (SupportedPlutusRunnable AlonzoEra)
 
   getConsumedValue = getConsumedMaryValue
 
@@ -125,6 +126,8 @@ instance EraUTxO AlonzoEra where
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+  getCacheStAnnTx = asatPlutusRunnableCache
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,
@@ -450,6 +453,9 @@ resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded plut
       ]
     version = pvMajor protVer
     lookupPlutusScriptRunnable sh =
+      -- We must look into `plutusScriptsProvided`, before we can look for the same script in the
+      -- `plutusScriptsCache`, since that cache can contain scripts from prior transactions in a
+      -- block
       Map.lookup sh plutusScriptsProvided <&> \case
         SupportedPlutusRunnable plutusRunnable ->
           case Map.lookup sh plutusScriptsCache of

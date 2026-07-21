@@ -120,6 +120,7 @@ genTxAndLEDGERState sizes = do
                 (systemStart testGlobals)
                 pp
                 (utxosUtxo (lsUTxOState ledgerState))
+                mempty
                 tx
         pure $ TRC (ledgerEnv, ledgerState, stAnnTx)
   (trc, genstate) <- runGenRS sizes (initStableFields >> genT)

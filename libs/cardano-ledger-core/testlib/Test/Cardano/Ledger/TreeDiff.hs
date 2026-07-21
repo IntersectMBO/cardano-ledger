@@ -33,6 +33,7 @@ import Cardano.Ledger.TxIn
 import Data.Functor.Identity
 import qualified Data.TreeDiff.OMap as OMap
 import GHC.TypeLits
+import Prettyprinter
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
@@ -82,6 +83,22 @@ instance ToExpr (SafeHash i) where
 
 -- Language
 instance ToExpr (Plutus l)
+
+instance ToExpr (PlutusRunnable l) where
+  toExpr pr@(PlutusRunnable _ _ _) =
+    let PlutusRunnable {..} = pr
+     in Rec "PlutusRunnable" $
+          OMap.fromList
+            [ ("plutusRunnableBinary", toExpr plutusRunnableBinary)
+            , ("plutusRunnableScriptHash", toExpr plutusRunnableScriptHash)
+            ,
+              ( "plutusRunnableResult"
+              , case plutusRunnableResult of
+                  Left err -> App "Left" [toExpr $ show $ pretty err]
+                  -- There is no point in showing plutus AST when debugging tests
+                  Right _sfe -> App "Right" [toExpr ("<ScriptForEvaluation>" :: String)]
+              )
+            ]
 
 instance ToExpr PlutusBinary
 

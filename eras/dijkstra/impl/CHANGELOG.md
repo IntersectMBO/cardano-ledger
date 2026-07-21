@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `dsattPlutusRunnableCache` field to `DijkstraStAnnTx TopTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Change `EraRule "LEDGERS" DijkstraEra` from `Shelley.LEDGERS` to `Babbage.LEDGERS`
 * Add `TranslateEra` instance for `SnapShots`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
