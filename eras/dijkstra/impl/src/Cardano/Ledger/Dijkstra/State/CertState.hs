@@ -40,30 +40,23 @@ instance ConwayEraCertState DijkstraEra where
 
 -- | Total deposits for a transaction, summed across the top-level tx and its subtransactions
 dijkstraCertsTotalDepositsTxBody ::
-  forall era l.
+  forall era.
   ( EraTx era
   , DijkstraEraTxBody era
-  , STxLevel l era ~ STxBothLevels l era
   ) =>
   PParams era ->
   ConwayCertState era ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Coin
-dijkstraCertsTotalDepositsTxBody pp certState = \txBody ->
-  -- TODO: restrict to TopTx, once certsTotalDepositsTxBody is restricted to TopTx
-  withBothTxLevels
-    txBody
-    ( \topTxBody ->
-        let subTxs = topTxBody ^. subTransactionsTxBodyL
-            batchTxCerts =
-              foldMap' (^. bodyTxL . certsTxBodyL) subTxs
-                <> (topTxBody ^. certsTxBodyL)
-         in getTotalDepositsTxCerts pp isPoolReg batchTxCerts
-              <+> conwayProposalsDeposits pp topTxBody
-              <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
-    )
-    (getTotalDepositsTxBody pp isPoolReg)
+dijkstraCertsTotalDepositsTxBody pp certState topTxBody =
+  getTotalDepositsTxCerts pp isPoolReg batchTxCerts
+    <+> conwayProposalsDeposits pp topTxBody
+    <+> foldMap' (conwayProposalsDeposits pp . (^. bodyTxL)) subTxs
   where
+    subTxs = topTxBody ^. subTransactionsTxBodyL
+    batchTxCerts =
+      foldMap' (^. bodyTxL . certsTxBodyL) subTxs
+        <> (topTxBody ^. certsTxBodyL)
     isPoolReg = (`Map.member` psStakePools (conwayCertPState certState))
 
 -- | Total refunds for a transaction, summed across the top-level tx and its subtransactions

@@ -84,7 +84,7 @@ shelleyObligationCertState certState =
     }
 
 shelleyCertsTotalDepositsTxBody ::
-  EraTxBody era => PParams era -> ShelleyCertState era -> TxBody t era -> Coin
+  EraTxBody era => PParams era -> ShelleyCertState era -> TxBody TopTx era -> Coin
 shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePools shelleyCertPState)
 

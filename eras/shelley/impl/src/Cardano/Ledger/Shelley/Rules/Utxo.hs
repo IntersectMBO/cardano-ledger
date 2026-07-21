@@ -634,7 +634,7 @@ updateUTxOStateDeposits ::
   ) =>
   PParams era ->
   CertState era ->
-  TxBody l era ->
+  TxBody TopTx era ->
   (Coin -> m ()) ->
   UTxOState era ->
   m (UTxOState era)
