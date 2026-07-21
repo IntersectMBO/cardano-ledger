@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Restrict `shelleyCertsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Switch parameter order of `updateUTxOState`
 * Add `updateUTxOStateDeposits` and `updateUTxOAndInstantStake`
 * Remove `GovState` parameter from `updateUTxOState`

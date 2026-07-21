@@ -1014,7 +1014,7 @@ upgradeProposals ProposalProcedure {..} =
 
 -- | Total deposits for a single tx body. It does NOT batch across subtransactions.
 dijkstraTotalDepositsTxBody ::
-  DijkstraEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
+  DijkstraEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody TopTx era -> Coin
 dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
     <+> conwayProposalsDeposits pp txBody

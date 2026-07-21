@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Restrict `getTotalDepositsTxBody` and `certsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`
