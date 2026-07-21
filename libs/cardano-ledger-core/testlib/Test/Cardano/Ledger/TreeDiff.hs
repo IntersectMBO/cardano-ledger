@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,11 +27,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys
 import Cardano.Ledger.MemoBytes
-import Cardano.Ledger.Plutus.CostModels
-import Cardano.Ledger.Plutus.Data
-import Cardano.Ledger.Plutus.ExUnits
-import Cardano.Ledger.Plutus.Language
-import Cardano.Ledger.Plutus.TxInfo
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Data.Functor.Identity
@@ -89,6 +86,19 @@ instance ToExpr (Plutus l)
 instance ToExpr PlutusBinary
 
 instance ToExpr Language
+
+instance
+  ToExpr ScriptHash =>
+  ToExpr PlutusWithContext
+  where
+  toExpr PlutusWithContext {..} =
+    Rec "PlutusWithContext" $
+      OMap.fromList
+        [ ("pwcProtocolVersion", toExpr pwcProtocolVersion)
+        , ("pwcScript", toExpr (plutusRunnableScriptHash pwcScript))
+        , ("pwcExUnits", toExpr pwcExUnits)
+        , ("pwcCostModel", toExpr pwcCostModel)
+        ]
 
 -- MemoBytes
 instance ToExpr t => ToExpr (MemoBytes t)

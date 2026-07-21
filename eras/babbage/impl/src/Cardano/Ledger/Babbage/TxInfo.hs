@@ -34,12 +34,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusScriptPurpose,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
+  SupportedPlutusRunnable (..),
   lookupTxInfoResultImpossible,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   AlonzoContextError (..),
   toLegacyPlutusArgs,
-  toPlutusWithContext,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (Data)
@@ -67,7 +67,12 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  PlutusArgs (..),
+  SLanguage (..),
+  decodePlutusRunnable,
+ )
 import Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
   transAddr,
@@ -232,6 +237,10 @@ instance EraPlutusContext BabbageEra where
     PlutusV2 -> Just $ SupportedLanguage SPlutusV2
     _lang -> Nothing
 
+  mkSupportedPlutusRunnable v = \case
+    BabbagePlutusV1 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+    BabbagePlutusV2 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+
   mkTxInfoResult lti =
     BabbageTxInfoResult
       (toPlutusTxInfo SPlutusV1 lti)
@@ -240,10 +249,6 @@ instance EraPlutusContext BabbageEra where
   lookupTxInfoResult SPlutusV1 (BabbageTxInfoResult tirPlutusV1 _) = tirPlutusV1
   lookupTxInfoResult SPlutusV2 (BabbageTxInfoResult _ tirPlutusV2) = tirPlutusV2
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
-
-  mkPlutusWithContext = \case
-    BabbagePlutusV1 p -> toPlutusWithContext $ Left p
-    BabbagePlutusV2 p -> toPlutusWithContext $ Left p
 
 data BabbageContextError era
   = AlonzoContextError (AlonzoContextError era)

@@ -45,8 +45,8 @@ import Cardano.Ledger.Plutus (
   ExUnits (..),
   Language (..),
   PlutusWithContext (..),
+  decodePlutusRunnable,
   hashData,
-  hashPlutusScript,
  )
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (inject)
@@ -91,9 +91,8 @@ collectTwoPhaseScriptInputsOutputOrdering = do
   collectInputs @AlonzoEra testEpochInfo testSystemStart defaultPParams validatingTx initUTxO
     `shouldBe` Right
       [ PlutusWithContext
-          { pwcProtocolVersion = pvMajor (defaultPParams @AlonzoEra ^. ppProtocolVersionL)
-          , pwcScript = Left plutus
-          , pwcScriptHash = hashPlutusScript plutus
+          { pwcProtocolVersion = pvMajor protVer
+          , pwcScript = decodePlutusRunnable (pvMajor protVer) plutus
           , pwcArgs = either (error . show) id $ do
               txInfo <-
                 toPlutusTxInfoForPurpose plutus lti $
@@ -110,10 +109,12 @@ collectTwoPhaseScriptInputsOutputOrdering = do
           }
       ]
   where
+    protVer = defaultPParams @AlonzoEra ^. ppProtocolVersionL
     plutus = alwaysSucceedsPlutus @'PlutusV1 3
+    lti :: LedgerTxInfo AlonzoEra
     lti =
       LedgerTxInfo
-        { ltiProtVer = defaultPParams @AlonzoEra ^. ppProtocolVersionL
+        { ltiProtVer = protVer
         , ltiEpochInfo = testEpochInfo
         , ltiSystemStart = testSystemStart
         , ltiUTxO = initUTxO

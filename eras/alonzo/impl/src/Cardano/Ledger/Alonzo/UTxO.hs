@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -50,18 +52,28 @@ module Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  CollectError,
+  EraPlutusContext,
+  SupportedPlutusRunnable (..),
+  mkSupportedPlutusRunnable,
+ )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
-import Cardano.Ledger.Plutus (Language (..), PlutusWithContext)
-import Cardano.Ledger.Plutus.Data (Data, Datum (..))
+import Cardano.Ledger.Plutus (
+  Data,
+  Datum (..),
+  Language (..),
+  PlutusRunnable (..),
+  PlutusWithContext,
+ )
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
@@ -76,6 +88,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn
 import Control.DeepSeq (NFData)
 import Data.Foldable as F (foldl', toList)
+import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
@@ -416,9 +429,20 @@ getAlonzoWitsVKeyNeeded certState utxo txBody =
 {-# INLINEABLE getAlonzoWitsVKeyNeeded #-}
 
 resolveNeededPlutusScriptsWithPurpose ::
-  AlonzoEraScript era =>
+  EraPlutusContext era =>
+  ProtVer ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
-  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)]
-resolveNeededPlutusScriptsWithPurpose (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) =
-  [(sh, sp, s) | (sp, sh) <- scriptsNeeded, Just s <- [lookupPlutusScript sh scriptsProvided]]
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
+resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided (AlonzoScriptsNeeded scriptsNeeded) =
+  [(sp, s) | (sp, sh) <- scriptsNeeded, Just s <- [lookupPlutusScriptRunnable sh]]
+  where
+    version = pvMajor protVer
+    lookupPlutusScriptRunnable sh =
+      Map.lookup sh plutusScriptsProvided <&> \case
+        SupportedPlutusRunnable pr ->
+          -- Avoid recomputing script hash
+          SupportedPlutusRunnable $ pr {plutusRunnableScriptHash = sh}
+    plutusScriptsProvided =
+      Map.mapMaybe (fmap (mkSupportedPlutusRunnable version) . toPlutusScript) $
+        unScriptsProvided scriptsProvided

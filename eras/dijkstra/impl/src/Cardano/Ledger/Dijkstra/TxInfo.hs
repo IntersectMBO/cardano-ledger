@@ -30,6 +30,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfo,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
+  SupportedPlutusRunnable (..),
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
@@ -68,6 +69,7 @@ import Cardano.Ledger.Plutus (
   PlutusLanguage,
   SLanguage (..),
   TxOutSource (..),
+  decodePlutusRunnable,
   plutusLanguage,
   plutusSLanguage,
   transCoinToLovelace,
@@ -246,6 +248,12 @@ instance EraPlutusContext DijkstraEra where
     PlutusV3 -> Just $ SupportedLanguage SPlutusV3
     PlutusV4 -> Just $ SupportedLanguage SPlutusV4
 
+  mkSupportedPlutusRunnable v = \case
+    DijkstraPlutusV1 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+    DijkstraPlutusV2 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+    DijkstraPlutusV3 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+    DijkstraPlutusV4 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+
   mkTxInfoResult lti =
     DijkstraTxInfoResult
       (toPlutusTxInfo SPlutusV1 lti)
@@ -257,12 +265,6 @@ instance EraPlutusContext DijkstraEra where
   lookupTxInfoResult SPlutusV2 (DijkstraTxInfoResult _ tirPlutusV2 _ _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (DijkstraTxInfoResult _ _ tirPlutusV3 _) = tirPlutusV3
   lookupTxInfoResult SPlutusV4 (DijkstraTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
-
-  mkPlutusWithContext = \case
-    DijkstraPlutusV1 p -> Alonzo.toPlutusWithContext $ Left p
-    DijkstraPlutusV2 p -> Alonzo.toPlutusWithContext $ Left p
-    DijkstraPlutusV3 p -> Alonzo.toPlutusWithContext $ Left p
-    DijkstraPlutusV4 p -> Alonzo.toPlutusWithContext $ Left p
 
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2

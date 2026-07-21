@@ -110,7 +110,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
               Set.fromList
                 [ plutus
                 | PlutusWithContext {pwcScript} <- collected
-                , Just plutus <- [mkPlutusScript $ either id plutusFromRunnable pwcScript]
+                , Just plutus <- [mkPlutusScript $ plutusFromRunnable pwcScript]
                 ]
             suppliedPScrpts = Set.fromList [plutus | PlutusScript plutus <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts

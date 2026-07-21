@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
+import Cardano.Ledger.Plutus (PlutusWithContext (..))
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
 import Control.State.Transition (Event, PredicateFailure)
 import Data.Functor.Identity (Identity)
@@ -214,19 +214,6 @@ instance
   , ToExpr PlutusWithContext
   ) =>
   ToExpr (AlonzoUtxosEvent era)
-
-instance
-  ToExpr ScriptHash =>
-  ToExpr PlutusWithContext
-  where
-  toExpr PlutusWithContext {..} =
-    Rec "PlutusWithContext" $
-      OMap.fromList
-        [ ("pwcProtocolVersion", toExpr pwcProtocolVersion)
-        , ("pwcScriptHash", toExpr pwcScriptHash)
-        , ("pwcExUnits", toExpr pwcExUnits)
-        , ("pwcCostModel", toExpr pwcCostModel)
-        ]
 
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>

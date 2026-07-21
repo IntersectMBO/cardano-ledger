@@ -18,6 +18,7 @@
 
 module Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
+  pwcScriptHash,
   ScriptFailure (..),
   ScriptResult (..),
   scriptPass,
@@ -61,15 +62,12 @@ import Cardano.Ledger.Plutus.Language (
   PlutusLanguage (..),
   PlutusRunnable (..),
   decodeWithPlutus,
-  hashPlutusScript,
-  plutusFromRunnable,
   plutusLanguage,
   withSamePlutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
 import Codec.Extras.SerialiseViaFlat (DeserialiseFailureInfo (..), DeserialiseFailureReason (..))
 import Control.DeepSeq (NFData (..), deepseq, ($!!))
-import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base64 as B64
@@ -89,6 +87,7 @@ import qualified PlutusLedgerApi.Common as P (
   EvaluationError (..),
   ExBudget,
   ScriptDecodeError (..),
+  ScriptForEvaluation,
   VerboseMode (..),
  )
 import Prettyprinter (Pretty (..))
@@ -100,14 +99,11 @@ data PlutusWithContext where
     PlutusLanguage l =>
     { pwcProtocolVersion :: !Version
     -- ^ Major protocol version that is necessary for [de]serialization
-    , pwcScript :: !(Either (Plutus l) (PlutusRunnable l))
+    , pwcScript :: !(PlutusRunnable l)
     -- ^ Actual plutus script that will be evaluated. Script is allowed to be in two forms:
     -- serialized and deserialized. This is necesary for implementing the opptimization
     -- that preserves deserialized `PlutusRunnable` after verifying wellformedness of
     -- plutus scripts during transaction validation (yet to be implemented).
-    , pwcScriptHash :: !ScriptHash
-    -- ^ Hash of the above script as it would appear on-chain. In other words it is not
-    -- just a hash of the script contents. (See `Cardano.Ledger.Core.hashScript` for more info)
     , pwcArgs :: !(PlutusArgs l)
     -- ^ All of the arguments to the Plutus scripts, including the redeemer and the
     -- Plutus context that was obtained from the transaction translation
@@ -125,26 +121,27 @@ instance NFData PlutusWithContext where
   rnf PlutusWithContext {..} =
     rnf pwcProtocolVersion `seq`
       rnf pwcScript `seq`
-        rnf pwcScriptHash `seq`
-          rnf pwcArgs `seq`
-            rnf pwcExUnits `seq`
-              rnf pwcCostModel
+        rnf pwcArgs `seq`
+          rnf pwcExUnits `seq`
+            rnf pwcCostModel
 
 instance Eq PlutusWithContext where
   pwc1@(PlutusWithContext {pwcScript = s1, pwcArgs = args1})
     == pwc2@(PlutusWithContext {pwcScript = s2, pwcArgs = args2}) =
       pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
-        && pwcScriptHash pwc1 == pwcScriptHash pwc2
         && fromMaybe False (withSamePlutusLanguage args1 args2 (==))
         && pwcExUnits pwc1 == pwcExUnits pwc2
         && pwcCostModel pwc1 == pwcCostModel pwc2
         && eqScripts s1 s2
       where
-        eqScripts (Left p1) (Left p2) =
-          plutusLanguage p1 == plutusLanguage p2 && plutusBinary p1 == plutusBinary p2
-        eqScripts (Right p1) (Right p2) =
-          plutusLanguage p1 == plutusLanguage p2 && plutusRunnable p1 == plutusRunnable p2
-        eqScripts _ _ = False
+        eqScripts p1 p2 =
+          plutusLanguage p1 == plutusLanguage p2
+            && plutusBinary (plutusRunnableBinary p1) == plutusBinary (plutusRunnableBinary p2)
+            && plutusRunnableScriptHash p1 == plutusRunnableScriptHash p2
+            && plutusRunnableResult p1 == plutusRunnableResult p2
+
+pwcScriptHash :: PlutusWithContext -> ScriptHash
+pwcScriptHash PlutusWithContext {pwcScript} = plutusRunnableScriptHash pwcScript
 
 data ScriptFailure = ScriptFailure
   { scriptFailureMessage :: Text
@@ -167,15 +164,12 @@ withRunnablePlutusWithContext ::
   PlutusWithContext ->
   -- | Handle the decoder failure
   (P.EvaluationError -> a) ->
-  (forall l. PlutusLanguage l => PlutusRunnable l -> PlutusArgs l -> a) ->
+  (forall l. PlutusLanguage l => P.ScriptForEvaluation -> PlutusArgs l -> a) ->
   a
-withRunnablePlutusWithContext PlutusWithContext {pwcProtocolVersion, pwcScript, pwcArgs} onError f =
-  case pwcScript of
+withRunnablePlutusWithContext PlutusWithContext {pwcScript, pwcArgs} onError f =
+  case plutusRunnableResult pwcScript of
     Right pr -> f pr pwcArgs
-    Left plutus ->
-      case decodePlutusRunnable pwcProtocolVersion plutus of
-        Right pr -> f pr pwcArgs
-        Left err -> onError (P.CodecError err)
+    Left err -> onError (P.CodecError err)
 
 instance Semigroup ScriptResult where
   Passes ps <> Passes qs = Passes (ps <> qs)
@@ -191,28 +185,19 @@ instance Monoid ScriptResult where
 -- other fields in a version-aware way.
 instance ToCBOR PlutusWithContext where
   toCBOR (PlutusWithContext {..}) =
-    Plain.encodeListLen 6
+    Plain.encodeListLen 5
       <> toCBOR pwcProtocolVersion
-      <> toPlainEncoding pwcProtocolVersion (either encCBOR encCBOR pwcScript)
-      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcScriptHash)
+      <> toPlainEncoding pwcProtocolVersion (encCBOR (plutusRunnableBinary pwcScript))
       <> toPlainEncoding pwcProtocolVersion (encCBOR pwcArgs)
       <> toPlainEncoding pwcProtocolVersion (encCBOR pwcExUnits)
       <> toPlainEncoding pwcProtocolVersion (encodeCostModel pwcCostModel)
 
 instance FromCBOR PlutusWithContext where
-  fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 6) $ do
+  fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 5) $ do
     pwcProtocolVersion <- fromCBOR
     toPlainDecoder Nothing pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
       let lang = plutusLanguage plutus
-          pwcScript = Left plutus
-          scriptHash = hashPlutusScript plutus
-      pwcScriptHash <- decCBOR
-      unless (pwcScriptHash == scriptHash) $
-        fail $
-          "ScriptHash mismatch. Encoded: "
-            <> show pwcScriptHash
-            <> " doesn't match the actual: "
-            <> show scriptHash
+          pwcScript = decodePlutusRunnable pwcProtocolVersion plutus
       pwcArgs <- decCBOR
       pwcExUnits <- decCBOR
       pwcCostModel <- decodeCostModel lang
@@ -317,14 +302,14 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
   -- copy all the fields. Otherwise GHC will greet us with
   -- `Record update for insufficiently polymorphic field...` error
   PlutusWithContext
-    { pwcProtocolVersion = fromMaybe pwcProtocolVersion pdoProtocolVersion
+    { pwcProtocolVersion = overrideProtocolVersion
     , pwcScript = overrideScript
     , pwcExUnits = overrideExUnits
     , pwcCostModel = overrideCostModel
-    , pwcScriptHash = overrideSriptHash
     , ..
     }
   where
+    overrideProtocolVersion = fromMaybe pwcProtocolVersion pdoProtocolVersion
     overrideExUnits =
       ExUnits
         (fromMaybe (exUnitsMem pwcExUnits) pdoExUnitsMem)
@@ -334,13 +319,13 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
         mkCostModel
           (fromMaybe (getCostModelLanguage pwcCostModel) pdoLanguage)
           (fromMaybe (getCostModelParams pwcCostModel) pdoCostModelValues)
-    (overrideSriptHash, overrideScript) =
+    overrideScript =
       case pdoScript of
-        Nothing -> (pwcScriptHash, pwcScript)
+        Nothing -> pwcScript
         Just hexScript ->
           case Plutus . PlutusBinary . SBS.toShort <$> B16.decode (BSC.filter (/= '\n') hexScript) of
             Left err -> error $ "Failed hex decoding of the custom script: " <> err
-            Right script -> (hashPlutusScript script, Left script)
+            Right script -> decodePlutusRunnable overrideProtocolVersion script
 
 -- | Execute a hex encoded script with the context that was produced within the ledger predicate
 -- failure. Using `PlutusDebugOverrides` it is possible to override any part of the execution.
@@ -418,13 +403,13 @@ explainPlutusEvaluationError ::
   P.EvaluationError ->
   ScriptResult
 explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScript, pwcArgs} e =
-  let lang = either plutusLanguage plutusLanguage pwcScript
-      Plutus binaryScript = either id plutusFromRunnable pwcScript
+  let lang = plutusLanguage pwcScript
+      Plutus binaryScript = plutusRunnableBinary pwcScript
       firstLines =
         [ "The " ++ show lang ++ " script failed:"
         , "Base64-encoded script bytes:"
         ]
-      shLine = "The script hash is:" ++ show (pwcScriptHash pwc)
+      shLine = "The script hash is:" ++ show (plutusRunnableScriptHash pwcScript)
       pvLine = "The protocol version is: " ++ show pwcProtocolVersion
       plutusError = "The plutus evaluation error is: " ++ show e
 
