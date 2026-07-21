@@ -468,7 +468,7 @@ instance
   , PredicateFailure (EraRule "LEDGER" era) ~ DijkstraLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ DijkstraLedgerEvent era
   ) =>
-  Embed (LEDGER era) (Shelley.LEDGERS era)
+  Embed (LEDGER era) (Babbage.LEDGERS era)
   where
   wrapFailed = Shelley.LedgerFailure
   wrapEvent = Shelley.LedgerEvent

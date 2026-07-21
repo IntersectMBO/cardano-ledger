@@ -25,7 +25,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (CertState, EraStake)
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -90,7 +89,7 @@ instance
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Default (LedgerState era)
@@ -113,7 +112,7 @@ alonzoLedgersTransition ::
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
@@ -127,7 +126,7 @@ alonzoLedgersTransition = do
         let utxo = utxosUtxo (lsUTxOState ls')
             stAnnTx = mkStAnnTx (unsafeLinearExtendEpochInfo slot ei) sysStart pp utxo tx
          in trans @(EraRule "LEDGER" era) $
-              TRC (LedgerEnv slot (Just epochNo) ix pp account, ls', stAnnTx)
+              TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, ls', stAnnTx)
     )
     ls
     $ zip [minBound ..]

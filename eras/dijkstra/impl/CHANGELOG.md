@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Change `EraRule "LEDGERS" DijkstraEra` from `Shelley.LEDGERS` to `Babbage.LEDGERS`
 * Add `TranslateEra` instance for `SnapShots`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`

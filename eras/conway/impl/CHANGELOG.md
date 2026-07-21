@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Change `EraRule "LEDGERS" ConwayEra` from `Shelley.LEDGERS` to `Babbage.LEDGERS`
 * Add `TranslateEra` instance for `SnapShots`
 * Fix `NoThunks` instance for `ConwayGenesis`
 * Remove `conwayCertsTotalRefundsTxBody` and `conwayConsumed`

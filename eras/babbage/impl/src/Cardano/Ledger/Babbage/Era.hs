@@ -12,6 +12,7 @@ module Cardano.Ledger.Babbage.Era (
   UTXOS,
   UTXOW,
   LEDGER,
+  LEDGERS,
 
   -- * Deprecated
   BabbageUTXO,
@@ -74,6 +75,10 @@ type BabbageLEDGER = LEDGER
 
 type instance EraRule "LEDGER" BabbageEra = LEDGER BabbageEra
 
+data LEDGERS c
+
+type instance EraRule "LEDGERS" BabbageEra = LEDGERS BabbageEra
+
 -- Rules inherited from Alonzo
 
 type instance EraRule "BBODY" BabbageEra = Alonzo.BBODY BabbageEra
@@ -87,8 +92,6 @@ type instance EraRule "DELEGS" BabbageEra = Shelley.DELEGS BabbageEra
 type instance EraRule "DELPL" BabbageEra = Shelley.DELPL BabbageEra
 
 type instance EraRule "EPOCH" BabbageEra = Shelley.EPOCH BabbageEra
-
-type instance EraRule "LEDGERS" BabbageEra = Shelley.LEDGERS BabbageEra
 
 type instance EraRule "MIR" BabbageEra = Shelley.MIR BabbageEra
 
