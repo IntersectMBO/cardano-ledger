@@ -39,6 +39,7 @@ module Cardano.Ledger.Hashes (
   EraIndependentTxAuxData,
   EraIndependentPParamView,
   EraIndependentScriptIntegrity,
+  EraIndependentEb,
 
   -- * Hashes
 
@@ -153,6 +154,8 @@ data EraIndependentScriptData
 data EraIndependentPParamView
 
 data EraIndependentScriptIntegrity
+
+data EraIndependentEb
 
 --------------------------------------------------------------------------------
 -- Key Hashes
