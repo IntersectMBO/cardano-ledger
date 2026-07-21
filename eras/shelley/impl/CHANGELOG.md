@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Switch parameter order of `updateUTxOState`
 * Add `updateUTxOStateDeposits` and `updateUTxOAndInstantStake`
 * Remove `GovState` parameter from `updateUTxOState`
 * Change `produced` to accept `PState`, instead of `CertState`

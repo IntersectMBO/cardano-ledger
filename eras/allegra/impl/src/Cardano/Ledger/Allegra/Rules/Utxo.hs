@@ -218,11 +218,11 @@ utxoTransition = do
 
   Shelley.updateUTxOState
     pp
-    (utxos & utxosGovStateL .~ govStateAfterPPUP)
     txBody
     certState
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
+    (utxos & utxosGovStateL .~ govStateAfterPPUP)
 
 -- | Ensure the transaction is within the validity window.
 --
