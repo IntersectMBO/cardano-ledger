@@ -120,10 +120,11 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo tx =
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo txBody
     scriptsProvided = getScriptsProvided utxo tx
-    plutusScriptsUsed = resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded
+    (plutusScriptsCache, plutusScriptsUsed) =
+      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded mempty
     stAnnSubTxs =
       map
-        (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided)
+        (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache)
         (toList (txBody ^. subTransactionsTxBodyL))
     ledgerTxInfo =
       LedgerTxInfo
@@ -163,13 +164,15 @@ mkDijkstraStAnnSubTx ::
   PParams era ->
   UTxO era ->
   ScriptsProvided era ->
+  Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   Tx SubTx era ->
   DijkstraStAnnTx SubTx era
-mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided tx =
+mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
   let
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
-    plutusScriptsUsed = resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded
+    (_, plutusScriptsUsed) =
+      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded plutusScriptsCache
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer

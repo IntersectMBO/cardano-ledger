@@ -133,7 +133,8 @@ mkAlonzoStAnnTx ei sysStart pp utxo tx =
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     scriptsProvided = getScriptsProvided utxo tx
-    plutusScriptsUsed = resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded
+    (_, plutusScriptsUsed) =
+      resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded mempty
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer

@@ -108,11 +108,12 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
         }
-    neededPlutusScripts =
+    (_, neededPlutusScripts) =
       resolveNeededPlutusScriptsWithPurpose
         protVer
         (getScriptsProvided utxo tx)
         (getScriptsNeeded utxo (tx ^. bodyTxL))
+        mempty
 
 scriptsWithContextFromLedgerTxInfo ::
   forall era.

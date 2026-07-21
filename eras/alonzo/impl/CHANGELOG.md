@@ -32,7 +32,8 @@
 * Change `Signal` to `StAnnTx TopTx era` for: `AlonzoLEDGER`, `AlonzoUTXOW`, `AlonzoUTXO`, `AlonzoUTXOS`
 * Add `FromJSON` instance for `IsValid`
 * Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
-* Add `resolveNeededPlutusScriptsWithPurpose`, which takes a `ProtVer` and returns `[(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]`
+* Add `resolveNeededPlutusScriptsWithPurpose`, which takes a `ProtVer` and a `Map ScriptHash (SupportedPlutusRunnable era)` cache of previously resolved scripts, and returns the updated cache together with `[(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]`
+* Add `unAlonzoScriptsNeeded` record accessor to `AlonzoScriptsNeeded`
 * Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`
 * Add `AlonzoStAnnTx`
 * Move and rename `toPlutusWithContext` from `Cardano.Ledger.Alonzo.Plutus.Context` to `mkPlutusWithContext` in `Cardano.Ledger.Alonzo.Plutus.TxInfo`, changing its signature to accept a `SupportedPlutusRunnable era` with separate `Data era` and `ExUnits` arguments

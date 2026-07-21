@@ -100,7 +100,7 @@ import Lens.Micro.Extras (view)
 
 -- | Alonzo era style `ScriptsNeeded` require also a `PlutusPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
-  = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash)]
+  = AlonzoScriptsNeeded {unAlonzoScriptsNeeded :: [(PlutusPurpose AsIxItem era, ScriptHash)]}
   deriving (Monoid, Semigroup, Generic)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
@@ -433,16 +433,30 @@ resolveNeededPlutusScriptsWithPurpose ::
   ProtVer ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
-  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
-resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided (AlonzoScriptsNeeded scriptsNeeded) =
-  [(sp, s) | (sp, sh) <- scriptsNeeded, Just s <- [lookupPlutusScriptRunnable sh]]
+  -- | These are cached scripts. Make sure they were constructed using the exact same protocol
+  -- version as the one supplied to this function.
+  Map.Map ScriptHash (SupportedPlutusRunnable era) ->
+  ( Map.Map ScriptHash (SupportedPlutusRunnable era)
+  , [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
+  )
+resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded plutusScriptsCache =
+  (updatedPlutusScriptCache, neededPlutusScriptsWithPurpose)
   where
+    updatedPlutusScriptCache = plutusScriptsCache `Map.union` plutusScriptsProvided
+    neededPlutusScriptsWithPurpose =
+      [ (sp, s)
+      | (sp, sh) <- unAlonzoScriptsNeeded scriptsNeeded
+      , Just s <- [lookupPlutusScriptRunnable sh]
+      ]
     version = pvMajor protVer
     lookupPlutusScriptRunnable sh =
       Map.lookup sh plutusScriptsProvided <&> \case
-        SupportedPlutusRunnable pr ->
-          -- Avoid recomputing script hash
-          SupportedPlutusRunnable $ pr {plutusRunnableScriptHash = sh}
+        SupportedPlutusRunnable plutusRunnable ->
+          case Map.lookup sh plutusScriptsCache of
+            Just cachedPlutusRunnable -> cachedPlutusRunnable
+            Nothing ->
+              -- Avoid recomputing script hash
+              SupportedPlutusRunnable $ plutusRunnable {plutusRunnableScriptHash = sh}
     plutusScriptsProvided =
       Map.mapMaybe (fmap (mkSupportedPlutusRunnable version) . toPlutusScript) $
         unScriptsProvided scriptsProvided
