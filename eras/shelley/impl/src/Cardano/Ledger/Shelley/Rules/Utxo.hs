@@ -401,11 +401,11 @@ utxoInductive = do
 
   updateUTxOState
     pp
-    (utxos & utxosGovStateL .~ govStateAfterPPUP)
     txBody
     certState
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
+    (utxos & utxosGovStateL .~ govStateAfterPPUP)
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -588,13 +588,13 @@ updateUTxOState ::
   , Monad m
   ) =>
   PParams era ->
-  UTxOState era ->
   TxBody TopTx era ->
   CertState era ->
   (Coin -> m ()) ->
   (UTxO era -> UTxO era -> m ()) ->
+  UTxOState era ->
   m (UTxOState era)
-updateUTxOState pp utxoState txBody certState depositChangeEvent utxoDiffEvent = do
+updateUTxOState pp txBody certState depositChangeEvent utxoDiffEvent utxoState = do
   withDeposits <- updateUTxOStateDeposits pp certState txBody depositChangeEvent utxoState
   withUtxo <- updateUTxOAndInstantStake txBody utxoDiffEvent withDeposits
   pure $ withUtxo & utxosFeesL <>~ (txBody ^. feeTxBodyL)
@@ -644,7 +644,7 @@ updateUTxOStateDeposits pp certState txBody depositChangeEvent utxoState = do
   where
     depositChange = totalDeposits <-> totalRefunds
     totalDeposits = certsTotalDepositsTxBody pp certState txBody
-    totalRefunds = certsTotalRefundsTxBody pp (certState ^. certDStateL. accountsL) txBody
+    totalRefunds = certsTotalRefundsTxBody pp (certState ^. certDStateL . accountsL) txBody
 
 instance
   ( Era era
