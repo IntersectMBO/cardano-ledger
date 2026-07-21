@@ -31,6 +31,7 @@ module Cardano.Ledger.Core.PParams (
   emptyPParamsUpdate,
   genericApplyPPUpdates,
   CoinPerByte (..),
+  MaxPledgeLeverage (..),
 
   -- * PParams lens
   ppTxFeePerByteL,
@@ -115,10 +116,12 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeSparseKeyed,
   encodeListLen,
   encodeMapLen,
+  encodeNullStrictMaybe,
   encodeWord,
   ifDecoderVersionAtLeast,
   natVersion,
@@ -138,6 +141,7 @@ import Cardano.Ledger.Core.Era (
   AtMostEra,
   Era (..),
   PreviousEra,
+  atMostEra,
   fromEraCBOR,
   toEraCBOR,
  )
@@ -160,6 +164,7 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
+import qualified Lens.Micro as L
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -357,6 +362,20 @@ genericApplyPPUpdates ::
 genericApplyPPUpdates (PParams a) (PParamsUpdate u) =
   PParams . to $ applyUpdate (from @_ @a a) (from @_ @u u)
 
+-- | Maximum pledge leverage, protocol parameter introduced in CIP-50. Eras prior to Dijkstra
+-- do not have this protocol parameter, which is equivalent to it being unset, ie. `SNothing`.
+newtype MaxPledgeLeverage = MaxPledgeLeverage
+  { unMaxPledgeLeverage :: StrictMaybe NonNegativeInterval
+  }
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype (NFData, NoThunks, ToJSON, FromJSON, ToPlutusData)
+
+instance EncCBOR MaxPledgeLeverage where
+  encCBOR (MaxPledgeLeverage m) = encodeNullStrictMaybe encCBOR m
+
+instance DecCBOR MaxPledgeLeverage where
+  decCBOR = MaxPledgeLeverage <$> decodeNullStrictMaybe decCBOR
+
 class
   ( Era era
   , Eq (PParamsHKD Identity era)
@@ -485,6 +504,14 @@ class
 
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
+
+  -- | Maximum pledge leverage
+  ppMaxPledgeLeverageG :: SimpleGetter (PParams era) MaxPledgeLeverage
+  default ppMaxPledgeLeverageG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) MaxPledgeLeverage
+  ppMaxPledgeLeverageG = L.to (const (MaxPledgeLeverage SNothing))
+    where
+      _ = atMostEra @"Conway" @era
 
   eraPParams :: [PParam era]
 

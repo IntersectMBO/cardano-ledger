@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.19.0.1
+## 1.19.1.0
 
-*
+* Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the
+  maximum pledge leverage is set in the protocol parameters
+
+### `testlib`
+
+* Add `registerPoolWithParams`, which registers a stake pool with adjusted parameters
 
 ## 1.19.0.0
 

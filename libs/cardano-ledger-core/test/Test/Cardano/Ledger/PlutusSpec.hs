@@ -19,6 +19,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.Coin (Coin, CoinPerByte, CompactForm)
+import Cardano.Ledger.Core (MaxPledgeLeverage)
 import Cardano.Ledger.Plutus
 import Data.Map.Strict (Map)
 import Data.Word
@@ -94,6 +95,7 @@ dataSpec = do
     roundTripPlutusDataSpec @Coin
     roundTripPlutusDataSpec @(CompactForm Coin)
     roundTripPlutusDataSpec @CoinPerByte
+    roundTripPlutusDataSpec @MaxPledgeLeverage
     roundTripPlutusDataSpec @Word32
     roundTripPlutusDataSpec @Word16
     roundTripPlutusDataSpec @Word8

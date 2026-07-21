@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Add the `maxPledgeLeverage` protocol parameter (serializes as `nonnegative_interval / nil`):
+  - Add `dppMaxPledgeLeverage` field to `DijkstraPParams`
+  - Add `udppMaxPledgeLeverage` field to `UpgradeDijkstraPParams`
+  - Add `hkdMaxPledgeLeverageL` to `DijkstraEraPParams`
+  - Add `ppMaxPledgeLeverageL` and `ppuMaxPledgeLeverageL`
 * Add `validateMissingAccountsInDirectDeposits`
 * Remove `SubExceededBalancesInWithdrawals` constructor from `SubEntitiesPredFailure`
 * Add `SubMissingOriginalAccountsInWithdrawals` constructor to `SubEntitiesPredFailure`
@@ -11,6 +16,15 @@
 * Memoize `getScriptsHashesNeeded` for subtransactions:
   - Add `dsastScriptsHashesNeeded` field to `DijkstraStAnnTx SubTx`, holding `Set ScriptHash`
   - Add `scriptsHashesNeededStAnnTx` method to `DijkstraEraUTxO`
+
+### cddl
+
+* Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
+
+### testlib
+
+* Add `DijkstraEraPParams` as a superclass of `DijkstraEraTest`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec`
 
 ## 0.3.0.0
 

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-core
-version: 1.21.1.0
+version: 1.22.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -321,6 +321,7 @@ test-suite tests
     Test.Cardano.Ledger.BinarySpec
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
+    Test.Cardano.Ledger.State.SnapShotsSpec
     Test.Cardano.Ledger.State.StakePoolSpec
     Test.Cardano.Ledger.StorableSpec
     Test.Cardano.Ledger.ToolsSpec

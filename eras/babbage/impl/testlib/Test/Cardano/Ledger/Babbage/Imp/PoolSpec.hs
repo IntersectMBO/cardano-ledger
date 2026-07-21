@@ -23,7 +23,6 @@ import Data.Coerce
 import Data.Map ((!))
 import qualified Data.Set as Set
 import Data.Typeable (cast)
-import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -53,11 +52,7 @@ babbageEraSpecificSpec = describe "POOL" $ do
         -- Pledge 0 makes the (pledge <= ownerStake) check in mkPoolRewardInfo
         -- trivially true, guaranteeing rewards flow. A nonzero pledge exceeding
         -- the owners' delegated stake would zero out the pool's rewards.
-        registerPoolWithZeroPledge pk rewAcc = do
-          pps <- freshPoolParams pk rewAcc
-          submitTx_ $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert pps {sppPledge = Coin 0}]
+        registerPoolWithZeroPledge = registerPoolWithParams $ \pps -> pps {sppPledge = Coin 0}
 
     rewAccs <- mapM registerStakeCredential poolSCreds >>= \ras -> ras <$ withTxsInBlock_ (pure ras)
     withTxsInBlock_ $ mapM_ registerStakeCredential screds

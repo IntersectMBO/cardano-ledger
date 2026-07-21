@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -23,10 +24,12 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppRefScriptCostStrideL,
   ppMaxRefScriptSizePerTxL,
   ppMaxRefScriptSizePerBlockL,
+  ppMaxPledgeLeverageL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
   ppuMaxRefScriptSizePerTxL,
   ppuMaxRefScriptSizePerBlockL,
+  ppuMaxPledgeLeverageL,
 
   -- * Deprecated
   dppMinFeeA,
@@ -47,7 +50,10 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   knownNonZeroBounded,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
@@ -66,7 +72,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON (..), withObject, (.:), (.=))
+import Data.Aeson (FromJSON, ToJSON (..), withObject, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Data (Proxy (..))
 import Data.Default (Default (..))
@@ -156,6 +162,7 @@ data DijkstraPParams f era = DijkstraPParams
   -- ^ Limit on the total number of bytes of reference scripts that a transaction can use.
   , dppRefScriptCostStride :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f (NonZero Word32))
   , dppRefScriptCostMultiplier :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f PositiveInterval)
+  , dppMaxPledgeLeverage :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f MaxPledgeLeverage)
   }
   deriving (Generic)
 
@@ -219,6 +226,7 @@ dijkstraApplyPPUpdates pp ppu = do
     , dppMaxRefScriptSizePerTx = ppApplyUpdate dppMaxRefScriptSizePerTx
     , dppRefScriptCostStride = ppApplyUpdate dppRefScriptCostStride
     , dppRefScriptCostMultiplier = ppApplyUpdate dppRefScriptCostMultiplier
+    , dppMaxPledgeLeverage = ppApplyUpdate dppMaxPledgeLeverage
     }
   where
     ppApplyUpdate :: (forall f. DijkstraPParams f era -> THKD g f a) -> THKD g Identity a
@@ -252,6 +260,7 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppMaxRefScriptSizePerTx :: !(HKD f Word32)
   , udppRefScriptCostStride :: !(HKD f (NonZero Word32))
   , udppRefScriptCostMultiplier :: !(HKD f PositiveInterval)
+  , udppMaxPledgeLeverage :: !(HKD f MaxPledgeLeverage)
   }
   deriving (Generic)
 
@@ -265,6 +274,7 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppMaxRefScriptSizePerTx <- o .: "maxRefScriptSizePerTx"
     udppRefScriptCostStride <- o .: "refScriptCostStride"
     udppRefScriptCostMultiplier <- o .: "refScriptCostMultiplier"
+    udppMaxPledgeLeverage <- o .:? "maxPledgeLeverage" .!= MaxPledgeLeverage SNothing
     pure UpgradeDijkstraPParams {..}
 
 instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
@@ -273,6 +283,7 @@ instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
     , "maxRefScriptSizePerTx" .= udppMaxRefScriptSizePerTx udpp
     , "refScriptCostStride" .= udppRefScriptCostStride udpp
     , "refScriptCostMultiplier" .= udppRefScriptCostMultiplier udpp
+    , "maxPledgeLeverage" .= udppMaxPledgeLeverage udpp
     ]
 
 deriving via
@@ -292,6 +303,7 @@ instance Era era => DecCBOR (UpgradeDijkstraPParams Identity era) where
         <! From
         <! From
         <! From
+        <! From
 
 instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
   encCBOR UpgradeDijkstraPParams {..} =
@@ -301,9 +313,11 @@ instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
         !> To udppMaxRefScriptSizePerTx
         !> To udppRefScriptCostStride
         !> To udppRefScriptCostMultiplier
+        !> To udppMaxPledgeLeverage
 
 emptyDijkstraUpgradePParamsUpdate :: UpgradeDijkstraPParams StrictMaybe era
-emptyDijkstraUpgradePParamsUpdate = UpgradeDijkstraPParams SNothing SNothing SNothing SNothing
+emptyDijkstraUpgradePParamsUpdate =
+  UpgradeDijkstraPParams SNothing SNothing SNothing SNothing SNothing
 
 upgradeDijkstraPParams ::
   UpgradeDijkstraPParams f DijkstraEra ->
@@ -346,6 +360,7 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
     , dppMaxRefScriptSizePerTx = THKD udppMaxRefScriptSizePerTx
     , dppRefScriptCostStride = THKD udppRefScriptCostStride
     , dppRefScriptCostMultiplier = THKD udppRefScriptCostMultiplier
+    , dppMaxPledgeLeverage = THKD udppMaxPledgeLeverage
     }
 
 downgradeDijkstraPParams :: DijkstraPParams f DijkstraEra -> ConwayPParams f ConwayEra
@@ -414,6 +429,7 @@ instance EraPParams DijkstraEra where
   hkdProtocolVersionL = notSupportedInThisEraL
   hkdMinPoolCostCompactL = lens (unTHKD . dppMinPoolCost) $ \pp x -> pp {dppMinPoolCost = THKD x}
   ppProtocolVersionL = ppLensHKD . lens dppProtocolVersion (\pp x -> pp {dppProtocolVersion = x})
+  ppMaxPledgeLeverageG = ppMaxPledgeLeverageL
 
   ppDG = to (const minBound)
   ppuProtocolVersionL = notSupportedInThisEraL
@@ -456,6 +472,7 @@ instance EraPParams DijkstraEra where
     , ppMaxRefScriptSizePerTx
     , ppRefScriptCostStride
     , ppRefScriptCostMultiplier
+    , ppMaxPledgeLeverage
     ]
 
 ppMaxRefScriptSizePerBlock :: PParam DijkstraEra
@@ -511,6 +528,20 @@ ppRefScriptCostMultiplier =
           PParamUpdate
             { ppuTag = 37
             , ppuLens = ppuRefScriptCostMultiplierL
+            }
+    }
+
+ppMaxPledgeLeverage :: PParam DijkstraEra
+ppMaxPledgeLeverage =
+  PParam
+    { ppName = "maxPledgeLeverage"
+    , ppLens = ppMaxPledgeLeverageL
+    , ppEraDecoder = Nothing
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 38
+            , ppuLens = ppuMaxPledgeLeverageL
             }
     }
 
@@ -626,6 +657,7 @@ emptyDijkstraPParams =
     , dppMaxRefScriptSizePerTx = THKD 0
     , dppRefScriptCostStride = THKD $ knownNonZeroBounded @1
     , dppRefScriptCostMultiplier = THKD minBound
+    , dppMaxPledgeLeverage = THKD (MaxPledgeLeverage SNothing)
     }
 
 emptyDijkstraPParamsUpdate :: DijkstraPParams StrictMaybe era
@@ -666,6 +698,7 @@ emptyDijkstraPParamsUpdate =
     , dppMaxRefScriptSizePerTx = THKD SNothing
     , dppRefScriptCostStride = THKD SNothing
     , dppRefScriptCostMultiplier = THKD SNothing
+    , dppMaxPledgeLeverage = THKD SNothing
     }
 
 class DijkstraEraPParams era => DijkstraEraPParams era where
@@ -673,12 +706,14 @@ class DijkstraEraPParams era => DijkstraEraPParams era where
   hkdMaxRefScriptSizePerTxL :: Lens' (PParamsHKD f era) (HKD f Word32)
   hkdRefScriptCostStrideL :: Lens' (PParamsHKD f era) (HKD f (NonZero Word32))
   hkdRefScriptCostMultiplierL :: Lens' (PParamsHKD f era) (HKD f PositiveInterval)
+  hkdMaxPledgeLeverageL :: Lens' (PParamsHKD f era) (HKD f MaxPledgeLeverage)
 
 instance DijkstraEraPParams DijkstraEra where
   hkdMaxRefScriptSizePerBlockL = lens (unTHKD . dppMaxRefScriptSizePerBlock) $ \pp x -> pp {dppMaxRefScriptSizePerBlock = THKD x}
   hkdMaxRefScriptSizePerTxL = lens (unTHKD . dppMaxRefScriptSizePerTx) $ \pp x -> pp {dppMaxRefScriptSizePerTx = THKD x}
   hkdRefScriptCostStrideL = lens (unTHKD . dppRefScriptCostStride) $ \pp x -> pp {dppRefScriptCostStride = THKD x}
   hkdRefScriptCostMultiplierL = lens (unTHKD . dppRefScriptCostMultiplier) $ \pp x -> pp {dppRefScriptCostMultiplier = THKD x}
+  hkdMaxPledgeLeverageL = lens (unTHKD . dppMaxPledgeLeverage) $ \pp x -> pp {dppMaxPledgeLeverage = THKD x}
 
 ppMaxRefScriptSizePerBlockL :: DijkstraEraPParams era => Lens' (PParams era) Word32
 ppMaxRefScriptSizePerBlockL = ppLensHKD . hkdMaxRefScriptSizePerBlockL @_ @Identity
@@ -707,3 +742,12 @@ ppuRefScriptCostStrideL = ppuLensHKD . hkdRefScriptCostStrideL @_ @StrictMaybe
 ppuRefScriptCostMultiplierL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PositiveInterval)
 ppuRefScriptCostMultiplierL = ppuLensHKD . hkdRefScriptCostMultiplierL @_ @StrictMaybe
+
+ppMaxPledgeLeverageL ::
+  DijkstraEraPParams era => Lens' (PParams era) MaxPledgeLeverage
+ppMaxPledgeLeverageL = ppLensHKD . hkdMaxPledgeLeverageL @_ @Identity
+
+ppuMaxPledgeLeverageL ::
+  DijkstraEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe MaxPledgeLeverage)
+ppuMaxPledgeLeverageL = ppuLensHKD . hkdMaxPledgeLeverageL @_ @StrictMaybe
