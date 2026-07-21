@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Add `ppMaxLeverageFactorG` method to `EraPParams` (pledge-leverage cap accessor, defaulting to `SNothing`)
+* Add a pledge-leverage cap argument (`StrictMaybe NonNegativeInterval`) to `maxPool'` and thread it through `maxPool`
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`

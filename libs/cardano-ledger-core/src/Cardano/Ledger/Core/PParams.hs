@@ -138,6 +138,7 @@ import Cardano.Ledger.Core.Era (
   AtMostEra,
   Era (..),
   PreviousEra,
+  atMostEra,
   fromEraCBOR,
   toEraCBOR,
  )
@@ -160,6 +161,7 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
+import qualified Lens.Micro as L
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -485,6 +487,12 @@ class
 
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostCompactL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f (CompactForm Coin))
+
+  -- | Maximum pledge leverage
+  ppMaxLeverageFactorG :: SimpleGetter (PParams era) (StrictMaybe NonNegativeInterval)
+  default ppMaxLeverageFactorG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) (StrictMaybe NonNegativeInterval)
+  ppMaxLeverageFactorG = atMostEra @"Conway" @era `seq` L.to (const SNothing)
 
   eraPParams :: [PParam era]
 

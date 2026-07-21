@@ -4,6 +4,7 @@
     "maxRefScriptSizePerTx":1,
     "refScriptCostStride":1,
     "refScriptCostMultiplier":1,
+    "maxLeverageFactor":null,
     "txFeeFixed":561284,
     "maxBlockBodySize":1,
     "maxTxSize":1,

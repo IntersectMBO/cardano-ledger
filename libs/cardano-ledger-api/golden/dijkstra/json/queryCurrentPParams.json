@@ -31,6 +31,7 @@
         },
         "maxBlockHeaderSize": 0,
         "maxCollateralInputs": 5,
+        "maxLeverageFactor": null,
         "maxRefScriptSizePerBlock": 0,
         "maxRefScriptSizePerTx": 0,
         "maxTxExecutionUnits": {
@@ -761,6 +762,7 @@
         },
         "maxBlockHeaderSize": 1100,
         "maxCollateralInputs": 3,
+        "maxLeverageFactor": null,
         "maxRefScriptSizePerBlock": 1048576,
         "maxRefScriptSizePerTx": 204800,
         "maxTxExecutionUnits": {
