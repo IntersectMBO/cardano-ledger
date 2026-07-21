@@ -355,10 +355,10 @@ utxoInductive ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxoState, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
-      utxo = utxos ^. utxoL
-      UTxOState _ _ _ ppup _ _ = utxos
+      utxo = utxoState ^. utxoL
+      UTxOState _ _ _ ppup _ _ = utxoState
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
       genDelegs = dsGenDelegs (certState ^. certDStateL)
@@ -405,7 +405,7 @@ utxoInductive = do
     certState
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
-    (utxos & utxosGovStateL .~ govStateAfterPPUP)
+    (utxoState & utxosGovStateL .~ govStateAfterPPUP)
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).

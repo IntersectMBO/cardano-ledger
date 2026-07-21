@@ -237,7 +237,7 @@ conwayUtxoTransition = do
   let tx = stAnnTx ^. txStAnnTxG
   Babbage.babbageUtxoValidation
   () <- trans @(EraRule "UTXOS" era) $ TRC ((), (), stAnnTx)
-  Babbage.updateUTxOStateByTxValidity
+  Babbage.updateUTxOState
     pp
     certState
     tx

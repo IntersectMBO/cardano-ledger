@@ -27,7 +27,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   validateCollateralEqBalance,
   validateOutputTooSmallUTxO,
   disjointRefInputs,
-  updateUTxOStateByTxValidity,
+  updateUTxOState,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
@@ -444,9 +444,9 @@ utxoTransition = do
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $
       TRC (Alonzo.UtxosEnv slot pp certState, utxosGovState utxos, stAnnTx)
-  updateUTxOStateByTxValidity pp certState tx (utxos & utxosGovStateL .~ updatedGovState)
+  updateUTxOState pp certState tx (utxos & utxosGovStateL .~ updatedGovState)
 
-updateUTxOStateByTxValidity ::
+updateUTxOState ::
   forall era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
@@ -459,7 +459,7 @@ updateUTxOStateByTxValidity ::
   Tx TopTx era ->
   UTxOState era ->
   Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
-updateUTxOStateByTxValidity pp certState tx utxoState =
+updateUTxOState pp certState tx utxoState =
   let txBody = tx ^. bodyTxL
       utxo = utxosUtxo utxoState
    in case tx ^. isValidTxL of
