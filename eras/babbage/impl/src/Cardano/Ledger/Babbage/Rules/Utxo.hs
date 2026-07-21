@@ -466,11 +466,11 @@ updateUTxOStateByTxValidity pp certState tx utxoState =
         IsValid True ->
           Shelley.updateUTxOState
             pp
-            utxoState
             txBody
             certState
             (tellEvent . Alonzo.TotalDeposits (hashAnnotated txBody))
             (\a b -> tellEvent $ Alonzo.TxUTxODiff a b)
+            utxoState
         IsValid False ->
           {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
           {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}

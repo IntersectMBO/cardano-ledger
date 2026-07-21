@@ -577,11 +577,11 @@ utxoTransition = do
     IsValid True ->
       Shelley.updateUTxOState
         pp
-        (utxos & utxosGovStateL .~ updatedGovState)
         txBody
         certState
         (tellEvent . TotalDeposits (hashAnnotated txBody))
         (\a b -> tellEvent (TxUTxODiff a b))
+        (utxos & utxosGovStateL .~ updatedGovState)
     IsValid False ->
       {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
       {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
