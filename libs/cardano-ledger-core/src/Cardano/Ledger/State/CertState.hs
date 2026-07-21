@@ -391,7 +391,8 @@ class
   --
   -- This is the contribution of a TxBody towards the deposit pot (utxosDeposit field of
   -- the UTxOState) of the system
-  certsTotalDepositsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody t era -> Coin
+  certsTotalDepositsTxBody ::
+    EraTxBody era => PParams era -> CertState era -> TxBody TopTx era -> Coin
 
   -- | Compute the total refunds from the Certs of a TxBody.
   --

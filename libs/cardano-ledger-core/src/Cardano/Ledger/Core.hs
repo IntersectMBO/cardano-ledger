@@ -264,7 +264,7 @@ class
     PParams era ->
     -- | Check whether stake pool is registered or not
     (KeyHash StakePool -> Bool) ->
-    TxBody l era ->
+    TxBody TopTx era ->
     Coin
   getTotalDepositsTxBody pp isPoolRegisted txBody =
     getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)

@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Restrict `dijkstraCertsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Add `TranslateEra` instance for `SnapShots`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`

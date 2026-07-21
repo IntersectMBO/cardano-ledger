@@ -1011,8 +1011,9 @@ upgradeProposals ProposalProcedure {..} =
     , pProcAnchor = pProcAnchor
     }
 
+-- | Total deposits for a single tx body. It does NOT batch across subtransactions.
 dijkstraTotalDepositsTxBody ::
-  ConwayEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody l era -> Coin
+  ConwayEraTxBody era => PParams era -> (KeyHash StakePool -> Bool) -> TxBody TopTx era -> Coin
 dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
     <+> conwayProposalsDeposits pp txBody
