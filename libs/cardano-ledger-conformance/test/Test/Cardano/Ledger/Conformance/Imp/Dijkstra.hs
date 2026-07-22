@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wwarn #-}
 
 module Test.Cardano.Ledger.Conformance.Imp.Dijkstra (spec) where
 
@@ -20,6 +19,7 @@ import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as ConwayGov
 import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as ConwayLedger
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as ConwayRatify
 import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as ConwayUtxo
+import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as ConwayUtxos
 import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as ConwayUtxow
 import Test.Cardano.Ledger.Dijkstra.Imp.CertSpec qualified as CERT
 import Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec qualified as CERTS
@@ -52,4 +52,5 @@ spec = do
               ConwayLedger.spec
               ConwayRatify.spec
               ConwayUtxo.spec
+              xdescribe "disabled" ConwayUtxos.spec
               ConwayUtxow.spec
