@@ -2,6 +2,13 @@
 
 ## 0.3.0.0
 
+* Add the `maxLeverageFactor` protocol parameter (`L`, maximum pledge leverage):
+  - Add `MaxLeverageFactor` newtype (serializes as `nonnegative_interval / nil`)
+  - Add `dppMaxLeverageFactor` field to `DijkstraPParams`
+  - Add `udppMaxLeverageFactor` field to `UpgradeDijkstraPParams`
+  - Add `hkdMaxLeverageFactorL` to `DijkstraEraPParams`
+  - Add `ppMaxLeverageFactorL` and `ppuMaxLeverageFactorL`
+  - Add `cip50MinLeverageFactor` and `cip50MaxLeverageFactor` (the inclusive bounds enforced by `ppuWellFormed`)
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`
 * Make `requiredTopLevelGuards` available on the top-level transaction body:
@@ -121,6 +128,7 @@
 
 ### cddl
 
+* Add `max_leverage_factor` rule and its entry in `protocol_param_update`
 * Remove re-exported `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
 * Remove `dijkstraProtocolVersionRule`
 * Add `transaction_mempool` rule
@@ -129,6 +137,7 @@
 
 ### testlib
 
+* Add `Arbitrary` and `ToExpr` instances for `MaxLeverageFactor`
 * Add `genSmallDijkstraBlockBody`
 * Add to `Test.Cardano.Ledger.Dijkstra.Examples`:
   - `exampleDijkstraOnwardsEraPParams`

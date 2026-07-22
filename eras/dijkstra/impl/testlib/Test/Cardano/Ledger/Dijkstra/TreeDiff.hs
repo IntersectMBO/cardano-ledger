@@ -43,7 +43,7 @@ import Cardano.Ledger.Dijkstra.Core (
   TopTx,
   Value,
  )
-import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams)
+import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, MaxLeverageFactor)
 import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceInterval,
@@ -71,6 +71,8 @@ instance ToExpr (PlutusScript DijkstraEra)
 instance ToExpr (DijkstraNativeScript era)
 
 instance ToExpr (DijkstraNativeScriptRaw era)
+
+instance ToExpr MaxLeverageFactor
 
 instance ToExpr (DijkstraPParams Identity DijkstraEra)
 

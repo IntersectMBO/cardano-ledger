@@ -17,6 +17,7 @@ import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
+import qualified Test.Cardano.Ledger.Dijkstra.RewardsSpec as RewardsSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxInfoSpec as DijkstraTxInfoSpec
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
@@ -38,3 +39,4 @@ main =
       txInfoSpec @DijkstraEra SPlutusV4
       DijkstraTxInfoSpec.spec @DijkstraEra
     GoldenBinary.spec @DijkstraEra
+    RewardsSpec.spec

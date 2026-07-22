@@ -44,6 +44,7 @@ import Cardano.Ledger.BaseTypes (
   KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
+  StrictMaybe (..),
   ToKeyValuePairs (..),
   UnitInterval,
   knownNonZeroBounded,
@@ -122,12 +123,16 @@ maxPool' ::
   Coin ->
   Rational ->
   Rational ->
+  -- | Maximum pledge leverage (CIP-50)
+  StrictMaybe NonNegativeInterval ->
   Coin
-maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
+maxPool' a0 nOpt r sigma pR mLeverage = rationalToCoinViaFloor $ factor1 * factor2
   where
     nonZeroZ0 = recipNonZero . toRatioNonZero $ toIntegerNonZero nOpt
     z0 = unNonZero nonZeroZ0
-    sigma' = min sigma z0
+    sigma' = case mLeverage of
+      SNothing -> min sigma z0 -- original Shelley behavior
+      SJust l -> min (min sigma z0) (unboundRational l * pR) -- CIP-50 behavior
     p' = min pR z0
     factor1 =
       -- This division is safe, because a0 is non-negative and we're adding one
@@ -137,7 +142,7 @@ maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
     factor3 = (sigma' - p' * factor4) /. nonZeroZ0
     factor4 = (z0 - sigma') /. nonZeroZ0
 
--- | Version of `maxPool'` that extracts `ppA0L` and `ppNOptL` from a `PParams`
+-- | Version of `maxPool'` that extracts `ppA0L`, `ppNOptL` and `ppMaxLeverageFactorG` from a `PParams`.
 maxPool ::
   EraPParams era =>
   PParams era ->
@@ -145,10 +150,11 @@ maxPool ::
   Rational ->
   Rational ->
   Coin
-maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
+maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR maxLeverageFactor
   where
     a0 = pp ^. ppA0L
     nOpt = (pp ^. ppNOptL) `nonZeroOr` knownNonZeroBounded @1
+    maxLeverageFactor = pp ^. ppMaxLeverageFactorG
 
 -- | This type is the collection of all the necessary data per stake pool that is derived from the
 -- `StakePoolState`, `InstantStake` and `Accounts` that is later used for reward

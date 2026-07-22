@@ -358,7 +358,7 @@ mkPoolRewardInfo
       Just numBlocksMade ->
         let Coin maxP =
               if pledge <= selfDelegatedOwnersStake
-                then maxPool' pp_a0 pp_nOpt r sigma poolRelativePledge
+                then maxPool' pp_a0 pp_nOpt r sigma poolRelativePledge pp_maxLeverage
                 else mempty
             appPerf = mkApparentPerformance pp_d sigmaA numBlocksMade blocksTotal
             poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
@@ -382,6 +382,7 @@ mkPoolRewardInfo
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L
       pp_nOpt = (pp ^. ppNOptL) `nonZeroOr` error "nOpt is zero"
+      pp_maxLeverage = pp ^. ppMaxLeverageFactorG
       Coin poolTotalStake = fromCompact (spssStake stakePoolSnapShot)
       Coin selfDelegatedOwnersStake = spssSelfDelegatedOwnersStake stakePoolSnapShot
       Coin pledge = spssPledge stakePoolSnapShot

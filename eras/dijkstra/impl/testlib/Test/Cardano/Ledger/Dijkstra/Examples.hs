@@ -41,6 +41,7 @@ import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
+  MaxLeverageFactor (..),
   UpgradeDijkstraPParams (..),
   ppMaxRefScriptSizePerBlockL,
   ppMaxRefScriptSizePerTxL,
@@ -133,6 +134,7 @@ exampleDijkstraGenesis =
           , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , udppRefScriptCostStride = knownNonZeroBounded @25_600 -- 25 KiB
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , udppMaxLeverageFactor = MaxLeverageFactor SNothing
           }
     }
 

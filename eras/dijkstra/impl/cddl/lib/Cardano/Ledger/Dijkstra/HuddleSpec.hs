@@ -506,6 +506,9 @@ instance HuddleRule "ex_units" DijkstraEra where
 instance HuddleRule "positive_interval" DijkstraEra where
   huddleRuleNamed = positiveIntervalRule
 
+instance HuddleRule "max_leverage_factor" DijkstraEra where
+  huddleRuleNamed pname p = pname =.= (huddleRule @"nonnegative_interval" p / VNil)
+
 instance HuddleRule "vote" DijkstraEra where
   huddleRuleNamed pname _ = voteRule pname
 
@@ -924,6 +927,7 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 35 ==> VUInt `sized` (4 :: Word64)) //- "max refScript size per tx"
         , opt (idx 36 ==> huddleRule @"positive_word32" p) //- "refScript cost stride"
         , opt (idx 37 ==> huddleRule @"positive_interval" p) //- "refScript cost multiplier"
+        , opt (idx 38 ==> huddleRule @"max_leverage_factor" p) //- "max pledge leverage"
         ]
 
 instance HuddleRule "proposed_protocol_parameter_updates" DijkstraEra where
