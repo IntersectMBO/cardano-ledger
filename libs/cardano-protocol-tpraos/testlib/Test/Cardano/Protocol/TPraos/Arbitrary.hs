@@ -29,9 +29,8 @@ import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
 import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (BHBody),
   BHeader (BHeader),
-  PrevHash (BlockHash, GenesisHash),
  )
-import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
+import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
@@ -42,6 +41,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Protocol.Praos.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
 
 instance Arbitrary ChainDepState where
@@ -134,21 +134,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-
-instance Arbitrary PrevHash where
-  arbitrary = do
-    hash <- arbitrary
-    frequency [(1, pure GenesisHash), (9999, pure (BlockHash hash))]
-
-instance Crypto c => Arbitrary (OCert c) where
-  arbitrary =
-    OCert
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-deriving newtype instance Arbitrary KESPeriod
 
 instance
   ( Crypto c

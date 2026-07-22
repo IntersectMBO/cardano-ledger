@@ -242,6 +242,8 @@ deriving via
   instance
     Crypto crypto => DecCBOR (Annotator (Header crypto))
 
+deriving newtype instance Crypto crypto => DecCBOR (Header crypto)
+
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockIssuerBlockHeaderG =
     to (\(Block (Header hb _) _) -> hashKey (hbVk hb))

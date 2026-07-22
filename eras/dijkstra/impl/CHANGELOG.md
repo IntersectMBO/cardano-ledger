@@ -122,6 +122,7 @@
 
 ### cddl
 
+* Add `eb_announcement` rule and extend `header_body` with `block_body_contains_leios_cert` and `eb_announcement` for the Leios block header
 * Remove re-exported `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
 * Remove `dijkstraProtocolVersionRule`
 * Add `transaction_mempool` rule

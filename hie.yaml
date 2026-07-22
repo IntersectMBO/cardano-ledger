@@ -333,6 +333,9 @@ cradle:
     - path: "libs/cardano-protocol/src"
       component: "lib:cardano-protocol"
 
+    - path: "libs/cardano-protocol/testlib"
+      component: "cardano-protocol:lib:testlib"
+
     - path: "libs/cardano-protocol-tpraos/src"
       component: "lib:cardano-protocol-tpraos"
 
