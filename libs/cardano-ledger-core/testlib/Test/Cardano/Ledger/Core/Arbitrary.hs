@@ -747,7 +747,7 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
         mempty
         (unActiveStake ssActiveStake)
 
-instance Arbitrary SnapShots where
+instance Arbitrary (SnapShots era) where
   arbitrary = do
     ssStakeMark <- arbitrary
     ssStakeSet <- arbitrary

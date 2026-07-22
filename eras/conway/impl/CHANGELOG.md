@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Add `TranslateEra` instance for `SnapShots`
 * Fix `NoThunks` instance for `ConwayGenesis`
 * Remove `conwayCertsTotalRefundsTxBody` and `conwayConsumed`
 * Remove an unnecessary argument to `conwayDRepRefundsTxCerts` function.

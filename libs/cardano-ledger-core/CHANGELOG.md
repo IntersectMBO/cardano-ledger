@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Make `SnapShots` parametric in `era`
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`

@@ -154,7 +154,7 @@ insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
 insertSnapShots ::
   MonadIO m =>
   Key EpochState ->
-  State.SnapShots ->
+  State.SnapShots era ->
   ReaderT SqlBackend m ()
 insertSnapShots epochStateKey State.SnapShots {..} = do
   mapM_
@@ -359,7 +359,7 @@ getSnapShotNoSharing epochStateId snapShotType = do
 getSnapShotsNoSharing ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m State.SnapShots
+  ReaderT SqlBackend m (State.SnapShots era)
 getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotNoSharing epochStateId SnapShotMark
   set <- getSnapShotNoSharing epochStateId SnapShotSet
@@ -439,7 +439,7 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
 getSnapShotsWithSharing ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m State.SnapShots
+  ReaderT SqlBackend m (State.SnapShots era)
 getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotWithSharing [] epochStateId SnapShotMark
   set <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
@@ -736,12 +736,12 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
       & curPParamsEpochStateL .~ epochStatePp
 
 loadSnapShotsNoSharing ::
-  MonadUnliftIO m => T.Text -> Entity EpochState -> m State.SnapShots
+  MonadUnliftIO m => T.Text -> Entity EpochState -> m (State.SnapShots era)
 loadSnapShotsNoSharing fp = runSqlite fp . getSnapShotsNoSharing
 {-# INLINEABLE loadSnapShotsNoSharing #-}
 
 loadSnapShotsWithSharing ::
-  MonadUnliftIO m => T.Text -> Entity EpochState -> m State.SnapShots
+  MonadUnliftIO m => T.Text -> Entity EpochState -> m (State.SnapShots era)
 loadSnapShotsWithSharing fp = runSqlite fp . getSnapShotsWithSharing
 {-# INLINEABLE loadSnapShotsWithSharing #-}
 

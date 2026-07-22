@@ -111,7 +111,7 @@ data ModelNewEpochState era = ModelNewEpochState
   , -- below here NO EFFECT until we model EpochBoundary
     mFStakePools :: !(Map (KeyHash StakePool) StakePoolParams)
   , mRetiring :: !(Map (KeyHash StakePool) EpochNo)
-  , mSnapshots :: !SnapShots
+  , mSnapshots :: !(SnapShots era)
   , mEL :: !EpochNo -- The current epoch,
   , mBprev :: !(Map (KeyHash StakePool) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
   , mBcur :: !(Map (KeyHash StakePool) Natural)

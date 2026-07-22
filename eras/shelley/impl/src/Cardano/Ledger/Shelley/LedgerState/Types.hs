@@ -66,7 +66,7 @@ import Numeric.Natural (Natural)
 data EpochState era = EpochState
   { esChainAccountState :: !ChainAccountState
   , esLState :: !(LedgerState era)
-  , esSnapshots :: !SnapShots
+  , esSnapshots :: !(SnapShots era)
   , esNonMyopic :: !NonMyopic
   -- ^ This field, esNonMyopic, does not appear in the formal spec
   -- and is not a part of the protocol. It is only used for providing
@@ -601,7 +601,7 @@ nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
 -- ===================================================
 -- EpochState
 
-esSnapshotsL :: Lens' (EpochState era) SnapShots
+esSnapshotsL :: Lens' (EpochState era) (SnapShots era)
 esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
 
 esLStateL :: Lens' (EpochState era) (LedgerState era)

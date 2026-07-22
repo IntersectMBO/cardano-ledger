@@ -549,7 +549,7 @@ createRUpdOld_ ::
   EraPParams era =>
   EpochSize ->
   BlocksMade ->
-  SnapShots ->
+  SnapShots era ->
   Coin ->
   PParams era ->
   Coin ->

@@ -155,13 +155,13 @@ snapsX ::
   , era ~ ConwayEra
   ) =>
   PParams era ->
-  Gen SnapShots
+  Gen (SnapShots era)
 snapsX pp = do
   univ <- genWitUniv @era 200
   context <- genCertContext @era univ
   epoch <- genFromSpec @EpochNo epochNoSpec
   ls <- genFromSpec @(LedgerState era) (ledgerStateSpec pp univ context (lit epoch))
-  genFromSpec @SnapShots (snapShotsSpec (lit (getMarkSnapShot ls)))
+  genFromSpec @(SnapShots era) (snapShotsSpec (lit (getMarkSnapShot ls)))
 
 instanRewX :: forall era. (era ~ ConwayEra, EraSpecTxOut era) => Gen InstantaneousRewards
 instanRewX = do

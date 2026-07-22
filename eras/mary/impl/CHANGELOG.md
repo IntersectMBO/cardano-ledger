@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Add `TranslateEra` instance for `SnapShots`
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
 

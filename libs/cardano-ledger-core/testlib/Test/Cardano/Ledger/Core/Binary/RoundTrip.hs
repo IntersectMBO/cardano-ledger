@@ -222,8 +222,8 @@ roundTripCoreEraTypesSpec = do
         (eraProtVerLow @era)
         (eraProtVerHigh @era)
     roundTripShareEraSpec @era @(CertState era)
+    roundTripShareEraSpec @era @(SnapShots era)
   describe "Core State Types" $ do
-    roundTripShareEraSpec @era @SnapShots
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
