@@ -377,7 +377,7 @@ dijkstraLedgerTransition = do
             pp
             chainAccountState
             originalUtxo
-            (tx ^. isValidTxL)
+            (tx ^. isPhase2ValidTxL)
         , ledgerState
         , subStAnnTxs
         )
@@ -385,7 +385,7 @@ dijkstraLedgerTransition = do
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
   (utxoStateBeforeUtxow, certStateFinal) <-
-    if tx ^. isValidTxL == IsValid True
+    if tx ^. isPhase2ValidTxL == Phase2Valid
       then do
         let txBody = tx ^. bodyTxL
         runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)

@@ -189,7 +189,7 @@ addAlonzoBasedTopTxFeatureExamples ::
   Tx TopTx era
 addAlonzoBasedTopTxFeatureExamples tx =
   tx
-    & isValidTxL .~ IsValid True
+    & isPhase2ValidTxL .~ Phase2Valid
     & bodyTxL . collateralInputsTxBodyL <>~ exampleTxIns
 
 addAlonzoBasedTxFeatureExamples ::

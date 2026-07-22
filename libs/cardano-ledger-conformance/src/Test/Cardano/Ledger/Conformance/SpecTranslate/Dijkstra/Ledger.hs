@@ -146,7 +146,7 @@ instance SpecTranslate DijkstraEra (Tx TopTx DijkstraEra) where
       <$> withCtxSpecTransM (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
       <*> toSpecRep (tx ^. witsTxL)
       <*> toSpecRep (tx ^. sizeTxF)
-      <*> toSpecRep (tx ^. isValidTxL)
+      <*> toSpecRep (tx ^. isPhase2ValidTxL)
       <*> toSpecRep (tx ^. auxDataTxL)
 
 instance SpecTranslate DijkstraEra (Tx SubTx DijkstraEra) where

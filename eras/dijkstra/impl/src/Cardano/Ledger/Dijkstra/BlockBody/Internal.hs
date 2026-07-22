@@ -38,7 +38,7 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..), toIsPhase2Valid)
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -199,7 +199,7 @@ instance
     where
       invalidIndices =
         NonEmptySet.fromFoldable $
-          StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
+          StrictSeq.findIndicesL (\tx -> tx ^. isPhase2ValidTxL == Phase2Invalid) txs
 
 instance
   ( AlonzoEraTx era
@@ -229,12 +229,12 @@ instance
       unless (inRange i) . fail $
         "index is out of range: " <> show i
     let
-      setValidityFlag tx isValid = set isValidTxL isValid <$> tx
+      setValidityFlag tx isPhase2Valid = set isPhase2ValidTxL isPhase2Valid <$> tx
       validityFlags = alignedValidFlags txsLength invalidTxs
-      txsWithIsValid = Seq.zipWith setValidityFlag (coerce txs) validityFlags
+      txsWithIsPhase2Valid = Seq.zipWith setValidityFlag (coerce txs) validityFlags
     pure $
       DijkstraBlockBodyRaw
-        <$> sequenceA (StrictSeq.forceToStrict txsWithIsValid)
+        <$> sequenceA (StrictSeq.forceToStrict txsWithIsPhase2Valid)
         <*> pure mbLeiosCert
         <*> pure mbPerasCert
 
@@ -259,7 +259,7 @@ instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBloc
     where
       invalidIndices =
         NonEmptySet.fromFoldable $
-          StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
+          StrictSeq.findIndicesL (\tx -> tx ^. isPhase2ValidTxL == Phase2Invalid) txs
   listLen _ = 1
 
 --------------------------------------------------------------------------------
@@ -267,11 +267,11 @@ instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBloc
 --------------------------------------------------------------------------------
 
 -- | Given the number of transactions, and the set of indices for which these
--- transactions do not validate, create an aligned sequence of `IsValid`
+-- transactions do not validate, create an aligned sequence of `IsPhase2Valid`
 -- flags.
-alignedValidFlags :: Int -> IntSet -> Seq.Seq IsValid
+alignedValidFlags :: Int -> IntSet -> Seq.Seq IsPhase2Valid
 alignedValidFlags n invalidSet =
-  Seq.fromFunction n $ \i -> IsValid (i `IntSet.notMember` invalidSet)
+  Seq.fromFunction n $ \i -> toIsPhase2Valid (i `IntSet.notMember` invalidSet)
 
 -- | Placeholder for Peras certificates
 --

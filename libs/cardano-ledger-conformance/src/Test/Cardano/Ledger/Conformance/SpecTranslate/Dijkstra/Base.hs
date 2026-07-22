@@ -400,10 +400,11 @@ instance SpecTranslate DijkstraEra Withdrawals where
 
   toSpecRep (Withdrawals w) = toSpecRepMap w
 
-instance SpecTranslate DijkstraEra IsValid where
-  type SpecRep DijkstraEra IsValid = Bool
+instance SpecTranslate DijkstraEra IsPhase2Valid where
+  type SpecRep DijkstraEra IsPhase2Valid = Bool
 
-  toSpecRep (IsValid b) = pure b
+  toSpecRep Phase2Valid = pure True
+  toSpecRep Phase2Invalid = pure False
 
 instance SpecTranslate DijkstraEra (GovPurposeId r) where
   type SpecRep DijkstraEra (GovPurposeId r) = (Agda.TxId, Integer)

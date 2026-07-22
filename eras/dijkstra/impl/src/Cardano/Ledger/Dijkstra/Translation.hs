@@ -65,11 +65,11 @@ instance TranslateEra DijkstraEra (Tx TopTx) where
       txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
       txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
       auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
-      let isValidTx = tx ^. isValidTxL
+      let isPhase2ValidTx = tx ^. isPhase2ValidTxL
       pure $
         mkBasicTx txBody
           & witsTxL .~ txWits
-          & isValidTxL .~ isValidTx
+          & isPhase2ValidTxL .~ isPhase2ValidTx
           & auxDataTxL .~ auxData
 
 instance TranslateEra DijkstraEra NewEpochState where

@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Rename the phase-2 validity field on `DijkstraTx`: `dtIsValid` -> `dtIsPhase2Valid`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`
 * Make `requiredTopLevelGuards` available on the top-level transaction body:

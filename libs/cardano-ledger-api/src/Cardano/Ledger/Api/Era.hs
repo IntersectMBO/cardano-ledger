@@ -339,7 +339,7 @@ instance EraApi AlonzoEra where
       AlonzoTx
         <$> left ATUEBodyUpgradeError (upgradeTxBody body)
         <*> pure (upgradeTxWits wits)
-        <*> pure (IsValid True)
+        <*> pure Phase2Valid
         <*> pure (fmap upgradeTxAuxData aux)
 
   upgradeTxBody

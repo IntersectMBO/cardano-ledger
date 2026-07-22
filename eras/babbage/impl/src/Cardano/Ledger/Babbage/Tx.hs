@@ -66,8 +66,8 @@ instance EqRaw (Tx l BabbageEra) where
   eqRaw = alonzoTxEqRaw
 
 instance AlonzoEraTx BabbageEra where
-  isValidTxL = babbageTxL . isValidAlonzoTxL
-  {-# INLINE isValidTxL #-}
+  isPhase2ValidTxL = babbageTxL . isPhase2ValidAlonzoTxL
+  {-# INLINE isPhase2ValidTxL #-}
 
 instance Typeable l => DecCBOR (Annotator (Tx l BabbageEra)) where
   decCBOR = fmap MkBabbageTx <$> decCBOR

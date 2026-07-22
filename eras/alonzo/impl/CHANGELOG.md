@@ -2,6 +2,12 @@
 
 ## 1.16.0.0
 
+* Convert `IsValid` into the `IsPhase2Valid` sum type (`Phase2Valid`/`Phase2Invalid`) and rename its lens and field, deprecating the old names:
+  - `isValidTxL` -> `isPhase2ValidTxL`
+  - `isValidAlonzoTxL` -> `isPhase2ValidAlonzoTxL`
+  - `atIsValid` -> `atIsPhase2Valid`
+  - `IsValid` is retained as a deprecated type alias and `pattern`
+* Add `toIsPhase2Valid` and `fromIsPhase2Valid`
 * Change `extraConfig` and `agExtraConfig` from `Maybe` to `StrictMaybe`
 * Remove `ueUtxo` field from `UtxoEnv`
 * Introduce `LEDGERS` and `STS` instance and wire it to `EraRule LEDGERS`
@@ -26,7 +32,7 @@
 * Add `AlonzoEraTxAuxData` as a superclass to `AlonzoEraTx`
 * Add `NFData` instance for `AlonzoScriptsNeeded`
 * Change `Signal` to `StAnnTx TopTx era` for: `AlonzoLEDGER`, `AlonzoUTXOW`, `AlonzoUTXO`, `AlonzoUTXOS`
-* Add `FromJSON` instance for `IsValid`
+* Add `FromJSON` instance for `IsPhase2Valid`
 * Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
 * Add `resolveNeededPlutusScriptsWithPurpose`
 * Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`

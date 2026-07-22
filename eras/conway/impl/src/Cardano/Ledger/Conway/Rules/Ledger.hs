@@ -358,7 +358,7 @@ conwayLedgerTransitionTRC
     curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
     (utxoState', certStateAfterCERTS) <-
-      if tx ^. isValidTxL == IsValid True
+      if tx ^. isPhase2ValidTxL == Phase2Valid
         then do
           let txBody = tx ^. bodyTxL
           runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)

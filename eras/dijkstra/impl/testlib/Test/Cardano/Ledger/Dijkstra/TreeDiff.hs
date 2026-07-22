@@ -157,7 +157,7 @@ instance ToExpr (DijkstraTx l DijkstraEra) where
             OMap.fromList
               [ ("dtBody", toExpr dtBody)
               , ("dtWits", toExpr dtWits)
-              , ("dtIsValid", toExpr dtIsValid)
+              , ("dtIsPhase2Valid", toExpr dtIsPhase2Valid)
               , ("dtAuxData", toExpr dtAuxData)
               ]
     txBody@(DijkstraSubTx {}) ->

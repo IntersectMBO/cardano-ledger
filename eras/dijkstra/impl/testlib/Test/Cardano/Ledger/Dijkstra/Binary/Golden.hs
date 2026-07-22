@@ -56,8 +56,8 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     goldenEmptyFields @era version
   describe "Subtransactions" $ do
     goldenSubTransactions @era
-  describe "IsValid flag" $ do
-    goldenIsValidFlag @era
+  describe "IsPhase2Valid flag" $ do
+    goldenIsPhase2ValidFlag @era
 
 goldenEmptyFields :: forall era. DijkstraEraTest era => Version -> Spec
 goldenEmptyFields version =
@@ -287,31 +287,31 @@ goldenSubTransactions = do
         , E TkNull
         ]
 
-goldenIsValidFlag :: forall era. DijkstraEraTest era => Spec
-goldenIsValidFlag = do
-  it "Deserialize transactions with missing `isValid` flag" $
+goldenIsPhase2ValidFlag :: forall era. DijkstraEraTest era => Spec
+goldenIsPhase2ValidFlag = do
+  it "Deserialize transactions with missing `isPhase2Valid` flag" $
     expectDecoderResultOn @(Tx TopTx era)
       version
       txWithoutFlagEnc
       basicValidTx
       id
-  it "Deserialize transactions with `isValid` flag set to true" $
+  it "Deserialize transactions with `isPhase2Valid` flag set to true" $
     expectDecoderResultOn @(Tx TopTx era)
       version
       txWithFlagTrueEnc
       basicValidTx
       id
-  it "Fail to deserialize transactions with `isValid` flag set to false" $
+  it "Fail to deserialize transactions with `isPhase2Valid` flag set to false" $
     expectDecoderFailureAnn @(Tx TopTx era)
       version
       txWithFlagFalseEnc
       ( DecoderErrorDeserialiseFailure
           "Annotator (Tx TopTx DijkstraEra)"
-          (DeserialiseFailure 13 "Value `false` not allowed for `isValid`")
+          (DeserialiseFailure 13 "Value `false` not allowed for `isPhase2Valid`")
       )
   where
     version = eraProtVerLow @era
-    basicValidTx = mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isValidTxL .~ IsValid True
+    basicValidTx = mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isPhase2ValidTxL .~ Phase2Valid
     txWithoutFlagEnc =
       mconcat
         [ E $ TkListLen 3

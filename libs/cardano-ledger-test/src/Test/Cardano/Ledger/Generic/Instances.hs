@@ -360,16 +360,16 @@ alonzoApplyTx ::
   forall era.
   (EraModel era, AlonzoEraTx era, Reflect era) =>
   Int -> SlotNo -> Model era -> Tx TopTx era -> Model era
-alonzoApplyTx count slot model tx = case tx ^. isValidTxL of
-  IsValid True -> applyTxSimple count epochAccurateModel tx
-  IsValid False -> applyTxFail count nextTxIx epochAccurateModel tx
+alonzoApplyTx count slot model tx = case tx ^. isPhase2ValidTxL of
+  Phase2Valid -> applyTxSimple count epochAccurateModel tx
+  Phase2Invalid -> applyTxFail count nextTxIx epochAccurateModel tx
   where
     transactionEpoch = epochFromSlotNo slot
     modelEpoch = mEL model
     epochAccurateModel = epochBoundary transactionEpoch modelEpoch model
     txbody = tx ^. bodyTxL
     outputs = txbody ^. outputsTxBodyL
-    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
+    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When Phase2Invalid, ColRet will get this TxIx
 
 instance EraGenericGen BabbageEra where
   setValidity = allegraSetValidity

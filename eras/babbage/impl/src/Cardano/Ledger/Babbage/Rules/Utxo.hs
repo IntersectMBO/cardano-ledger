@@ -463,8 +463,8 @@ updateUTxOStateByTxValidity ::
 updateUTxOStateByTxValidity pp certState govState tx utxoState =
   let txBody = tx ^. bodyTxL
       utxo = utxosUtxo utxoState
-   in case tx ^. isValidTxL of
-        IsValid True ->
+   in case tx ^. isPhase2ValidTxL of
+        Phase2Valid ->
           Shelley.updateUTxOState
             pp
             utxoState
@@ -473,7 +473,7 @@ updateUTxOStateByTxValidity pp certState govState tx utxoState =
             govState
             (tellEvent . Alonzo.TotalDeposits (hashAnnotated txBody))
             (\a b -> tellEvent $ Alonzo.TxUTxODiff a b)
-        IsValid False ->
+        Phase2Invalid ->
           {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
           {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
           let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)

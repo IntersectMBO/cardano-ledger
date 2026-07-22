@@ -37,6 +37,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
+import Cardano.Ledger.Alonzo.Tx (fromIsPhase2Valid, toIsPhase2Valid)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
@@ -320,11 +321,11 @@ makeDatumWitness txout =
       datum <- lookupByKeyM "datum" datumHash gsDatums
       pure $ datsTxWitsL @era' <>~ TxDats [(hashData datum, datum)]
 
--- | Does the current Credential point to a PlutusScript? If so return its IsValid and Hash
+-- | Does the current Credential point to a PlutusScript? If so return its IsPhase2Valid and Hash
 plutusScriptHashFromTag ::
   Credential k ->
   PlutusPurposeTag ->
-  GenRS era (Maybe (IsValid, ScriptHash))
+  GenRS era (Maybe (IsPhase2Valid, ScriptHash))
 plutusScriptHashFromTag (KeyHashObj _) _ = pure Nothing
 plutusScriptHashFromTag (ScriptHashObj scriptHash) tag =
   fmap (Map.lookup (scriptHash, tag) . gsPlutusScripts) get <&> \case
@@ -338,15 +339,15 @@ redeemerWitnessMaker ::
   EraGenericGen era =>
   PlutusPurposeTag ->
   [Maybe (GenRS era (Data era), Credential k)] ->
-  GenRS era (IsValid, [ExUnits -> TxWits era -> TxWits era])
+  GenRS era (IsPhase2Valid, [ExUnits -> TxWits era -> TxWits era])
 redeemerWitnessMaker tag listWithCred =
   let creds =
         [ (ix, genDat, cred)
         | (ix, mCred) <- zip [0 ..] listWithCred
         , Just (genDat, cred) <- [mCred]
         ]
-      allValid :: [IsValid] -> IsValid
-      allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
+      allValid :: [IsPhase2Valid] -> IsPhase2Valid
+      allValid = toIsPhase2Valid . getAll . foldMap (All . fromIsPhase2Valid)
    in fmap (first allValid . unzip . catMaybes) $
         forM creds $ \(ix, genDat, cred) ->
           plutusScriptHashFromTag cred tag >>= \case
@@ -818,14 +819,14 @@ genAlonzoTx slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo slot
   pure (utxo, tx)
 
-applyIsValid :: forall era. Reflect era => IsValid -> Tx TopTx era -> Tx TopTx era
+applyIsValid :: forall era. Reflect era => IsPhase2Valid -> Tx TopTx era -> Tx TopTx era
 applyIsValid isValid = case reify @era of
   Shelley -> id
   Mary -> id
   Allegra -> id
-  Alonzo -> isValidTxL .~ isValid
-  Babbage -> isValidTxL .~ isValid
-  Conway -> isValidTxL .~ isValid
+  Alonzo -> isPhase2ValidTxL .~ isValid
+  Babbage -> isPhase2ValidTxL .~ isValid
+  Conway -> isPhase2ValidTxL .~ isValid
 
 genAlonzoTxAndInfo ::
   forall era.
@@ -865,7 +866,7 @@ genAlonzoTxAndInfo slot = do
   recipients <- genRecipientsFrom toSpendNoCollateralTxOuts
 
   -- mkPaymentWits :: ExUnits -> TxWits era -> TxWits era
-  (IsValid v1, mkPaymentWits) <-
+  (isPhase2Valid1, mkPaymentWits) <-
     redeemerWitnessMaker
       Spending
       [ (\dh cred -> (lookupByKeyM "datum" dh gsDatums, cred))
@@ -886,15 +887,20 @@ genAlonzoTxAndInfo slot = do
       then pure Nothing
       else Just <$> genTxOut (inject withdrawalAmount)
   let wdrlCreds = map ((^. accountAddressCredentialL) . fst) $ Map.toAscList wdrlMap
-  (IsValid v2, mkWithdrawalsWits) <-
+  (isPhase2Valid2, mkWithdrawalsWits) <-
     redeemerWitnessMaker Withdrawing $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genTxCerts slot
   let dcertCreds = map getTxCertCredential dcerts
-  (IsValid v3, mkCertsWits) <-
+  (isPhase2Valid3, mkCertsWits) <-
     redeemerWitnessMaker Certifying $ map ((,) genDatum <$>) dcertCreds
 
-  let isValid = IsValid (v1 && v2 && v3)
+  let isValid =
+        toIsPhase2Valid
+          ( fromIsPhase2Valid isPhase2Valid1
+              && fromIsPhase2Valid isPhase2Valid2
+              && fromIsPhase2Valid isPhase2Valid3
+          )
       mkWits :: [ExUnits -> TxWits era -> TxWits era]
       mkWits = mkPaymentWits <> mkCertsWits <> mkWithdrawalsWits
   exUnits <- genExUnits (length mkWits)

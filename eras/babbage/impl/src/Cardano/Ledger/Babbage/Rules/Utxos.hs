@@ -119,9 +119,9 @@ utxosTransition ::
 utxosTransition =
   judgmentContext >>= \(TRC (_, pup, stAnnTx)) -> do
     let tx = stAnnTx ^. txStAnnTxG
-    case tx ^. isValidTxL of
-      IsValid True -> babbageEvalScriptsTxValid
-      IsValid False -> do
+    case tx ^. isPhase2ValidTxL of
+      Phase2Valid -> babbageEvalScriptsTxValid
+      Phase2Invalid -> do
         babbageEvalScriptsTxInvalid @era stAnnTx
         pure pup
 
@@ -150,7 +150,7 @@ expectScriptsToPass stAnnTx = do
             failBecause $
               injectFailure $
                 Alonzo.ValidationTagMismatch
-                  (tx ^. isValidTxL)
+                  (tx ^. isPhase2ValidTxL)
                   (Alonzo.FailedUnexpectedly (Alonzo.scriptFailureToFailureDescription <$> fs))
           Passes ps -> mapM_ (tellEvent . injectEvent . Alonzo.SuccessfulPlutusScriptsEvent) (nonEmpty ps)
 
@@ -212,7 +212,7 @@ babbageEvalScriptsTxInvalid stAnnTx = do
           Passes _ ->
             failBecause $
               injectFailure $
-                Alonzo.ValidationTagMismatch (tx ^. isValidTxL) Alonzo.PassedUnexpectedly
+                Alonzo.ValidationTagMismatch (tx ^. isPhase2ValidTxL) Alonzo.PassedUnexpectedly
           Fails ps fs -> do
             mapM_
               (tellEvent . injectEvent . Alonzo.SuccessfulPlutusScriptsEvent @era)
