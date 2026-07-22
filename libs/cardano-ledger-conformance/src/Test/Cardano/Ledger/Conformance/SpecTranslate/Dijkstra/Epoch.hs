@@ -53,8 +53,8 @@ instance SpecTranslate DijkstraEra (EpochState DijkstraEra) where
       ratifyState = getRatifyState $ utxosGovState lsUTxOState
       govActions = toList $ lsUTxOState ^. utxosGovStateL . proposalsGovStateL . pPropsL
 
-instance SpecTranslate DijkstraEra (SnapShots era) where
-  type SpecRep DijkstraEra (SnapShots era) = Agda.Snapshots
+instance SpecTranslate DijkstraEra (SnapShots DijkstraEra) where
+  type SpecRep DijkstraEra (SnapShots DijkstraEra) = Agda.Snapshots
 
   toSpecRep (SnapShots {..}) =
     Agda.MkSnapshots

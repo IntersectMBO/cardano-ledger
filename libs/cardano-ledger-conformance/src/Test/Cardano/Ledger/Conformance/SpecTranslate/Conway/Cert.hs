@@ -145,8 +145,8 @@ instance SpecTranslate ConwayEra (EpochState ConwayEra) where
       ratifyState = getRatifyState $ utxosGovState lsUTxOState
       govActions = toList $ lsUTxOState ^. utxosGovStateL . proposalsGovStateL . pPropsL
 
-instance SpecTranslate ConwayEra (SnapShots era) where
-  type SpecRep ConwayEra (SnapShots era) = Agda.Snapshots
+instance SpecTranslate ConwayEra (SnapShots ConwayEra) where
+  type SpecRep ConwayEra (SnapShots ConwayEra) = Agda.Snapshots
 
   toSpecRep (SnapShots {..}) =
     Agda.MkSnapshots
