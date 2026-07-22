@@ -10,6 +10,8 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.HuddleSpec (babbageCDDL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Cardano.Protocol.Crypto (StandardCrypto)
+import qualified Cardano.Protocol.Praos.BlockHeader as Praos
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
@@ -19,6 +21,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Protocol.Praos.Arbitrary ()
 
 spec :: Spec
 spec =
@@ -46,6 +49,9 @@ spec =
       huddleRoundTripCborSpec @(Redeemers BabbageEra) v "redeemers"
       huddleRoundTripAnnCborSpec @(Tx TopTx BabbageEra) v "transaction"
       huddleRoundTripCborSpec @(Tx TopTx BabbageEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(Praos.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Praos.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Praos.HeaderBody StandardCrypto) v "header_body"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx BabbageEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData BabbageEra) v "auxiliary_data"
@@ -55,3 +61,4 @@ spec =
         huddleDecoderEquivalenceSpec @(TxWits BabbageEra) v "transaction_witness_set"
         huddleDecoderEquivalenceSpec @(Redeemers BabbageEra) v "redeemers"
         huddleDecoderEquivalenceSpec @(Tx TopTx BabbageEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(Praos.Header StandardCrypto) v "header"

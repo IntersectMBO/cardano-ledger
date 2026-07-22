@@ -24,7 +24,7 @@
 -- the fields needed for the Praos protocol. This also allows us to hide the
 -- more detailed construction of the header.
 module Cardano.Protocol.Praos.BlockHeader (
-  Header (Header, headerBody, headerSig),
+  Header (HeaderConstr, Header, headerBody, headerSig),
   HeaderBody (..),
   headerHash,
   headerSize,

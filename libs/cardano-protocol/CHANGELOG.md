@@ -13,3 +13,7 @@
   - `Cardano.Protocol.TPraos.BlockHeader`
   - `Cardano.Protocol.Praos.VRF`
   - `Cardano.Protocol.Praos.BlockHeader`
+
+### `testlib`
+
+* Add `testlib` with `Test.Cardano.Protocol.Praos.Arbitrary` and `Test.Cardano.Protocol.Leios.Arbitrary`, providing `Arbitrary` instances for the Praos and Leios `Header`/`HeaderBody`, `EbAnnouncement`, `InputVRF`, `OCert`, `KESPeriod` and `PrevHash`, and non-annotator `DecCBOR` instances for the Praos and Leios `Header`

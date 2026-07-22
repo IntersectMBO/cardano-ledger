@@ -17,7 +17,7 @@
 -- appended. Everything else is identical to the Praos header, see
 -- "Cardano.Protocol.Praos.BlockHeader" for details.
 module Cardano.Protocol.Leios.BlockHeader (
-  Header (Header, headerBody, headerSig),
+  Header (HeaderConstr, Header, headerBody, headerSig),
   HeaderBody (..),
   EbAnnouncement (..),
   headerHash,
