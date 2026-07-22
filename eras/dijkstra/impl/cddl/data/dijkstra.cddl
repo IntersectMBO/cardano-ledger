@@ -815,9 +815,9 @@ direct_deposits = {+ reward_account => coin}
 account_balance_intervals = {+ credential => account_balance_interval}
 
 account_balance_interval =
-  [  inclusive_lower_bound : coin, exclusive_upper_bound : coin/ nil
-  // inclusive_lower_bound : coin/ nil, exclusive_upper_bound : coin
-  ]
+  [inclusive_lower_bound : coin, exclusive_upper_bound : coin/ nil]
+  / [inclusive_lower_bound : coin/ nil, exclusive_upper_bound : coin]
+  / coin
 
 transaction_witness_set =
   { ? 0 : nonempty_set<vkeywitness>

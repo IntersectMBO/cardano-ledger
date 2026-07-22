@@ -196,6 +196,9 @@ instance SpecTranslate DijkstraEra (AccountBalanceInterval DijkstraEra) where
       pure $ Agda.Upper u
     AccountBalanceBothBounds (Inclusive (Coin l)) (Exclusive (Coin u)) ->
       pure $ Agda.Both l u
+    AccountBalanceExact (Coin c) ->
+      -- TODO Future task to replace with new formal spec type
+      pure $ Agda.Both c (c + 1)
 
 instance SpecTranslate DijkstraEra (AccountBalanceIntervals DijkstraEra) where
   type
