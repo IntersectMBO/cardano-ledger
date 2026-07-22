@@ -45,7 +45,8 @@ library
       -Wredundant-constraints
   build-depends:
     base >=4.18 && <5,
-    cardano-crypto-class ^>=2.5,
+    cardano-crypto-class ^>=2.6,
+    cardano-crypto-praos ^>=2.2,
     cardano-ledger-allegra >=1.10,
     cardano-ledger-alonzo >=1.16,
     cardano-ledger-babbage >=1.13.1,

@@ -24,7 +24,6 @@ import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Data.OSet.Strict (OSet)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genDatumPresent, genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
-  noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
@@ -46,7 +45,7 @@ spec :: Spec
 spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
-    describe "Huddle" $ specWithHuddle dijkstraCDDL . noTwiddle $ do
+    describe "Huddle" $ specWithHuddle dijkstraCDDL $ do
       describe "TxsRB" $
         fullAnnGenCddlSpec @(BlockBody DijkstraEra) genSmallDijkstraTxsBlockBody v "block_body"
       describe "CertRB" $
