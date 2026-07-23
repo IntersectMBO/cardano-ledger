@@ -39,6 +39,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import Cardano.Ledger.Shelley.LedgerState (utxosGovStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -195,7 +196,7 @@ utxoTransition = do
   runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
 
   -- process Protocol Parameter Update Proposals
-  ppup' <-
+  govStateAfterPPUP <-
     trans @(EraRule "PPUP" era) $ TRC (Shelley.PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
 
   {- adaPolicy ∉ supp mint tx
@@ -217,12 +218,11 @@ utxoTransition = do
 
   Shelley.updateUTxOState
     pp
-    utxos
     txBody
     certState
-    ppup'
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
+    (utxos & utxosGovStateL .~ govStateAfterPPUP)
 
 -- | Ensure the transaction is within the validity window.
 --

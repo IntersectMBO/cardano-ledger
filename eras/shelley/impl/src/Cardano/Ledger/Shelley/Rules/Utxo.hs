@@ -24,7 +24,8 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEvent (..),
   validSizeComputationCheck,
   updateUTxOState,
-  updateUTxOStateNoFees,
+  updateUTxOStateDeposits,
+  updateUTxOAndInstantStake,
 
   -- * Validations
   validateInputSetEmptyUTxO,
@@ -56,7 +57,7 @@ import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, UTXO)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
   PPUP,
@@ -354,10 +355,10 @@ utxoInductive ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp certState, utxos, stAnnTx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxoState, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
-      utxo = utxos ^. utxoL
-      UTxOState _ _ _ ppup _ _ = utxos
+      utxo = utxoState ^. utxoL
+      UTxOState _ _ _ ppup _ _ = utxoState
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
       genDelegs = dsGenDelegs (certState ^. certDStateL)
@@ -386,7 +387,7 @@ utxoInductive = do
   runTest $ validateValueNotConservedUTxO pp utxo certState txBody
 
   -- process Protocol Parameter Update Proposals
-  ppup' <-
+  govStateAfterPPUP <-
     trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
 
   {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
@@ -400,12 +401,11 @@ utxoInductive = do
 
   updateUTxOState
     pp
-    utxos
     txBody
     certState
-    ppup'
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (\a b -> tellEvent $ TxUTxODiff a b)
+    (utxoState & utxosGovStateL .~ govStateAfterPPUP)
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -588,58 +588,63 @@ updateUTxOState ::
   , Monad m
   ) =>
   PParams era ->
-  UTxOState era ->
   TxBody TopTx era ->
   CertState era ->
-  GovState era ->
   (Coin -> m ()) ->
   (UTxO era -> UTxO era -> m ()) ->
+  UTxOState era ->
   m (UTxOState era)
-updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
-  newUtxoState <-
-    updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent
-  pure $ newUtxoState {utxosFees = utxosFees newUtxoState <> txBody ^. feeTxBodyL}
+updateUTxOState pp txBody certState depositChangeEvent utxoDiffEvent utxoState = do
+  withDeposits <- updateUTxOStateDeposits pp certState txBody depositChangeEvent utxoState
+  withUtxo <- updateUTxOAndInstantStake txBody utxoDiffEvent withDeposits
+  pure $ withUtxo & utxosFeesL <>~ (txBody ^. feeTxBodyL)
 
--- | Like 'updateUTxOState', but does not collect fees. This is used for sub-transactions
--- where fees are not applicable.
-updateUTxOStateNoFees ::
+-- | Apply the txBody's inputs/outputs to the UTxO map and to the instant stake,
+-- firing the diff event.
+updateUTxOAndInstantStake ::
   ( EraTxBody era
   , EraStake era
+  , Monad m
+  ) =>
+  TxBody l era ->
+  (UTxO era -> UTxO era -> m ()) ->
+  UTxOState era ->
+  m (UTxOState era)
+updateUTxOAndInstantStake txBody utxoDiffEvent utxoState = do
+  let !utxoAdd = txouts txBody
+      {- utxoDel  = txins txb ◁ utxo -}
+      !(utxoWithout, utxoDel) = extractKeys (unUTxO (utxoState ^. utxoL)) (txBody ^. inputsTxBodyL)
+      {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
+      newUtxo = utxoWithout `Map.union` unUTxO utxoAdd
+      deletedUtxo = UTxO utxoDel
+      newInstantStake =
+        deleteInstantStake
+          deletedUtxo
+          (addInstantStake utxoAdd (utxoState ^. instantStakeL))
+  utxoDiffEvent deletedUtxo utxoAdd
+  pure $!
+    utxoState
+      & utxoL .~ UTxO newUtxo
+      & instantStakeL .~ newInstantStake
+
+updateUTxOStateDeposits ::
+  ( EraTxBody era
   , EraCertState era
   , Monad m
   ) =>
   PParams era ->
-  UTxOState era ->
-  TxBody l era ->
   CertState era ->
-  GovState era ->
+  TxBody TopTx era ->
   (Coin -> m ()) ->
-  (UTxO era -> UTxO era -> m ()) ->
+  UTxOState era ->
   m (UTxOState era)
-updateUTxOStateNoFees pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
-  let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosDonation} = utxos
-      UTxO utxo = utxosUtxo
-      !utxoAdd = txouts txBody -- These will be inserted into the UTxO
-      {- utxoDel  = txins txb ◁ utxo -}
-      !(utxoWithout, utxoDel) = extractKeys utxo (txBody ^. inputsTxBodyL)
-      {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
-      newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      deletedUTxO = UTxO utxoDel
-      totalRefunds = certsTotalRefundsTxBody pp (certState ^. certDStateL . accountsL) txBody
-      totalDeposits = certsTotalDepositsTxBody pp certState txBody
-      depositChange = totalDeposits <-> totalRefunds
+updateUTxOStateDeposits pp certState txBody depositChangeEvent utxoState = do
   depositChangeEvent depositChange
-  txUtxODiffEvent deletedUTxO utxoAdd
-  pure $!
-    UTxOState
-      { utxosUtxo = UTxO newUTxO
-      , utxosDeposited = utxosDeposited <> depositChange
-      , utxosFees = utxosFees
-      , utxosGovState = govState
-      , utxosInstantStake =
-          deleteInstantStake deletedUTxO (addInstantStake utxoAdd (utxos ^. instantStakeL))
-      , utxosDonation = utxosDonation
-      }
+  pure $! utxoState & utxosDepositedL <>~ depositChange
+  where
+    depositChange = totalDeposits <-> totalRefunds
+    totalDeposits = certsTotalDepositsTxBody pp certState txBody
+    totalRefunds = certsTotalRefundsTxBody pp (certState ^. certDStateL . accountsL) txBody
 
 instance
   ( Era era
