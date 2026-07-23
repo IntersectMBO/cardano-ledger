@@ -23,6 +23,7 @@ module Cardano.Ledger.Shelley (
   sfExtraEntropyL,
 ) where
 
+import Cardano.Ledger.Shelley.Block ()
 import Cardano.Ledger.Shelley.BlockBody ()
 import Cardano.Ledger.Shelley.Era (
   ShelleyEra,

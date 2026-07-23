@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Shelley.Binary.Annotator (
 import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -126,3 +127,7 @@ instance Era era => DecCBOR (MultiSigRaw era) where
       2 -> (,) 2 . MultiSigAnyOf <$> decCBOR
       3 -> (,) 3 <$> (MultiSigMOf <$> decCBOR <*> decCBOR)
       k -> invalidKey k
+
+instance DecCBOR h => DecCBOR (Block h ShelleyEra) where
+  decCBOR =
+    decodeRecordNamed "Block" (const 4) $ Block <$> decCBOR <*> decCBOR
