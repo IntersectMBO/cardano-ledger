@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Add `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block`
 * Add `TranslateEra` instance for `SnapShots`
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
@@ -13,6 +14,7 @@
 
 ### `testlib`
 
+* Add `DecCBOR` instance for `Block`
 * Make `Test.Cardano.Ledger.Mary.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Mary.Examples`:
   - Remove `exampleMaryBasedShelleyTxBody`, `exampleMaryBasedTxBody`

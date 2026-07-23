@@ -44,7 +44,6 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR,
-  EncCBORGroup (..),
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNullMaybe,
   decodeNullStrictMaybe,
@@ -120,7 +119,6 @@ instance EraBlockBody DijkstraEra where
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
   txSeqBlockBodyL = lensMemoRawType @DijkstraEra dbbrTxs (\bb p -> bb {dbbrTxs = p})
   hashBlockBody (MkDijkstraBlockBody m) = extractHash $ getMemoBytesHash m
-  numSegComponents = 1
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
 
 mkBasicBlockBodyDijkstra :: forall era. AlonzoEraTx era => DijkstraBlockBody era
@@ -248,19 +246,6 @@ deriving via
     , DecCBOR (Annotator (TxWits era))
     ) =>
     DecCBOR (Annotator (DijkstraBlockBody era))
-
-instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBody txs mbLeiosCert mbPerasCert) = do
-    encodeListLen 4
-      <> encodeNullMaybe encCBOR invalidIndices
-      <> encCBOR txs
-      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
-      <> encodeNullStrictMaybe encCBOR mbPerasCert
-    where
-      invalidIndices =
-        NonEmptySet.fromFoldable $
-          StrictSeq.findIndicesL (\tx -> tx ^. isValidTxL == IsValid False) txs
-  listLen _ = 1
 
 --------------------------------------------------------------------------------
 -- Internal utility functions

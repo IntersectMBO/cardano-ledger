@@ -20,6 +20,7 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -82,3 +83,7 @@ instance Era era => DecCBOR (Timelock era) where
   decCBOR = MkTimelock <$> decodeMemoized decCBOR
 
 deriving newtype instance DecCBOR (Tx TopTx AllegraEra)
+
+instance DecCBOR h => DecCBOR (Block h AllegraEra) where
+  decCBOR =
+    decodeRecordNamed "Block" (const 4) $ Block <$> decCBOR <*> decCBOR

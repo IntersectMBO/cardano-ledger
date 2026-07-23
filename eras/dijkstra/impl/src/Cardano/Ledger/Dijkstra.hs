@@ -33,6 +33,7 @@ import Cardano.Ledger.BaseTypes (Inject (inject))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
+import Cardano.Ledger.Dijkstra.Block ()
 import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era

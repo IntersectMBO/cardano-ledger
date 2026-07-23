@@ -2,6 +2,8 @@
 
 ## 0.3.0.0
 
+* Add `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in new module `Cardano.Ledger.Dijkstra.Block`
+* Remove `EncCBORGroup` instance for `DijkstraBlockBody`
 * Add `TranslateEra` instance for `SnapShots`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`

@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in new module `Cardano.Ledger.Alonzo.Block`
 * Add `TranslateEra` instance for `SnapShots`
 * Change `extraConfig` and `agExtraConfig` from `Maybe` to `StrictMaybe`
 * Remove `ueUtxo` field from `UtxoEnv`
@@ -70,6 +71,7 @@
 
 ### `testlib`
 
+* Add `DecCBOR` instance for `Block`
 * Add `Arbitrary` instance for `AlonzoBbodyPredFailure`
 * Add to `Test.Cardano.Ledger.Alonzo.Examples`:
   - `exampleAlonzoPParams`

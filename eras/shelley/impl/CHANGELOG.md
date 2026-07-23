@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in new module `Cardano.Ledger.Shelley.Block`
 * Change `produced` to accept `PState`, instead of `CertState`
 * Remove `consumed` in favor of `shelleyConsumed`
 * Restrict `produced` to `TxBody TopTx era`.
@@ -125,6 +126,7 @@
 
 ### `testlib`
 
+* Add `DecCBOR` instance for `Block`
 * Add `Arbitrary` instance for `ShelleyBbodyPredFailure`
 * Add to `Test.Cardano.Ledger.Shelley.Examples`:
   - `exampleShelleyPParams`

@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Add `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block`
 * Add `TranslateEra` instance for `SnapShots`
 * Fix `NoThunks` instance for `ConwayGenesis`
 * Remove `conwayCertsTotalRefundsTxBody` and `conwayConsumed`

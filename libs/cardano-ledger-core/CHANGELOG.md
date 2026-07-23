@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Remove `numSegComponents` from `EraBlockBody`
+* Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Make `SnapShots` parametric in `era`
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
@@ -82,6 +84,7 @@
 
 ### `testlib`
 
+* Remove generic `DecCBOR` instance for `Block`
 * Add `EraRulesWithFailures` type family to `EraTest`
 * Remove `roundTripAllPredicateFailures`, `EraRuleProof` and `RuleListEra`
 * Add `examplePParams` and `examplePParamsUpdate` to `EraTest`.

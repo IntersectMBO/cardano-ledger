@@ -8,12 +8,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.BlockBody where
+module Cardano.Ledger.Alonzo.Block () where
 
-import Cardano.Ledger.Alonzo.BlockBody
-import Cardano.Ledger.Babbage.Era
-import Cardano.Ledger.Babbage.Tx ()
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.Alonzo.BlockBody ()
+import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -21,32 +20,23 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   decodeRecordNamed,
   encodeListLen,
-  serialize',
   toPlainEncoding,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
-import qualified Data.ByteString as BS
 import Data.Typeable (Typeable)
 
-instance EraBlockBody BabbageEra where
-  type BlockBody BabbageEra = AlonzoBlockBody BabbageEra
-  mkBasicBlockBody = mkBasicBlockBodyAlonzo
-  txSeqBlockBodyL = txSeqBlockBodyAlonzoL
-  hashBlockBody = alonzoBlockBodyHash
-  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
-
-instance EncCBOR h => EncCBOR (Block h BabbageEra) where
+instance EncCBOR h => EncCBOR (Block h AlonzoEra) where
   encCBOR (Block h txns) =
     encodeListLen 5 <> encCBOR h <> encCBORGroup txns
 
-instance (EncCBOR h, Typeable h) => Plain.ToCBOR (Block h BabbageEra) where
-  toCBOR = toPlainEncoding (eraProtVerLow @BabbageEra) . encCBOR
+instance (EncCBOR h, Typeable h) => Plain.ToCBOR (Block h AlonzoEra) where
+  toCBOR = toPlainEncoding (eraProtVerLow @AlonzoEra) . encCBOR
 
 instance
   (DecCBOR (Annotator h), Typeable h) =>
-  DecCBOR (Annotator (Block h BabbageEra))
+  DecCBOR (Annotator (Block h AlonzoEra))
   where
   decCBOR =
     decodeRecordNamed "Block" (const 5) $ do

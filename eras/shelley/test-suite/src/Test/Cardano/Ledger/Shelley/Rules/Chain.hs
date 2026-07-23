@@ -33,7 +33,6 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (BbodySignal (..), Block (..), EraBlockHeader)
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
@@ -252,7 +251,6 @@ instance
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
-  , EncCBORGroup (BlockBody era)
   , AtMostEra "Alonzo" era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era
