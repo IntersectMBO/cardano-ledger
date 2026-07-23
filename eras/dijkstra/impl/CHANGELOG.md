@@ -3,6 +3,11 @@
 ## 0.3.0.0
 
 * Add `TranslateEra` instance for `SnapShots`
+* Add `minPoolMargin` protocol parameter (CIP-0023):
+  - Add `dppMinPoolMargin` to `DijkstraPParams`
+  - Add `udppMinPoolMargin` to `UpgradeDijkstraPParams`
+  - Add `hkdMinPoolMarginL` to `DijkstraEraPParams`
+  - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
 * Add `dijkstraConsumed` and `validateValueNotConservedUTxO`
 * Add `AccountBalanceExact` constructor to `AccountBalanceInterval`
 * Make `requiredTopLevelGuards` available on the top-level transaction body:
