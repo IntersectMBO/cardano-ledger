@@ -105,9 +105,11 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   Encoding,
   ToCBOR (..),
+  TokenType (..),
   decodeNullStrictMaybe,
   encodeListLen,
   encodeNullStrictMaybe,
+  peekTokenType,
   serialize,
   serialize',
  )
@@ -465,12 +467,19 @@ instance
   decCBOR =
     withSTxTopLevelM @l @era $ \case
       STopTxOnly ->
-        decodeRecordNamed "AlonzoTx" (const 4) $ do
+        fmap snd $ decodeRecordNamed "AlonzoTx" fst $ do
           body <- decCBOR
           wits <- decCBOR
-          isValid <- decCBOR
+          (isValidFlagSupplied, isValid) <-
+            peekTokenType >>= \case
+              TypeBool -> do
+                isValid <- decCBOR
+                pure (True, isValid)
+              _ -> pure (False, IsValid True)
           auxData <- decodeNullStrictMaybe decCBOR
-          pure $ AlonzoTx <$> body <*> wits <*> pure isValid <*> sequence auxData
+          let
+            tx = AlonzoTx <$> body <*> wits <*> pure isValid <*> sequence auxData
+          pure (if isValidFlagSupplied then 4 else 3, tx)
   {-# INLINE decCBOR #-}
 
 data AlonzoStAnnTx l era where

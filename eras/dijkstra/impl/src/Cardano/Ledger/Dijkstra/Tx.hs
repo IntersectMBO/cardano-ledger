@@ -131,28 +131,26 @@ instance EraTx era => EncCBOR (DijkstraTx l era) where
 
 decodeDijkstraTopTx :: EraTx era => Bool -> Decoder s (Annotator (DijkstraTx TopTx era))
 decodeDijkstraTopTx allowIsValid =
-  fst <$> do
-    let isValidBackwardsCompatibleLength isValidFlagSupplied = if isValidFlagSupplied then 4 else 3
-    decodeRecordNamed "DijkstraTx" (isValidBackwardsCompatibleLength . snd) $ do
-      bodyAnn <- decCBOR
-      witsAnn <- decCBOR
-      isValidFlagSupplied <-
-        if allowIsValid
-          then
-            peekTokenType >>= \case
-              TypeBool ->
-                decCBOR >>= \case
-                  True -> pure True
-                  False -> fail "Value `false` not allowed for `isValid`"
-              _ -> pure False
-          else pure False
-      auxAnn <- decodeNullStrictMaybe decCBOR
-      let
-        -- `isValid == False` can no longer be supplied in an encoded transaction.
-        isValid = IsValid True
-        dijkstraTopTx =
-          DijkstraTx <$> bodyAnn <*> witsAnn <*> pure isValid <*> sequence auxAnn
-      pure (dijkstraTopTx, isValidFlagSupplied)
+  fmap snd $ decodeRecordNamed "DijkstraTx" fst $ do
+    bodyAnn <- decCBOR
+    witsAnn <- decCBOR
+    isValidFlagSupplied <-
+      if allowIsValid
+        then
+          peekTokenType >>= \case
+            TypeBool ->
+              decCBOR >>= \case
+                True -> pure True
+                False -> fail "Value `false` not allowed for `isValid`"
+            _ -> pure False
+        else pure False
+    auxAnn <- decodeNullStrictMaybe decCBOR
+    let
+      -- `isValid == False` can no longer be supplied in an encoded transaction.
+      isValid = IsValid True
+      dijkstraTopTx =
+        DijkstraTx <$> bodyAnn <*> witsAnn <*> pure isValid <*> sequence auxAnn
+    pure (if isValidFlagSupplied then 4 else 3, dijkstraTopTx)
 
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case

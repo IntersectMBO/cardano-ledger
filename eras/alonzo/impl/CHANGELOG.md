@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Make `AlonzoTx` decoder that used for Mempool backwards compatible with prior-eras
 * Add `TranslateEra` instance for `SnapShots`
 * Change `extraConfig` and `agExtraConfig` from `Maybe` to `StrictMaybe`
 * Remove `ueUtxo` field from `UtxoEnv`
