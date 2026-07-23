@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block`
 * Add `TranslateEra` instance for `SnapShots`
 * Rename rule types and deprecate the old names:
   - `AllegraUTXO` -> `UTXO`
@@ -22,6 +23,7 @@
 
 ### `testlib`
 
+* Add `DecCBOR` instance for `Block`
 * Export `shelleyToBabbageSpec`
 * Make `Test.Cardano.Ledger.Allegra.Imp.spec` accept `Proxy era`
 * In `Test.Cardano.Ledger.Allegra.Examples`:
