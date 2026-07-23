@@ -44,7 +44,6 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR,
-  EncCBORGroup (..),
   decodeNonEmptySetLikeEnforceNoDuplicates,
   decodeNullMaybe,
   decodeNullStrictMaybe,
@@ -246,19 +245,6 @@ deriving via
     , DecCBOR (Annotator (TxWits era))
     ) =>
     DecCBOR (Annotator (DijkstraBlockBody era))
-
-instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBlockBody era) where
-  encCBORGroup (DijkstraBlockBody txs mbLeiosCert mbPerasCert) = do
-    encodeListLen 4
-      <> encodeNullMaybe encCBOR invalidIndices
-      <> encCBOR txs
-      <> encodeNullStrictMaybe encCBOR mbLeiosCert
-      <> encodeNullStrictMaybe encCBOR mbPerasCert
-    where
-      invalidIndices =
-        NonEmptySet.fromFoldable $
-          StrictSeq.findIndicesL (\tx -> tx ^. isPhase2ValidTxL == Phase2Invalid) txs
-  listLen _ = 1
 
 --------------------------------------------------------------------------------
 -- Internal utility functions
