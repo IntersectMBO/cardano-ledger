@@ -841,8 +841,7 @@ instance (FromJSON k, FromJSON v, Aeson.FromJSONKey k, Ord k) => FromJSON (Injec
           Nothing -> fail $ "Invalid hash format: " <> show hashText
           Just h -> pure $ InjectionFromFile (fsPathFromList segments) h
       (Nothing, Just d) -> pure $ EmbeddedInjection d
-      (Nothing, Nothing) ->
-        fail "InjectionData: No injection was provided. Expected either \"file\" or \"data\""
+      (Nothing, Nothing) -> pure NoInjection
       (Just _, Just _) ->
         fail "InjectionData: cannot specify both \"file\" and \"data\" fields"
 
