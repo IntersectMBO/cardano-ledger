@@ -701,6 +701,7 @@ protocol_param_update =
   , ? 35 : uint .size 4           ; max refScript size per tx
   , ? 36 : positive_word32        ; refScript cost stride
   , ? 37 : positive_interval      ; refScript cost multiplier
+  , ? 38 : unit_interval          ; min pool margin
   }
 
 epoch_interval = uint .size 4

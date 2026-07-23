@@ -133,6 +133,7 @@ exampleDijkstraGenesis =
           , udppMaxRefScriptSizePerTx = 200 * 1024 -- 200KiB
           , udppRefScriptCostStride = knownNonZeroBounded @25_600 -- 25 KiB
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
+          , udppMinPoolMargin = fromJust $ boundRational 0.015
           }
     }
 
