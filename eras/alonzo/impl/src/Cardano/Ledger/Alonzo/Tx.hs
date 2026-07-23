@@ -102,15 +102,12 @@ import Cardano.Ledger.BaseTypes (integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
-  Decoder,
   EncCBOR (encCBOR),
   Encoding,
   ToCBOR (..),
   decodeNullStrictMaybe,
   encodeListLen,
   encodeNullStrictMaybe,
-  ifDecoderVersionAtLeast,
-  natVersion,
   serialize,
   serialize',
  )
@@ -453,21 +450,6 @@ instance
   where
   toCBOR = toEraCBOR @era
 
-decodeAlonzoTxPv12 ::
-  forall era s.
-  ( DecCBOR (Annotator (TxBody TopTx era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
-  ) =>
-  Decoder s (Annotator (AlonzoTx TopTx era))
-decodeAlonzoTxPv12 = decodeRecordNamed "AlonzoTx" (const 4) $ do
-  body <- decCBOR
-  wits <- decCBOR
-  isValid <- decCBOR
-  auxData <- decodeNullStrictMaybe decCBOR
-  pure $ AlonzoTx <$> body <*> wits <*> pure isValid <*> sequence auxData
-{-# INLINE decodeAlonzoTxPv12 #-}
-
 instance
   ( Typeable l
   , Era era
@@ -483,13 +465,12 @@ instance
   decCBOR =
     withSTxTopLevelM @l @era $ \case
       STopTxOnly ->
-        ifDecoderVersionAtLeast (natVersion @12) decodeAlonzoTxPv12 $
-          decode $
-            Ann (RecD AlonzoTx)
-              <*! From
-              <*! From
-              <*! Ann From
-              <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
+        decodeRecordNamed "AlonzoTx" (const 4) $ do
+          body <- decCBOR
+          wits <- decCBOR
+          isValid <- decCBOR
+          auxData <- decodeNullStrictMaybe decCBOR
+          pure $ AlonzoTx <$> body <*> wits <*> pure isValid <*> sequence auxData
   {-# INLINE decCBOR #-}
 
 data AlonzoStAnnTx l era where
