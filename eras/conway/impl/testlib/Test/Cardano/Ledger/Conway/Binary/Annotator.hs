@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,6 +13,7 @@ module Test.Cardano.Ledger.Conway.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxBody
@@ -20,3 +22,7 @@ import Test.Cardano.Ledger.Babbage.Binary.Annotator
 deriving newtype instance DecCBOR (TxBody TopTx ConwayEra)
 
 deriving newtype instance DecCBOR (Tx TopTx ConwayEra)
+
+instance DecCBOR h => DecCBOR (Block h ConwayEra) where
+  decCBOR =
+    decodeRecordNamed "Block" (const 5) $ Block <$> decCBOR <*> decCBOR
