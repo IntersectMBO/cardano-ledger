@@ -25,6 +25,7 @@ module Cardano.Ledger.Plutus.Language (
   -- * Plutus Script
   Plutus (..),
   isValidPlutus,
+  isValidPlutusRunnable,
   PlutusBinary (..),
   PlutusRunnable (..),
   plutusFromRunnable,
@@ -228,9 +229,16 @@ instance PlutusLanguage l => EncCBOR (Plutus l) where
     where
       lang = plutusLanguage plutus
 
--- | Verify that the binary version of the Plutus script is deserializable.
+-- | Verify that the binary version of the Plutus script is deserializable. If instead you have
+-- `PlutusRunnable` already available it will be better to use `isValidPlutusRunnable`, since then
+-- runnable version of plutus ` P.ScriptForEvaluation` can be reused later without redundant
+-- subsequent decoding.
 isValidPlutus :: PlutusLanguage l => Version -> Plutus l -> Bool
-isValidPlutus v = isRight . plutusRunnableResult . decodePlutusRunnable v
+isValidPlutus v = isValidPlutusRunnable . decodePlutusRunnable v
+
+-- | Verify that PlutusRunnable was successfully decoded.
+isValidPlutusRunnable :: PlutusRunnable l -> Bool
+isValidPlutusRunnable = isRight . plutusRunnableResult
 
 -- | Serialize the runnable version of the plutus script
 --
