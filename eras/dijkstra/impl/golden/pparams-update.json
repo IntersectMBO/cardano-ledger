@@ -3275,12 +3275,12 @@
     },
     "maxBlockHeaderSize": 7400,
     "maxCollateralInputs": 23475,
-    "maxPledgeLeverage": null,
-    "maxRefScriptSizePerBlock": 4289467586,
-    "maxRefScriptSizePerTx": 1859783665,
+    "maxRefScriptSizePerTx": 4289467586,
     "maxTxSize": 1863034707,
     "maxValueSize": 1974697554,
+    "minFeeRefScriptCostPerByte": 8.164750115848688503e9,
     "minPoolCost": 39,
+    "minPoolMargin": 0.37594056706,
     "poolPledgeInfluence": 327308.7863167419765,
     "poolRetireMaxEpoch": 3723021713,
     "poolVotingThresholds": {
@@ -3290,6 +3290,7 @@
         "motionNoConfidence": 0.661716538544,
         "ppSecurityGroup": 0.5484981
     },
+    "refScriptCostStride": 4282983247,
     "stakePoolDeposit": 751882,
     "stakePoolTargetNum": 30951,
     "treasuryCut": 0.78,
