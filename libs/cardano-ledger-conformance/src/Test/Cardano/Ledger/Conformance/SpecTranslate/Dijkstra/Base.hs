@@ -109,7 +109,7 @@ instance SpecTranslate DijkstraEra Language where
     PlutusV1 -> return Agda.PV1
     PlutusV2 -> return Agda.PV2
     PlutusV3 -> return Agda.PV3
-    PlutusV4 -> error "PlutusV4 not supported"
+    PlutusV4 -> return Agda.PV4
 
 instance SpecTranslate DijkstraEra CostModels where
   type SpecRep DijkstraEra CostModels = Agda.LanguageCostModels

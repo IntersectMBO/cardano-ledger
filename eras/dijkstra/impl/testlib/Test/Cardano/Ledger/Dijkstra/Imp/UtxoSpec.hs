@@ -42,7 +42,9 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "Collaterals" $ do
-    it "Fails to submit a transaction containing a Ptr in collateral return" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1264
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Fails to submit a transaction containing a Ptr in collateral return" $ do
       cred <- KeyHashObj <$> freshKeyHash
       ptr <- arbitrary
       pp <- getsPParams id
