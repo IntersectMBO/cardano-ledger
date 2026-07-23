@@ -643,9 +643,6 @@ class
   -- Merkle tree.
   hashBlockBody :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
 
-  -- | The number of segregated components
-  numSegComponents :: Word64
-
   blockBodySize :: ProtVer -> BlockBody era -> Int
   default blockBodySize :: SafeToHash (BlockBody era) => ProtVer -> BlockBody era -> Int
   blockBodySize _ = originalBytesSize
