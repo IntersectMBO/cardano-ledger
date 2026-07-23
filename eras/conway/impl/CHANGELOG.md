@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.23.0.1
+## 1.23.1.0
 
-*
+* Add `EncCBOR`, `ToCBOR` for `Block`
+* Add `DecCBOR` instances for `Annotator Block`
+
+### `testlib`
+
+* Add `DecCBOR` instance for `Block`
 
 ## 1.23.0.0
 

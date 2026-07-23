@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.16.0.1
+## 1.16.1.0
 
-*
+* Add `EncCBOR`, `ToCBOR` for `Block`
+* Add `DecCBOR` instances for `Annotator Block`
+
+### `testlib`
+
+* Add `DecCBOR` instance for `Block`
 
 ## 1.16.0.0
 

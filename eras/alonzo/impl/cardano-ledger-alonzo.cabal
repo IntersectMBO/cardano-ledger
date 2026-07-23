@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-alonzo
-version: 1.16.0.1
+version: 1.16.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -27,7 +27,6 @@ source-repository head
 library
   exposed-modules:
     Cardano.Ledger.Alonzo
-    Cardano.Ledger.Alonzo.Block
     Cardano.Ledger.Alonzo.BlockBody
     Cardano.Ledger.Alonzo.BlockBody.Internal
     Cardano.Ledger.Alonzo.Core
@@ -50,6 +49,7 @@ library
 
   hs-source-dirs: src
   other-modules:
+    Cardano.Ledger.Alonzo.Block
     Cardano.Ledger.Alonzo.Era
     Cardano.Ledger.Alonzo.Forecast
     Cardano.Ledger.Alonzo.Rules.Bbody

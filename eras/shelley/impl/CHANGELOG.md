@@ -2,11 +2,14 @@
 
 ## 1.19.1.0
 
+* Add `EncCBOR`, `ToCBOR` for `Block`
+* Add `DecCBOR` instances for `Annotator Block`
 * Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the
   maximum pledge leverage is set in the protocol parameters
 
 ### `testlib`
 
+* Add `DecCBOR` instance for `Block`
 * Add `registerPoolWithParams`, which registers a stake pool with adjusted parameters
 
 ## 1.19.0.0
