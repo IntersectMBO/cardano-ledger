@@ -2,7 +2,7 @@ cabal-version: 3.0
 name: cardano-ledger-canonical-state
 version: 9.9.9.9
 synopsis:
-  Instaces for working with canonical ledger state representation
+  Instances for working with canonical ledger state representation
 
 description:
   Library for definition of the canonical state. The library defines canonical types and conversion

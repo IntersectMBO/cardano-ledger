@@ -701,6 +701,17 @@ instance HasSimpleRep PoolCert
 
 instance HasSpec PoolCert
 
+instance HasSpec BlsKey where
+  type TypeSpec BlsKey = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
 instance HasSimpleRep StakePoolParams
 
 instance HasSpec StakePoolParams

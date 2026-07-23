@@ -4,10 +4,12 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | This module provides the 'StakePoolState' data type, which represents the
@@ -30,6 +32,7 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Lenses
   spsVrfL,
+  spsBlsKeyL,
   spsPledgeL,
   spsCostL,
   spsMarginL,
@@ -53,6 +56,7 @@ module Cardano.Ledger.State.StakePool (
     PoolParams,
     ppId,
     ppVrf,
+    ppBlsKey,
     ppPledge,
     ppCost,
     ppMargin,
@@ -64,6 +68,7 @@ module Cardano.Ledger.State.StakePool (
   withStakePoolParamsFlatEncoding,
   decodeStakePoolParamsFlat,
   PoolMetadata (..),
+  BlsKey (..),
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
@@ -73,6 +78,15 @@ module Cardano.Ledger.State.StakePool (
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Crypto.DSIGN (
+  BLS12381MinSigDSIGN,
+  DSIGNAggregatable (
+    PossessionProofDSIGN,
+    rawDeserialisePossessionProofDSIGN,
+    rawSerialisePossessionProofDSIGN
+  ),
+  DSIGNAlgorithm (VerKeyDSIGN, rawDeserialiseVerKeyDSIGN, rawSerialiseVerKeyDSIGN),
+ )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
@@ -90,12 +104,17 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Encoding,
   Interns,
+  TokenType (TypeListLen, TypeListLen64, TypeListLenIndef, TypeNull),
+  decodeNull,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeRecordNamedT,
   decodeRecordSum,
   encodeListLen,
   encodeNullStrictMaybe,
+  ifDecoderVersionAtLeast,
+  natVersion,
+  peekTokenType,
   withCurrentEncodingVersion,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -105,6 +124,12 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
   (<!),
+ )
+import Cardano.Ledger.Binary.Crypto (
+  decodePossessionProofDSIGN,
+  decodeVerKeyDSIGN,
+  encodePossessionProofDSIGN,
+  encodeVerKeyDSIGN,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential)
@@ -138,6 +163,7 @@ import NoThunks.Class (NoThunks (..))
 data StakePoolState = StakePoolState
   { spsVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ VRF verification key hash for leader election
+  , spsBlsKey :: !(StrictMaybe BlsKey)
   , spsPledge :: !Coin
   -- ^ Pledge amount committed by the pool operator
   , spsCost :: !Coin
@@ -161,6 +187,9 @@ data StakePoolState = StakePoolState
 
 spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
+
+spsBlsKeyL :: Lens' StakePoolState (StrictMaybe BlsKey)
+spsBlsKeyL = lens spsBlsKey $ \sps blsKey -> sps {spsBlsKey = blsKey}
 
 spsPledgeL :: Lens' StakePoolState Coin
 spsPledgeL = lens spsPledge $ \sps c -> sps {spsPledge = c}
@@ -194,6 +223,7 @@ instance EncCBOR StakePoolState where
     encode $
       Rec StakePoolState
         !> To (spsVrf sps)
+        !> To (spsBlsKey sps)
         !> To (spsPledge sps)
         !> To (spsCost sps)
         !> To (spsMargin sps)
@@ -218,13 +248,15 @@ instance DecCBOR StakePoolState where
         <! From
         <! From
         <! From
+        <! From
 
 instance DecShareCBOR StakePoolState where
   type Share StakePoolState = Interns (Credential Staking)
   decSharePlusCBOR =
-    decodeRecordNamedT "StakePoolState" (const 10) $
+    decodeRecordNamedT "StakePoolState" (const 11) $
       StakePoolState
         <$> lift decCBOR
+        <*> lift decCBOR
         <*> lift decCBOR
         <*> lift decCBOR
         <*> lift decCBOR
@@ -239,6 +271,7 @@ instance Default StakePoolState where
   def =
     StakePoolState
       { spsVrf = def
+      , spsBlsKey = def
       , spsPledge = Coin 0
       , spsCost = Coin 0
       , spsMargin = def
@@ -258,6 +291,7 @@ mkStakePoolState ::
 mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
+    , spsBlsKey = sppBlsKey spp
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
@@ -277,6 +311,7 @@ stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
+    , sppBlsKey = spsBlsKey sps
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
@@ -424,6 +459,7 @@ instance DecCBOR StakePoolRelay where
 data StakePoolParams = StakePoolParams
   { sppId :: !(KeyHash StakePool)
   , sppVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , sppBlsKey :: !(StrictMaybe BlsKey)
   , sppPledge :: !Coin
   , sppCost :: !Coin
   , sppMargin :: !UnitInterval
@@ -433,6 +469,60 @@ data StakePoolParams = StakePoolParams
   , sppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
+
+data BlsKey = BlsKey
+  { blsPubKey :: !(VerKeyDSIGN BLS12381MinSigDSIGN)
+  , blsPossessionProof :: !(PossessionProofDSIGN BLS12381MinSigDSIGN)
+  }
+  deriving (Show, Generic, Eq, NoThunks, NFData)
+
+instance Ord BlsKey where
+  compare a b =
+    compare
+      (rawSerialiseVerKeyDSIGN (blsPubKey a))
+      (rawSerialiseVerKeyDSIGN (blsPubKey b))
+      <> compare
+        (rawSerialisePossessionProofDSIGN (blsPossessionProof a))
+        (rawSerialisePossessionProofDSIGN (blsPossessionProof b))
+
+instance ToJSON BlsKey where
+  toJSON blsKey =
+    Aeson.object
+      [ "blsPubKey"
+          .= Text.decodeLatin1 (B16.encode (rawSerialiseVerKeyDSIGN $ blsPubKey blsKey))
+      , "blsPossessionProof"
+          .= Text.decodeLatin1
+            ( B16.encode
+                (rawSerialisePossessionProofDSIGN $ blsPossessionProof blsKey)
+            )
+      ]
+
+instance FromJSON BlsKey where
+  parseJSON = Aeson.withObject "BlsKey" $ \obj -> do
+    pubKeyHex <- Text.encodeUtf8 <$> obj .: "blsPubKey"
+    blsPossessionProofHex <- Text.encodeUtf8 <$> obj .: "blsPossessionProof"
+    blsPubKey <-
+      case rawDeserialiseVerKeyDSIGN =<< either (const Nothing) Just (B16.decode pubKeyHex) of
+        Nothing -> fail "Invalid hex for BlsPubKey"
+        Just vk -> pure vk
+    blsPossessionProof <-
+      case rawDeserialisePossessionProofDSIGN
+        =<< either (const Nothing) Just (B16.decode blsPossessionProofHex) of
+        Nothing -> fail "Invalid hex for PossessionProof"
+        Just p -> pure p
+    pure $ BlsKey {blsPubKey, blsPossessionProof}
+
+instance EncCBOR BlsKey where
+  encCBOR lk =
+    encodeListLen 2
+      <> encodeVerKeyDSIGN (blsPubKey lk)
+      <> encodePossessionProofDSIGN (blsPossessionProof lk)
+
+instance DecCBOR BlsKey where
+  decCBOR = decodeRecordNamed "BlsKey" (const 2) $ do
+    blsPubKey <- decodeVerKeyDSIGN
+    blsPossessionProof <- decodePossessionProofDSIGN
+    pure BlsKey {blsPubKey, blsPossessionProof}
 
 sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
@@ -444,7 +534,7 @@ sppMetadataL :: Lens' StakePoolParams (StrictMaybe PoolMetadata)
 sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
 
 instance Default StakePoolParams where
-  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def
+  def = StakePoolParams def def def (Coin 0) (Coin 0) def def def def def
 
 instance NoThunks StakePoolParams
 
@@ -455,6 +545,7 @@ instance ToJSON StakePoolParams where
     Aeson.object
       [ "poolId" .= sppId spp
       , "vrf" .= sppVrf spp
+      , "blsKey" .= sppBlsKey spp
       , "pledge" .= sppPledge spp
       , "cost" .= sppCost spp
       , "margin" .= sppMargin spp
@@ -472,6 +563,7 @@ instance FromJSON StakePoolParams where
       StakePoolParams
         <$> ((obj .: "poolId") <|> (obj .: "publicKey"))
         <*> obj .: "vrf"
+        <*> obj .:? "blsKey" .!= SNothing
         <*> obj .: "pledge"
         <*> obj .: "cost"
         <*> obj .: "margin"
@@ -485,6 +577,7 @@ type PoolParams = StakePoolParams
 pattern PoolParams ::
   KeyHash StakePool ->
   VRFVerKeyHash StakePoolVRF ->
+  StrictMaybe BlsKey ->
   Coin ->
   Coin ->
   UnitInterval ->
@@ -493,8 +586,29 @@ pattern PoolParams ::
   StrictSeq StakePoolRelay ->
   StrictMaybe PoolMetadata ->
   PoolParams
-pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, ppOwners, ppRelays, ppMetadata} =
-  StakePoolParams ppId ppVrf ppPledge ppCost ppMargin ppAccountAddress ppOwners ppRelays ppMetadata
+pattern PoolParams
+  { ppId
+  , ppVrf
+  , ppBlsKey
+  , ppPledge
+  , ppCost
+  , ppMargin
+  , ppAccountAddress
+  , ppOwners
+  , ppRelays
+  , ppMetadata
+  } =
+  StakePoolParams
+    ppId
+    ppVrf
+    ppBlsKey
+    ppPledge
+    ppCost
+    ppMargin
+    ppAccountAddress
+    ppOwners
+    ppRelays
+    ppMetadata
 
 {-# COMPLETE PoolParams #-}
 
@@ -503,6 +617,7 @@ pattern PoolParams {ppId, ppVrf, ppPledge, ppCost, ppMargin, ppAccountAddress, p
 {-# DEPRECATED
   ppId
   , ppVrf
+  , ppBlsKey
   , ppPledge
   , ppCost
   , ppMargin
@@ -559,10 +674,17 @@ withStakePoolParamsFlatEncoding ::
   (Int -> Encoding -> Encoding) ->
   Encoding
 withStakePoolParamsFlatEncoding poolParams f =
-  withCurrentEncodingVersion $ \_v ->
-    f 9 $
+  withCurrentEncodingVersion $ \v -> do
+    let (extraLen, blsKeyEncoding)
+          | v >= natVersion @12 =
+              case sppBlsKey poolParams of
+                SJust lk -> (1, encCBOR lk)
+                SNothing -> (0, mempty)
+          | otherwise = (0, mempty)
+    f (9 + extraLen) $
       encCBOR (sppId poolParams)
         <> encCBOR (sppVrf poolParams)
+        <> blsKeyEncoding
         <> encCBOR (sppPledge poolParams)
         <> encCBOR (sppCost poolParams)
         <> encCBOR (sppMargin poolParams)
@@ -579,6 +701,11 @@ decodeStakePoolParamsFlat :: Decoder s (Int, StakePoolParams)
 decodeStakePoolParamsFlat = do
   sppId <- decCBOR
   sppVrf <- decCBOR
+  (extraBlsKeyLen, sppBlsKey) <-
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      decodeBlsKeyBackwardsCompatible
+      (pure (0, SNothing))
   sppPledge <- decCBOR
   sppCost <- decCBOR
   sppMargin <- decCBOR
@@ -586,4 +713,14 @@ decodeStakePoolParamsFlat = do
   sppOwners <- decCBOR
   sppRelays <- decCBOR
   sppMetadata <- decodeNullStrictMaybe decCBOR
-  pure (9, StakePoolParams {..})
+  pure (9 + extraBlsKeyLen, StakePoolParams {..})
+  where
+    decodeBlsKeyBackwardsCompatible = do
+      peekTokenType >>= \case
+        TypeListLen -> (\lk -> (1, SJust lk)) <$> decCBOR
+        TypeListLen64 -> (\lk -> (1, SJust lk)) <$> decCBOR
+        TypeListLenIndef -> (\lk -> (1, SJust lk)) <$> decCBOR
+        TypeNull -> do
+          decodeNull
+          pure (1, SNothing)
+        _ -> pure (0, SNothing)
