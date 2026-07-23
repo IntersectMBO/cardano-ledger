@@ -25,6 +25,7 @@ module Cardano.Ledger.Alonzo (
   mkAlonzoStAnnTx,
 ) where
 
+import Cardano.Ledger.Alonzo.Block ()
 import Cardano.Ledger.Alonzo.BlockBody ()
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
