@@ -27,5 +27,4 @@ instance EraBlockBody MaryEra where
   mkBasicBlockBody = mkBasicBlockBodyShelley
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = shelleyBlockBodyHash
-  numSegComponents = 3
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
