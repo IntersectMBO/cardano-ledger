@@ -22,15 +22,13 @@ import Cardano.Ledger.Mary.Value (
   PolicyID,
   multiAssetFromList,
  )
-import Cardano.Ledger.Shelley.LedgerState (
-  esLStateL,
-  lsCertStateL,
-  nesEsL,
- )
+import qualified Cardano.Ledger.Shelley.AdaPots as AdaPots
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val
+import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -131,7 +129,7 @@ spec = describe "UTXO" $ do
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
 
-    it "sums outputs, fee, treasury donations, pool/DRep deposits and burned assets across the batch" $ do
+    it "sums outputs, fee, treasury donations, deposits and burned assets across the batch" $ do
       poolDeposit <- (Coin 1 <>) <$> arbitrary
       dRepDeposit <- (Coin 1 <>) <$> arbitrary
       modifyPParams $ (ppPoolDepositL .~ poolDeposit) . (ppDRepDepositL .~ dRepDeposit)
@@ -149,6 +147,10 @@ spec = describe "UTXO" $ do
       subTreasury <- arbitrary
       topBurnAmount <- getPositive <$> arbitrary
       subBurnAmount <- getPositive <$> arbitrary
+      topDDAddr <- arbitrary
+      subDDAddr <- arbitrary
+      topDDAmount <- (Coin 1 <>) <$> arbitrary
+      subDDAmount <- (Coin 1 <>) <$> arbitrary
       let topMint = multiAssetFromList [(policyA, asset, -topBurnAmount)]
           subMint = multiAssetFromList [(policyA, asset, -subBurnAmount)]
           expectedBurned :: MultiAsset
@@ -169,6 +171,7 @@ spec = describe "UTXO" $ do
                   .~ [regPool, RegDRepTxCert drepB dRepDeposit SNothing]
                 & treasuryDonationTxBodyL .~ subTreasury
                 & mintTxBodyL .~ subMint
+                & directDepositsTxBodyL .~ DirectDeposits [(subDDAddr, subDDAmount)]
           topTx :: Tx TopTx era
           topTx =
             mkBasicTx $
@@ -179,6 +182,7 @@ spec = describe "UTXO" $ do
                   .~ [regPool, RegDRepTxCert drepA dRepDeposit SNothing]
                 & treasuryDonationTxBodyL .~ topTreasury
                 & mintTxBodyL .~ topMint
+                & directDepositsTxBodyL .~ DirectDeposits [(topDDAddr, topDDAmount)]
                 & subTransactionsTxBodyL .~ [subTx]
           expectedCoin =
             topOutValue
@@ -188,9 +192,24 @@ spec = describe "UTXO" $ do
               <> subTreasury
               <> poolDeposit
               <> ((2 :: Int) <×> dRepDeposit)
+              <> topDDAmount
+              <> subDDAmount
           expected = MaryValue expectedCoin expectedBurned
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
+      checkDepositCalculation
+        (topTx ^. bodyTxL)
+        (poolDeposit <> ((2 :: Int) <×> dRepDeposit))
+        (poolDeposit <> dRepDeposit)
   where
     mkSubTx i cert = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert] & inputsTxBodyL .~ [i]
+    -- Check that `certsTotalDepositsTxBody` (used to set deposits in `UTxOState` and `AdaPots` calculations)
+    -- returns the batch deposits, while `getTotalDepositsTxBody` returns the top-level deposits
+    checkDepositCalculation topBody batchDeposits topLevelDeposits = do
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      AdaPots.proDeposits (AdaPots.producedTxBody topBody pp certState)
+        `shouldBe` batchDeposits
+      let isPoolReg = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
+      getTotalDepositsTxBody pp isPoolReg topBody `shouldBe` topLevelDeposits
