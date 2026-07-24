@@ -132,6 +132,7 @@ transaction_body =
   , ? 24 : required_top_level_guards       ; required top-level guards
   , ? 25 : direct_deposits                 ; direct deposits
   , ? 26 : account_balance_intervals       ; account balance intervals
+  , ? 27 : account_balance_intervals       ; starting account balance intervals
   }
 
 set<a0> = #6.258([* a0])/ [* a0]

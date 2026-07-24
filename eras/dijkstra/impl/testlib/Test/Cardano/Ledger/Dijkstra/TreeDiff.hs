@@ -104,6 +104,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrSubTransactions", toExpr dtbrSubTransactions)
               , ("dtbrDirectDeposits", toExpr dtbrDirectDeposits)
               , ("dtbrAccountBalanceIntervals", toExpr dtbrAccountBalanceIntervals)
+              , ("dtbrStartingAccountBalanceIntervals", toExpr dtbrStartingAccountBalanceIntervals)
               ]
     txBody@(DijkstraSubTxBodyRaw {}) ->
       let DijkstraSubTxBodyRaw {..} = txBody

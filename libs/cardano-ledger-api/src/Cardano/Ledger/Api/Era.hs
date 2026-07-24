@@ -644,6 +644,7 @@ instance EraApi DijkstraEra where
             , dtbRequiredTopLevelGuards = mempty
             , dtbDirectDeposits = DirectDeposits mempty
             , dtbAccountBalanceIntervals = AccountBalanceIntervals mempty
+            , dtbStartingAccountBalanceIntervals = AccountBalanceIntervals mempty
             }
 
   upgradeTxWits atw =

@@ -2,6 +2,11 @@
 
 ## 0.3.0.0
 
+* Add `startingAccountBalanceIntervals` to the top-level transaction body:
+  - Add `startingAccountBalanceIntervalsTxBodyL` to the `DijkstraEraTxBody` typeclass
+  - Add `dtbStartingAccountBalanceIntervals` to `TxBody`
+  - Add `dtbrStartingAccountBalanceIntervals` to `DijkstraTxBodyRaw`
+  - Add `startingAccountBalanceIntervalsDijkstraTxBodyRawL`
 * Add `dsastPlutusRunnableCache` field to `DijkstraStAnnTx SubTx` and `dsattPlutusRunnableCache` field to `DijkstraStAnnTx TopTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Change `EraRule "LEDGERS" DijkstraEra` from `Shelley.LEDGERS` to `Babbage.LEDGERS`
 * Add `TranslateEra` instance for `SnapShots`

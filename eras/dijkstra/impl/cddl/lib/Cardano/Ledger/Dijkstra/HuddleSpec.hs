@@ -1058,6 +1058,7 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 24 ==> huddleRule @"required_top_level_guards" p) //- "required top-level guards"
         , opt (idx 25 ==> huddleRule @"direct_deposits" p) //- "direct deposits"
         , opt (idx 26 ==> huddleRule @"account_balance_intervals" p) //- "account balance intervals"
+        , opt (idx 27 ==> huddleRule @"account_balance_intervals" p) //- "starting account balance intervals"
         ]
 
 instance HuddleRule "transaction_witness_set" DijkstraEra where
