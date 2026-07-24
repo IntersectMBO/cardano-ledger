@@ -2,7 +2,7 @@
 
 ## 1.16.0.0
 
-* Rename `validScript` to `isValidScript` and move it to `Cardano.Ledger.Alonzo.TxAuxData`
+* Rename `validScript` to `isValidScript`, move it to `Cardano.Ledger.Alonzo.TxAuxData` and add two more arguments to it.
 * Add `asatPlutusRunnableCache` field to `AlonzoStAnnTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Add `SupportedPlutusRunnable` type and add `mkSupportedPlutusRunnable` to `EraPlutusContext`
 * Remove `mkPlutusWithContext` from `EraPlutusContext`

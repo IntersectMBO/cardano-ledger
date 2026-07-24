@@ -94,7 +94,7 @@ instance EraTxAuxData ShelleyEra where
     lensMemoRawType @ShelleyEra stadrMetadata $
       \txAuxDataRaw md -> txAuxDataRaw {stadrMetadata = md}
 
-  validateTxAuxData _ _ = True
+  validateTxAuxData _ _ _ = True
 
 instance EqRaw (ShelleyTxAuxData era)
 

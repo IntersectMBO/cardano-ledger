@@ -25,6 +25,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxAuxData (isValidScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
@@ -64,6 +65,7 @@ import Control.State.Transition.Extended (
 import Data.ByteString (ByteString)
 import Data.Foldable (sequenceA_, toList)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as StrictSeq (singleton)
@@ -233,16 +235,19 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   ) =>
   PParams era ->
-  Tx TopTx era ->
+  StAnnTx TopTx era ->
   Test (BabbageUtxowPredFailure era)
-validateScriptsWellFormed pp tx =
+validateScriptsWellFormed pp stAnnTx =
   validateScriptsWellFormedTxOuts
+    (stAnnTx ^. cacheStAnnTxG)
     pp
     (tx ^. witsTxL . scriptTxWitsL)
     (normalOuts <> foldMap StrictSeq.singleton returnOut)
   where
+    tx = stAnnTx ^. txStAnnTxG
     normalOuts = tx ^. bodyTxL . outputsTxBodyL
     returnOut = tx ^. bodyTxL . collateralReturnTxBodyL
 
@@ -251,20 +256,24 @@ validateScriptsWellFormedTxOuts ::
   ( BabbageEraTxOut era
   , Foldable f
   ) =>
+  Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   PParams era ->
   Map.Map ScriptHash (Script era) ->
   f (TxOut era) ->
   Test (BabbageUtxowPredFailure era)
-validateScriptsWellFormedTxOuts pp scriptWits txOuts =
+validateScriptsWellFormedTxOuts plutusScriptsCache pp witScripts txOuts =
   sequenceA_
-    [ failureOnNonEmptySet (Map.keysSet invalidScriptWits) MalformedScriptWitnesses
-    , failureOnNonEmptySet invalidRefScriptHashes MalformedReferenceScripts
+    [ failureOnNonEmptySet (filterInvalidScripts witScripts) MalformedScriptWitnesses
+    , failureOnNonEmptySet (filterInvalidScripts refScripts) MalformedReferenceScripts
     ]
   where
-    invalidScriptWits = Map.filter (not . isValidScript (pp ^. ppProtocolVersionL)) scriptWits
-    rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) (toList txOuts)
-    invalidRefScripts = filter (not . isValidScript (pp ^. ppProtocolVersionL)) rScripts
-    invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
+    filterInvalidScripts =
+      Map.keysSet
+        . Map.filterWithKey
+          (\scriptHash -> not . isValidScript plutusScriptsCache (pp ^. ppProtocolVersionL) scriptHash)
+    refScripts =
+      Map.fromElems hashScript $
+        mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) (toList txOuts)
 
 -- ==============================================================
 -- Here we define the transition function, using reusable tests.
@@ -300,8 +309,9 @@ babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -361,12 +371,12 @@ babbageUtxowTransition = do
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $ Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp stAnnTx
 
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
   -}
-  runTest $ validateScriptsWellFormed pp tx
+  runTest $ validateScriptsWellFormed pp stAnnTx
   -- Note that Datum validation is done during deserialization,
   -- as given by the decoders in the Plutus library
 
@@ -388,6 +398,7 @@ instance
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , BabbageEraTxBody era
   , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era

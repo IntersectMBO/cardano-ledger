@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `StAnnTxCache` as an argument to `validateTxAuxData`
 * Add `isValidPlutusRunnable`
 * Add `StAnnTxCache` associated type and `cacheStAnnTxG` method to `EraTx`, together with a new `Monoid (StAnnTxCache era)` superclass constraint
 * Restructure `PlutusRunnable` from a `newtype` over `ScriptForEvaluation` into a record with fields `plutusRunnableBinary`, `plutusRunnableScriptHash` and `plutusRunnableResult`

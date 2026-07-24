@@ -22,7 +22,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxow (
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, SupportedPlutusRunnable (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
@@ -58,6 +58,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
@@ -178,6 +179,7 @@ instance
   , ConwayEraTxBody era
   , DijkstraEraTxBody era
   , EraPlutusContext era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
   , EraRule "SUBUTXOW" era ~ SUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (SUBUTXOW era)
@@ -203,6 +205,7 @@ dijkstraSubUtxowTransition ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , DijkstraEraTxBody era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
   , EraRule "SUBUTXOW" era ~ SUBUTXOW era
   , Embed (EraRule "SUBUTXO" era) (SUBUTXOW era)
@@ -237,7 +240,7 @@ dijkstraSubUtxowTransition = do
   runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx
 
   {- txADhash ≡ map hash txAuxData -}
-  runTestOnSignal $ Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp stAnnTx
 
   let scriptIntegrity = mkScriptIntegrity pp tx (plutusLanguagesUsedStAnnTx stAnnTx)
   runTest $ Alonzo.checkScriptIntegrityHash tx pp scriptIntegrity
@@ -246,6 +249,7 @@ dijkstraSubUtxowTransition = do
 
   runTest $
     Babbage.validateScriptsWellFormedTxOuts
+      (stAnnTx ^. cacheStAnnTxG)
       pp
       (tx ^. witsTxL . scriptTxWitsL)
       (tx ^. bodyTxL . outputsTxBodyL)

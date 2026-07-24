@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* `validateScriptsWellFormed` / `validateScriptsWellFormedTxOuts` gained a cache parameter
 * Introduce `LEDGERS` rule with `STS` and `Embed (LEDGER era) (LEDGERS era)` instances, and wire it to `EraRule "LEDGERS" BabbageEra` (previously `Shelley.LEDGERS`)
 * Export `LEDGERS` from `Cardano.Ledger.Babbage.Era` and `Cardano.Ledger.Babbage.Rules`
 * Add `TranslateEra` instance for `SnapShots`

@@ -486,7 +486,7 @@ class
 
   metadataTxAuxDataL :: Lens' (TxAuxData era) (Map Word64 Metadatum)
 
-  validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
+  validateTxAuxData :: StAnnTxCache era -> ProtVer -> TxAuxData era -> Bool
 
 modifyTxAuxData ::
   EraTx era =>

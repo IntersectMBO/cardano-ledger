@@ -101,7 +101,7 @@ instance EraTxAuxData AllegraEra where
 
   metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
-  validateTxAuxData _ (AllegraTxAuxData _ as) = as `deepseq` True
+  validateTxAuxData _ _ (AllegraTxAuxData _ as) = as `deepseq` True
 
 metadataAllegraTxAuxDataL ::
   forall era.

@@ -25,6 +25,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxow (
 
 import Cardano.Crypto.Hash (ByteString)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
@@ -205,8 +206,9 @@ dijkstraUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , DijkstraEraTxBody era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era
@@ -281,11 +283,11 @@ dijkstraUtxowTransition = do
 
   -- check metadata hash
   {- ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad) -}
-  runTestOnSignal $ Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp stAnnTx
 
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                        x ∈ Script ∪ Datum ⇒ isWellFormed x -}
-  runTest $ Babbage.validateScriptsWellFormed pp tx
+  runTest $ Babbage.validateScriptsWellFormed pp stAnnTx
 
   {- scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw) -}
   -- Per-level: script integrity is per-tx (depends on that tx's redeemers and language views)
@@ -311,8 +313,9 @@ instance
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , DijkstraEraTxBody era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era

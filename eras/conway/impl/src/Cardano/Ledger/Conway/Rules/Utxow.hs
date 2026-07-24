@@ -25,6 +25,7 @@ module Cardano.Ledger.Conway.Rules.Utxow (
 
 import Cardano.Crypto.Hash (ByteString)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
@@ -46,6 +47,7 @@ import Control.State.Transition.Extended (
   STS (..),
  )
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
@@ -169,8 +171,9 @@ instance
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era

@@ -361,7 +361,7 @@ alonzoStyleWitness = do
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $ Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp stAnnTx
 
   {- languages txw ⊆ dom(costmdls pp)  -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails

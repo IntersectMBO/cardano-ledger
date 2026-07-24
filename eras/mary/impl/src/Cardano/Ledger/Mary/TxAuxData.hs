@@ -31,7 +31,7 @@ instance EraTxAuxData MaryEra where
 
   metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
-  validateTxAuxData _ (AllegraTxAuxData _ as) = as `deepseq` True
+  validateTxAuxData _ _ (AllegraTxAuxData _ as) = as `deepseq` True
 
 instance AllegraEraTxAuxData MaryEra where
   nativeScriptsTxAuxDataL = nativeScriptsAllegraTxAuxDataL
