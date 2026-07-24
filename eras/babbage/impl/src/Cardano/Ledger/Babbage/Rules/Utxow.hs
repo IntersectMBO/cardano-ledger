@@ -26,7 +26,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (validScript)
+import Cardano.Ledger.Alonzo.TxAuxData (isValidScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, UTXOW)
@@ -261,9 +261,9 @@ validateScriptsWellFormedTxOuts pp scriptWits txOuts =
     , failureOnNonEmptySet invalidRefScriptHashes MalformedReferenceScripts
     ]
   where
-    invalidScriptWits = Map.filter (not . validScript (pp ^. ppProtocolVersionL)) scriptWits
+    invalidScriptWits = Map.filter (not . isValidScript (pp ^. ppProtocolVersionL)) scriptWits
     rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) (toList txOuts)
-    invalidRefScripts = filter (not . validScript (pp ^. ppProtocolVersionL)) rScripts
+    invalidRefScripts = filter (not . isValidScript (pp ^. ppProtocolVersionL)) rScripts
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
 -- ==============================================================

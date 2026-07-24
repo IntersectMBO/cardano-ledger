@@ -27,7 +27,6 @@ module Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (NativeScript, PlutusScript),
   Script,
   isPlutusScript,
-  validScript,
   eqAlonzoScriptRaw,
   AlonzoEraScript (..),
   eraLanguages,
@@ -66,7 +65,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
-import Cardano.Ledger.BaseTypes (ProtVer (..), invalidKey, kindObjectValue)
+import Cardano.Ledger.BaseTypes (invalidKey, kindObjectValue)
 import Cardano.Ledger.Binary (
   Annotator,
   CBORGroup (..),
@@ -135,7 +134,6 @@ import qualified Data.Text as Text
 import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import GHC.Stack
 import NoThunks.Class (NoThunks (..))
 
 class
@@ -722,18 +720,6 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
         n -> invalidKey n
       {-# INLINE decodeAlonzoScript #-}
   {-# INLINE decCBOR #-}
-
--- | Verify that every `Script` represents a valid script. Force native scripts to Normal
--- Form, to ensure that there are no bottoms and deserialize `Plutus` scripts into a
--- `Cardano.Ledger.Plutus.Language.PlutusRunnable`.
-validScript :: (HasCallStack, AlonzoEraScript era) => ProtVer -> Script era -> Bool
-validScript pv script =
-  case toPlutusScript script of
-    Just plutusScript -> isValidPlutusScript (pvMajor pv) plutusScript
-    Nothing ->
-      case getNativeScript script of
-        Just timelockScript -> deepseq timelockScript True
-        Nothing -> error "Impossible: There are only Native and Plutus scripts available"
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.

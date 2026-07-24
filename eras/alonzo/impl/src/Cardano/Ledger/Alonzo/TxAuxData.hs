@@ -44,6 +44,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   addPlutusScripts,
   decodeTxAuxDataByTokenType,
   emptyAlonzoTxAuxDataRaw,
+  isValidScript,
 
   -- * Deprecated
   atadPlutus,
@@ -56,12 +57,12 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AlonzoScript (..),
+  isValidPlutusScript,
   mkBinaryPlutusScript,
   plutusScriptBinary,
   plutusScriptLanguage,
-  validScript,
  )
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -354,7 +355,7 @@ validateAlonzoTxAuxData ::
   AlonzoTxAuxData era ->
   Bool
 validateAlonzoTxAuxData pv auxData =
-  all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
+  all (isValidScript pv) (getAlonzoTxAuxDataScripts auxData)
 
 instance AllegraEraTxAuxData AlonzoEra where
   nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
@@ -465,3 +466,15 @@ atadPlutus (MkAlonzoTxAuxData (Memo raw _)) = atadrPlutusScripts raw
 atadPlutus' :: AlonzoTxAuxData era -> Map Language (NE.NonEmpty PlutusBinary)
 atadPlutus' (MkAlonzoTxAuxData (Memo raw _)) = atadrPlutusScripts raw
 {-# DEPRECATED atadPlutus' "In favor of `atadPlutusScripts'`" #-}
+
+-- | Verify that every `Script` represents a valid script. Force native scripts to Normal
+-- Form, to ensure that there are no bottoms and deserialize `Plutus` scripts into a
+-- `Cardano.Ledger.Plutus.Language.PlutusRunnable`.
+isValidScript :: (HasCallStack, AlonzoEraScript era) => ProtVer -> Script era -> Bool
+isValidScript pv script =
+  case toPlutusScript script of
+    Just plutusScript -> isValidPlutusScript (pvMajor pv) plutusScript
+    Nothing ->
+      case getNativeScript script of
+        Just timelockScript -> deepseq timelockScript True
+        Nothing -> error "Impossible: There are only Native and Plutus scripts available"
