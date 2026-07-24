@@ -117,6 +117,11 @@ class (EraTx era, AnyEraTxBody era, AnyEraTxWits era, AnyEraTxAuxData era) => An
   default isPhase2ValidTxG :: AlonzoEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsPhase2Valid)
   isPhase2ValidTxG = isPhase2ValidTxL . to Just
 
+  isValidTxG :: SimpleGetter (Tx TopTx era) (Maybe IsPhase2Valid)
+  isValidTxG = isPhase2ValidTxG
+
+{-# DEPRECATED isValidTxG "In favor of `isPhase2ValidTxG`" #-}
+
 instance AnyEraTx ShelleyEra where
   isPhase2ValidTxG = to (const Nothing)
 
@@ -146,7 +151,3 @@ producedTxOuts tx =
     _ -> txouts txBody
   where
     txBody = tx ^. bodyTxL
-
-isValidTxG :: AnyEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsPhase2Valid)
-isValidTxG = isPhase2ValidTxG
-{-# DEPRECATED isValidTxG "In favor of `isPhase2ValidTxG`" #-}

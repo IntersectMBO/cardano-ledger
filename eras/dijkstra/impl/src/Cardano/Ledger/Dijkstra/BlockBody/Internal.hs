@@ -38,7 +38,7 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..), toIsPhase2Valid)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -270,7 +270,8 @@ instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBloc
 -- flags.
 alignedValidFlags :: Int -> IntSet -> Seq.Seq IsPhase2Valid
 alignedValidFlags n invalidSet =
-  Seq.fromFunction n $ \i -> toIsPhase2Valid (i `IntSet.notMember` invalidSet)
+  Seq.fromFunction n $ \i ->
+    if i `IntSet.notMember` invalidSet then Phase2Valid else Phase2Invalid
 
 -- | Placeholder for Peras certificates
 --

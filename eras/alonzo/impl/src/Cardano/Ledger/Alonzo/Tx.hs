@@ -39,8 +39,6 @@ module Cardano.Ledger.Alonzo.Tx (
   Data,
   DataHash,
   IsPhase2Valid (..),
-  toIsPhase2Valid,
-  fromIsPhase2Valid,
   hashData,
   nonNativeLanguages,
   hashScriptIntegrity,
@@ -73,7 +71,6 @@ module Cardano.Ledger.Alonzo.Tx (
   -- * Deprecated
   IsValid,
   pattern IsValid,
-  isValidTxL,
   isValidAlonzoTxL,
   atIsValid,
 ) where
@@ -163,8 +160,15 @@ data IsPhase2Valid
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NoThunks, NFData)
 
-fromIsPhase2Valid :: IsPhase2Valid -> Bool
-fromIsPhase2Valid = \case
+instance Semigroup IsPhase2Valid where
+  Phase2Valid <> x = x
+  Phase2Invalid <> _ = Phase2Invalid
+
+instance Monoid IsPhase2Valid where
+  mempty = Phase2Valid
+
+isPhase2Valid :: IsPhase2Valid -> Bool
+isPhase2Valid = \case
   Phase2Invalid -> False
   Phase2Valid -> True
 
@@ -172,17 +176,17 @@ toIsPhase2Valid :: Bool -> IsPhase2Valid
 toIsPhase2Valid b = if b then Phase2Valid else Phase2Invalid
 
 instance EncCBOR IsPhase2Valid where
-  encCBOR = encCBOR . fromIsPhase2Valid
+  encCBOR = encCBOR . isPhase2Valid
 
 instance DecCBOR IsPhase2Valid where
   decCBOR = toIsPhase2Valid <$> decCBOR
 
 instance ToCBOR IsPhase2Valid where
-  toCBOR = toCBOR . fromIsPhase2Valid
+  toCBOR = toCBOR . isPhase2Valid
 
 instance ToJSON IsPhase2Valid where
-  toJSON = toJSON . fromIsPhase2Valid
-  toEncoding = toEncoding . fromIsPhase2Valid
+  toJSON = toJSON . isPhase2Valid
+  toEncoding = toEncoding . isPhase2Valid
 
 instance FromJSON IsPhase2Valid where
   parseJSON = fmap toIsPhase2Valid . parseJSON
@@ -190,7 +194,7 @@ instance FromJSON IsPhase2Valid where
 type IsValid = IsPhase2Valid
 
 pattern IsValid :: Bool -> IsPhase2Valid
-pattern IsValid b <- (fromIsPhase2Valid -> b)
+pattern IsValid b <- (isPhase2Valid -> b)
   where
     IsValid = toIsPhase2Valid
 
@@ -270,6 +274,11 @@ class
   where
   isPhase2ValidTxL :: Lens' (Tx TopTx era) IsPhase2Valid
 
+  isValidTxL :: Lens' (Tx TopTx era) IsPhase2Valid
+  isValidTxL = isPhase2ValidTxL
+
+{-# DEPRECATED isValidTxL "In favor of `isPhase2ValidTxL`" #-}
+
 instance Typeable l => DecCBOR (Annotator (Tx l AlonzoEra)) where
   decCBOR = fmap MkAlonzoTx <$> decCBOR
 
@@ -328,10 +337,6 @@ isPhase2ValidAlonzoTxL =
     case tx of
       AlonzoTx {} -> tx {atIsPhase2Valid = txIsPhase2Valid}
 {-# INLINEABLE isPhase2ValidAlonzoTxL #-}
-
-isValidTxL :: AlonzoEraTx era => Lens' (Tx TopTx era) IsPhase2Valid
-isValidTxL = isPhase2ValidTxL
-{-# DEPRECATED isValidTxL "In favor of `isPhase2ValidTxL`" #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx l era) IsPhase2Valid
 isValidAlonzoTxL = isPhase2ValidAlonzoTxL

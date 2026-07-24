@@ -37,7 +37,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (fromIsPhase2Valid, toIsPhase2Valid)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
@@ -82,7 +81,6 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Monoid (All (..))
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
@@ -346,9 +344,7 @@ redeemerWitnessMaker tag listWithCred =
         | (ix, mCred) <- zip [0 ..] listWithCred
         , Just (genDat, cred) <- [mCred]
         ]
-      allValid :: [IsPhase2Valid] -> IsPhase2Valid
-      allValid = toIsPhase2Valid . getAll . foldMap (All . fromIsPhase2Valid)
-   in fmap (first allValid . unzip . catMaybes) $
+   in fmap (first mconcat . unzip . catMaybes) $
         forM creds $ \(ix, genDat, cred) ->
           plutusScriptHashFromTag cred tag >>= \case
             Nothing -> pure Nothing
@@ -895,12 +891,7 @@ genAlonzoTxAndInfo slot = do
   (isPhase2Valid3, mkCertsWits) <-
     redeemerWitnessMaker Certifying $ map ((,) genDatum <$>) dcertCreds
 
-  let isValid =
-        toIsPhase2Valid
-          ( fromIsPhase2Valid isPhase2Valid1
-              && fromIsPhase2Valid isPhase2Valid2
-              && fromIsPhase2Valid isPhase2Valid3
-          )
+  let isValid = isPhase2Valid1 <> isPhase2Valid2 <> isPhase2Valid3
       mkWits :: [ExUnits -> TxWits era -> TxWits era]
       mkWits = mkPaymentWits <> mkCertsWits <> mkWithdrawalsWits
   exUnits <- genExUnits (length mkWits)

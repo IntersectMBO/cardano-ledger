@@ -147,14 +147,14 @@ decodeDijkstraTopTx allowIsPhase2Valid =
             TypeBool ->
               decCBOR >>= \case
                 True -> pure True
-                False -> fail "Value `false` not allowed for `isValid`"
+                False -> fail "Value `false` not allowed for `isPhase2Valid`"
             _ -> pure False
         else pure False
     auxAnn <- decodeNullStrictMaybe decCBOR
     let
       -- `isValid == False` can no longer be supplied in an encoded transaction.
       dijkstraTopTx =
-        DijkstraTx <$> bodyAnn <*> witsAnn <*> IsPhase2Valid <*> sequence auxAnn
+        DijkstraTx <$> bodyAnn <*> witsAnn <*> pure Phase2Valid <*> sequence auxAnn
     pure (if isValidFlagSupplied then 4 else 3, dijkstraTopTx)
 
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where

@@ -40,7 +40,6 @@ import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   ScriptIntegrity (..),
   hashScriptIntegrity,
-  toIsPhase2Valid,
   totExUnits,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
@@ -480,9 +479,10 @@ instance EraGen AlonzoEra where
                   Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
-  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (toIsPhase2Valid v) auxdata
+  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit validity auxdata
     where
       v = all twoPhaseValidates (wit ^. scriptTxWitsL)
+      validity = if v then Phase2Valid else Phase2Invalid
       twoPhaseValidates script =
         isNativeScript @AlonzoEra script
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)

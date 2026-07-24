@@ -7,7 +7,7 @@
   - `isValidAlonzoTxL` -> `isPhase2ValidAlonzoTxL`
   - `atIsValid` -> `atIsPhase2Valid`
   - `IsValid` is retained as a deprecated type alias and `pattern`
-* Add `toIsPhase2Valid` and `fromIsPhase2Valid`
+  - Add `Semigroup`/`Monoid` instances for `IsPhase2Valid`
 * Rename `validScript` to `isValidScript`, move it to `Cardano.Ledger.Alonzo.TxAuxData` and add two more arguments to it.
 * Add `asatPlutusRunnableCache` field to `AlonzoStAnnTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Add `SupportedPlutusRunnable` type and add `mkSupportedPlutusRunnable` to `EraPlutusContext`

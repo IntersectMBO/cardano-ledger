@@ -88,7 +88,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Tx (IsPhase2Valid (..), ScriptIntegrityHash, toIsPhase2Valid)
+import Cardano.Ledger.Alonzo.Tx (IsPhase2Valid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
@@ -851,7 +851,9 @@ genPlutusScript tag = do
       else pure $ alwaysFalse mlanguage numArgs
 
   let scriptHash = hashScript @era script
-  modifyPlutusScripts (Map.insert (scriptHash, tag) (toIsPhase2Valid isValid, script))
+      validity = if isValid then Phase2Valid else Phase2Invalid
+  modifyPlutusScripts
+    (Map.insert (scriptHash, tag) (validity, script))
   pure scriptHash
 
 -- ======================================================================
