@@ -2,6 +2,9 @@
 
 ## 1.16.0.0
 
+* Add `asatPlutusRunnableCache` field to `AlonzoStAnnTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
+* Add `SupportedPlutusRunnable` type and add `mkSupportedPlutusRunnable` to `EraPlutusContext`
+* Remove `mkPlutusWithContext` from `EraPlutusContext`
 * Make `AlonzoTx` decoder that used for Mempool backwards compatible with prior-eras
 * Add `TranslateEra` instance for `SnapShots`
 * Change `extraConfig` and `agExtraConfig` from `Maybe` to `StrictMaybe`
@@ -30,10 +33,11 @@
 * Change `Signal` to `StAnnTx TopTx era` for: `AlonzoLEDGER`, `AlonzoUTXOW`, `AlonzoUTXO`, `AlonzoUTXOS`
 * Add `FromJSON` instance for `IsValid`
 * Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
-* Add `resolveNeededPlutusScriptsWithPurpose`
+* Add `resolveNeededPlutusScriptsWithPurpose`, which takes a `ProtVer` and a `Map ScriptHash (SupportedPlutusRunnable era)` cache of previously resolved scripts, and returns the updated cache together with `[(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]`
+* Add `unAlonzoScriptsNeeded` record accessor to `AlonzoScriptsNeeded`
 * Add `scriptsWithContextFromLedgerTxInfo` and `scriptsWithContextFromLedgerTxInfoWithResult`
 * Add `AlonzoStAnnTx`
-* Move `toPlutusWithContext` from `Cardano.Ledger.Alonzo.Plutus.Context` to `Cardano.Ledger.Alonzo.Plutus.TxInfo`
+* Move and rename `toPlutusWithContext` from `Cardano.Ledger.Alonzo.Plutus.Context` to `mkPlutusWithContext` in `Cardano.Ledger.Alonzo.Plutus.TxInfo`, changing its signature to accept a `SupportedPlutusRunnable era` with separate `Data era` and `ExUnits` arguments
 * Add `scriptsProvidedStAnnTx` to `AlonzoEraUTxO` and a helper to implement it `scriptsProvidedAlonzoStAnnTx`
 * Remove `ToCBOR` and `FromCBOR` instances for `AlonzoExtraConfig` and `AlonzoTxOut`
 * Add `ApplyTick` instance for `AlonzoEra`

@@ -26,9 +26,8 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
-import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.Era (LEDGERS, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -43,7 +42,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (CertState, EraStake)
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (asks)
@@ -61,6 +60,7 @@ import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 
 data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo
@@ -195,18 +195,18 @@ ledgersTransition ::
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do
-  TRC (LedgersEnv slot epochNo pp account, ls, txs) <- judgmentContext
+  TRC (LedgersEnv slot epochNo pp account, initLedgerState, txs) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sysStart <- liftSTS $ asks systemStart
   foldM
-    ( \ !ls' (ix, tx) ->
+    ( \ !curLedgerState (ix, tx) ->
         -- build the annotations against the same utxo snapshot that the rule will validate against
-        let utxo = utxosUtxo (lsUTxOState ls')
-            stAnnTx = mkStAnnTx ei sysStart pp utxo tx
+        let utxo = curLedgerState ^. utxoL
+            stAnnTx = mkStAnnTx ei sysStart pp utxo mempty tx
          in trans @(EraRule "LEDGER" era) $
-              TRC (LedgerEnv slot (Just epochNo) ix pp account, ls', stAnnTx)
+              TRC (LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
     )
-    ls
+    initLedgerState
     $ zip [minBound ..]
     $ toList txs
 

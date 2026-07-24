@@ -28,7 +28,12 @@ module Cardano.Ledger.Dijkstra.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, ContextError, TxInfoResult)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  CollectError,
+  ContextError,
+  SupportedPlutusRunnable,
+  TxInfoResult,
+ )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   IsValid (..),
@@ -71,6 +76,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -374,6 +380,7 @@ data DijkstraStAnnTx l era where
     , dsattScriptsProvided :: ScriptsProvided era
     , dsattPlutusLegacyMode :: Bool
     , dsattPlutusLanguagesUsed :: Set Language
+    , dsattPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     , dsattSubTransactions :: [DijkstraStAnnTx SubTx era]
     } ->

@@ -29,6 +29,7 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   toPlutusTxInfoForPurpose,
   EraPlutusContext (..),
   lookupTxInfoResultImpossible,
+  SupportedPlutusRunnable (..),
   SupportedLanguage (..),
   mkSupportedLanguageM,
   supportedLanguages,
@@ -52,21 +53,19 @@ import Cardano.Ledger.Alonzo.Scripts (
   PlutusPurpose,
   PlutusScript (..),
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), kindObjectValue)
+import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (
-  CostModel,
   Data,
-  ExUnits,
   Language (..),
   Plutus (..),
   PlutusArgs,
   PlutusBinary,
   PlutusLanguage,
+  PlutusRunnable (..),
   PlutusScriptContext,
-  PlutusWithContext (..),
   SLanguage (..),
   asSLanguage,
   plutusLanguage,
@@ -75,7 +74,7 @@ import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..))
 import Control.Monad (join)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
@@ -204,6 +203,8 @@ class
 
   mkSupportedLanguage :: Language -> Maybe (SupportedLanguage era)
 
+  mkSupportedPlutusRunnable :: Version -> PlutusScript era -> SupportedPlutusRunnable era
+
   -- | Construct `PlutusTxInfo` for all supported languages in this era.
   mkTxInfoResult :: LedgerTxInfo era -> TxInfoResult era
 
@@ -217,16 +218,6 @@ class
     SLanguage l ->
     TxInfoResult era ->
     PlutusTxInfoResult l era
-
-  mkPlutusWithContext ::
-    PlutusScript era ->
-    ScriptHash ->
-    PlutusPurpose AsIxItem era ->
-    LedgerTxInfo era ->
-    TxInfoResult era ->
-    (Data era, ExUnits) ->
-    CostModel ->
-    Either (ContextError era) PlutusWithContext
 
 -- | Helper function to use when implementing `lookupTxInfoResult` for plutus languages that are not
 -- supported by the era.
@@ -296,6 +287,28 @@ mkSupportedBinaryPlutusScript supportedLanguage plutus =
   case supportedLanguage of
     SupportedLanguage sLang ->
       mkSupportedPlutusScript (asSLanguage sLang (Plutus plutus))
+
+-- | Invariant of this type is that it cannot be used between different protocol versions. In other
+-- words `SupportedPlutusRunnable` constructed from the same script, but two separate protocol
+-- versions, is not guaranteed to be the same, i.e. one of the could fail decoding, while the other
+-- would not.
+data SupportedPlutusRunnable era where
+  SupportedPlutusRunnable ::
+    EraPlutusTxInfo l era =>
+    !(PlutusRunnable l) -> SupportedPlutusRunnable era
+
+instance Show (SupportedPlutusRunnable era) where
+  show (SupportedPlutusRunnable spr) = "(SupportedPlutusRunnable (" ++ show spr ++ "))"
+
+-- | As long as the language and the script hash are the same, we can conclude equality, because of
+-- the type invariant
+instance Eq (SupportedPlutusRunnable era) where
+  SupportedPlutusRunnable spr1 == SupportedPlutusRunnable spr2 =
+    plutusLanguage spr1 == plutusLanguage spr2
+      && plutusRunnableScriptHash spr1 == plutusRunnableScriptHash spr2
+
+instance NFData (SupportedPlutusRunnable era) where
+  rnf (SupportedPlutusRunnable spr) = rnf spr
 
 data SupportedLanguage era where
   SupportedLanguage :: EraPlutusTxInfo l era => SLanguage l -> SupportedLanguage era

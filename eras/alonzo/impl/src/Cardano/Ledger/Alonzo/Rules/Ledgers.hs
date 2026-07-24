@@ -23,11 +23,9 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, systemStart)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
-import Cardano.Ledger.Shelley.Core (EraGov)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (CertState, EraStake)
+import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (asks)
@@ -43,6 +41,7 @@ import Control.State.Transition (
 import Data.Default (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
+import Lens.Micro ((^.))
 
 type instance EraRuleFailure "LEDGERS" AlonzoEra = Shelley.ShelleyLedgersPredFailure AlonzoEra
 
@@ -90,7 +89,7 @@ instance
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Default (LedgerState era)
@@ -113,25 +112,30 @@ alonzoLedgersTransition ::
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (LEDGERS era)
 alonzoLedgersTransition = do
-  TRC (Shelley.LedgersEnv slot epochNo pp account, ls, txs) <- judgmentContext
+  TRC (Shelley.LedgersEnv slot epochNo pp account, initLedgerState, txs) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sysStart <- liftSTS $ asks systemStart
-  foldM
-    ( \ !ls' (ix, tx) ->
-        let utxo = utxosUtxo (lsUTxOState ls')
-            stAnnTx = mkStAnnTx (unsafeLinearExtendEpochInfo slot ei) sysStart pp utxo tx
-         in trans @(EraRule "LEDGER" era) $
-              TRC (LedgerEnv slot (Just epochNo) ix pp account, ls', stAnnTx)
-    )
-    ls
-    $ zip [minBound ..]
-    $ toList txs
+  (finalLedgerState, _) <-
+    foldM -- cache is lazy on purpose, since it is unused when validation is off
+      ( \(!curLedgerState, stAnnTxCache) (ix, tx) -> do
+          let utxo = curLedgerState ^. utxoL
+              stAnnTx =
+                mkStAnnTx (unsafeLinearExtendEpochInfo slot ei) sysStart pp utxo stAnnTxCache tx
+          newLedgerState <-
+            trans @(EraRule "LEDGER" era) $
+              TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
+          pure (newLedgerState, getCacheStAnnTx stAnnTx)
+      )
+      (initLedgerState, mempty)
+      $ zip [minBound ..]
+      $ toList txs
+  pure finalLedgerState
 
 instance
   ( Era era

@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -50,18 +52,28 @@ module Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  CollectError,
+  EraPlutusContext,
+  SupportedPlutusRunnable (..),
+  mkSupportedPlutusRunnable,
+ )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
-import Cardano.Ledger.Plutus (Language (..), PlutusWithContext)
-import Cardano.Ledger.Plutus.Data (Data, Datum (..))
+import Cardano.Ledger.Plutus (
+  Data,
+  Datum (..),
+  Language (..),
+  PlutusRunnable (..),
+  PlutusWithContext,
+ )
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
@@ -76,6 +88,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn
 import Control.DeepSeq (NFData)
 import Data.Foldable as F (foldl', toList)
+import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
@@ -87,7 +100,7 @@ import Lens.Micro.Extras (view)
 
 -- | Alonzo era style `ScriptsNeeded` require also a `PlutusPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
-  = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash)]
+  = AlonzoScriptsNeeded {unAlonzoScriptsNeeded :: [(PlutusPurpose AsIxItem era, ScriptHash)]}
   deriving (Monoid, Semigroup, Generic)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
@@ -98,6 +111,7 @@ deriving instance AlonzoEraScript era => NFData (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
+  type StAnnTxCache AlonzoEra = Map.Map ScriptHash (SupportedPlutusRunnable AlonzoEra)
 
   getConsumedValue = getConsumedMaryValue
 
@@ -112,6 +126,8 @@ instance EraUTxO AlonzoEra where
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+  getCacheStAnnTx = asatPlutusRunnableCache
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,
@@ -416,9 +432,37 @@ getAlonzoWitsVKeyNeeded certState utxo txBody =
 {-# INLINEABLE getAlonzoWitsVKeyNeeded #-}
 
 resolveNeededPlutusScriptsWithPurpose ::
-  AlonzoEraScript era =>
+  EraPlutusContext era =>
+  ProtVer ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
-  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)]
-resolveNeededPlutusScriptsWithPurpose (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) =
-  [(sh, sp, s) | (sp, sh) <- scriptsNeeded, Just s <- [lookupPlutusScript sh scriptsProvided]]
+  -- | These are cached scripts. Make sure they were constructed using the exact same protocol
+  -- version as the one supplied to this function.
+  Map.Map ScriptHash (SupportedPlutusRunnable era) ->
+  ( Map.Map ScriptHash (SupportedPlutusRunnable era)
+  , [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
+  )
+resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded plutusScriptsCache =
+  (updatedPlutusScriptCache, neededPlutusScriptsWithPurpose)
+  where
+    updatedPlutusScriptCache = plutusScriptsCache `Map.union` plutusScriptsProvided
+    neededPlutusScriptsWithPurpose =
+      [ (sp, s)
+      | (sp, sh) <- unAlonzoScriptsNeeded scriptsNeeded
+      , Just s <- [lookupPlutusScriptRunnable sh]
+      ]
+    version = pvMajor protVer
+    lookupPlutusScriptRunnable sh =
+      -- We must look into `plutusScriptsProvided`, before we can look for the same script in the
+      -- `plutusScriptsCache`, since that cache can contain scripts from prior transactions in a
+      -- block
+      Map.lookup sh plutusScriptsProvided <&> \case
+        SupportedPlutusRunnable plutusRunnable ->
+          case Map.lookup sh plutusScriptsCache of
+            Just cachedPlutusRunnable -> cachedPlutusRunnable
+            Nothing ->
+              -- Avoid recomputing script hash
+              SupportedPlutusRunnable $ plutusRunnable {plutusRunnableScriptHash = sh}
+    plutusScriptsProvided =
+      Map.mapMaybe (fmap (mkSupportedPlutusRunnable version) . toPlutusScript) $
+        unScriptsProvided scriptsProvided

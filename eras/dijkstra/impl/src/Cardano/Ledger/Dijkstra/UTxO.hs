@@ -18,7 +18,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   batchNonDistinctRefScriptsSize,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, SupportedPlutusRunnable)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
@@ -130,6 +130,7 @@ dijkstraProducedValue pp isRegPoolId topTxBody =
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra
+  type StAnnTxCache DijkstraEra = Map.Map ScriptHash (SupportedPlutusRunnable DijkstraEra)
 
   getConsumedValue = getConsumedDijkstraValue
 
@@ -144,6 +145,8 @@ instance EraUTxO DijkstraEra where
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+
+  getCacheStAnnTx = dsattPlutusRunnableCache
 
 -- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
 -- scripts from all subtransactions.

@@ -2,6 +2,15 @@
 
 ## 1.21.0.0
 
+* Add `StAnnTxCache` associated type and `getCacheStAnnTx` method to `EraUTxO`, together with a new `Monoid (StAnnTxCache era)` superclass constraint
+* Restructure `PlutusRunnable` from a `newtype` over `ScriptForEvaluation` into a record with fields `plutusRunnableBinary`, `plutusRunnableScriptHash` and `plutusRunnableResult`
+* Change `decodePlutusRunnable` to return `PlutusRunnable l` instead of `Either ScriptDecodeError (PlutusRunnable l)`
+* Change `evaluatePlutusRunnable`, `evaluatePlutusRunnableBudget` and `mkTermToEvaluate` to accept a `ScriptForEvaluation` instead of a `PlutusRunnable l`
+* Add `asSameLanguage`
+* Change `pwcScript` field of `PlutusWithContext` to `PlutusRunnable l`, previously `Either (Plutus l) (PlutusRunnable l)`
+* Remove `pwcScriptHash` field from `PlutusWithContext` and add `pwcScriptHash` as a function instead
+* Change the continuation argument of `withRunnablePlutusWithContext` to receive a `ScriptForEvaluation`
+* Change the binary serialization of `PlutusWithContext`: the script hash is no longer stored, making the encoding not backwards compatible
 * Make `SnapShots` parametric in `era`
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`

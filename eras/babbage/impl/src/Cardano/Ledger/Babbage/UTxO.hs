@@ -11,6 +11,8 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScriptsNonDistinct,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable)
+import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
@@ -42,6 +44,7 @@ import Lens.Micro
 
 instance EraUTxO BabbageEra where
   type ScriptsNeeded BabbageEra = AlonzoScriptsNeeded BabbageEra
+  type StAnnTxCache BabbageEra = Map.Map ScriptHash (SupportedPlutusRunnable BabbageEra)
 
   getConsumedValue = getConsumedMaryValue
 
@@ -57,6 +60,8 @@ instance EraUTxO BabbageEra where
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+  getCacheStAnnTx = asatPlutusRunnableCache
 
 instance AlonzoEraUTxO BabbageEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

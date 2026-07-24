@@ -17,6 +17,8 @@ module Cardano.Ledger.Conway.UTxO (
   getConwayMinFeeTxUtxo,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable)
+import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
@@ -118,6 +120,7 @@ conwayProducedValue pp isStakePool txBody =
 
 instance EraUTxO ConwayEra where
   type ScriptsNeeded ConwayEra = AlonzoScriptsNeeded ConwayEra
+  type StAnnTxCache ConwayEra = Map.Map ScriptHash (SupportedPlutusRunnable ConwayEra)
 
   getConsumedValue = getConsumedMaryValue
 
@@ -132,6 +135,8 @@ instance EraUTxO ConwayEra where
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+
+  getCacheStAnnTx = asatPlutusRunnableCache
 
 instance AlonzoEraUTxO ConwayEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

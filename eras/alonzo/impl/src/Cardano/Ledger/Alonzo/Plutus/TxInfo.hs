@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  toPlutusWithContext,
+  mkPlutusWithContext,
   AlonzoContextError (..),
   TxOutSource (..),
   transLookupTxOut,
@@ -97,34 +97,35 @@ import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
-toPlutusWithContext ::
-  forall l era.
-  (EraPlutusTxInfo l era, AlonzoEraUTxO era) =>
-  Either (Plutus l) (PlutusRunnable l) ->
-  ScriptHash ->
+mkPlutusWithContext ::
+  forall era.
+  AlonzoEraUTxO era =>
+  SupportedPlutusRunnable era ->
   PlutusPurpose AsIxItem era ->
   LedgerTxInfo era ->
   TxInfoResult era ->
-  (Data era, ExUnits) ->
+  Data era ->
+  ExUnits ->
   CostModel ->
   Either (ContextError era) PlutusWithContext
-toPlutusWithContext script scriptHash plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult (redeemerData, exUnits) costModel = do
-  let slang = isLanguage @l
-      maybeSpendingDatum =
-        getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
-  mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
-  txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
-  plutusArgs <-
-    toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
-  pure $
-    PlutusWithContext
-      { pwcProtocolVersion = pvMajor (ltiProtVer lti)
-      , pwcScript = script
-      , pwcScriptHash = scriptHash
-      , pwcArgs = plutusArgs
-      , pwcExUnits = exUnits
-      , pwcCostModel = costModel
-      }
+mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult redeemerData exUnits costModel =
+  case script of
+    SupportedPlutusRunnable plutusRunnable -> do
+      let slang = isLanguage `asSameLanguage` plutusRunnable
+          maybeSpendingDatum =
+            getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
+      mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
+      txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
+      plutusArgs <-
+        toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
+      pure $
+        PlutusWithContext
+          { pwcProtocolVersion = pvMajor (ltiProtVer lti)
+          , pwcScript = plutusRunnable
+          , pwcArgs = plutusArgs
+          , pwcExUnits = exUnits
+          , pwcCostModel = costModel
+          }
 
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
@@ -201,12 +202,13 @@ instance EraPlutusContext AlonzoEra where
     PlutusV1 -> Just $ SupportedLanguage SPlutusV1
     _lang -> Nothing
 
+  mkSupportedPlutusRunnable v = \case
+    AlonzoPlutusV1 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+
   mkTxInfoResult = AlonzoTxInfoResult . toPlutusTxInfo SPlutusV1
 
   lookupTxInfoResult SPlutusV1 (AlonzoTxInfoResult tirPlutusV1) = tirPlutusV1
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
-
-  mkPlutusWithContext (AlonzoPlutusV1 p) = toPlutusWithContext (Left p)
 
 data AlonzoContextError era
   = TranslationLogicMissingInput TxIn

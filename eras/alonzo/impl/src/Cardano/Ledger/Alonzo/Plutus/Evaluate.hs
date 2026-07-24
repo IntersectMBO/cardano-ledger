@@ -38,7 +38,9 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusContext (..),
   LedgerTxInfo (..),
+  SupportedPlutusRunnable (..),
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (mkPlutusWithContext)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (
@@ -46,6 +48,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded (..),
   resolveNeededPlutusScriptsWithPurpose,
  )
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
@@ -54,7 +57,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   runPlutusScriptWithLogs,
  )
 import Cardano.Ledger.Plutus.ExUnits
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), plutusLanguage)
 import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
@@ -105,10 +108,12 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
         }
-    neededPlutusScripts =
+    (_, neededPlutusScripts) =
       resolveNeededPlutusScriptsWithPurpose
+        protVer
         (getScriptsProvided utxo tx)
         (getScriptsNeeded utxo (tx ^. bodyTxL))
+        mempty
 
 scriptsWithContextFromLedgerTxInfo ::
   forall era.
@@ -118,7 +123,7 @@ scriptsWithContextFromLedgerTxInfo ::
   ) =>
   LedgerTxInfo era ->
   CostModels ->
-  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)] ->
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfo lti =
   scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
@@ -127,12 +132,11 @@ scriptsWithContextFromLedgerTxInfoWithResult ::
   forall era.
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
-  , EraPlutusContext era
   ) =>
   LedgerTxInfo era ->
   TxInfoResult era ->
   CostModels ->
-  [(ScriptHash, PlutusPurpose AsIxItem era, PlutusScript era)] ->
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusScriptsUsed =
   merge
@@ -143,22 +147,24 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusS
     redeemers =
       case lti of
         LedgerTxInfo {ltiTx} -> ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
-    getScriptWithRedeemer (plutusScriptHash, plutusPurpose, plutusScript) =
+    getScriptWithRedeemer (plutusPurpose, plutusScriptRunnable) =
       let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
        in case Map.lookup redeemerIndex redeemers of
-            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
+            Just (d, exUnits) -> Right (plutusScriptRunnable, plutusPurpose, d, exUnits)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
-    apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
-      let lang = plutusScriptLanguage plutusScript
+    apply (plutusScriptRunnable, plutusPurpose, redeemerData, exUnits) = do
+      let lang =
+            case plutusScriptRunnable of
+              SupportedPlutusRunnable srp -> plutusLanguage srp
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang $ costModelsValid costModels
       first BadTranslation $
         mkPlutusWithContext
-          plutusScript
-          plutusScriptHash
+          plutusScriptRunnable
           plutusPurpose
           lti
           txInfoResult
-          (redeemerData, exUnits)
+          redeemerData
+          exUnits
           costModel
 
     -- Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
@@ -278,7 +284,7 @@ type RedeemerReportWithLogs era =
 evalTxExUnits ::
   forall era.
   ( AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
@@ -305,7 +311,7 @@ evalTxExUnits pp tx utxo epochInfo systemStart =
 evalTxExUnitsWithLogs ::
   forall era.
   ( AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
@@ -370,12 +376,12 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
       pwc <-
         first ContextError $
           mkPlutusWithContext
-            plutusScript
-            plutusScriptHash
+            (mkSupportedPlutusRunnable (pvMajor protVer) plutusScript)
             plutusPurpose
             ledgerTxInfo
             txInfoResult
-            (redeemerData, maxBudget)
+            redeemerData
+            maxBudget
             costModel
       case evaluatePlutusWithContext P.Verbose pwc of
         (logs, Left err) -> Left $ ValidationFailure exUnits err logs pwc

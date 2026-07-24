@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
+import Cardano.Ledger.Plutus (PlutusWithContext (..))
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided)
 import Control.State.Transition (Event, PredicateFailure)
 import Data.Functor.Identity (Identity)
@@ -153,16 +153,20 @@ instance
   ) =>
   ToExpr (AlonzoStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _) =
+  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in Rec "AlonzoStAnnTx" $
           OMap.fromList
             [ ("asatTx", toExpr asatTx)
             , ("asatScriptsNeeded", toExpr asatScriptsNeeded)
             , ("asatScriptsProvided", toExpr asatScriptsProvided)
+            , ("asatPlutusRunnableCache", toExpr asatPlutusRunnableCache)
             , ("asatPlutusLanguagesUsed", toExpr asatPlutusLanguagesUsed)
             , ("asatPlutusScriptsWithContext", toExpr asatPlutusScriptsWithContext)
             ]
+
+instance ToExpr (SupportedPlutusRunnable era) where
+  toExpr (SupportedPlutusRunnable spr) = toExpr spr
 
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)
@@ -214,19 +218,6 @@ instance
   , ToExpr PlutusWithContext
   ) =>
   ToExpr (AlonzoUtxosEvent era)
-
-instance
-  ToExpr ScriptHash =>
-  ToExpr PlutusWithContext
-  where
-  toExpr PlutusWithContext {..} =
-    Rec "PlutusWithContext" $
-      OMap.fromList
-        [ ("pwcProtocolVersion", toExpr pwcProtocolVersion)
-        , ("pwcScriptHash", toExpr pwcScriptHash)
-        , ("pwcExUnits", toExpr pwcExUnits)
-        , ("pwcCostModel", toExpr pwcCostModel)
-        ]
 
 instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>

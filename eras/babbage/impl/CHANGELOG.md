@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Introduce `LEDGERS` rule with `STS` and `Embed (LEDGER era) (LEDGERS era)` instances, and wire it to `EraRule "LEDGERS" BabbageEra` (previously `Shelley.LEDGERS`)
+* Export `LEDGERS` from `Cardano.Ledger.Babbage.Era` and `Cardano.Ledger.Babbage.Rules`
 * Add `TranslateEra` instance for `SnapShots`
 * Rename rule types and deprecate the old names:
   - `BabbageLEDGER` -> `LEDGER`

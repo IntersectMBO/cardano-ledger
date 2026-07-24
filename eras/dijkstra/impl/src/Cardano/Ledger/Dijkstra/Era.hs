@@ -55,6 +55,7 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraUTXOW,
 ) where
 
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block, EraBlockHeader)
 import Cardano.Ledger.Conway.Core
@@ -285,7 +286,7 @@ type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" DijkstraEra = Shelley.LEDGERS DijkstraEra
+type instance EraRule "LEDGERS" DijkstraEra = Babbage.LEDGERS DijkstraEra
 
 type instance EraRule "POOLREAP" DijkstraEra = Shelley.POOLREAP DijkstraEra
 

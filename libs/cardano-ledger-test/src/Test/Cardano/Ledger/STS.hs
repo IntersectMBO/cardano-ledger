@@ -232,6 +232,7 @@ prop_UTXOS =
             (systemStart testGlobals)
             pp
             utxo
+            mempty
             tx
     )
     $ \_env _st _sig _st' -> True
@@ -334,6 +335,7 @@ prop_UTXOW =
             (systemStart testGlobals)
             (Shelley.uePParams env)
             (utxosUtxo st)
+            mempty
             tx
     )
     $ \_env _st _sig _st' -> True

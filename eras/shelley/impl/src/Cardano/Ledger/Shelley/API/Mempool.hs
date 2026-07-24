@@ -144,6 +144,7 @@ unsafeMakeValidatedTx globals env state tx =
           (systemStart globals)
           (env ^. ledgerPpL)
           (state ^. utxoG)
+          mempty
           tx
     , vtProtocolVersion = env ^. ledgerPpL . ppProtocolVersionL
     , vtSlotNo = env ^. ledgerSlotNoL
@@ -167,6 +168,7 @@ translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
   ( EraTx era
+  , EraUTxO era
   , Eq (ApplyTxError era)
   , Show (ApplyTxError era)
   , Typeable (ApplyTxError era)
@@ -183,6 +185,7 @@ class
     SystemStart ->
     PParams era ->
     UTxO era ->
+    StAnnTxCache era ->
     Tx TopTx era ->
     StAnnTx TopTx era
 
@@ -284,6 +287,7 @@ defaultApplyTxWithValidation wrap validationPolicy globals env state tx =
           (systemStart globals)
           (env ^. ledgerPpL)
           (state ^. utxoG)
+          mempty
           tx
    in first wrap $
         ruleApplyTxValidation @rule validationPolicy globals env state stAnnTx
@@ -323,7 +327,7 @@ instance ApplyTx ShelleyEra where
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
 
-  mkStAnnTx _ _ _ _ = id
+  mkStAnnTx _ _ _ _ _ = id
 
   internalApplyTxWithValidation validationPolicy globals env state tx =
     let stAnnTx =
@@ -332,6 +336,7 @@ instance ApplyTx ShelleyEra where
             (systemStart globals)
             (env ^. ledgerPpL)
             (state ^. utxoG)
+            mempty
             tx
      in first ShelleyApplyTxError $
           ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx

@@ -115,6 +115,7 @@ instance
         (systemStart testGlobals)
         pParams
         (utxosUtxo (lsUTxOState ls))
+        mempty
         tx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
@@ -127,7 +128,6 @@ ledgersSigGen ::
   ( Crypto c
   , ApplyTx era
   , EraGen era
-  , EraUTxO era
   , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
@@ -167,6 +167,7 @@ ledgersSigGen
                 (systemStart testGlobals)
                 pParams
                 utxo
+                mempty
                 tx
             res =
               runShelleyBase $

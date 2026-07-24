@@ -51,6 +51,7 @@ module Cardano.Ledger.Conway.Era (
   ConwayRATIFY,
 ) where
 
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (ConwayEra)
@@ -240,7 +241,7 @@ type instance EraRule "HARDFORK" ConwayEra = HARDFORK ConwayEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" ConwayEra = Shelley.LEDGERS ConwayEra
+type instance EraRule "LEDGERS" ConwayEra = Babbage.LEDGERS ConwayEra
 
 type instance EraRule "POOLREAP" ConwayEra = Shelley.POOLREAP ConwayEra
 

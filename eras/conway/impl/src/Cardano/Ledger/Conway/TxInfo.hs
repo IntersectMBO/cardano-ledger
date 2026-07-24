@@ -51,12 +51,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxCert,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
+  SupportedPlutusRunnable (..),
   lookupTxInfoResultImpossible,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   AlonzoContextError (..),
   TxOutSource (..),
-  toPlutusWithContext,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
@@ -105,7 +105,12 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  PlutusArgs (..),
+  SLanguage (..),
+  decodePlutusRunnable,
+ )
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
   slotToPOSIXTime,
@@ -156,6 +161,11 @@ instance EraPlutusContext ConwayEra where
     PlutusV3 -> Just $ SupportedLanguage SPlutusV3
     _ -> Nothing
 
+  mkSupportedPlutusRunnable v = \case
+    ConwayPlutusV1 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+    ConwayPlutusV2 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+    ConwayPlutusV3 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
+
   mkTxInfoResult lti =
     ConwayTxInfoResult
       (toPlutusTxInfo SPlutusV1 lti)
@@ -166,11 +176,6 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
-
-  mkPlutusWithContext = \case
-    ConwayPlutusV1 p -> toPlutusWithContext $ Left p
-    ConwayPlutusV2 p -> toPlutusWithContext $ Left p
-    ConwayPlutusV3 p -> toPlutusWithContext $ Left p
 
 data ConwayContextError era
   = BabbageContextError (BabbageContextError era)

@@ -99,6 +99,7 @@ library
     cardano-ledger-shelley ^>=1.19,
     cardano-strict-containers,
     containers,
+    data-default,
     deepseq,
     mempack,
     microlens,

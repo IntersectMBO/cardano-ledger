@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -47,6 +48,7 @@ module Cardano.Ledger.Plutus.Language (
   toSLanguage,
   withSLanguage,
   asSLanguage,
+  asSameLanguage,
   withSamePlutusLanguage,
 
   -- * Plutus Script Context
@@ -73,6 +75,10 @@ import Cardano.Ledger.Binary (
   unlessDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Hashes (SafeToHash (..), ScriptHash (..))
+import qualified Codec.Extras.SerialiseViaFlat as PlutusCore (
+  DeserialiseFailureInfo (..),
+  DeserialiseFailureReason (..),
+ )
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
 import Data.Aeson (
@@ -98,7 +104,7 @@ import qualified Data.Text.Encoding as T
 import Data.Typeable (Typeable, gcast)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks)
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import PlutusCore (DefaultFun, DefaultUni)
 import qualified PlutusLedgerApi.Common as P (
   Data,
@@ -108,11 +114,10 @@ import qualified PlutusLedgerApi.Common as P (
   LogOutput,
   MajorProtocolVersion (..),
   PlutusLedgerLanguage (PlutusV1, PlutusV2, PlutusV3),
-  ScriptDecodeError,
+  ScriptDecodeError (..),
   ScriptForEvaluation,
   VerboseMode,
   mkTermToEvaluate,
-  serialisedScript,
  )
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
@@ -126,11 +131,36 @@ import qualified UntypedPlutusCore as UPLC
 --
 -- The only way to obtain this type is by the means of deserializing `Plutus` with
 -- `decodePlutusRunnable`
-newtype PlutusRunnable (l :: Language) = PlutusRunnable
-  { plutusRunnable :: P.ScriptForEvaluation
+data PlutusRunnable (l :: Language) = PlutusRunnable
+  { plutusRunnableBinary :: !(Plutus l)
+  , plutusRunnableScriptHash :: ScriptHash
+  -- ^ Hash of the script. Lazy on purpose
+  , plutusRunnableResult :: Either P.ScriptDecodeError P.ScriptForEvaluation
+  -- ^ Decoded version of the script. Lazy on purpose
   }
-  deriving stock (Show, Generic)
-  deriving newtype (Eq, NFData, NoThunks)
+  deriving stock (Eq, Show, Generic)
+
+deriving via
+  AllowThunksIn '["plutusRunnableScriptHash", "plutusRunnableResult"] (PlutusRunnable l)
+  instance
+    Typeable l => NoThunks (PlutusRunnable l)
+
+instance NFData (PlutusRunnable l) where
+  rnf (PlutusRunnable prb prsh prr) =
+    prb `deepseq`
+      prsh `deepseq`
+        either rnfScriptDecodeError rnf prr
+
+rnfScriptDecodeError :: P.ScriptDecodeError -> ()
+rnfScriptDecodeError = \case
+  P.CBORDeserialiseError (PlutusCore.DeserialiseFailureInfo byteOffset reason) ->
+    byteOffset `deepseq` case reason of
+      PlutusCore.EndOfInput -> ()
+      PlutusCore.ExpectedBytes -> ()
+      PlutusCore.OtherReason rStr -> rnf rStr
+  P.RemainderError err -> rnf err
+  P.LedgerLanguageNotAvailableError {} -> ()
+  P.PlutusCoreLanguageNotAvailableError {} -> ()
 
 toMajorProtocolVersion :: Version -> P.MajorProtocolVersion
 toMajorProtocolVersion = P.MajorProtocolVersion . getVersion
@@ -139,7 +169,7 @@ instance PlutusLanguage l => DecCBOR (PlutusRunnable l) where
   decCBOR = do
     plutus <- decCBOR
     pv <- getDecoderVersion
-    either (fail . show) pure $ decodePlutusRunnable pv plutus
+    pure $ decodePlutusRunnable pv plutus
 
 instance PlutusLanguage l => EncCBOR (PlutusRunnable l) where
   encCBOR = encCBOR . plutusFromRunnable
@@ -200,13 +230,13 @@ instance PlutusLanguage l => EncCBOR (Plutus l) where
 
 -- | Verify that the binary version of the Plutus script is deserializable.
 isValidPlutus :: PlutusLanguage l => Version -> Plutus l -> Bool
-isValidPlutus v = isRight . decodePlutusRunnable v
+isValidPlutus v = isRight . plutusRunnableResult . decodePlutusRunnable v
 
 -- | Serialize the runnable version of the plutus script
 --
 -- > decodePlutusRunnable majVer (plutusFromRunnable pr) == Right pr
 plutusFromRunnable :: PlutusRunnable l -> Plutus l
-plutusFromRunnable = Plutus . PlutusBinary . P.serialisedScript . plutusRunnable
+plutusFromRunnable = plutusRunnableBinary
 
 -- | Binary representation of a Plutus script.
 newtype PlutusBinary = PlutusBinary {unPlutusBinary :: ShortByteString}
@@ -434,7 +464,7 @@ class
     Version ->
     -- | Binary version of the script that will be deserialized
     Plutus l ->
-    Either P.ScriptDecodeError (PlutusRunnable l)
+    PlutusRunnable l
 
   evaluatePlutusRunnable ::
     -- | Which major protocol version to use for script execution
@@ -446,7 +476,7 @@ class
     -- | The resource budget which must not be exceeded during evaluation
     P.ExBudget ->
     -- | The script to evaluate
-    PlutusRunnable l ->
+    P.ScriptForEvaluation ->
     -- | The arguments to the script
     PlutusArgs l ->
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
@@ -462,7 +492,7 @@ class
     -- | Includes the cost model to use for tallying up the execution costs
     P.EvaluationContext ->
     -- | The script to evaluate
-    PlutusRunnable l ->
+    P.ScriptForEvaluation ->
     -- | The arguments to the script
     PlutusArgs l ->
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
@@ -471,7 +501,7 @@ class
     -- | Which major protocol version to use for script execution
     Version ->
     -- | The script to evaluate
-    PlutusRunnable l ->
+    P.ScriptForEvaluation ->
     -- | The arguments to the script
     PlutusArgs l ->
     Either P.EvaluationError (UPLC.Term UPLC.NamedDeBruijn DefaultUni DefaultFun ())
@@ -481,17 +511,17 @@ instance PlutusLanguage 'PlutusV1 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV1
   plutusLanguageTag _ = 0x01
-  decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
-    PlutusRunnable <$> PV1.deserialiseScript (toMajorProtocolVersion pv) bs
-  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
+  decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
+    PlutusRunnable p (hashPlutusScript p) $ PV1.deserialiseScript (toMajorProtocolVersion pv) bs
+  evaluatePlutusRunnable pv vm ec exBudget rs =
     PV1.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
       . legacyPlutusArgsToData
       . unPlutusV1Args
-  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
+  evaluatePlutusRunnableBudget pv vm ec rs =
     PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
       . legacyPlutusArgsToData
       . unPlutusV1Args
-  mkTermToEvaluate pv (PlutusRunnable rs) =
+  mkTermToEvaluate pv rs =
     P.mkTermToEvaluate P.PlutusV1 (toMajorProtocolVersion pv) rs
       . legacyPlutusArgsToData
       . unPlutusV1Args
@@ -501,17 +531,17 @@ instance PlutusLanguage 'PlutusV2 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV2
   plutusLanguageTag _ = 0x02
-  decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
-    PlutusRunnable <$> PV2.deserialiseScript (toMajorProtocolVersion pv) bs
-  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
+  decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
+    PlutusRunnable p (hashPlutusScript p) $ PV2.deserialiseScript (toMajorProtocolVersion pv) bs
+  evaluatePlutusRunnable pv vm ec exBudget rs =
     PV2.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
       . legacyPlutusArgsToData
       . unPlutusV2Args
-  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
+  evaluatePlutusRunnableBudget pv vm ec rs =
     PV2.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
       . legacyPlutusArgsToData
       . unPlutusV2Args
-  mkTermToEvaluate pv (PlutusRunnable rs) =
+  mkTermToEvaluate pv rs =
     P.mkTermToEvaluate P.PlutusV2 (toMajorProtocolVersion pv) rs
       . legacyPlutusArgsToData
       . unPlutusV2Args
@@ -521,17 +551,17 @@ instance PlutusLanguage 'PlutusV3 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV3
   plutusLanguageTag _ = 0x03
-  decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
-    PlutusRunnable <$> PV3.deserialiseScript (toMajorProtocolVersion pv) bs
-  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
+  decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
+    PlutusRunnable p (hashPlutusScript p) $ PV3.deserialiseScript (toMajorProtocolVersion pv) bs
+  evaluatePlutusRunnable pv vm ec exBudget rs =
     PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
       . PV3.toData
       . unPlutusV3Args
-  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
+  evaluatePlutusRunnableBudget pv vm ec rs =
     PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
       . PV3.toData
       . unPlutusV3Args
-  mkTermToEvaluate pv (PlutusRunnable rs) =
+  mkTermToEvaluate pv rs =
     P.mkTermToEvaluate P.PlutusV3 (toMajorProtocolVersion pv) rs
       . pure
       . PV3.toData
@@ -542,16 +572,17 @@ instance PlutusLanguage 'PlutusV4 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV4
   plutusLanguageTag _ = 0x04
-  decodePlutusRunnable pv (Plutus (PlutusBinary bs)) = PlutusRunnable <$> PV3.deserialiseScript (toMajorProtocolVersion pv) bs
-  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
+  decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
+    PlutusRunnable p (hashPlutusScript p) $ PV3.deserialiseScript (toMajorProtocolVersion pv) bs
+  evaluatePlutusRunnable pv vm ec exBudget rs =
     PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
       . PV3.toData
       . unPlutusV4Args
-  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
+  evaluatePlutusRunnableBudget pv vm ec rs =
     PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
       . PV3.toData
       . unPlutusV4Args
-  mkTermToEvaluate pv (PlutusRunnable rs) =
+  mkTermToEvaluate pv rs =
     P.mkTermToEvaluate P.PlutusV3 (toMajorProtocolVersion pv) rs
       . pure
       . PV3.toData
@@ -570,8 +601,22 @@ toSLanguage lang
     thisLanguage :: SLanguage l
     thisLanguage = isLanguage
 
+-- | This is similar to `asSameLanguage`, but with arguments flipped and one of those proxies
+-- monomorphized to `SLanguage`.
 asSLanguage :: SLanguage l -> proxy l -> proxy l
 asSLanguage _ = id
+
+-- | This is similar to `Data.Proxy.asProxyTypeOf`, but for `Language`. Restrict type of language in
+-- one proxy type to the same of another.
+--
+-- >>> :seti -XDataKinds
+-- >>> let plutusRunnable = error "Some well formed PlutusV1 script" :: PlutusRunnable 'PlutusV1
+-- >>> isLanguage `asSameLanguage` plutusRunnable
+-- SPlutusV1
+asSameLanguage :: PlutusLanguage l => proxy l -> proxyAs l -> proxy l
+asSameLanguage x _ = x
+  where
+    _ = isLanguage `asSLanguage` x
 
 withSLanguage :: Language -> (forall l. PlutusLanguage l => SLanguage l -> a) -> a
 withSLanguage l f =

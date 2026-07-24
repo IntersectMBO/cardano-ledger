@@ -84,6 +84,7 @@ instance
         (systemStart testGlobals)
         pParams
         (utxosUtxo (lsUTxOState ls))
+        mempty
         tx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
