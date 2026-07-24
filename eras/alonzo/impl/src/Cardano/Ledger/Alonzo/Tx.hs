@@ -102,15 +102,14 @@ import Cardano.Ledger.BaseTypes (integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
-  Decoder,
   EncCBOR (encCBOR),
   Encoding,
   ToCBOR (..),
+  TokenType (..),
   decodeNullStrictMaybe,
   encodeListLen,
   encodeNullStrictMaybe,
-  ifDecoderVersionAtLeast,
-  natVersion,
+  peekTokenType,
   serialize,
   serialize',
  )
@@ -453,21 +452,6 @@ instance
   where
   toCBOR = toEraCBOR @era
 
-decodeAlonzoTxPv12 ::
-  forall era s.
-  ( DecCBOR (Annotator (TxBody TopTx era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
-  ) =>
-  Decoder s (Annotator (AlonzoTx TopTx era))
-decodeAlonzoTxPv12 = decodeRecordNamed "AlonzoTx" (const 4) $ do
-  body <- decCBOR
-  wits <- decCBOR
-  isValid <- decCBOR
-  auxData <- decodeNullStrictMaybe decCBOR
-  pure $ AlonzoTx <$> body <*> wits <*> pure isValid <*> sequence auxData
-{-# INLINE decodeAlonzoTxPv12 #-}
-
 instance
   ( Typeable l
   , Era era
@@ -483,13 +467,19 @@ instance
   decCBOR =
     withSTxTopLevelM @l @era $ \case
       STopTxOnly ->
-        ifDecoderVersionAtLeast (natVersion @12) decodeAlonzoTxPv12 $
-          decode $
-            Ann (RecD AlonzoTx)
-              <*! From
-              <*! From
-              <*! Ann From
-              <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
+        fmap snd $ decodeRecordNamed "AlonzoTx" fst $ do
+          body <- decCBOR
+          wits <- decCBOR
+          (isValidFlagSupplied, isValid) <-
+            peekTokenType >>= \case
+              TypeBool -> do
+                isValid <- decCBOR
+                pure (True, isValid)
+              _ -> pure (False, IsValid True)
+          auxData <- decodeNullStrictMaybe decCBOR
+          let
+            tx = AlonzoTx <$> body <*> wits <*> pure isValid <*> sequence auxData
+          pure (if isValidFlagSupplied then 4 else 3, tx)
   {-# INLINE decCBOR #-}
 
 data AlonzoStAnnTx l era where
