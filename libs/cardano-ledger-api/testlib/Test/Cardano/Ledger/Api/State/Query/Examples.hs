@@ -52,8 +52,10 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   QueryPoolStateResult (..),
+  QueryResultPoolDistr,
   StakeSnapshot (..),
   StakeSnapshots (..),
+  toQueryResultPoolDistr,
  )
 import Cardano.Ledger.BaseTypes (
   AnchorData,
@@ -231,33 +233,35 @@ querySPOStakeDistrExamples =
       ]
   ]
 
-querySetSnapshotStakePoolDistrExamples :: [PoolDistr]
+querySetSnapshotStakePoolDistrExamples :: [QueryResultPoolDistr]
 querySetSnapshotStakePoolDistrExamples =
-  [ def
-  , examplePoolDistr
-  , PoolDistr
-      { unPoolDistr =
-          Map.fromList
-            [
-              ( mkKeyHash 1
-              , IndividualPoolStake
-                  { individualPoolStake = 1 % 4
-                  , individualTotalPoolStake = CompactCoin 1_000_000_000
-                  , individualPoolStakeVrf = exampleVrfVerKeyHash
-                  }
-              )
-            ,
-              ( mkKeyHash 2
-              , IndividualPoolStake
-                  { individualPoolStake = 3 % 8
-                  , individualTotalPoolStake = CompactCoin 5_000_000_000
-                  , individualPoolStakeVrf = exampleVrfVerKeyHash
-                  }
-              )
-            ]
-      , pdTotalActiveStake = knownNonZeroCoin @6_000_000_000
-      }
-  ]
+  map
+    toQueryResultPoolDistr
+    [ def
+    , examplePoolDistr
+    , PoolDistr
+        { unPoolDistr =
+            Map.fromList
+              [
+                ( mkKeyHash 1
+                , IndividualPoolStake
+                    { individualPoolStake = 1 % 4
+                    , individualTotalPoolStake = CompactCoin 1_000_000_000
+                    , individualPoolStakeVrf = exampleVrfVerKeyHash
+                    }
+                )
+              ,
+                ( mkKeyHash 2
+                , IndividualPoolStake
+                    { individualPoolStake = 3 % 8
+                    , individualTotalPoolStake = CompactCoin 5_000_000_000
+                    , individualPoolStakeVrf = exampleVrfVerKeyHash
+                    }
+                )
+              ]
+        , pdTotalActiveStake = knownNonZeroCoin @6_000_000_000
+        }
+    ]
 
 queryStakePoolDefaultVoteExamples :: [DefaultVote]
 queryStakePoolDefaultVoteExamples =
