@@ -261,6 +261,8 @@ deriving via
   instance
     Crypto c => DecCBOR (Annotator (BHeader c))
 
+deriving newtype instance Crypto c => DecCBOR (BHeader c)
+
 pattern BHeader ::
   Crypto c =>
   BHBody c ->

@@ -21,14 +21,21 @@ import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Cardano.Protocol.Crypto (StandardCrypto)
+import qualified Cardano.Protocol.Leios.BlockHeader as Leios
 import Data.OSet.Strict (OSet)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genDatumPresent, genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
+  huddleDecoderEquivalenceSpec,
+  huddleRoundTripAnnCborSpec,
+  huddleRoundTripCborSpec,
+  huddleRoundTripGenValidate,
   noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary (genNonEmptyVotingProcedures)
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
 import Test.Cardano.Ledger.Core.Binary (
   fullAnnCddlSpec,
   fullAnnGenCddlSpec,
@@ -41,6 +48,19 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary (
   genSmallDijkstraTxsBlockBody,
  )
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import Test.Cardano.Protocol.Leios.Arbitrary ()
+
+genLeiosHeader :: Gen (Leios.Header StandardCrypto)
+genLeiosHeader = do
+  h <- arbitrary
+  pv <- genEraProtVer @DijkstraEra
+  pure $ Leios.Header ((Leios.headerBody h) {Leios.hbProtVer = pv}) (Leios.headerSig h)
+
+genLeiosHeaderBody :: Gen (Leios.HeaderBody StandardCrypto)
+genLeiosHeaderBody = do
+  hb <- arbitrary
+  pv <- genEraProtVer @DijkstraEra
+  pure hb {Leios.hbProtVer = pv}
 
 spec :: Spec
 spec = do
@@ -77,3 +97,11 @@ spec = do
       fullCddlSpec @(OSet (TxCert DijkstraEra)) v "certificates"
       fullCddlSpec @(OSet (ProposalProcedure DijkstraEra)) v "proposal_procedures"
       fullGenCddlSpec @(VotingProcedures DijkstraEra) genNonEmptyVotingProcedures v "voting_procedures"
+      -- Leios block header
+      huddleRoundTripAnnCborSpec @(Leios.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Leios.Header StandardCrypto) v "header"
+      huddleRoundTripGenValidate @(Leios.Header StandardCrypto) genLeiosHeader v "header"
+      huddleDecoderEquivalenceSpec @(Leios.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Leios.HeaderBody StandardCrypto) v "header_body"
+      huddleRoundTripGenValidate @(Leios.HeaderBody StandardCrypto) genLeiosHeaderBody v "header_body"
+      fullCddlSpec @Leios.EbAnnouncement v "eb_announcement"

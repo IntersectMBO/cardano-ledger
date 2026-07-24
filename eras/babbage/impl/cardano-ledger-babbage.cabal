@@ -271,4 +271,5 @@ test-suite tests
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
+    cardano-protocol:{cardano-protocol, testlib},
     testlib,

@@ -13,6 +13,9 @@
 
 ### `testlib`
 
+* Re-export `Test.Cardano.Protocol.Praos.Arbitrary` and `Test.Cardano.Protocol.Leios.Arbitrary` from the new `cardano-protocol` testlib
+* Move the `Arbitrary` instances for `OCert`, `KESPeriod` and `PrevHash` to the new `cardano-protocol` testlib
+* Move the non-annotator `DecCBOR (BHeader)` instance from `Test.Cardano.Protocol.Binary.Annotator` to the `cardano-protocol` library (beside the type)
 * Add `NFData` instances for `{VerKeyVRF,SignKeyVRF,CertVRF} FakeVRF`
 * Replace `CuddleData` with `HuddleEnv`
 

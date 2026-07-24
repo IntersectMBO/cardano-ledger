@@ -932,11 +932,45 @@ instance HuddleRule "proposed_protocol_parameter_updates" DijkstraEra where
 instance HuddleRule "update" DijkstraEra where
   huddleRuleNamed = updateRule
 
+leiosHeaderBodyRule ::
+  forall era.
+  ( HuddleRule "operational_cert" era
+  , HuddleRule "protocol_version" era
+  , HuddleRule "eb_announcement" era
+  ) =>
+  Proxy "header_body" ->
+  Proxy era ->
+  Rule
+leiosHeaderBodyRule pname p =
+  pname
+    =.= arr
+      [ "block_number" ==> huddleRule @"block_number" p
+      , "slot" ==> huddleRule @"slot" p
+      , "prev_hash" ==> (huddleRule @"hash32" p / VNil)
+      , "issuer_vkey" ==> huddleRule @"vkey" p
+      , "vrf_vkey" ==> huddleRule @"vrf_vkey" p
+      , "vrf_result" ==> huddleRule @"vrf_cert" p
+      , "block_body_size" ==> VUInt `sized` (4 :: Word64)
+      , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
+      , a $ huddleRule @"operational_cert" p
+      , a $ huddleRule @"protocol_version" p
+      , "block_body_contains_leios_cert" ==> VBool
+      , "eb_announcement" ==> (huddleRule @"eb_announcement" p / VNil)
+      ]
+
 instance HuddleRule "header_body" DijkstraEra where
-  huddleRuleNamed = babbageHeaderBodyRule
+  huddleRuleNamed = leiosHeaderBodyRule
 
 instance HuddleRule "header" DijkstraEra where
   huddleRuleNamed = headerRule
+
+instance HuddleRule "eb_announcement" DijkstraEra where
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
+        [ "eb_hash" ==> huddleRule @"hash32" p
+        , "eb_size" ==> VUInt `sized` (4 :: Word64) //- "size of the EB block closure"
+        ]
 
 instance HuddleRule "block" DijkstraEra where
   huddleRuleNamed pname p =

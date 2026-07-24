@@ -270,6 +270,8 @@ deriving via
   instance
     Crypto c => DecCBOR (Annotator (Header c))
 
+deriving newtype instance Crypto c => DecCBOR (Header c)
+
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockIssuerBlockHeaderG =
     to (\(Block (Header hb _) _) -> hashKey (hbVk hb))
