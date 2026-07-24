@@ -47,7 +47,7 @@ import Control.DeepSeq (NFData)
 import qualified Data.Set as Set (map)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (^.))
+import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
 
 -- ========================================
@@ -59,7 +59,11 @@ instance EraTx AllegraEra where
 
   type StAnnTx l AllegraEra = Tx l AllegraEra
 
+  type StAnnTxCache AllegraEra = ()
+
   txStAnnTxG = id
+
+  cacheStAnnTxG = to (const ())
 
   mkBasicTx = MkAllegraTx . mkBasicShelleyTx
 

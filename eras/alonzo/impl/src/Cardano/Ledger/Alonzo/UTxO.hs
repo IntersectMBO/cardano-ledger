@@ -111,7 +111,6 @@ deriving instance AlonzoEraScript era => NFData (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
-  type StAnnTxCache AlonzoEra = Map.Map ScriptHash (SupportedPlutusRunnable AlonzoEra)
 
   getConsumedValue = getConsumedMaryValue
 
@@ -126,8 +125,6 @@ instance EraUTxO AlonzoEra where
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
-
-  getCacheStAnnTx = asatPlutusRunnableCache
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,

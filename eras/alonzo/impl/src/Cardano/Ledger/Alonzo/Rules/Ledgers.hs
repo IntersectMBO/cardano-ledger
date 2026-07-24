@@ -130,7 +130,7 @@ alonzoLedgersTransition = do
           newLedgerState <-
             trans @(EraRule "LEDGER" era) $
               TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
-          pure (newLedgerState, getCacheStAnnTx stAnnTx)
+          pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
       (initLedgerState, mempty)
       $ zip [minBound ..]

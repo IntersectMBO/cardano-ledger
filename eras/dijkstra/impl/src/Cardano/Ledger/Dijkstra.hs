@@ -195,6 +195,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
       , dsastTxInfoResult = txInfoResult
       , dsastPlutusLanguagesUsed =
           Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
+      , dsastPlutusRunnableCache = plutusScriptsCache
       , dsastPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfoWithResult
             ledgerTxInfo

@@ -17,6 +17,7 @@ module Cardano.Ledger.Babbage.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable)
 import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
@@ -26,6 +27,7 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
+import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
@@ -41,7 +43,11 @@ instance EraTx BabbageEra where
 
   type StAnnTx l BabbageEra = AlonzoStAnnTx l BabbageEra
 
+  type StAnnTxCache BabbageEra = Map.Map ScriptHash (SupportedPlutusRunnable BabbageEra)
+
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
+  cacheStAnnTxG = to $ \AlonzoStAnnTx {asatPlutusRunnableCache} -> asatPlutusRunnableCache
 
   mkBasicTx = MkBabbageTx . mkBasicAlonzoTx
 

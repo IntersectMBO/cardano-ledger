@@ -168,7 +168,11 @@ instance EraTx AlonzoEra where
 
   type StAnnTx l AlonzoEra = AlonzoStAnnTx l AlonzoEra
 
+  type StAnnTxCache AlonzoEra = Map.Map ScriptHash (SupportedPlutusRunnable AlonzoEra)
+
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
+  cacheStAnnTxG = to $ \AlonzoStAnnTx {asatPlutusRunnableCache} -> asatPlutusRunnableCache
 
   mkBasicTx = MkAlonzoTx . mkBasicAlonzoTx
 

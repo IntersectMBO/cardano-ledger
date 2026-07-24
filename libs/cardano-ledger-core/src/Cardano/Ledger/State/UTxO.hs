@@ -239,13 +239,10 @@ deriving instance (Era era, Show (Script era)) => Show (ScriptsProvided era)
 
 deriving instance (Era era, NFData (Script era)) => NFData (ScriptsProvided era)
 
-class (Monoid (StAnnTxCache era), EraTx era) => EraUTxO era where
+class EraTx era => EraUTxO era where
   -- | A customizable type on per era basis for the information required to find all
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
-
-  -- | Cache that can be shared between different `StAnnTx`s
-  type StAnnTxCache era :: Type
 
   -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue ::
@@ -286,6 +283,3 @@ class (Monoid (StAnnTxCache era), EraTx era) => EraUTxO era where
 
   -- | Minimum fee computation, excluding witnesses and including ref scripts size
   getMinFeeTxUtxo :: PParams era -> Tx t era -> UTxO era -> Coin
-
-  -- | Pull out cache from `StAnnTx`
-  getCacheStAnnTx :: StAnnTx TopTx era -> StAnnTxCache era

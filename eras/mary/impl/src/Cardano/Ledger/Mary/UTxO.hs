@@ -38,7 +38,6 @@ import Lens.Micro
 
 instance EraUTxO MaryEra where
   type ScriptsNeeded MaryEra = ShelleyScriptsNeeded MaryEra
-  type StAnnTxCache MaryEra = ()
 
   getConsumedValue = getConsumedMaryValue
 
@@ -53,8 +52,6 @@ instance EraUTxO MaryEra where
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
-
-  getCacheStAnnTx _ = mempty
 
 -- | Calculate the value consumed by the transation.
 --

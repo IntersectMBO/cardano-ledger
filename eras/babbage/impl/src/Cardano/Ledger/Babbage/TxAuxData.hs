@@ -1,9 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.TxAuxData () where
 
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   metadataAlonzoTxAuxDataL,
@@ -13,8 +15,12 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.Scripts ()
+import Data.Map (Map)
 
-instance EraTxAuxData BabbageEra where
+instance
+  StAnnTxCache BabbageEra ~ Map ScriptHash (SupportedPlutusRunnable BabbageEra) =>
+  EraTxAuxData BabbageEra
+  where
   type TxAuxData BabbageEra = AlonzoTxAuxData BabbageEra
 
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
@@ -22,8 +28,14 @@ instance EraTxAuxData BabbageEra where
   metadataTxAuxDataL = metadataAlonzoTxAuxDataL
   validateTxAuxData = validateAlonzoTxAuxData
 
-instance AllegraEraTxAuxData BabbageEra where
+instance
+  StAnnTxCache BabbageEra ~ Map ScriptHash (SupportedPlutusRunnable BabbageEra) =>
+  AllegraEraTxAuxData BabbageEra
+  where
   nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
 
-instance AlonzoEraTxAuxData BabbageEra where
+instance
+  StAnnTxCache BabbageEra ~ Map ScriptHash (SupportedPlutusRunnable BabbageEra) =>
+  AlonzoEraTxAuxData BabbageEra
+  where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL

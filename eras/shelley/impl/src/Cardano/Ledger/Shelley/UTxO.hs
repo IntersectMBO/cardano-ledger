@@ -163,7 +163,6 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
 
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
-  type StAnnTxCache ShelleyEra = ()
 
   getConsumedValue = getConsumedCoin
 
@@ -178,8 +177,6 @@ instance EraUTxO ShelleyEra where
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
-
-  getCacheStAnnTx _ = mempty
 
 -- We don't consider the reference scripts in the calculation before Conway
 getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx l era -> Coin

@@ -44,6 +44,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   addPlutusScripts,
   decodeTxAuxDataByTokenType,
   emptyAlonzoTxAuxDataRaw,
+  isValidScript,
 
   -- * Deprecated
   atadPlutus,
@@ -53,15 +54,16 @@ module Cardano.Ledger.Alonzo.TxAuxData (
 import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable (..))
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AlonzoScript (..),
+  isValidPlutusScript,
   mkBinaryPlutusScript,
   plutusScriptBinary,
   plutusScriptLanguage,
-  validScript,
  )
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -89,7 +91,12 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoizedEra,
  )
-import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  PlutusBinary (..),
+  guardPlutus,
+  isValidPlutusRunnable,
+ )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Control.DeepSeq (NFData, deepseq)
 import Control.Monad (forM)
@@ -99,7 +106,9 @@ import Data.List (intercalate)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras as Map (fromElems)
 import Data.Maybe (isNothing, mapMaybe)
+import Data.Semigroup (All (..))
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
@@ -332,7 +341,10 @@ deriving via
 
 instance Eq (NativeScript era) => EqRaw (AlonzoTxAuxData era)
 
-instance EraTxAuxData AlonzoEra where
+instance
+  StAnnTxCache AlonzoEra ~ Map ScriptHash (SupportedPlutusRunnable AlonzoEra) =>
+  EraTxAuxData AlonzoEra
+  where
   type TxAuxData AlonzoEra = AlonzoTxAuxData AlonzoEra
 
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
@@ -350,13 +362,20 @@ metadataAlonzoTxAuxDataL =
 
 validateAlonzoTxAuxData ::
   (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
+  Map ScriptHash (SupportedPlutusRunnable era) ->
   ProtVer ->
   AlonzoTxAuxData era ->
   Bool
-validateAlonzoTxAuxData pv auxData =
-  all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
+validateAlonzoTxAuxData plutusScriptsCache pv auxData =
+  getAll $
+    Map.foldMapWithKey (\scriptHash -> All . isValidScript plutusScriptsCache pv scriptHash) $
+      Map.fromElems hashScript $
+        getAlonzoTxAuxDataScripts auxData
 
-instance AllegraEraTxAuxData AlonzoEra where
+instance
+  StAnnTxCache AlonzoEra ~ Map ScriptHash (SupportedPlutusRunnable AlonzoEra) =>
+  AllegraEraTxAuxData AlonzoEra
+  where
   nativeScriptsTxAuxDataL = nativeScriptsAlonzoTxAuxDataL
 
 nativeScriptsAlonzoTxAuxDataL ::
@@ -366,7 +385,10 @@ nativeScriptsAlonzoTxAuxDataL =
   lensMemoRawType @era atadrNativeScripts $
     \txAuxDataRaw ts -> txAuxDataRaw {atadrNativeScripts = ts}
 
-instance AlonzoEraTxAuxData AlonzoEra where
+instance
+  StAnnTxCache AlonzoEra ~ Map ScriptHash (SupportedPlutusRunnable AlonzoEra) =>
+  AlonzoEraTxAuxData AlonzoEra
+  where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL
 
 plutusScriptsAllegraTxAuxDataL ::
@@ -465,3 +487,29 @@ atadPlutus (MkAlonzoTxAuxData (Memo raw _)) = atadrPlutusScripts raw
 atadPlutus' :: AlonzoTxAuxData era -> Map Language (NE.NonEmpty PlutusBinary)
 atadPlutus' (MkAlonzoTxAuxData (Memo raw _)) = atadrPlutusScripts raw
 {-# DEPRECATED atadPlutus' "In favor of `atadPlutusScripts'`" #-}
+
+-- | Verify that every `Script` represents a valid script. Force native scripts to Normal
+-- Form, to ensure that there are no bottoms and deserialize `Plutus` scripts into a
+-- `Cardano.Ledger.Plutus.Language.PlutusRunnable`.
+isValidScript ::
+  (HasCallStack, AlonzoEraScript era) =>
+  -- | Decoded plutus scripts cache, that can be utilized to avoid redundant deserialization of
+  -- plutus scripts for the sole purpose of their validation
+  Map ScriptHash (SupportedPlutusRunnable era) ->
+  -- | Protocol version to be used by the Plutus decoder
+  ProtVer ->
+  -- | It is important that the hash is of the supplied script to be validated
+  ScriptHash ->
+  -- | Script to be validated
+  Script era ->
+  Bool
+isValidScript plutusScriptsCache pv scriptHash script =
+  case toPlutusScript script of
+    Just plutusScript ->
+      case Map.lookup scriptHash plutusScriptsCache of
+        Just (SupportedPlutusRunnable plutusRunnable) -> isValidPlutusRunnable plutusRunnable
+        Nothing -> isValidPlutusScript (pvMajor pv) plutusScript
+    Nothing ->
+      case getNativeScript script of
+        Just timelockScript -> deepseq timelockScript True
+        Nothing -> error "Impossible: There are only Native and Plutus scripts available"

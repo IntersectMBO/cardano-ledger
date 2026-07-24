@@ -313,7 +313,7 @@ transitionRulesUTXOW = do
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $ validateMetadata pp tx
+  runTestOnSignal $ validateMetadata pp stAnnTx
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
@@ -424,9 +424,10 @@ validateNeededWitnesses witsKeyHashes certState utxo txBody =
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
-validateMetadata :: EraTx era => PParams era -> Tx l era -> Test (ShelleyUtxowPredFailure era)
-validateMetadata pp tx =
-  let txBody = tx ^. bodyTxL
+validateMetadata :: EraTx era => PParams era -> StAnnTx l era -> Test (ShelleyUtxowPredFailure era)
+validateMetadata pp stAnnTx =
+  let tx = stAnnTx ^. txStAnnTxG
+      txBody = tx ^. bodyTxL
       pv = pp ^. ppProtocolVersionL
    in case (txBody ^. auxDataHashTxBodyL, tx ^. auxDataTxL) of
         (SNothing, SNothing) -> pure ()
@@ -438,7 +439,7 @@ validateMetadata pp tx =
             [ failureUnless (hashTxAuxData md' == mdh) $
                 ConflictingMetadataHash $
                   Mismatch {mismatchSupplied = mdh, mismatchExpected = hashTxAuxData md'}
-            , failureUnless (validateTxAuxData pv md') InvalidMetadata
+            , failureUnless (validateTxAuxData (stAnnTx ^. cacheStAnnTxG) pv md') InvalidMetadata
             ]
 
 -- | check genesis keys signatures for instantaneous rewards certificates
