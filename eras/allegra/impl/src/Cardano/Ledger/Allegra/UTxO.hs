@@ -22,7 +22,6 @@ import Lens.Micro
 
 instance EraUTxO AllegraEra where
   type ScriptsNeeded AllegraEra = ShelleyScriptsNeeded AllegraEra
-  type StAnnTxCache AllegraEra = ()
 
   getConsumedValue pp lookupKeyDeposit = getConsumedCoin pp lookupKeyDeposit
 
@@ -37,5 +36,3 @@ instance EraUTxO AllegraEra where
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
-
-  getCacheStAnnTx _ = mempty

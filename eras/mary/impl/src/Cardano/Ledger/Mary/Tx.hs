@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.Tx (
 import Control.DeepSeq (NFData)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks)
 
 -- ========================================
@@ -50,7 +50,11 @@ instance EraTx MaryEra where
 
   type StAnnTx l MaryEra = Tx l MaryEra
 
+  type StAnnTxCache MaryEra = ()
+
   txStAnnTxG = id
+
+  cacheStAnnTxG = to (const ())
 
   mkBasicTx = MkMaryTx . mkBasicShelleyTx
 

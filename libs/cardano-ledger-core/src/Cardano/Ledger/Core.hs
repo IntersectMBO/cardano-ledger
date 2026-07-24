@@ -153,6 +153,7 @@ class
   , EraTxAuxData era
   , EraPParams era
   , HasEraTxLevel Tx era
+  , Monoid (StAnnTxCache era)
   , forall l. Typeable l => NoThunks (Tx l era)
   , forall l. Typeable l => DecCBOR (Annotator (Tx l era))
   , forall l. Typeable l => ToCBOR (Tx l era)
@@ -178,7 +179,13 @@ class
   -- missing output, regardless if data from reference inputs is still present in the `StAnnTx`
   type StAnnTx (l :: TxLevel) era = (r :: Type) | r -> l era
 
+  -- | Cache that can be shared between different `StAnnTx`s
+  type StAnnTxCache era :: Type
+
   txStAnnTxG :: SimpleGetter (StAnnTx l era) (Tx l era)
+
+  -- | Pull out cache from `StAnnTx`
+  cacheStAnnTxG :: SimpleGetter (StAnnTx l era) (StAnnTxCache era)
 
   mkBasicTx :: TxBody l era -> Tx l era
 

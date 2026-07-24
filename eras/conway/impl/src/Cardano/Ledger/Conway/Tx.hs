@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway.Tx (
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoStAnnTx (..),
   alonzoMinFeeTx,
@@ -47,6 +48,7 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -64,7 +66,11 @@ instance EraTx ConwayEra where
 
   type StAnnTx l ConwayEra = AlonzoStAnnTx l ConwayEra
 
+  type StAnnTxCache ConwayEra = Map.Map ScriptHash (SupportedPlutusRunnable ConwayEra)
+
   txStAnnTxG = to $ \AlonzoStAnnTx {asatTx} -> asatTx
+
+  cacheStAnnTxG = to $ \AlonzoStAnnTx {asatPlutusRunnableCache} -> asatPlutusRunnableCache
 
   mkBasicTx = MkConwayTx . mkBasicAlonzoTx
 

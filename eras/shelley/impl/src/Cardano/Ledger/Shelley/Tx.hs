@@ -203,7 +203,11 @@ instance EraTx ShelleyEra where
 
   type StAnnTx l ShelleyEra = Tx l ShelleyEra
 
+  type StAnnTxCache ShelleyEra = ()
+
   txStAnnTxG = id
+
+  cacheStAnnTxG = to (const ())
 
   mkBasicTx = MkShelleyTx . mkBasicShelleyTx
 

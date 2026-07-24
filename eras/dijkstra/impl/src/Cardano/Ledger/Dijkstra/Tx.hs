@@ -197,9 +197,15 @@ instance EraTx DijkstraEra where
 
   type StAnnTx l DijkstraEra = DijkstraStAnnTx l DijkstraEra
 
+  type StAnnTxCache DijkstraEra = Map.Map ScriptHash (SupportedPlutusRunnable DijkstraEra)
+
   txStAnnTxG = to $ \case
     DijkstraStAnnTopTx {dsattTx} -> dsattTx
     DijkstraStAnnSubTx {dsastTx} -> dsastTx
+
+  cacheStAnnTxG = to $ \case
+    DijkstraStAnnTopTx {dsattPlutusRunnableCache} -> dsattPlutusRunnableCache
+    DijkstraStAnnSubTx {dsastPlutusRunnableCache} -> dsastPlutusRunnableCache
 
   mkBasicTx = MkDijkstraTx . mkBasicDijkstraTx
 
@@ -391,6 +397,7 @@ data DijkstraStAnnTx l era where
     , dsastScriptsProvided :: ScriptsProvided era
     , dsastTxInfoResult :: TxInfoResult era
     , dsastPlutusLanguagesUsed :: Set Language
+    , dsastPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , dsastPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     } ->
     DijkstraStAnnTx SubTx era
