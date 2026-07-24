@@ -376,7 +376,7 @@ babbageUtxowTransition = do
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
   -}
-  runTest $ validateScriptsWellFormed pp stAnnTx
+  runTestOnSignal $ validateScriptsWellFormed pp stAnnTx
   -- Note that Datum validation is done during deserialization,
   -- as given by the decoders in the Plutus library
 

@@ -247,7 +247,7 @@ dijkstraSubUtxowTransition = do
 
   runTest $ Alonzo.hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
 
-  runTest $
+  runTestOnSignal $
     Babbage.validateScriptsWellFormedTxOuts
       (stAnnTx ^. cacheStAnnTxG)
       pp

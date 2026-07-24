@@ -287,7 +287,7 @@ dijkstraUtxowTransition = do
 
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                        x ∈ Script ∪ Datum ⇒ isWellFormed x -}
-  runTest $ Babbage.validateScriptsWellFormed pp stAnnTx
+  runTestOnSignal $ Babbage.validateScriptsWellFormed pp stAnnTx
 
   {- scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw) -}
   -- Per-level: script integrity is per-tx (depends on that tx's redeemers and language views)
