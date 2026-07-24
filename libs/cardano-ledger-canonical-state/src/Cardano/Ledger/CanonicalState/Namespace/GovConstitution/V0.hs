@@ -28,6 +28,7 @@ import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),
   CanonicalCBOREntryEncoder (..),
   KnownNamespace (..),
+  NamespaceKeySize,
   namespaceKeySize,
  )
 import Cardano.SCLS.Versioned (Versioned (..))
@@ -41,6 +42,8 @@ data GovConstitutionIn = GovConstitutionIn
 
 newtype GovConstitutionOut = GovConstitutionOut CanonicalConstitution
   deriving (Eq, Show, Generic)
+
+type instance NamespaceKeySize "gov/constitution/v0" = 1
 
 instance IsKey GovConstitutionIn where
   keySize = namespaceKeySize @"gov/constitution/v0"

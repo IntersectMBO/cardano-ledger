@@ -18,12 +18,12 @@ import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.SCLS.CBOR.Canonical.Decoder as D
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..))
-import Cardano.SCLS.CDDL ()
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
 import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),
   CanonicalCBOREntryEncoder (..),
   KnownNamespace (..),
+  NamespaceKeySize,
   namespaceKeySize,
  )
 import Data.MemPack (MemPack (..))
@@ -42,6 +42,8 @@ data BlockIn = BlockIn
   , blockInEpochNo :: !EpochNo
   }
   deriving stock (Eq, Ord, Show, Generic)
+
+type instance NamespaceKeySize "blocks/v0" = 36
 
 instance IsKey BlockIn where
   keySize = namespaceKeySize @"blocks/v0"
