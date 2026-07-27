@@ -9,7 +9,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
@@ -93,6 +92,7 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Prelude hiding (decodeFloat)
 
 class Typeable a => DecCBOR a where
@@ -612,6 +612,9 @@ instance DecCBOR PV2.ScriptContext where
   decCBOR = decCBOR >>= decodeScriptContextFromData
 
 instance DecCBOR PV3.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextFromData
+
+instance DecCBOR PV4.ScriptContext where
   decCBOR = decCBOR >>= decodeScriptContextFromData
 
 decodeScriptContextFromData :: (PV3.FromData a, MonadFail m) => PV3.Data -> m a

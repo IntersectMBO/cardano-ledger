@@ -143,7 +143,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
               ]
         }
     languagesUsed =
-      Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
+      Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr, _) <- plutusScriptsUsed]
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
@@ -195,7 +195,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
       , dsastScriptsProvided = scriptsProvided
       , dsastTxInfoResult = txInfoResult
       , dsastPlutusLanguagesUsed =
-          Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
+          Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr, _) <- plutusScriptsUsed]
       , dsastPlutusRunnableCache = plutusScriptsCache
       , dsastPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfoWithResult

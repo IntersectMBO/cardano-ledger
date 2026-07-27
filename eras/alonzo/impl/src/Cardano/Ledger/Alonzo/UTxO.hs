@@ -437,14 +437,14 @@ resolveNeededPlutusScriptsWithPurpose ::
   -- version as the one supplied to this function.
   Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   ( Map.Map ScriptHash (SupportedPlutusRunnable era)
-  , [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
+  , [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era, ScriptHash)]
   )
 resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded plutusScriptsCache =
   (updatedPlutusScriptCache, neededPlutusScriptsWithPurpose)
   where
     updatedPlutusScriptCache = plutusScriptsCache `Map.union` plutusScriptsProvided
     neededPlutusScriptsWithPurpose =
-      [ (sp, s)
+      [ (sp, s, sh)
       | (sp, sh) <- unAlonzoScriptsNeeded scriptsNeeded
       , Just s <- [lookupPlutusScriptRunnable sh]
       ]

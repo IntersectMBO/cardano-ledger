@@ -91,7 +91,7 @@ spec = describe "UTXOS" $ do
               }
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
-        Right txInfo ->
+        Right (txInfo, _) ->
           PV1.txInfoValidRange txInfo
             `shouldBe` PV1.Interval
               (PV1.LowerBound PV1.NegInf True)

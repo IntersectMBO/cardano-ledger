@@ -51,6 +51,7 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
@@ -159,7 +160,7 @@ hasReferenceInput slang txInfo =
     SPlutusV1 -> expectationFailure "PlutusV1 does not have reference inputs"
     SPlutusV2 -> PV2.txInfoReferenceInputs txInfo `shouldNotBe` mempty
     SPlutusV3 -> PV3.txInfoReferenceInputs txInfo `shouldNotBe` mempty
-    SPlutusV4 -> PV3.txInfoReferenceInputs txInfo `shouldNotBe` mempty
+    SPlutusV4 -> PV4.txInfoReferenceInputs txInfo `shouldNotBe` mempty
 
 plutusTxInInfoInputs ::
   forall era l. HasCallStack => SLanguage l -> PlutusTxInfo l -> [PlutusTxInInfo era l]
@@ -168,7 +169,7 @@ plutusTxInInfoInputs slang txInfo =
     SPlutusV1 -> error "PlutusV1 not supported"
     SPlutusV2 -> PV2.txInfoInputs txInfo
     SPlutusV3 -> PV3.txInfoInputs txInfo
-    SPlutusV4 -> PV3.txInfoInputs txInfo
+    SPlutusV4 -> PV4.txInfoInputs txInfo
 
 expectOneInput ::
   forall era l.
@@ -188,7 +189,7 @@ expectOneOutput o slang txInfo =
     SPlutusV1 -> expectationFailure "PlutusV1 not supported"
     SPlutusV2 -> PV2.txInfoOutputs txInfo `shouldBe` [o]
     SPlutusV3 -> PV3.txInfoOutputs txInfo `shouldBe` [o]
-    SPlutusV4 -> PV3.txInfoOutputs txInfo `shouldBe` [o]
+    SPlutusV4 -> PV4.txInfoOutputs txInfo `shouldBe` [o]
 
 successfulTranslation ::
   forall era l.
@@ -212,7 +213,7 @@ successfulTranslation slang tx f =
           , ltiMemoizedSubTransactions = mempty
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
-        Right txInfo -> f slang txInfo
+        Right (txInfo, _) -> f slang txInfo
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
 
 expectTranslationError ::
@@ -237,7 +238,7 @@ expectTranslationError slang tx expected =
           , ltiMemoizedSubTransactions = mempty
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
-        Right txInfo ->
+        Right (txInfo, _) ->
           assertFailure $ "This translation was expected to fail, but it succeeded: " <> show txInfo
         Left e -> e `shouldBe` expected
 

@@ -114,7 +114,7 @@ mkPlutusTxInfo ::
   (HasCallStack, EraPlutusTxInfo l era) =>
   SLanguage l -> LedgerTxInfo era -> PlutusPurpose AsIx era -> PlutusTxInfo l
 mkPlutusTxInfo slang lti plutusPurpose =
-  either (error . show) id $
+  either (error . show) fst $
     toPlutusTxInfoForPurpose slang lti (hoistPlutusPurpose toAsPurpose plutusPurpose)
 
 epochInfo :: EpochInfo (Either a)

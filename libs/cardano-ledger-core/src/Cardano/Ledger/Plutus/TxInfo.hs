@@ -23,6 +23,7 @@ module Cardano.Ledger.Plutus.TxInfo (
   txOutSourceToText,
   transAddr,
   transAccountAddress,
+  transAccountId,
   transRewardAccount,
   transDataHash,
   transKeyHash,
@@ -81,6 +82,7 @@ import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -156,6 +158,9 @@ transAddr = \case
 -- extra `PV1.StakingHash` wrapper is needed.
 transAccountAddress :: AccountAddress -> PV1.Credential
 transAccountAddress (AccountAddress _networkId (AccountId cred)) = transCred cred
+
+transAccountId :: AccountId -> PV4.AccountId
+transAccountId (AccountId cred) = PV4.AccountId $ transCred cred
 
 {-# DEPRECATED transRewardAccount "In favor of `transAccountAddress`" #-}
 transRewardAccount :: AccountAddress -> PV1.Credential

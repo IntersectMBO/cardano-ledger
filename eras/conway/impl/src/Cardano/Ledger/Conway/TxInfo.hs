@@ -30,6 +30,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transTxOutV1,
   transMintValue,
   transTxBodyId,
+  transTxIn,
   transValidityInterval,
   transVotingProcedures,
   transProposal,
@@ -37,6 +38,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transTxCertV1V2,
   transPlutusPurposeV1V2,
   transPlutusPurposeV3,
+  transVoter,
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
   scriptPurposeToScriptInfo,
@@ -430,7 +432,7 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
             , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> Right txInfo
+      Right $ \_ -> Right (txInfo, ())
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -455,7 +457,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer Babbage.noScriptHash tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -473,7 +475,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
             , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV2.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> Right txInfo
+      Right $ \_ -> Right (txInfo, ())
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
@@ -501,7 +503,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer Babbage.noScriptHash tx
       -- It is important for memoization for `txInfo` to be a let binding
       let txInfo =
             PV3.TxInfo
@@ -527,7 +529,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
                     Coin 0 -> Nothing
                     coin -> Just $ transCoinToLovelace coin
               }
-      Right $ \_ -> Right txInfo
+      Right $ \_ -> Right (txInfo, ())
 
   toPlutusArgs = toPlutusV3Args
 
@@ -631,9 +633,10 @@ transPlutusPurposeV3 ::
   ) =>
   proxy 'PlutusV3 ->
   ProtVer ->
+  ScriptHash ->
   PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
-transPlutusPurposeV3 proxy pv = \case
+transPlutusPurposeV3 proxy pv _scriptHash = \case
   SpendingPurpose (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
   MintingPurpose (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   CertifyingPurpose (AsIxItem ix txCert) ->
@@ -729,13 +732,14 @@ transPlutusPurposeV1V2 ::
   ) =>
   proxy l ->
   ProtVer ->
+  ScriptHash ->
   PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV2.ScriptPurpose
-transPlutusPurposeV1V2 proxy pv = \case
-  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending asIxItem
-  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting asIxItem
-  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying asIxItem
-  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoWithdrawing asIxItem
+transPlutusPurposeV1V2 proxy pv scriptHash = \case
+  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv scriptHash $ AlonzoSpending asIxItem
+  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv scriptHash $ AlonzoMinting asIxItem
+  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv scriptHash $ AlonzoCertifying asIxItem
+  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv scriptHash $ AlonzoWithdrawing asIxItem
   purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
@@ -746,13 +750,15 @@ toPlutusV3Args ::
   EraPlutusTxInfo 'PlutusV3 era =>
   proxy 'PlutusV3 ->
   ProtVer ->
+  ScriptHash ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
+  () ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args proxy pv txInfo plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy pv plutusPurpose
+toPlutusV3Args proxy pv scriptHash txInfo plutusPurpose maybeSpendingData _topTxInfo redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy pv scriptHash plutusPurpose
   let scriptInfo =
         scriptPurposeToScriptInfo
           scriptPurpose

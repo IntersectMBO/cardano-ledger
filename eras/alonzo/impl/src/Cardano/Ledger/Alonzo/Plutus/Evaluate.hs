@@ -123,7 +123,7 @@ scriptsWithContextFromLedgerTxInfo ::
   ) =>
   LedgerTxInfo era ->
   CostModels ->
-  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era, ScriptHash)] ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfo lti =
   scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
@@ -136,7 +136,7 @@ scriptsWithContextFromLedgerTxInfoWithResult ::
   LedgerTxInfo era ->
   TxInfoResult era ->
   CostModels ->
-  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era, ScriptHash)] ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusScriptsUsed =
   merge
@@ -147,12 +147,12 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusS
     redeemers =
       case lti of
         LedgerTxInfo {ltiTx} -> ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
-    getScriptWithRedeemer (plutusPurpose, plutusScriptRunnable) =
+    getScriptWithRedeemer (plutusPurpose, plutusScriptRunnable, scriptHash) =
       let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
        in case Map.lookup redeemerIndex redeemers of
-            Just (d, exUnits) -> Right (plutusScriptRunnable, plutusPurpose, d, exUnits)
+            Just (d, exUnits) -> Right (plutusScriptRunnable, scriptHash, plutusPurpose, d, exUnits)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
-    apply (plutusScriptRunnable, plutusPurpose, redeemerData, exUnits) = do
+    apply (plutusScriptRunnable, scriptHash, plutusPurpose, redeemerData, exUnits) = do
       let lang =
             case plutusScriptRunnable of
               SupportedPlutusRunnable srp -> plutusLanguage srp
@@ -160,6 +160,7 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusS
       first BadTranslation $
         mkPlutusWithContext
           plutusScriptRunnable
+          scriptHash
           plutusPurpose
           lti
           txInfoResult
@@ -377,6 +378,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         first ContextError $
           mkPlutusWithContext
             (mkSupportedPlutusRunnable (pvMajor protVer) plutusScript)
+            plutusScriptHash
             plutusPurpose
             ledgerTxInfo
             txInfoResult

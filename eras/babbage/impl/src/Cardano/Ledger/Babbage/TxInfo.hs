@@ -25,6 +25,7 @@ module Cardano.Ledger.Babbage.TxInfo (
   transTxRedeemers,
   transRedeemer,
   toPlutusV2Args,
+  noScriptHash,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -196,14 +197,15 @@ transRedeemerPtr ::
   ) =>
   proxy l ->
   ProtVer ->
+  (PlutusPurpose AsIx era -> ScriptHash) ->
   TxBody t era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
-transRedeemerPtr proxy pv txBody (ptr, (d, _)) =
+transRedeemerPtr proxy pv lookupScriptHash txBody (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
-      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sp
+      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv (lookupScriptHash ptr) sp
       Right (plutusScriptPurpose, transRedeemer d)
 
 -- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
@@ -217,13 +219,20 @@ transTxRedeemers ::
   ) =>
   proxy l ->
   ProtVer ->
+  (PlutusPurpose AsIx era -> ScriptHash) ->
   Tx t era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemers proxy pv tx =
+transTxRedeemers proxy pv lookupScriptHash tx =
   PV2.unsafeFromList
     <$> mapM
-      (transRedeemerPtr proxy pv $ tx ^. bodyTxL)
+      (transRedeemerPtr proxy pv lookupScriptHash $ tx ^. bodyTxL)
       (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+
+-- | A placeholder for Plutus versions (V1-V3) that do not use the script hash
+-- in their ScriptPurpose. The value is never forced because `toPlutusScriptPurpose`
+-- ignores the `ScriptHash` parameter for those versions.
+noScriptHash :: a -> ScriptHash
+noScriptHash = const $ error "noScriptHash: ScriptHash should not be used for this Plutus version"
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
@@ -352,7 +361,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
             , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV1.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> Right txInfo
+      Right $ \_ -> Right (txInfo, ())
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -376,7 +385,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- transTxRedeemers proxy ltiProtVer noScriptHash tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -394,7 +403,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
             , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
             , PV2.txInfoId = Alonzo.transTxBodyId txBody
             }
-      Right $ \_ -> Right txInfo
+      Right $ \_ -> Right (txInfo, ())
 
   toPlutusArgs = toPlutusV2Args
 
@@ -404,11 +413,13 @@ toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>
   proxy 'PlutusV2 ->
   ProtVer ->
+  ScriptHash ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
+  () ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy pv txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV2Args proxy pv scriptHash txInfo scriptPurpose maybeSpendingData _topTxInfo redeemerData =
   PlutusV2Args
-    <$> toLegacyPlutusArgs proxy pv (PV2.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
+    <$> toLegacyPlutusArgs proxy pv scriptHash (PV2.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData

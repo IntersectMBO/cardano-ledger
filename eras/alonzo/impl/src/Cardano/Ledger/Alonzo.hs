@@ -154,7 +154,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
       , asatScriptsProvided = scriptsProvided
       , asatPlutusRunnableCache = newStAnnTxCache
       , asatPlutusLanguagesUsed =
-          Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
+          Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr, _) <- plutusScriptsUsed]
       , asatPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
       }

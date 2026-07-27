@@ -1,20 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -105,6 +99,7 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Prelude hiding (encodeFloat, (.))
 
 class EncCBOR a where
@@ -455,13 +450,16 @@ instance Plain.ToCBOR PV1.Data where
 instance EncCBOR PV1.Data
 
 instance EncCBOR PV1.ScriptContext where
-  encCBOR = encCBOR . PV3.toData
+  encCBOR = encCBOR . PV1.toData
 
 instance EncCBOR PV2.ScriptContext where
-  encCBOR = encCBOR . PV3.toData
+  encCBOR = encCBOR . PV2.toData
 
 instance EncCBOR PV3.ScriptContext where
   encCBOR = encCBOR . PV3.toData
+
+instance EncCBOR PV4.ScriptContext where
+  encCBOR = encCBOR . PV4.toData
 
 --------------------------------------------------------------------------------
 -- Leios

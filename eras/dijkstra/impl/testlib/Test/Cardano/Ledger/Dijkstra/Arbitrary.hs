@@ -159,7 +159,13 @@ instance Era era => Arbitrary (DijkstraTxCert era) where
       ]
 
 instance Arbitrary DijkstraDelegCert where
-  arbitrary = DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    oneof
+      [ DijkstraRegCert <$> arbitrary <*> arbitrary
+      , DijkstraUnRegCert <$> arbitrary <*> arbitrary
+      , DijkstraDelegCert <$> arbitrary <*> arbitrary
+      , DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
+      ]
 
 instance
   ( EraPParams era

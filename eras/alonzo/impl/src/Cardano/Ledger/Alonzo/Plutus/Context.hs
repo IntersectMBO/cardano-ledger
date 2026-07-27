@@ -38,6 +38,7 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
 
   -- * Language dependent translation
   PlutusTxInfo,
+  PlutusTopTxInfo,
   PlutusTxCert,
   PlutusScriptPurpose,
   PlutusScriptContext,
@@ -87,6 +88,7 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era where
@@ -120,6 +122,7 @@ class
   toPlutusScriptPurpose ::
     proxy l ->
     ProtVer ->
+    ScriptHash ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
@@ -131,9 +134,11 @@ class
   toPlutusArgs ::
     proxy l ->
     ProtVer ->
+    ScriptHash ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Maybe (Data era) ->
+    PlutusTopTxInfo l ->
     Data era ->
     Either (ContextError era) (PlutusArgs l)
 
@@ -159,7 +164,7 @@ newtype PlutusTxInfoResult l era
       Either
         (ContextError era)
         ( PlutusPurpose AsPurpose era ->
-          Either (ContextError era) (PlutusTxInfo l)
+          Either (ContextError era) (PlutusTxInfo l, PlutusTopTxInfo l)
         )
   }
 
@@ -167,7 +172,7 @@ newtype PlutusTxInfoResult l era
 mkPlutusTxInfoFromResult ::
   PlutusPurpose AsPurpose era ->
   PlutusTxInfoResult l era ->
-  Either (ContextError era) (PlutusTxInfo l)
+  Either (ContextError era) (PlutusTxInfo l, PlutusTopTxInfo l)
 mkPlutusTxInfoFromResult sp (PlutusTxInfoResult txInfoResult) =
   join $ ($ sp) <$> txInfoResult
 
@@ -180,7 +185,7 @@ toPlutusTxInfoForPurpose ::
   proxy l ->
   LedgerTxInfo era ->
   PlutusPurpose AsPurpose era ->
-  Either (ContextError era) (PlutusTxInfo l)
+  Either (ContextError era) (PlutusTxInfo l, PlutusTopTxInfo l)
 toPlutusTxInfoForPurpose proxy lti sp =
   mkPlutusTxInfoFromResult sp $ toPlutusTxInfo proxy lti
 
@@ -233,19 +238,25 @@ type family PlutusTxCert (l :: Language) where
   PlutusTxCert 'PlutusV1 = PV1.DCert
   PlutusTxCert 'PlutusV2 = PV2.DCert
   PlutusTxCert 'PlutusV3 = PV3.TxCert
-  PlutusTxCert 'PlutusV4 = PV3.TxCert
+  PlutusTxCert 'PlutusV4 = PV4.TxCert
 
 type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
   PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
   PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
-  PlutusScriptPurpose 'PlutusV4 = PV3.ScriptPurpose
+  PlutusScriptPurpose 'PlutusV4 = PV4.ScriptPurpose
 
 type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
-  PlutusTxInfo 'PlutusV4 = PV3.TxInfo
+  PlutusTxInfo 'PlutusV4 = PV4.TxInfo
+
+type family PlutusTopTxInfo (l :: Language) where
+  PlutusTopTxInfo 'PlutusV1 = ()
+  PlutusTopTxInfo 'PlutusV2 = ()
+  PlutusTopTxInfo 'PlutusV3 = ()
+  PlutusTopTxInfo 'PlutusV4 = Maybe PV4.TopTxInfo
 
 type family PlutusTxInInfo era (l :: Language) where
   -- This special case is here because Alonzo does not have a ContextError
@@ -254,7 +265,7 @@ type family PlutusTxInInfo era (l :: Language) where
   PlutusTxInInfo _ 'PlutusV1 = PV1.TxInInfo
   PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
   PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
-  PlutusTxInInfo _ 'PlutusV4 = PV3.TxInInfo
+  PlutusTxInInfo _ 'PlutusV4 = PV4.TxInInfo
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

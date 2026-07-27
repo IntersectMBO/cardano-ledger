@@ -94,15 +94,17 @@ collectTwoPhaseScriptInputsOutputOrdering = do
           { pwcProtocolVersion = pvMajor protVer
           , pwcScript = decodePlutusRunnable (pvMajor protVer) plutus
           , pwcArgs = either (error . show) id $ do
-              txInfo <-
+              (txInfo, topTxInfo) <-
                 toPlutusTxInfoForPurpose plutus lti $
                   error "PlutusV1 ScriptPurpose should be unevaluated"
               toPlutusArgs
                 plutus
                 (defaultPParams @AlonzoEra ^. ppProtocolVersionL)
+                (error "ScriptHash not used for PlutusV1")
                 txInfo
                 spendingPurpose1
                 (Just (datum @AlonzoEra))
+                topTxInfo
                 (redeemer @AlonzoEra)
           , pwcExUnits = ExUnits 5000 5000
           , pwcCostModel = zeroTestingCostModel PlutusV1
