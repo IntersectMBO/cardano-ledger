@@ -91,7 +91,7 @@ gov_action =
     / (arr [1, a (gov_action_id / VNil), a protocol_version] //- "Hard fork")
     / ( arr
           [ 2
-          , "withdrawls" ==> mp [0 <+ asKey reward_account ==> coin]
+          , "withdrawals" ==> mp [0 <+ asKey reward_account ==> coin]
           , a (script_hash / VNil)
           ]
           //- "Treasury withdraw"
