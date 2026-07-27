@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -37,12 +38,13 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   decodeFixedSized,
   decodeNullStrictMaybe,
+  decodeRecordNamed,
   encodeFixedSized,
+  encodeListLen,
   encodeNullStrictMaybe,
   serialize',
   unCBORGroup,
  )
-import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Core (Era)
@@ -91,17 +93,16 @@ data EbAnnouncement = EbAnnouncement
 
 instance EncCBOR EbAnnouncement where
   encCBOR (EbAnnouncement h s) =
-    encode $
-      Rec EbAnnouncement
-        !> To h
-        !> To s
+    encodeListLen 2
+      <> encCBOR h
+      <> encCBOR s
 
 instance DecCBOR EbAnnouncement where
   decCBOR =
-    decode $
-      RecD EbAnnouncement
-        <! From
-        <! From
+    decodeRecordNamed "EbAnnouncement" (const 2) $
+      EbAnnouncement
+        <$> decCBOR
+        <*> decCBOR
 
 data HeaderBody crypto = HeaderBody
   { hbBlockNo :: !BlockNo
@@ -211,50 +212,45 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
       , hbBlockBodyContainsLeiosCert
       , hbEbAnnouncement
       } =
-      encode $
-        Rec HeaderBody
-          !> To hbBlockNo
-          !> To hbSlotNo
-          !> To hbPrev
-          !> To hbVk
-          !> E encodeFixedSized hbVrfVk
-          !> To hbVrfRes
-          !> To hbBodySize
-          !> To hbBodyHash
-          !> To hbOCert
-          !> To hbProtVer
-          !> To hbBlockBodyContainsLeiosCert
-          !> E (encodeNullStrictMaybe encCBOR) hbEbAnnouncement
+      encodeListLen 12
+        <> encCBOR hbBlockNo
+        <> encCBOR hbSlotNo
+        <> encCBOR hbPrev
+        <> encCBOR hbVk
+        <> encodeFixedSized hbVrfVk
+        <> encCBOR hbVrfRes
+        <> encCBOR hbBodySize
+        <> encCBOR hbBodyHash
+        <> encCBOR hbOCert
+        <> encCBOR hbProtVer
+        <> encCBOR hbBlockBodyContainsLeiosCert
+        <> encodeNullStrictMaybe encCBOR hbEbAnnouncement
 
 instance Crypto crypto => DecCBOR (HeaderBody crypto) where
   decCBOR =
-    decode $
-      RecD HeaderBody
-        <! From
-        <! From
-        <! From
-        <! From
-        <! D decodeFixedSized
-        <! From
-        <! From
-        <! From
-        <! mapCoder unCBORGroup From
-        <! From
-        <! From
-        <! D (decodeNullStrictMaybe decCBOR)
-
-encodeHeaderRaw ::
-  Crypto crypto =>
-  HeaderRaw crypto ->
-  Encode (Closed Dense) (HeaderRaw crypto)
-encodeHeaderRaw (HeaderRaw body sig) =
-  Rec HeaderRaw !> To body !> E encodeFixedSized sig
+    decodeRecordNamed "HeaderBody" (const 12) $
+      HeaderBody
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decodeFixedSized
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> (unCBORGroup <$> decCBOR)
+        <*> decCBOR
+        <*> decCBOR
+        <*> decodeNullStrictMaybe decCBOR
 
 instance Crypto crypto => EncCBOR (HeaderRaw crypto) where
-  encCBOR = encode . encodeHeaderRaw
+  encCBOR (HeaderRaw body sig) =
+    encodeListLen 2 <> encCBOR body <> encodeFixedSized sig
 
 instance Crypto crypto => DecCBOR (HeaderRaw crypto) where
-  decCBOR = decode $ RecD HeaderRaw <! From <! D decodeFixedSized
+  decCBOR =
+    decodeRecordNamed "HeaderRaw" (const 2) $
+      HeaderRaw <$> decCBOR <*> decodeFixedSized
 
 instance Crypto crypto => DecCBOR (Annotator (HeaderRaw crypto)) where
   decCBOR = pure <$> decCBOR
