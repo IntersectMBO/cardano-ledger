@@ -3,13 +3,20 @@
 
 module Main where
 
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules ()
 import Cardano.Ledger.Plutus (SLanguage (..))
+import Cardano.Protocol.Crypto (StandardCrypto)
+import qualified Cardano.Protocol.Leios.BlockHeader as Leios
 import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (
+  roundTripAnnEraExpectation,
+  roundTripEraExpectation,
+ )
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as GoldenBinary
@@ -29,6 +36,12 @@ main =
   ledgerEraTestMain @DijkstraEra $ do
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
+      prop "Block (Leios.Header)" $
+        withMaxSuccess 25 $
+          conjoin
+            [ roundTripEraExpectation @DijkstraEra @(Block (Leios.Header StandardCrypto) DijkstraEra)
+            , roundTripAnnEraExpectation @DijkstraEra @(Block (Leios.Header StandardCrypto) DijkstraEra)
+            ]
     Cddl.spec
     GoldenSpec.spec
     roundTripJsonShelleyEraSpec @DijkstraEra

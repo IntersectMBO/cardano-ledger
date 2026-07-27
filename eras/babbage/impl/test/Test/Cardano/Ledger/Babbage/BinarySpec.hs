@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Babbage.BinarySpec (spec) where
 
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Babbage
+import Cardano.Ledger.Block (Block)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
@@ -21,6 +22,10 @@ import Test.Cardano.Ledger.Core.Binary as Binary (
   decoderEquivalenceEraSpec,
   txSizeSpec,
  )
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (
+  roundTripAnnEraExpectation,
+  roundTripEraExpectation,
+ )
 import Test.Cardano.Protocol.Praos.Arbitrary ()
 
 spec :: Spec
@@ -29,6 +34,12 @@ spec = do
     roundTripAlonzoCommonSpec @BabbageEra
     roundTripCborSpec @(Praos.HeaderBody StandardCrypto)
     roundTripCborSpec @(Praos.Header StandardCrypto)
+    prop "Block (Praos.Header)" $
+      withMaxSuccess 25 $
+        conjoin
+          [ roundTripEraExpectation @BabbageEra @(Block (Praos.Header StandardCrypto) BabbageEra)
+          , roundTripAnnEraExpectation @BabbageEra @(Block (Praos.Header StandardCrypto) BabbageEra)
+          ]
   describe "DecCBOR instances equivalence" $ do
     Binary.decoderEquivalenceCoreEraTypesSpec @BabbageEra
     decoderEquivalenceEraSpec @BabbageEra @(TxDats BabbageEra)

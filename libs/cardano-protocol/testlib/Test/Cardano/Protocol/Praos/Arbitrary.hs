@@ -14,6 +14,8 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (DecCBOR)
+import Cardano.Ledger.Block (Block (Block))
+import Cardano.Ledger.Core (BlockBody, EraBlockBody)
 import Cardano.Ledger.Hashes (HashHeader (HashHeader))
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Praos.BlockHeader (Header (Header, HeaderConstr), HeaderBody (HeaderBody))
@@ -73,3 +75,14 @@ instance
     pure $ Header hBody hSig
 
 deriving newtype instance Crypto c => DecCBOR (Header c)
+
+instance
+  ( Crypto c
+  , EraBlockBody era
+  , KES.Signable (KES c) ~ SignableRepresentation
+  , VRF.Signable (VRF c) ~ SignableRepresentation
+  , Arbitrary (BlockBody era)
+  ) =>
+  Arbitrary (Block (Header c) era)
+  where
+  arbitrary = Block <$> arbitrary <*> arbitrary
