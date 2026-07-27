@@ -62,6 +62,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text ()
 import Data.Text qualified as T
 import Data.Word (Word16, Word64)
+import GHC.TypeLits (KnownSymbol)
 import Test.AntiGen (withAnnotation, (|!))
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
 import Text.Heredoc
@@ -248,6 +249,23 @@ directDepositsRule pname p =
           ==> huddleRule @"coin" p
       ]
 
+accountBalanceIntervals ::
+  forall era name.
+  ( HuddleRule "credential" era
+  , HuddleRule "account_balance_interval" era
+  , KnownSymbol name
+  ) =>
+  Proxy name ->
+  Proxy era ->
+  Rule
+accountBalanceIntervals pname p =
+  pname
+    =.= mp
+      [ 1
+          <+ asKey (huddleRule @"credential" p)
+          ==> huddleRule @"account_balance_interval" p
+      ]
+
 accountBalanceIntervalsRule ::
   forall era.
   ( HuddleRule "credential" era
@@ -256,13 +274,17 @@ accountBalanceIntervalsRule ::
   Proxy "account_balance_intervals" ->
   Proxy era ->
   Rule
-accountBalanceIntervalsRule pname p =
-  pname
-    =.= mp
-      [ 1
-          <+ asKey (huddleRule @"credential" p)
-          ==> huddleRule @"account_balance_interval" p
-      ]
+accountBalanceIntervalsRule = accountBalanceIntervals
+
+startingAccountBalanceIntervalsRule ::
+  forall era.
+  ( HuddleRule "credential" era
+  , HuddleRule "account_balance_interval" era
+  ) =>
+  Proxy "starting_account_balance_intervals" ->
+  Proxy era ->
+  Rule
+startingAccountBalanceIntervalsRule = accountBalanceIntervals
 
 accountBalanceIntervalRule ::
   forall era.
@@ -705,6 +727,9 @@ instance HuddleRule "account_balance_intervals" DijkstraEra where
 instance HuddleRule "account_balance_interval" DijkstraEra where
   huddleRuleNamed = accountBalanceIntervalRule
 
+instance HuddleRule "starting_account_balance_intervals" DijkstraEra where
+  huddleRuleNamed = startingAccountBalanceIntervalsRule
+
 instance HuddleRule "data" DijkstraEra where
   huddleRuleNamed = dataRule
 
@@ -1058,7 +1083,8 @@ instance HuddleRule "transaction_body" DijkstraEra where
         , opt (idx 24 ==> huddleRule @"required_top_level_guards" p) //- "required top-level guards"
         , opt (idx 25 ==> huddleRule @"direct_deposits" p) //- "direct deposits"
         , opt (idx 26 ==> huddleRule @"account_balance_intervals" p) //- "account balance intervals"
-        , opt (idx 27 ==> huddleRule @"account_balance_intervals" p) //- "starting account balance intervals"
+        , opt (idx 27 ==> huddleRule @"starting_account_balance_intervals" p)
+            //- "starting account balance intervals"
         ]
 
 instance HuddleRule "transaction_witness_set" DijkstraEra where
