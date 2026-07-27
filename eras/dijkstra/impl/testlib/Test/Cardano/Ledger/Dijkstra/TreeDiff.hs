@@ -102,6 +102,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dtbrCurrentTreasuryValue", toExpr dtbrCurrentTreasuryValue)
               , ("dtbrTreasuryDonation", toExpr dtbrTreasuryDonation)
               , ("dtbrSubTransactions", toExpr dtbrSubTransactions)
+              , ("dtbrRequiredTopLevelGuards", toExpr dtbrRequiredTopLevelGuards)
               , ("dtbrDirectDeposits", toExpr dtbrDirectDeposits)
               , ("dtbrAccountBalanceIntervals", toExpr dtbrAccountBalanceIntervals)
               , ("dtbrStartingAccountBalanceIntervals", toExpr dtbrStartingAccountBalanceIntervals)
