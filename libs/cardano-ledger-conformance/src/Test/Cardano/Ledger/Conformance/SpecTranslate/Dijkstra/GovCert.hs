@@ -12,8 +12,6 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.GovCert () where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
@@ -21,7 +19,7 @@ import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Data.Default (Default (..))
-import Data.Map.Strict (Map, keysSet)
+import Data.Map.Strict (keysSet)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
@@ -56,14 +54,8 @@ instance SpecTranslate DijkstraEra ConwayGovCert where
 
 instance SpecTranslate DijkstraEra (Conway.ConwayGovCertEnv DijkstraEra) where
   type SpecRep DijkstraEra (Conway.ConwayGovCertEnv DijkstraEra) = Agda.CertEnv
-  type
-    SpecContext DijkstraEra (Conway.ConwayGovCertEnv DijkstraEra) =
-      (VotingProcedures DijkstraEra, Map AccountAddress Coin)
 
-  -- TODO Dijkstra: the new ceDirectDeposits field defaults to empty here; the
-  -- value should be plumbed from the transaction body's directDeposits.
   toSpecRep Conway.ConwayGovCertEnv {..} = do
-    (votes, withdrawals) <- askSpecTransM
     let propGetCCMembers (UpdateCommittee _ _ x _) = Just $ keysSet x
         propGetCCMembers _ = Nothing
         potentialCCMembers =
@@ -77,10 +69,7 @@ instance SpecTranslate DijkstraEra (Conway.ConwayGovCertEnv DijkstraEra) where
       Agda.MkCertEnv
         <$> toSpecRep cgceCurrentEpoch
         <*> toSpecRep cgcePParams
-        <*> toSpecRep votes
-        <*> toSpecRepMap withdrawals
         <*> toSpecRep ccColdCreds
-        <*> pure (Agda.MkHSMap [])
 
 instance SpecTranslate DijkstraEra (VState DijkstraEra) where
   type SpecRep DijkstraEra (VState DijkstraEra) = Agda.GState

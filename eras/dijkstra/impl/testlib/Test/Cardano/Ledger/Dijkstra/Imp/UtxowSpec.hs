@@ -46,7 +46,8 @@ spec = describe "UTXOW" $ do
       let guardScript = RequireAllOf []
       let guardScriptHash = hashScript @era $ fromNativeScript guardScript
       scriptHash <- impAddNativeScript $ RequireGuard (ScriptHashObj guardScriptHash)
-      tx <- mkTokenMintingTx scriptHash
+      txIn <- produceScript scriptHash
+      let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
       submitFailingTx
         tx
         [injectFailure $ Conway.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
@@ -82,10 +83,9 @@ spec = describe "UTXOW" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash
       let guardScript = RequireGuard guardKeyHash
       let guardScriptHash = hashScript @era $ fromNativeScript guardScript
-
       scriptHash <- impAddNativeScript $ RequireGuard (ScriptHashObj guardScriptHash)
-
-      tx <- mkTokenMintingTx scriptHash
+      txIn <- produceScript scriptHash
+      let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
       submitFailingTx
         tx
         [injectFailure $ Conway.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]

@@ -38,7 +38,7 @@ instance SpecTranslate DijkstraEra DijkstraDelegCert where
   toSpecRep (DijkstraUnRegCert c d) =
     Agda.Dereg
       <$> toSpecRep c
-      <*> toSpecRep (Just d)
+      <*> toSpecRep d
   toSpecRep (DijkstraDelegCert c d) =
     Agda.Delegate
       <$> toSpecRep c
