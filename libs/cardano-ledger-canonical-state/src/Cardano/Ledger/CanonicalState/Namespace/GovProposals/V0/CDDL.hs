@@ -94,7 +94,7 @@ gov_action =
           , "withdrawals" ==> mp [0 <+ asKey reward_account ==> coin]
           , a (script_hash / VNil)
           ]
-          //- "Treasury withdraw"
+          //- "Treasury withdrawal"
       )
     / (arr [3, "purpose" ==> (gov_action_id / VNil)] //- "No confidence")
     / ( arr
