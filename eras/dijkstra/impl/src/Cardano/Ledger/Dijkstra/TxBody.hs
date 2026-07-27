@@ -50,6 +50,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbRequiredTopLevelGuards,
     dtbDirectDeposits,
     dtbAccountBalanceIntervals,
+    dtbStartingAccountBalanceIntervals,
     dstbSpendInputs,
     dstbReferenceInputs,
     dstbOutputs,
@@ -97,6 +98,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   requiredTopLevelGuardsDijkstraTxBodyRawL,
   directDepositsDijkstraTxBodyRawL,
   accountBalanceIntervalsDijkstraTxBodyRawL,
+  startingAccountBalanceIntervalsDijkstraTxBodyRawL,
 ) where
 
 import Cardano.Base.Typeable (TypeName (TypeName))
@@ -186,6 +188,7 @@ data DijkstraTxBodyRaw l era where
     , dtbrRequiredTopLevelGuards :: !(Map (Credential Guard) (StrictMaybe (Data era)))
     , dtbrDirectDeposits :: !DirectDeposits
     , dtbrAccountBalanceIntervals :: !(AccountBalanceIntervals era)
+    , dtbrStartingAccountBalanceIntervals :: !(AccountBalanceIntervals era)
     } ->
     DijkstraTxBodyRaw TopTx era
   DijkstraSubTxBodyRaw ::
@@ -228,7 +231,7 @@ deriving via
     (Typeable l, EraTxBody era) => NoThunks (DijkstraTxBodyRaw l era)
 
 instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l era) where
-  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  rnf txBodyRaw@(DijkstraTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraTxBodyRaw {..} = txBodyRaw
      in dtbrSpendInputs `deepseq`
           dtbrCollateralInputs `deepseq`
@@ -252,7 +255,8 @@ instance (EraTxBody era, NFData (Tx SubTx era)) => NFData (DijkstraTxBodyRaw l e
                                               dtbrSubTransactions `deepseq`
                                                 dtbrRequiredTopLevelGuards `deepseq`
                                                   dtbrDirectDeposits `deepseq`
-                                                    rnf dtbrAccountBalanceIntervals
+                                                    dtbrAccountBalanceIntervals `deepseq`
+                                                      rnf dtbrStartingAccountBalanceIntervals
   rnf txBodyRaw@(DijkstraSubTxBodyRaw _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraSubTxBodyRaw {..} = txBodyRaw
      in dstbrSpendInputs `deepseq`
@@ -301,6 +305,7 @@ basicDijkstraTxBodyRaw STopTx =
     OMap.Empty
     mempty
     (DirectDeposits mempty)
+    (AccountBalanceIntervals mempty)
     (AccountBalanceIntervals mempty)
 basicDijkstraTxBodyRaw SSubTx =
   DijkstraSubTxBodyRaw
@@ -446,6 +451,15 @@ instance
                 x <- decCBOR
                 failOnNull (unAccountBalanceIntervals x) $ emptyNamedFailure "AccountBalanceIntervals" "non-empty"
                 pure x
+        27
+          | STopTx <- sTxLevel ->
+              Just $
+                decodeAccA acc (startingAccountBalanceIntervalsDijkstraTxBodyRawL .~) $
+                  pure <$> do
+                    x <- decCBOR
+                    failOnNull (unAccountBalanceIntervals x) $
+                      emptyNamedFailure "StartingAccountBalanceIntervals" "non-empty"
+                    pure x
         _ -> Nothing
       decodeSubTransactions :: Decoder s (Annotator (OMap TxId (Tx SubTx era)))
       decodeSubTransactions =
@@ -495,6 +509,7 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
           (Key 24 $ E (encodeMap encCBOR (encodeNullStrictMaybe encCBOR)) dtbrRequiredTopLevelGuards)
         !> Omit (null . unDirectDeposits) (Key 25 (To dtbrDirectDeposits))
         !> Omit (null . unAccountBalanceIntervals) (Key 26 (To dtbrAccountBalanceIntervals))
+        !> Omit (null . unAccountBalanceIntervals) (Key 27 (To dtbrStartingAccountBalanceIntervals))
 encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
   let ValidityInterval bot top = dstbrVldt
    in Keyed
@@ -603,6 +618,7 @@ pattern DijkstraTxBody ::
   Map (Credential Guard) (StrictMaybe (Data DijkstraEra)) ->
   DirectDeposits ->
   AccountBalanceIntervals DijkstraEra ->
+  AccountBalanceIntervals DijkstraEra ->
   TxBody TopTx DijkstraEra
 pattern DijkstraTxBody
   { dtbSpendInputs
@@ -628,6 +644,7 @@ pattern DijkstraTxBody
   , dtbRequiredTopLevelGuards
   , dtbDirectDeposits
   , dtbAccountBalanceIntervals
+  , dtbStartingAccountBalanceIntervals
   } <-
   ( getMemoRawType ->
       DijkstraTxBodyRaw
@@ -654,6 +671,7 @@ pattern DijkstraTxBody
         , dtbrRequiredTopLevelGuards = dtbRequiredTopLevelGuards
         , dtbrDirectDeposits = dtbDirectDeposits
         , dtbrAccountBalanceIntervals = dtbAccountBalanceIntervals
+        , dtbrStartingAccountBalanceIntervals = dtbStartingAccountBalanceIntervals
         }
     )
   where
@@ -680,7 +698,8 @@ pattern DijkstraTxBody
       subTransactions
       requiredTopLevelGuards
       directDeposits
-      accountBalanceIntervals =
+      accountBalanceIntervals
+      startingAccountBalanceIntervals =
         mkMemoizedEra @DijkstraEra $
           DijkstraTxBodyRaw
             inputsX
@@ -706,6 +725,7 @@ pattern DijkstraTxBody
             requiredTopLevelGuards
             directDeposits
             accountBalanceIntervals
+            startingAccountBalanceIntervals
 
 pattern DijkstraSubTxBody ::
   ( EncCBOR (Tx SubTx DijkstraEra)
@@ -939,6 +959,12 @@ accountBalanceIntervalsDijkstraTxBodyRawL =
         x@DijkstraTxBodyRaw {} -> \y -> x {dtbrAccountBalanceIntervals = y}
         x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrAccountBalanceIntervals = y}
     )
+
+startingAccountBalanceIntervalsDijkstraTxBodyRawL ::
+  Lens' (DijkstraTxBodyRaw TopTx era) (AccountBalanceIntervals era)
+startingAccountBalanceIntervalsDijkstraTxBodyRawL =
+  lens dtbrStartingAccountBalanceIntervals $
+    \txb x -> txb {dtbrStartingAccountBalanceIntervals = x}
 
 instance
   ( Eq (Tx SubTx DijkstraEra)
@@ -1331,6 +1357,8 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
 
   accountBalanceIntervalsTxBodyL :: Lens' (TxBody l era) (AccountBalanceIntervals era)
 
+  startingAccountBalanceIntervalsTxBodyL :: Lens' (TxBody TopTx era) (AccountBalanceIntervals era)
+
 guardsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) (OSet (Credential Guard))
 guardsDijkstraTxBodyRawL =
   lens
@@ -1382,6 +1410,9 @@ instance
 
   accountBalanceIntervalsTxBodyL = memoRawTypeL @DijkstraEra . accountBalanceIntervalsDijkstraTxBodyRawL
   {-# INLINE accountBalanceIntervalsTxBodyL #-}
+
+  startingAccountBalanceIntervalsTxBodyL = memoRawTypeL @DijkstraEra . startingAccountBalanceIntervalsDijkstraTxBodyRawL
+  {-# INLINE startingAccountBalanceIntervalsTxBodyL #-}
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the
