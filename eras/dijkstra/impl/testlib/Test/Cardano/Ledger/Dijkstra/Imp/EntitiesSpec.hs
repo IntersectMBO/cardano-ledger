@@ -228,6 +228,76 @@ spec = describe "ENTITIES" $ do
             & subTransactionsTxBodyL
               .~ [regAndDDSubTx]
     submitTx_ tx
+
+  -- Needs Imp sub-tx wits fixup + nested inject plumbing to assert
+  -- SubEntitiesFailure (SubWithdrawalAmountsExceedAccountBalances _) from SUBENTITIES.
+  xit "Sub-tx withdraws more than account balance" $ do
+    (accountAddress, reward, _stakeKey) <- setupAccountAddress
+    let
+      excessiveWdrlSubTx :: Tx SubTx era
+      excessiveWdrlSubTx =
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals [(accountAddress, reward <+> Coin 1)]
+      tx =
+        mkBasicTx $
+          mkBasicTxBody
+            & subTransactionsTxBodyL
+              .~ [excessiveWdrlSubTx]
+    _ <- trySubmitTx tx
+    pure ()
+
+  -- Needs Imp sub-tx wits fixup + batch balance to submit successfully.
+  xit "Legacy: top withdraws 0 from an account registered by a prior sub-tx" $ do
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    accountAddress <- getAccountAddressFor stakingCred
+    keyDeposit <- getsPParams ppKeyDepositL
+    txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
+    let
+      regSubTx :: Tx SubTx era
+      regSubTx =
+        mkBasicTx $
+          mkBasicTxBody
+            & certsTxBodyL
+              .~ [RegDepositTxCert stakingCred keyDeposit]
+      tx =
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals [(accountAddress, zero)]
+            & inputsTxBodyL
+              .~ [txIn]
+            & subTransactionsTxBodyL
+              .~ [regSubTx]
+    submitTx_ tx
+
+  -- Needs Imp sub-tx wits fixup + batch balance to submit successfully.
+  xit "Legacy: top drains exact DD amount from an account registered + DD'd by a prior sub-tx" $ do
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    accountAddress <- getAccountAddressFor stakingCred
+    keyDeposit <- getsPParams ppKeyDepositL
+    txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
+    let
+      ddAmount = Coin 50
+      regAndDDSubTx :: Tx SubTx era
+      regAndDDSubTx =
+        mkBasicTx $
+          mkBasicTxBody
+            & certsTxBodyL
+              .~ [RegDepositTxCert stakingCred keyDeposit]
+            & directDepositsTxBodyL
+              .~ DirectDeposits [(accountAddress, ddAmount)]
+      tx =
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals [(accountAddress, ddAmount)]
+            & inputsTxBodyL
+              .~ [txIn]
+            & subTransactionsTxBodyL
+              .~ [regAndDDSubTx]
+    submitTx_ tx
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
     setupAccountAddress = do
