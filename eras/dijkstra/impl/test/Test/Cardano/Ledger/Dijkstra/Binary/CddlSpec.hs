@@ -69,7 +69,7 @@ spec = do
       fullCddlSpec @(PParamsUpdate DijkstraEra) v "protocol_param_update"
       fullCddlSpec @CostModels v "cost_models"
       fullAnnGenCddlSpec @(Redeemers DijkstraEra) genNonEmptyRedeemers v "redeemers"
-      fullAnnCddlSpec @(Tx TopTx DijkstraEra) v "transaction"
+      fullAnnCddlSpec @(Tx TopTx DijkstraEra) v "mempool_transaction"
       fullCddlSpec @(VotingProcedure DijkstraEra) v "voting_procedure"
       fullCddlSpec @(ProposalProcedure DijkstraEra) v "proposal_procedure"
       fullCddlSpec @(GovAction DijkstraEra) v "gov_action"

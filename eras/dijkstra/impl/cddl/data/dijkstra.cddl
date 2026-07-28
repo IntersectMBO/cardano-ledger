@@ -2,19 +2,25 @@
 
 block = [header, block_body]
 
-transaction = [transaction_body, transaction_witness_set, auxiliary_data/ nil]
+; Transactions in a block carry a trailing `is_valid` flag, which is
+; set by the block producer. It is placed after all the fields that are
+; supplied by the transaction author.
+block_transaction =
+  [transaction_body, transaction_witness_set, auxiliary_data/ nil, bool]
 
-; In Dijkstra we're deprecating the `is_valid` flag, but for backwards
-; compatibility we still allow this flag to be present in incoming
-; transactions. Once the transaction is added to a block, the flag will
-; be stripped, so the `is_valid` flag cannot appear in transactions that
-; are in a block.
+; In Dijkstra we're deprecating the `is_valid` flag in submitted
+; transactions, since it is set by the block producer rather than the
+; transaction author. For backwards compatibility we still allow this
+; flag to be present in incoming transactions, but only with its value
+; set to `true`. Once the transaction is added to a block, the flag is
+; moved to the end of the transaction (see the `block_transaction` rule).
 ;
-; In the next era `is_valid` flags will not be allowed even in mempool
-; transactions, so it's strongly recommended to encode transactions
-; according to the `transaction` rule.
-transaction_mempool =
-  transaction
+; In the next era the `is_valid` flag will not be allowed in mempool
+; transactions at all, so it's strongly recommended to encode
+; transactions without the flag.
+mempool_transaction =
+  [ transaction_body, transaction_witness_set, auxiliary_data/ nil
+  ]
   / [transaction_body, transaction_witness_set, true, auxiliary_data/ nil]
 
 kes_signature = bytes .size 448
@@ -93,19 +99,11 @@ protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
 
-; Note that every transaction_index must be strictly smaller than the length of transaction_bodies
 block_body =
-  [ invalid_transactions : invalid_transactions/ nil
-  , transactions      : [* transaction]
+  [ transactions      : [* block_transaction]
   , leios_certificate : leios_certificate/ nil
   , peras_certificate : peras_certificate/ nil
   ]
-
-invalid_transactions = nonempty_set<transaction_index>
-
-nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
-
-transaction_index = uint .size 2
 
 transaction_body =
   {   0  : set<transaction_input>
@@ -628,6 +626,8 @@ positive_int64 = 1 .. max_int64
 ; therefore there is no way to override this behavior by providing a custom
 ; representation for empty redeemers.
 script_data_hash = hash32
+
+nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
 
 guards = nonempty_set<addr_keyhash>/ nonempty_oset<credential>
 

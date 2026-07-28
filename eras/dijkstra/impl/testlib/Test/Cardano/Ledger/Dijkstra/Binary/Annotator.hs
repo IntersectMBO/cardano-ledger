@@ -25,25 +25,19 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (
   DijkstraBlockBody (..),
   DijkstraBlockBodyRaw (..),
-  alignedValidFlags,
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized)
-import Control.Monad (forM_, unless, when)
+import Control.Monad (when)
 import Data.Coerce (coerce)
-import Data.Foldable (Foldable (..))
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IntSet
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
-import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
-import Data.Word (Word16)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 
@@ -203,7 +197,7 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
-      STopTx -> decodeDijkstraTopTx True
+      STopTx -> decodeDijkstraTopTx
       SSubTx -> decodeRecordNamed "DijkstraSubTx" (const 3) $ do
         body <- decCBOR
         wits <- decCBOR
@@ -218,48 +212,43 @@ decodeDijkstraTopTx ::
   , DecCBOR (TxWits era)
   , DecCBOR (TxAuxData era)
   ) =>
-  Bool -> Decoder s (DijkstraTx TopTx era)
-decodeDijkstraTopTx allowIsValid =
+  Decoder s (DijkstraTx TopTx era)
+decodeDijkstraTopTx =
   fst <$> do
     let isValidBackwardsCompatibleLength isValidFlagSupplied = if isValidFlagSupplied then 4 else 3
     decodeRecordNamed "DijkstraTx" (isValidBackwardsCompatibleLength . snd) $ do
       body <- decCBOR
       wits <- decCBOR
       isValidFlagSupplied <-
-        if allowIsValid
-          then
-            peekTokenType >>= \case
-              TypeBool ->
-                decCBOR >>= \case
-                  True -> pure True
-                  False -> fail "Value `false` not allowed for `isValid`"
-              _ -> pure False
-          else pure False
+        peekTokenType >>= \case
+          TypeBool ->
+            decCBOR >>= \case
+              True -> pure True
+              False -> fail "Value `false` not allowed for `isValid`"
+          _ -> pure False
       aux <- decodeNullStrictMaybe decCBOR
       pure (DijkstraTx body wits (IsValid True) aux, isValidFlagSupplied)
 
+decodeDijkstraTopTxInBlock ::
+  ( DecCBOR (TxBody TopTx era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  Decoder s (DijkstraTx TopTx era)
+decodeDijkstraTopTxInBlock =
+  decodeRecordNamed "DijkstraTx" (const 4) $ do
+    body <- decCBOR
+    wits <- decCBOR
+    aux <- decodeNullStrictMaybe decCBOR
+    isValid <- decCBOR
+    pure $ DijkstraTx body wits isValid aux
+
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
-  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
-    let
-      decodeInvalidTxs =
-        decodeNonEmptySetLikeEnforceNoDuplicates
-          (IntSet.insert . fromIntegral @Word16 @Int)
-          (\x -> (IntSet.size x, x))
-          (decCBOR @Word16)
-    invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
-    txs <- decodeSeq (decodeDijkstraTopTx @DijkstraEra False)
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+    txs <- decodeSeq (decodeDijkstraTopTxInBlock @DijkstraEra)
     mbLeiosCert <- decodeNullStrictMaybe decCBOR
     mbPerasCert <- decodeNullStrictMaybe decCBOR
-
-    let txsLength = Seq.length txs
-        inRange x = 0 <= x && x <= txsLength - 1
-    forM_ (IntSet.toList invalidTxs) $ \i ->
-      unless (inRange i) . fail $
-        "index is out of range: " <> show i
-    let
-      validityFlags = alignedValidFlags txsLength invalidTxs
-      txsWithIsValid = Seq.zipWith (set isValidTxL) validityFlags (coerce <$> txs)
-    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict txsWithIsValid) mbLeiosCert mbPerasCert
+    pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict (coerce <$> txs)) mbLeiosCert mbPerasCert
 
 instance DecCBOR (DijkstraBlockBody DijkstraEra) where
   decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR

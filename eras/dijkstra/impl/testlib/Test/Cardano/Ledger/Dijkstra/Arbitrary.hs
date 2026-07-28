@@ -47,6 +47,7 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -348,7 +349,13 @@ genSmallDijkstraTxsBlockBody =
           [ (99, choose (1, max 1 $ sz `div` 20))
           , (1, pure 0)
           ]
-      SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
+      SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) genTxInBlock)
+    -- In a block the `is_valid` flag is set by the block producer, so unlike in
+    -- submitted transactions it can be `False`.
+    genTxInBlock = do
+      tx <- arbitrary
+      isValid <- arbitrary
+      pure $ tx & isValidTxL .~ IsValid isValid
 
 -- | Generate the "CertRB" form of a Dijkstra block body: a Leios certificate is
 -- present and the transaction sequence is empty (per CIP-164, a CertRB never
