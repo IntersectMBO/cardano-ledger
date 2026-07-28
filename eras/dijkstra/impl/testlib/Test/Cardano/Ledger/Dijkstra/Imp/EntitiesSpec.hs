@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec (spec) where
+module Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -26,7 +26,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
-spec = describe "CERTS" $ do
+spec = describe "ENTITIES" $ do
   describe "Withdrawals" $ do
     it "Withdrawing from an unregistered staking address" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
