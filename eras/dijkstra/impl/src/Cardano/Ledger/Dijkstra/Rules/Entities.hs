@@ -39,6 +39,7 @@ import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -48,6 +49,7 @@ import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -96,6 +98,11 @@ data EntitiesPredFailure era
   | IncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | WithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | DirectDepositsToMissingAccounts DirectDeposits
+  | WrongNetworkWithdrawal
+      -- | Expected network id
+      Network
+      -- | Withdrawal accounts with wrong network id
+      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -121,6 +128,7 @@ instance
       IncompleteWithdrawals x -> Sum (IncompleteWithdrawals @era) 2 !> To x
       WithdrawalAmountsExceedAccountBalances x -> Sum (WithdrawalAmountsExceedAccountBalances @era) 3 !> To x
       DirectDepositsToMissingAccounts x -> Sum (DirectDepositsToMissingAccounts @era) 4 !> To x
+      WrongNetworkWithdrawal x y -> Sum (WrongNetworkWithdrawal @era) 5 !> To x !> To y
 
 instance
   ( Era era
@@ -134,6 +142,7 @@ instance
     2 -> SumD IncompleteWithdrawals <! From
     3 -> SumD WithdrawalAmountsExceedAccountBalances <! From
     4 -> SumD DirectDepositsToMissingAccounts <! From
+    5 -> SumD WrongNetworkWithdrawal <! From <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
@@ -170,6 +179,9 @@ instance InjectRuleFailure "ENTITIES" DijkstraGovCertPredFailure DijkstraEra whe
 instance InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraEntitiesPredFailure
 
+instance InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure DijkstraEra where
+  injectFailure = shelleyUtxoToDijkstraEntitiesPredFailure
+
 instance
   ( EraTx era
   , DijkstraEraTxBody era
@@ -182,6 +194,7 @@ instance
   , Environment (EraRule "CERTS" era) ~ Conway.CertsEnv era
   , EraRule "ENTITIES" era ~ ENTITIES era
   , InjectRuleFailure "ENTITIES" EntitiesPredFailure era
+  , InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   STS (ENTITIES era)
@@ -207,6 +220,7 @@ dijkstraEntitiesTransition ::
   , Environment (EraRule "CERTS" era) ~ Conway.CertsEnv era
   , EraRule "ENTITIES" era ~ ENTITIES era
   , InjectRuleFailure "ENTITIES" EntitiesPredFailure era
+  , InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   TransitionRule (ENTITIES era)
@@ -220,6 +234,8 @@ dijkstraEntitiesTransition = do
       certsEnv = Conway.CertsEnv tx pp curEpoch committee committeeProposals
 
   network <- liftSTS $ asks networkId
+
+  runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
 
   validateWithdrawals legacyMode network withdrawals accounts
 
@@ -278,6 +294,23 @@ conwayToDijkstraEntitiesPredFailure = \case
   Conway.ConwayMempoolFailure _ -> impossible "ConwayMempoolFailure"
   Conway.ConwayWithdrawalsMissingAccounts _ -> impossible "ConwayWithdrawalsMissingAccounts"
   Conway.ConwayIncompleteWithdrawals _ -> impossible "ConwayIncompleteWithdrawals"
+  where
+    impossible name = error $ "Impossible: `" <> name <> "` for ENTITIES"
+
+shelleyUtxoToDijkstraEntitiesPredFailure ::
+  Shelley.ShelleyUtxoPredFailure era -> EntitiesPredFailure era
+shelleyUtxoToDijkstraEntitiesPredFailure = \case
+  Shelley.WrongNetworkWithdrawal net addrs -> WrongNetworkWithdrawal net addrs
+  Shelley.BadInputsUTxO _ -> impossible "BadInputsUTxO"
+  Shelley.ExpiredUTxO _ -> impossible "ExpiredUTxO"
+  Shelley.MaxTxSizeUTxO _ -> impossible "MaxTxSizeUTxO"
+  Shelley.InputSetEmptyUTxO -> impossible "InputSetEmptyUTxO"
+  Shelley.FeeTooSmallUTxO _ -> impossible "FeeTooSmallUTxO"
+  Shelley.ValueNotConservedUTxO _ -> impossible "ValueNotConservedUTxO"
+  Shelley.WrongNetwork _ _ -> impossible "WrongNetwork"
+  Shelley.OutputTooSmallUTxO _ -> impossible "OutputTooSmallUTxO"
+  Shelley.UpdateFailure _ -> impossible "UpdateFailure"
+  Shelley.OutputBootAddrAttrsTooBig _ -> impossible "OutputBootAddrAttrsTooBig"
   where
     impossible name = error $ "Impossible: `" <> name <> "` for ENTITIES"
 
