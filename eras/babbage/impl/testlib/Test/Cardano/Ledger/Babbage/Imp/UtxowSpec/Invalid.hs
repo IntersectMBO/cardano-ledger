@@ -62,7 +62,9 @@ spec = describe "Invalid" $ do
   forM_ @[] [PlutusV2 .. eraMaxLanguage @era] $ \slang -> do
     describe (show slang) $ do
       withSLanguage slang $ \lang -> do
-        it "MalformedScriptWitnesses" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "MalformedScriptWitnesses" $ do
           let scriptHash = hashPlutusScript $ asSLanguage lang malformedPlutus
           txIn <- produceScript scriptHash
           let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
@@ -73,7 +75,9 @@ spec = describe "Invalid" $ do
                   NES.singleton scriptHash
             ]
 
-        it "MalformedReferenceScripts" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "MalformedReferenceScripts" $ do
           plutus <- mkPlutusScript $ asSLanguage lang malformedPlutus
           let script = fromPlutusScript plutus
               scriptHash = hashScript script
@@ -116,7 +120,9 @@ spec = describe "Invalid" $ do
           txIn <- txInAt 0 <$> submitTx tx
           submitPhase2Invalid_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
-        it "Use a collateral output" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/724
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "Use a collateral output" $ do
           let scriptHash = hashPlutusScript $ alwaysFailsWithDatum lang
               datum = Data @era $ PV1.B "abcde"
               datumHash = hashData datum

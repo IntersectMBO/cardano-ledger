@@ -6,8 +6,12 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
+import Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec qualified as AlonzoUTXOW
+import Test.Cardano.Ledger.Babbage.Imp.UtxoSpec qualified as BabbageUTXO
 import Test.Cardano.Ledger.Babbage.Imp.UtxosSpec qualified as BabbageUTXOS
+import Test.Cardano.Ledger.Babbage.Imp.UtxowSpec qualified as BabbageUTXOW
 import Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify qualified as RatifySpec
 import Test.Cardano.Ledger.Conformance.Imp.Core
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as BBODY
@@ -24,6 +28,9 @@ import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as UTXOS
 import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as UTXOW
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
+import Test.Cardano.Ledger.Mary.Imp.UtxoSpec qualified as MaryUTXO
+import Test.Cardano.Ledger.Shelley.Imp.UtxoSpec qualified as ShelleyUTXO
+import Test.Cardano.Ledger.Shelley.Imp.UtxowSpec qualified as ShelleyUTXOW
 
 spec :: Spec
 spec = do
@@ -41,7 +48,14 @@ spec = do
             GOVCERT.spec
             LEDGER.spec
             RATIFY.spec
+            ShelleyUTXO.spec
+            MaryUTXO.spec
+            AlonzoUTXO.spec
+            BabbageUTXO.spec
             UTXO.spec
+            ShelleyUTXOW.spec
+            AlonzoUTXOW.spec
+            BabbageUTXOW.spec
             UTXOW.spec
             AlonzoUTXOS.spec
             BabbageUTXOS.spec

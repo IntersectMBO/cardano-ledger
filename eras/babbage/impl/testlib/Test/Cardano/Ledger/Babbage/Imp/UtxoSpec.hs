@@ -21,11 +21,12 @@ import Test.Cardano.Ledger.Babbage.ImpTest (
   AlonzoEraImp,
   ImpInit,
   LedgerSpec,
+  disableInConformanceIt,
   freshKeyAddr_,
   getsPParams,
   submitFailingTx,
  )
-import Test.Cardano.Ledger.Common (SpecWith, describe, it)
+import Test.Cardano.Ledger.Common (SpecWith, describe)
 
 spec ::
   forall era.
@@ -36,7 +37,9 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   -- TxOut too large for the included ADA, using a large inline datum
-  it "Min-utxo value with output too large" $ do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1281
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Min-utxo value with output too large" $ do
     pp <- getsPParams id
     addr <- freshKeyAddr_
     let

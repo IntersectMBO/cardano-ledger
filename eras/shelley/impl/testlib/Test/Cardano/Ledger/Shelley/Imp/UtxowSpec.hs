@@ -35,12 +35,16 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   describe "Bootstrap Witness" $ do
-    it "Valid Witnesses" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Valid Witnesses" $ do
       aliceBootAddr <- freshBootstapAddress
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
       let txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]
       submitTx_ (mkBasicTx txBody)
-    it "InvalidWitnessesUTXOW" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "InvalidWitnessesUTXOW" $ do
       aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstapAddress
       aliceByronKeyPair <- getByronKeyPair aliceBootAddr
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
