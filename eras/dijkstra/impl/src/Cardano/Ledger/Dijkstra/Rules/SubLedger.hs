@@ -50,10 +50,10 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSubCertsPredFailure (..),
-  SubCertsEnv (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubEntities (
+  SubEntitiesEnv (..),
   SubEntitiesEvent,
   SubEntitiesPredFailure (..),
  )
@@ -88,7 +88,6 @@ import Control.State.Transition.Extended (
   trans,
   transitionRules,
  )
-import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -99,6 +98,7 @@ data SubLedgerEnv era = SubLedgerEnv
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
   , sleOriginalUtxo :: UTxO era
+  , sleOriginalAccounts :: Accounts era
   , sleTopTxIsValid :: IsValid
   }
 
@@ -232,7 +232,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsValid
+    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo originalAccounts topIsValid
       , LedgerState utxoState certState
       , stAnnTx
       ) <-
@@ -253,9 +253,14 @@ dijkstraSubLedgersTransition = do
         certStateAfterSubEntities <-
           trans @(EraRule "SUBENTITIES" era) $
             TRC
-              ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
+              ( SubEntitiesEnv
+                  curEpochNo
+                  pp
+                  committee
+                  (proposalsWithPurpose grCommitteeL proposals)
+                  originalAccounts
               , certState
-              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              , tx
               )
         let govEnv =
               Conway.GovEnv
@@ -370,7 +375,7 @@ conwayToDijkstraSubLedgerPredFailure = \case
   Conway.ConwayCertsFailure f -> SubEntitiesFailure (injectFailure @"SUBENTITIES" f)
   Conway.ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
   Conway.ConwayWdrlNotDelegatedToDRep _ -> error "Impossible: `ConwayWdrlNotDelegatedToDRep` for SUBLEDGER"
-  Conway.ConwayWithdrawalsMissingAccounts x -> SubEntitiesFailure (SubWithdrawalsMissingAccounts x)
+  Conway.ConwayWithdrawalsMissingAccounts x -> SubEntitiesFailure (SubMissingAccountsInWithdrawals x)
   Conway.ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
   Conway.ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
   Conway.ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"

@@ -43,7 +43,6 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
-  validateWrongNetworkInDirectDeposit,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
@@ -85,11 +84,6 @@ data DijkstraSubUtxoPredFailure era
       Network
       -- | the set of addresses with incorrect network IDs
       (NonEmptySet Addr)
-  | SubWrongNetworkWithdrawal
-      -- | the expected network id
-      Network
-      -- | the set of reward addresses with incorrect network IDs
-      (NonEmptySet AccountAddress)
   | -- | list of supplied bad transaction outputs
     SubOutputBootAddrAttrsTooBig (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
@@ -102,11 +96,6 @@ data DijkstraSubUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     SubBabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
-  | SubWrongNetworkInDirectDeposit
-      -- | the expected network id
-      Network
-      -- | the set of account addresses with incorrect network IDs
-      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -199,7 +188,6 @@ instance
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   STS (SUBUTXO era)
   where
@@ -224,7 +212,6 @@ dijkstraSubUtxoTransition ::
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
@@ -257,8 +244,6 @@ dijkstraSubUtxoTransition = do
 
   netId <- liftSTS $ asks networkId
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
-  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
-  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId txBody
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
   if isValid
@@ -283,13 +268,11 @@ instance
       SubMaxTxSizeUTxO mm -> Sum SubMaxTxSizeUTxO 2 !> To mm
       SubInputSetEmptyUTxO -> Sum SubInputSetEmptyUTxO 3
       SubWrongNetwork right wrongs -> Sum (SubWrongNetwork @era) 4 !> To right !> To wrongs
-      SubWrongNetworkWithdrawal right wrongs -> Sum (SubWrongNetworkWithdrawal @era) 5 !> To right !> To wrongs
       SubOutputBootAddrAttrsTooBig outs -> Sum (SubOutputBootAddrAttrsTooBig @era) 6 !> To outs
       SubOutputTooBigUTxO outs -> Sum (SubOutputTooBigUTxO @era) 7 !> To outs
       SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
       SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
-      SubWrongNetworkInDirectDeposit right wrongs -> Sum (SubWrongNetworkInDirectDeposit @era) 11 !> To right !> To wrongs
 
 instance
   ( Era era
@@ -305,13 +288,11 @@ instance
     2 -> SumD SubMaxTxSizeUTxO <! From
     3 -> SumD SubInputSetEmptyUTxO
     4 -> SumD SubWrongNetwork <! From <! From
-    5 -> SumD SubWrongNetworkWithdrawal <! From <! From
     6 -> SumD SubOutputBootAddrAttrsTooBig <! From
     7 -> SumD SubOutputTooBigUTxO <! From
     8 -> SumD SubWrongNetworkInTxBody <! From
     9 -> SumD SubOutsideForecast <! From
     10 -> SumD SubBabbageOutputTooSmallUTxO <! From
-    11 -> SumD SubWrongNetworkInDirectDeposit <! From <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -325,7 +306,6 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   FeeTooSmallUTxO _ -> error "Impossible: `FeeTooSmallUTxO` for SUBUTXO"
   ValueNotConservedUTxO _ -> error "Impossible: `ValueNotConservedUTxO` for SUBUTXO"
   WrongNetwork x y -> SubWrongNetwork x y
-  WrongNetworkWithdrawal x y -> SubWrongNetworkWithdrawal x y
   OutputBootAddrAttrsTooBig xs -> SubOutputBootAddrAttrsTooBig xs
   OutputTooBigUTxO xs -> SubOutputTooBigUTxO xs
   InsufficientCollateral _ _ -> error "Impossible: `InsufficientCollateral` for SUBUTXO"
@@ -340,5 +320,4 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
-  WrongNetworkInDirectDeposit x y -> SubWrongNetworkInDirectDeposit x y
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
