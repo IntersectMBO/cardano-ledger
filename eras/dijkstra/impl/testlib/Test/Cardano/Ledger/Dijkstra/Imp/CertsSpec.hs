@@ -45,7 +45,7 @@ spec = describe "CERTS" $ do
             WithdrawalsExceedAccountBalance @era $
               NE.singleton accountAddress $
                 Mismatch (Coin 20) mempty
-        , injectFailure . WithdrawalsMissingAccounts @era $
+        , injectFailure . MissingAccountsInWithdrawals @era $
             Withdrawals [(accountAddress, Coin 20)]
         ]
       (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
@@ -58,7 +58,7 @@ spec = describe "CERTS" $ do
                 .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
       submitFailingTx
         tx2
-        [ injectFailure . WithdrawalsMissingAccounts @era $
+        [ injectFailure . MissingAccountsInWithdrawals @era $
             Withdrawals [(accountAddress, zero)]
         ]
 
@@ -83,7 +83,7 @@ spec = describe "CERTS" $ do
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         , injectFailure $
-            WithdrawalAmountsExceedAccountBalances @era $
+            ExceededBalancesInWithdrawals @era $
               NE.singleton accountAddress1 $
                 Mismatch (reward1 <+> Coin 1) reward1
         ]

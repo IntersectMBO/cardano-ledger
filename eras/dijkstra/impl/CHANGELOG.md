@@ -2,6 +2,16 @@
 
 ## 0.3.0.0
 
+* Rename constructors of `SubEntitiesPredFailure`:
+  - `SubWithdrawalsMissingAccounts` -> `SubMissingAccountsInWithdrawals`
+  - `SubWithdrawalAmountsExceedAccountBalances` -> `SubExceededBalancesInWithdrawals`
+  - `SubDirectDepositsToMissingAccounts` -> `SubMissingAccountsInDirectDeposits`
+* Add `SubWrongNetworkInWithdrawals` and `SubWrongNetworkInDirectDeposits` constructors to `SubEntitiesPredFailure`
+* Rename constructors of `EntitiesPredFailure`:
+  - `WithdrawalsMissingAccounts` -> `MissingAccountsInWithdrawals`
+  - `WithdrawalAmountsExceedAccountBalances` -> `ExceededBalancesInWithdrawals`
+  - `DirectDepositsToMissingAccounts` -> `MissingAccountsInDirectDeposits`
+* Add `WrongNetworkInWithdrawals` and `WrongNetworkInDirectDeposits` constructors to `EntitiesPredFailure`
 * Add `validateWrongNetworkInDirectDeposit`
 * Remove `WrongNetworkWithdrawal` and `WrongNetworkInDirectDeposit `constructors from `DijkstraUtxoPredFailure`
 * Remove `SubWrongNetworkWithdrawal` and `SubWrongNetworkInDirectDeposit` constructors from `DijkstraSubUtxoPredFailure`
