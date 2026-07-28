@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, SUBCERTS, SUBENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesPredFailure (..),
+  validateWrongNetworkInDirectDeposit,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSubCertsEvent,
@@ -60,6 +61,11 @@ data SubEntitiesPredFailure era
       Network
       -- | Withdrawal accounts with wrong network id
       (NonEmptySet AccountAddress)
+  | SubWrongNetworkInDirectDeposit
+      -- | Expected network id
+      Network
+      -- | Direct-deposit accounts with wrong network id
+      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -85,6 +91,7 @@ instance
       SubWithdrawalAmountsExceedAccountBalances x -> Sum (SubWithdrawalAmountsExceedAccountBalances @era) 2 !> To x
       SubDirectDepositsToMissingAccounts x -> Sum (SubDirectDepositsToMissingAccounts @era) 3 !> To x
       SubWrongNetworkWithdrawal expected wrongs -> Sum (SubWrongNetworkWithdrawal @era) 4 !> To expected !> To wrongs
+      SubWrongNetworkInDirectDeposit expected wrongs -> Sum (SubWrongNetworkInDirectDeposit @era) 5 !> To expected !> To wrongs
 
 instance
   ( Era era
@@ -98,6 +105,7 @@ instance
     2 -> SumD SubWithdrawalAmountsExceedAccountBalances <! From
     3 -> SumD SubDirectDepositsToMissingAccounts <! From
     4 -> SumD SubWrongNetworkWithdrawal <! From <! From
+    5 -> SumD SubWrongNetworkInDirectDeposit <! From <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -138,6 +146,7 @@ instance
   , Environment (EraRule "SUBCERTS" era) ~ SubCertsEnv era
   , EraRule "SUBENTITIES" era ~ SUBENTITIES era
   , InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure era
+  , InjectRuleFailure "SUBENTITIES" EntitiesPredFailure era
   , InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
@@ -164,6 +173,7 @@ dijkstraSubEntitiesTransition ::
   , Environment (EraRule "SUBCERTS" era) ~ SubCertsEnv era
   , EraRule "SUBENTITIES" era ~ SUBENTITIES era
   , InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure era
+  , InjectRuleFailure "SUBENTITIES" EntitiesPredFailure era
   , InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
@@ -179,6 +189,7 @@ dijkstraSubEntitiesTransition = do
   network <- liftSTS $ asks networkId
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
+  runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
 
   let (missingWithdrawals, exceededWithdrawals) =
         case withdrawalsThatExceedAccountBalance withdrawals network accounts of
@@ -222,6 +233,7 @@ entitiesToSubEntitiesPredFailure ::
   EntitiesPredFailure era -> SubEntitiesPredFailure era
 entitiesToSubEntitiesPredFailure = \case
   WrongNetworkWithdrawal net addrs -> SubWrongNetworkWithdrawal net addrs
+  WrongNetworkInDirectDeposit net addrs -> SubWrongNetworkInDirectDeposit net addrs
   CertsFailure _ -> impossible "CertsFailure"
   WithdrawalsMissingAccounts _ -> impossible "WithdrawalsMissingAccounts"
   IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"

@@ -2,8 +2,9 @@
 
 ## 0.3.0.0
 
-* Remove `WrongNetworkWithdrawal` constructor from `DijkstraUtxoPredFailure`
-* Remove `SubWrongNetworkWithdrawal` constructor from `DijkstraSubUtxoPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
+* Remove `WrongNetworkWithdrawal` and `WrongNetworkInDirectDeposit `constructors from `DijkstraUtxoPredFailure`
+* Remove `SubWrongNetworkWithdrawal` and `SubWrongNetworkInDirectDeposit` constructors from `DijkstraSubUtxoPredFailure`
 * Remove `sleTxIx` from `SubLedgerEnv`
 * Rename the phase-2 validity field on `DijkstraTx`: `dtIsValid` -> `dtIsPhase2Valid`
 * Add `dsattPlutusRunnableCache` field to `DijkstraStAnnTx TopTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
