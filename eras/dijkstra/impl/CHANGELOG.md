@@ -2,6 +2,10 @@
 
 ## 0.3.0.0
 
+* Change the block body serialization: each transaction in a block now carries its `is_valid` flag as the trailing element and the `invalid_transactions` field was removed from the block body:
+  - Add `toCBORForBlockInclusion` and `decodeDijkstraTopTxInBlock`
+  - Change `decodeDijkstraTopTx` to only decode the mempool format, by removing its `Bool` parameter
+  - Remove `alignedValidFlags`
 * Add `encodeLeiosCert`, `decodeLeiosCert`
 * Add `startingAccountBalanceIntervals` to the top-level transaction body:
   - Add `startingAccountBalanceIntervalsTxBodyL` to the `DijkstraEraTxBody` typeclass
@@ -130,6 +134,8 @@
 
 ### cddl
 
+* Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
+* Remove the `invalid_transactions` rule and drop the field from `block_body`
 * Remove re-exported `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
 * Remove `dijkstraProtocolVersionRule`
 * Add `transaction_mempool` rule
