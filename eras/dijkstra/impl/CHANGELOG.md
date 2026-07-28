@@ -1,8 +1,10 @@
 # Revision history for `cardano-ledger-dijkstra`
 
-## 0.3.0.1
+## 0.4.0.0
 
-*
+* Memoize `getScriptsHashesNeeded` for subtransactions:
+  - Add `dsastScriptsHashesNeeded` field to `DijkstraStAnnTx SubTx`, holding `Set ScriptHash`
+  - Add `scriptsHashesNeededStAnnTx` method to `DijkstraEraUTxO`
 
 ## 0.3.0.0
 

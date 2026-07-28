@@ -61,6 +61,7 @@ import Lens.Micro.Extras (view)
 class AlonzoEraUTxO era => DijkstraEraUTxO era where
   subTransactionsStAnnTx :: StAnnTx TopTx era -> [StAnnTx SubTx era]
   plutusLegacyModeStAnnTxG :: SimpleGetter (StAnnTx TopTx era) Bool
+  scriptsHashesNeededStAnnTx :: StAnnTx SubTx era -> Set ScriptHash
 
 -- | Unlike `shelleyConsumed`, this function does not need access to `Accounts` to produce accurate
 -- information about refunds, hence is this simplification. Note that using `shelleyConsumed` in
@@ -252,6 +253,7 @@ plutusLanguagesUsedDijkstraStAnnTx stAnnTx =
 instance DijkstraEraUTxO DijkstraEra where
   subTransactionsStAnnTx = subTransactionsDijkstraStAnnTx
   plutusLegacyModeStAnnTxG = to (\DijkstraStAnnTopTx {dsattPlutusLegacyMode} -> dsattPlutusLegacyMode)
+  scriptsHashesNeededStAnnTx = dsastScriptsHashesNeeded
 
 subTransactionsDijkstraStAnnTx ::
   DijkstraStAnnTx TopTx era -> [DijkstraStAnnTx SubTx era]

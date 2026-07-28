@@ -49,6 +49,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   validateGuardDatums,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
@@ -173,7 +174,7 @@ instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent
 
 instance
   ( AlonzoEraTx era
-  , AlonzoEraUTxO era
+  , DijkstraEraUTxO era
   , BabbageEraTxOut era
   , ConwayEraGov era
   , ConwayEraTxBody era
@@ -203,7 +204,7 @@ instance
 dijkstraSubUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
-  , AlonzoEraUTxO era
+  , DijkstraEraUTxO era
   , DijkstraEraTxBody era
   , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
@@ -228,7 +229,7 @@ dijkstraSubUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   let scriptsNeeded = scriptsNeededStAnnTx stAnnTx
-      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+      scriptHashesNeeded = scriptsHashesNeededStAnnTx stAnnTx
 
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded

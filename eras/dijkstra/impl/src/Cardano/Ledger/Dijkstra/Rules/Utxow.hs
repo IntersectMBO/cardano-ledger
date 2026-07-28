@@ -242,7 +242,7 @@ dijkstraUtxowTransition = do
   let allScriptHashesNeeded =
         Set.unions $
           topScriptHashesNeeded
-            : (getScriptsHashesNeeded . scriptsNeededStAnnTx <$> subStAnnTxs)
+            : (scriptsHashesNeededStAnnTx <$> subStAnnTxs)
 
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   -- Per-level: phase-1 script validation is per-tx (script execution)
