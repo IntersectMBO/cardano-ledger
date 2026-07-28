@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Add `encodeLeiosCert`, `decodeLeiosCert`
 * Add `startingAccountBalanceIntervals` to the top-level transaction body:
   - Add `startingAccountBalanceIntervalsTxBodyL` to the `DijkstraEraTxBody` typeclass
   - Add `dtbStartingAccountBalanceIntervals` to `TxBody`

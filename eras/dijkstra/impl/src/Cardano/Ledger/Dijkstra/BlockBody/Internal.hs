@@ -56,7 +56,6 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
   serialize',
  )
-import Cardano.Ledger.Binary.Crypto (decodeLeiosCert, encodeLeiosCert)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
@@ -194,7 +193,7 @@ instance
     encodeListLen 4
       <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =
@@ -220,7 +219,7 @@ instance
 
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @era False)
-    mbLeiosCert <- decodeNullStrictMaybe decodeLeiosCert
+    mbLeiosCert <- decodeNullStrictMaybe decCBOR
     mbPerasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs
@@ -254,7 +253,7 @@ instance (AlonzoEraTx era, EncCBOR (Tx TopTx era)) => EncCBORGroup (DijkstraBloc
     encodeListLen 4
       <> encodeNullMaybe encCBOR invalidIndices
       <> encCBOR txs
-      <> encodeNullStrictMaybe encodeLeiosCert mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
     where
       invalidIndices =

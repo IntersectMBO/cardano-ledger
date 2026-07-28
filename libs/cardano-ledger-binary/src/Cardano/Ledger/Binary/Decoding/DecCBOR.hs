@@ -42,7 +42,6 @@ import Cardano.Crypto.VRF.Class (
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
-import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Version (Version, byronProtVer)
 import Cardano.Slotting.Block (BlockNo (..))
@@ -66,6 +65,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6)
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
 import Control.Monad (when)
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -470,19 +470,19 @@ instance DecCBOR UTCTime where
 --------------------------------------------------------------------------------
 
 instance DSIGNAlgorithm v => DecCBOR (VerKeyDSIGN v) where
-  decCBOR = decodeVerKeyDSIGN
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm v => DecCBOR (SignKeyDSIGN v) where
-  decCBOR = decodeSignKeyDSIGN
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
-  decCBOR = decodeSigDSIGN
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
-  decCBOR = decodeSignedDSIGN
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
@@ -502,11 +502,11 @@ instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
 --------------------------------------------------------------------------------
 
 instance KESAlgorithm k => DecCBOR (VerKeyKES k) where
-  decCBOR = decodeVerKeyKES
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance KESAlgorithm k => DecCBOR (SigKES k) where
-  decCBOR = decodeSigKES
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
@@ -514,51 +514,51 @@ instance KESAlgorithm k => DecCBOR (SigKES k) where
 --------------------------------------------------------------------------------
 
 instance DecCBOR (VerKeyVRF SimpleVRF) where
-  decCBOR = decodeVerKeyVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (SignKeyVRF SimpleVRF) where
-  decCBOR = decodeSignKeyVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (CertVRF SimpleVRF) where
-  decCBOR = decodeCertVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (VerKeyVRF MockVRF) where
-  decCBOR = decodeVerKeyVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (SignKeyVRF MockVRF) where
-  decCBOR = decodeSignKeyVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (CertVRF MockVRF) where
-  decCBOR = decodeCertVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.Proof where
-  decCBOR = decCBOR >>= Praos.proofFromBytes
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.SignKey where
-  decCBOR = decCBOR >>= Praos.skFromBytes
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.VerKey where
-  decCBOR = decCBOR >>= Praos.vkFromBytes
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (VerKeyVRF Praos.PraosVRF) where
-  decCBOR = decodeVerKeyVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (SignKeyVRF Praos.PraosVRF) where
-  decCBOR = decodeSignKeyVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (CertVRF Praos.PraosVRF) where
-  decCBOR = decodeCertVRF
+  decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance Typeable v => DecCBOR (OutputVRF v) where
@@ -570,7 +570,7 @@ instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
     CertifiedVRF
       <$ enforceSize "CertifiedVRF" 2
       <*> decCBOR
-      <*> decodeCertVRF
+      <*> decodeFixedSized
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
@@ -619,3 +619,17 @@ decodeScriptContextFromData scriptContextData =
   case PV3.fromData scriptContextData of
     Nothing -> fail $ "ScriptContext cannot be decoded from Data: " <> show scriptContextData
     Just scriptContext -> pure scriptContext
+
+--------------------------------------------------------------------------------
+-- Leios
+--------------------------------------------------------------------------------
+
+instance DecCBOR BitField where
+  decCBOR = BitField <$> decCBOR
+
+instance DecCBOR LeiosCert where
+  decCBOR =
+    decodeRecordNamed "LeiosCert" (const 2) $
+      LeiosCert
+        <$> decCBOR
+        <*> decCBOR

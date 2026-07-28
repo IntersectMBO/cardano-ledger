@@ -23,6 +23,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   ByteArray (..),
   C.DecodeAction (..),
   C.TokenType (..),
+  decodeFixedSized,
 
   -- ** Versioning
   getDecoderVersion,
@@ -171,6 +172,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Base.Typeable (TypeName)
+import qualified Cardano.Binary.FixedSizeCodec as FSC
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -178,10 +180,10 @@ import Cardano.Ledger.Binary.Plain (
   showDecoderError,
   toCborError,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeTagMaybe)
+import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeBytes, decodeTagMaybe)
 import Cardano.Ledger.Binary.Version (Version, mkVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
-import Codec.CBOR.ByteArray (ByteArray (..))
+import Codec.CBOR.ByteArray (ByteArray (..), fromShortByteString, toShortByteString)
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
   DecodeAction (..),
@@ -191,7 +193,6 @@ import qualified Codec.CBOR.Decoding as C (
   decodeBreakOr,
   decodeByteArray,
   decodeByteArrayCanonical,
-  decodeBytes,
   decodeBytesCanonical,
   decodeBytesIndef,
   decodeDouble,
@@ -263,8 +264,10 @@ import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Functor.Compose (Compose (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -343,6 +346,34 @@ withPlainDecoder vd f = Decoder $ \bsl -> f . runDecoder vd bsl
 enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
 enforceDecoderVersion version d = Decoder $ \bsl _ -> runDecoder d bsl version
 {-# INLINE enforceDecoderVersion #-}
+
+decodeBytesDefinite :: Decoder s ByteString
+decodeBytesDefinite = fromPlainDecoder Plain.decodeBytes
+
+-- | Decode a bytestring, accepting both definite and indefinite length encodings. Chunks
+-- of an indefinite length bytestring are concatenated together.
+decodeBytes :: Decoder s ByteString
+decodeBytes =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeBytesDefOrIndef
+    decodeBytesDefinite
+  where
+    decodeBytesDefOrIndef = do
+      peekTokenType >>= \case
+        C.TypeBytesIndef -> do
+          decodeBytesIndef
+          let go !acc =
+                decodeBreakOr >>= \case
+                  True -> pure $! BS.concat (reverse acc)
+                  False -> do
+                    !chunk <- decodeBytesDefinite
+                    go (chunk : acc)
+          go []
+        _ -> decodeBytesDefinite
+
+decodeFixedSized :: FSC.FixedSizeCodec a => Decoder s a
+decodeFixedSized = FSC.rawDecodeFixedSized =<< decodeBytes
 
 -- | Lookup the original bytes that are being used for deserialization. This action will
 -- fail deserialization whenever original bytes are not available.
@@ -1392,17 +1423,33 @@ decodeBreakOr :: Decoder s Bool
 decodeBreakOr = fromPlainDecoder C.decodeBreakOr
 {-# INLINE decodeBreakOr #-}
 
+decodeByteArrayDefinite :: Decoder s ByteArray
+decodeByteArrayDefinite = fromPlainDecoder C.decodeByteArray
+
 decodeByteArray :: Decoder s ByteArray
-decodeByteArray = fromPlainDecoder C.decodeByteArray
+decodeByteArray =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeByteArrayDefOrIndef
+    decodeByteArrayDefinite
+  where
+    decodeByteArrayDefOrIndef = do
+      peekTokenType >>= \case
+        C.TypeBytesIndef -> do
+          decodeBytesIndef
+          let go !acc =
+                decodeBreakOr >>= \case
+                  True -> pure $! SBS.concat (reverse acc)
+                  False -> do
+                    !chunk <- toShortByteString <$> decodeByteArrayDefinite
+                    go (chunk : acc)
+          fromShortByteString <$> go []
+        _ -> decodeByteArrayDefinite
 {-# INLINE decodeByteArray #-}
 
 decodeByteArrayCanonical :: Decoder s ByteArray
 decodeByteArrayCanonical = fromPlainDecoder C.decodeByteArrayCanonical
 {-# INLINE decodeByteArrayCanonical #-}
-
-decodeBytes :: Decoder s BS.ByteString
-decodeBytes = fromPlainDecoder C.decodeBytes
-{-# INLINE decodeBytes #-}
 
 decodeBytesCanonical :: Decoder s BS.ByteString
 decodeBytesCanonical = fromPlainDecoder C.decodeBytesCanonical

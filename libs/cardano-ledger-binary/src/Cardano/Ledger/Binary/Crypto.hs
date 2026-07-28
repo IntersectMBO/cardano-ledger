@@ -26,119 +26,122 @@ module Cardano.Ledger.Binary.Crypto (
   decodeSignKeyVRF,
   encodeCertVRF,
   decodeCertVRF,
-
-  -- * Leios
-  encodeLeiosCert,
-  decodeLeiosCert,
 ) where
 
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
-import qualified Cardano.Crypto.Leios as C
 import qualified Cardano.Crypto.VRF.Class as C
-import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, fromPlainDecoder)
-import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, fromPlainEncoding)
+import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, decodeFixedSized)
+import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, encodeFixedSized)
 
 --------------------------------------------------------------------------------
 -- DSIGN
 --------------------------------------------------------------------------------
 
 encodeVerKeyDSIGN :: C.DSIGNAlgorithm v => C.VerKeyDSIGN v -> Encoding
-encodeVerKeyDSIGN = fromPlainEncoding . C.encodeVerKeyDSIGN
+encodeVerKeyDSIGN = encodeFixedSized
 {-# INLINE encodeVerKeyDSIGN #-}
+{-# DEPRECATED encodeVerKeyDSIGN "Use encodeFixedSized instead" #-}
 
 decodeVerKeyDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.VerKeyDSIGN v)
-decodeVerKeyDSIGN = fromPlainDecoder C.decodeVerKeyDSIGN
+decodeVerKeyDSIGN = decodeFixedSized
 {-# INLINE decodeVerKeyDSIGN #-}
+{-# DEPRECATED decodeVerKeyDSIGN "Use decodeFixedSized instead" #-}
 
 encodeSignKeyDSIGN :: C.DSIGNAlgorithm v => C.SignKeyDSIGN v -> Encoding
-encodeSignKeyDSIGN = fromPlainEncoding . C.encodeSignKeyDSIGN
+encodeSignKeyDSIGN = encodeFixedSized
 {-# INLINE encodeSignKeyDSIGN #-}
+{-# DEPRECATED encodeSignKeyDSIGN "Use encodeFixedSized instead" #-}
 
 decodeSignKeyDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SignKeyDSIGN v)
-decodeSignKeyDSIGN = fromPlainDecoder C.decodeSignKeyDSIGN
+decodeSignKeyDSIGN = decodeFixedSized
 {-# INLINE decodeSignKeyDSIGN #-}
+{-# DEPRECATED decodeSignKeyDSIGN "Use decodeFixedSized instead" #-}
 
 encodeSigDSIGN :: C.DSIGNAlgorithm v => C.SigDSIGN v -> Encoding
-encodeSigDSIGN = fromPlainEncoding . C.encodeSigDSIGN
+encodeSigDSIGN = encodeFixedSized
 {-# INLINE encodeSigDSIGN #-}
+{-# DEPRECATED encodeSigDSIGN "Use encodeFixedSized instead" #-}
 
 decodeSigDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SigDSIGN v)
-decodeSigDSIGN = fromPlainDecoder C.decodeSigDSIGN
+decodeSigDSIGN = decodeFixedSized
 {-# INLINE decodeSigDSIGN #-}
+{-# DEPRECATED decodeSigDSIGN "Use decodeFixedSized instead" #-}
 
 encodeSignedDSIGN :: C.DSIGNAlgorithm v => C.SignedDSIGN v a -> Encoding
-encodeSignedDSIGN = fromPlainEncoding . C.encodeSignedDSIGN
+encodeSignedDSIGN = encodeFixedSized
 {-# INLINE encodeSignedDSIGN #-}
+{-# DEPRECATED encodeSignedDSIGN "Use encodeFixedSized instead" #-}
 
 decodeSignedDSIGN :: C.DSIGNAlgorithm v => Decoder s (C.SignedDSIGN v a)
-decodeSignedDSIGN = fromPlainDecoder C.decodeSignedDSIGN
+decodeSignedDSIGN = decodeFixedSized
 {-# INLINE decodeSignedDSIGN #-}
+{-# DEPRECATED decodeSignedDSIGN "Use decodeFixedSized instead" #-}
 
 --------------------------------------------------------------------------------
 -- KES
 --------------------------------------------------------------------------------
 
 encodeVerKeyKES :: C.KESAlgorithm v => C.VerKeyKES v -> Encoding
-encodeVerKeyKES = fromPlainEncoding . C.encodeVerKeyKES
+encodeVerKeyKES = encodeFixedSized
 {-# INLINE encodeVerKeyKES #-}
+{-# DEPRECATED encodeVerKeyKES "Use encodeFixedSized instead" #-}
 
 decodeVerKeyKES :: C.KESAlgorithm v => Decoder s (C.VerKeyKES v)
-decodeVerKeyKES = fromPlainDecoder C.decodeVerKeyKES
+decodeVerKeyKES = decodeFixedSized
 {-# INLINE decodeVerKeyKES #-}
+{-# DEPRECATED decodeVerKeyKES "Use decodeFixedSized instead" #-}
 
 encodeSigKES :: C.KESAlgorithm v => C.SigKES v -> Encoding
-encodeSigKES = fromPlainEncoding . C.encodeSigKES
+encodeSigKES = encodeFixedSized
 {-# INLINE encodeSigKES #-}
+{-# DEPRECATED encodeSigKES "Use encodeFixedSized instead" #-}
 
 decodeSigKES :: C.KESAlgorithm v => Decoder s (C.SigKES v)
-decodeSigKES = fromPlainDecoder C.decodeSigKES
+decodeSigKES = decodeFixedSized
 {-# INLINE decodeSigKES #-}
+{-# DEPRECATED decodeSigKES "Use decodeFixedSized instead" #-}
 
 encodeSignedKES :: C.KESAlgorithm v => C.SignedKES v a -> Encoding
-encodeSignedKES = fromPlainEncoding . C.encodeSignedKES
+encodeSignedKES = encodeFixedSized
 {-# INLINE encodeSignedKES #-}
+{-# DEPRECATED encodeSignedKES "Use encodeFixedSized instead" #-}
 
 decodeSignedKES :: C.KESAlgorithm v => Decoder s (C.SignedKES v a)
-decodeSignedKES = fromPlainDecoder C.decodeSignedKES
+decodeSignedKES = decodeFixedSized
 {-# INLINE decodeSignedKES #-}
+{-# DEPRECATED decodeSignedKES "Use decodeFixedSized instead" #-}
 
 --------------------------------------------------------------------------------
 -- VRF
 --------------------------------------------------------------------------------
 
 encodeVerKeyVRF :: C.VRFAlgorithm v => C.VerKeyVRF v -> Encoding
-encodeVerKeyVRF = fromPlainEncoding . C.encodeVerKeyVRF
+encodeVerKeyVRF = encodeFixedSized
 {-# INLINE encodeVerKeyVRF #-}
+{-# DEPRECATED encodeVerKeyVRF "Use encodeFixedSized instead" #-}
 
 decodeVerKeyVRF :: C.VRFAlgorithm v => Decoder s (C.VerKeyVRF v)
-decodeVerKeyVRF = fromPlainDecoder C.decodeVerKeyVRF
+decodeVerKeyVRF = decodeFixedSized
 {-# INLINE decodeVerKeyVRF #-}
+{-# DEPRECATED decodeVerKeyVRF "Use decodeFixedSized instead" #-}
 
 encodeSignKeyVRF :: C.VRFAlgorithm v => C.SignKeyVRF v -> Encoding
-encodeSignKeyVRF = fromPlainEncoding . C.encodeSignKeyVRF
+encodeSignKeyVRF = encodeFixedSized
 {-# INLINE encodeSignKeyVRF #-}
+{-# DEPRECATED encodeSignKeyVRF "Use encodeFixedSized instead" #-}
 
 decodeSignKeyVRF :: C.VRFAlgorithm v => Decoder s (C.SignKeyVRF v)
-decodeSignKeyVRF = fromPlainDecoder C.decodeSignKeyVRF
+decodeSignKeyVRF = decodeFixedSized
 {-# INLINE decodeSignKeyVRF #-}
+{-# DEPRECATED decodeSignKeyVRF "Use decodeFixedSized instead" #-}
 
 encodeCertVRF :: C.VRFAlgorithm v => C.CertVRF v -> Encoding
-encodeCertVRF = fromPlainEncoding . C.encodeCertVRF
+encodeCertVRF = encodeFixedSized
 {-# INLINE encodeCertVRF #-}
+{-# DEPRECATED encodeCertVRF "Use encodeFixedSized instead" #-}
 
 decodeCertVRF :: C.VRFAlgorithm v => Decoder s (C.CertVRF v)
-decodeCertVRF = fromPlainDecoder C.decodeCertVRF
+decodeCertVRF = decodeFixedSized
 {-# INLINE decodeCertVRF #-}
-
---------------------------------------------------------------------------------
--- Leios
---------------------------------------------------------------------------------
-
-encodeLeiosCert :: C.LeiosCert -> Encoding
-encodeLeiosCert = fromPlainEncoding . C.encodeLeiosCert
-{-# INLINE encodeLeiosCert #-}
-
-decodeLeiosCert :: Decoder s C.LeiosCert
-decodeLeiosCert = fromPlainDecoder C.decodeLeiosCert
-{-# INLINE decodeLeiosCert #-}
+{-# DEPRECATED decodeCertVRF "Use decodeFixedSized instead" #-}

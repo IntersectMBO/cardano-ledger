@@ -15,6 +15,8 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   withCurrentEncodingVersion,
   enforceEncodingVersion,
   ifEncodingVersionAtLeast,
+  FixedSizeCodec (..),
+  encodeFixedSized,
 
   -- ** Custom
   encodeVersion,
@@ -93,6 +95,8 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
 
 import Cardano.Base.IP (IPv4, IPv6, fromIPv4w, fromIPv6w)
 import qualified Cardano.Binary as C
+import Cardano.Binary.FixedSizeCodec (FixedSizeCodec (..))
+import qualified Cardano.Binary.FixedSizeCodec as FSC
 import Cardano.Ledger.Binary.Decoding.Decoder (setTag)
 import Cardano.Ledger.Binary.Version (Version, getVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginToMaybe)
@@ -149,7 +153,10 @@ withCurrentEncodingVersion f =
 enforceEncodingVersion :: Version -> Encoding -> Encoding
 enforceEncodingVersion version encoding = fromPlainEncoding (toPlainEncoding version encoding)
 
--- | Conditionally choose the encoder newer or older deceder, depending on the current
+encodeFixedSized :: FixedSizeCodec a => a -> Encoding
+encodeFixedSized = fromPlainEncoding . FSC.encodeFixedSized
+
+-- | Conditionally choose the newer or older encoder, depending on the current
 -- version. Supplied version acts as a pivot.
 --
 -- =====__Example__
