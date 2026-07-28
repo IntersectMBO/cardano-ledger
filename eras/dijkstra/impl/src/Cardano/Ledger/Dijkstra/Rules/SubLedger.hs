@@ -50,10 +50,10 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSubCertsPredFailure (..),
-  SubCertsEnv (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubEntities (
+  SubEntitiesEnv (..),
   SubEntitiesEvent,
   SubEntitiesPredFailure (..),
  )
@@ -88,7 +88,6 @@ import Control.State.Transition.Extended (
   trans,
   transitionRules,
  )
-import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -98,6 +97,7 @@ data SubLedgerEnv era = SubLedgerEnv
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
   , sleOriginalUtxo :: UTxO era
+  , sleOriginalAccounts :: Accounts era
   , sleTopTxIsPhase2Valid :: IsPhase2Valid
   }
 
@@ -231,7 +231,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo pp chainAccountState originalUtxo topIsPhase2Valid
+    ( SubLedgerEnv slot mbCurEpochNo pp chainAccountState originalUtxo originalAccounts topIsPhase2Valid
       , LedgerState utxoState certState
       , stAnnTx
       ) <-
@@ -252,9 +252,14 @@ dijkstraSubLedgersTransition = do
         certStateAfterSubEntities <-
           trans @(EraRule "SUBENTITIES" era) $
             TRC
-              ( SubCertsEnv tx pp curEpochNo committee (proposalsWithPurpose grCommitteeL proposals)
+              ( SubEntitiesEnv
+                  curEpochNo
+                  pp
+                  committee
+                  (proposalsWithPurpose grCommitteeL proposals)
+                  originalAccounts
               , certState
-              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              , tx
               )
         let govEnv =
               Conway.GovEnv
