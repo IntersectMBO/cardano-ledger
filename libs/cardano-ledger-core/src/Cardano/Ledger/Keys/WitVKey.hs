@@ -22,7 +22,6 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   encodeListLen,
  )
-import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Hashes (
   EraIndependentTxBody,
   HASH,
@@ -77,7 +76,7 @@ instance EncCBOR (WitVKey kr) where
 instance Typeable kr => DecCBOR (WitVKey kr) where
   decCBOR =
     decodeRecordNamed "WitVKey" (const 2) $
-      WitVKey <$> decCBOR <*> decodeSignedDSIGN
+      WitVKey <$> decCBOR <*> decCBOR
   {-# INLINE decCBOR #-}
 
 pattern WitVKey ::

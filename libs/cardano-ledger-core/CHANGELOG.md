@@ -24,6 +24,8 @@
   - `getConsumedValue`
 * Change `certsTotalRefundsTxBody` to accept `Accounts` instead of `CertState`
 * Restrict `getProducedValue` to `TxBody TopTx era`.
+* Remove `decodeSignedDSIGNED`, `encodeSignedDSIGN` in favor of `encodeFixedSized`/`decodeFixedSized`
+* Remove `FromCBOR` and `ToCBOR` instances for `VKey`
 * Remove `Semigroup` and `Monoid` instances for `CostModels`
 * Change `updateCostModels` to take `CostModelsUpdate` as its second argument
 * Add `CostModelsUpdate`

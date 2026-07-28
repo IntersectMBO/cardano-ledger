@@ -23,6 +23,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   ByteArray (..),
   C.DecodeAction (..),
   C.TokenType (..),
+  decodeBytesDefOrIndef,
+  decodeFixedSized,
 
   -- ** Versioning
   getDecoderVersion,
@@ -171,6 +173,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Base.Typeable (TypeName)
+import qualified Cardano.Binary.FixedSizeCodec as FSC
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -263,6 +266,7 @@ import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
@@ -343,6 +347,29 @@ withPlainDecoder vd f = Decoder $ \bsl -> f . runDecoder vd bsl
 enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
 enforceDecoderVersion version d = Decoder $ \bsl _ -> runDecoder d bsl version
 {-# INLINE enforceDecoderVersion #-}
+
+-- | Decode a bytestring, accepting both definite and indefinite length encodings. Chunks
+-- of an indefinite length bytestring are concatenated together.
+decodeBytesDefOrIndef :: Decoder s ByteString
+decodeBytesDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeBytesIndef -> do
+      decodeBytesIndef
+      let go acc =
+            decodeBreakOr >>= \case
+              True -> pure $! BS.concat (reverse acc)
+              False -> do
+                !chunk <- decodeBytes
+                go (chunk : acc)
+      go []
+    _ -> decodeBytes
+
+decodeFixedSized :: FSC.FixedSizeCodec a => Decoder s a
+decodeFixedSized =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    (FSC.rawDecodeFixedSized =<< decodeBytesDefOrIndef)
+    (fromPlainDecoder FSC.decodeFixedSized)
 
 -- | Lookup the original bytes that are being used for deserialization. This action will
 -- fail deserialization whenever original bytes are not available.
