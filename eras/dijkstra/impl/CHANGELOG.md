@@ -2,6 +2,10 @@
 
 ## 0.4.0.0
 
+* Change the block body serialization: each transaction in a block now carries its `is_valid` flag as the trailing element and the `invalid_transactions` field was removed from the block body:
+  - Add `toCBORForBlockInclusion` and `decodeDijkstraTopTxInBlock`
+  - Change `decodeDijkstraTopTx` to only decode the mempool format, by removing its `Bool` parameter
+  - Remove `alignedValidFlags`
 * Add a Dijkstra `EPOCH` rule
   - Take the stake snapshot at the end of the transition after stake pool and governance-action refunds and treasury withdrawals are applied, so that stake pool voting stake is consistent with DRep voting stake (#5014)
 * Add `localProducedValue` helper in `UTxO` module
@@ -43,6 +47,8 @@
 
 ### `cddl`
 
+* Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
+* Remove the `invalid_transactions` rule and drop the field from `block_body`
 * Add `HuddleRule "vrf_cert"` instance
 * Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
 
