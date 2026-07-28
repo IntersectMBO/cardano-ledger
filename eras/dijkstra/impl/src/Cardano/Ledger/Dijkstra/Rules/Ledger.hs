@@ -63,6 +63,7 @@ import Cardano.Ledger.Dijkstra.Rules.Entities (
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubEntities (SubEntitiesPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
@@ -178,6 +179,12 @@ instance InjectRuleFailure "LEDGER" Conway.ConwayGovPredFailure DijkstraEra wher
 
 instance InjectRuleFailure "LEDGER" DijkstraSubLedgersPredFailure DijkstraEra where
   injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" SubEntitiesPredFailure DijkstraEra where
+  injectFailure =
+    injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
+      . SubLedgerFailure
+      . SubEntitiesFailure
 
 deriving instance
   ( Era era
