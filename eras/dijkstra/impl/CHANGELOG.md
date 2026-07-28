@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Restrict `dijkstraCertsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Add `encodeLeiosCert`, `decodeLeiosCert`
 * Add `startingAccountBalanceIntervals` to the top-level transaction body:
   - Add `startingAccountBalanceIntervalsTxBodyL` to the `DijkstraEraTxBody` typeclass

@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Restrict `getTotalDepositsTxBody` and `certsTotalDepositsTxBody` to `TxBody TopTx era` type
 * Add `StAnnTxCache` as an argument to `validateTxAuxData`
 * Add `isValidPlutusRunnable`
 * Add `StAnnTxCache` associated type and `cacheStAnnTxG` method to `EraTx`, together with a new `Monoid (StAnnTxCache era)` superclass constraint

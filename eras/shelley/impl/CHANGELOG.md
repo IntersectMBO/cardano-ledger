@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Restrict `shelleyCertsTotalDepositsTxBody` to `TxBody TopTx era` type
+* Switch parameter order of `updateUTxOState`
+* Add `updateUTxOStateDeposits` and `updateUTxOAndInstantStake`
+* Remove `GovState` parameter from `updateUTxOState`
 * Change argument to `validateMetadata` from `Tx` to `StAnnTx`
 * Add `EraUTxO era` as a superclass constraint to `ApplyTx`
 * Change `produced` to accept `PState`, instead of `CertState`
@@ -79,7 +83,6 @@
 * Remove `ToCBOR` and `FromCBOR` instances for `UTxOState`, `LedgerState`, `ShelleyTxOut`
 * Add `ApplyTick` typeclass with `applyTick` method, extracted from `ApplyBlock`.
 * Remove `validMetadata` from `SoftForks`
-* Add `updateUTxOStateNoFees`
 * Add `Shelley.API.Forecast` and `Shelley.Forecast`:
   - Add `EraForecast` and `ShelleyEraForecast` typeclasses to deprecate `GetLedgerView` from `cardano-ledger-tpraos`.
   - Add `currentForecast` and `futureForecast` functions to deprecate `currentLedgerView` and `futureLedgerView`.

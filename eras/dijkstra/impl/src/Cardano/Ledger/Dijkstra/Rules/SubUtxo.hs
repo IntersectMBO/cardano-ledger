@@ -47,7 +47,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
-import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosGovState, utxosUtxo)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -216,7 +216,6 @@ dijkstraSubUtxoTransition ::
   forall era.
   ( EraTx era
   , EraStake era
-  , EraCertState era
   , DijkstraEraTxBody era
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
@@ -229,7 +228,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot pp certState originalUtxo (IsValid isValid), utxoState, stAnnTx) <-
+  TRC (SubUtxoEnv slot pp _ originalUtxo (IsValid isValid), utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -263,17 +262,11 @@ dijkstraSubUtxoTransition = do
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
   if isValid
-    then do
-      newState <-
-        Shelley.updateUTxOStateNoFees
-          pp
-          utxoState
-          txBody
-          certState
-          (utxosGovState utxoState)
-          (tellEvent . TotalDeposits (hashAnnotated txBody))
-          (\a b -> tellEvent $ TxUTxODiff a b)
-      pure $ newState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
+    then
+      Shelley.updateUTxOAndInstantStake
+        txBody
+        (\a b -> tellEvent $ TxUTxODiff a b)
+        (utxoState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL)
     else
       pure utxoState
 

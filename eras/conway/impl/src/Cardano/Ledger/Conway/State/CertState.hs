@@ -116,7 +116,7 @@ conwayObligationCertState certState =
         }
 
 conwayCertsTotalDepositsTxBody ::
-  EraTxBody era => PParams era -> ConwayCertState era -> TxBody l era -> Coin
+  EraTxBody era => PParams era -> ConwayCertState era -> TxBody TopTx era -> Coin
 conwayCertsTotalDepositsTxBody pp ConwayCertState {conwayCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePools conwayCertPState)
 

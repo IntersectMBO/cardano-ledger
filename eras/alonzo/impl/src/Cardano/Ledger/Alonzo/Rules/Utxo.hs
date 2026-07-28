@@ -88,7 +88,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (ShelleyGovState, UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
@@ -573,26 +573,7 @@ utxoTransition = do
     trans @(EraRule "UTXOS" era) $
       TRC (UtxosEnv slot pp certState, utxosGovState utxos, stAnnTx)
 
-  case tx ^. isValidTxL of
-    IsValid True ->
-      Shelley.updateUTxOState
-        pp
-        utxos
-        txBody
-        certState
-        updatedGovState
-        (tellEvent . TotalDeposits (hashAnnotated txBody))
-        (\a b -> tellEvent (TxUTxODiff a b))
-    IsValid False ->
-      {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
-      {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
-      let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
-       in pure $!
-            utxos
-              { utxosUtxo = UTxO utxoKeep
-              , utxosFees = (utxosFees utxos) <> sumAllCoin utxoDel
-              , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxos ^. instantStakeL)
-              }
+  updateUTxOState pp certState tx (utxos & utxosGovStateL .~ updatedGovState)
 
 --------------------------------------------------------------------------------
 -- UTXO STS
@@ -766,3 +747,38 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.UpdateFailure x -> UtxosFailure (injectFailure @"UTXOS" @t x)
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)
+
+updateUTxOState ::
+  forall era.
+  ( AlonzoEraTx era
+  , EraStake era
+  , EraCertState era
+  , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
+  ) =>
+  PParams era ->
+  CertState era ->
+  Tx TopTx era ->
+  UTxOState era ->
+  Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
+updateUTxOState pp certState tx utxoState =
+  let txBody = tx ^. bodyTxL
+      utxo = utxosUtxo utxoState
+   in case tx ^. isValidTxL of
+        IsValid True ->
+          Shelley.updateUTxOState
+            pp
+            txBody
+            certState
+            (tellEvent . TotalDeposits (hashAnnotated txBody))
+            (\a b -> tellEvent (TxUTxODiff a b))
+            utxoState
+        IsValid False ->
+          {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+          {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+          let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+           in pure $!
+                utxoState
+                  { utxosUtxo = UTxO utxoKeep
+                  , utxosFees = utxosFees utxoState <> sumAllCoin utxoDel
+                  , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxoState ^. instantStakeL)
+                  }

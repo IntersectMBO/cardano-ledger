@@ -444,10 +444,9 @@ dijkstraUtxoTransition = do
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
   () <- trans @(EraRule "UTXOS" era) $ TRC ((), (), stAnnTx)
-  Babbage.updateUTxOStateByTxValidity
+  Babbage.updateUTxOState
     pp
     certState
-    (utxosGovState utxos)
     tx
     (Conway.updateTreasuryDonation tx utxos)
 
