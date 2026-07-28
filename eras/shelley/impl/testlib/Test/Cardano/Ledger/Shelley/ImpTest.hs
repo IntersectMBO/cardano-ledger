@@ -128,6 +128,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   shelleyModifyImpInitProtVer,
   modifyImpInitPostSubmitTxHook,
   disableImpInitPostSubmitTxHook,
+  withPostSubmitTxHook,
+  withDisabledPostSubmitTxHook,
   modifyImpInitPostEpochBoundaryHook,
   disableImpInitPostEpochBoundaryHook,
   disableInConformanceIt,
@@ -741,6 +743,24 @@ modifyImpInitPostSubmitTxHook f =
           impInitEnv impInit
             & itePostSubmitTxHookL .~ f
       }
+
+withPostSubmitTxHook ::
+  ( forall t.
+    Globals ->
+    TRC (EraRule "LEDGER" era) ->
+    Either
+      (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+      (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+    ImpM t ()
+  ) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withPostSubmitTxHook f = local $ itePostSubmitTxHookL .~ f
+
+withDisabledPostSubmitTxHook ::
+  ImpTestM era a ->
+  ImpTestM era a
+withDisabledPostSubmitTxHook = withPostSubmitTxHook $ \_ _ _ -> pure ()
 
 disableImpInitPostSubmitTxHook ::
   SpecWith (ImpInit (LedgerSpec era)) ->

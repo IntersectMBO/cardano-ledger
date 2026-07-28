@@ -54,9 +54,7 @@ spec ::
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
-  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
-  -- TODO: Re-enable after issue is resolved, by removing this override
-  disableInConformanceIt "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
+  it "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
     fixedTx <- fixupTx =<< setupBadPPViewHashTx
     badScriptIntegrityHash <- arbitrary
     tx <- substituteIntegrityHashAndFixWits badScriptIntegrityHash fixedTx
