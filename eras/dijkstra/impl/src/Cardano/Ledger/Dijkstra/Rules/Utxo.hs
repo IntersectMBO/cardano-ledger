@@ -124,11 +124,6 @@ data DijkstraUtxoPredFailure era
       Network
       -- | the set of addresses with incorrect network IDs
       (NonEmptySet Addr)
-  | WrongNetworkWithdrawal
-      -- | the expected network id
-      Network
-      -- | the set of reward addresses with incorrect network IDs
-      (NonEmptySet AccountAddress)
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
@@ -422,9 +417,6 @@ dijkstraUtxoTransition = do
   {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
 
-  {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
-  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
-
   {- (txnetworkid txb = NetworkId) ∨ (txnetworkid txb = ◇) -}
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
@@ -529,7 +521,6 @@ instance
       FeeTooSmallUTxO mm -> Sum FeeTooSmallUTxO 5 !> To mm
       ValueNotConservedUTxO mm -> Sum (ValueNotConservedUTxO @era) 6 !> To mm
       WrongNetwork right wrongs -> Sum (WrongNetwork @era) 7 !> To right !> To wrongs
-      WrongNetworkWithdrawal right wrongs -> Sum (WrongNetworkWithdrawal @era) 8 !> To right !> To wrongs
       OutputBootAddrAttrsTooBig outs -> Sum (OutputBootAddrAttrsTooBig @era) 9 !> To outs
       OutputTooBigUTxO outs -> Sum (OutputTooBigUTxO @era) 10 !> To outs
       InsufficientCollateral a b -> Sum InsufficientCollateral 11 !> To a !> To b
@@ -565,7 +556,6 @@ instance
     5 -> SumD FeeTooSmallUTxO <! From
     6 -> SumD ValueNotConservedUTxO <! From
     7 -> SumD WrongNetwork <! From <! From
-    8 -> SumD WrongNetworkWithdrawal <! From <! From
     9 -> SumD OutputBootAddrAttrsTooBig <! From
     10 -> SumD OutputTooBigUTxO <! From
     11 -> SumD InsufficientCollateral <! From <! From
@@ -599,7 +589,7 @@ conwayToDijkstraUtxoPredFailure = \case
   Conway.FeeTooSmallUTxO m -> FeeTooSmallUTxO m
   Conway.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Conway.WrongNetwork x y -> WrongNetwork x y
-  Conway.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
+  Conway.WrongNetworkWithdrawal _ _ -> error "Impossible: `WrongNetworkWithdrawal` for UTXO"
   Conway.OutputTooSmallUTxO _ -> error "Impossible: `OutputTooSmallUTxO` for UTXO"
   Conway.UtxosFailure x -> UtxosFailure x
   Conway.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
