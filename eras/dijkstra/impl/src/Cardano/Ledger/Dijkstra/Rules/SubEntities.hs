@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,16 +16,30 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Rules.SubEntities (
+  SubEntitiesEnv (..),
   SubEntitiesPredFailure (..),
   SubEntitiesEvent (..),
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
-import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (
+  EpochNo,
+  Globals (networkId),
+  Mismatch (..),
+  Relation (..),
+  ShelleyBase,
+  StrictMaybe,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (
+  Committee,
+  GovActionPurpose (..),
+  GovActionState,
+  GovPurposeId,
+ )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, SUBCERTS, SUBENTITIES)
@@ -41,8 +56,48 @@ import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
+import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro
+
+data SubEntitiesEnv era = SubEntitiesEnv
+  { seeCurrentEpoch :: EpochNo
+  , seePParams :: PParams era
+  , seeCurrentCommittee :: StrictMaybe (Committee era)
+  , seeCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+  , seeOriginalAccounts :: Accounts era
+  }
+  deriving (Generic)
+
+deriving instance
+  (EraPParams era, Eq (Committee era), Eq (GovActionState era), Eq (Accounts era)) =>
+  Eq (SubEntitiesEnv era)
+
+deriving instance
+  (EraPParams era, Show (Committee era), Show (GovActionState era), Show (Accounts era)) =>
+  Show (SubEntitiesEnv era)
+
+instance
+  (EraPParams era, NFData (Committee era), NFData (GovActionState era), NFData (Accounts era)) =>
+  NFData (SubEntitiesEnv era)
+
+instance
+  ( EraPParams era
+  , EncCBOR (Committee era)
+  , EncCBOR (GovActionState era)
+  , EncCBOR (Accounts era)
+  ) =>
+  EncCBOR (SubEntitiesEnv era)
+  where
+  encCBOR x@(SubEntitiesEnv _ _ _ _ _) =
+    let SubEntitiesEnv {..} = x
+     in encode $
+          Rec SubEntitiesEnv
+            !> To seeCurrentEpoch
+            !> To seePParams
+            !> To seeCurrentCommittee
+            !> To seeCommitteeProposals
+            !> To seeOriginalAccounts
 
 data SubEntitiesPredFailure era
   = SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
@@ -124,8 +179,8 @@ instance
   STS (SUBENTITIES era)
   where
   type State (SUBENTITIES era) = CertState era
-  type Signal (SUBENTITIES era) = Seq (TxCert era)
-  type Environment (SUBENTITIES era) = SubCertsEnv era
+  type Signal (SUBENTITIES era) = Tx SubTx era
+  type Environment (SUBENTITIES era) = SubEntitiesEnv era
   type BaseM (SUBENTITIES era) = ShelleyBase
   type PredicateFailure (SUBENTITIES era) = SubEntitiesPredFailure era
   type Event (SUBENTITIES era) = SubEntitiesEvent era
@@ -148,12 +203,11 @@ dijkstraSubEntitiesTransition ::
   ) =>
   TransitionRule (SUBENTITIES era)
 dijkstraSubEntitiesTransition = do
-  TRC (subCertsEnv, certState, certificates) <- judgmentContext
-  let tx = certsTx subCertsEnv
-      pp = certsPParams subCertsEnv
-      curEpoch = certsCurrentEpoch subCertsEnv
-      withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+  TRC (SubEntitiesEnv curEpoch pp committee committeeProposals _originalAccounts, certState, tx) <-
+    judgmentContext
+  let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
+      subCertsEnv = SubCertsEnv tx pp curEpoch committee committeeProposals
 
   network <- liftSTS $ asks networkId
   let (missingWithdrawals, exceededWithdrawals) =
@@ -170,7 +224,8 @@ dijkstraSubEntitiesTransition = do
           & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
           & certDStateL . accountsL %~ applyWithdrawals withdrawals
   certStateAfterSubCerts <-
-    trans @(EraRule "SUBCERTS" era) $ TRC (subCertsEnv, certStateBeforeSubCerts, certificates)
+    trans @(EraRule "SUBCERTS" era) $
+      TRC (subCertsEnv, certStateBeforeSubCerts, StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL)
 
   let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
