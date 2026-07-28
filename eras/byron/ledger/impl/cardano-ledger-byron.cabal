@@ -241,7 +241,7 @@ library
     bytestring,
     canonical-json,
     cardano-binary >=1.7.3,
-    cardano-crypto >= 1.4,
+    cardano-crypto >=1.4,
     cardano-crypto-wrapper >=1.6,
     cardano-ledger-binary >=1.8,
     cardano-prelude,

@@ -126,6 +126,7 @@
 * Remove DRep requirement for reward withdrawals
   - Remove `WdrlNotDelegatedToDRep` constructor from `EntitiesPredFailure`
   - Remove `SubWdrlNotDelegatedToDRep` constructor from `SubEntitiesPredFailure`
+* Update dependency to `cardano-crypto-leios ^>=0.1`
 
 ### cddl
 

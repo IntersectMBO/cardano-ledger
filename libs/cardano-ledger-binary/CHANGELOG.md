@@ -10,6 +10,7 @@
 * Remove default implementation for `DecCBOR` class
 * Remove `binaryGetDecoder` from exports
 * Change `decodeIPv4` and `decodeIPv6` to reject leftover bytes unconditionally, regardless of protocol version
+* Depend on `cardano-crypto-class ^>=2.6` and `cardano-crypto-leios ^>=0.1`
 
 ### `testlib`
 
