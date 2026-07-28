@@ -5,6 +5,7 @@
 * Add `TranslateEra` instance for `SnapShots`
 * Add `ApplyTick` instance for `MaryEra`
 * Add `EraForecast` and `ShelleyEraForecast` instances for `MaryEra`.
+* Updated dependency `cardano-crypto-class ^>=2.6`
 
 ### `cddl`
 

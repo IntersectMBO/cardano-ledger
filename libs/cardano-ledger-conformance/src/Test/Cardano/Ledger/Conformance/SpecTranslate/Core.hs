@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   signatureFromInteger,
 ) where
 
+import Cardano.Binary.FixedSizeCodec (rawDecodeFixedSized, rawEncodeFixedSized)
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Cardano.Ledger.Address (
@@ -157,16 +158,16 @@ instance
   toSpecRep (PParamsUpdate ppu) = toSpecRep ppu
 
 vkeyToInteger :: VKey kd -> Integer
-vkeyToInteger = toInteger . bytesToNatural . rawSerialiseVerKeyDSIGN . unVKey
+vkeyToInteger = toInteger . bytesToNatural . rawEncodeFixedSized . unVKey
 
 vkeyFromInteger :: Integer -> Maybe (VKey kd)
-vkeyFromInteger = fmap VKey . rawDeserialiseVerKeyDSIGN . naturalToBytes 32 . fromInteger
+vkeyFromInteger = fmap VKey . rawDecodeFixedSized . naturalToBytes 32 . fromInteger
 
 signatureToInteger :: DSIGNAlgorithm v => SigDSIGN v -> Integer
-signatureToInteger = toInteger . bytesToNatural . rawSerialiseSigDSIGN
+signatureToInteger = toInteger . bytesToNatural . rawEncodeFixedSized
 
 signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
-signatureFromInteger = rawDeserialiseSigDSIGN . naturalToBytes 64 . fromInteger
+signatureFromInteger = rawDecodeFixedSized . naturalToBytes 64 . fromInteger
 
 instance SpecTranslate era (VKey k) where
   type SpecRep era (VKey k) = Agda.HSVKey

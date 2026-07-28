@@ -20,6 +20,12 @@ module Cardano.Protocol.TPraos.OCert (
 ) where
 
 import Cardano.Base.Proxy (asProxy)
+import Cardano.Binary.FixedSizeCodec (
+  decodeFixedSized,
+  encodeFixedSized,
+  fixedSize,
+  rawEncodeFixedSized,
+ )
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -121,18 +127,18 @@ instance Crypto c => FromCBOR (OCert c) where
 
 encodeOCertFields :: Crypto c => OCert c -> Plain.Encoding
 encodeOCertFields ocert =
-  KES.encodeVerKeyKES (ocertVkHot ocert)
+  encodeFixedSized (ocertVkHot ocert)
     <> Plain.toCBOR (ocertN ocert)
     <> Plain.toCBOR (ocertKESPeriod ocert)
-    <> DSIGN.encodeSignedDSIGN (ocertSigma ocert)
+    <> encodeFixedSized (ocertSigma ocert)
 
 decodeOCertFields :: Crypto c => Plain.Decoder s (OCert c)
 decodeOCertFields =
   OCert
-    <$> KES.decodeVerKeyKES
+    <$> decodeFixedSized
     <*> Plain.fromCBOR
     <*> (KESPeriod <$> Plain.fromCBOR)
-    <*> DSIGN.decodeSignedDSIGN
+    <*> decodeFixedSized
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod
 kesPeriod (SlotNo s) =
@@ -149,11 +155,11 @@ instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.verKeySizeKES (Proxy @(KES c))
+          fixedSize (Proxy @(KES.VerKeyKES (KES c)))
             + 8
             + 8
       )
-      $ BS.byteStringCopy (KES.rawSerialiseVerKeyKES vk)
+      $ BS.byteStringCopy (rawEncodeFixedSized vk)
         <> BS.word64BE counter
         <> BS.word64BE (fromIntegral $ unKESPeriod period)
 

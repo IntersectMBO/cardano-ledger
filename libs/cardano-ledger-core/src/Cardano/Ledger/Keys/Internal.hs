@@ -28,6 +28,7 @@ module Cardano.Ledger.Keys.Internal (
   encodeSignedDSIGN,
 ) where
 
+import Cardano.Binary.FixedSizeCodec (decodeFixedSized, encodeFixedSized)
 import Cardano.Crypto.DSIGN hiding (
   decodeSignedDSIGN,
   encodeSignedDSIGN,
@@ -120,11 +121,11 @@ deriving via Quiet (VKey kd) instance Show (VKey kd)
 instance HasKeyRole VKey
 
 instance Typeable kd => FromCBOR (VKey kd) where
-  fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
+  fromCBOR = VKey <$> decodeFixedSized
   {-# INLINE fromCBOR #-}
 
 instance Typeable kd => ToCBOR (VKey kd) where
-  toCBOR = DSIGN.encodeVerKeyDSIGN . unVKey
+  toCBOR = encodeFixedSized . unVKey
 
 -- | Produce a digital signature
 signedDSIGN ::

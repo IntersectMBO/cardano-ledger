@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
   module Test.Cardano.Ledger.Conway.TreeDiff,
 ) where
 
-import Cardano.Crypto.DSIGN (rawSerialiseSigDSIGN)
+import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
 import Cardano.Crypto.Leios (LeiosCert (..), encodeBitField)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
@@ -144,7 +144,7 @@ instance ToExpr LeiosCert where
     Rec "LeiosCert" $
       OMap.fromList
         [ ("leiosCertSigners", toExpr . HexBytes . serialize' $ encodeBitField leiosCertSigners)
-        , ("leiosCertSignature", toExpr . HexBytes $ rawSerialiseSigDSIGN leiosCertSignature)
+        , ("leiosCertSignature", toExpr . HexBytes $ rawEncodeFixedSized leiosCertSignature)
         ]
 
 instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)

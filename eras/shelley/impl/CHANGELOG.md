@@ -117,6 +117,7 @@
 * Add `ToJSON` and `FromJSON` instances for `MultiSig era`
 * Export `shelleyBasedEraNativeScriptToJSON` and `shelleyBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Shelley.Scripts`
 * Change `shelleyBasedEraNativeScriptToJSON` to accept a `(NativeScript era -> Aeson.Object)` continuation as its first argument for recursive child serialisation
+* Depend on `cardano-crypto-class ^>=2.6`
 
 ### `cddl`
 

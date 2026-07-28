@@ -86,6 +86,7 @@ module Cardano.Ledger.Hashes (
   standardAddrHashSize,
 ) where
 
+import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashSize)
 import qualified Cardano.Crypto.Hash as Hash
@@ -192,7 +193,7 @@ hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 hashTxBodySignature ::
   DSIGN.SignedDSIGN DSIGN (Hash.Hash HASH EraIndependentTxBody) ->
   Hash.Hash HASH (DSIGN.SignedDSIGN DSIGN (Hash.Hash HASH EraIndependentTxBody))
-hashTxBodySignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN.rawSerialiseSigDSIGN sigDSIGN
+hashTxBodySignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith rawEncodeFixedSized sigDSIGN
 {-# INLINE hashTxBodySignature #-}
 
 --------------------------------------------------------------------------------

@@ -89,7 +89,7 @@ library
     bytestring,
     cardano-base:testlib,
     cardano-crypto,
-    cardano-crypto-class >=2.3,
+    cardano-crypto-class ^>=2.6,
     cardano-crypto-wrapper,
     cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
