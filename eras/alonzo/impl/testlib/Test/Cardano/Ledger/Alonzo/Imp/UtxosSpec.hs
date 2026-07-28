@@ -181,7 +181,9 @@ spec = describe "UTXOS" $ do
           let tx = mkBasicTx mkBasicTxBody & isPhase2ValidTxL .~ Phase2Invalid
           submitFailingTx tx [injectFailure (ValidationTagMismatch Phase2Invalid PassedUnexpectedly)]
 
-        it "Invalid transaction marked as valid" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "Invalid transaction marked as valid" $ do
           txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum slang
           submitPhase2Invalid_ $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 

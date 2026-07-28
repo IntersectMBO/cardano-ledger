@@ -6,6 +6,8 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
+import Test.Cardano.Ledger.Babbage.Imp.UtxosSpec qualified as BabbageUTXOS
 import Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify qualified as RatifySpec
 import Test.Cardano.Ledger.Conformance.Imp.Core
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as BBODY
@@ -41,6 +43,8 @@ spec = do
             RATIFY.spec
             UTXO.spec
             UTXOW.spec
+            AlonzoUTXOS.spec
+            BabbageUTXOS.spec
             UTXOS.spec
   describe "Imp (only spec)" $ do
     RatifySpec.spec

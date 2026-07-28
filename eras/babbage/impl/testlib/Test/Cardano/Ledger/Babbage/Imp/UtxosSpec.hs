@@ -147,7 +147,9 @@ spec = describe "UTXOS" $ do
             & bodyTxL . inputsTxBodyL .~ [txIn]
             & bodyTxL . referenceInputsTxBodyL .~ [txIn]
 
-  it "Incorrect collateral total" $ do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/724
+  -- TODO: Re-enable after issues are resolved, by removing this override
+  disableInConformanceIt "Incorrect collateral total" $ do
     let
       scriptHash = withSLanguage PlutusV2 (hashPlutusScript . alwaysSucceedsWithDatum)
       txOut =
