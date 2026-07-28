@@ -18,6 +18,7 @@ library
   exposed-modules:
     Cardano.Ledger.Binary
     Cardano.Ledger.Binary.Coders
+    Cardano.Ledger.Binary.Crypto
     Cardano.Ledger.Binary.Decoding
     Cardano.Ledger.Binary.Encoding
     Cardano.Ledger.Binary.FlatTerm
