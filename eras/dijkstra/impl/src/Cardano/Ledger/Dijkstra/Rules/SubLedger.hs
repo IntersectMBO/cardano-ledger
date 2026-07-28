@@ -375,7 +375,7 @@ conwayToDijkstraSubLedgerPredFailure = \case
   Conway.ConwayCertsFailure f -> SubEntitiesFailure (injectFailure @"SUBENTITIES" f)
   Conway.ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
   Conway.ConwayWdrlNotDelegatedToDRep _ -> error "Impossible: `ConwayWdrlNotDelegatedToDRep` for SUBLEDGER"
-  Conway.ConwayWithdrawalsMissingAccounts x -> SubEntitiesFailure (SubWithdrawalsMissingAccounts x)
+  Conway.ConwayWithdrawalsMissingAccounts x -> SubEntitiesFailure (SubMissingAccountsInWithdrawals x)
   Conway.ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
   Conway.ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
   Conway.ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"

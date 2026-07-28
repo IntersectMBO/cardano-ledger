@@ -109,15 +109,15 @@ instance
 
 data SubEntitiesPredFailure era
   = SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
-  | SubWithdrawalsMissingAccounts Withdrawals
-  | SubWithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
-  | SubDirectDepositsToMissingAccounts DirectDeposits
-  | SubWrongNetworkWithdrawal
+  | SubMissingAccountsInWithdrawals Withdrawals
+  | SubExceededBalancesInWithdrawals (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | SubMissingAccountsInDirectDeposits DirectDeposits
+  | SubWrongNetworkInWithdrawals
       -- | Expected network id
       Network
       -- | Withdrawal accounts with wrong network id
       (NonEmptySet AccountAddress)
-  | SubWrongNetworkInDirectDeposit
+  | SubWrongNetworkInDirectDeposits
       -- | Expected network id
       Network
       -- | Direct-deposit accounts with wrong network id
@@ -143,11 +143,11 @@ instance
   encCBOR =
     encode . \case
       SubCertsFailure x -> Sum (SubCertsFailure @era) 0 !> To x
-      SubWithdrawalsMissingAccounts x -> Sum (SubWithdrawalsMissingAccounts @era) 1 !> To x
-      SubWithdrawalAmountsExceedAccountBalances x -> Sum (SubWithdrawalAmountsExceedAccountBalances @era) 2 !> To x
-      SubDirectDepositsToMissingAccounts x -> Sum (SubDirectDepositsToMissingAccounts @era) 3 !> To x
-      SubWrongNetworkWithdrawal expected wrongs -> Sum (SubWrongNetworkWithdrawal @era) 4 !> To expected !> To wrongs
-      SubWrongNetworkInDirectDeposit expected wrongs -> Sum (SubWrongNetworkInDirectDeposit @era) 5 !> To expected !> To wrongs
+      SubMissingAccountsInWithdrawals x -> Sum (SubMissingAccountsInWithdrawals @era) 1 !> To x
+      SubExceededBalancesInWithdrawals x -> Sum (SubExceededBalancesInWithdrawals @era) 2 !> To x
+      SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 3 !> To x
+      SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 4 !> To expected !> To wrongs
+      SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 5 !> To expected !> To wrongs
 
 instance
   ( Era era
@@ -157,11 +157,11 @@ instance
   where
   decCBOR = decode . Summands "SubEntitiesPredFailure" $ \case
     0 -> SumD SubCertsFailure <! From
-    1 -> SumD SubWithdrawalsMissingAccounts <! From
-    2 -> SumD SubWithdrawalAmountsExceedAccountBalances <! From
-    3 -> SumD SubDirectDepositsToMissingAccounts <! From
-    4 -> SumD SubWrongNetworkWithdrawal <! From <! From
-    5 -> SumD SubWrongNetworkInDirectDeposit <! From <! From
+    1 -> SumD SubMissingAccountsInWithdrawals <! From
+    2 -> SumD SubExceededBalancesInWithdrawals <! From
+    3 -> SumD SubMissingAccountsInDirectDeposits <! From
+    4 -> SumD SubWrongNetworkInWithdrawals <! From <! From
+    5 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -254,8 +254,8 @@ dijkstraSubEntitiesTransition = do
           Nothing -> (Map.empty, Map.empty)
           Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
   failOnNonEmptyMap missingWithdrawals $
-    injectFailure . SubWithdrawalsMissingAccounts . Withdrawals . NEM.toMap
-  failOnNonEmptyMap exceededWithdrawals $ injectFailure . SubWithdrawalAmountsExceedAccountBalances
+    injectFailure . SubMissingAccountsInWithdrawals . Withdrawals . NEM.toMap
+  failOnNonEmptyMap exceededWithdrawals $ injectFailure . SubExceededBalancesInWithdrawals
 
   let certStateBeforeSubCerts =
         certState
@@ -269,7 +269,7 @@ dijkstraSubEntitiesTransition = do
   let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
   failOnJust (directDepositsMissingAccounts directDeposits accountsAfterSubCerts) $
-    injectFailure . SubDirectDepositsToMissingAccounts
+    injectFailure . SubMissingAccountsInDirectDeposits
 
   pure $ certStateAfterSubCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
 
@@ -291,13 +291,13 @@ conwayToDijkstraSubEntitiesPredFailure = \case
 entitiesToSubEntitiesPredFailure ::
   EntitiesPredFailure era -> SubEntitiesPredFailure era
 entitiesToSubEntitiesPredFailure = \case
-  WrongNetworkWithdrawal net addrs -> SubWrongNetworkWithdrawal net addrs
-  WrongNetworkInDirectDeposit net addrs -> SubWrongNetworkInDirectDeposit net addrs
+  WrongNetworkInWithdrawals net addrs -> SubWrongNetworkInWithdrawals net addrs
+  WrongNetworkInDirectDeposits net addrs -> SubWrongNetworkInDirectDeposits net addrs
   CertsFailure _ -> impossible "CertsFailure"
-  WithdrawalsMissingAccounts _ -> impossible "WithdrawalsMissingAccounts"
+  MissingAccountsInWithdrawals _ -> impossible "MissingAccountsInWithdrawals"
   IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
-  WithdrawalAmountsExceedAccountBalances _ -> impossible "WithdrawalAmountsExceedAccountBalances"
-  DirectDepositsToMissingAccounts _ -> impossible "DirectDepositsToMissingAccounts"
+  ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
+  MissingAccountsInDirectDeposits _ -> impossible "MissingAccountsInDirectDeposits"
   where
     impossible name = error $ "Impossible: `" <> name <> "` for SUBENTITIES"
 
