@@ -25,6 +25,8 @@ module Cardano.Ledger.Dijkstra.Tx (
   DijkstraStAnnTx (..),
   validateDijkstraNativeScript,
   decodeDijkstraTopTx,
+  decodeDijkstraTopTxInBlock,
+  toCBORForBlockInclusion,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
@@ -134,21 +136,23 @@ instance (EraTx era, Typeable l) => ToCBOR (DijkstraTx l era) where
 instance EraTx era => EncCBOR (DijkstraTx l era) where
   encCBOR = toCBORForMempoolSubmission
 
-decodeDijkstraTopTx :: EraTx era => Bool -> Decoder s (Annotator (DijkstraTx TopTx era))
-decodeDijkstraTopTx allowIsPhase2Valid =
+-- | Decode a top-level transaction in the mempool format:
+-- @[transaction_body, transaction_witness_set, auxiliary_data\/ nil]@. For
+-- backwards compatibility the legacy
+-- @[transaction_body, transaction_witness_set, true, auxiliary_data\/ nil]@
+-- format is also accepted, but only with the `IsPhase2Valid` flag set to `True`.
+decodeDijkstraTopTx :: EraTx era => Decoder s (Annotator (DijkstraTx TopTx era))
+decodeDijkstraTopTx =
   fmap snd $ decodeRecordNamed "DijkstraTx" fst $ do
     bodyAnn <- decCBOR
     witsAnn <- decCBOR
     isValidFlagSupplied <-
-      if allowIsPhase2Valid
-        then
-          peekTokenType >>= \case
-            TypeBool ->
-              decCBOR >>= \case
-                True -> pure True
-                False -> fail "Value `false` not allowed for `isPhase2Valid`"
-            _ -> pure False
-        else pure False
+      peekTokenType >>= \case
+        TypeBool ->
+          decCBOR >>= \case
+            True -> pure True
+            False -> fail "Value `false` not allowed for `isPhase2Valid`"
+        _ -> pure False
     auxAnn <- decodeNullStrictMaybe decCBOR
     let
       -- `isValid == False` can no longer be supplied in an encoded transaction.
@@ -156,9 +160,22 @@ decodeDijkstraTopTx allowIsPhase2Valid =
         DijkstraTx <$> bodyAnn <*> witsAnn <*> pure Phase2Valid <*> sequence auxAnn
     pure (if isValidFlagSupplied then 4 else 3, dijkstraTopTx)
 
+-- | Decode a top-level transaction in the format used inside a block body:
+-- @[transaction_body, transaction_witness_set, auxiliary_data\/ nil, is_valid]@.
+-- Unlike in the mempool format, the trailing `IsPhase2Valid` flag is mandatory
+-- and can be `False`, since it is set by the block producer.
+decodeDijkstraTopTxInBlock :: EraTx era => Decoder s (Annotator (DijkstraTx TopTx era))
+decodeDijkstraTopTxInBlock =
+  decodeRecordNamed "DijkstraTx" (const 4) $ do
+    bodyAnn <- decCBOR
+    witsAnn <- decCBOR
+    auxAnn <- decodeNullStrictMaybe decCBOR
+    isPhase2Valid <- decCBOR
+    pure $ DijkstraTx <$> bodyAnn <*> witsAnn <*> pure isPhase2Valid <*> sequence auxAnn
+
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
   decCBOR = withSTxBothLevels @l $ \case
-    STopTx -> decodeDijkstraTopTx True
+    STopTx -> decodeDijkstraTopTx
     SSubTx ->
       decodeRecordNamed "DijkstraSubTx" (const 3) $ do
         body <- decCBOR
@@ -337,7 +354,15 @@ validateDijkstraNativeScript tx =
 {-# INLINEABLE validateDijkstraNativeScript #-}
 
 --------------------------------------------------------------------------------
--- Mempool Serialisation
+-- Serialisation
+--
+-- A top-level transaction has two wire formats:
+-- - the mempool format @[body, wits, aux_data/ nil]@, used for transmission
+--   from node to node or from wallet to node, which omits the `IsPhase2Valid`
+--   flag ('toCBORForMempoolSubmission'), and
+-- - the block format @[body, wits, aux_data/ nil, is_valid]@, used for
+--   transactions inside a block body, where the trailing `IsPhase2Valid` flag
+--   is set by the block producer ('toCBORForBlockInclusion').
 --
 -- We do not store the Tx bytes for the following reasons:
 -- - A Tx serialised in this way never forms part of any hashed structure, hence
@@ -352,9 +377,10 @@ validateDijkstraNativeScript tx =
 -- wallet to node.
 --
 -- Note that this serialisation is neither the serialisation used on-chain
--- (where Txs are deconstructed using segwit), nor the serialisation used for
--- computing the transaction size (which omits the `IsPhase2Valid` field for
--- compatibility with Mary - see 'toCBORForSizeComputation').
+-- (which includes the `IsPhase2Valid` flag as the last element - see
+-- 'toCBORForBlockInclusion'), nor the serialisation used for computing the
+-- transaction size (which omits the `IsPhase2Valid` field for compatibility
+-- with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
   ( EncCBOR (TxBody l era)
   , EncCBOR (TxWits era)
@@ -376,6 +402,19 @@ toCBORForMempoolSubmission = \case
         !> To dstBody
         !> To dstWits
         !> E (encodeNullStrictMaybe encCBOR) dstAuxData
+
+-- | Encode to CBOR in the format used inside a block body:
+-- @[transaction_body, transaction_witness_set, auxiliary_data\/ nil, is_valid]@.
+--
+-- The `IsPhase2Valid` flag is placed after the fields supplied by the
+-- transaction author, since it is set by the block producer.
+toCBORForBlockInclusion :: AlonzoEraTx era => Tx TopTx era -> Encoding
+toCBORForBlockInclusion tx =
+  encodeListLen 4
+    <> encCBOR (tx ^. bodyTxL)
+    <> encCBOR (tx ^. witsTxL)
+    <> encodeNullStrictMaybe encCBOR (tx ^. auxDataTxL)
+    <> encCBOR (tx ^. isPhase2ValidTxL)
 
 data DijkstraStAnnTx l era where
   DijkstraStAnnTopTx ::

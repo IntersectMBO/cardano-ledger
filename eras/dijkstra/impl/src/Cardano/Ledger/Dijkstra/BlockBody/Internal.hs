@@ -29,7 +29,6 @@
 module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   DijkstraBlockBody (DijkstraBlockBody, MkDijkstraBlockBody),
   DijkstraBlockBodyRaw (..),
-  alignedValidFlags,
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
   PerasCert (..),
@@ -38,26 +37,29 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR,
-  decodeNonEmptySetLikeEnforceNoDuplicates,
-  decodeNullMaybe,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeSeq,
   encCBOR,
+  encodeFoldableEncoder,
   encodeListLen,
-  encodeNullMaybe,
   encodeNullStrictMaybe,
   serialize',
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
+import Cardano.Ledger.Dijkstra.Tx (
+  DijkstraTx,
+  Tx (..),
+  decodeDijkstraTopTxInBlock,
+  toCBORForBlockInclusion,
+ )
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
@@ -71,20 +73,13 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_, unless)
 import Data.Array.Byte (ByteArray)
 import qualified Data.ByteString as BS
 import Data.Coerce (Coercible, coerce)
-import Data.Foldable (Foldable (..))
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IntSet
 import Data.Maybe.Strict (StrictMaybe (..))
-import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set.NonEmpty as NonEmptySet
 import Data.Typeable (Typeable)
-import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -95,8 +90,11 @@ import NoThunks.Class (NoThunks)
 --
 -- * BlockBody
 --
--- BlockBody provides an alternate way of formatting transactions in a block, in
--- order to support segregated witnessing.
+-- Unlike in the previous eras, transactions in a Dijkstra block body are not
+-- deconstructed into segregated components. Each transaction is serialized
+-- whole, as @[transaction_body, transaction_witness_set, auxiliary_data\/ nil,
+-- is_valid]@, with the block-producer-supplied `IsPhase2Valid` flag as the
+-- trailing element.
 
 data DijkstraBlockBodyRaw era = DijkstraBlockBodyRaw
   { dbbrTxs :: !(StrictSeq (Tx TopTx era))
@@ -181,22 +179,12 @@ pattern DijkstraBlockBody txs mbLeiosCert mbPerasCert <-
 -- Serialisation and hashing
 --------------------------------------------------------------------------------
 
-instance
-  ( AlonzoEraTx era
-  , EncCBOR (Tx TopTx era)
-  ) =>
-  EncCBOR (DijkstraBlockBodyRaw era)
-  where
+instance AlonzoEraTx era => EncCBOR (DijkstraBlockBodyRaw era) where
   encCBOR (DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert) =
-    encodeListLen 4
-      <> encodeNullMaybe encCBOR invalidIndices
-      <> encCBOR txs
+    encodeListLen 3
+      <> encodeFoldableEncoder toCBORForBlockInclusion txs
       <> encodeNullStrictMaybe encCBOR mbLeiosCert
       <> encodeNullStrictMaybe encCBOR mbPerasCert
-    where
-      invalidIndices =
-        NonEmptySet.fromFoldable $
-          StrictSeq.findIndicesL (\tx -> tx ^. isPhase2ValidTxL == Phase2Invalid) txs
 
 instance
   ( AlonzoEraTx era
@@ -207,31 +195,13 @@ instance
   ) =>
   DecCBOR (Annotator (DijkstraBlockBodyRaw era))
   where
-  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
-    let
-      decodeInvalidTxs =
-        decodeNonEmptySetLikeEnforceNoDuplicates
-          (IntSet.insert . fromIntegral @Word16 @Int)
-          (\x -> (IntSet.size x, x))
-          (decCBOR @Word16)
-
-    invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
-    txs <- decodeSeq (decodeDijkstraTopTx @era False)
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
+    txs <- decodeSeq (decodeDijkstraTopTxInBlock @era)
     mbLeiosCert <- decodeNullStrictMaybe decCBOR
     mbPerasCert <- decodeNullStrictMaybe decCBOR
-
-    let txsLength = Seq.length txs
-        inRange x = 0 <= x && x < txsLength
-    forM_ (IntSet.toList invalidTxs) $ \i ->
-      unless (inRange i) . fail $
-        "index is out of range: " <> show i
-    let
-      setValidityFlag tx isPhase2Valid = set isPhase2ValidTxL isPhase2Valid <$> tx
-      validityFlags = alignedValidFlags txsLength invalidTxs
-      txsWithIsPhase2Valid = Seq.zipWith setValidityFlag (coerce txs) validityFlags
     pure $
       DijkstraBlockBodyRaw
-        <$> sequenceA (StrictSeq.forceToStrict txsWithIsPhase2Valid)
+        <$> sequenceA (StrictSeq.forceToStrict (coerce txs))
         <*> pure mbLeiosCert
         <*> pure mbPerasCert
 
@@ -245,18 +215,6 @@ deriving via
     , DecCBOR (Annotator (TxWits era))
     ) =>
     DecCBOR (Annotator (DijkstraBlockBody era))
-
---------------------------------------------------------------------------------
--- Internal utility functions
---------------------------------------------------------------------------------
-
--- | Given the number of transactions, and the set of indices for which these
--- transactions do not validate, create an aligned sequence of `IsPhase2Valid`
--- flags.
-alignedValidFlags :: Int -> IntSet -> Seq.Seq IsPhase2Valid
-alignedValidFlags n invalidSet =
-  Seq.fromFunction n $ \i ->
-    if i `IntSet.notMember` invalidSet then Phase2Valid else Phase2Invalid
 
 -- | Placeholder for Peras certificates
 --
