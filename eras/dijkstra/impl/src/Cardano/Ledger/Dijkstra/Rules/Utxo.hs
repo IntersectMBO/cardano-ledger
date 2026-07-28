@@ -20,10 +20,8 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
-  validateWrongNetworkInDirectDeposit,
 ) where
 
-import Cardano.Ledger.Address (DirectDeposits (..))
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
@@ -78,7 +76,6 @@ import Control.State.Transition.Extended (
   TRC (..),
   TransitionRule,
   failureOnNonEmptyMap,
-  failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
   trans,
@@ -160,11 +157,6 @@ data DijkstraUtxoPredFailure era
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
   | PtrPresentInCollateralReturn (TxOut era)
-  | WrongNetworkInDirectDeposit
-      -- | the expected network id
-      Network
-      -- | the set of account addresses with incorrect network IDs
-      (NonEmptySet AccountAddress)
   | -- | Total withdrawals per account that exceed the original account balance
     WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   deriving (Generic)
@@ -299,20 +291,6 @@ validateBatchCollateral pp tx (UTxO utxo) =
       hasRedeemers t || any hasRedeemers (t ^. bodyTxL . subTransactionsTxBodyL)
     hasRedeemers = not . null . (^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
-validateWrongNetworkInDirectDeposit ::
-  DijkstraEraTxBody era =>
-  Network ->
-  TxBody t era ->
-  Test (DijkstraUtxoPredFailure era)
-validateWrongNetworkInDirectDeposit netId txb =
-  failureOnNonEmptySet depositsWrongNetwork (WrongNetworkInDirectDeposit netId)
-  where
-    depositsWrongNetwork =
-      Map.keysSet $
-        Map.filterWithKey
-          (\a _ -> aaNetworkId a /= netId)
-          (unDirectDeposits $ txb ^. directDepositsTxBodyL)
-
 -- | Ensure that value consumed and produced matches up exactly,  aggregated across the entire batch
 -- (top-level transaction and all its sub-transactions).
 --
@@ -421,7 +399,6 @@ dijkstraUtxoTransition = do
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
   {- direct deposit network IDs -}
-  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId txBody
 
   {- no Ptr in collateral return -}
   validateNoPtrInCollateralReturn txBody
@@ -535,7 +512,6 @@ instance
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 20 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
-      WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
 
 instance
@@ -570,7 +546,6 @@ instance
     20 -> SumD BabbageOutputTooSmallUTxO <! From
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
-    23 -> SumD WrongNetworkInDirectDeposit <! From <! From
     24 -> SumD WithdrawalsExceedAccountBalance <! From
     n -> Invalid n
 

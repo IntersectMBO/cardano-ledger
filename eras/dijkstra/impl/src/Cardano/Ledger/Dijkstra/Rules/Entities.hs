@@ -18,6 +18,7 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesEnv (..),
   EntitiesPredFailure (..),
   EntitiesEvent (..),
+  validateWrongNetworkInDirectDeposit,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -39,7 +40,7 @@ import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
-import Cardano.Ledger.Rules.ValidationMode (runTest)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -103,6 +104,11 @@ data EntitiesPredFailure era
       Network
       -- | Withdrawal accounts with wrong network id
       (NonEmptySet AccountAddress)
+  | WrongNetworkInDirectDeposit
+      -- | Expected network id
+      Network
+      -- | Direct-deposit accounts with wrong network id
+      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -129,6 +135,7 @@ instance
       WithdrawalAmountsExceedAccountBalances x -> Sum (WithdrawalAmountsExceedAccountBalances @era) 3 !> To x
       DirectDepositsToMissingAccounts x -> Sum (DirectDepositsToMissingAccounts @era) 4 !> To x
       WrongNetworkWithdrawal x y -> Sum (WrongNetworkWithdrawal @era) 5 !> To x !> To y
+      WrongNetworkInDirectDeposit x y -> Sum (WrongNetworkInDirectDeposit @era) 6 !> To x !> To y
 
 instance
   ( Era era
@@ -143,6 +150,7 @@ instance
     3 -> SumD WithdrawalAmountsExceedAccountBalances <! From
     4 -> SumD DirectDepositsToMissingAccounts <! From
     5 -> SumD WrongNetworkWithdrawal <! From <! From
+    6 -> SumD WrongNetworkInDirectDeposit <! From <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
@@ -236,6 +244,7 @@ dijkstraEntitiesTransition = do
   network <- liftSTS $ asks networkId
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
+  runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
 
   validateWithdrawals legacyMode network withdrawals accounts
 
@@ -254,6 +263,20 @@ dijkstraEntitiesTransition = do
     injectFailure . DirectDepositsToMissingAccounts
 
   pure $ certStateAfterCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
+
+validateWrongNetworkInDirectDeposit ::
+  DijkstraEraTxBody era =>
+  Network ->
+  TxBody t era ->
+  Test (EntitiesPredFailure era)
+validateWrongNetworkInDirectDeposit netId txb =
+  failureOnNonEmptySet depositsWrongNetwork (WrongNetworkInDirectDeposit netId)
+  where
+    depositsWrongNetwork =
+      Map.keysSet $
+        Map.filterWithKey
+          (\a _ -> aaNetworkId a /= netId)
+          (unDirectDeposits $ txb ^. directDepositsTxBodyL)
 
 validateWithdrawals ::
   EraAccounts era =>
