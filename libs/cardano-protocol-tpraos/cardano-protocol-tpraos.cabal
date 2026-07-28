@@ -98,6 +98,7 @@ library testlib
     base,
     bytestring,
     cardano-base:{cardano-base, testlib} >=0.1.5.0,
+    cardano-binary,
     cardano-crypto-class:{cardano-crypto-class, testlib},
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},

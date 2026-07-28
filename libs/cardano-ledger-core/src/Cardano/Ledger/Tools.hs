@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | This is a module that contains functionality that is not necessary for ledger
 -- operation, but is useful for testing as well as for downstream users of ledger
@@ -25,8 +26,9 @@ module Cardano.Ledger.Tools (
 ) where
 
 import Cardano.Base.Bytes (byteArrayFromByteString)
+import Cardano.Binary.FixedSizeCodec (fixedSize)
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN.Class (sigSizeDSIGN, verKeySizeDSIGN)
+import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
@@ -251,8 +253,6 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
     & (witsTxL . addrTxWitsL <>~ dummyKeyWits)
     & (witsTxL . bootAddrTxWitsL <>~ dummyByronKeyWits)
   where
-    dsign :: Proxy DSIGN
-    dsign = Proxy
     version = pvMajor (pp ^. ppProtocolVersionL)
     -- We need to make sure that dummies are unique, since they'll be placed into a Set
     mkDummy name n =
@@ -262,10 +262,10 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
         . decodeFull' version
         . serialize' version
         . integralToByteStringN n
-    vKeySize = fromIntegral $ verKeySizeDSIGN dsign
+    vKeySize = fromIntegral $ fixedSize (Proxy @(VerKeyDSIGN DSIGN))
     dummyKeys = map (mkDummy "VKey" vKeySize) [0 :: Int ..]
 
-    sigSize = fromIntegral $ sigSizeDSIGN dsign
+    sigSize = fromIntegral $ fixedSize (Proxy @(SigDSIGN DSIGN))
     dummySig = mkDummy "Signature" sigSize (0 :: Int)
     dummyKeyWits =
       Set.fromList [WitVKey key dummySig | key <- take numKeyWits dummyKeys]

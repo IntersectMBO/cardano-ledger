@@ -21,6 +21,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
 ) where
 
 import qualified Cardano.Binary as Plain (Decoder)
+import Cardano.Binary.FixedSizeCodec (rawDecodeFixedSized)
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
   SigDSIGN,
@@ -538,15 +539,15 @@ instance DecCBOR (CertVRF MockVRF) where
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.Proof where
-  decCBOR = decCBOR >>= Praos.proofFromBytes
+  decCBOR = decCBOR >>= rawDecodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.SignKey where
-  decCBOR = decCBOR >>= Praos.skFromBytes
+  decCBOR = decCBOR >>= rawDecodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.VerKey where
-  decCBOR = decCBOR >>= Praos.vkFromBytes
+  decCBOR = decCBOR >>= rawDecodeFixedSized
   {-# INLINE decCBOR #-}
 
 instance DecCBOR (VerKeyVRF Praos.PraosVRF) where

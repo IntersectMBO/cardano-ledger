@@ -25,6 +25,7 @@ module Cardano.Ledger.Binary.Encoding.EncCBOR (
   toByronCBOR,
 ) where
 
+import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
   SigDSIGN,
@@ -409,13 +410,13 @@ instance VRFAlgorithm v => EncCBOR (CertifiedVRF v a) where
       <> encodeCertVRF (certifiedProof cvrf)
 
 instance EncCBOR Praos.Proof where
-  encCBOR = encCBOR . Praos.proofBytes
+  encCBOR = encCBOR . rawEncodeFixedSized
 
 instance EncCBOR Praos.SignKey where
-  encCBOR = encCBOR . Praos.skBytes
+  encCBOR = encCBOR . rawEncodeFixedSized
 
 instance EncCBOR Praos.VerKey where
-  encCBOR = encCBOR . Praos.vkBytes
+  encCBOR = encCBOR . rawEncodeFixedSized
 
 deriving instance EncCBOR (VerKeyVRF Praos.PraosVRF)
 

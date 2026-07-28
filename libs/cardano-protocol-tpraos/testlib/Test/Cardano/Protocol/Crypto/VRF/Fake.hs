@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -20,6 +21,7 @@ module Test.Cardano.Protocol.Crypto.VRF.Fake (
 ) where
 
 import Cardano.Base.Bytes (byteArrayFromByteString, splitsAt)
+import Cardano.Binary.FixedSizeCodec (FixedSizeCodec (..))
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
@@ -125,37 +127,39 @@ instance VRFAlgorithm FakeVRF where
       (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
       recomputedProof = fromIntegral . byteArrayToNatural $ recomputedProofBytes
 
-  sizeVerKeyVRF _ = 8
-  sizeSignKeyVRF _ = 8
-  sizeCertVRF _ = 26
   sizeOutputVRF _ = hashSize (Proxy :: Proxy Blake2b_224)
 
-  rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseCertVRF (CertFakeVRF k s v) =
+instance FixedSizeCodec (VerKeyVRF FakeVRF) where
+  type FixedSize (VerKeyVRF FakeVRF) = 8
+  rawEncodeFixedSized (VerKeyFakeVRF k) = writeBinaryWord64 k
+  rawDecodeFixedSized bs
+    | [kb] <- splitsAt [8] bs
+    , let k = readBinaryWord64 kb =
+        pure $! VerKeyFakeVRF k
+    | otherwise =
+        fail "VerKeyVRF FakeVRF: wrong length"
+
+instance FixedSizeCodec (SignKeyVRF FakeVRF) where
+  type FixedSize (SignKeyVRF FakeVRF) = 8
+  rawEncodeFixedSized (SignKeyFakeVRF k) = writeBinaryWord64 k
+  rawDecodeFixedSized bs
+    | [kb] <- splitsAt [8] bs
+    , let k = readBinaryWord64 kb =
+        pure $! SignKeyFakeVRF k
+    | otherwise =
+        fail "SignKeyVRF FakeVRF: wrong length"
+
+instance FixedSizeCodec (CertVRF FakeVRF) where
+  type FixedSize (CertVRF FakeVRF) = 26
+  rawEncodeFixedSized (CertFakeVRF k s v) =
     writeBinaryWord64 k <> writeBinaryWord16 s <> getOutputVRFBytes v
-
-  rawDeserialiseVerKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        Just $! VerKeyFakeVRF k
-    | otherwise =
-        Nothing
-
-  rawDeserialiseSignKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        Just $! SignKeyFakeVRF k
-    | otherwise =
-        Nothing
-
-  rawDeserialiseCertVRF bs
+  rawDecodeFixedSized bs
     | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
     , let k = readBinaryWord64 kb
     , let s = readBinaryWord16 smb =
-        Just $! CertFakeVRF k s (OutputVRF $ byteArrayFromByteString xs)
+        pure $! CertFakeVRF k s (OutputVRF $ byteArrayFromByteString xs)
     | otherwise =
-        Nothing
+        fail "CertVRF FakeVRF: wrong length"
 
 evalFakeVRF ::
   SneakilyContainResult a =>
