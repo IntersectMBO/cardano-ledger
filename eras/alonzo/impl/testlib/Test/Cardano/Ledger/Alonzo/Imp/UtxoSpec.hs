@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,9 +18,11 @@ import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Metadata as M
 import Cardano.Ledger.Plutus (Data (..), ExUnits (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.Monad (forM)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro (to, (%~), (&), (.~), (<>~), (^.))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -34,6 +37,28 @@ spec = describe "UTXO" $ do
       [ injectFailure $
           WrongNetworkInTxBody Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
       ]
+
+  it "Collateral input not in UTxO" $ do
+    let neverSubmittedTx = mkBasicTx mkBasicTxBody :: Tx TopTx era
+        bogusCollateralTxIn = mkTxInPartial (txIdTx neverSubmittedTx) 0
+        tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . collateralInputsTxBodyL .~ [bogusCollateralTxIn]
+    submitFailingTx
+      tx
+      [injectFailure $ BadInputsUTxO (NES.singleton bogusCollateralTxIn)]
+
+  it "Collateral input already spent" $ do
+    addr <- freshKeyAddr_
+    spentTxIn <- sendCoinTo addr (Coin 10_000_000)
+    submitTx_ $
+      mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [spentTxIn]
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . collateralInputsTxBodyL .~ [spentTxIn]
+    submitFailingTx
+      tx
+      [injectFailure $ BadInputsUTxO (NES.singleton spentTxIn)]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
