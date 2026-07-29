@@ -25,6 +25,8 @@ import Cardano.Ledger.Val (Val (..))
 import qualified Data.Foldable as Foldable
 import Data.List ((\\))
 import qualified Data.Map.NonEmpty as NE
+import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -33,41 +35,82 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
-  it "Withdrawing from an unregistered staking address" $ do
+  it "Withdrawals from an unregistered staking address" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
-    stakeKey <- freshKeyHash
-    accountAddress <- getAccountAddressFor $ KeyHashObj stakeKey
+    account1 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+    account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+    amountX <- Coin . getPositive <$> arbitrary
     let
-      tx =
-        mkBasicTx $
-          mkBasicTxBody
-            & withdrawalsTxBodyL
-              .~ Withdrawals [(accountAddress, Coin 20)]
+      txBody :: forall l. Typeable l => TxBody l era
+      txBody =
+        mkBasicTxBody
+          & withdrawalsTxBodyL .~ Withdrawals [(account1, amountX), (account2, zero)]
     submitFailingTx
-      tx
+      (mkBasicTx txBody)
       [ injectFailure $
           WithdrawalsExceedAccountBalance @era $
-            NE.singleton accountAddress $
-              Mismatch (Coin 20) mempty
+            NE.singleton account1 $
+              Mismatch amountX mempty
       , injectFailure . MissingAccountsInWithdrawals @era $
-          Withdrawals [(accountAddress, Coin 20)]
-      ]
-    (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
-    void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
-    let
-      tx2 =
-        mkBasicTx $
-          mkBasicTxBody
-            & withdrawalsTxBodyL
-              .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
-    submitFailingTx
-      tx2
-      [ injectFailure . MissingAccountsInWithdrawals @era $
-          Withdrawals [(accountAddress, zero)]
+          Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
-  it "Withdrawing the wrong amount" $ do
+    account3 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+    amountY <- Coin . getPositive <$> arbitrary
+    let subTxOnlyWithdrawal =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(account3, amountY)]
+    submitFailingTxIncluding
+      (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
+      [ injectFailure . SubMissingAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure $
+          WithdrawalsExceedAccountBalance @era $
+            fromJust $
+              NE.fromMap $
+                Map.fromList
+                  [ (account1, Mismatch (amountX <> amountX) mempty) -- accumulated from top and sub transaction
+                  , (account3, Mismatch amountY mempty)
+                  ]
+      , injectFailure . SubMissingAccountsInWithdrawals @era $
+          Withdrawals [(account3, amountY)]
+      , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
+          Withdrawals [(account3, amountY)]
+      ]
+
+  it "Direct deposits to an unregistered account" $ do
+    account <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+    amountX <- Coin . getPositive <$> arbitrary
+    let
+    let
+      txBody :: forall l. Typeable l => TxBody l era
+      txBody = mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountX)]
+    submitFailingTx
+      (mkBasicTx txBody)
+      [ injectFailure . MissingAccountsInDirectDeposits @era $
+          DirectDeposits [(account, amountX)]
+      ]
+
+    account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+    amountY <- Coin . getPositive <$> arbitrary
+    amountZ <- Coin . getPositive <$> arbitrary
+    let
+    let subTxOnlyDirectDeposit =
+          mkBasicTx $
+            mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
+    submitFailingTxIncluding
+      (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyDirectDeposit])
+      [ injectFailure . SubMissingAccountsInDirectDeposits @era $
+          DirectDeposits [(account, amountX)]
+      , injectFailure . SubMissingAccountsInDirectDeposits @era $
+          DirectDeposits [(account, amountY), (account2, amountZ)]
+      ]
+
+  it "Withdrawals of the wrong amount" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
     (accountAddress1, reward1, stakeKey1) <- setupAccountAddress
@@ -115,7 +158,7 @@ spec = describe "ENTITIES" $ do
             .~ Withdrawals
               [(accountAddress1, zero)]
 
-  it "Rejects withdrawals and direct deposits with wrong network id" $ do
+  it "Withdrawals and direct deposits with wrong network id" $ do
     stakeKey <- freshKeyHash
     accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
     let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
