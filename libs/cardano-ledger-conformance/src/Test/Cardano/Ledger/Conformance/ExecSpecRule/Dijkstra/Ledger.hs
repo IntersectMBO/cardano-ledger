@@ -56,6 +56,9 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   SpecTRC (..),
   runFromAgdaFunction,
  )
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.Base (
+  externalFunctions,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
   askSpecTransM,
@@ -222,7 +225,9 @@ instance ExecSpecRule "LEDGER" DijkstraEra where
 
   translateOutput _ = withSpecTransM dlecNetworkId . toSpecRep
 
-  runAgdaRule = runFromAgdaFunction Agda.ledgerStep
+  runAgdaRule trc =
+    let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.txtopIsValid (strcSignal trc)}
+     in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
 
 instance ExecSpecTopLevelRule "LEDGER" DijkstraEra where
   mkRuleExecContext globals (TRC (env, state, signal)) =

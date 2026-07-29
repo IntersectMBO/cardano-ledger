@@ -158,7 +158,6 @@ instance SpecTranslate DijkstraEra (Tx SubTx DijkstraEra) where
       <$> withCtxSpecTransM (txIdTx tx) (toSpecRep (tx ^. bodyTxL))
       <*> toSpecRep (tx ^. witsTxL)
       <*> toSpecRep (tx ^. sizeTxF)
-      <*> pure ()
       <*> toSpecRep (tx ^. auxDataTxL)
 
 instance SpecTranslate DijkstraEra (DijkstraStAnnTx TopTx DijkstraEra) where
