@@ -73,6 +73,8 @@ keyGovPParamsIn = \case
 mapGovPParamsIn :: Map ByteString GovPParamsIn
 mapGovPParamsIn = boundedEnumMap keyGovPParamsIn
 
+type instance NamespaceKeySize "gov/pparams/v0" = 4
+
 instance IsKey GovPParamsIn where
   keySize = namespaceKeySize @"gov/pparams/v0"
   packKeyM = packByteStringM . keyGovPParamsIn
@@ -132,8 +134,6 @@ deriving newtype instance
 deriving newtype instance
   FromCanonicalCBOR "gov/pparams/v0" (PParams era) =>
   FromCanonicalCBOR "gov/pparams/v0" (GovPParamsOut era)
-
-type instance NamespaceKeySize "gov/pparams/v0" = 4
 
 instance
   ( NamespaceEra "gov/pparams/v0" ~ era

@@ -32,6 +32,7 @@ import Cardano.SCLS.NamespaceCodec (
   CanonicalCBOREntryDecoder (..),
   CanonicalCBOREntryEncoder (..),
   KnownNamespace (..),
+  NamespaceKeySize,
   namespaceKeySize,
  )
 import Cardano.SCLS.Versioned (Versioned (Versioned))
@@ -70,6 +71,8 @@ deriving newtype instance
 deriving newtype instance
   FromCanonicalCBOR "gov/committee/v0" (StrictMaybe CanonicalCommittee) =>
   FromCanonicalCBOR "gov/committee/v0" GovCommitteeOut
+
+type instance NamespaceKeySize "gov/committee/v0" = 1
 
 instance IsKey GovCommitteeIn where
   keySize = namespaceKeySize @"gov/committee/v0"
