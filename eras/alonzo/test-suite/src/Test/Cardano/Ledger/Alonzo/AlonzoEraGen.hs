@@ -479,9 +479,10 @@ instance EraGen AlonzoEra where
                   Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
-  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit (IsValid v) auxdata
+  constructTx bod wit auxdata = MkAlonzoTx $ AlonzoTx bod wit validity auxdata
     where
       v = all twoPhaseValidates (wit ^. scriptTxWitsL)
+      validity = if v then Phase2Valid else Phase2Invalid
       twoPhaseValidates script =
         isNativeScript @AlonzoEra script
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)
@@ -532,12 +533,12 @@ instance EraGen AlonzoEra where
                 <> " instead of "
                 <> show (unWrapExUnits ppMax)
 
-  hasFailedScripts tx = IsValid False == tx ^. isValidTxL
+  hasFailedScripts tx = Phase2Invalid == tx ^. isPhase2ValidTxL
 
   feeOrCollateral tx utxo =
-    case tx ^. isValidTxL of
-      IsValid True -> tx ^. bodyTxL . feeTxBodyL
-      IsValid False -> sumCollateral tx utxo
+    case tx ^. isPhase2ValidTxL of
+      Phase2Valid -> tx ^. bodyTxL . feeTxBodyL
+      Phase2Invalid -> sumCollateral tx utxo
 
 sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx TopTx era -> UTxO era -> Coin
 sumCollateral tx utxo =

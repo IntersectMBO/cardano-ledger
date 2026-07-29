@@ -11,6 +11,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,6 +20,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module exports implementations of many of the functions outlined in the Alonzo specification.
@@ -36,7 +38,7 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Figure 2
   Data,
   DataHash,
-  IsValid (..),
+  IsPhase2Valid (..),
   hashData,
   nonNativeLanguages,
   hashScriptIntegrity,
@@ -44,7 +46,7 @@ module Cardano.Ledger.Alonzo.Tx (
   ScriptIntegrity (ScriptIntegrity),
   ScriptIntegrityHash,
   -- Figure 3
-  AlonzoTx (AlonzoTx, atBody, atWits, atIsValid, atAuxData),
+  AlonzoTx (AlonzoTx, atBody, atWits, atIsPhase2Valid, atAuxData),
   Tx (..),
   AlonzoEraTx (..),
   mkBasicAlonzoTx,
@@ -52,7 +54,7 @@ module Cardano.Ledger.Alonzo.Tx (
   witsAlonzoTxL,
   auxDataAlonzoTxL,
   sizeAlonzoTxF,
-  isValidAlonzoTxL,
+  isPhase2ValidAlonzoTxL,
   txrdmrs,
   TxBody (AlonzoTxBody),
   -- Figure 4
@@ -65,6 +67,12 @@ module Cardano.Ledger.Alonzo.Tx (
   toCBORForMempoolSubmission,
   alonzoTxEqRaw,
   mkScriptIntegrity,
+
+  -- * Deprecated
+  IsValid,
+  pattern IsValid,
+  isValidAlonzoTxL,
+  atIsValid,
 ) where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
@@ -126,7 +134,7 @@ import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
@@ -143,17 +151,62 @@ import NoThunks.Class (InspectHeap (..), NoThunks)
 
 -- ===================================================
 
--- | Tag indicating whether non-native scripts in this transaction are expected
--- to validate. This is added by the block creator when constructing the block.
-newtype IsValid = IsValid Bool
-  deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON, FromJSON)
+-- | Tag indicating whether the non-native (phase-2) scripts in this transaction
+-- are expected to validate. This is added by the block creator when constructing
+-- the block.
+data IsPhase2Valid
+  = Phase2Invalid
+  | Phase2Valid
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NoThunks, NFData)
+
+instance Semigroup IsPhase2Valid where
+  Phase2Valid <> x = x
+  Phase2Invalid <> _ = Phase2Invalid
+
+instance Monoid IsPhase2Valid where
+  mempty = Phase2Valid
+
+isPhase2Valid :: IsPhase2Valid -> Bool
+isPhase2Valid = \case
+  Phase2Invalid -> False
+  Phase2Valid -> True
+
+toIsPhase2Valid :: Bool -> IsPhase2Valid
+toIsPhase2Valid b = if b then Phase2Valid else Phase2Invalid
+
+instance EncCBOR IsPhase2Valid where
+  encCBOR = encCBOR . isPhase2Valid
+
+instance DecCBOR IsPhase2Valid where
+  decCBOR = toIsPhase2Valid <$> decCBOR
+
+instance ToCBOR IsPhase2Valid where
+  toCBOR = toCBOR . isPhase2Valid
+
+instance ToJSON IsPhase2Valid where
+  toJSON = toJSON . isPhase2Valid
+  toEncoding = toEncoding . isPhase2Valid
+
+instance FromJSON IsPhase2Valid where
+  parseJSON = fmap toIsPhase2Valid . parseJSON
+
+type IsValid = IsPhase2Valid
+
+pattern IsValid :: Bool -> IsPhase2Valid
+pattern IsValid b <- (isPhase2Valid -> b)
+  where
+    IsValid = toIsPhase2Valid
+
+{-# COMPLETE IsValid #-}
+
+{-# DEPRECATED IsValid "In favor of `IsPhase2Valid`" #-}
 
 data AlonzoTx l era where
   AlonzoTx ::
     { atBody :: !(TxBody TopTx era)
     , atWits :: !(TxWits era)
-    , atIsValid :: !IsValid
+    , atIsPhase2Valid :: !IsPhase2Valid
     , atAuxData :: !(StrictMaybe (TxAuxData era))
     } ->
     AlonzoTx TopTx era
@@ -202,7 +255,7 @@ alonzoTxEqRaw ::
 alonzoTxEqRaw tx1 tx2 =
   withTopTxLevelOnly tx1 $ \tx1' ->
     withTopTxLevelOnly tx2 $ \tx2' ->
-      shelleyTxEqRaw tx1 tx2 && (tx1' ^. isValidTxL == tx2' ^. isValidTxL)
+      shelleyTxEqRaw tx1 tx2 && (tx1' ^. isPhase2ValidTxL == tx2' ^. isPhase2ValidTxL)
 
 instance EqRaw (Tx l AlonzoEra) where
   eqRaw = alonzoTxEqRaw
@@ -219,14 +272,19 @@ class
   ) =>
   AlonzoEraTx era
   where
-  isValidTxL :: Lens' (Tx TopTx era) IsValid
+  isPhase2ValidTxL :: Lens' (Tx TopTx era) IsPhase2Valid
+
+  isValidTxL :: Lens' (Tx TopTx era) IsPhase2Valid
+  isValidTxL = isPhase2ValidTxL
+
+{-# DEPRECATED isValidTxL "In favor of `isPhase2ValidTxL`" #-}
 
 instance Typeable l => DecCBOR (Annotator (Tx l AlonzoEra)) where
   decCBOR = fmap MkAlonzoTx <$> decCBOR
 
 instance AlonzoEraTx AlonzoEra where
-  isValidTxL = alonzoTxL . isValidAlonzoTxL
-  {-# INLINE isValidTxL #-}
+  isPhase2ValidTxL = alonzoTxL . isPhase2ValidAlonzoTxL
+  {-# INLINE isPhase2ValidTxL #-}
 
 mkBasicAlonzoTx ::
   ( EraTx era
@@ -236,7 +294,7 @@ mkBasicAlonzoTx ::
 mkBasicAlonzoTx txBody =
   case toSTxLevel txBody of
     STopTxOnly ->
-      AlonzoTx txBody mempty (IsValid True) SNothing
+      AlonzoTx txBody mempty Phase2Valid SNothing
 
 -- | `TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx l era) (TxBody l era)
@@ -273,12 +331,20 @@ sizeAlonzoTxF =
       . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
-isValidAlonzoTxL :: Lens' (AlonzoTx l era) IsValid
-isValidAlonzoTxL =
-  lens (\AlonzoTx {atIsValid} -> atIsValid) $ \tx txIsValid ->
+isPhase2ValidAlonzoTxL :: Lens' (AlonzoTx l era) IsPhase2Valid
+isPhase2ValidAlonzoTxL =
+  lens (\AlonzoTx {atIsPhase2Valid} -> atIsPhase2Valid) $ \tx txIsPhase2Valid ->
     case tx of
-      AlonzoTx {} -> tx {atIsValid = txIsValid}
-{-# INLINEABLE isValidAlonzoTxL #-}
+      AlonzoTx {} -> tx {atIsPhase2Valid = txIsPhase2Valid}
+{-# INLINEABLE isPhase2ValidAlonzoTxL #-}
+
+isValidAlonzoTxL :: Lens' (AlonzoTx l era) IsPhase2Valid
+isValidAlonzoTxL = isPhase2ValidAlonzoTxL
+{-# DEPRECATED isValidAlonzoTxL "In favor of `isPhase2ValidAlonzoTxL`" #-}
+
+atIsValid :: AlonzoTx TopTx era -> IsPhase2Valid
+atIsValid = atIsPhase2Valid
+{-# DEPRECATED atIsValid "In favor of `atIsPhase2Valid`" #-}
 
 deriving instance
   (Era era, Eq (TxBody l era), Eq (TxWits era), Eq (TxAuxData era)) => Eq (AlonzoTx l era)
@@ -304,7 +370,7 @@ instance
     atBody `deepseq`
       atWits `deepseq`
         atAuxData `deepseq`
-          rnf atIsValid
+          rnf atIsPhase2Valid
 
 -- | A ScriptIntegrityHash is the hash of three things.  The first two come
 -- from the witnesses and the last comes from the Protocol Parameters.
@@ -428,12 +494,12 @@ toCBORForMempoolSubmission ::
   AlonzoTx l era ->
   Encoding
 toCBORForMempoolSubmission
-  AlonzoTx {atBody, atWits, atAuxData, atIsValid} =
+  AlonzoTx {atBody, atWits, atAuxData, atIsPhase2Valid} =
     encode $
       Rec AlonzoTx
         !> To atBody
         !> To atWits
-        !> To atIsValid
+        !> To atIsPhase2Valid
         !> E (encodeNullStrictMaybe encCBOR) atAuxData
 
 instance

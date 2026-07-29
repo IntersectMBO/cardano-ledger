@@ -373,10 +373,11 @@ instance SpecTranslate ConwayEra Withdrawals where
 
   toSpecRep (Withdrawals w) = toSpecRepMap w
 
-instance SpecTranslate ConwayEra IsValid where
-  type SpecRep ConwayEra IsValid = Bool
+instance SpecTranslate ConwayEra IsPhase2Valid where
+  type SpecRep ConwayEra IsPhase2Valid = Bool
 
-  toSpecRep (IsValid b) = pure b
+  toSpecRep Phase2Valid = pure True
+  toSpecRep Phase2Invalid = pure False
 
 instance SpecTranslate ConwayEra (GovPurposeId r) where
   type SpecRep ConwayEra (GovPurposeId r) = (Agda.TxId, Integer)

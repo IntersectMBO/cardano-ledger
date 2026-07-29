@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Rename `isValidTxG` to `isPhase2ValidTxG` in `AnyEraTx`, deprecating the old name
+* Re-export `IsPhase2Valid` and `isPhase2ValidTxL`, keeping the deprecated `IsValid`/`isValidTxL` re-exports
 * Remove a no longer necessary argument to `evalBalanceTxBody` that looked up DRep deposits
 * Restrict `evalBalanceTxBody` to `TxBody TopTx era`.
 * Rename `AnyEraRewardingPurpose` to `AnyEraWithdrawingPurpose` and `anyEraToRewardingPurpose` to `anyEraToWithdrawingPurpose`, deprecating the old names

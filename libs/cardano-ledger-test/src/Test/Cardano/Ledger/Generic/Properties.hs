@@ -13,7 +13,7 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsPhase2Valid (Phase2Valid))
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, systemStart)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochNo, SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
-import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence (Seq)
@@ -148,7 +147,7 @@ testTxValidForLEDGER (trc@(TRC (env, ledgerState, vstAnnTx)), _genstate) =
    in case runSTSWithContext @era trc of
         Right ledgerState' ->
           -- UTxOState and CertState after applying the transaction $$$
-          classify (coerce (isValid' (reify @era) vtx)) "TxValid" $
+          classify (isValid' (reify @era) vtx == Phase2Valid) "TxValid" $
             totalAda ledgerState' === totalAda ledgerState
         Left errs ->
           counterexample

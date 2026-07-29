@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
  )
 import Cardano.Ledger.Alonzo.Rules (BBODY, LEDGER)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), mkPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..), totExUnits)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..), ScriptResult (..))
 import Cardano.Ledger.Plutus.Language (plutusFromRunnable)
@@ -87,7 +87,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
         , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds'
         } =
         let tx = stAnnTx ^. txStAnnTxG
-            isValid' = tx ^. isValidTxL
+            isValid' = tx ^. isPhase2ValidTxL
             noNewUTxO = u' `Map.isSubmapOf` u
             collateralInFees = f <> sumCollateral tx (UTxO u) == f'
             utxoConsumed = not $ u `Map.isSubmapOf` u'
@@ -143,15 +143,15 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
               )
               ( counterexample "At least one UTxO is consumed" utxoConsumed
                   .&&. ( case (hasPlutus, isValid') of
-                           (NoPlutus, IsValid True) -> totEU === ExUnits 0 0
-                           (NoPlutus, IsValid False) -> counterexample "No Plutus scripts, but isValid == False" False
-                           (HasPlutus, IsValid True) ->
+                           (NoPlutus, Phase2Valid) -> totEU === ExUnits 0 0
+                           (NoPlutus, Phase2Invalid) -> counterexample "No Plutus scripts, but Phase2Invalid" False
+                           (HasPlutus, Phase2Valid) ->
                              conjoin
                                [ counterexample "Non trivial execution units" nonTrivialExU
                                , counterexample "Received the expected plutus scripts" expectedPScripts
                                , counterexample "Plutus scripts all evaluate to true" allPlutusTrue
                                ]
-                           (HasPlutus, IsValid False) ->
+                           (HasPlutus, Phase2Invalid) ->
                              conjoin
                                [ counterexample "No new UTxO" noNewUTxO
                                , counterexample "The collateral amount was added to the fees" collateralInFees

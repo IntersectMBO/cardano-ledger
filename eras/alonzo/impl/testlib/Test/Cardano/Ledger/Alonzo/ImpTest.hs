@@ -503,7 +503,7 @@ impScriptPredicateFailure tx = do
     (_, Fails _ failures) ->
       pure $
         ValidationTagMismatch
-          (IsValid True)
+          Phase2Valid
           (FailedUnexpectedly (scriptFailureToFailureDescription <$> failures))
 
 submitPhase2Invalid_ ::
@@ -523,13 +523,13 @@ submitPhase2Invalid ::
 submitPhase2Invalid tx = do
   fixedUpTx <-
     impAnn "Check that tx fails with IsValid True" $ do
-      tx ^. isValidTxL `shouldBe` IsValid True
+      tx ^. isPhase2ValidTxL `shouldBe` Phase2Valid
       (predFailure, fixedUpTx) <- expectLeft =<< trySubmitTx tx
       scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
       predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
       pure fixedUpTx
   impAnn "Submit tx with IsValid False" $ do
-    withNoFixup $ submitTx $ fixedUpTx & isValidTxL .~ IsValid False
+    withNoFixup $ submitTx $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
 
 impAlonzoExpectTxSuccess ::
   ( HasCallStack
@@ -541,7 +541,7 @@ impAlonzoExpectTxSuccess tx = do
   let inputs = tx ^. bodyTxL . inputsTxBodyL
       collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
       outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
-  if tx ^. isValidTxL == IsValid True
+  if tx ^. isPhase2ValidTxL == Phase2Valid
     then do
       impAnn "Inputs should be gone from UTxO" $
         expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList inputs]

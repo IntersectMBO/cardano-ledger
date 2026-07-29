@@ -204,9 +204,9 @@ updateTreasuryDonation ::
   UTxOState era ->
   UTxOState era
 updateTreasuryDonation tx utxos =
-  case tx ^. isValidTxL of
-    IsValid True -> utxos & utxosDonationL <>~ tx ^. bodyTxL . treasuryDonationTxBodyL
-    IsValid False -> utxos
+  case tx ^. isPhase2ValidTxL of
+    Phase2Valid -> utxos & utxosDonationL <>~ tx ^. bodyTxL . treasuryDonationTxBodyL
+    Phase2Invalid -> utxos
 
 conwayUtxoTransition ::
   forall era.

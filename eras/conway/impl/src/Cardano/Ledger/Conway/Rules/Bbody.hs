@@ -31,7 +31,7 @@ import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsValid (..), isValidTxL)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsPhase2Valid (..), isPhase2ValidTxL)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
@@ -365,6 +365,6 @@ totalRefScriptSizeInBlock protVer txs (UTxO utxo)
     accum (!accUtxo, !accSum) tx =
       let updatedUtxo = accUtxo `Map.union` unUTxO toAdd
           toAdd
-            | IsValid True <- tx ^. isValidTxL = txouts $ tx ^. bodyTxL
+            | Phase2Valid <- tx ^. isPhase2ValidTxL = txouts $ tx ^. bodyTxL
             | otherwise = collOuts $ tx ^. bodyTxL
        in (updatedUtxo, accSum + txNonDistinctRefScriptsSize (UTxO accUtxo) tx)

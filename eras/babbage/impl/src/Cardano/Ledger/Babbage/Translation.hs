@@ -70,12 +70,12 @@ instance TranslateEra BabbageEra (Tx TopTx) where
       auxData <- case tx' ^. auxDataTxL of
         SNothing -> pure SNothing
         SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-      let validating = tx' ^. isValidTxL
+      let validating = tx' ^. isPhase2ValidTxL
       pure . asSTxTopLevel $
         mkBasicTx txBody
           & witsTxL .~ txWits
           & auxDataTxL .~ auxData
-          & isValidTxL .~ validating
+          & isPhase2ValidTxL .~ validating
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

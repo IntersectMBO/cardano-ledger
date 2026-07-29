@@ -9,7 +9,7 @@
 
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsPhase2Valid (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -78,13 +78,12 @@ consistentUtxoSizeProp proof = aggProp agg0 aggregate makeprop
     aggregate count (MockBlock _ _ txs) = F.foldl' aggTx count txs
     aggTx count tx =
       count
-        + ( if valid
-              then length (body ^. outputsTxBodyL) - Set.size (body ^. inputsTxBodyL)
-              else length (getCollateralOutputs proof body) - Set.size (getCollateralInputs proof body)
+        + ( case isValid' proof tx of
+              Phase2Valid -> length (body ^. outputsTxBodyL) - Set.size (body ^. inputsTxBodyL)
+              Phase2Invalid -> length (getCollateralOutputs proof body) - Set.size (getCollateralInputs proof body)
           )
       where
         body = getBody proof tx
-        IsValid valid = isValid' proof tx
     makeprop firstSt lastSt n = getUtxoSize firstSt === getUtxoSize lastSt - n
     getUtxoSize :: MockChainState era -> Int
     getUtxoSize = Map.size . unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs . mcsNes

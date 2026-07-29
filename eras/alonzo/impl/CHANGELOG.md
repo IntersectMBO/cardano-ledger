@@ -2,6 +2,12 @@
 
 ## 1.16.0.0
 
+* Convert `IsValid` into the `IsPhase2Valid` sum type (`Phase2Valid`/`Phase2Invalid`) and rename its lens and field, deprecating the old names:
+  - `isValidTxL` -> `isPhase2ValidTxL`
+  - `isValidAlonzoTxL` -> `isPhase2ValidAlonzoTxL`
+  - `atIsValid` -> `atIsPhase2Valid`
+  - `IsValid` is retained as a deprecated type alias and `pattern`
+  - Add `Semigroup`/`Monoid` instances for `IsPhase2Valid`
 * Rename `validScript` to `isValidScript`, move it to `Cardano.Ledger.Alonzo.TxAuxData` and add two more arguments to it.
 * Add `asatPlutusRunnableCache` field to `AlonzoStAnnTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Add `SupportedPlutusRunnable` type and add `mkSupportedPlutusRunnable` to `EraPlutusContext`
@@ -32,7 +38,7 @@
 * Add `AlonzoEraTxAuxData` as a superclass to `AlonzoEraTx`
 * Add `NFData` instance for `AlonzoScriptsNeeded`
 * Change `Signal` to `StAnnTx TopTx era` for: `AlonzoLEDGER`, `AlonzoUTXOW`, `AlonzoUTXO`, `AlonzoUTXOS`
-* Add `FromJSON` instance for `IsValid`
+* Add `FromJSON` instance for `IsPhase2Valid`
 * Add `ltiMemoizedSubTransactions` to `LedgerTxInfo`
 * Add `resolveNeededPlutusScriptsWithPurpose`, which takes a `ProtVer` and a `Map ScriptHash (SupportedPlutusRunnable era)` cache of previously resolved scripts, and returns the updated cache together with `[(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]`
 * Add `unAlonzoScriptsNeeded` record accessor to `AlonzoScriptsNeeded`

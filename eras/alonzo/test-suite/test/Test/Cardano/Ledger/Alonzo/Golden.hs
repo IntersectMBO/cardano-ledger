@@ -209,8 +209,8 @@ goldenJsonSerialization =
           }
       ]
     aesonGoldenSpec getDataFileName "golden/IsValid.json" $
-      [ IsValid True
-      , IsValid False
+      [ Phase2Valid
+      , Phase2Invalid
       ]
     itGoldenToJSON getDataFileName "golden/FailureDescription.json" $
       PlutusFailure "A description" "A reconstruction"

@@ -49,7 +49,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (
   UtxosEnv (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
@@ -763,8 +763,8 @@ updateUTxOState ::
 updateUTxOState pp certState tx utxoState =
   let txBody = tx ^. bodyTxL
       utxo = utxosUtxo utxoState
-   in case tx ^. isValidTxL of
-        IsValid True ->
+   in case tx ^. isPhase2ValidTxL of
+        Phase2Valid ->
           Shelley.updateUTxOState
             pp
             txBody
@@ -772,7 +772,7 @@ updateUTxOState pp certState tx utxoState =
             (tellEvent . TotalDeposits (hashAnnotated txBody))
             (\a b -> tellEvent (TxUTxODiff a b))
             utxoState
-        IsValid False ->
+        Phase2Invalid ->
           {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
           {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
           let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)

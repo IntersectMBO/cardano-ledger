@@ -111,7 +111,7 @@ impBabbageExpectTxSuccess tx = do
   -- Check that the balance of the collateral was returned
   let returns = Map.toList . unUTxO . collOuts $ tx ^. bodyTxL
   utxo <- getsNES utxoL
-  if tx ^. isValidTxL == IsValid True
+  if tx ^. isPhase2ValidTxL == Phase2Valid
     then do
       impAnn "Collateral return should not be in UTxO" $
         expectUTxOContent utxo [(txIn, isNothing) | (txIn, _txOut) <- returns]

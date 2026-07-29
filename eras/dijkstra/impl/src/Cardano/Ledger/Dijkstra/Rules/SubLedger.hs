@@ -99,7 +99,7 @@ data SubLedgerEnv era = SubLedgerEnv
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
   , sleOriginalUtxo :: UTxO era
-  , sleTopTxIsValid :: IsValid
+  , sleTopTxIsPhase2Valid :: IsPhase2Valid
   }
 
 data DijkstraSubLedgerPredFailure era
@@ -232,7 +232,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsValid
+    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsPhase2Valid
       , LedgerState utxoState certState
       , stAnnTx
       ) <-
@@ -246,7 +246,7 @@ dijkstraSubLedgersTransition = do
   let proposals = govState ^. proposalsGovStateL
 
   (utxoStateBeforeSubUtxow, certStateFinal) <-
-    if topIsValid == IsValid True
+    if topIsPhase2Valid == Phase2Valid
       then do
         runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
 
@@ -287,7 +287,7 @@ dijkstraSubLedgersTransition = do
   utxoStateAfterSubUtxow <-
     trans @(EraRule "SUBUTXOW" era) $
       TRC
-        ( SubUtxoEnv slot pp certState originalUtxo topIsValid
+        ( SubUtxoEnv slot pp certState originalUtxo topIsPhase2Valid
         , utxoStateBeforeSubUtxow
         , stAnnTx
         )
