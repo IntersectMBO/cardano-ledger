@@ -241,6 +241,7 @@ dijkstraSubEntitiesTransition = do
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
   runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
+  runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
 
   let (missingWithdrawals, exceededWithdrawals) =
         case withdrawalsThatExceedAccountBalance withdrawals network accounts of
@@ -275,6 +276,16 @@ validateMissingOriginalAccountsInWithdrawals wdrls originalAccounts =
   failureOnJust
     (withdrawalsMissingAccounts wdrls originalAccounts)
     SubMissingOriginalAccountsInWithdrawals
+
+validateMissingAccountsInWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Test (SubEntitiesPredFailure era)
+validateMissingAccountsInWithdrawals wdrls accounts =
+  failureOnJust
+    (withdrawalsMissingAccounts wdrls accounts)
+    SubMissingAccountsInWithdrawals
 
 conwayToDijkstraSubEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> SubEntitiesPredFailure era
