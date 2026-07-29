@@ -95,7 +95,6 @@ import Lens.Micro
 data SubLedgerEnv era = SubLedgerEnv
   { sleSlotNo :: SlotNo
   , sleEpochNo :: Maybe EpochNo
-  , sleTxIx :: TxIx
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
   , sleOriginalUtxo :: UTxO era
@@ -232,7 +231,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsPhase2Valid
+    ( SubLedgerEnv slot mbCurEpochNo pp chainAccountState originalUtxo topIsPhase2Valid
       , LedgerState utxoState certState
       , stAnnTx
       ) <-

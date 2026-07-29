@@ -356,7 +356,7 @@ dijkstraLedgerTransition ::
   ) =>
   TransitionRule (LEDGER era)
 dijkstraLedgerTransition = do
-  TRC (Shelley.LedgerEnv slot mbCurEpochNo txIx pp chainAccountState, ledgerState, stAnnTx) <-
+  TRC (Shelley.LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState, ledgerState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -373,7 +373,6 @@ dijkstraLedgerTransition = do
         ( SubLedgerEnv
             slot
             mbCurEpochNo
-            txIx
             pp
             chainAccountState
             originalUtxo
