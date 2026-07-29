@@ -139,7 +139,6 @@ spec = describe "ENTITIES" $ do
         (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
         [ injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
         , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-        , injectFailure . SubMissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
         ]
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)

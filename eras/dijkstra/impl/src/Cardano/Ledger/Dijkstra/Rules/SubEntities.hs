@@ -25,7 +25,6 @@ import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -51,8 +50,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import Data.Map.NonEmpty (NonEmptyMap)
-import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -103,7 +100,6 @@ data SubEntitiesPredFailure era
   = SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
   | SubMissingAccountsInWithdrawals Withdrawals
   | SubMissingOriginalAccountsInWithdrawals Withdrawals
-  | SubExceededBalancesInWithdrawals (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | SubMissingAccountsInDirectDeposits DirectDeposits
   | SubWrongNetworkInWithdrawals
       -- | Expected network id
@@ -138,10 +134,9 @@ instance
       SubCertsFailure x -> Sum (SubCertsFailure @era) 0 !> To x
       SubMissingAccountsInWithdrawals x -> Sum (SubMissingAccountsInWithdrawals @era) 1 !> To x
       SubMissingOriginalAccountsInWithdrawals x -> Sum (SubMissingOriginalAccountsInWithdrawals @era) 2 !> To x
-      SubExceededBalancesInWithdrawals x -> Sum (SubExceededBalancesInWithdrawals @era) 3 !> To x
-      SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 4 !> To x
-      SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 5 !> To expected !> To wrongs
-      SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 6 !> To expected !> To wrongs
+      SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 3 !> To x
+      SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 4 !> To expected !> To wrongs
+      SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 5 !> To expected !> To wrongs
 
 instance
   ( Era era
@@ -153,10 +148,9 @@ instance
     0 -> SumD SubCertsFailure <! From
     1 -> SumD SubMissingAccountsInWithdrawals <! From
     2 -> SumD SubMissingOriginalAccountsInWithdrawals <! From
-    3 -> SumD SubExceededBalancesInWithdrawals <! From
-    4 -> SumD SubMissingAccountsInDirectDeposits <! From
-    5 -> SumD SubWrongNetworkInWithdrawals <! From <! From
-    6 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
+    3 -> SumD SubMissingAccountsInDirectDeposits <! From
+    4 -> SumD SubWrongNetworkInWithdrawals <! From <! From
+    5 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -242,14 +236,6 @@ dijkstraSubEntitiesTransition = do
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
   runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
   runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
-
-  let (missingWithdrawals, exceededWithdrawals) =
-        case withdrawalsThatExceedAccountBalance withdrawals network accounts of
-          Nothing -> (Map.empty, Map.empty)
-          Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
-  failOnNonEmptyMap missingWithdrawals $
-    injectFailure . SubMissingAccountsInWithdrawals . Withdrawals . NEM.toMap
-  failOnNonEmptyMap exceededWithdrawals $ injectFailure . SubExceededBalancesInWithdrawals
 
   let certStateBeforeSubCerts =
         certState
