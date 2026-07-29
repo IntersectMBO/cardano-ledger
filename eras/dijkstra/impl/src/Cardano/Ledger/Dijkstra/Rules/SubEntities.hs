@@ -46,7 +46,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   SubCertsEnv (..),
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
-import Cardano.Ledger.Rules.ValidationMode (runTest)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -102,6 +102,7 @@ instance
 data SubEntitiesPredFailure era
   = SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
   | SubMissingAccountsInWithdrawals Withdrawals
+  | SubMissingOriginalAccountsInWithdrawals Withdrawals
   | SubExceededBalancesInWithdrawals (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | SubMissingAccountsInDirectDeposits DirectDeposits
   | SubWrongNetworkInWithdrawals
@@ -136,10 +137,11 @@ instance
     encode . \case
       SubCertsFailure x -> Sum (SubCertsFailure @era) 0 !> To x
       SubMissingAccountsInWithdrawals x -> Sum (SubMissingAccountsInWithdrawals @era) 1 !> To x
-      SubExceededBalancesInWithdrawals x -> Sum (SubExceededBalancesInWithdrawals @era) 2 !> To x
-      SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 3 !> To x
-      SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 4 !> To expected !> To wrongs
-      SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 5 !> To expected !> To wrongs
+      SubMissingOriginalAccountsInWithdrawals x -> Sum (SubMissingOriginalAccountsInWithdrawals @era) 2 !> To x
+      SubExceededBalancesInWithdrawals x -> Sum (SubExceededBalancesInWithdrawals @era) 3 !> To x
+      SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 4 !> To x
+      SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 5 !> To expected !> To wrongs
+      SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 6 !> To expected !> To wrongs
 
 instance
   ( Era era
@@ -150,10 +152,11 @@ instance
   decCBOR = decode . Summands "SubEntitiesPredFailure" $ \case
     0 -> SumD SubCertsFailure <! From
     1 -> SumD SubMissingAccountsInWithdrawals <! From
-    2 -> SumD SubExceededBalancesInWithdrawals <! From
-    3 -> SumD SubMissingAccountsInDirectDeposits <! From
-    4 -> SumD SubWrongNetworkInWithdrawals <! From <! From
-    5 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
+    2 -> SumD SubMissingOriginalAccountsInWithdrawals <! From
+    3 -> SumD SubExceededBalancesInWithdrawals <! From
+    4 -> SumD SubMissingAccountsInDirectDeposits <! From
+    5 -> SumD SubWrongNetworkInWithdrawals <! From <! From
+    6 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -227,7 +230,7 @@ dijkstraSubEntitiesTransition ::
   ) =>
   TransitionRule (SUBENTITIES era)
 dijkstraSubEntitiesTransition = do
-  TRC (SubEntitiesEnv curEpoch pp committee committeeProposals _originalAccounts, certState, tx) <-
+  TRC (SubEntitiesEnv curEpoch pp committee committeeProposals originalAccounts, certState, tx) <-
     judgmentContext
   let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
@@ -237,6 +240,7 @@ dijkstraSubEntitiesTransition = do
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
+  runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
 
   let (missingWithdrawals, exceededWithdrawals) =
         case withdrawalsThatExceedAccountBalance withdrawals network accounts of
@@ -261,6 +265,16 @@ dijkstraSubEntitiesTransition = do
     injectFailure . SubMissingAccountsInDirectDeposits
 
   pure $ certStateAfterSubCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
+
+validateMissingOriginalAccountsInWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Test (SubEntitiesPredFailure era)
+validateMissingOriginalAccountsInWithdrawals wdrls originalAccounts =
+  failureOnJust
+    (withdrawalsMissingAccounts wdrls originalAccounts)
+    SubMissingOriginalAccountsInWithdrawals
 
 conwayToDijkstraSubEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> SubEntitiesPredFailure era

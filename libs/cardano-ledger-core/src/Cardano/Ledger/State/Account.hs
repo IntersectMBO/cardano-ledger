@@ -30,6 +30,7 @@ module Cardano.Ledger.State.Account (
   applyWithdrawals,
   applyDirectDeposits,
   directDepositsMissingAccounts,
+  withdrawalsMissingAccounts,
   removeStakePoolDelegations,
 ) where
 
@@ -337,12 +338,31 @@ directDepositsMissingAccounts ::
   DirectDeposits ->
   Accounts era ->
   Maybe DirectDeposits
-directDepositsMissingAccounts (DirectDeposits dds) accounts
-  | Map.foldrWithKey' checkRegistered True dds = Nothing
-  | otherwise = Just $ DirectDeposits $ Map.foldrWithKey' collectMissing Map.empty dds
+directDepositsMissingAccounts (DirectDeposits dds) accounts =
+  DirectDeposits <$> missingAccounts dds accounts
+
+-- | Returns `Nothing` iff every credential targeted by the supplied
+-- `Withdrawals` is a registered account. Otherwise it returns the subset of
+-- withdrawals whose target credential is not registered.
+withdrawalsMissingAccounts ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Maybe Withdrawals
+withdrawalsMissingAccounts (Withdrawals wdrls) accounts =
+  Withdrawals <$> missingAccounts wdrls accounts
+
+missingAccounts ::
+  EraAccounts era =>
+  Map AccountAddress a ->
+  Accounts era ->
+  Maybe (Map AccountAddress a)
+missingAccounts accountAddresses accounts
+  | Map.foldrWithKey' checkRegistered True accountAddresses = Nothing
+  | otherwise = Just $ Map.foldrWithKey' collectMissing Map.empty accountAddresses
   where
-    isRegistered (AccountAddress _ (AccountId credential)) =
-      isAccountRegistered credential accounts
+    isRegistered (AccountAddress _ (AccountId cred)) =
+      isAccountRegistered cred accounts
     checkRegistered addr _ acc = acc && isRegistered addr
     collectMissing addr amount acc
       | isRegistered addr = acc

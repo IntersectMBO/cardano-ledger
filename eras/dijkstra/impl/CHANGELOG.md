@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `SubMissingOriginalAccountsInWithdrawals` constructor to `SubEntitiesPredFailure`
 * Add `SubEntitiesEnv` and use it as `Environment` in the `SUBENTITIES` `STS` instance
 * Change the `STS` `Signal` of `SUBENTITIES` to `Tx SubTx era`
 * Add `sleOriginalAccounts` to `SubLedgerEnv`
