@@ -33,113 +33,112 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
-  describe "Withdrawals" $ do
-    it "Withdrawing from an unregistered staking address" $ do
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+  it "Withdrawing from an unregistered staking address" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
-      stakeKey <- freshKeyHash
-      accountAddress <- getAccountAddressFor $ KeyHashObj stakeKey
-      let
-        tx =
-          mkBasicTx $
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals [(accountAddress, Coin 20)]
-      submitFailingTx
-        tx
-        [ injectFailure $
-            WithdrawalsExceedAccountBalance @era $
-              NE.singleton accountAddress $
-                Mismatch (Coin 20) mempty
-        , injectFailure . MissingAccountsInWithdrawals @era $
-            Withdrawals [(accountAddress, Coin 20)]
-        ]
-      (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
-      void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
-      let
-        tx2 =
-          mkBasicTx $
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
-      submitFailingTx
-        tx2
-        [ injectFailure . MissingAccountsInWithdrawals @era $
-            Withdrawals [(accountAddress, zero)]
-        ]
-
-    it "Withdrawing the wrong amount" $ do
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-
-      (accountAddress1, reward1, stakeKey1) <- setupAccountAddress
-      (accountAddress2, reward2, stakeKey2) <- setupAccountAddress
-      void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
-      void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
-      submitFailingTx
-        ( mkBasicTx $
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals
-                  [ (accountAddress1, reward1 <+> Coin 1)
-                  , (accountAddress2, reward2)
-                  ]
-        )
-        [ injectFailure $
-            WithdrawalsExceedAccountBalance @era $
-              NE.singleton accountAddress1 $
-                Mismatch (reward1 <+> Coin 1) reward1
-        , injectFailure $
-            ExceededBalancesInWithdrawals @era $
-              NE.singleton accountAddress1 $
-                Mismatch (reward1 <+> Coin 1) reward1
-        ]
-
-      -- in legacy mode, we produce `IncompleteWithdrawals` failure
-      txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
-      submitFailingTx
-        ( mkBasicTx $
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals
-                  [(accountAddress1, zero)]
-              & inputsTxBodyL .~ [txIn]
-        )
-        [ injectFailure . IncompleteWithdrawals @era $
-            NE.singleton accountAddress1 $
-              Mismatch zero reward1
-        ]
-
-      submitTx_ $
+    stakeKey <- freshKeyHash
+    accountAddress <- getAccountAddressFor $ KeyHashObj stakeKey
+    let
+      tx =
         mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals [(accountAddress, Coin 20)]
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalsExceedAccountBalance @era $
+            NE.singleton accountAddress $
+              Mismatch (Coin 20) mempty
+      , injectFailure . MissingAccountsInWithdrawals @era $
+          Withdrawals [(accountAddress, Coin 20)]
+      ]
+    (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
+    void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
+    let
+      tx2 =
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals [(accountAddress, zero), (registeredAccountAddress, reward)]
+    submitFailingTx
+      tx2
+      [ injectFailure . MissingAccountsInWithdrawals @era $
+          Withdrawals [(accountAddress, zero)]
+      ]
+
+  it "Withdrawing the wrong amount" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+
+    (accountAddress1, reward1, stakeKey1) <- setupAccountAddress
+    (accountAddress2, reward2, stakeKey2) <- setupAccountAddress
+    void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
+    void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
+    submitFailingTx
+      ( mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals
+                [ (accountAddress1, reward1 <+> Coin 1)
+                , (accountAddress2, reward2)
+                ]
+      )
+      [ injectFailure $
+          WithdrawalsExceedAccountBalance @era $
+            NE.singleton accountAddress1 $
+              Mismatch (reward1 <+> Coin 1) reward1
+      , injectFailure $
+          ExceededBalancesInWithdrawals @era $
+            NE.singleton accountAddress1 $
+              Mismatch (reward1 <+> Coin 1) reward1
+      ]
+
+    -- in legacy mode, we produce `IncompleteWithdrawals` failure
+    txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
+    submitFailingTx
+      ( mkBasicTx $
           mkBasicTxBody
             & withdrawalsTxBodyL
               .~ Withdrawals
                 [(accountAddress1, zero)]
+            & inputsTxBodyL .~ [txIn]
+      )
+      [ injectFailure . IncompleteWithdrawals @era $
+          NE.singleton accountAddress1 $
+            Mismatch zero reward1
+      ]
 
-    it "Rejects withdrawals and direct deposits with wrong network id" $ do
-      stakeKey <- freshKeyHash
-      accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
-      let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
-      let txBody :: forall l. Typeable l => TxBody l era
-          txBody =
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals [(wrongNetworkAccount, mempty)]
-              & directDepositsTxBodyL
-                .~ DirectDeposits [(wrongNetworkAccount, Coin 50)]
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              [(accountAddress1, zero)]
 
-      submitFailingTx
-        (mkBasicTx txBody)
-        [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
-        , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-        , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
-        ]
+  it "Rejects withdrawals and direct deposits with wrong network id" $ do
+    stakeKey <- freshKeyHash
+    accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
+    let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
+    let txBody :: forall l. Typeable l => TxBody l era
+        txBody =
+          mkBasicTxBody
+            & withdrawalsTxBodyL
+              .~ Withdrawals [(wrongNetworkAccount, mempty)]
+            & directDepositsTxBodyL
+              .~ DirectDeposits [(wrongNetworkAccount, Coin 50)]
 
-      submitFailingTxIncluding
-        (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
-        [ injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
-        , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-        ]
+    submitFailingTx
+      (mkBasicTx txBody)
+      [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      ]
+
+    submitFailingTxIncluding
+      (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
+      [ injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
+      ]
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
     setupAccountAddress = do
