@@ -35,6 +35,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraUtxoPredFailure,
   DijkstraUtxowPredFailure,
   EntitiesPredFailure (..),
+  SubEntitiesPredFailure (..),
  )
 import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript,
@@ -99,6 +100,7 @@ class
   , DijkstraEraTest era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
+  , InjectRuleFailure "LEDGER" SubEntitiesPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraUtxowPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure era

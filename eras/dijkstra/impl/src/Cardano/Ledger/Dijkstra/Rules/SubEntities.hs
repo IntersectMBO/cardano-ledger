@@ -20,7 +20,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubEntities (
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
-import Cardano.Ledger.BaseTypes (Globals (networkId), Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
@@ -28,12 +28,18 @@ import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, SUBCERTS, SUBENTITIES)
+import Cardano.Ledger.Dijkstra.Rules.Entities (
+  EntitiesPredFailure (..),
+  validateWrongNetworkInDirectDeposit,
+ )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSubCertsEvent,
   DijkstraSubCertsPredFailure,
   SubCertsEnv (..),
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Rules.ValidationMode (runTest)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
@@ -41,14 +47,25 @@ import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
+import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 
 data SubEntitiesPredFailure era
   = SubCertsFailure (PredicateFailure (EraRule "SUBCERTS" era))
-  | SubWithdrawalsMissingAccounts Withdrawals
-  | SubWithdrawalAmountsExceedAccountBalances (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
-  | SubDirectDepositsToMissingAccounts DirectDeposits
+  | SubMissingAccountsInWithdrawals Withdrawals
+  | SubExceededBalancesInWithdrawals (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | SubMissingAccountsInDirectDeposits DirectDeposits
+  | SubWrongNetworkInWithdrawals
+      -- | Expected network id
+      Network
+      -- | Withdrawal accounts with wrong network id
+      (NonEmptySet AccountAddress)
+  | SubWrongNetworkInDirectDeposits
+      -- | Expected network id
+      Network
+      -- | Direct-deposit accounts with wrong network id
+      (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -70,9 +87,11 @@ instance
   encCBOR =
     encode . \case
       SubCertsFailure x -> Sum (SubCertsFailure @era) 0 !> To x
-      SubWithdrawalsMissingAccounts x -> Sum (SubWithdrawalsMissingAccounts @era) 1 !> To x
-      SubWithdrawalAmountsExceedAccountBalances x -> Sum (SubWithdrawalAmountsExceedAccountBalances @era) 2 !> To x
-      SubDirectDepositsToMissingAccounts x -> Sum (SubDirectDepositsToMissingAccounts @era) 3 !> To x
+      SubMissingAccountsInWithdrawals x -> Sum (SubMissingAccountsInWithdrawals @era) 1 !> To x
+      SubExceededBalancesInWithdrawals x -> Sum (SubExceededBalancesInWithdrawals @era) 2 !> To x
+      SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 3 !> To x
+      SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 4 !> To expected !> To wrongs
+      SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 5 !> To expected !> To wrongs
 
 instance
   ( Era era
@@ -82,9 +101,11 @@ instance
   where
   decCBOR = decode . Summands "SubEntitiesPredFailure" $ \case
     0 -> SumD SubCertsFailure <! From
-    1 -> SumD SubWithdrawalsMissingAccounts <! From
-    2 -> SumD SubWithdrawalAmountsExceedAccountBalances <! From
-    3 -> SumD SubDirectDepositsToMissingAccounts <! From
+    1 -> SumD SubMissingAccountsInWithdrawals <! From
+    2 -> SumD SubExceededBalancesInWithdrawals <! From
+    3 -> SumD SubMissingAccountsInDirectDeposits <! From
+    4 -> SumD SubWrongNetworkInWithdrawals <! From <! From
+    5 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -109,6 +130,12 @@ instance InjectRuleFailure "SUBENTITIES" Conway.ConwayCertsPredFailure DijkstraE
 instance InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraSubEntitiesPredFailure
 
+instance InjectRuleFailure "SUBENTITIES" EntitiesPredFailure DijkstraEra where
+  injectFailure = entitiesToSubEntitiesPredFailure
+
+instance InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure DijkstraEra where
+  injectFailure = injectFailure @"SUBENTITIES" @EntitiesPredFailure . injectFailure @"ENTITIES"
+
 instance
   ( EraTx era
   , DijkstraEraTxBody era
@@ -119,6 +146,8 @@ instance
   , Environment (EraRule "SUBCERTS" era) ~ SubCertsEnv era
   , EraRule "SUBENTITIES" era ~ SUBENTITIES era
   , InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure era
+  , InjectRuleFailure "SUBENTITIES" EntitiesPredFailure era
+  , InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   STS (SUBENTITIES era)
@@ -144,6 +173,8 @@ dijkstraSubEntitiesTransition ::
   , Environment (EraRule "SUBCERTS" era) ~ SubCertsEnv era
   , EraRule "SUBENTITIES" era ~ SUBENTITIES era
   , InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure era
+  , InjectRuleFailure "SUBENTITIES" EntitiesPredFailure era
+  , InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   TransitionRule (SUBENTITIES era)
@@ -156,13 +187,17 @@ dijkstraSubEntitiesTransition = do
       accounts = certState ^. certDStateL . accountsL
 
   network <- liftSTS $ asks networkId
+
+  runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
+  runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
+
   let (missingWithdrawals, exceededWithdrawals) =
         case withdrawalsThatExceedAccountBalance withdrawals network accounts of
           Nothing -> (Map.empty, Map.empty)
           Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
   failOnNonEmptyMap missingWithdrawals $
-    injectFailure . SubWithdrawalsMissingAccounts . Withdrawals . NEM.toMap
-  failOnNonEmptyMap exceededWithdrawals $ injectFailure . SubWithdrawalAmountsExceedAccountBalances
+    injectFailure . SubMissingAccountsInWithdrawals . Withdrawals . NEM.toMap
+  failOnNonEmptyMap exceededWithdrawals $ injectFailure . SubExceededBalancesInWithdrawals
 
   let certStateBeforeSubCerts =
         certState
@@ -175,7 +210,7 @@ dijkstraSubEntitiesTransition = do
   let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
   failOnJust (directDepositsMissingAccounts directDeposits accountsAfterSubCerts) $
-    injectFailure . SubDirectDepositsToMissingAccounts
+    injectFailure . SubMissingAccountsInDirectDeposits
 
   pure $ certStateAfterSubCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
 
@@ -191,6 +226,19 @@ conwayToDijkstraSubEntitiesPredFailure = \case
   Conway.ConwayMempoolFailure _ -> impossible "ConwayMempoolFailure"
   Conway.ConwayWithdrawalsMissingAccounts _ -> impossible "ConwayWithdrawalsMissingAccounts"
   Conway.ConwayIncompleteWithdrawals _ -> impossible "ConwayIncompleteWithdrawals"
+  where
+    impossible name = error $ "Impossible: `" <> name <> "` for SUBENTITIES"
+
+entitiesToSubEntitiesPredFailure ::
+  EntitiesPredFailure era -> SubEntitiesPredFailure era
+entitiesToSubEntitiesPredFailure = \case
+  WrongNetworkInWithdrawals net addrs -> SubWrongNetworkInWithdrawals net addrs
+  WrongNetworkInDirectDeposits net addrs -> SubWrongNetworkInDirectDeposits net addrs
+  CertsFailure _ -> impossible "CertsFailure"
+  MissingAccountsInWithdrawals _ -> impossible "MissingAccountsInWithdrawals"
+  IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
+  ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
+  MissingAccountsInDirectDeposits _ -> impossible "MissingAccountsInDirectDeposits"
   where
     impossible name = error $ "Impossible: `" <> name <> "` for SUBENTITIES"
 

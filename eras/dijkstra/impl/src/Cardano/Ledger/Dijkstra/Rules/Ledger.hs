@@ -63,6 +63,7 @@ import Cardano.Ledger.Dijkstra.Rules.Entities (
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubEntities (SubEntitiesPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
@@ -179,6 +180,12 @@ instance InjectRuleFailure "LEDGER" Conway.ConwayGovPredFailure DijkstraEra wher
 
 instance InjectRuleFailure "LEDGER" DijkstraSubLedgersPredFailure DijkstraEra where
   injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" SubEntitiesPredFailure DijkstraEra where
+  injectFailure =
+    injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
+      . SubLedgerFailure
+      . SubEntitiesFailure
 
 deriving instance
   ( Era era
@@ -356,7 +363,7 @@ dijkstraLedgerTransition ::
   ) =>
   TransitionRule (LEDGER era)
 dijkstraLedgerTransition = do
-  TRC (Shelley.LedgerEnv slot mbCurEpochNo txIx pp chainAccountState, ledgerState, stAnnTx) <-
+  TRC (Shelley.LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState, ledgerState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -373,7 +380,6 @@ dijkstraLedgerTransition = do
         ( SubLedgerEnv
             slot
             mbCurEpochNo
-            txIx
             pp
             chainAccountState
             originalUtxo
@@ -495,7 +501,7 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayTreasuryValueMismatch mm -> DijkstraTreasuryValueMismatch mm
   Conway.ConwayTxRefScriptsSizeTooBig mm -> DijkstraTxRefScriptsSizeTooBig mm
   Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
-  Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraEntitiesFailure (WithdrawalsMissingAccounts ws)
+  Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraEntitiesFailure (MissingAccountsInWithdrawals ws)
   Conway.ConwayIncompleteWithdrawals ws -> DijkstraEntitiesFailure (IncompleteWithdrawals ws)
 
 shelleyToDijkstraLedgerPredFailure ::
@@ -505,7 +511,7 @@ shelleyToDijkstraLedgerPredFailure ::
 shelleyToDijkstraLedgerPredFailure = \case
   Shelley.UtxowFailure x -> DijkstraUtxowFailure x
   Shelley.DelegsFailure _ -> error "Impossible: DELEGS has been removed in Dijkstra"
-  Shelley.ShelleyWithdrawalsMissingAccounts x -> DijkstraEntitiesFailure (WithdrawalsMissingAccounts x)
+  Shelley.ShelleyWithdrawalsMissingAccounts x -> DijkstraEntitiesFailure (MissingAccountsInWithdrawals x)
   Shelley.ShelleyIncompleteWithdrawals x -> DijkstraEntitiesFailure (IncompleteWithdrawals x)
 
 instance

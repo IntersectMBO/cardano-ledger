@@ -95,7 +95,6 @@ import Lens.Micro
 data SubLedgerEnv era = SubLedgerEnv
   { sleSlotNo :: SlotNo
   , sleEpochNo :: Maybe EpochNo
-  , sleTxIx :: TxIx
   , slePParams :: PParams era
   , sleAccount :: ChainAccountState
   , sleOriginalUtxo :: UTxO era
@@ -232,7 +231,7 @@ dijkstraSubLedgersTransition ::
   TransitionRule (EraRule "SUBLEDGER" era)
 dijkstraSubLedgersTransition = do
   TRC
-    ( SubLedgerEnv slot mbCurEpochNo _ pp chainAccountState originalUtxo topIsPhase2Valid
+    ( SubLedgerEnv slot mbCurEpochNo pp chainAccountState originalUtxo topIsPhase2Valid
       , LedgerState utxoState certState
       , stAnnTx
       ) <-
@@ -370,7 +369,7 @@ conwayToDijkstraSubLedgerPredFailure = \case
   Conway.ConwayCertsFailure f -> SubEntitiesFailure (injectFailure @"SUBENTITIES" f)
   Conway.ConwayGovFailure f -> SubGovFailure (injectFailure @"SUBGOV" f)
   Conway.ConwayWdrlNotDelegatedToDRep _ -> error "Impossible: `ConwayWdrlNotDelegatedToDRep` for SUBLEDGER"
-  Conway.ConwayWithdrawalsMissingAccounts x -> SubEntitiesFailure (SubWithdrawalsMissingAccounts x)
+  Conway.ConwayWithdrawalsMissingAccounts x -> SubEntitiesFailure (SubMissingAccountsInWithdrawals x)
   Conway.ConwayTreasuryValueMismatch x -> SubTreasuryValueMismatch x
   Conway.ConwayTxRefScriptsSizeTooBig _ -> error "Impossible: `ConwayTxRefScriptsSizeTooBig` for SUBLEDGER"
   Conway.ConwayMempoolFailure _ -> error "Impossible: `ConwayMempoolFailure` for SUBLEDGER"

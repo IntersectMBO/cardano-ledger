@@ -2,6 +2,20 @@
 
 ## 0.3.0.0
 
+* Rename constructors of `SubEntitiesPredFailure`:
+  - `SubWithdrawalsMissingAccounts` -> `SubMissingAccountsInWithdrawals`
+  - `SubWithdrawalAmountsExceedAccountBalances` -> `SubExceededBalancesInWithdrawals`
+  - `SubDirectDepositsToMissingAccounts` -> `SubMissingAccountsInDirectDeposits`
+* Add `SubWrongNetworkInWithdrawals` and `SubWrongNetworkInDirectDeposits` constructors to `SubEntitiesPredFailure`
+* Rename constructors of `EntitiesPredFailure`:
+  - `WithdrawalsMissingAccounts` -> `MissingAccountsInWithdrawals`
+  - `WithdrawalAmountsExceedAccountBalances` -> `ExceededBalancesInWithdrawals`
+  - `DirectDepositsToMissingAccounts` -> `MissingAccountsInDirectDeposits`
+* Add `WrongNetworkInWithdrawals` and `WrongNetworkInDirectDeposits` constructors to `EntitiesPredFailure`
+* Add `validateWrongNetworkInDirectDeposit`
+* Remove `WrongNetworkWithdrawal` and `WrongNetworkInDirectDeposit `constructors from `DijkstraUtxoPredFailure`
+* Remove `SubWrongNetworkWithdrawal` and `SubWrongNetworkInDirectDeposit` constructors from `DijkstraSubUtxoPredFailure`
+* Remove `sleTxIx` from `SubLedgerEnv`
 * Rename the phase-2 validity field on `DijkstraTx`: `dtIsValid` -> `dtIsPhase2Valid`
 * Add `dsattPlutusRunnableCache` field to `DijkstraStAnnTx TopTx`, holding `Map ScriptHash (SupportedPlutusRunnable era)`
 * Restrict `dijkstraCertsTotalDepositsTxBody` to `TxBody TopTx era` type

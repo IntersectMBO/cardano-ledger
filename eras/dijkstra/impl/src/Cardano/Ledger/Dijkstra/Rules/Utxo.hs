@@ -20,10 +20,8 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
-  validateWrongNetworkInDirectDeposit,
 ) where
 
-import Cardano.Ledger.Address (DirectDeposits (..))
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
@@ -78,7 +76,6 @@ import Control.State.Transition.Extended (
   TRC (..),
   TransitionRule,
   failureOnNonEmptyMap,
-  failureOnNonEmptySet,
   judgmentContext,
   liftSTS,
   trans,
@@ -124,11 +121,6 @@ data DijkstraUtxoPredFailure era
       Network
       -- | the set of addresses with incorrect network IDs
       (NonEmptySet Addr)
-  | WrongNetworkWithdrawal
-      -- | the expected network id
-      Network
-      -- | the set of reward addresses with incorrect network IDs
-      (NonEmptySet AccountAddress)
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig (NonEmpty (TxOut era))
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
@@ -165,11 +157,6 @@ data DijkstraUtxoPredFailure era
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
   | PtrPresentInCollateralReturn (TxOut era)
-  | WrongNetworkInDirectDeposit
-      -- | the expected network id
-      Network
-      -- | the set of account addresses with incorrect network IDs
-      (NonEmptySet AccountAddress)
   | -- | Total withdrawals per account that exceed the original account balance
     WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   deriving (Generic)
@@ -304,20 +291,6 @@ validateBatchCollateral pp tx (UTxO utxo) =
       hasRedeemers t || any hasRedeemers (t ^. bodyTxL . subTransactionsTxBodyL)
     hasRedeemers = not . null . (^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
-validateWrongNetworkInDirectDeposit ::
-  DijkstraEraTxBody era =>
-  Network ->
-  TxBody t era ->
-  Test (DijkstraUtxoPredFailure era)
-validateWrongNetworkInDirectDeposit netId txb =
-  failureOnNonEmptySet depositsWrongNetwork (WrongNetworkInDirectDeposit netId)
-  where
-    depositsWrongNetwork =
-      Map.keysSet $
-        Map.filterWithKey
-          (\a _ -> aaNetworkId a /= netId)
-          (unDirectDeposits $ txb ^. directDepositsTxBodyL)
-
 -- | Ensure that value consumed and produced matches up exactly,  aggregated across the entire batch
 -- (top-level transaction and all its sub-transactions).
 --
@@ -422,14 +395,8 @@ dijkstraUtxoTransition = do
   {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
 
-  {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
-  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
-
   {- (txnetworkid txb = NetworkId) ∨ (txnetworkid txb = ◇) -}
   runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
-
-  {- direct deposit network IDs -}
-  runTestOnSignal $ validateWrongNetworkInDirectDeposit netId txBody
 
   {- no Ptr in collateral return -}
   validateNoPtrInCollateralReturn txBody
@@ -529,7 +496,6 @@ instance
       FeeTooSmallUTxO mm -> Sum FeeTooSmallUTxO 5 !> To mm
       ValueNotConservedUTxO mm -> Sum (ValueNotConservedUTxO @era) 6 !> To mm
       WrongNetwork right wrongs -> Sum (WrongNetwork @era) 7 !> To right !> To wrongs
-      WrongNetworkWithdrawal right wrongs -> Sum (WrongNetworkWithdrawal @era) 8 !> To right !> To wrongs
       OutputBootAddrAttrsTooBig outs -> Sum (OutputBootAddrAttrsTooBig @era) 9 !> To outs
       OutputTooBigUTxO outs -> Sum (OutputTooBigUTxO @era) 10 !> To outs
       InsufficientCollateral a b -> Sum InsufficientCollateral 11 !> To a !> To b
@@ -544,7 +510,6 @@ instance
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 20 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
-      WrongNetworkInDirectDeposit right wrongs -> Sum (WrongNetworkInDirectDeposit @era) 23 !> To right !> To wrongs
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
 
 instance
@@ -565,7 +530,6 @@ instance
     5 -> SumD FeeTooSmallUTxO <! From
     6 -> SumD ValueNotConservedUTxO <! From
     7 -> SumD WrongNetwork <! From <! From
-    8 -> SumD WrongNetworkWithdrawal <! From <! From
     9 -> SumD OutputBootAddrAttrsTooBig <! From
     10 -> SumD OutputTooBigUTxO <! From
     11 -> SumD InsufficientCollateral <! From <! From
@@ -580,7 +544,6 @@ instance
     20 -> SumD BabbageOutputTooSmallUTxO <! From
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
-    23 -> SumD WrongNetworkInDirectDeposit <! From <! From
     24 -> SumD WithdrawalsExceedAccountBalance <! From
     n -> Invalid n
 
@@ -599,7 +562,7 @@ conwayToDijkstraUtxoPredFailure = \case
   Conway.FeeTooSmallUTxO m -> FeeTooSmallUTxO m
   Conway.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Conway.WrongNetwork x y -> WrongNetwork x y
-  Conway.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
+  Conway.WrongNetworkWithdrawal _ _ -> error "Impossible: `WrongNetworkWithdrawal` for UTXO"
   Conway.OutputTooSmallUTxO _ -> error "Impossible: `OutputTooSmallUTxO` for UTXO"
   Conway.UtxosFailure x -> UtxosFailure x
   Conway.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
