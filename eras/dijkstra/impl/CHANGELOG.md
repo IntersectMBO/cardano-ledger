@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `validateMissingAccountsInDirectDeposits`
 * Remove `SubExceededBalancesInWithdrawals` constructor from `SubEntitiesPredFailure`
 * Add `SubMissingOriginalAccountsInWithdrawals` constructor to `SubEntitiesPredFailure`
 * Add `SubEntitiesEnv` and use it as `Environment` in the `SUBENTITIES` `STS` instance

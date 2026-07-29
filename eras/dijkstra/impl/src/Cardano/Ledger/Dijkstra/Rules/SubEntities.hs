@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, SUBCERTS, SUBENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesPredFailure (..),
+  validateMissingAccountsInDirectDeposits,
   validateWrongNetworkInDirectDeposit,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
@@ -227,6 +228,7 @@ dijkstraSubEntitiesTransition = do
   TRC (SubEntitiesEnv curEpoch pp committee committeeProposals originalAccounts, certState, tx) <-
     judgmentContext
   let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+      directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accounts = certState ^. certDStateL . accountsL
       subCertsEnv = SubCertsEnv tx pp curEpoch committee committeeProposals
 
@@ -237,21 +239,21 @@ dijkstraSubEntitiesTransition = do
   runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
   runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
 
+  let appliedWithdrawals = applyWithdrawals withdrawals accounts
   let certStateBeforeSubCerts =
         certState
           & Conway.updateDormantDRepExpiries tx curEpoch
           & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
-          & certDStateL . accountsL %~ applyWithdrawals withdrawals
+          & certDStateL . accountsL .~ appliedWithdrawals
   certStateAfterSubCerts <-
     trans @(EraRule "SUBCERTS" era) $
       TRC (subCertsEnv, certStateBeforeSubCerts, StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL)
 
-  let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
-      accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
-  failOnJust (directDepositsMissingAccounts directDeposits accountsAfterSubCerts) $
-    injectFailure . SubMissingAccountsInDirectDeposits
+  let accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
+  runTest $ validateMissingAccountsInDirectDeposits directDeposits accountsAfterSubCerts
 
-  pure $ certStateAfterSubCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
+  let appliedDirectDeposits = applyDirectDeposits directDeposits accountsAfterSubCerts
+  pure $ certStateAfterSubCerts & certDStateL . accountsL .~ appliedDirectDeposits
 
 validateMissingOriginalAccountsInWithdrawals ::
   EraAccounts era =>
@@ -297,7 +299,7 @@ entitiesToSubEntitiesPredFailure = \case
   MissingAccountsInWithdrawals _ -> impossible "MissingAccountsInWithdrawals"
   IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
   ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
-  MissingAccountsInDirectDeposits _ -> impossible "MissingAccountsInDirectDeposits"
+  MissingAccountsInDirectDeposits dds -> SubMissingAccountsInDirectDeposits dds
   where
     impossible name = error $ "Impossible: `" <> name <> "` for SUBENTITIES"
 
