@@ -12,7 +12,7 @@ import Control.State.Transition (Event)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec as CERTS
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as UTXOW
@@ -32,6 +32,6 @@ spec era = do
   describe "DijkstraEra Onwards" $ withImpInitEachEraVersion era $ do
     LEDGER.spec
     CERT.spec
-    CERTS.spec
+    ENTITIES.spec
     UTXOW.spec
     UTXO.spec

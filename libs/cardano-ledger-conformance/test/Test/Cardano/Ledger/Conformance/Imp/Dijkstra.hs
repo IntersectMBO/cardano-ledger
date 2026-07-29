@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as ConwayUTXO
 import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as ConwayUTXOS
 import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as ConwayUTXOW
 import Test.Cardano.Ledger.Dijkstra.Imp.CertSpec qualified as CERT
-import Test.Cardano.Ledger.Dijkstra.Imp.CertsSpec qualified as CERTS
+import Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec qualified as ENTITIES
 import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec qualified as UTXO
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec qualified as UTXOW
@@ -39,7 +39,7 @@ spec = do
             ConwayBBODY.spec
             CERT.spec
             xdescribe "disabled" ConwayCERTS.spec
-            CERTS.spec
+            xdescribe "pending ENTITIES implementation" ENTITIES.spec
             ConwayDELEG.spec
             ConwayENACT.spec
             ConwayEPOCH.spec
