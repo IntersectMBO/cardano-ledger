@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.16.0.1
+## 1.16.1.0
 
-*
+### `testlib`
+
+* Add `genSmallAlonzoBlockBody`
 
 ## 1.16.0.0
 
