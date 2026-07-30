@@ -8,20 +8,34 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.HuddleSpec (babbageCDDL)
+import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genSmallAlonzoBlockBody)
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
+  huddleRoundTripGenValidate,
   noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
 import Test.Cardano.Protocol.Praos.Arbitrary ()
+
+genPraosHeader :: Gen (Praos.Header StandardCrypto)
+genPraosHeader = do
+  h <- arbitrary
+  pv <- genEraProtVer @BabbageEra
+  pure $ Praos.Header ((Praos.headerBody h) {Praos.hbProtVer = pv}) (Praos.headerSig h)
+
+genPraosBlock :: Gen (Block (Praos.Header StandardCrypto) BabbageEra)
+genPraosBlock = Block <$> genPraosHeader <*> genSmallAlonzoBlockBody
 
 spec :: Spec
 spec =
@@ -52,6 +66,7 @@ spec =
       huddleRoundTripAnnCborSpec @(Praos.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Praos.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Praos.HeaderBody StandardCrypto) v "header_body"
+      huddleRoundTripGenValidate @(Block (Praos.Header StandardCrypto) BabbageEra) genPraosBlock v "block"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx BabbageEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData BabbageEra) v "auxiliary_data"

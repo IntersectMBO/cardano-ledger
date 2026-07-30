@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
+import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Conway.Governance (
   GovAction,
   ProposalProcedure,
@@ -62,6 +63,9 @@ genLeiosHeaderBody = do
   pv <- genEraProtVer @DijkstraEra
   pure hb {Leios.hbProtVer = pv}
 
+genLeiosBlock :: Gen (Block (Leios.Header StandardCrypto) DijkstraEra)
+genLeiosBlock = Block <$> genLeiosHeader <*> genSmallDijkstraTxsBlockBody
+
 spec :: Spec
 spec = do
   describe "CDDL" $ do
@@ -104,4 +108,8 @@ spec = do
       huddleDecoderEquivalenceSpec @(Leios.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Leios.HeaderBody StandardCrypto) v "header_body"
       huddleRoundTripGenValidate @(Leios.HeaderBody StandardCrypto) genLeiosHeaderBody v "header_body"
+      huddleRoundTripGenValidate @(Block (Leios.Header StandardCrypto) DijkstraEra)
+        genLeiosBlock
+        v
+        "block"
       fullCddlSpec @Leios.EbAnnouncement v "eb_announcement"

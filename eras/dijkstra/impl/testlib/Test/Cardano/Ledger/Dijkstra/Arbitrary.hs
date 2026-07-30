@@ -329,8 +329,9 @@ instance
       <*> arbitrary
 
 -- | Generate the "TxsRB" form of a Dijkstra block body: a few transactions are
--- present and no Leios certificate is attached. Transaction count and per-tx
--- size are kept small so the round-trip is fast under shrinking.
+-- present and no Leios certificate is attached. At least 25 transactions are
+-- generated, each scaled down by the transaction count so the whole block
+-- stays bounded in size.
 genSmallDijkstraTxsBlockBody ::
   ( AlonzoEraTx era
   , Arbitrary (Tx TopTx era)
@@ -338,16 +339,12 @@ genSmallDijkstraTxsBlockBody ::
   Gen (DijkstraBlockBody era)
 genSmallDijkstraTxsBlockBody =
   DijkstraBlockBody
-    <$> genFewTxs
+    <$> genTxs
     <*> pure SNothing
     <*> arbitrary
   where
-    genFewTxs = sized $ \sz -> do
-      numTxs <-
-        frequency
-          [ (99, choose (1, max 1 $ sz `div` 20))
-          , (1, pure 0)
-          ]
+    genTxs = do
+      numTxs <- choose (25, 40)
       SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
 
 -- | Generate the "CertRB" form of a Dijkstra block body: a Leios certificate is

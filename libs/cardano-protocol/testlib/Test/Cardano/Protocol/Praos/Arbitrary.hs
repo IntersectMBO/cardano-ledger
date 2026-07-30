@@ -16,29 +16,14 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core (BlockBody, EraBlockBody)
-import Cardano.Ledger.Hashes (HashHeader (HashHeader))
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Praos.BlockHeader (Header (Header, HeaderConstr), HeaderBody (HeaderBody))
 import Cardano.Protocol.Praos.VRF (InputVRF, mkInputVRF)
-import Cardano.Protocol.TPraos.BlockHeader (PrevHash (BlockHash, GenesisHash))
-import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Protocol.Arbitrary ()
 import Test.Crypto.Instances ()
-
-instance Crypto c => Arbitrary (OCert c) where
-  arbitrary =
-    OCert
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-deriving newtype instance Arbitrary KESPeriod
-
-instance Arbitrary PrevHash where
-  arbitrary = frequency [(1, pure GenesisHash), (9999, BlockHash . HashHeader <$> arbitrary)]
 
 instance Arbitrary InputVRF where
   arbitrary = mkInputVRF <$> arbitrary <*> arbitrary

@@ -31,6 +31,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genValidAndUnknownCostModels,
   genAlonzoPlutusPurposePointer,
   genDatumPresent,
+  genSmallAlonzoBlockBody,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra, ApplyTxError (..), Tx (..))
@@ -93,6 +94,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Word
@@ -492,6 +494,18 @@ instance
   Arbitrary (AlonzoBlockBody era)
   where
   arbitrary = AlonzoBlockBody <$> arbitrary
+
+genSmallAlonzoBlockBody ::
+  ( AlonzoEraTx era
+  , Arbitrary (Tx TopTx era)
+  , SafeToHash (TxWits era)
+  ) =>
+  Gen (AlonzoBlockBody era)
+genSmallAlonzoBlockBody = AlonzoBlockBody <$> genTxs
+  where
+    genTxs = do
+      numTxs <- choose (25, 40)
+      SSeq.fromList <$> vectorOf numTxs (scale (`div` numTxs) arbitrary)
 
 instance Arbitrary LangDepView where
   arbitrary = LangDepView <$> arbitrary <*> arbitrary

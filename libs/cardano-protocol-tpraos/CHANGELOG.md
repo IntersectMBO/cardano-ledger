@@ -17,8 +17,6 @@
 
 ### `testlib`
 
-* Re-export `Test.Cardano.Protocol.Praos.Arbitrary` and `Test.Cardano.Protocol.Leios.Arbitrary` from the new `cardano-protocol` testlib
-* Move the `Arbitrary` instances for `OCert`, `KESPeriod` and `PrevHash` to the new `cardano-protocol` testlib
 * Add `NFData` instances for `{VerKeyVRF,SignKeyVRF,CertVRF} FakeVRF`
 * Replace `CuddleData` with `HuddleEnv`
 
