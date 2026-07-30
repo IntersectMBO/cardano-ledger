@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.23.0.1
+
+*
+
 ## 1.23.0.0
 
 * Restrict `conwayCertsTotalDepositsTxBody` to `TxBody TopTx era` type

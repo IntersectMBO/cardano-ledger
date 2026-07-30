@@ -128,8 +128,7 @@ data DijkstraPParams f era = DijkstraPParams
   -- including non-native scripts.
   , dppMaxCollateralInputs :: !(THKD ('PPGroups 'NetworkGroup 'NoStakePoolGroup) f Word16)
   -- ^ Maximum number of collateral inputs allowed in a transaction
-  , -- New ones for Dijkstra:
-    dppPoolVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f PoolVotingThresholds)
+  , dppPoolVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f PoolVotingThresholds)
   -- ^ Thresholds for SPO votes
   , dppDRepVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f DRepVotingThresholds)
   -- ^ Thresholds for DRep votes
@@ -149,7 +148,8 @@ data DijkstraPParams f era = DijkstraPParams
       !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f NonNegativeInterval)
   -- ^ Reference scripts fee for the minimum fee calculation
   -- TODO ensure that the groups here make sense
-  , dppMaxRefScriptSizePerBlock :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
+  , -- New ones for Dijkstra:
+    dppMaxRefScriptSizePerBlock :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Limit on the total number of bytes of all reference scripts combined from
   -- all transactions within a block.
   , dppMaxRefScriptSizePerTx :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)

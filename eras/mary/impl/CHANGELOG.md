@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.11.0.1
+
+*
+
 ## 1.11.0.0
 
 * Add `TranslateEra` instance for `SnapShots`

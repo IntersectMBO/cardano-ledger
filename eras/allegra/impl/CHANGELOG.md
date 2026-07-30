@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.10.0.1
+
+*
+
 ## 1.10.0.0
 
 * Add `TranslateEra` instance for `SnapShots`

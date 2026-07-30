@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.6.0.1
+
+*
+
 ## 1.6.0.0
 
 * Move `Cardano.Protocol.Crypto` and `Cardano.Protocol.TPraos.OCert` to the new `cardano-protocol` package. They are re-exported here unchanged.

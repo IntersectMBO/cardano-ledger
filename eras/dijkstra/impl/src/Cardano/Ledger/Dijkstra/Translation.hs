@@ -25,9 +25,6 @@ import Cardano.Ledger.Conway.Governance (
   PulsingSnapshot,
   RatifyState (..),
   finishDRepPulser,
-  mkEnactState,
-  rsEnactStateL,
-  setCompleteDRepPulsingState,
   translateProposals,
  )
 import Cardano.Ledger.Conway.Governance.DRepPulser (PulsingSnapshot (..))
@@ -44,12 +41,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
-  epochStateGovStateL,
   lsCertStateL,
   lsUTxOStateL,
  )
 import Data.Coerce (coerce)
-import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~), (^.))
 
@@ -74,19 +69,12 @@ instance TranslateEra DijkstraEra (Tx TopTx) where
 
 instance TranslateEra DijkstraEra NewEpochState where
   translateEra ctxt nes = do
-    let es = translateEra' ctxt $ nesEs nes
-        -- We need to ensure that we have the same initial EnactState in the pulser as
-        -- well as in the current EnactState, otherwise in the very first EPOCH rule call
-        -- the pulser will reset it.
-        ratifyState =
-          def
-            & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
     pure $
       NewEpochState
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = setCompleteDRepPulsingState def ratifyState es
+        , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
