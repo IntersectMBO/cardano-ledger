@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.14.0.1
+
+*
+
 ## 1.14.0.0
 
 * Rename `updateUTxOStateByTxValidity` to `updateUTxOState`

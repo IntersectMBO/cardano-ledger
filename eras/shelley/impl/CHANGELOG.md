@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.19.0.1
+
+*
+
 ## 1.19.0.0
 
 * Restrict `shelleyCertsTotalDepositsTxBody` to `TxBody TopTx era` type

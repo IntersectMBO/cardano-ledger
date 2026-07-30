@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.16.0.1
+
+*
+
 ## 1.16.0.0
 
 * Convert `IsValid` into the `IsPhase2Valid` sum type (`Phase2Valid`/`Phase2Invalid`) and rename its lens and field, deprecating the old names:

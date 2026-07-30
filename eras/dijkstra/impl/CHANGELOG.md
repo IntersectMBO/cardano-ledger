@@ -1,5 +1,9 @@
 # Revision history for `cardano-ledger-dijkstra`
 
+## 0.3.0.1
+
+*
+
 ## 0.3.0.0
 
 * Rename constructors of `SubEntitiesPredFailure`:
