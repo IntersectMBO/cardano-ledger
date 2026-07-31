@@ -230,7 +230,7 @@ spec = describe "DELEG" $ do
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1284
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt
-      "Delegate vote to a DRep that is unregistered and reregistered in the same transaction"
+      "Delegate stake to a DRep that is unregistered and reregistered in the same transaction"
       $ whenPostBootstrap
       $ do
         committee <- registerInitialCommittee
@@ -248,7 +248,7 @@ spec = describe "DELEG" $ do
                 [ UnRegDRepTxCert drep deposit
                 , RegDRepTxCert drep deposit SNothing
                 ]
-        impAnn "Withdrawal is no longer ratified" $ do
+        impAnn "Withdrawal is no longer ratified, since the only DRep has no stake" $ do
           account <- registerAccountAddress
           void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
           getAccountBalance account `shouldReturn` Coin 0
