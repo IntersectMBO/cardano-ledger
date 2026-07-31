@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.21.0.1
+## 1.21.1.0
 
-*
+* Add `withdrawalsMissingAccounts` to `Account`
 
 ## 1.21.0.0
 

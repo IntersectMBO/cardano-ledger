@@ -74,6 +74,7 @@ import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
+  lsCertState,
   lsUTxOStateL,
   utxosGovStateL,
   utxosUtxo,
@@ -338,6 +339,7 @@ validateAllRefScriptSize pp utxo tx =
 dijkstraLedgerTransition ::
   forall era.
   ( AlonzoEraTx era
+  , ConwayEraCertState era
   , ConwayEraGov era
   , DijkstraEraTxBody era
   , DijkstraEraUTxO era
@@ -383,6 +385,7 @@ dijkstraLedgerTransition = do
             pp
             chainAccountState
             originalUtxo
+            (lsCertState ledgerState ^. certDStateL . accountsL)
             (tx ^. isPhase2ValidTxL)
         , ledgerState
         , subStAnnTxs
