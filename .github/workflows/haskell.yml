@@ -233,6 +233,7 @@ jobs:
         - cardano-ledger-shelley-test
         - cardano-ledger-test
         - cardano-protocol-tpraos
+        - cardano-protocol
         - non-integral
         - small-steps
         - vector-map
