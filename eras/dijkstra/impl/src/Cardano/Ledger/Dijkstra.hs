@@ -191,6 +191,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
     DijkstraStAnnSubTx
       { dsastTx = tx
       , dsastScriptsNeeded = scriptsNeeded
+      , dsastScriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
       , dsastScriptsProvided = scriptsProvided
       , dsastTxInfoResult = txInfoResult
       , dsastPlutusLanguagesUsed =

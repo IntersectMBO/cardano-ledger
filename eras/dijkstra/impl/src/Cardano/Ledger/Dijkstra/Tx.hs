@@ -393,6 +393,7 @@ data DijkstraStAnnTx l era where
   DijkstraStAnnSubTx ::
     { dsastTx :: !(Tx SubTx era)
     , dsastScriptsNeeded :: ScriptsNeeded era
+    , dsastScriptsHashesNeeded :: Set ScriptHash
     , dsastScriptsProvided :: ScriptsProvided era
     , dsastTxInfoResult :: TxInfoResult era
     , dsastPlutusLanguagesUsed :: Set Language
