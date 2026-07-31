@@ -227,6 +227,32 @@ spec = describe "DELEG" $ do
           getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
           expectDelegatedVote cred (DRepCredential drepCred)
 
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1284
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt
+      "Delegate stake to a DRep that is unregistered and reregistered in the same transaction"
+      $ whenPostBootstrap
+      $ do
+        committee <- registerInitialCommittee
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+        donateToTreasury $ Coin 5_000_000
+        impAnn "Withdrawal is ratified by the vote of the DRep with delegated stake" $ do
+          account <- registerAccountAddress
+          void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
+          getAccountBalance account `shouldReturn` Coin 1_000
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.fromList
+                [ UnRegDRepTxCert drep deposit
+                , RegDRepTxCert drep deposit SNothing
+                ]
+        impAnn "Withdrawal is no longer ratified, since the only DRep has no stake" $ do
+          account <- registerAccountAddress
+          void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
+          getAccountBalance account `shouldReturn` Coin 0
+
     it "Redelegate vote to the same DRep" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
