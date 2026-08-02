@@ -41,7 +41,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
-import Test.Cardano.Protocol.Arbitrary ()
+import Test.Cardano.Protocol.TPraos.BlockHeader.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
 
 instance Arbitrary ChainDepState where

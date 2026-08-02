@@ -10,7 +10,7 @@ import Cardano.Ledger.Babbage
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genSmallAlonzoBlockBody)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Era ()
@@ -25,15 +25,15 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (
   roundTripAnnEraExpectation,
   roundTripEraExpectation,
  )
-import Test.Cardano.Protocol.Praos.Arbitrary ()
+import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
 
 spec :: Spec
 spec = do
   describe "RoundTrip" $ do
     roundTripAlonzoCommonSpec @BabbageEra
     prop "Block (Praos.Header)" $
-      withMaxSuccess 25 $
-        forAll (Block <$> arbitrary <*> genSmallAlonzoBlockBody) $ \block ->
+      BaseQC.withNumTests 25 $
+        forAll (Block <$> arbitrary <*> scale (`div` 2) arbitrary) $ \block ->
           conjoin
             [ roundTripEraExpectation @BabbageEra @(Block (Praos.Header StandardCrypto) BabbageEra) block
             , roundTripAnnEraExpectation @BabbageEra @(Block (Praos.Header StandardCrypto) BabbageEra) block

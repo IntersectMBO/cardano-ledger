@@ -9,7 +9,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genSmallAlonzoBlockBody)
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
@@ -47,8 +47,8 @@ main = ledgerEraTestMain @ConwayEra $ do
     TxInfo.spec
     describe "RoundTrip" $
       prop "Block (Praos.Header)" $
-        withMaxSuccess 25 $
-          forAll (Block <$> arbitrary <*> genSmallAlonzoBlockBody) $ \block ->
+        BaseQC.withNumTests 25 $
+          forAll (Block <$> arbitrary <*> scale (`div` 2) arbitrary) $ \block ->
             conjoin
               [ roundTripEraExpectation @ConwayEra @(Block (Praos.Header StandardCrypto) ConwayEra) block
               , roundTripAnnEraExpectation @ConwayEra @(Block (Praos.Header StandardCrypto) ConwayEra) block

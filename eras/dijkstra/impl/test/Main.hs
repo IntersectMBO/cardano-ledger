@@ -9,6 +9,7 @@ import Cardano.Ledger.Dijkstra.Rules ()
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Leios.BlockHeader as Leios
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
@@ -38,7 +39,7 @@ main =
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
       prop "Block (Leios.Header)" $
-        withMaxSuccess 25 $
+        BaseQC.withNumTests 25 $
           forAll (Block <$> arbitrary <*> genSmallDijkstraTxsBlockBody) $ \block ->
             conjoin
               [ roundTripEraExpectation @DijkstraEra @(Block (Leios.Header StandardCrypto) DijkstraEra) block

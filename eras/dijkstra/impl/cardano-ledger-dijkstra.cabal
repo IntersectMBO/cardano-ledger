@@ -270,6 +270,7 @@ test-suite tests
 
   build-depends:
     base,
+    cardano-base:testlib,
     cardano-data,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage:testlib,

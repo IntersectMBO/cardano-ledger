@@ -8,7 +8,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Protocol.Leios.Arbitrary () where
+module Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary () where
 
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
@@ -25,7 +25,7 @@ import Cardano.Protocol.Leios.BlockHeader (
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Protocol.Praos.Arbitrary ()
+import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
 import Test.Crypto.Instances ()
 
 instance Arbitrary EbAnnouncement where

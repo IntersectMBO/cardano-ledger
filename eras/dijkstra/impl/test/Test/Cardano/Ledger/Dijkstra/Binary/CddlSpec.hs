@@ -49,7 +49,7 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary (
   genSmallDijkstraTxsBlockBody,
  )
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
-import Test.Cardano.Protocol.Leios.Arbitrary ()
+import Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary ()
 
 genLeiosHeader :: Gen (Leios.Header StandardCrypto)
 genLeiosHeader = do

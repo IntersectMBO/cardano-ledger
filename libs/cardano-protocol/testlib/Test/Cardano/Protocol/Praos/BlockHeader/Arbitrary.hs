@@ -8,7 +8,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Protocol.Praos.Arbitrary () where
+module Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary () where
 
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
@@ -22,7 +22,7 @@ import Cardano.Protocol.Praos.VRF (InputVRF, mkInputVRF)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Protocol.Arbitrary ()
+import Test.Cardano.Protocol.TPraos.BlockHeader.Arbitrary ()
 import Test.Crypto.Instances ()
 
 instance Arbitrary InputVRF where

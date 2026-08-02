@@ -18,7 +18,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers, genSmallAlonzoBlockBody)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleAntiCborSpec,
   huddleDecoderEquivalenceSpec,
@@ -33,7 +33,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
-import Test.Cardano.Protocol.Praos.Arbitrary ()
+import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
 
 genPraosHeader :: Gen (Praos.Header StandardCrypto)
 genPraosHeader = do
@@ -48,7 +48,7 @@ genPraosHeaderBody = do
   pure hb {Praos.hbProtVer = pv}
 
 genPraosBlock :: Gen (Block (Praos.Header StandardCrypto) ConwayEra)
-genPraosBlock = Block <$> genPraosHeader <*> genSmallAlonzoBlockBody
+genPraosBlock = Block <$> genPraosHeader <*> scale (`div` 2) arbitrary
 
 spec :: Spec
 spec = do

@@ -8,18 +8,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Protocol.Arbitrary () where
+module Test.Cardano.Protocol.TPraos.BlockHeader.Arbitrary () where
 
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core (BlockBody, EraBlockBody, TopTx, Tx)
 import Cardano.Ledger.Hashes (HashHeader (HashHeader))
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.TPraos.BlockHeader (
   BHBody (BHBody),
-  BHeader (BHeader),
+  BHeader (BHeader, BHeaderConstr),
   PrevHash (BlockHash, GenesisHash),
  )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
@@ -88,3 +89,5 @@ instance
     Block
       <$> arbitrary
       <*> arbitrary
+
+deriving newtype instance Crypto c => DecCBOR (BHeader c)
