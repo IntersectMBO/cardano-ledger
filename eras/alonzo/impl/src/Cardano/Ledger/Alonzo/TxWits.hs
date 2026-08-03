@@ -126,7 +126,10 @@ import Cardano.Ledger.Shelley.TxWits (
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
 import Control.Monad.Trans.Fail (runFail)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withArray, withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
+import qualified Data.Foldable as Foldable
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -778,3 +781,83 @@ encodeWithSetTag xs =
     (natVersion @9)
     (encodeTag setTag <> encCBOR xs)
     (encCBOR xs)
+
+instance (Era era, ToJSON (Data era)) => ToJSON (TxDats era) where
+  toJSON (TxDats m) =
+    Aeson.toJSON
+      [ object ["dataHash" .= k, "data" .= v]
+      | (k, v) <- Map.toList m
+      ]
+
+instance (Era era, FromJSON (Data era)) => FromJSON (TxDats era) where
+  parseJSON = withArray "TxDats" $ \arr -> do
+    pairs <- mapM parsePair (Foldable.toList arr)
+    pure $ TxDats (Map.fromList pairs)
+    where
+      parsePair = withObject "TxDat" $ \o -> do
+        !datHash <- o .: "dataHash"
+        !dat <- o .: "data"
+        pure (datHash, dat)
+
+instance
+  ( AlonzoEraScript era
+  , ToJSON (Data era)
+  , ToJSON (PlutusPurpose AsIx era)
+  ) =>
+  ToJSON (Redeemers era)
+  where
+  toJSON (Redeemers rdmrs) =
+    Aeson.toJSON
+      [ object ["purpose" .= k, "data" .= d, "exUnits" .= ex]
+      | (k, (d, ex)) <- Map.toList rdmrs
+      ]
+
+instance
+  ( AlonzoEraScript era
+  , FromJSON (Data era)
+  , FromJSON (PlutusPurpose AsIx era)
+  ) =>
+  FromJSON (Redeemers era)
+  where
+  parseJSON = withArray "Redeemers" $ \arr -> do
+    pairs <- mapM parseRedeemer (Foldable.toList arr)
+    pure $ Redeemers (Map.fromList pairs)
+    where
+      parseRedeemer = withObject "Redeemer" $ \o -> do
+        !purpose <- o .: "purpose"
+        !dat <- o .: "data"
+        !exUnits <- o .: "exUnits"
+        pure (purpose, (dat, exUnits))
+
+instance
+  ( AlonzoEraScript era
+  , ToJSON (Script era)
+  , ToJSON (Data era)
+  , ToJSON (PlutusPurpose AsIx era)
+  ) =>
+  ToJSON (AlonzoTxWits era)
+  where
+  toJSON (AlonzoTxWits vkeys boots scripts dats rdmrs) =
+    object
+      [ "addrWits" .= Set.toList vkeys
+      , "bootWits" .= Set.toList boots
+      , "scriptWits" .= scripts
+      , "datums" .= dats
+      , "redeemers" .= rdmrs
+      ]
+
+instance
+  ( AlonzoEraScript era
+  , FromJSON (Script era)
+  , FromJSON (Data era)
+  , FromJSON (PlutusPurpose AsIx era)
+  ) =>
+  FromJSON (AlonzoTxWits era)
+  where
+  parseJSON = withObject "AlonzoTxWits" $ \o ->
+    AlonzoTxWits
+      <$> (Set.fromList <$> o .: "addrWits")
+      <*> (Set.fromList <$> o .: "bootWits")
+      <*> o .: "scriptWits"
+      <*> o .: "datums"
+      <*> o .: "redeemers"
