@@ -1,8 +1,12 @@
 # Version history for `cardano-protocol`
 
-## 0.1.0.1
+## 0.1.1.0
 
-*
+* Export `HeaderConstr` from `Cardano.Protocol.Praos.BlockHeader` and `Cardano.Protocol.Leios.BlockHeader`
+
+### `testlib`
+
+* Add `testlib` with `Test.Cardano.Protocol.Arbitrary`, `Test.Cardano.Protocol.Praos.Arbitrary` and `Test.Cardano.Protocol.Leios.Arbitrary`, providing `Arbitrary` instances for `OCert`, `KESPeriod`, `PrevHash`, `InputVRF`, the TPraos `BHeader`/`BHBody`/`Block`, the Praos and Leios `Header`/`HeaderBody`/`Block` and `EbAnnouncement`, and non-annotator `DecCBOR` instances for the Praos and Leios `Header`
 
 ## 0.1.0.0
 

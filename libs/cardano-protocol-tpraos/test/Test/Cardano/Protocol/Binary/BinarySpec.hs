@@ -20,7 +20,7 @@ import Data.Typeable (typeRep)
 import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Binary (decoderEquivalenceProp, decoderEquivalenceSpec)
+import Test.Cardano.Ledger.Binary (decoderEquivalenceProp)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Protocol.Binary.Annotator ()
@@ -29,7 +29,6 @@ import Test.Cardano.Protocol.TPraos.Arbitrary ()
 spec :: Spec
 spec = do
   describe "DecCBOR instances equivalence" $ do
-    decoderEquivalenceSpec @(BHeader StandardCrypto) minBound maxBound
     blockEraSpec @ShelleyEra
     blockEraSpec @AllegraEra
     blockEraSpec @MaryEra

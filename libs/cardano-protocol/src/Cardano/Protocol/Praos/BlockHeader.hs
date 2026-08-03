@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -24,7 +25,7 @@
 -- the fields needed for the Praos protocol. This also allows us to hide the
 -- more detailed construction of the header.
 module Cardano.Protocol.Praos.BlockHeader (
-  Header (Header, headerBody, headerSig),
+  Header (HeaderConstr, Header, headerBody, headerSig),
   HeaderBody (..),
   headerHash,
   headerSize,
@@ -42,11 +43,12 @@ import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (..),
   decodeFixedSized,
+  decodeRecordNamed,
   encodeFixedSized,
+  encodeListLen,
   serialize',
   unCBORGroup,
  )
-import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
 import Cardano.Ledger.Core (Era)
@@ -187,46 +189,41 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
       , hbOCert
       , hbProtVer
       } =
-      encode $
-        Rec HeaderBody
-          !> To hbBlockNo
-          !> To hbSlotNo
-          !> To hbPrev
-          !> To hbVk
-          !> E encodeFixedSized hbVrfVk
-          !> To hbVrfRes
-          !> To hbBodySize
-          !> To hbBodyHash
-          !> To hbOCert
-          !> To hbProtVer
+      encodeListLen 10
+        <> encCBOR hbBlockNo
+        <> encCBOR hbSlotNo
+        <> encCBOR hbPrev
+        <> encCBOR hbVk
+        <> encodeFixedSized hbVrfVk
+        <> encCBOR hbVrfRes
+        <> encCBOR hbBodySize
+        <> encCBOR hbBodyHash
+        <> encCBOR hbOCert
+        <> encCBOR hbProtVer
 
 instance Crypto crypto => DecCBOR (HeaderBody crypto) where
   decCBOR =
-    decode $
-      RecD HeaderBody
-        <! From
-        <! From
-        <! From
-        <! From
-        <! D decodeFixedSized
-        <! From
-        <! From
-        <! From
-        <! mapCoder unCBORGroup From
-        <! From
-
-encodeHeaderRaw ::
-  Crypto crypto =>
-  HeaderRaw crypto ->
-  Encode (Closed Dense) (HeaderRaw crypto)
-encodeHeaderRaw (HeaderRaw body sig) =
-  Rec HeaderRaw !> To body !> E encodeFixedSized sig
+    decodeRecordNamed "HeaderBody" (const 10) $
+      HeaderBody
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decodeFixedSized
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> (unCBORGroup <$> decCBOR)
+        <*> decCBOR
 
 instance Crypto crypto => EncCBOR (HeaderRaw crypto) where
-  encCBOR = encode . encodeHeaderRaw
+  encCBOR (HeaderRaw body sig) =
+    encodeListLen 2 <> encCBOR body <> encodeFixedSized sig
 
 instance Crypto crypto => DecCBOR (HeaderRaw crypto) where
-  decCBOR = decode $ RecD HeaderRaw <! From <! D decodeFixedSized
+  decCBOR =
+    decodeRecordNamed "HeaderRaw" (const 2) $
+      HeaderRaw <$> decCBOR <*> decodeFixedSized
 
 instance Crypto crypto => DecCBOR (Annotator (HeaderRaw crypto)) where
   decCBOR = pure <$> decCBOR

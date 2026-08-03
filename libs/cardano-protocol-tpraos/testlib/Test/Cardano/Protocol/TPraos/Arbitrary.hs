@@ -27,11 +27,10 @@ import Cardano.Ledger.Core
 import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
 import Cardano.Protocol.TPraos.API (ChainDepState, PraosCrypto)
 import Cardano.Protocol.TPraos.BlockHeader (
-  BHBody (BHBody),
-  BHeader (BHeader),
-  PrevHash (BlockHash, GenesisHash),
+  BHBody,
+  BHeader,
  )
-import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
+import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
@@ -42,6 +41,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Protocol.TPraos.BlockHeader.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
 
 instance Arbitrary ChainDepState where
@@ -79,19 +79,6 @@ instance Arbitrary OBftSlot where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance
-  ( Crypto c
-  , VRF.Signable (VRF c) ~ SignableRepresentation
-  , KES.Signable (KES c) ~ SignableRepresentation
-  ) =>
-  Arbitrary (BHeader c)
-  where
-  arbitrary = do
-    bhBody <- arbitrary
-    hotKey <- arbitrary
-    let sig = KES.unsoundPureSignedKES () 1 bhBody hotKey
-    pure $ BHeader bhBody sig
-
 genBHeader ::
   ( VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
@@ -114,56 +101,6 @@ genBHeader aiks = do
       bhBody =
         mkBHBody protVer prevHash allPoolKeys slotNo blockNo epochNonce oCert bodySize bodyHash
   return $ mkBHeader allPoolKeys kesPeriod keyRegKesPeriod bhBody
-
-instance
-  ( Crypto c
-  , VRF.Signable (VRF c) ~ SignableRepresentation
-  ) =>
-  Arbitrary (BHBody c)
-  where
-  arbitrary =
-    BHBody
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance Arbitrary PrevHash where
-  arbitrary = do
-    hash <- arbitrary
-    frequency [(1, pure GenesisHash), (9999, pure (BlockHash hash))]
-
-instance Crypto c => Arbitrary (OCert c) where
-  arbitrary =
-    OCert
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-deriving newtype instance Arbitrary KESPeriod
-
-instance
-  ( Crypto c
-  , EraBlockBody era
-  , KES.Signable (KES c) ~ SignableRepresentation
-  , VRF.Signable (VRF c) ~ SignableRepresentation
-  , Arbitrary (Tx TopTx era)
-  , Arbitrary (BlockBody era)
-  ) =>
-  Arbitrary (Block (BHeader c) era)
-  where
-  arbitrary =
-    Block
-      <$> arbitrary
-      <*> arbitrary
 
 -- | Use supplied keys to generate a Block.
 genBlock ::

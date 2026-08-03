@@ -8,17 +8,33 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.HuddleSpec (babbageCDDL)
+import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Cardano.Protocol.Crypto (StandardCrypto)
+import qualified Cardano.Protocol.Praos.BlockHeader as Praos
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
+  huddleRoundTripGenValidate,
   noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
+import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
+
+genPraosHeader :: Gen (Praos.Header StandardCrypto)
+genPraosHeader = do
+  h <- arbitrary
+  pv <- genEraProtVer @BabbageEra
+  pure $ Praos.Header ((Praos.headerBody h) {Praos.hbProtVer = pv}) (Praos.headerSig h)
+
+genPraosBlock :: Gen (Block (Praos.Header StandardCrypto) BabbageEra)
+genPraosBlock = Block <$> genPraosHeader <*> scale (`div` 2) arbitrary
 
 spec :: Spec
 spec =
@@ -46,6 +62,10 @@ spec =
       huddleRoundTripCborSpec @(Redeemers BabbageEra) v "redeemers"
       huddleRoundTripAnnCborSpec @(Tx TopTx BabbageEra) v "transaction"
       huddleRoundTripCborSpec @(Tx TopTx BabbageEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(Praos.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Praos.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Praos.HeaderBody StandardCrypto) v "header_body"
+      huddleRoundTripGenValidate @(Block (Praos.Header StandardCrypto) BabbageEra) genPraosBlock v "block"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx BabbageEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData BabbageEra) v "auxiliary_data"
@@ -55,3 +75,4 @@ spec =
         huddleDecoderEquivalenceSpec @(TxWits BabbageEra) v "transaction_witness_set"
         huddleDecoderEquivalenceSpec @(Redeemers BabbageEra) v "redeemers"
         huddleDecoderEquivalenceSpec @(Tx TopTx BabbageEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(Praos.Header StandardCrypto) v "header"

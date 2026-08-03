@@ -10,11 +10,14 @@ module Test.Cardano.Ledger.Conway.Binary.CddlSpec (spec) where
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
+import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.HuddleSpec (conwayCDDL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Cardano.Protocol.Crypto (StandardCrypto)
+import qualified Cardano.Protocol.Praos.BlockHeader as Praos
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleAntiCborSpec,
@@ -29,6 +32,23 @@ import Test.Cardano.Ledger.Binary.Cuddle (
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
+import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
+import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
+
+genPraosHeader :: Gen (Praos.Header StandardCrypto)
+genPraosHeader = do
+  h <- arbitrary
+  pv <- genEraProtVer @ConwayEra
+  pure $ Praos.Header ((Praos.headerBody h) {Praos.hbProtVer = pv}) (Praos.headerSig h)
+
+genPraosHeaderBody :: Gen (Praos.HeaderBody StandardCrypto)
+genPraosHeaderBody = do
+  hb <- arbitrary
+  pv <- genEraProtVer @ConwayEra
+  pure hb {Praos.hbProtVer = pv}
+
+genPraosBlock :: Gen (Block (Praos.Header StandardCrypto) ConwayEra)
+genPraosBlock = Block <$> genPraosHeader <*> scale (`div` 2) arbitrary
 
 spec :: Spec
 spec = do
@@ -116,7 +136,15 @@ spec = do
       -- TxCert
       huddleRoundTripCborSpec @(TxCert ConwayEra) v "certificate"
       huddleRoundTripArbitraryValidate @(TxCert ConwayEra) v "certificate"
+      -- Praos block header
+      huddleRoundTripAnnCborSpec @(Praos.Header StandardCrypto) v "header"
+      huddleRoundTripCborSpec @(Praos.Header StandardCrypto) v "header"
+      huddleRoundTripGenValidate @(Praos.Header StandardCrypto) genPraosHeader v "header"
+      huddleRoundTripCborSpec @(Praos.HeaderBody StandardCrypto) v "header_body"
+      huddleRoundTripGenValidate @(Praos.HeaderBody StandardCrypto) genPraosHeaderBody v "header_body"
+      huddleRoundTripGenValidate @(Block (Praos.Header StandardCrypto) ConwayEra) genPraosBlock v "block"
       describe "DecCBOR instances equivalence via CDDL" $ do
+        huddleDecoderEquivalenceSpec @(Praos.Header StandardCrypto) v "header"
         huddleDecoderEquivalenceSpec @(TxBody TopTx ConwayEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData ConwayEra) v "auxiliary_data"
         huddleDecoderEquivalenceSpec @(Timelock ConwayEra) v "native_script"

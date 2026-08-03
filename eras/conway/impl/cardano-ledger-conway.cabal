@@ -318,6 +318,7 @@ test-suite tests
   build-depends:
     HUnit,
     base,
+    cardano-base:testlib,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-binary:testlib,
@@ -325,4 +326,5 @@ test-suite tests
     cardano-ledger-conway:cddl,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
+    cardano-protocol:{cardano-protocol, testlib},
     testlib,

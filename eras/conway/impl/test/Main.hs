@@ -3,9 +3,13 @@
 
 module Main where
 
+import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Tx (tierRefScriptFee)
+import Cardano.Protocol.Crypto (StandardCrypto)
+import qualified Cardano.Protocol.Praos.BlockHeader as Praos
+import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
@@ -16,6 +20,10 @@ import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
 import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (
+  roundTripAnnEraExpectation,
+  roundTripEraExpectation,
+ )
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
@@ -37,6 +45,14 @@ main = ledgerEraTestMain @ConwayEra $ do
     Cddl.spec
     GoldenSpec.spec
     TxInfo.spec
+    describe "RoundTrip" $
+      prop "Block (Praos.Header)" $
+        BaseQC.withNumTests 25 $
+          forAll (Block <$> arbitrary <*> scale (`div` 2) arbitrary) $ \block ->
+            conjoin
+              [ roundTripEraExpectation @ConwayEra @(Block (Praos.Header StandardCrypto) ConwayEra) block
+              , roundTripAnnEraExpectation @ConwayEra @(Block (Praos.Header StandardCrypto) ConwayEra) block
+              ]
   describe "Various tests for functions defined in Conway" $ do
     prop "tierRefScriptFee is a linear function when growth is 1" $ \(Positive sizeIncrement) baseFee (NonNegative size) ->
       tierRefScriptFee 1 sizeIncrement baseFee size

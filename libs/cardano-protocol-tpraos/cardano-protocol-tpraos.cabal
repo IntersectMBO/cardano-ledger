@@ -106,7 +106,7 @@ library testlib
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-    cardano-protocol,
+    cardano-protocol:{cardano-protocol, testlib} >=0.1.1,
     cardano-protocol-tpraos,
     cardano-strict-containers,
     containers,
