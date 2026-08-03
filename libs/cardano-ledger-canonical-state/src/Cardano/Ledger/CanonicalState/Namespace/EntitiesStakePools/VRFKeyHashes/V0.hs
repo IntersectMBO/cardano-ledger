@@ -36,7 +36,6 @@ import Cardano.SCLS.NamespaceCodec (
   NamespaceKeySize,
   namespaceKeySize,
  )
-import Cardano.SCLS.Versioned (Versioned (..))
 import Data.MemPack (MemPack (packM, unpackM))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)

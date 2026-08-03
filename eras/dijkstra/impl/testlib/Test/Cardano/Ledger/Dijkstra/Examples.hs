@@ -19,8 +19,17 @@ module Test.Cardano.Ledger.Dijkstra.Examples (
   exampleDijkstraOnwardsEraPParams,
   exampleDijkstraOnwardsEraPParamsUpdate,
   exampleDijkstraGenesis,
+  exampleBlsKey,
 ) where
 
+import Cardano.Crypto.DSIGN (
+  BLS12381MinSigDSIGN,
+  DSIGNAggregatable (createPossessionProofDSIGN),
+  DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGNWithContext),
+  seedSizeDSIGN,
+ )
+import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
@@ -73,11 +82,17 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
  )
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
+import Cardano.Ledger.State (
+  BlsKey (..),
+  StakePoolParams (..),
+ )
+import qualified Data.ByteString as Strict
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
+import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro ((%~), (&), (.~), (<>~))
 import qualified PlutusLedgerApi.Common as P
@@ -102,6 +117,7 @@ import Test.Cardano.Ledger.Shelley.Examples (
   addShelleyBasedTopTxExampleFee,
   examplePayKey,
   exampleStakeKey,
+  exampleStakePoolParams,
   mkKeyHash,
   mkScriptHash,
  )
@@ -248,7 +264,15 @@ addDijkstraBasedTxFeatures tx =
         ]
     & bodyTxL . directDepositsTxBodyL .~ exampleDirectDeposits
     & bodyTxL . accountBalanceIntervalsTxBodyL .~ exampleAccountBalanceIntervals
+    & bodyTxL . certsTxBodyL
+      <>~ StrictSeq.fromList
+        [ RegPoolTxCert exampleStakePoolParamsWithBlsKey
+        ]
   where
+    exampleStakePoolParamsWithBlsKey =
+      exampleStakePoolParams
+        { sppBlsKey = SJust exampleBlsKey
+        }
     redeemers =
       Redeemers $
         Map.fromList
@@ -291,3 +315,14 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
+
+exampleBlsKey :: BlsKey
+exampleBlsKey =
+  BlsKey
+    { blsPubKey = vk
+    , blsPossessionProof = createPossessionProofDSIGN minSigPoPDST sk
+    }
+  where
+    seed = mkSeedFromBytes $ Strict.replicate (fromIntegral $ seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN)) 42
+    sk = genKeyDSIGNWithContext @BLS12381MinSigDSIGN Nothing seed
+    vk = deriveVerKeyDSIGN sk

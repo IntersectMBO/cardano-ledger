@@ -27,7 +27,7 @@ module Cardano.Ledger.CanonicalState.Namespace.EntitiesStakePools.V0 (
   fromCanonicalStakePoolParams,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, StrictMaybe, UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochNo, StrictMaybe (..), UnitInterval)
 import Cardano.Ledger.CanonicalState.BasicTypes (
   CanonicalCoin (..),
   decodeNamespacedField,
@@ -45,12 +45,16 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State (
+  BlsKey,
   PoolMetadata,
   StakePoolParams (..),
   StakePoolRelay,
   StakePoolState (..),
  )
-import Cardano.SCLS.CBOR.Canonical.Decoder (FromCanonicalCBOR (..), decodeMapLenCanonicalOf)
+import Cardano.SCLS.CBOR.Canonical.Decoder (
+  FromCanonicalCBOR (..),
+  decodeMapLenCanonicalOf,
+ )
 import Cardano.SCLS.CBOR.Canonical.Encoder (ToCanonicalCBOR (..), encodeAsMap, mkEncodablePair)
 import Cardano.SCLS.Entry.IsKey (IsKey (..))
 import Cardano.SCLS.NamespaceCodec (
@@ -155,33 +159,36 @@ data CanonicalStakePoolState = CanonicalStakePoolState
   , cspsMetadata :: !(StrictMaybe PoolMetadata)
   , cspsDeposit :: !CanonicalCoin
   , cspsDelegators :: !(Set (Credential Staking))
+  , cspsBlsKey :: !(StrictMaybe BlsKey)
   }
   deriving (Show, Eq, Generic)
 
 instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalStakePoolState where
   toCanonicalCBOR v CanonicalStakePoolState {..} =
     encodeAsMap
-      [ mkEncodablePair v ("vrf" :: Text) cspsVrf
+      [ mkEncodablePair v ("account_id" :: Text) cspsAccountId
       , mkEncodablePair v ("cost" :: Text) cspsCost
+      , mkEncodablePair v ("delegators" :: Text) cspsDelegators
+      , mkEncodablePair v ("deposit" :: Text) cspsDeposit
+      , mkEncodablePair v ("bls_key" :: Text) cspsBlsKey
       , mkEncodablePair v ("margin" :: Text) cspsMargin
+      , mkEncodablePair v ("metadata" :: Text) cspsMetadata
       , mkEncodablePair v ("owners" :: Text) cspsOwners
       , mkEncodablePair v ("pledge" :: Text) cspsPledge
       , mkEncodablePair v ("relays" :: Text) cspsRelays
-      , mkEncodablePair v ("deposit" :: Text) cspsDeposit
-      , mkEncodablePair v ("metadata" :: Text) cspsMetadata
-      , mkEncodablePair v ("account_id" :: Text) cspsAccountId
-      , mkEncodablePair v ("delegators" :: Text) cspsDelegators
+      , mkEncodablePair v ("vrf" :: Text) cspsVrf
       ]
 
 instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePoolState where
   fromCanonicalCBOR = do
-    decodeMapLenCanonicalOf 10
+    decodeMapLenCanonicalOf 11
     Versioned cspsVrf <- decodeNamespacedField @v "vrf"
     Versioned cspsCost <- decodeNamespacedField @v "cost"
     Versioned cspsMargin <- decodeNamespacedField @v "margin"
     Versioned cspsOwners <- decodeNamespacedField @v "owners"
     Versioned cspsPledge <- decodeNamespacedField @v "pledge"
     Versioned cspsRelays <- decodeNamespacedField @v "relays"
+    Versioned cspsBlsKey <- decodeNamespacedField @v "bls_key"
     Versioned cspsDeposit <- decodeNamespacedField @v "deposit"
     Versioned cspsMetadata <- decodeNamespacedField @v "metadata"
     Versioned cspsAccountId <- decodeNamespacedField @v "account_id"
@@ -201,12 +208,14 @@ mkCanonicalStakePoolState (StakePoolState {..}) =
     , cspsMetadata = spsMetadata
     , cspsDeposit = CanonicalCoin spsDeposit
     , cspsDelegators = spsDelegators
+    , cspsBlsKey = spsBlsKey
     }
 
 fromCanonicalStakePoolState :: CanonicalStakePoolState -> StakePoolState
 fromCanonicalStakePoolState (CanonicalStakePoolState {..}) =
   StakePoolState
     { spsVrf = cspsVrf
+    , spsBlsKey = cspsBlsKey
     , spsPledge = fromCompact $ unCoin cspsPledge
     , spsCost = fromCompact $ unCoin cspsCost
     , spsMargin = cspsMargin
@@ -221,6 +230,7 @@ fromCanonicalStakePoolState (CanonicalStakePoolState {..}) =
 data CanonicalStakePoolParams = CanonicalStakePoolParams
   { csppId :: !(KeyHash StakePool)
   , csppVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , csppBlsKey :: !(StrictMaybe BlsKey)
   , csppPledge :: !CanonicalCoin
   , csppCost :: !CanonicalCoin
   , csppMargin :: !UnitInterval
@@ -234,20 +244,21 @@ data CanonicalStakePoolParams = CanonicalStakePoolParams
 instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalStakePoolParams where
   toCanonicalCBOR v CanonicalStakePoolParams {..} =
     encodeAsMap
-      [ mkEncodablePair v ("id" :: Text) csppId
-      , mkEncodablePair v ("vrf" :: Text) csppVrf
+      [ mkEncodablePair v ("account_address" :: Text) csppAccountAddress
       , mkEncodablePair v ("cost" :: Text) csppCost
+      , mkEncodablePair v ("id" :: Text) csppId
+      , mkEncodablePair v ("bls_key" :: Text) csppBlsKey
       , mkEncodablePair v ("margin" :: Text) csppMargin
+      , mkEncodablePair v ("metadata" :: Text) csppMetadata
       , mkEncodablePair v ("owners" :: Text) csppOwners
       , mkEncodablePair v ("pledge" :: Text) csppPledge
       , mkEncodablePair v ("relays" :: Text) csppRelays
-      , mkEncodablePair v ("metadata" :: Text) csppMetadata
-      , mkEncodablePair v ("account_address" :: Text) csppAccountAddress
+      , mkEncodablePair v ("vrf" :: Text) csppVrf
       ]
 
 instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePoolParams where
   fromCanonicalCBOR = do
-    decodeMapLenCanonicalOf 9
+    decodeMapLenCanonicalOf 10
     Versioned csppId <- decodeNamespacedField @v "id"
     Versioned csppVrf <- decodeNamespacedField @v "vrf"
     Versioned csppCost <- decodeNamespacedField @v "cost"
@@ -255,6 +266,7 @@ instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePo
     Versioned csppOwners <- decodeNamespacedField @v "owners"
     Versioned csppPledge <- decodeNamespacedField @v "pledge"
     Versioned csppRelays <- decodeNamespacedField @v "relays"
+    Versioned csppBlsKey <- decodeNamespacedField @v "bls_key"
     Versioned csppMetadata <- decodeNamespacedField @v "metadata"
     Versioned csppAccountAddress <- decodeNamespacedField @v "account_address"
     pure $ Versioned CanonicalStakePoolParams {..}
@@ -264,6 +276,7 @@ mkCanonicalStakePoolParams (StakePoolParams {..}) =
   CanonicalStakePoolParams
     { csppId = sppId
     , csppVrf = sppVrf
+    , csppBlsKey = sppBlsKey
     , csppCost = CanonicalCoin (toCompactPartial sppCost)
     , csppMargin = sppMargin
     , csppPledge = CanonicalCoin (toCompactPartial sppPledge)
@@ -278,6 +291,7 @@ fromCanonicalStakePoolParams (CanonicalStakePoolParams {..}) =
   StakePoolParams
     { sppId = csppId
     , sppVrf = csppVrf
+    , sppBlsKey = csppBlsKey
     , sppCost = fromCompact $ unCoin csppCost
     , sppMargin = csppMargin
     , sppPledge = fromCompact $ unCoin csppPledge

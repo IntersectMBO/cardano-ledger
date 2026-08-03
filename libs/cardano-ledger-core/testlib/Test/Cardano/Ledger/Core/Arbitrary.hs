@@ -38,6 +38,13 @@ module Test.Cardano.Ledger.Core.Arbitrary (
 ) where
 
 import qualified Cardano.Chain.Common as Byron
+import Cardano.Crypto.DSIGN (
+  BLS12381MinSigDSIGN,
+  DSIGNAggregatable (PossessionProofDSIGN, createPossessionProofDSIGN),
+  DSIGNAlgorithm (genKeyDSIGNWithContext),
+  seedSizeDSIGN,
+ )
+import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (
@@ -56,7 +63,7 @@ import Cardano.Ledger.BaseTypes (
   PositiveInterval,
   PositiveUnitInterval,
   ProtVer (..),
-  StrictMaybe,
+  StrictMaybe (SNothing),
   TxIx (..),
   UnitInterval,
   Url,
@@ -123,6 +130,7 @@ import Test.Cardano.Slotting.Arbitrary ()
 import Test.Cardano.StrictContainers.Instances ()
 import Test.Crypto.Hash ()
 import Test.Crypto.KES ()
+import Test.Crypto.Util (arbitrarySeedOfSize)
 import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary (GSubterms, RecursivelyShrink)
@@ -459,6 +467,7 @@ instance Arbitrary StakePoolParams where
     StakePoolParams
       <$> arbitrary
       <*> arbitrary
+      <*> pure SNothing -- BlsKey is only supported from version 12 (Dijkstra)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -471,6 +480,7 @@ instance Arbitrary StakePoolState where
   arbitrary =
     StakePoolState
       <$> arbitrary
+      <*> pure SNothing -- BlsKey is only supported from version 12 (Dijkstra)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -483,6 +493,20 @@ instance Arbitrary StakePoolState where
 
 instance Arbitrary PoolMetadata where
   arbitrary = PoolMetadata <$> arbitrary <*> arbitrary
+
+instance Arbitrary BlsKey where
+  arbitrary = BlsKey <$> arbitrary <*> arbitrary
+
+instance Arbitrary (PossessionProofDSIGN BLS12381MinSigDSIGN) where
+  arbitrary = genBlsPossessionProof
+
+-- TODO: Replace with `defaultPossessionProofGen` once cardano-crypto-class
+-- exports it from the public API.
+genBlsPossessionProof :: Gen (PossessionProofDSIGN BLS12381MinSigDSIGN)
+genBlsPossessionProof = do
+  seed <- arbitrarySeedOfSize (seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN))
+  let sk = genKeyDSIGNWithContext @BLS12381MinSigDSIGN Nothing seed
+  pure $ createPossessionProofDSIGN minSigPoPDST sk
 
 instance Arbitrary StakePoolRelay where
   arbitrary = genericArbitraryU

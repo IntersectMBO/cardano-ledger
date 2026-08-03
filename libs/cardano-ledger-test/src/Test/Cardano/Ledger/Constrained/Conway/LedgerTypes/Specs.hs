@@ -390,8 +390,8 @@ pStateSpec univ currepoch = constrained $ \ [var|pState|] ->
     , witness univ (dom_ retiring)
     , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePoolParams
-    , forAll' (rng_ stakePoolParams) $ \_ _ _ _ _ _ _ _ [var|d|] _ ->
-        assertExplain (pure "all deposits are greater then (Coin 0)") $ d >=. lit 0
+    , forAll (rng_ stakePoolParams) $ \poolState ->
+        assertExplain (pure "all deposits are greater then (Coin 0)") $ sel @9 poolState >=. lit 0
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     , assertExplain (pure "retiring after current epoch") $

@@ -33,7 +33,8 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 ) where
 
 import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
-import Cardano.Ledger.Conway.HuddleSpec hiding ()
+import Cardano.Ledger.Binary (rawEncodeFixedSized)
+import Cardano.Ledger.Conway.HuddleSpec hiding (poolParamsGroup)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Huddle.Gen (
   CBORGen,
@@ -52,6 +53,9 @@ import Cardano.Ledger.Huddle.Gen (
   withAntiGen,
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
+import Cardano.Ledger.State (
+  BlsKey (..),
+ )
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless, zipWithM)
 import Data.Foldable (traverse_)
@@ -65,6 +69,7 @@ import Data.Word (Word16, Word64)
 import GHC.TypeLits (KnownSymbol)
 import Test.AntiGen (withAnnotation, (|!))
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
+import Test.Cardano.Ledger.Core.Arbitrary ()
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -600,8 +605,43 @@ instance HuddleRule "relay" DijkstraEra where
 instance HuddleRule "pool_metadata" DijkstraEra where
   huddleRuleNamed = poolMetadataRule
 
+instance HuddleRule "bls_key" DijkstraEra where
+  huddleRuleNamed pname _p =
+    withCBORGen blsKeyGen $
+      ( pname
+          =.= arr
+            [ "bls_pubkey" ==> VBytes `sized` (96 :: Word64)
+            , "bls_possession_proof" ==> VBytes `sized` (48 :: Word64)
+            ]
+      )
+        //- "BLS key"
+    where
+      blsKeyGen = do
+        lk <- liftGen Gen.arbitrary
+        pure $
+          SingleTerm $
+            TList
+              [ TBytes (rawEncodeFixedSized $ blsPubKey lk)
+              , TBytes (rawEncodeFixedSized $ blsPossessionProof lk)
+              ]
+
 instance HuddleGroup "pool_params" DijkstraEra where
-  huddleGroupNamed = poolParamsGroup
+  huddleGroupNamed pname p =
+    ( pname
+        =.~ grp
+          [ "operator" ==> huddleRule @"pool_keyhash" p
+          , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
+          , opt ("bls_key" ==> huddleRule @"bls_key" p / VNil)
+          , "pledge" ==> huddleRule @"coin" p
+          , "cost" ==> huddleRule @"coin" p
+          , "margin" ==> huddleRule @"unit_interval" p
+          , "reward_account" ==> huddleRule @"reward_account" p
+          , "pool_owners" ==> huddleRule1 @"set" p (huddleRule @"addr_keyhash" p)
+          , "relays" ==> arr [0 <+ a (huddleRule @"relay" p)]
+          , "pool_metadata" ==> huddleRule @"pool_metadata" p / VNil
+          ]
+    )
+      //- "Pool parameters for stake pool registration"
 
 instance HuddleGroup "account_registration_cert" DijkstraEra where
   huddleGroupNamed = accountRegistrationCertGroup
