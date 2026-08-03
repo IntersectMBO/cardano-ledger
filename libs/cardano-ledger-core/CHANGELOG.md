@@ -1,8 +1,16 @@
 # Version history for `cardano-ledger-core`
 
-## 1.21.1.0
+## 1.22.0.0
 
+* Add `ToPlutusData` instance for `StrictMaybe`
+* Add `MaxPledgeLeverage`, the maximum pledge leverage introduced in CIP-50
+* Add `ppMaxPledgeLeverageG` method to `EraPParams`, which defaults to `MaxPledgeLeverage SNothing` for eras up to Conway
+* Add a `MaxPledgeLeverage` argument to `maxPool'` and thread it through `maxPool`
 * Add `withdrawalsMissingAccounts` to `Account`
+
+### `testlib`
+
+* Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
 
 ## 1.21.0.0
 

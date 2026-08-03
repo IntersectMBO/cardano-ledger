@@ -96,6 +96,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshPoolParams,
   registerPool,
   registerPoolWithAccountAddress,
+  registerPoolWithParams,
   registerAndRetirePoolToMakeReward,
   getBalance,
   lookupBalance,
@@ -2053,11 +2054,21 @@ registerPoolWithAccountAddress ::
   KeyHash StakePool ->
   AccountAddress ->
   ImpTestM era ()
-registerPoolWithAccountAddress khPool accountAddress = do
+registerPoolWithAccountAddress = registerPoolWithParams id
+
+-- | Same as `registerPoolWithAccountAddress`, except the freshly generated parameters of
+-- the stake pool are adjusted with the supplied function before it is registered.
+registerPoolWithParams ::
+  ShelleyEraImp era =>
+  (StakePoolParams -> StakePoolParams) ->
+  KeyHash StakePool ->
+  AccountAddress ->
+  ImpTestM era ()
+registerPoolWithParams modifyStakePoolParams khPool accountAddress = do
   pps <- freshPoolParams khPool accountAddress
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
+      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert (modifyStakePoolParams pps))
 
 registerAndRetirePoolToMakeReward ::
   ShelleyEraImp era =>

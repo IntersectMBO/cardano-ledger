@@ -16,6 +16,7 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   PositiveInterval,
   ProtVer (..),
+  StrictMaybe (..),
   UnitInterval,
   nonZero,
   (%.),
@@ -52,6 +53,13 @@ class ToPlutusData x where
 instance ToPlutusData a => ToPlutusData [a] where
   toPlutusData xs = List (map toPlutusData xs)
   fromPlutusData (List xs) = mapM fromPlutusData xs
+  fromPlutusData _ = Nothing
+
+instance ToPlutusData a => ToPlutusData (StrictMaybe a) where
+  toPlutusData SNothing = Constr 1 []
+  toPlutusData (SJust x) = Constr 0 [toPlutusData x]
+  fromPlutusData (Constr 1 []) = Just SNothing
+  fromPlutusData (Constr 0 [x]) = SJust <$> fromPlutusData x
   fromPlutusData _ = Nothing
 
 instance (Ord a, ToPlutusData a, ToPlutusData b) => ToPlutusData (Map a b) where

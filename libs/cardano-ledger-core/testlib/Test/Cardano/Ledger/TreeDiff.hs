@@ -218,6 +218,8 @@ deriving newtype instance
 
 deriving newtype instance ToExpr CoinPerByte
 
+instance ToExpr MaxPledgeLeverage
+
 instance ToExpr TxIn
 
 instance ToExpr TxId

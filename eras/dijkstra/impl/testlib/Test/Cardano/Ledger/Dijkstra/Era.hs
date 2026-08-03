@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEraBlockHeader (..))
+import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
@@ -77,6 +78,7 @@ instance EraTest DijkstraEra where
 
 class
   ( ConwayEraTest era
+  , DijkstraEraPParams era
   , DijkstraEraTxBody era
   , DijkstraEraScript era
   ) =>

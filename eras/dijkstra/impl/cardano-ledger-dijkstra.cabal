@@ -116,7 +116,7 @@ library
     cardano-ledger-babbage ^>=1.14,
     cardano-ledger-binary ^>=1.9,
     cardano-ledger-conway ^>=1.23,
-    cardano-ledger-core:{cardano-ledger-core, internal} >=1.21,
+    cardano-ledger-core:{cardano-ledger-core, internal} >=1.22,
     cardano-ledger-mary,
     cardano-ledger-shelley,
     cardano-slotting,
@@ -151,6 +151,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -254,6 +255,7 @@ test-suite tests
     Paths_cardano_ledger_dijkstra
     Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec
     Test.Cardano.Ledger.Dijkstra.GoldenSpec
+    Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec
 
   default-language: Haskell2010
   ghc-options:
