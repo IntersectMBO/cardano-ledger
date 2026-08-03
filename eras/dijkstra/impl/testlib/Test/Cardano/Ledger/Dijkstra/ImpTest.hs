@@ -22,6 +22,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance (ConwayEraGov (..), committeeMembersL)
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -52,8 +53,10 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.State
+import Cardano.Ledger.TxIn (TxIn)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -76,7 +79,7 @@ instance ShelleyEraImp DijkstraEra where
 
   modifyPParams = conwayModifyPParams
 
-  fixupTx = babbageFixupTx
+  fixupTx = dijkstraFixupTx
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert
@@ -184,3 +187,31 @@ dijkstraGenUnRegTxCert stakingCredential = do
     Nothing -> getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
     Just accountState -> pure (fromCompact (accountState ^. depositAccountStateL))
   pure $ UnRegDepositTxCert stakingCredential deposit
+
+dijkstraFixupTx ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+dijkstraFixupTx =
+  babbageFixupTx >=> addSubTxIns
+
+addSubTxIns ::
+  forall era.
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+addSubTxIns tx = impAnn "addSubTxIns" $ do
+  fixedUpSubTransactions <-
+    traverse
+      fabricateTxIn
+      (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
+  pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable fixedUpSubTransactions
+  where
+    fabricateTxIn subTx
+      | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
+      | otherwise = do
+          addr <- freshKeyAddr_
+          newTxIn <- sendCoinTo addr (Coin 1_000_000)
+          pure $ subTx & bodyTxL . inputsTxBodyL .~ Set.singleton newTxIn
