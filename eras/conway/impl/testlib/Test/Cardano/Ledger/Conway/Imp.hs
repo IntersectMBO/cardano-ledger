@@ -34,6 +34,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as GOV
 import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HARDFORK
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as RATIFY
+import qualified Test.Cardano.Ledger.Conway.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as UTXO
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as UTXOS
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxowSpec as UTXOW
@@ -61,6 +62,7 @@ spec era = do
     LEDGER.spec
     HARDFORK.spec
     RATIFY.spec
+    SNAP.spec
     UTXO.spec
     UTXOS.spec
     UTXOW.spec
@@ -70,4 +72,5 @@ conwayOnlySpec = do
   describe "ConwayEra Specific" $ withImpInitEachEraVersion (Proxy @ConwayEra) $ do
     -- TODO: move to `spec` when ready: https://github.com/IntersectMBO/cardano-ledger/issues/5805
     CERTS.spec
+    SNAP.conwayOnlySpec
     UTXO.conwayOnlySpec
