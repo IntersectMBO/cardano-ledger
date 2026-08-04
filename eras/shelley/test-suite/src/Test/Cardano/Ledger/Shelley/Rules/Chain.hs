@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -13,6 +14,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
@@ -165,6 +170,14 @@ deriving stock instance
   , Eq (PredicateFailure (EraRule "TICKN" era))
   ) =>
   Eq (TestChainPredicateFailure era)
+
+deriving stock instance
+  ( Era era
+  , Ord (PredicateFailure (EraRule "BBODY" era))
+  , Ord (PredicateFailure (EraRule "TICK" era))
+  , Ord (PredicateFailure (EraRule "TICKN" era))
+  ) =>
+  Ord (TestChainPredicateFailure era)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::

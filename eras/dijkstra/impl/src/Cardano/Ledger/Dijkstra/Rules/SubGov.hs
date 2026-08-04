@@ -41,7 +41,7 @@ import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 
 newtype DijkstraSubGovPredFailure era = DijkstraSubGovPredFailure (DijkstraGovPredFailure era)
-  deriving (Generic, Eq, Show, NFData, EncCBOR, DecCBOR)
+  deriving (Generic, Eq, Ord, Show, NFData, EncCBOR, DecCBOR)
 
 type instance EraRuleFailure "SUBGOV" DijkstraEra = DijkstraSubGovPredFailure DijkstraEra
 

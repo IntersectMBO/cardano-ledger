@@ -21,7 +21,7 @@ import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
 
 newtype NonEmptySet a = NonEmptySet (Set a)
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Ord)
   deriving newtype (EncCBOR, NoThunks, NFData, ToJSON)
 
 instance (Ord a, FromJSON a) => FromJSON (NonEmptySet a) where

@@ -100,6 +100,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   CostModelsUpdate (..),
   ExUnits (..),
+  OrdExUnits (..),
   Prices (Prices),
   emptyCostModels,
   updateCostModels,

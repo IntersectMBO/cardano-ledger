@@ -184,7 +184,7 @@ data TimelockRaw era
   | -- Note that the Int may be negative in which case (TimelockMOf (-2) [..]) is always True
     TimelockTimeStart !SlotNo -- The start time
   | TimelockTimeExpire !SlotNo -- The time it expires
-  deriving (Eq, Generic, NFData)
+  deriving (Eq, Ord, Generic, NFData)
 
 class ShelleyEraScript era => AllegraEraScript era where
   mkTimeStart :: SlotNo -> NativeScript era
@@ -251,7 +251,7 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
 -- =================================================================
 
 newtype Timelock era = MkTimelock (MemoBytes (TimelockRaw era))
-  deriving (Eq, Generic)
+  deriving (Eq, Ord, Generic)
   deriving newtype (ToCBOR, NFData, SafeToHash)
 
 instance Era era => MemPack (Timelock era) where
