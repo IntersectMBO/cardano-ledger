@@ -31,7 +31,6 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
   huddleRoundTripGenValidate,
-  noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
@@ -70,7 +69,7 @@ spec :: Spec
 spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @DijkstraEra
-    describe "Huddle" $ specWithHuddle dijkstraCDDL . noTwiddle $ do
+    describe "Huddle" $ specWithHuddle dijkstraCDDL $ do
       describe "TxsRB" $
         fullAnnGenCddlSpec @(BlockBody DijkstraEra) genSmallDijkstraTxsBlockBody v "block_body"
       describe "CertRB" $
