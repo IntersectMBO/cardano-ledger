@@ -2,7 +2,7 @@
 
 ## 1.16.0.1
 
-*
+* Add `FromJSON` instance for `AlonzoTxOut era`
 
 ## 1.16.0.0
 

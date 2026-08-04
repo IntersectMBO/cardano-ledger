@@ -112,7 +112,8 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.MemPack
@@ -335,6 +336,14 @@ instance (Era era, Val (Value era), ToJSON (Script era)) => ToKeyValuePairs (Bab
     , "datum" .= dat
     , "referenceScript" .= mRefScript
     ]
+
+instance (Era era, Val (Value era), FromJSON (Script era)) => FromJSON (BabbageTxOut era) where
+  parseJSON = Aeson.withObject "BabbageTxOut" $ \o ->
+    BabbageTxOut
+      <$> o .: "address"
+      <*> o .: "value"
+      <*> o .: "datum"
+      <*> o .: "referenceScript"
 
 viewCompactTxOut ::
   forall era.

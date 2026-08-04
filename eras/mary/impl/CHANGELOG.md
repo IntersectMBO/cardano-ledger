@@ -2,7 +2,8 @@
 
 ## 1.11.0.1
 
-*
+* Add `FromJSON` instance for `MaryValue`
+* Add `FromJSON` and `FromJSONKey` instances for `AssetName` (hex-decoding from `ToJSON` format)
 
 ## 1.11.0.0
 

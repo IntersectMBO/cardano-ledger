@@ -176,6 +176,8 @@ ledgerEraTestMain extraEraSpec =
           roundTripAesonProperty @(TxAuxData era)
         prop (show $ typeRep $ Proxy @(TxWits era)) $
           roundTripAesonProperty @(TxWits era)
+        prop (show $ typeRep $ Proxy @(TxOut era)) $
+          roundTripAesonProperty @(TxOut era)
       describe "Era-specific spec" extraEraSpec
 
 -- | This is a helper function that uses `mkTestAccountState` to register an account.

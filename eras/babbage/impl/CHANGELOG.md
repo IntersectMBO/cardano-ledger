@@ -2,7 +2,7 @@
 
 ## 1.14.0.1
 
-*
+* Add `FromJSON` instance for `BabbageTxOut era`
 
 ## 1.14.0.0
 

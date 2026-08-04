@@ -19,6 +19,9 @@
 * Add `FromJSON` instance for `TxIn`; fix `txInToText` to use `unTxIx` instead of `show`
 * Add `FromJSON` instance for `PoolCert`
 * Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
+* Add `FromJSON (TxOut era)` as `EraTxOut` superclass constraint
+* Add `FromJSON t` as `Val t` superclass constraint
+* Add `ToJSON` and `FromJSON` instances for `Datum era`
 
 ### `testlib`
 
@@ -135,6 +138,7 @@
 * Add round-trip JSON property test for `NativeScript era` and `Script era` to the shared era spec
 * Add round-trip JSON property test for `TxAuxData era` to the shared era spec
 * Add round-trip JSON property test for `TxWits era` to the shared era spec
+* Add round-trip JSON property test for `TxOut era` to the shared era spec
 
 ## 1.20.0.0
 
