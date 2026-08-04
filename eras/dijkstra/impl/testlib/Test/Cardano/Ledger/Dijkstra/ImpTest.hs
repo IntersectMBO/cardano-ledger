@@ -100,6 +100,7 @@ class
   , InjectRuleFailure "LEDGER" DijkstraUtxowPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -124,6 +125,13 @@ instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure DijkstraEra w
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = Conway.StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = Conway.StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
+  injectFailure =
+    injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
+      . SubLedgerFailure
+      . SubUtxowFailure
+      . SubUtxoFailure
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

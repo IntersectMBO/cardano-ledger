@@ -22,8 +22,6 @@ import Cardano.Ledger.Dijkstra.Rules (
  )
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Val (Val (..))
-import qualified Data.Foldable as Foldable
-import Data.List ((\\))
 import qualified Data.Map.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -62,23 +60,25 @@ spec = describe "ENTITIES" $ do
           mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL .~ Withdrawals [(account3, amountY)]
-    submitFailingTxIncluding
+    submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
-      [ injectFailure . SubMissingAccountsInWithdrawals @era $
-          Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
-          Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure $
+      [ injectFailure $
           WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap $
                 Map.fromList
-                  [ (account1, Mismatch (amountX <> amountX) mempty) -- accumulated from top and sub transaction
+                  [ (account1, Mismatch (amountX <> amountX) mempty)
                   , (account3, Mismatch amountY mempty)
                   ]
-      , injectFailure . SubMissingAccountsInWithdrawals @era $
-          Withdrawals [(account3, amountY)]
+      , injectFailure . MissingAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . SubMissingAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
+          Withdrawals [(account3, amountY)]
+      , injectFailure . SubMissingAccountsInWithdrawals @era $
           Withdrawals [(account3, amountY)]
       ]
 
@@ -102,9 +102,11 @@ spec = describe "ENTITIES" $ do
     let subTxOnlyDirectDeposit =
           mkBasicTx $
             mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
-    submitFailingTxIncluding
+    submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyDirectDeposit])
-      [ injectFailure . SubMissingAccountsInDirectDeposits @era $
+      [ injectFailure . MissingAccountsInDirectDeposits @era $
+          DirectDeposits [(account, amountX)]
+      , injectFailure . SubMissingAccountsInDirectDeposits @era $
           DirectDeposits [(account, amountX)]
       , injectFailure . SubMissingAccountsInDirectDeposits @era $
           DirectDeposits [(account, amountY), (account2, amountZ)]
@@ -177,9 +179,12 @@ spec = describe "ENTITIES" $ do
       , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       ]
 
-    submitFailingTxIncluding
+    submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
-      [ injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
+      [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
       ]
   where
@@ -191,13 +196,3 @@ spec = describe "ENTITIES" $ do
       submitAndExpireProposalToMakeReward cred
       b <- getBalance cred
       pure (ra, b, kh)
-
-    -- Poor man's `submitFailingTx` - only checking that the given predicate failures
-    -- are part of all the failures returned by submitting the transaction.
-    -- TOOD: to be replaced by `submitFailingTx` when the Imp fixup for nested transaction is done.
-    submitFailingTxIncluding tx expected = do
-      result <- trySubmitTx tx
-      case result of
-        Left (predFailures, _) ->
-          (expected \\ Foldable.toList predFailures) `shouldBe` []
-        Right _ -> expectationFailure "Expected submission to fail, but it succeeded"
