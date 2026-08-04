@@ -19,6 +19,7 @@ import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (decodePositiveCoin)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -264,3 +265,7 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
 
 instance DecCBOR (DijkstraBlockBody DijkstraEra) where
   decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR
+
+instance DecCBOR h => DecCBOR (Block h DijkstraEra) where
+  decCBOR =
+    decodeRecordNamed "Block" (const 2) $ Block <$> decCBOR <*> decCBOR

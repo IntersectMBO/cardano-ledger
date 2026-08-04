@@ -26,18 +26,7 @@ module Cardano.Ledger.Block (
   neededTxInsForBlock,
 ) where
 
-import Cardano.Base.Proxy (asProxy)
 import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.Binary (
-  Annotator,
-  DecCBOR (decCBOR),
-  EncCBOR (..),
-  EncCBORGroup (..),
-  decodeRecordNamed,
-  encodeListLen,
-  toPlainEncoding,
- )
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
@@ -45,7 +34,6 @@ import Control.DeepSeq (NFData)
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, (^.))
@@ -73,42 +61,6 @@ deriving anyclass instance
   NoThunks (Block h era)
 
 instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
-
-instance
-  forall era h.
-  ( Era era
-  , EncCBORGroup (BlockBody era)
-  , EncCBOR h
-  ) =>
-  EncCBOR (Block h era)
-  where
-  encCBOR (Block h txns) =
-    encodeListLen (1 + listLen (asProxy txns)) <> encCBOR h <> encCBORGroup txns
-
-instance
-  forall era h.
-  ( Era era
-  , EncCBORGroup (BlockBody era)
-  , EncCBOR h
-  , Typeable h
-  ) =>
-  Plain.ToCBOR (Block h era)
-  where
-  toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
-
-instance
-  ( EraBlockBody era
-  , DecCBOR (Annotator h)
-  , Typeable h
-  ) =>
-  DecCBOR (Annotator (Block h era))
-  where
-  decCBOR = decodeRecordNamed "Block" (const blockSize) $ do
-    header <- decCBOR
-    txns <- decCBOR
-    pure $ Block <$> header <*> txns
-    where
-      blockSize = 1 + fromIntegral (numSegComponents @era)
 
 bheader ::
   Block h era ->

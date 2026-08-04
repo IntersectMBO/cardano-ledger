@@ -2,6 +2,9 @@
 
 ## 0.4.0.0
 
+* Add `EncCBOR`, `ToCBOR` for `Block`
+* Add `DecCBOR` instances for `Annotator Block`
+* Remove `EncCBORGroup` instance for `DijkstraBlockBody`
 * Add the `maxPledgeLeverage` protocol parameter (serializes as `nonnegative_interval / nil`):
   - Add `dppMaxPledgeLeverage` field to `DijkstraPParams`
   - Add `udppMaxPledgeLeverage` field to `UpgradeDijkstraPParams`
@@ -29,6 +32,7 @@
 
 ### testlib
 
+* Add `DecCBOR` instance for `Block`
 * Add `DijkstraEraPParams` as a superclass of `DijkstraEraTest`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec`
 

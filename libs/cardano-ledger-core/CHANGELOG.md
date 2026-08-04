@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Remove `numSegComponents` from `EraBlockBody`
+* Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Add `ToPlutusData` instance for `StrictMaybe`
 * Add `MaxPledgeLeverage`, the maximum pledge leverage introduced in CIP-50
 * Add `ppMaxPledgeLeverageG` method to `EraPParams`, which defaults to `MaxPledgeLeverage SNothing` for eras up to Conway
@@ -121,6 +123,7 @@
 
 ### `testlib`
 
+* Remove generic `DecCBOR` instance for `Block`
 * Add `EraRulesWithFailures` type family to `EraTest`
 * Remove `roundTripAllPredicateFailures`, `EraRuleProof` and `RuleListEra`
 * Add `examplePParams` and `examplePParamsUpdate` to `EraTest`.

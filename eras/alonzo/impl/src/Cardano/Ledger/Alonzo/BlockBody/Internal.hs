@@ -99,7 +99,6 @@ instance EraBlockBody AlonzoEra where
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = abbHash
-  numSegComponents = 4
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 mkBasicBlockBodyAlonzo ::

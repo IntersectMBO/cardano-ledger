@@ -30,6 +30,7 @@ flag asserts
 library
   exposed-modules:
     Cardano.Ledger.Dijkstra
+    Cardano.Ledger.Dijkstra.Block
     Cardano.Ledger.Dijkstra.BlockBody
     Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Core
@@ -116,9 +117,9 @@ library
     cardano-ledger-babbage ^>=1.14,
     cardano-ledger-binary ^>=1.9,
     cardano-ledger-conway ^>=1.23,
-    cardano-ledger-core:{cardano-ledger-core, internal} >=1.22,
+    cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.22,
     cardano-ledger-mary,
-    cardano-ledger-shelley,
+    cardano-ledger-shelley ^>=1.19.1,
     cardano-slotting,
     cardano-strict-containers,
     containers,

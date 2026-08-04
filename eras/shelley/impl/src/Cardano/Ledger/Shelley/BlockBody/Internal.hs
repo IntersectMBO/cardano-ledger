@@ -108,7 +108,6 @@ instance EraBlockBody ShelleyEra where
   mkBasicBlockBody = mkBasicBlockBodyShelley
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = sbbHash
-  numSegComponents = 3
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 mkBasicBlockBodyShelley ::

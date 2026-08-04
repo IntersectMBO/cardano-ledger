@@ -27,6 +27,7 @@ import Cardano.Ledger.Alonzo.TxAuxData
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
@@ -355,3 +356,7 @@ instance Era era => DecCBOR (TxDatsRaw era) where
 deriving newtype instance Era era => DecCBOR (TxDats era)
 
 deriving newtype instance DecCBOR (Tx TopTx AlonzoEra)
+
+instance DecCBOR h => DecCBOR (Block h AlonzoEra) where
+  decCBOR =
+    decodeRecordNamed "Block" (const 5) $ Block <$> decCBOR <*> decCBOR
