@@ -714,6 +714,7 @@ protocol_param_update =
   , ? 36 : positive_word32        ; refScript cost stride
   , ? 37 : positive_interval      ; refScript cost multiplier
   , ? 38 : max_pledge_leverage    ; max pledge leverage
+  , ? 39 : unit_interval          ; min pool margin
   }
 
 epoch_interval = uint .size 4

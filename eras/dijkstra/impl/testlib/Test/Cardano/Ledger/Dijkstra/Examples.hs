@@ -150,6 +150,7 @@ exampleDijkstraGenesis =
           , udppRefScriptCostStride = knownNonZeroBounded @25_600 -- 25 KiB
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
+          , udppMinPoolMargin = fromJust $ boundRational 0.015
           }
     }
 

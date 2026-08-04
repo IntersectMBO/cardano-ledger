@@ -16,6 +16,12 @@
 * Memoize `getScriptsHashesNeeded` for subtransactions:
   - Add `dsastScriptsHashesNeeded` field to `DijkstraStAnnTx SubTx`, holding `Set ScriptHash`
   - Add `scriptsHashesNeededStAnnTx` method to `DijkstraEraUTxO`
+* Add `minPoolMargin` protocol parameter (CIP-0023):
+  - Add `dppMinPoolMargin` to `DijkstraPParams`
+  - Add `udppMinPoolMargin` to `UpgradeDijkstraPParams`
+  - Add `hkdMinPoolMarginL` to `DijkstraEraPParams`
+  - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
+  - Override `ppMinPoolMarginG` in `EraPParams` instance
 
 ### cddl
 

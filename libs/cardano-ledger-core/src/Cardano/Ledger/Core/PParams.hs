@@ -513,6 +513,13 @@ class
     where
       _ = atMostEra @"Conway" @era
 
+  -- Minimum Stake Pool Margin
+  ppMinPoolMarginG :: SimpleGetter (PParams era) UnitInterval
+  default ppMinPoolMarginG :: AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
+  ppMinPoolMarginG = L.to (const minBound)
+    where
+      _ = atMostEra @"Conway" @era
+
   eraPParams :: [PParam era]
 
 hkdMinFeeAL ::

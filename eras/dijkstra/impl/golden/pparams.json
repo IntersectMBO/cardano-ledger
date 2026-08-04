@@ -63,6 +63,7 @@
     "dRepDeposit":302491,
     "dRepActivity":0,
     "minFeeRefScriptCostPerByte":23896.4809186040265,
+    "minPoolMargin":0,
     "protocolVersion":{
        "major":4,
        "minor":1

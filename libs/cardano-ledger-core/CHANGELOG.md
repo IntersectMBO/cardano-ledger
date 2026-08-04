@@ -8,7 +8,7 @@
 * Add a `MaxPledgeLeverage` argument to `maxPool'` and thread it through `maxPool`
 * Add `withdrawalsMissingAccounts` to `Account`
 * Add `sppBlsKey` field to `StakePoolParams`
-* Add `spsBlsKey` field and `spsBlsKeyL` lens to `StakePoolState`
+* Add `spsBlsKeyL` lens to `StakePoolState`
 * Add `BlsKey` type with `EncCBOR`/`DecCBOR`, `ToJSON`/`FromJSON` instances
 * Make `FromJSON StakePoolParams` backward-compatible: `blsKey` field is optional (defaults to `SNothing`)
 * Add `ToJSON`, `FromJSON` and `NFData` as `EraTxWits` superclass constraints
@@ -18,6 +18,7 @@
 * Add `ToJSON` and `FromJSON` instances for `BootstrapWitness`
 * Add `FromJSON` instance for `TxIn`; fix `txInToText` to use `unTxIx` instead of `show`
 * Add `FromJSON` instance for `PoolCert`
+* Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
 
 ### `testlib`
 

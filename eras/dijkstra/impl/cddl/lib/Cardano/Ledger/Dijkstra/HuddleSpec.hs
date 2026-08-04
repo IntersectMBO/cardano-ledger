@@ -993,6 +993,7 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 36 ==> huddleRule @"positive_word32" p) //- "refScript cost stride"
         , opt (idx 37 ==> huddleRule @"positive_interval" p) //- "refScript cost multiplier"
         , opt (idx 38 ==> huddleRule @"max_pledge_leverage" p) //- "max pledge leverage"
+        , opt (idx 39 ==> huddleRule @"unit_interval" p) //- "min pool margin"
         ]
 
 instance HuddleRule "proposed_protocol_parameter_updates" DijkstraEra where
