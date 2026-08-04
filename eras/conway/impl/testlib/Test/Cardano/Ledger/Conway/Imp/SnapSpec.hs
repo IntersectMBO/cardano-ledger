@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Conway.Imp.StakeCalculationsSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.SnapSpec (spec, conwayOnlySpec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin
@@ -24,7 +24,34 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = describe "Stake calculations for voting and leader election" $ do
+spec = describe "SNAP" $ do
+  let getSpoVotingStake :: KeyHash StakePool -> ImpTestM era Coin
+      getSpoVotingStake pool = do
+        poolDistr <- psPoolDistr . fst . finishDRepPulser <$> getsNES (nesEsL . epochStateDRepPulsingStateL)
+        pure $ fromCompact $ poolDistr Map.! pool
+  it "SPO voting stake exceeds leader election stake by the active proposal deposit" $ do
+    modifyPParams $ \pp ->
+      pp
+        & ppGovActionLifetimeL .~ EpochInterval 10
+        & ppGovActionDepositL .~ Coin 1_000_000
+    govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+
+    (pool, _paymentCred, stakingCred) <- setupPoolWithStake (Coin 500_000_000)
+    returnAddr <- getAccountAddressFor stakingCred
+    _govActionId <- submitProposal =<< mkProposalWithAccountAddress InfoAction returnAddr
+
+    passEpoch
+    spoVotingStakeThisEpoch <- getSpoVotingStake pool
+    passEpoch
+    leaderElectionStakeNextEpoch <-
+      fromCompact . individualTotalPoolStake . (Map.! pool) . unPoolDistr <$> getsNES nesPdL
+    (spoVotingStakeThisEpoch <-> leaderElectionStakeNextEpoch) `shouldBe` govActionDeposit
+
+conwayOnlySpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era))
+conwayOnlySpec = describe "SNAP" $ do
   let getSpoVotingStake :: KeyHash StakePool -> ImpTestM era Coin
       getSpoVotingStake pool = do
         poolDistr <- psPoolDistr . fst . finishDRepPulser <$> getsNES (nesEsL . epochStateDRepPulsingStateL)
@@ -33,7 +60,7 @@ spec = describe "Stake calculations for voting and leader election" $ do
       getDRepVotingStake drep = do
         drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
         pure $ fromCompact $ drepDistr Map.! DRepCredential drep
-  it "SPO voting stake is less than DRep voting stake by the refunded deposit" $ do
+  it "Reproduces #5014: SPO voting stake lags DRep voting stake by the refunded deposit" $ do
     modifyPParams $ \pp ->
       pp
         & ppGovActionLifetimeL .~ EpochInterval 1
@@ -61,21 +88,3 @@ spec = describe "Stake calculations for voting and leader election" $ do
     drepVotingStakeNextEpoch <- getDRepVotingStake drep
     impAnn "SPO voting stake catches up in the next epoch" $
       spoVotingStakeNextEpoch `shouldBe` drepVotingStakeNextEpoch
-
-  it "SPO voting stake exceeds leader election stake by the active proposal deposit" $ do
-    modifyPParams $ \pp ->
-      pp
-        & ppGovActionLifetimeL .~ EpochInterval 10
-        & ppGovActionDepositL .~ Coin 1_000_000
-    govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-
-    (pool, _paymentCred, stakingCred) <- setupPoolWithStake (Coin 500_000_000)
-    returnAddr <- getAccountAddressFor stakingCred
-    _govActionId <- submitProposal =<< mkProposalWithAccountAddress InfoAction returnAddr
-
-    passEpoch
-    spoVotingStakeThisEpoch <- getSpoVotingStake pool
-    passEpoch
-    leaderElectionStakeNextEpoch <-
-      fromCompact . individualTotalPoolStake . (Map.! pool) . unPoolDistr <$> getsNES nesPdL
-    (spoVotingStakeThisEpoch <-> leaderElectionStakeNextEpoch) `shouldBe` govActionDeposit

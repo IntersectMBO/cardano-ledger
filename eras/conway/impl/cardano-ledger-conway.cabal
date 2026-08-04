@@ -206,7 +206,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Imp.HardForkSpec
     Test.Cardano.Ledger.Conway.Imp.LedgerSpec
     Test.Cardano.Ledger.Conway.Imp.RatifySpec
-    Test.Cardano.Ledger.Conway.Imp.StakeCalculationsSpec
+    Test.Cardano.Ledger.Conway.Imp.SnapSpec
     Test.Cardano.Ledger.Conway.Imp.UtxoSpec
     Test.Cardano.Ledger.Conway.Imp.UtxosSpec
     Test.Cardano.Ledger.Conway.Imp.UtxowSpec
