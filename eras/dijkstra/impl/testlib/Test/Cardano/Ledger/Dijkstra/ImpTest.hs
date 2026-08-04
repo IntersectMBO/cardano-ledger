@@ -202,7 +202,12 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
       (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
   pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable fixedup
   where
-    fixupSubTransaction = addSubTxIn
+    fixupSubTransaction =
+      addSubTxIn
+        >=> addNativeScriptTxWits
+        >=> fixupAuxDataHash
+        >=> fixupTxOuts
+        >=> updateAddrTxWits
     addSubTxIn subTx
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
       | otherwise = do
