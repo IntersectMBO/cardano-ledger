@@ -119,7 +119,7 @@ library
     cardano-ledger-conway ^>=1.23,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.22,
     cardano-ledger-mary,
-    cardano-ledger-shelley,
+    cardano-ledger-shelley ^>=1.19.1,
     cardano-slotting,
     cardano-strict-containers,
     containers,
