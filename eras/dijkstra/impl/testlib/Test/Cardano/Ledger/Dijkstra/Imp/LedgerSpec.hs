@@ -10,9 +10,7 @@ module Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec (spec) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraUtxoPredFailure (BadInputsUTxO),
- )
+import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
@@ -23,25 +21,27 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEDGER" $ do
-  -- TODO: re-enable after Imp fixup of subtransactions is implemented
-  xdescribe "Spending sub-transaction outputs" $ do
+  describe "Spending sub-transaction outputs" $ do
     it "Fails when top-level transaction spends output from its own sub-transaction" $ do
-      (_, addr) <- freshKeyAddr
-      txIn <- sendCoinTo addr (Coin 10_000_000)
+      txIn <- (`sendCoinTo` Coin 10_000_000) =<< freshKeyAddr_
+      subTxIn <- (`sendCoinTo` Coin 5_000_000) =<< freshKeyAddr_
 
       let subTx :: Tx SubTx era
-          subTx = mkBasicTx mkBasicTxBody
-          subTxId = txIdTx subTx
-
+          -- consume an input, to avoid the fixup adding one, which would throw off the test conditions
+          subTx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [subTxIn])
+          subTxId = txIdTx subTx -- now stable through fixup
           badInput = mkTxInPartial subTxId 0
           tx =
             mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL .~ Set.fromList [txIn, badInput]
-              & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
+              & bodyTxL . inputsTxBodyL .~ [txIn, badInput]
+              & bodyTxL . subTransactionsTxBodyL .~ [subTx]
 
       submitFailingTx
         tx
-        [injectFailure $ BadInputsUTxO $ NES.singleton badInput]
+        -- the failure is produced twice - checking against the origin and threaded state, respectively
+        [ injectFailure $ BadInputsUTxO $ NES.singleton badInput
+        , injectFailure $ BadInputsUTxO $ NES.singleton badInput
+        ]
 
     it "Fails when sub-transaction spends output from another sub-transaction" $ do
       (_, addr1) <- freshKeyAddr
@@ -52,22 +52,24 @@ spec = describe "LEDGER" $ do
       let subTx1 :: Tx SubTx era
           subTx1 =
             mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL .~ Set.singleton txIn1
+              & bodyTxL . inputsTxBodyL .~ [txIn1]
           subTx1Id = txIdTx subTx1
 
           badInput = mkTxInPartial subTx1Id 0
           subTx2 :: Tx SubTx era
           subTx2 =
             mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL .~ Set.fromList [txIn2, badInput]
+              & bodyTxL . inputsTxBodyL .~ [txIn2, badInput]
 
           tx =
             mkBasicTx mkBasicTxBody
-              & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable ([subTx1, subTx2] :: [Tx SubTx era])
+              & bodyTxL . subTransactionsTxBodyL .~ [subTx1, subTx2]
 
       submitFailingTx
         tx
-        [injectFailure $ BadInputsUTxO $ NES.singleton badInput]
+        [ injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
+        , injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
+        ]
 
     it "Succeeds when inputs don't reference sub-transaction outputs" $ do
       (_, addr1) <- freshKeyAddr
