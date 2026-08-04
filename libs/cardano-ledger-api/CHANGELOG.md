@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.14.0.1
+## 1.15.0.0
 
-*
+* Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
 
 ## 1.14.0.0
 
@@ -15,7 +15,7 @@
 * Add `generate-cbor` executable.
 * Add `ToJSON` instances for `StakeSnapshot` and `StakeSnapshots`.
 * Add `ToJSON` instance for `QueryPoolStateResult`.
-* Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`), returning the stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`.
+* Add `querySetSnapshotStakePoolDistr` (`GetPoolDistr2`).
 * Add `queryDRepDelegatees` (`GetFilteredVoteDelegatees`).
 * Add `queryStakePoolRelays` (`GetLedgerPeerSnapshot`).
 * Add `queryAccountsDeposits` (`GetStakeDelegDeposits`).
