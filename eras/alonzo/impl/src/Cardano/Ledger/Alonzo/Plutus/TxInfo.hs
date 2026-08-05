@@ -99,7 +99,6 @@ import qualified PlutusLedgerApi.V2 as PV2
 
 mkPlutusWithContext ::
   forall era.
-  AlonzoEraUTxO era =>
   SupportedPlutusRunnable era ->
   PlutusPurpose AsIxItem era ->
   LedgerTxInfo era ->
@@ -108,7 +107,7 @@ mkPlutusWithContext ::
   ExUnits ->
   CostModel ->
   Either (ContextError era) PlutusWithContext
-mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult redeemerData exUnits costModel =
+mkPlutusWithContext script plutusPurpose lti txInfoResult redeemerData exUnits costModel =
   case script of
     SupportedPlutusRunnable plutusRunnable -> do
       let slang = isLanguage `asSameLanguage` plutusRunnable
