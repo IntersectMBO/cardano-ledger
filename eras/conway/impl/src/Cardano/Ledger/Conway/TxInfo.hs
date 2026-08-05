@@ -33,6 +33,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transValidityInterval,
   transVotingProcedures,
   transProposal,
+  transVoter,
   toPlutusV3Args,
   transTxCertV1V2,
   transPlutusPurposeV1V2,
@@ -631,9 +632,10 @@ transPlutusPurposeV3 ::
   ) =>
   proxy 'PlutusV3 ->
   ProtVer ->
+  ScriptHash ->
   PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
-transPlutusPurposeV3 proxy pv = \case
+transPlutusPurposeV3 proxy pv _sh = \case
   SpendingPurpose (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
   MintingPurpose (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   CertifyingPurpose (AsIxItem ix txCert) ->
@@ -729,13 +731,14 @@ transPlutusPurposeV1V2 ::
   ) =>
   proxy l ->
   ProtVer ->
+  ScriptHash ->
   PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV2.ScriptPurpose
-transPlutusPurposeV1V2 proxy pv = \case
-  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending asIxItem
-  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting asIxItem
-  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying asIxItem
-  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoWithdrawing asIxItem
+transPlutusPurposeV1V2 proxy pv sh = \case
+  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoSpending asIxItem
+  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoMinting asIxItem
+  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoCertifying asIxItem
+  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoWithdrawing asIxItem
   purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
@@ -746,13 +749,14 @@ toPlutusV3Args ::
   EraPlutusTxInfo 'PlutusV3 era =>
   proxy 'PlutusV3 ->
   ProtVer ->
+  ScriptHash ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args proxy pv txInfo plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy pv plutusPurpose
+toPlutusV3Args proxy pv sh txInfo plutusPurpose maybeSpendingData redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy pv sh plutusPurpose
   let scriptInfo =
         scriptPurposeToScriptInfo
           scriptPurpose

@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.TxInfo (
@@ -33,6 +34,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
@@ -42,6 +44,7 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   ProtVer (..),
   StrictMaybe,
+  TxIx (TxIx),
   kindObjectValue,
   strictMaybe,
   strictMaybeToMaybe,
@@ -58,8 +61,10 @@ import Cardano.Ledger.Conway.TxInfo (
   transDelegatee,
   transHotCommitteeCred,
   transMap,
+  transProposal,
   transTxInInfoV1,
   transTxInInfoV3,
+  transVoter,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -89,11 +94,13 @@ import Cardano.Ledger.Plutus (
   transDatum,
   transEpochNo,
   transKeyHash,
+  transSafeHash,
+  transScriptHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..))
-import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Cardano.Ledger.TxIn (TxId (TxId), TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM, unless, zipWithM)
@@ -714,20 +721,22 @@ toPlutusV4Args ::
   EraPlutusTxInfo 'PlutusV4 era =>
   proxy 'PlutusV4 ->
   ProtVer ->
+  ScriptHash ->
   PV4.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy pv txInfo plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy pv plutusPurpose
-  let scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData)
+toPlutusV4Args proxy pv sh txInfo plutusPurpose maybeSpendingData redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy pv sh plutusPurpose
+  let scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) _
   pure $
     PlutusV4Args $
       PV4.ScriptContext
         { PV4.scriptContextTxInfo = txInfo
         , PV4.scriptContextRedeemer = Babbage.transRedeemer redeemerData
         , PV4.scriptContextScriptInfo = scriptInfo
+        , PV4.scriptContextScriptHash = _
         }
 
 checkPointerPresentInOutput ::
@@ -743,16 +752,25 @@ checkPointerPresentInOutput outputs =
       Addr _ _ (StakeRefPtr _) -> True
       _ -> False
 
+transTxId :: TxId -> PV4.TxId
+transTxId (TxId h) = PV4.TxId $ transSafeHash h
+
 transPlutusPurposeV4 ::
+  Era era =>
   proxy 'PlutusV4 ->
   ProtVer ->
+  ScriptHash ->
   DijkstraPlutusPurpose AsIxItem era ->
   Either (ContextError era) (PlutusScriptPurpose PlutusV4)
-transPlutusPurposeV4 proxy pv = \case
-  DijkstraSpending (AsIxItem _ (TxIn txId txIx)) -> pure $ PV4.Spending _ (PV4.TxOutRef (transTxId txId) _)
-  DijkstraMinting _ -> pure $ PV4.Minting _ _
-  DijkstraCertifying _ -> pure $ PV4.Certifying _ _ _
-  DijkstraWithdrawing _ -> pure $ PV4.Withdrawing _ _
-  DijkstraVoting _ -> pure $ PV4.Voting _ _
-  DijkstraProposing _ -> pure $ PV4.Proposing _ _ _
-  DijkstraGuarding _ -> pure $ PV4.Guarding _ _
+transPlutusPurposeV4 proxy pv (transScriptHash -> sh) = \case
+  DijkstraSpending (AsIxItem _ (TxIn txId (TxIx ix))) ->
+    pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
+  DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
+  DijkstraCertifying (AsIxItem ix cert) ->
+    pure $ PV4.Certifying sh (toInteger ix) (transTxCertV4 proxy pv cert)
+  DijkstraWithdrawing (AsIxItem _ (AccountAddress _ (AccountId c))) ->
+    pure $ PV4.Withdrawing sh (transCred c)
+  DijkstraVoting (AsIxItem _ voter) -> pure $ PV4.Voting sh (transVoter voter)
+  DijkstraProposing (AsIxItem ix proc) ->
+    pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
+  DijkstraGuarding (AsIxItem _ _) -> pure $ PV4.Guarding sh undefined

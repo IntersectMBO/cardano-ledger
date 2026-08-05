@@ -203,7 +203,8 @@ transRedeemerPtr proxy pv txBody (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
-      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sp
+      let sh = undefined
+      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sh sp
       Right (plutusScriptPurpose, transRedeemer d)
 
 -- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
@@ -404,11 +405,19 @@ toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>
   proxy 'PlutusV2 ->
   ProtVer ->
+  ScriptHash ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy pv txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV2Args proxy pv sh txInfo scriptPurpose maybeSpendingData redeemerData =
   PlutusV2Args
-    <$> toLegacyPlutusArgs proxy pv (PV2.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
+    <$> toLegacyPlutusArgs
+      proxy
+      pv
+      sh
+      (PV2.ScriptContext txInfo)
+      scriptPurpose
+      maybeSpendingData
+      redeemerData

@@ -121,6 +121,7 @@ class
   toPlutusScriptPurpose ::
     proxy l ->
     ProtVer ->
+    ScriptHash ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
@@ -132,6 +133,7 @@ class
   toPlutusArgs ::
     proxy l ->
     ProtVer ->
+    ScriptHash ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Maybe (Data era) ->
