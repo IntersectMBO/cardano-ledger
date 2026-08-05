@@ -112,12 +112,10 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult r
   case script of
     SupportedPlutusRunnable plutusRunnable -> do
       let slang = isLanguage `asSameLanguage` plutusRunnable
-          maybeSpendingDatum =
-            getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
       mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
       txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
       plutusArgs <-
-        toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
+        toPlutusArgs slang lti txInfo plutusPurpose redeemerData
       pure $
         PlutusWithContext
           { pwcProtocolVersion = pvMajor (ltiProtVer lti)
@@ -165,17 +163,21 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
     pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
 
 toPlutusV1Args ::
-  EraPlutusTxInfo 'PlutusV1 era =>
+  (AlonzoEraUTxO era, EraPlutusTxInfo 'PlutusV1 era) =>
   proxy 'PlutusV1 ->
-  ProtVer ->
+  LedgerTxInfo era ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
-  Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy pv txInfo scriptPurpose maybeSpendingData redeemerData =
-  PlutusV1Args
-    <$> toLegacyPlutusArgs proxy pv (PV1.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
+toPlutusV1Args proxy lti@LedgerTxInfo {ltiProtVer, ltiTx} txInfo plutusPurpose redeemerData =
+  let
+    context = PV1.ScriptContext txInfo
+    maybeSpendingDatum =
+      getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
+   in
+    PlutusV1Args
+      <$> toLegacyPlutusArgs proxy ltiProtVer context plutusPurpose maybeSpendingDatum redeemerData
 
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>

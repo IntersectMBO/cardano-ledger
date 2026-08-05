@@ -60,6 +60,7 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxOutV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -743,20 +744,22 @@ transProtVer (ProtVer major minor) =
   PV3.ProtocolVersion (toInteger (getVersion32 major)) (toInteger minor)
 
 toPlutusV3Args ::
-  EraPlutusTxInfo 'PlutusV3 era =>
+  (AlonzoEraUTxO era, EraPlutusTxInfo 'PlutusV3 era) =>
   proxy 'PlutusV3 ->
-  ProtVer ->
+  LedgerTxInfo era ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
-  Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args proxy pv txInfo plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy pv plutusPurpose
-  let scriptInfo =
-        scriptPurposeToScriptInfo
-          scriptPurpose
-          (transDatum <$> maybeSpendingData)
+toPlutusV3Args proxy lti@LedgerTxInfo {ltiProtVer, ltiTx} txInfo plutusPurpose redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
+  let
+    maybeSpendingDatum =
+      getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
+    scriptInfo =
+      scriptPurposeToScriptInfo
+        scriptPurpose
+        (transDatum <$> maybeSpendingDatum)
   pure $
     PlutusV3Args $
       PV3.ScriptContext
