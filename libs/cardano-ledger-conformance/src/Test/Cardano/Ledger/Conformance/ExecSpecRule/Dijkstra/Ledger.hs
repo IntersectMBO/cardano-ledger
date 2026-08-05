@@ -50,14 +50,14 @@ import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import qualified Test.Cardano.Ledger.Binary.TreeDiff as TD
 import Test.Cardano.Ledger.Common (NFData, ToExpr (..))
 import Test.Cardano.Ledger.Conformance (withSpecTransM)
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
+  externalFunctions,
+ )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   ExecSpecTopLevelRule (..),
   SpecTRC (..),
   runFromAgdaFunction,
- )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.Base (
-  externalFunctions,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),

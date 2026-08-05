@@ -9,13 +9,12 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg () where
 
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Core (KeyRole (..))
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Credential (Credential)
 import Control.State.Transition.Extended (TRC (..))
 import Data.Bifunctor (second)
 import Data.Set (Set)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (ExecContext, runAgdaRule, translateInputs),
   SpecTRC (SpecTRC),
@@ -25,9 +24,8 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   unComputationResult,
   withCtxSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Conway.ImpTest ()
 
 instance ExecSpecRule "DELEG" ConwayEra where
   -- The context is the set of all DRep delegatees in the transaction

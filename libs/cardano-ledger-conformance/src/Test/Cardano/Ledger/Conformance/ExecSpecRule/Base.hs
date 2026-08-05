@@ -12,20 +12,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.Base (
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
   externalFunctions,
 ) where
 
 import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
-import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Core (HASH, Hash)
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Data.ByteString (ByteString)
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
-import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (integerToHash)
+import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (signatureFromInteger, vkeyFromInteger)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra ()
+import Test.Cardano.Ledger.Conformance.Utils (integerToHash)
 
 externalFunctions :: Agda.ExternalFunctions
 externalFunctions = Agda.MkExternalFunctions {..}
