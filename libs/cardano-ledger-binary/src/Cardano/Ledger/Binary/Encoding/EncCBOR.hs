@@ -105,6 +105,7 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Prelude hiding (encodeFloat, (.))
 
 class EncCBOR a where
@@ -462,6 +463,9 @@ instance EncCBOR PV2.ScriptContext where
 
 instance EncCBOR PV3.ScriptContext where
   encCBOR = encCBOR . PV3.toData
+
+instance EncCBOR PV4.ScriptContext where
+  encCBOR = encCBOR . PV4.toData
 
 --------------------------------------------------------------------------------
 -- Leios

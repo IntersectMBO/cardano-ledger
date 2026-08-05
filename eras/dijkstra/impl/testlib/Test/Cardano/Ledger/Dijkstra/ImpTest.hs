@@ -85,6 +85,7 @@ instance AlonzoEraImp DijkstraEra where
     plutusTestScripts SPlutusV1
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
+      <> plutusTestScripts SPlutusV4
 
 instance BabbageEraImp DijkstraEra
 

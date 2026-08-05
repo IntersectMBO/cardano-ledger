@@ -16,6 +16,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
+  PlutusTxOut,
   toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
@@ -23,7 +24,6 @@ import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (..),
-  transTxOutV2,
  )
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -42,6 +42,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.Data (Proxy (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -51,6 +52,7 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
@@ -97,10 +99,10 @@ inlineDatumOutput =
   mkBasicTxOut shelleyAddr (inject $ Coin 3)
     & datumTxOutL .~ datumEx
 
-refScriptOutput :: (BabbageEraTxOut era, EraPlutusTxInfo 'PlutusV2 era) => TxOut era
+refScriptOutput :: forall l era. (BabbageEraTxOut era, EraPlutusTxInfo l era) => TxOut era
 refScriptOutput =
   mkBasicTxOut shelleyAddr (inject $ Coin 3)
-    & referenceScriptTxOutL .~ (SJust $ alwaysSucceeds @'PlutusV2 3)
+    & referenceScriptTxOutL .~ SJust (alwaysSucceeds @l 3)
 
 -- This input is only a "Shelley input" in the sense
 -- that we attach it to a Shelley output in the UTxO created below.
@@ -114,8 +116,9 @@ inputWithRefScript :: TxIn
 inputWithRefScript = mkTxInPartial genesisId 4
 
 exampleUTxO ::
+  forall l era.
   ( BabbageEraTxOut era
-  , EraPlutusTxInfo 'PlutusV2 era
+  , EraPlutusTxInfo l era
   , Value era ~ MaryValue
   ) =>
   UTxO era
@@ -125,7 +128,7 @@ exampleUTxO =
       [ (byronInput, byronOutput)
       , (shelleyInput, shelleyOutput)
       , (inputWithInlineDatum, inlineDatumOutput)
-      , (inputWithRefScript, refScriptOutput)
+      , (inputWithRefScript, refScriptOutput @l)
       ]
 
 txb ::
@@ -159,7 +162,7 @@ hasReferenceInput slang txInfo =
     SPlutusV1 -> expectationFailure "PlutusV1 does not have reference inputs"
     SPlutusV2 -> PV2.txInfoReferenceInputs txInfo `shouldNotBe` mempty
     SPlutusV3 -> PV3.txInfoReferenceInputs txInfo `shouldNotBe` mempty
-    SPlutusV4 -> PV3.txInfoReferenceInputs txInfo `shouldNotBe` mempty
+    SPlutusV4 -> PV4.txInfoReferenceInputs txInfo `shouldNotBe` mempty
 
 plutusTxInInfoInputs ::
   forall era l. HasCallStack => SLanguage l -> PlutusTxInfo l -> [PlutusTxInInfo era l]
@@ -168,7 +171,7 @@ plutusTxInInfoInputs slang txInfo =
     SPlutusV1 -> error "PlutusV1 not supported"
     SPlutusV2 -> PV2.txInfoInputs txInfo
     SPlutusV3 -> PV3.txInfoInputs txInfo
-    SPlutusV4 -> PV3.txInfoInputs txInfo
+    SPlutusV4 -> PV4.txInfoInputs txInfo
 
 expectOneInput ::
   forall era l.
@@ -182,19 +185,18 @@ expectOneInput ::
   Expectation
 expectOneInput l i txInfo = plutusTxInInfoInputs @era l txInfo `shouldBe` [i]
 
-expectOneOutput :: PV2.TxOut -> SLanguage l -> PlutusTxInfo l -> Expectation
+expectOneOutput :: PlutusTxOut l -> SLanguage l -> PlutusTxInfo l -> Expectation
 expectOneOutput o slang txInfo =
   case slang of
     SPlutusV1 -> expectationFailure "PlutusV1 not supported"
     SPlutusV2 -> PV2.txInfoOutputs txInfo `shouldBe` [o]
     SPlutusV3 -> PV3.txInfoOutputs txInfo `shouldBe` [o]
-    SPlutusV4 -> PV3.txInfoOutputs txInfo `shouldBe` [o]
+    SPlutusV4 -> PV4.txInfoOutputs txInfo `shouldBe` [o]
 
 successfulTranslation ::
   forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
-  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
   SLanguage l ->
@@ -207,7 +209,7 @@ successfulTranslation slang tx f =
           { ltiProtVer = ProtVer (eraProtVerLow @era) 0
           , ltiEpochInfo = ei
           , ltiSystemStart = ss
-          , ltiUTxO = exampleUTxO
+          , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
           }
@@ -219,7 +221,6 @@ expectTranslationError ::
   forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
-  , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
   ) =>
   SLanguage l ->
@@ -232,7 +233,7 @@ expectTranslationError slang tx expected =
           { ltiProtVer = ProtVer (eraProtVerLow @era) 0
           , ltiEpochInfo = ei
           , ltiSystemStart = ss
-          , ltiUTxO = exampleUTxO
+          , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
           }
@@ -240,17 +241,6 @@ expectTranslationError slang tx expected =
         Right txInfo ->
           assertFailure $ "This translation was expected to fail, but it succeeded: " <> show txInfo
         Left e -> e `shouldBe` expected
-
-expectV1TranslationError ::
-  ( BabbageEraTxOut era
-  , EraPlutusTxInfo 'PlutusV1 era
-  , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
-  ) =>
-  Tx TopTx era ->
-  ContextError era ->
-  Expectation
-expectV1TranslationError = expectTranslationError SPlutusV1
 
 errorTranslate ::
   forall era b.
@@ -262,28 +252,26 @@ errorTranslate exampleName =
   either (\err -> error $ exampleName ++ " failed: " ++ show err) id
 
 translatedOutputEx1 ::
-  forall era.
+  forall era l.
   ( BabbageEraTxOut era
-  , Show (ContextError era)
   , Value era ~ MaryValue
-  , Inject (BabbageContextError era) (ContextError era)
+  , EraPlutusTxInfo l era
   ) =>
-  PV2.TxOut
+  PlutusTxOut l
 translatedOutputEx1 =
   errorTranslate @era "translatedOutputEx1" $
-    transTxOutV2 @era (TxOutFromOutput minBound) inlineDatumOutput
+    toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) inlineDatumOutput
 
 translatedOutputEx2 ::
-  forall era.
+  forall l era.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
-  , Inject (BabbageContextError era) (ContextError era)
+  , EraPlutusTxInfo l era
   ) =>
-  PV2.TxOut
+  PlutusTxOut l
 translatedOutputEx2 =
   errorTranslate @era "translatedOutputEx2" $
-    transTxOutV2 @era (TxOutFromOutput minBound) refScriptOutput
+    toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) (refScriptOutput @l)
 
 txInfoSpecV1 ::
   forall era.
@@ -291,30 +279,34 @@ txInfoSpecV1 ::
   , BabbageEraTxBody era
   , Value era ~ MaryValue
   , EraPlutusTxInfo 'PlutusV1 era
-  , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Spec
 txInfoSpecV1 =
   describe "Plutus V1" $ do
     it "translation error on byron txout" $
-      expectV1TranslationError @era
+      expectTranslationError @era
+        SPlutusV1
         (txBare shelleyInput byronOutput)
         (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
     it "translation error on byron txin" $
-      expectV1TranslationError @era
+      expectTranslationError @era
+        SPlutusV1
         (txBare byronInput shelleyOutput)
         (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
     it "translation error on unknown txin (logic error)" $
-      expectV1TranslationError @era
+      expectTranslationError @era
+        SPlutusV1
         (txBare unknownInput shelleyOutput)
         (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
     it "translation error on inline datum in input" $
-      expectV1TranslationError @era
+      expectTranslationError @era
+        SPlutusV1
         (txBare inputWithInlineDatum shelleyOutput)
         (inject $ InlineDatumsNotSupported @era (TxOutFromInput inputWithInlineDatum))
     it "translation error on inline datum in output" $
-      expectV1TranslationError @era
+      expectTranslationError @era
+        SPlutusV1
         (txBare shelleyInput inlineDatumOutput)
         (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
 
@@ -360,27 +352,27 @@ txInfoSpec lang =
         lang
         (txBare inputWithInlineDatum shelleyOutput)
         ( \l txInfo -> do
-            txInInfo <- expectRight $ toPlutusTxInInfo @_ @era l exampleUTxO inputWithInlineDatum
+            txInInfo <- expectRight $ toPlutusTxInInfo l (exampleUTxO @l @era) inputWithInlineDatum
             expectOneInput @era l txInInfo txInfo
         )
     it "use inline datum in output" $
       successfulTranslation @era
         lang
         (txBare shelleyInput inlineDatumOutput)
-        (expectOneOutput (translatedOutputEx1 @era))
+        (expectOneOutput (translatedOutputEx1 @era @l))
     it "use reference script in input" $
       successfulTranslation @era
         lang
         (txBare inputWithRefScript shelleyOutput)
         ( \l txInfo -> do
-            txInInfo <- expectRight $ toPlutusTxInInfo @_ @era l exampleUTxO inputWithRefScript
+            txInInfo <- expectRight $ toPlutusTxInInfo @_ @era l (exampleUTxO @l) inputWithRefScript
             expectOneInput @era l txInInfo txInfo
         )
     it "use reference script in output" $
       successfulTranslation @era
         lang
-        (txBare shelleyInput refScriptOutput)
-        (expectOneOutput (translatedOutputEx2 @era))
+        (txBare shelleyInput $ refScriptOutput @l)
+        (expectOneOutput (translatedOutputEx2 @l @era))
 
 spec ::
   forall era.

@@ -39,12 +39,13 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
   | TxInfoPV2 PV2.TxInfo
   | TxInfoPV3 PV3.TxInfo
-  | TxInfoPV4 PV3.TxInfo
+  | TxInfoPV4 PV4.TxInfo
   deriving (Show, Eq, Generic)
 
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
@@ -165,6 +166,24 @@ instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
 
 instance Cborg.Serialise PV3.Rational
+
+instance Cborg.Serialise PV4.AccountId
+
+instance Cborg.Serialise PV4.TxCert
+
+instance Cborg.Serialise PV4.AccountBalanceInterval
+
+instance Cborg.Serialise PV4.AccountBalanceIntervals
+
+instance Cborg.Serialise PV4.ScriptPurpose
+
+instance Cborg.Serialise PV4.Address
+
+instance Cborg.Serialise PV4.TxOut
+
+instance Cborg.Serialise PV4.TxInInfo
+
+instance Cborg.Serialise PV4.TxInfo
 
 instance Cborg.Serialise VersionedTxInfo
 

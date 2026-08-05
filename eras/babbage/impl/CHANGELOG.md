@@ -1,7 +1,10 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.14.1.0
+## 1.15.0.0
 
+* Change `transTxRedeemers` to accept a `UTxO era` argument
+* Change `toPlutusV2Args` to accept a `ScriptHash` argument
+* Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

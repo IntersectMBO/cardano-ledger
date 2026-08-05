@@ -22,7 +22,7 @@ import NoThunks.Class (NoThunks)
 
 newtype NonEmptySet a = NonEmptySet (Set a)
   deriving stock (Show, Eq, Ord)
-  deriving newtype (EncCBOR, NoThunks, NFData, ToJSON)
+  deriving newtype (EncCBOR, NoThunks, NFData, ToJSON, Semigroup)
 
 instance (Ord a, FromJSON a) => FromJSON (NonEmptySet a) where
   parseJSON v = do
