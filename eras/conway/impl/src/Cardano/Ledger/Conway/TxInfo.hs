@@ -745,14 +745,13 @@ transProtVer (ProtVer major minor) =
 
 toPlutusV3Args ::
   (AlonzoEraUTxO era, EraPlutusTxInfo 'PlutusV3 era) =>
-  Tx level era ->
   proxy 'PlutusV3 ->
   LedgerTxInfo era ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args _ proxy lti@LedgerTxInfo {ltiProtVer, ltiTx} txInfo plutusPurpose redeemerData = do
+toPlutusV3Args proxy lti@LedgerTxInfo {ltiProtVer, ltiTx} txInfo plutusPurpose redeemerData = do
   scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
   let
     maybeSpendingDatum =

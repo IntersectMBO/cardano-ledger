@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedPlutusRunnable (..),
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), toAsItem, toAsPurpose)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -58,6 +58,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
+  DijkstraEraScript,
   PlutusScript (..),
   pattern GuardingPurpose,
  )
@@ -521,7 +522,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose _ = error "stub: PlutusV4 not yet implemented"
 
-  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     withBothTxLevels ltiTx mkTopTxInfo mkSubTxInfo
     where
       mkTopTxInfo tx = PlutusTxInfoResult $ do
@@ -529,24 +530,8 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
         let
           topTxInfo = txInfo {PV3.txInfoFee = transCoinToLovelace (tx ^. bodyTxL . feeTxBodyL)}
         Right $ \case
-          purpose@(GuardingPurpose AsPurpose) -> do
-            _subTxInfosForGuards <-
-              forM (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
-                let txId = txIdTx subTx
-                mkTxInfo <-
-                  unPlutusTxInfoResult $
-                    case Map.lookup txId (ltiMemoizedSubTransactions lti) of
-                      Nothing ->
-                        toPlutusTxInfo proxy $
-                          lti
-                            { ltiTx = subTx
-                            , ltiMemoizedSubTransactions = mempty
-                            }
-                      Just txInfoResults ->
-                        lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
-                left (SubTxContextError txId) $ mkTxInfo purpose
-            -- TODO: Include _subTxInfosForGuards
-            Right topTxInfo
+          -- TODO: this ppattern match in PlutusPurpose turned out to be unnecessary, since TxInfo
+          -- stays the same regardless of the purpose by design. It is toPlutusArgs that varies
           _ -> Right topTxInfo
       mkSubTxInfo tx = PlutusTxInfoResult $ do
         txInfo <- mkAnyLevelTxInfo tx
@@ -597,20 +582,47 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
                   coin -> Just $ transCoinToLovelace coin
             }
 
-  toPlutusArgs = toPlutusV4Args
+  toPlutusArgs lang lti@LedgerTxInfo {ltiTx} = toPlutusV4Args ltiTx lang lti
 
   toPlutusTxInInfo _ = transTxInInfoV3
 
 toPlutusV4Args ::
-  (AlonzoEraUTxO era, EraPlutusTxInfo 'PlutusV4 era) =>
+  ( AlonzoEraUTxO era
+  , DijkstraEraScript era
+  , DijkstraEraTxBody era
+  , EraPlutusTxInfo 'PlutusV4 era
+  , Inject (DijkstraContextError era) (ContextError era)
+  , STxLevel level era ~ STxBothLevels level era
+  ) =>
+  Tx level era ->
   proxy 'PlutusV4 ->
   LedgerTxInfo era ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy lti@LedgerTxInfo {ltiProtVer, ltiTx} txInfo plutusPurpose redeemerData = do
+toPlutusV4Args ltiTx proxy lti@LedgerTxInfo {ltiProtVer} txInfo plutusPurpose redeemerData = do
   scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
+  _subTxInfosForGuards <-
+    flip (withBothTxLevels ltiTx) (\_ -> pure []) $ \tx -> do
+      case hoistPlutusPurpose toAsPurpose plutusPurpose of
+        purpose@(GuardingPurpose AsPurpose) -> do
+          forM (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
+            let txId = txIdTx subTx
+            mkTxInfo <-
+              unPlutusTxInfoResult $
+                case Map.lookup txId (ltiMemoizedSubTransactions lti) of
+                  Nothing ->
+                    toPlutusTxInfo proxy $
+                      lti
+                        { ltiTx = subTx
+                        , ltiMemoizedSubTransactions = mempty
+                        }
+                  Just txInfoResults ->
+                    lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
+            left (inject . SubTxContextError txId) $ mkTxInfo purpose
+        _ -> pure []
+  -- TODO: Include _subTxInfosForGuards
   let
     maybeSpendingDatum =
       getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
