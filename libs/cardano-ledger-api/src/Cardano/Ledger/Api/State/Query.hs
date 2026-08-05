@@ -789,7 +789,7 @@ instance EncCBOR QueryResultIndividualPoolStake where
 
 instance DecCBOR QueryResultIndividualPoolStake where
   decCBOR =
-    decodeRecordNamed "IndividualPoolStake" (const 3) $
+    decodeRecordNamed "QueryResultIndividualPoolStake" (const 3) $
       QueryResultIndividualPoolStake <$> decCBOR <*> decCBOR <*> decCBOR
 
 instance EncCBOR QueryResultPoolDistr where
@@ -800,7 +800,7 @@ instance EncCBOR QueryResultPoolDistr where
 
 instance DecCBOR QueryResultPoolDistr where
   decCBOR =
-    decodeRecordNamed "PoolDistr" (const 2) $
+    decodeRecordNamed "QueryResultPoolDistr" (const 2) $
       QueryResultPoolDistr <$> decCBOR <*> decCBOR
 
 -- | Query the pool distribution derived from the set-snapshot.
