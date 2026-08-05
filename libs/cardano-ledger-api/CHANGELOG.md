@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.14.0.1
+## 1.15.0.0
 
-*
+* Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
 
 ## 1.14.0.0
 
