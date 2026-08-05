@@ -87,6 +87,7 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era where
@@ -233,19 +234,19 @@ type family PlutusTxCert (l :: Language) where
   PlutusTxCert 'PlutusV1 = PV1.DCert
   PlutusTxCert 'PlutusV2 = PV2.DCert
   PlutusTxCert 'PlutusV3 = PV3.TxCert
-  PlutusTxCert 'PlutusV4 = PV3.TxCert
+  PlutusTxCert 'PlutusV4 = PV4.TxCert
 
 type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
   PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
   PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
-  PlutusScriptPurpose 'PlutusV4 = PV3.ScriptPurpose
+  PlutusScriptPurpose 'PlutusV4 = PV4.ScriptPurpose
 
 type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
-  PlutusTxInfo 'PlutusV4 = PV3.TxInfo
+  PlutusTxInfo 'PlutusV4 = PV4.TxInfo
 
 type family PlutusTxInInfo era (l :: Language) where
   -- This special case is here because Alonzo does not have a ContextError
@@ -254,7 +255,7 @@ type family PlutusTxInInfo era (l :: Language) where
   PlutusTxInInfo _ 'PlutusV1 = PV1.TxInInfo
   PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
   PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
-  PlutusTxInInfo _ 'PlutusV4 = PV3.TxInInfo
+  PlutusTxInInfo _ 'PlutusV4 = PV4.TxInInfo
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus
