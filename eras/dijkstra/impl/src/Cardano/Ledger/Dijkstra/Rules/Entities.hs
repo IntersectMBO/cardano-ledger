@@ -28,12 +28,19 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (
+  Committee,
+  GovActionPurpose (..),
+  GovActionState,
+  GovPurposeId,
+ )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
@@ -43,29 +50,49 @@ import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
 
 data EntitiesEnv era = EntitiesEnv
-  { eePlutusLegacyMode :: Bool
-  , eeCertsEnv :: Conway.CertsEnv era
+  { eeCurrentEpoch :: EpochNo
+  , eePParams :: PParams era
+  , eeCurrentCommittee :: StrictMaybe (Committee era)
+  , eeCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+  , eeOriginalAccounts :: Accounts era
   }
   deriving (Generic)
 
-deriving instance (EraPParams era, Eq (Tx TopTx era)) => Eq (EntitiesEnv era)
+deriving instance
+  (EraPParams era, Eq (Committee era), Eq (GovActionState era), Eq (Accounts era)) =>
+  Eq (EntitiesEnv era)
 
-deriving instance (EraPParams era, Show (Tx TopTx era)) => Show (EntitiesEnv era)
+deriving instance
+  (EraPParams era, Show (Committee era), Show (GovActionState era), Show (Accounts era)) =>
+  Show (EntitiesEnv era)
 
-instance (EraPParams era, NFData (Tx TopTx era)) => NFData (EntitiesEnv era)
+instance
+  (EraPParams era, NFData (Committee era), NFData (GovActionState era), NFData (Accounts era)) =>
+  NFData (EntitiesEnv era)
 
-instance EraTx era => EncCBOR (EntitiesEnv era) where
-  encCBOR x@(EntitiesEnv _ _) =
+instance
+  ( EraPParams era
+  , EncCBOR (Committee era)
+  , EncCBOR (GovActionState era)
+  , EncCBOR (Accounts era)
+  ) =>
+  EncCBOR (EntitiesEnv era)
+  where
+  encCBOR x@(EntitiesEnv _ _ _ _ _) =
     let EntitiesEnv {..} = x
      in encode $
           Rec EntitiesEnv
-            !> To eePlutusLegacyMode
-            !> To eeCertsEnv
+            !> To eeCurrentEpoch
+            !> To eePParams
+            !> To eeCurrentCommittee
+            !> To eeCommitteeProposals
+            !> To eeOriginalAccounts
 
 data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
@@ -167,6 +194,7 @@ instance InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure DijkstraEra
 instance
   ( EraTx era
   , DijkstraEraTxBody era
+  , DijkstraEraUTxO era
   , ConwayEraPParams era
   , ConwayEraCertState era
   , Embed (EraRule "CERTS" era) (ENTITIES era)
@@ -181,7 +209,7 @@ instance
   STS (ENTITIES era)
   where
   type State (ENTITIES era) = CertState era
-  type Signal (ENTITIES era) = Seq (TxCert era)
+  type Signal (ENTITIES era) = StAnnTx TopTx era
   type Environment (ENTITIES era) = EntitiesEnv era
   type BaseM (ENTITIES era) = ShelleyBase
   type PredicateFailure (ENTITIES era) = EntitiesPredFailure era
@@ -192,8 +220,8 @@ instance
 
 dijkstraEntitiesTransition ::
   forall era.
-  ( EraTx era
-  , DijkstraEraTxBody era
+  ( DijkstraEraTxBody era
+  , DijkstraEraUTxO era
   , ConwayEraCertState era
   , Embed (EraRule "CERTS" era) (ENTITIES era)
   , State (EraRule "CERTS" era) ~ CertState era
@@ -206,10 +234,13 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (EntitiesEnv legacyMode certsEnv, certState, certificates) <- judgmentContext
-  let Conway.CertsEnv tx pp curEpoch _committee _committeeProposals = certsEnv
+  TRC (EntitiesEnv curEpoch pp committee committeeProposals _originalAccounts, certState, stAnnTx) <-
+    judgmentContext
+  let tx = stAnnTx ^. txStAnnTxG
+      legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
+      certsEnv = Conway.CertsEnv tx pp curEpoch committee committeeProposals
 
   network <- liftSTS $ asks networkId
 
@@ -224,7 +255,8 @@ dijkstraEntitiesTransition = do
           & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
           & certDStateL . accountsL %~ applyWithdrawals withdrawals
   certStateAfterCerts <-
-    trans @(EraRule "CERTS" era) $ TRC (certsEnv, certStateBeforeCerts, certificates)
+    trans @(EraRule "CERTS" era) $
+      TRC (certsEnv, certStateBeforeCerts, StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL)
 
   let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accountsAfterCerts = certStateAfterCerts ^. certDStateL . accountsL
