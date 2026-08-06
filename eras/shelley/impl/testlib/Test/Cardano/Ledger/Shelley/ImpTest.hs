@@ -1149,7 +1149,7 @@ impNativeScriptKeyPairs tx = do
   keyPairs <- mapM (impSatisfyNativeScript curAddrWits $ tx ^. bodyTxL) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
-fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
+fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx l era -> ImpTestM era (Tx l era)
 fixupTxOuts tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let

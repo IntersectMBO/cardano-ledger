@@ -114,12 +114,9 @@ spec = describe "UTXOW" $ do
             tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
-        result <- trySubmitTx tx
-        let present = case result of
-              Left (predFailures, _) ->
-                injectFailure (MissingRequiredGuards (NES.singleton guardKeyHash)) `elem` predFailures
-              Right _ -> False
-        present `shouldBe` True
+        submitFailingTx
+          tx
+          [injectFailure (MissingRequiredGuards (NES.singleton guardKeyHash))]
 
     describe "MalformedGuardDatums" $ do
       it "A key-hash guard carrying a datum is a predicate failure" $ do
@@ -159,6 +156,7 @@ spec = describe "UTXOW" $ do
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
                 & witsTxL . hashScriptTxWitsL .~ [guardScript]
                 & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, mDatum)]
+            -- TODO replace with `submitFailingTx` once we have fixup support for plutus scripts
             hasMalformed tx = do
               result <- trySubmitTx tx
               pure $ case result of
