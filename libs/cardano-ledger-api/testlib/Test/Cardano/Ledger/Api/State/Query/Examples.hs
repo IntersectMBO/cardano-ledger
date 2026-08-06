@@ -101,6 +101,7 @@ import Test.Cardano.Ledger.Conway.Examples (
  )
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
+import Test.Cardano.Ledger.Dijkstra.Examples (exampleLeiosKey)
 import Test.Cardano.Ledger.Era (EraTest (..))
 import Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
@@ -244,6 +245,7 @@ querySetSnapshotStakePoolDistrExamples =
                   { individualPoolStake = 1 % 4
                   , individualTotalPoolStake = CompactCoin 1_000_000_000
                   , individualPoolStakeVrf = exampleVrfVerKeyHash
+                  , individualPoolStakeBls = SNothing
                   }
               )
             ,
@@ -252,6 +254,7 @@ querySetSnapshotStakePoolDistrExamples =
                   { individualPoolStake = 3 % 8
                   , individualTotalPoolStake = CompactCoin 5_000_000_000
                   , individualPoolStakeVrf = exampleVrfVerKeyHash
+                  , individualPoolStakeBls = SJust exampleLeiosKey
                   }
               )
             ]

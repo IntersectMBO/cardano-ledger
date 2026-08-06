@@ -198,8 +198,8 @@ poolsByTotalStakeFraction globals nes =
     toTotalStakeFrac ::
       IndividualPoolStake ->
       IndividualPoolStake
-    toTotalStakeFrac (IndividualPoolStake s c vrf) =
-      IndividualPoolStake (s * stakeRatio) c vrf
+    toTotalStakeFrac (IndividualPoolStake s c vrf bls) =
+      IndividualPoolStake (s * stakeRatio) c vrf bls
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> NewEpochState era -> Coin

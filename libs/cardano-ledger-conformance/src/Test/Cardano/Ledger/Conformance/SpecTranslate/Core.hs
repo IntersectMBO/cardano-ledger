@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -212,7 +213,7 @@ committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
 instance SpecTranslate era IndividualPoolStake where
   type SpecRep era IndividualPoolStake = SpecRep era Coin
 
-  toSpecRep (IndividualPoolStake _ c _) = toSpecRep c
+  toSpecRep IndividualPoolStake {individualTotalPoolStake} = toSpecRep individualTotalPoolStake
 
 instance SpecTranslate era PoolDistr where
   type SpecRep era PoolDistr = Agda.HSMap (SpecRep era (KeyHash StakePool)) Agda.Coin

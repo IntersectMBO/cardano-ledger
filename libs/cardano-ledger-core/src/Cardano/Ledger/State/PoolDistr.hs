@@ -25,11 +25,24 @@ module Cardano.Ledger.State.PoolDistr (
   individualTotalPoolStakeL,
 ) where
 
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), NonZero, ToKeyValuePairs (..))
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  NonZero,
+  StrictMaybe (..),
+  ToKeyValuePairs (..),
+ )
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  DecoderError (..),
+  EncCBOR (..),
+  cborError,
+  decodeListLen,
+  encodeListLen,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
+import Cardano.Ledger.State.StakePool (LeiosKey (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default
@@ -69,24 +82,30 @@ individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
 
 instance EncCBOR IndividualPoolStake where
-  encCBOR (IndividualPoolStake stake stakeCoin vrf) =
+  encCBOR (IndividualPoolStake stake stakeCoin vrf bls) =
     mconcat
-      [ encodeListLen 3
+      [ encodeListLen 4
       , encCBOR stake
       , encCBOR stakeCoin
       , encCBOR vrf
+      , encCBOR bls
       ]
 
 instance DecCBOR IndividualPoolStake where
-  decCBOR =
-    decodeRecordNamed "IndividualPoolStake" (const 3) $
-      IndividualPoolStake
-        <$> decCBOR
-        <*> decCBOR
-        <*> decCBOR
+  decCBOR = do
+    n <- decodeListLen
+    stake <- decCBOR
+    stakeCoin <- decCBOR
+    vrf <- decCBOR
+    -- Snapshots written before the Leios key was added carry only three fields.
+    bls <- case n of
+      3 -> pure SNothing
+      4 -> decCBOR
+      _ -> cborError $ DecoderErrorSizeMismatch "IndividualPoolStake" 4 n
+    pure $ IndividualPoolStake stake stakeCoin vrf bls
 
 instance ToKeyValuePairs IndividualPoolStake where
-  toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _) =
+  toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
     let IndividualPoolStake {..} = indivPoolStake
      in [ "individualPoolStake" .= individualPoolStake
         , "individualTotalPoolStake" .= individualTotalPoolStake

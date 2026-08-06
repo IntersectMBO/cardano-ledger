@@ -23,6 +23,7 @@ import Cardano.Ledger.State (
   unActiveStake,
  )
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (SNothing))
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap
 import qualified Test.Cardano.Base.QuickCheck as BaseQC
@@ -55,7 +56,7 @@ oldCalculatePoolDistr includeHash (SnapShot activeStake _ stakePoolsSnapShot) =
           ]
    in PoolDistr
         ( Map.intersectionWith
-            (\(cc, rat) vrf -> IndividualPoolStake rat cc vrf)
+            (\(cc, rat) vrf -> IndividualPoolStake rat cc vrf SNothing)
             sd
             (VMap.toMap (VMap.map spssVrf stakePoolsSnapShot))
         )

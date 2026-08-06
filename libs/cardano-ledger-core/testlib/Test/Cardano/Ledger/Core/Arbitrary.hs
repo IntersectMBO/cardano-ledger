@@ -536,7 +536,7 @@ instance Arbitrary PoolDistr where
   arbitrary = PoolDistr <$> arbitrary <*> arbitrary
 
 instance Arbitrary IndividualPoolStake where
-  arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRepState --------------------------------------------------------------
@@ -705,6 +705,7 @@ instance Arbitrary StakePoolSnapShot where
   arbitrary =
     StakePoolSnapShot
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
