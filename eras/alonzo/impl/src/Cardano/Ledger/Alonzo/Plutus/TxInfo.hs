@@ -119,9 +119,9 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiTx} txInfoResult r
       plutusArgs <-
         toPlutusArgs
           slang
-          (ltiProtVer lti)
           (plutusRunnableScriptHash plutusRunnable)
           txInfo
+          lti
           plutusPurpose
           maybeSpendingDatum
           redeemerData
@@ -174,18 +174,18 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
 toPlutusV1Args ::
   EraPlutusTxInfo 'PlutusV1 era =>
   proxy 'PlutusV1 ->
-  ProtVer ->
   ScriptHash ->
   PV1.TxInfo ->
+  LedgerTxInfo era ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy pv sh txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV1Args proxy sh txInfo lti scriptPurpose maybeSpendingData redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs
       proxy
-      pv
+      (ltiProtVer lti)
       sh
       (PV1.ScriptContext txInfo)
       scriptPurpose

@@ -404,18 +404,18 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>
   proxy 'PlutusV2 ->
-  ProtVer ->
   ScriptHash ->
   PV2.TxInfo ->
+  LedgerTxInfo era ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy pv sh txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV2Args proxy sh txInfo lti scriptPurpose maybeSpendingData redeemerData =
   PlutusV2Args
     <$> toLegacyPlutusArgs
       proxy
-      pv
+      (ltiProtVer lti)
       sh
       (PV2.ScriptContext txInfo)
       scriptPurpose

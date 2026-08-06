@@ -534,7 +534,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
-  toPlutusTxInfo proxy lti@LedgerTxInfo {..} =
+  toPlutusTxInfo proxy LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
       txInfo <- mkAnyLevelTxInfo ltiTx
       Right $ \_ -> Right txInfo
@@ -579,10 +579,11 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoCurrentTreasuryAmount =
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx = withBothTxLevels txBody (const Nothing) _
+            , PV4.txInfoSubTxIx = Nothing -- TODO collect subtransactions if this is a top tx
             , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
             , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
-            , PV4.txInfoAccountBalanceIntervals = transTxBodyAccountBalanceIntervals txBody
+            , PV4.txInfoAccountBalanceIntervals =
+                transAccountBalanceIntervals $ txBody ^. accountBalanceIntervalsTxBodyL
             , PV4.txInfoGuards = transTxBodyGuards txBody
             , PV4.txInfoRequiredTopLevelGuards = transTxBodyRequiredTopLevelGuards txBody
             }
@@ -666,12 +667,9 @@ transAccountBalanceInterval = \case
   AccountBalanceUpperBound (Exclusive u) -> PV4.AccountBalanceUpperBound $ transCoinToLovelace u
   AccountBalanceBothBounds (Inclusive l) (Exclusive u) -> PV4.AccountBalanceBothBounds (transCoinToLovelace l) (transCoinToLovelace u)
 
-transTxBodyAccountBalanceIntervals ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.AccountBalanceIntervals
-transTxBodyAccountBalanceIntervals txb =
+transAccountBalanceIntervals :: AccountBalanceIntervals era -> PV4.AccountBalanceIntervals
+transAccountBalanceIntervals (AccountBalanceIntervals balanceIntervals) =
   PV4.AccountBalanceIntervals $ transMap transAccountId transAccountBalanceInterval balanceIntervals
-  where
-    AccountBalanceIntervals balanceIntervals = txb ^. accountBalanceIntervalsTxBodyL
 
 transTxBodyGuards :: DijkstraEraTxBody era => TxBody l era -> [PV4.Credential]
 transTxBodyGuards txb = fmap transCred . F.toList $ txb ^. guardsTxBodyL
@@ -692,7 +690,6 @@ scriptPurposeToScriptInfo sp datum topInfo = case sp of
 
 toPlutusV4Args ::
   proxy 'PlutusV4 ->
-  ProtVer ->
   ScriptHash ->
   PV4.TxInfo ->
   LedgerTxInfo DijkstraEra ->
@@ -700,11 +697,11 @@ toPlutusV4Args ::
   Maybe (Data DijkstraEra) ->
   Data DijkstraEra ->
   Either (ContextError DijkstraEra) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy pv sh txInfo LedgerTxInfo {ltiTx} plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy pv sh plutusPurpose
+toPlutusV4Args proxy sh txInfo LedgerTxInfo {..} plutusPurpose maybeSpendingData redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer sh plutusPurpose
   let
-    topTxInfo = withBothTxLevels ltiTx _ (const Nothing)
-    scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) topTxInfo
+    -- TODO TopTxInfo should be set if this is a top-level transaction
+    scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
   pure $
     PlutusV4Args $
       PV4.ScriptContext
@@ -731,7 +728,9 @@ transTxId :: TxId -> PV4.TxId
 transTxId (TxId h) = PV4.TxId $ transSafeHash h
 
 transPlutusPurposeV4 ::
-  Era era =>
+  ( ConwayEraTxCert era
+  , ConwayEraPlutusTxInfo PlutusV4 era
+  ) =>
   proxy 'PlutusV4 ->
   ProtVer ->
   ScriptHash ->
@@ -748,4 +747,4 @@ transPlutusPurposeV4 proxy pv (transScriptHash -> sh) = \case
   DijkstraVoting (AsIxItem _ voter) -> pure $ PV4.Voting sh (transVoter voter)
   DijkstraProposing (AsIxItem ix proc) ->
     pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
-  DijkstraGuarding (AsIxItem _ _) -> pure $ PV4.Guarding sh _
+  DijkstraGuarding (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)

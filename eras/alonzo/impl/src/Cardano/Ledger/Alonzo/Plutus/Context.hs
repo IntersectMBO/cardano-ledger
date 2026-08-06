@@ -132,9 +132,9 @@ class
 
   toPlutusArgs ::
     proxy l ->
-    ProtVer ->
     ScriptHash ->
     PlutusTxInfo l ->
+    LedgerTxInfo era ->
     PlutusPurpose AsIxItem era ->
     Maybe (Data era) ->
     Data era ->
