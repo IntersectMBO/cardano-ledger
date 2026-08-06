@@ -89,8 +89,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
-import Data.Sequence (Seq)
-import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro
@@ -315,7 +313,7 @@ instance
   , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , Signal (EraRule "ENTITIES" era) ~ Seq (TxCert era)
+  , Signal (EraRule "ENTITIES" era) ~ StAnnTx TopTx era
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
   , Signal (EraRule "SUBLEDGERS" era) ~ [StAnnTx SubTx era]
   , ConwayEraCertState era
@@ -378,7 +376,7 @@ dijkstraLedgerTransition ::
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , Signal (EraRule "ENTITIES" era) ~ Seq (TxCert era)
+  , Signal (EraRule "ENTITIES" era) ~ StAnnTx TopTx era
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
   , STS (LEDGER era)
   , EraRule "LEDGER" era ~ LEDGER era
@@ -432,10 +430,13 @@ dijkstraLedgerTransition = do
           trans @(EraRule "ENTITIES" era) $
             TRC
               ( EntitiesEnv
-                  (stAnnTx ^. plutusLegacyModeStAnnTxG)
-                  (Conway.CertsEnv tx pp curEpochNo committee committeeProposals)
+                  curEpochNo
+                  pp
+                  committee
+                  committeeProposals
+                  (lsCertState ledgerState ^. certDStateL . accountsL)
               , certStateAfterSubLedgers
-              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              , stAnnTx
               )
 
         let govSignal =

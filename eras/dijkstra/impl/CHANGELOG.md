@@ -2,6 +2,12 @@
 
 ## 0.4.0.0
 
+* Restructure `EntitiesEnv`:
+  - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
+  - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
+* Change the `STS` `Signal` of `ENTITIES` to `StAnnTx TopTx era`
+* Add `localProducedValue` helper in `UTxO` module
+* Add `ValueNotConservedInLegacy` constructor to `DijkstraUtxoPredFailure`
 * Change the block body serialization: each transaction in a block now carries its `is_valid` flag as the trailing element and the `invalid_transactions` field was removed from the block body:
   - Add `toCBORForBlockInclusion` and `decodeDijkstraTopTxInBlock`
   - Change `decodeDijkstraTopTx` to only decode the mempool format, by removing its `Bool` parameter
