@@ -35,6 +35,7 @@ import Cardano.Ledger.Dijkstra.Rules.Cert ()
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Deleg ()
 import Cardano.Ledger.Dijkstra.Rules.Entities
+import Cardano.Ledger.Dijkstra.Rules.Epoch ()
 import Cardano.Ledger.Dijkstra.Rules.Gov
 import Cardano.Ledger.Dijkstra.Rules.GovCert
 import Cardano.Ledger.Dijkstra.Rules.Ledger
