@@ -22,7 +22,7 @@ import qualified Data.ByteString.Char8 as BS8
 import Data.List (intercalate)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Options.Applicative ((<**>))
 import qualified Options.Applicative as Opt
@@ -41,6 +41,8 @@ data GenerateCBOROpts = GenerateCBOROpts
   , gcboCount :: !Int
   , gcboSeed :: !(Maybe Int)
   , gcboBinary :: !Bool
+  , gcboTries :: !Int
+  , gcboVerbose :: !Bool
   }
 
 optsParser :: [String] -> Opt.Parser GenerateCBOROpts
@@ -81,6 +83,19 @@ optsParser eras =
       ( Opt.long "binary"
           <> Opt.help "Output raw CBOR bytes instead of hex encoding"
       )
+    <*> Opt.option
+      Opt.auto
+      ( Opt.long "tries"
+          <> Opt.short 't'
+          <> Opt.metavar "N"
+          <> Opt.value 50
+          <> Opt.showDefault
+          <> Opt.help "Number of retries for failed sample generations"
+      )
+    <*> Opt.switch
+      ( Opt.long "verbose"
+          <> Opt.help "More verbose output"
+      )
 
 generateCBORMain :: Map T.Text Cuddle.Huddle -> IO ()
 generateCBORMain eraCDDLs = do
@@ -110,41 +125,40 @@ generateCBORMain eraCDDLs = do
         when (multipleRules && not (gcboBinary opts)) $
           hPutStrLn stderr $
             "# " <> T.unpack ruleName
-        forM_ [0 .. gcboCount opts - 1] $ emitSample opts env ruleName
+        forM_ [0 .. gcboCount opts - 1] $ emitSample 0 opts env ruleName
   where
     eraNames = map T.unpack (Map.keys eraCDDLs)
 
-emitSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> IO ()
-emitSample opts env ruleName sampleIx = do
-  let cborGen = runCBORGen (toGenConfig env) (generateFromName (Name ruleName))
-      gen = zapAntiGenResult (fromMaybe 0 (gcboZap opts)) cborGen
-  result <- case gcboSeed opts of
-    Nothing -> generate gen
-    Just seed -> pure $ unGen gen (mkQCGen (seed + sampleIx)) 30
-  writeSample opts env ruleName sampleIx result
-
-writeSample :: GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> ZapResult CBOR.Term -> IO ()
-writeSample opts env ruleName sampleIx ZapResult {zrValue, zrZapped}
-  | isJust (gcboZap opts) =
-      if zrZapped == 0
-        then warn "produced no corruptions"
-        else case validation of
-          Left e -> warn $ "could not run validation because of malformed bytes\n" <> show e
-          Right (Evidenced SValid _) -> warn "produced a value that is still valid"
-          Right (Evidenced SInvalid _) -> outputBinary
-  | otherwise = outputBinary
-  where
-    outputBinary
-      | gcboBinary opts = BS.hPut stdout bs
-      | otherwise = BS8.putStrLn (Base16.encode bs)
-    bs = CBOR.toStrictByteString (CBOR.encodeTerm zrValue)
-    validation = validateCBOR bs (Name ruleName) (mapIndex (heRoot env))
-    warn reason =
-      hPutStrLn stderr $
-        "Warning: zap "
-          <> reason
-          <> " for rule "
-          <> T.unpack ruleName
-          <> " (sample "
-          <> show sampleIx
-          <> ")"
+emitSample :: Int -> GenerateCBOROpts -> HuddleEnv -> T.Text -> Int -> IO ()
+emitSample tries opts env ruleName sampleIx
+  | tries > gcboTries opts =
+      die $ "failed to generate a sample after " <> show (gcboTries opts + 1) <> " attempts"
+  | otherwise = do
+      let cborGen = runCBORGen (toGenConfig env) (generateFromName (Name ruleName))
+          gen = zapAntiGenResult (fromMaybe 0 (gcboZap opts)) cborGen
+          retry = emitSample (tries + 1) opts env ruleName sampleIx
+      ZapResult {zrValue, zrZapped} <- case gcboSeed opts of
+        Nothing -> generate gen
+        Just seed -> pure $ unGen gen (mkQCGen (seed + sampleIx + gcboCount opts * tries)) 30
+      let
+        bs = CBOR.toStrictByteString (CBOR.encodeTerm zrValue)
+        outputBinary
+          | gcboBinary opts = BS.hPut stdout bs
+          | otherwise = BS8.putStrLn (Base16.encode bs)
+        validationResult = validateCBOR bs (Name ruleName) (mapIndex (heRoot env))
+        warn msg
+          | gcboVerbose opts = hPutStrLn stderr msg
+          | otherwise = pure ()
+      case gcboZap opts of
+        Just _
+          | zrZapped == 0 -> warn "Warning: no decision points for the zapper to zap, retrying" >> retry
+          | otherwise -> case validationResult of
+              Left (RuleDoesNotExist n) -> die $ "Failed to validate because rule does not exist: " <> show n
+              Left (LeftoverBytes _) ->
+                warn "Warning: leftover bytes after decoding generated CBOR, retrying" >> retry
+              Left (DecodingFailed e) ->
+                warn ("Warning: failed to decode generated CBOR, retrying (" <> show e <> ")") >> retry
+              Right (Evidenced SValid _) ->
+                warn "Warning: zapper failed to generate an invalid value, retrying" >> retry
+              Right (Evidenced SInvalid _) -> outputBinary
+        Nothing -> outputBinary
