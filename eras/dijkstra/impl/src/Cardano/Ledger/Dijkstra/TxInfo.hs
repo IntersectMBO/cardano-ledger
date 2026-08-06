@@ -347,7 +347,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
 
-  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
@@ -362,7 +362,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy (const $ Right ()) lti
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx (const $ Right ())
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -391,7 +391,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV3
 
-  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
       let
         txBody = tx ^. bodyTxL
@@ -409,7 +409,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy (const $ Right ()) lti
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx (const $ Right ())
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -535,7 +535,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
-  toPlutusTxInfo proxy lti@LedgerTxInfo {..} =
+  toPlutusTxInfo proxy LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
       txInfo <- mkAnyLevelTxInfo ltiTx
       Right $ \_ -> Right txInfo
@@ -566,7 +566,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             case lookup purpose scriptsNeeded of
               Just sh -> Right sh
               Nothing -> Left undefined
-        plutusRedeemers <- Babbage.transTxRedeemers proxy resolvePurposeScriptHash lti
+        plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx resolvePurposeScriptHash
         Right $
           PV4.TxInfo
             { PV4.txInfoInputs = inputsInfo

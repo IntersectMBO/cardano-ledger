@@ -190,23 +190,23 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  forall proxy l era.
+  forall proxy l era t.
   ( EraPlutusTxInfo l era
   , AlonzoEraTxBody era
-  , EraTx era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
+  ProtVer ->
+  TxBody t era ->
   (PlutusPurpose AsIxItem era -> Either (ContextError era) (PlutusPurposeScriptHash l)) ->
-  LedgerTxInfo era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
-transRedeemerPtr proxy getScriptHash LedgerTxInfo {ltiTx, ltiProtVer} (ptr, (d, _)) =
-  case redeemerPointerInverse (ltiTx ^. bodyTxL) ptr of
+transRedeemerPtr proxy pv txBody getScriptHash (ptr, (d, _)) =
+  case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
       sh <- getScriptHash sp
-      plutusScriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer sh sp
+      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sh sp
       Right (plutusScriptPurpose, transRedeemer d)
 
 -- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
@@ -219,14 +219,15 @@ transTxRedeemers ::
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
+  ProtVer ->
+  Tx t era ->
   (PlutusPurpose AsIxItem era -> Either (ContextError era) (PlutusPurposeScriptHash l)) ->
-  LedgerTxInfo era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemers proxy getScriptHash lti@LedgerTxInfo {ltiTx} =
+transTxRedeemers proxy pv tx getScriptHash =
   PV2.unsafeFromList
     <$> mapM
-      (transRedeemerPtr proxy getScriptHash lti)
-      (Map.toList $ ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+      (transRedeemerPtr proxy pv (tx ^. bodyTxL) getScriptHash)
+      (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
@@ -366,7 +367,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 
   toPlutusScriptPurpose = Alonzo.transPlutusPurpose
 
-  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
       let txBody = tx ^. bodyTxL
       timeRange <-
@@ -379,7 +380,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemers proxy (const $ Right ()) lti
+      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx (const $ Right ())
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
