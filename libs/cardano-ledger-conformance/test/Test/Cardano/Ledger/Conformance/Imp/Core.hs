@@ -12,11 +12,12 @@
 module Test.Cardano.Ledger.Conformance.Imp.Core where
 
 import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core (EraRule)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
 import Data.Data (Proxy (..))
-import Data.List.NonEmpty
+import Data.List.NonEmpty as NE
 import Data.Text qualified as T
 import GHC.TypeLits (symbolVal)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
@@ -112,5 +113,5 @@ epochBoundaryConformanceHook ::
   TRC (EraRule "NEWEPOCH" era) ->
   State (EraRule "NEWEPOCH" era) ->
   ImpM t ()
-epochBoundaryConformanceHook globals trc res =
-  conformanceHook @"NEWEPOCH" @era globals trc (mkRuleExecContext globals trc) $ Right (res, [])
+epochBoundaryConformanceHook globals trc implRes =
+  conformanceHook @"NEWEPOCH" @era globals trc (mkRuleExecContext globals trc) $ Right (implRes, [])

@@ -7,6 +7,12 @@ module Test.Cardano.Ledger.Conformance.Imp.Dijkstra (spec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
+import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
+import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
+import Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec qualified as AlonzoUTXOW
+import Test.Cardano.Ledger.Babbage.Imp.UtxoSpec qualified as BabbageUTXO
+import Test.Cardano.Ledger.Babbage.Imp.UtxosSpec qualified as BabbageUTXOS
+import Test.Cardano.Ledger.Babbage.Imp.UtxowSpec qualified as BabbageUTXOW
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra ()
 import Test.Cardano.Ledger.Conformance.Imp.Core
 import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as ConwayBBODY
@@ -28,6 +34,9 @@ import Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec qualified as UTXO
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec qualified as UTXOW
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
+import Test.Cardano.Ledger.Mary.Imp.UtxoSpec qualified as MaryUTXO
+import Test.Cardano.Ledger.Shelley.Imp.UtxoSpec qualified as ShelleyUTXO
+import Test.Cardano.Ledger.Shelley.Imp.UtxowSpec qualified as ShelleyUTXOW
 
 spec :: Spec
 spec = do
@@ -48,8 +57,17 @@ spec = do
             ConwayLEDGER.spec
             LEDGER.spec
             ConwayRATIFY.spec
+            ShelleyUTXO.spec
+            MaryUTXO.spec
+            AlonzoUTXO.spec
+            BabbageUTXO.spec
             ConwayUTXO.spec
             UTXO.spec
+            ShelleyUTXOW.spec
+            AlonzoUTXOW.spec
+            BabbageUTXOW.spec
             ConwayUTXOW.spec
             UTXOW.spec
-            xdescribe "disabled" ConwayUTXOS.spec
+            AlonzoUTXOS.spec
+            BabbageUTXOS.spec
+            ConwayUTXOS.spec

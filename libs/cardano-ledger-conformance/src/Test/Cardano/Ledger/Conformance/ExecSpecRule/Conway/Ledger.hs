@@ -38,7 +38,7 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
   externalFunctions,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()

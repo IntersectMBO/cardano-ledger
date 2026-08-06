@@ -1,5 +1,6 @@
 module Test.Cardano.Ledger.Conformance (module X) where
 
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base as X
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core as X
 import Test.Cardano.Ledger.Conformance.Orphans.Conway as X ()
 import Test.Cardano.Ledger.Conformance.Orphans.Core as X ()

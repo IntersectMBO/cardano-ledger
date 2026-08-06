@@ -12,24 +12,19 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
   externalFunctions,
 ) where
 
 import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
-import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Core (HASH, Hash)
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Data.ByteString (ByteString)
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
-import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
-import Test.Cardano.Ledger.Conformance (integerToHash)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (signatureFromInteger, vkeyFromInteger)
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.ImpTest ()
-
--- ======================================================================
+import Test.Cardano.Ledger.Conformance.Utils (integerToHash)
 
 externalFunctions :: Agda.ExternalFunctions
 externalFunctions = Agda.MkExternalFunctions {..}

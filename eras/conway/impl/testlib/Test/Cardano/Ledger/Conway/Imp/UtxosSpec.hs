@@ -461,9 +461,7 @@ govPolicySpec = do
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
         mkProposal govAction >>= submitProposal_
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1091
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
+    it "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
@@ -491,9 +489,7 @@ costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap
   describe "PlutusV3 Initialization" $ do
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1104
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "Updating CostModels with alwaysFails govPolicy does not validate" $ whenPostBootstrap $ do
+    it "Updating CostModels with alwaysFails govPolicy does not validate" $ whenPostBootstrap $ do
       -- no initial PlutusV3 CostModels
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 

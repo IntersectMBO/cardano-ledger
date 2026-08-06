@@ -31,7 +31,7 @@ library
 
   hs-source-dirs: src
   other-modules:
-    Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
+    Test.Cardano.Ledger.Conformance.ExecSpecRule.Base
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs
     Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg
@@ -158,12 +158,15 @@ test-suite tests
 
   build-depends:
     base >=4.18 && <5,
+    cardano-ledger-alonzo:testlib,
+    cardano-ledger-babbage:testlib,
     cardano-ledger-conformance,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-executable-spec,
-    cardano-ledger-shelley,
+    cardano-ledger-mary:testlib,
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-test,
     cardano-strict-containers,
     constrained-generators,

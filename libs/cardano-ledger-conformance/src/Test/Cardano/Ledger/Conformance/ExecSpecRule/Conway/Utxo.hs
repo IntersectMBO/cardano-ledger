@@ -26,10 +26,10 @@ import Test.Cardano.Ledger.Conformance (
   withCtxSpecTransM,
   withSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (externalFunctions)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..))
+import Test.Cardano.Ledger.Conway.ImpTest ()
 import Test.Cardano.Ledger.Generic.Instances ()
 
 instance ExecSpecRule "UTXO" ConwayEra where

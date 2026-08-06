@@ -524,7 +524,9 @@ submitPhase2Invalid tx = do
   fixedUpTx <-
     impAnn "Check that tx fails with IsValid True" $ do
       tx ^. isPhase2ValidTxL `shouldBe` Phase2Valid
-      (predFailure, fixedUpTx) <- expectLeft =<< trySubmitTx tx
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+      -- TODO: remove `withDisabledPostSubmitTxHook` once the issue above is resolved
+      (predFailure, fixedUpTx) <- expectLeft =<< withDisabledPostSubmitTxHook (trySubmitTx tx)
       scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
       predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
       pure fixedUpTx

@@ -117,7 +117,9 @@ spec = describe "UTXOS" $ do
   describe "Scripts with bootstrap addresses fail" $
     forM_ (eraLanguages @era) $ \lang ->
       withSLanguage lang $ \slang ->
-        it (show lang) $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt (show lang) $ do
           tx <- mkTxWithPlutusAndBootstrapAddress slang
           submitFailingTx
             tx
@@ -147,7 +149,9 @@ spec = describe "UTXOS" $ do
             & bodyTxL . inputsTxBodyL .~ [txIn]
             & bodyTxL . referenceInputsTxBodyL .~ [txIn]
 
-  it "Incorrect collateral total" $ do
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/724
+  -- TODO: Re-enable after issues are resolved, by removing this override
+  disableInConformanceIt "Incorrect collateral total" $ do
     let
       scriptHash = withSLanguage PlutusV2 (hashPlutusScript . alwaysSucceedsWithDatum)
       txOut =

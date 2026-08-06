@@ -43,9 +43,13 @@ spec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
-  it "Mint a Token" $ void mintBasicToken
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+  -- TODO: Re-enable after issue is resolved, by removing this override
+  disableInConformanceIt "Mint a Token" $ void mintBasicToken
   describe "ShelleyUtxoPredFailure" $ do
-    it "ValueNotConservedUTxO" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "ValueNotConservedUTxO" $ do
       -- Burn too much
       Positive tooMuch <- arbitrary
       txMinted <- mintBasicToken

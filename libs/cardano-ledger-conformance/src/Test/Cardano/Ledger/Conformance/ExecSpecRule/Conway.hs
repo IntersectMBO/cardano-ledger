@@ -2,7 +2,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   module X,
 ) where
 
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base as X
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert as X
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs as X ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg as X ()

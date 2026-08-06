@@ -50,6 +50,9 @@ import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import qualified Test.Cardano.Ledger.Binary.TreeDiff as TD
 import Test.Cardano.Ledger.Common (NFData, ToExpr (..))
 import Test.Cardano.Ledger.Conformance (withSpecTransM)
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
+  externalFunctions,
+ )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   ExecSpecTopLevelRule (..),
@@ -222,7 +225,9 @@ instance ExecSpecRule "LEDGER" DijkstraEra where
 
   translateOutput _ = withSpecTransM dlecNetworkId . toSpecRep
 
-  runAgdaRule = runFromAgdaFunction Agda.ledgerStep
+  runAgdaRule trc =
+    let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.txtopIsValid (strcSignal trc)}
+     in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
 
 instance ExecSpecTopLevelRule "LEDGER" DijkstraEra where
   mkRuleExecContext globals (TRC (env, state, signal)) =

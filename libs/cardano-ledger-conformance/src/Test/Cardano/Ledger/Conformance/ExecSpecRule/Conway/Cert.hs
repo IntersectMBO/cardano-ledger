@@ -26,7 +26,6 @@ import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   SpecTRC (..),
@@ -37,6 +36,8 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   askSpecTransM,
   withCtxSpecTransM,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Conway.ImpTest ()
 
 data ConwayCertExecContext era
   = ConwayCertExecContext

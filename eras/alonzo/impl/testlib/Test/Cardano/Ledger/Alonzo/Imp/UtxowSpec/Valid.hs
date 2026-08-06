@@ -97,10 +97,14 @@ spec = describe "Valid transactions" $ do
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
-        it "Validating MINT script" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+        -- TODO: Re-enable after issues are resolved, by removing this override
+        disableInConformanceIt "Validating MINT script" $ do
           submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
 
-        it "Not validating MINT script" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+        -- TODO: Re-enable after issues are resolved, by removing this override
+        disableInConformanceIt "Not validating MINT script" $ do
           submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
 
         it "Acceptable supplementary datum" $ do
