@@ -51,6 +51,7 @@ import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.BaseTypes (
   Inject (..),
+  ProtVer,
   StrictMaybe (..),
   isSJust,
   kindObjectValue,
@@ -405,18 +406,18 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>
   proxy 'PlutusV2 ->
+  ProtVer ->
   ScriptHash ->
   PV2.TxInfo ->
-  LedgerTxInfo era ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy _ txInfo lti scriptPurpose maybeSpendingData redeemerData =
+toPlutusV2Args proxy pv _ txInfo scriptPurpose maybeSpendingData redeemerData =
   PlutusV2Args
     <$> toLegacyPlutusArgs
       proxy
-      (ltiProtVer lti)
+      pv
       ()
       (PV2.ScriptContext txInfo)
       scriptPurpose

@@ -697,15 +697,15 @@ scriptPurposeToScriptInfo sp datum topInfo = case sp of
 
 toPlutusV4Args ::
   proxy 'PlutusV4 ->
+  ProtVer ->
   ScriptHash ->
   PV4.TxInfo ->
-  LedgerTxInfo DijkstraEra ->
   PlutusPurpose AsIxItem DijkstraEra ->
   Maybe (Data DijkstraEra) ->
   Data DijkstraEra ->
   Either (ContextError DijkstraEra) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy sh txInfo LedgerTxInfo {..} plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer sh plutusPurpose
+toPlutusV4Args proxy pv sh txInfo plutusPurpose maybeSpendingData redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy pv sh plutusPurpose
   let
     -- TODO TopTxInfo should be set if this is a top-level transaction
     scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
