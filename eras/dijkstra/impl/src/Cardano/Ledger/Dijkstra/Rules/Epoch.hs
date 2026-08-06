@@ -163,15 +163,11 @@ epochTransition = do
       utxoState0 = lsUTxOState ledgerState0
       certState0 = ledgerState0 ^. lsCertStateL
       vState = certState0 ^. certVStateL
-  snapshots1 <-
-    trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ledgerState0 curPParams, snapshots0, ())
-
   Shelley.PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $
       TRC ((), Shelley.PoolreapState utxoState0 chainAccountState0 certState0, eNo)
 
   let
-    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
     ratifyState@RatifyState {rsEnactState, rsEnacted, rsExpired} =
@@ -222,6 +218,10 @@ epochTransition = do
       ledgerState0
         & lsCertStateL .~ certState2
         & lsUTxOStateL .~ utxoState2
+  snapshots1 <-
+    trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ledgerState1 curPParams, snapshots0, ())
+  let
+    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
     epochState1 =
       epochState0
         & chainAccountStateL .~ chainAccountState3
