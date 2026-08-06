@@ -1,7 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,37 +8,20 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Epoch (
-  EPOCH,
-  PredicateFailure,
-  ConwayEpochEvent (..),
-  applyEnactedWithdrawals,
-  returnProposalDeposits,
-  updateCommitteeState,
-  updateNumDormantEpochs,
-) where
+module Cardano.Ledger.Dijkstra.Rules.Epoch () where
 
-import Cardano.Ledger.Address (accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
-import Cardano.Ledger.Coin (Coin, compactCoinOrError)
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, EPOCH, HARDFORK, RATIFY)
 import Cardano.Ledger.Conway.Governance (
-  Committee,
   ConwayEraGov (..),
   ConwayGovState,
   EnactState (..),
-  GovActionId,
-  GovActionState (..),
-  Proposals,
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
@@ -52,22 +32,26 @@ import Cardano.Ledger.Conway.Governance (
   cgsFuturePParamsL,
   cgsPrevPParamsL,
   cgsProposalsL,
-  ensTreasuryL,
-  ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
-  gasDeposit,
-  gasReturnAddr,
-  pPropsL,
   proposalsApplyEnactment,
   proposalsGovStateL,
   setFreshDRepPulsingState,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.Conway.Rules.HardFork (
-  ConwayHardForkEvent (..),
+import Cardano.Ledger.Conway.Rules (
+  ConwayEpochEvent (..),
+  ConwayHardForkEvent,
+  ConwayNewEpochEvent (EpochEvent),
+  HARDFORK,
+  NEWEPOCH,
+  RATIFY,
+  applyEnactedWithdrawals,
+  returnProposalDeposits,
+  updateCommitteeState,
+  updateNumDormantEpochs,
  )
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Dijkstra.Era (EPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -86,9 +70,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rewards ()
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.Val (zero, (<->))
-import Control.DeepSeq (NFData)
-import Control.Monad (guard)
+import Cardano.Ledger.Val (zero)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -99,49 +81,11 @@ import Control.State.Transition (
   tellEvent,
   trans,
  )
-import Data.Foldable (Foldable (..))
+import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..))
-import qualified Data.OMap.Strict as OMap
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
-import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
-
-data ConwayEpochEvent era
-  = PoolReapEvent (Event (EraRule "POOLREAP" era))
-  | SnapEvent (Event (EraRule "SNAP" era))
-  | EpochBoundaryRatifyState (RatifyState era)
-  | GovInfoEvent
-      -- | Enacted actions
-      (Set (GovActionState era))
-      -- | Actions that were removed as conflicting due to enactment
-      (Set (GovActionState era))
-      -- | Actions that were removed due to expiration together with their dependees
-      (Set (GovActionState era))
-      -- | Map of removed governance action ids that had an unregistered account address to their unclaimed deposits so they can be transferred to the treasury.
-      (Map.Map GovActionId Coin)
-  | HardForkEvent (Event (EraRule "HARDFORK" era))
-  deriving (Generic)
-
-type instance EraRuleEvent "EPOCH" ConwayEra = ConwayEpochEvent ConwayEra
-
-deriving instance
-  ( EraPParams era
-  , Eq (Event (EraRule "POOLREAP" era))
-  , Eq (Event (EraRule "SNAP" era))
-  , Eq (Event (EraRule "HARDFORK" era))
-  ) =>
-  Eq (ConwayEpochEvent era)
-
-instance
-  ( EraPParams era
-  , NFData (Event (EraRule "POOLREAP" era))
-  , NFData (Event (EraRule "SNAP" era))
-  , NFData (Event (EraRule "HARDFORK" era))
-  ) =>
-  NFData (ConwayEpochEvent era)
 
 instance
   ( EraTxOut era
@@ -174,76 +118,9 @@ instance
   type Signal (EPOCH era) = EpochNo
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
-
-  -- EPOCH rule can never fail
   type PredicateFailure (EPOCH era) = Void
   type Event (EPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
-
-returnProposalDeposits ::
-  (Foldable f, EraAccounts era) =>
-  f (GovActionState era) ->
-  Accounts era ->
-  (Accounts era, Map.Map GovActionId Coin)
-returnProposalDeposits removedProposals oldAccounts =
-  foldr' processProposal (oldAccounts, mempty) removedProposals
-  where
-    processProposal gas (!accounts, !unclaimed)
-      | (Just _accountState, newAccounts) <- updateLookupAccountState addRefund cred accounts =
-          (newAccounts, unclaimed)
-      | otherwise = (accounts, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
-      where
-        addRefund = balanceAccountStateL <>~ compactCoinOrError (gasDeposit gas)
-        cred = gasReturnAddr gas ^. accountAddressCredentialL
-
--- | When there have been zero governance proposals to vote on in the previous epoch
--- increase the dormant-epoch counter by one.
-updateNumDormantEpochs :: EpochNo -> Proposals era -> VState era -> VState era
-updateNumDormantEpochs currentEpoch ps vState =
-  if null $ OMap.filter ((currentEpoch <=) . gasExpiresAfter) $ ps ^. pPropsL
-    then vState & vsNumDormantEpochsL %~ succ
-    else vState
-
--- | Apply TreasuryWithdrawals to the EpochState
---
---   acnt' = record acnt { treasury = treasury + UTxOState.fees utxoSt
---                                  + getCoin unclaimed + donations ∸ totWithdrawals }
---
--- The utxo fees and donations are applied in the remaining body of EPOCH transition
-applyEnactedWithdrawals ::
-  EraAccounts era =>
-  ChainAccountState ->
-  DState era ->
-  EnactState era ->
-  (ChainAccountState, DState era, EnactState era)
-applyEnactedWithdrawals chainAccountState dState enactedState =
-  let enactedWithdrawals = enactedState ^. ensWithdrawalsL
-      accounts = dState ^. accountsL
-      -- The use of the partial function `compactCoinOrError` is justified here because
-      -- 1. the decoder for coin at the proposal-submission boundary has already
-      --    confirmed we have a compactible value
-      -- 2. the refunds and unsuccessful refunds together do not exceed the
-      --    current treasury value, as enforced by the `ENACT` rule.
-      successfulWithdrawls =
-        Map.mapMaybeWithKey
-          (\cred w -> compactCoinOrError w <$ guard (isAccountRegistered cred accounts))
-          enactedWithdrawals
-      chainAccountState' =
-        chainAccountState
-          -- Subtract `successfulWithdrawals` from the treasury, and add them to the rewards UMap
-          -- `unclaimed` withdrawals remain in the treasury.
-          -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
-          --   + unclaimed - totWithdrawals
-          -- we just subtract the `refunds`
-          --   - refunds
-          & casTreasuryL %~ (<-> fromCompact (fold successfulWithdrawls))
-      dState' = dState & accountsL %~ addToBalanceAccounts successfulWithdrawls
-      -- Reset enacted withdrawals:
-      enactedState' =
-        enactedState
-          & ensWithdrawalsL .~ Map.empty
-          & ensTreasuryL .~ mempty
-   in (chainAccountState', dState', enactedState')
 
 epochTransition ::
   forall era.
@@ -303,22 +180,9 @@ epochTransition = do
     (chainAccountState2, dState2, EnactState {..}) =
       applyEnactedWithdrawals chainAccountState1 (certState1 ^. certDStateL) rsEnactState
 
-    -- NOTE: It is important that we apply the results of ratification
-    -- and enactment from the pulser to the working copy of proposals.
-    -- The proposals in the pulser are a subset of the current
-    -- proposals, in that, in addition to the proposals in the pulser,
-    -- the current proposals now contain new proposals submitted during
-    -- the epoch that just passed (we are at its boundary here) and
-    -- any votes that were submitted to the already pulsing as well as
-    -- newly submitted proposals. We only need to apply the enactment
-    -- operations to this superset to get a new set of proposals with:
-    -- enacted actions and their sibling subtrees, as well as expired
-    -- actions and their subtrees, removed, and with all the votes
-    -- intact for the rest of them.
     (newProposals, enactedActions, removedDueToEnactment, expiredActions) =
       proposalsApplyEnactment rsEnacted rsExpired (govState0 ^. proposalsGovStateL)
 
-    -- Apply the values from the computed EnactState to the GovState
     govState1 =
       govState0
         & cgsProposalsL .~ newProposals
@@ -341,21 +205,17 @@ epochTransition = do
   let
     certState2 =
       mkConwayCertState
-        -- Increment the dormant epoch counter
         ( updateNumDormantEpochs eNo newProposals vState
-            -- Remove cold credentials of committee members that were removed or were invalid
             & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
         )
         (certState1 ^. certPStateL)
         (dState2 & accountsL .~ newAccounts)
     chainAccountState3 =
       chainAccountState2
-        -- Move donations and unclaimed rewards from proposals to treasury:
         & casTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
       utxoState1
         & utxosDepositedL .~ totalObligation certState2 govState1
-        -- Clear the donations field:
         & utxosDonationL .~ zero
         & utxosGovStateL .~ govState1
     ledgerState1 =
@@ -420,11 +280,11 @@ instance
   wrapFailed = absurd
   wrapEvent = HardForkEvent
 
-updateCommitteeState :: StrictMaybe (Committee era) -> CommitteeState era -> CommitteeState era
-updateCommitteeState committee (CommitteeState creds) =
-  CommitteeState $ Map.intersection creds members
+instance
+  ( STS (EPOCH era)
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  ) =>
+  Embed (EPOCH era) (NEWEPOCH era)
   where
-    members = foldMap' committeeMembers committee
-
-instance InjectRuleEvent "EPOCH" ConwayHardForkEvent ConwayEra where
-  injectEvent = HardForkEvent
+  wrapFailed = \case {}
+  wrapEvent = EpochEvent
