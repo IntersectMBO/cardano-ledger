@@ -59,6 +59,7 @@ data IndividualPoolStake = IndividualPoolStake
   -- is part of `individualPoolStake` we also add proposal-deposits to this
   -- field.
   , individualPoolStakeVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , individualPoolStakeBls :: !(StrictMaybe LeiosKey)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -90,6 +91,7 @@ instance ToKeyValuePairs IndividualPoolStake where
      in [ "individualPoolStake" .= individualPoolStake
         , "individualTotalPoolStake" .= individualTotalPoolStake
         , "individualPoolStakeVrf" .= individualPoolStakeVrf
+        , "individualPoolStakeBls" .= individualPoolStakeBls
         ]
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's

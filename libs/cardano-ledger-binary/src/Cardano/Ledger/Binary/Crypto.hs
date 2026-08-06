@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Binary.Crypto (
@@ -34,13 +35,25 @@ module Cardano.Ledger.Binary.Crypto (
   decodeLeiosCert,
 ) where
 
+import Cardano.Base.Bytes (byteArrayFromByteString, byteArrayToByteString)
 import Cardano.Crypto.DSIGN.Class (DSIGNAggregatable)
 import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..), bitFieldBytes)
 import qualified Cardano.Crypto.Leios as C
 import qualified Cardano.Crypto.VRF.Class as C
-import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, fromPlainDecoder)
-import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, fromPlainEncoding)
+import Cardano.Ledger.Binary.Decoding.Decoder (
+  Decoder,
+  decodeBytes,
+  decodeRecordNamed,
+  fromPlainDecoder,
+ )
+import Cardano.Ledger.Binary.Encoding.Encoder (
+  Encoding,
+  encodeBytes,
+  encodeListLen,
+  fromPlainEncoding,
+ )
 
 --------------------------------------------------------------------------------
 -- DSIGN
@@ -146,10 +159,18 @@ decodeCertVRF = fromPlainDecoder C.decodeCertVRF
 -- Leios
 --------------------------------------------------------------------------------
 
+-- TODO: Vendored encoder, this moved to an EncCBOR instance since
 encodeLeiosCert :: C.LeiosCert -> Encoding
-encodeLeiosCert = fromPlainEncoding . C.encodeLeiosCert
+encodeLeiosCert (LeiosCert bf sig) =
+  encodeListLen 2
+    <> encodeBytes (byteArrayToByteString $ bitFieldBytes bf)
+    <> encodeSigDSIGN sig
 {-# INLINE encodeLeiosCert #-}
 
+-- TODO: Vendored decoder, this moved to a DecCBOR instance since
 decodeLeiosCert :: Decoder s C.LeiosCert
-decodeLeiosCert = fromPlainDecoder C.decodeLeiosCert
+decodeLeiosCert =
+  decodeRecordNamed "LeiosCert" (const 2) $ do
+    bf <- BitField . byteArrayFromByteString <$> decodeBytes
+    LeiosCert bf <$> decodeSigDSIGN
 {-# INLINE decodeLeiosCert #-}

@@ -41,6 +41,7 @@ import Cardano.Crypto.KES.Class (
   SigKES,
   VerKeyKES,
  )
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
 import Cardano.Crypto.VRF.Class (
   CertVRF,
   CertifiedVRF (..),
@@ -368,6 +369,15 @@ instance DSIGNAlgorithm v => EncCBOR (SigDSIGN v) where
 
 instance DSIGNAlgorithm v => EncCBOR (SignedDSIGN v a) where
   encCBOR = encodeSignedDSIGN
+
+instance EncCBOR BitField where
+  encCBOR (BitField ba) = encCBOR ba
+
+instance EncCBOR LeiosCert where
+  encCBOR (LeiosCert bf sig) =
+    encodeListLen 2
+      <> encCBOR bf
+      <> encCBOR sig
 
 --------------------------------------------------------------------------------
 -- Hash

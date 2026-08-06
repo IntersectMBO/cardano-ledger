@@ -30,6 +30,7 @@ import Cardano.Crypto.DSIGN.Class (
  )
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, PackedBytes, hashFromPackedBytes)
 import Cardano.Crypto.KES.Class (KESAlgorithm, SigKES, VerKeyKES)
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
 import Cardano.Crypto.PackedBytes (packByteString)
 import Cardano.Crypto.VRF.Class (
   CertVRF,
@@ -484,6 +485,16 @@ instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
 instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
   decCBOR = decodeSignedDSIGN
   {-# INLINE decCBOR #-}
+
+instance DecCBOR BitField where
+  decCBOR = BitField <$> decCBOR
+
+instance DecCBOR LeiosCert where
+  decCBOR =
+    decodeRecordNamed "LeiosCert" (const 2) $
+      LeiosCert
+        <$> decCBOR
+        <*> decCBOR
 
 --------------------------------------------------------------------------------
 -- Hash
