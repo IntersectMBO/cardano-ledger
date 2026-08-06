@@ -2,6 +2,7 @@
 
 ## 1.23.1.0
 
+* Export `applyEnactedWithdrawals`, `returnProposalDeposits`, `updateCommitteeState` and `updateNumDormantEpochs`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
