@@ -17,17 +17,6 @@ module Cardano.Ledger.Dijkstra.TxCert (
   DijkstraTxCert (..),
   DijkstraDelegCert (..),
   dijkstraToConwayDelegCert,
-  pattern RegPoolTxCert,
-  pattern RetirePoolTxCert,
-  pattern RegDepositTxCert,
-  pattern UnRegDepositTxCert,
-  pattern DelegTxCert,
-  pattern RegDepositDelegTxCert,
-  pattern AuthCommitteeHotKeyTxCert,
-  pattern ResignCommitteeColdTxCert,
-  pattern RegDRepTxCert,
-  pattern UnRegDRepTxCert,
-  pattern UpdateDRepTxCert,
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObjectValue)
