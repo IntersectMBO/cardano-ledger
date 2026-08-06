@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Add a Dijkstra `EPOCH` rule
+  - Take the stake snapshot at the end of the transition after stake pool and governance-action refunds and treasury withdrawals are applied, so that stake pool voting stake is consistent with DRep voting stake (#5014)
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Remove `EncCBORGroup` instance for `DijkstraBlockBody`

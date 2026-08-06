@@ -14,6 +14,7 @@ module Cardano.Ledger.Dijkstra.Era (
   BBODY,
   CERT,
   ENTITIES,
+  EPOCH,
   GOV,
   GOVCERT,
   LEDGER,
@@ -208,7 +209,9 @@ type instance EraRule "GOV" DijkstraEra = GOV DijkstraEra
 
 type instance EraRule "NEWEPOCH" DijkstraEra = Conway.NEWEPOCH DijkstraEra
 
-type instance EraRule "EPOCH" DijkstraEra = Conway.EPOCH DijkstraEra
+data EPOCH era
+
+type instance EraRule "EPOCH" DijkstraEra = EPOCH DijkstraEra
 
 type instance EraRule "ENACT" DijkstraEra = Conway.ENACT DijkstraEra
 
