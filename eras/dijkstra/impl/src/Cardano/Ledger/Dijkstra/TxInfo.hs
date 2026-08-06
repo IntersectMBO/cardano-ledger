@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (toAsIx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -132,6 +133,8 @@ data DijkstraContextError era
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
     RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
+  | -- | TODO
+    ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
   deriving (Generic)
 
 deriving instance
@@ -191,6 +194,8 @@ instance
       kindObjectValue "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
     RequiredTopLevelGuardsNotSupported rtlg ->
       kindObjectValue "RequiredTopLevelGuardsNotSupported" ["required_top_level_guards" .= show rtlg]
+    ScriptHashNotFoundForPurpose purpose ->
+      kindObjectValue "ScriptHashNotFoundForPurpose" ["purpose" .= toJSON purpose]
 
 instance
   ( EraPParams era
@@ -236,6 +241,8 @@ instance
         Sum GuardScriptHashesNotSupported 22 !> To scriptHashes
       RequiredTopLevelGuardsNotSupported rtlg ->
         Sum RequiredTopLevelGuardsNotSupported 23 !> To rtlg
+      ScriptHashNotFoundForPurpose purpose ->
+        Sum ScriptHashNotFoundForPurpose 24 !> To purpose
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -565,7 +572,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
           resolvePurposeScriptHash purpose =
             case lookup purpose scriptsNeeded of
               Just sh -> Right sh
-              Nothing -> Left undefined
+              Nothing -> Left . inject $ ScriptHashNotFoundForPurpose $ hoistPlutusPurpose toAsIx purpose
         plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx resolvePurposeScriptHash
         Right $
           PV4.TxInfo
