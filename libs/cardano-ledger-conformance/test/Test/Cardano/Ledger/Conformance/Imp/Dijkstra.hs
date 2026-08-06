@@ -45,29 +45,30 @@ spec = do
       modifyImpInitProtVer @DijkstraEra (natVersion @12) $
         modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
           modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-            ConwayBBODY.spec
-            CERT.spec
-            xdescribe "disabled" ConwayCERTS.spec
-            ENTITIES.spec
-            ConwayDELEG.spec
-            ConwayENACT.spec
-            ConwayEPOCH.spec
-            ConwayGOV.spec
-            ConwayGOVCERT.spec
-            ConwayLEDGER.spec
-            LEDGER.spec
-            ConwayRATIFY.spec
-            ShelleyUTXO.spec
-            MaryUTXO.spec
-            AlonzoUTXO.spec
-            BabbageUTXO.spec
-            ConwayUTXO.spec
-            UTXO.spec
-            ShelleyUTXOW.spec
-            AlonzoUTXOW.spec
-            BabbageUTXOW.spec
-            ConwayUTXOW.spec
-            UTXOW.spec
-            AlonzoUTXOS.spec
-            BabbageUTXOS.spec
-            ConwayUTXOS.spec
+            enableImpInitRunningInConformance $ do
+              ConwayBBODY.spec
+              CERT.spec
+              xdescribe "disabled" ConwayCERTS.spec
+              ENTITIES.spec
+              ConwayDELEG.spec
+              ConwayENACT.spec
+              ConwayEPOCH.spec
+              ConwayGOV.spec
+              ConwayGOVCERT.spec
+              ConwayLEDGER.spec
+              LEDGER.spec
+              ConwayRATIFY.spec
+              ShelleyUTXO.spec
+              MaryUTXO.spec
+              AlonzoUTXO.spec
+              BabbageUTXO.spec
+              ConwayUTXO.spec
+              UTXO.spec
+              ShelleyUTXOW.spec
+              AlonzoUTXOW.spec
+              BabbageUTXOW.spec
+              ConwayUTXOW.spec
+              UTXOW.spec
+              AlonzoUTXOS.spec
+              BabbageUTXOS.spec
+              ConwayUTXOS.spec

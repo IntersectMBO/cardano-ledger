@@ -39,26 +39,27 @@ spec = do
       modifyImpInitProtVer @ConwayEra (natVersion @11) $
         modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
           modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-            BBODY.spec
-            CERTS.spec
-            DELEG.spec
-            ENACT.spec
-            EPOCH.spec
-            GOV.spec
-            GOVCERT.spec
-            LEDGER.spec
-            RATIFY.spec
-            ShelleyUTXO.spec
-            MaryUTXO.spec
-            AlonzoUTXO.spec
-            BabbageUTXO.spec
-            UTXO.spec
-            ShelleyUTXOW.spec
-            AlonzoUTXOW.spec
-            BabbageUTXOW.spec
-            UTXOW.spec
-            AlonzoUTXOS.spec
-            BabbageUTXOS.spec
-            UTXOS.spec
+            enableImpInitRunningInConformance $ do
+              BBODY.spec
+              CERTS.spec
+              DELEG.spec
+              ENACT.spec
+              EPOCH.spec
+              GOV.spec
+              GOVCERT.spec
+              LEDGER.spec
+              RATIFY.spec
+              ShelleyUTXO.spec
+              MaryUTXO.spec
+              AlonzoUTXO.spec
+              BabbageUTXO.spec
+              UTXO.spec
+              ShelleyUTXOW.spec
+              AlonzoUTXOW.spec
+              BabbageUTXOW.spec
+              UTXOW.spec
+              AlonzoUTXOS.spec
+              BabbageUTXOS.spec
+              UTXOS.spec
   describe "Imp (only spec)" $ do
     RatifySpec.spec
