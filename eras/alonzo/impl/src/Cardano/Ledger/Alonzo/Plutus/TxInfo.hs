@@ -181,12 +181,12 @@ toPlutusV1Args ::
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy sh txInfo lti scriptPurpose maybeSpendingData redeemerData =
+toPlutusV1Args proxy _ txInfo lti scriptPurpose maybeSpendingData redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs
       proxy
       (ltiProtVer lti)
-      sh
+      ()
       (PV1.ScriptContext txInfo)
       scriptPurpose
       maybeSpendingData
@@ -196,7 +196,7 @@ toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
   ProtVer ->
-  ScriptHash ->
+  PlutusPurposeScriptHash l ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
@@ -398,7 +398,7 @@ transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
   ProtVer ->
-  ScriptHash ->
+  PlutusPurposeScriptHash l ->
   AlonzoPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV1.ScriptPurpose
 transPlutusPurpose proxy pv _ = \case

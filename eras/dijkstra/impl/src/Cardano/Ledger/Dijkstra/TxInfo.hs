@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
   Exclusive (..),
@@ -96,7 +97,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Cardano.Ledger.State (StakePoolParams (..))
+import Cardano.Ledger.State (EraUTxO (..), StakePoolParams (..))
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
@@ -346,7 +347,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
@@ -361,7 +362,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy (const $ Right ()) lti
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -390,7 +391,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV3
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
       let
         txBody = tx ^. bodyTxL
@@ -408,7 +409,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy (const $ Right ()) lti
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -534,7 +535,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
-  toPlutusTxInfo proxy LedgerTxInfo {..} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
       txInfo <- mkAnyLevelTxInfo ltiTx
       Right $ \_ -> Right txInfo
@@ -559,7 +560,13 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             [minBound ..]
             (F.toList (txBody ^. outputsTxBodyL))
         txCerts <- transTxBodyCerts proxy ltiProtVer txBody
-        plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+        let
+          AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded ltiUTxO txBody
+          resolvePurposeScriptHash purpose =
+            case lookup purpose scriptsNeeded of
+              Just sh -> Right sh
+              Nothing -> Left undefined
+        plutusRedeemers <- Babbage.transTxRedeemers proxy resolvePurposeScriptHash lti
         Right $
           PV4.TxInfo
             { PV4.txInfoInputs = inputsInfo
