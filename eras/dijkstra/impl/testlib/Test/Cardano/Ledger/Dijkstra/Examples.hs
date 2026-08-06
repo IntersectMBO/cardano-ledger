@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Dijkstra.Examples (
   exampleDijkstraOnwardsEraPParams,
   exampleDijkstraOnwardsEraPParamsUpdate,
   exampleDijkstraGenesis,
+  exampleLeiosKey,
 ) where
 
 import Cardano.Crypto.DSIGN (

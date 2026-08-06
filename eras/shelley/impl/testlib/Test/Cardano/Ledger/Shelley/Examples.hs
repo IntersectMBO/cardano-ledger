@@ -283,6 +283,7 @@ examplePoolDistr =
               1
               (CompactCoin 1)
               exampleVrfVerKeyHash
+              SNothing -- TODO: should this be SJust and a leios key?
           )
         ]
     )

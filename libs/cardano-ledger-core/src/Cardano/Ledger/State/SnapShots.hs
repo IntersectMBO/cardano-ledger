@@ -44,6 +44,7 @@ import Cardano.Ledger.BaseTypes (
   KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
+  StrictMaybe,
   ToKeyValuePairs (..),
   UnitInterval,
   knownNonZeroBounded,
@@ -81,7 +82,7 @@ import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.State.Stake
-import Cardano.Ledger.State.StakePool (StakePoolState (..))
+import Cardano.Ledger.State.StakePool (LeiosKey, StakePoolState (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -166,6 +167,8 @@ data StakePoolSnapShot = StakePoolSnapShot
   -- `spssSelfDelegatedOwners`
   , spssVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ Corresponding field in the `StakePoolState` is `spsVrf`.
+  , spssLeiosKey :: !(StrictMaybe LeiosKey)
+  -- ^ Corresponding field in the `StakePoolState` is `spsLeiosKey`.
   , spssPledge :: !Coin
   -- ^ Corresponding field in the `StakePoolState` is `spsPledge`.
   , spssCost :: !Coin
@@ -204,6 +207,7 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
             -- extra Set allocation and `O(n*log(n))` mappping over a Set.
             map KeyHashObj (Set.elems selfDelegatedOwners)
     , spssVrf = spsVrf
+    , spssLeiosKey = spsLeiosKey
     , spssPledge = spsPledge
     , spssCost = spsCost
     , spssMargin = spsMargin
@@ -211,7 +215,8 @@ mkStakePoolSnapShot activeStake totalActiveStake stakePoolState =
     , spssAccountId = spsAccountId
     }
   where
-    StakePoolState {spsVrf, spsPledge, spsCost, spsMargin, spsAccountId, spsOwners, spsDelegators} =
+    StakePoolState
+      {spsVrf, spsLeiosKey, spsPledge, spsCost, spsMargin, spsAccountId, spsOwners, spsDelegators} =
       stakePoolState
     selfDelegatedOwners =
       Set.filter (\ownerKeyHash -> KeyHashObj ownerKeyHash `Set.member` spsDelegators) spsOwners
@@ -222,13 +227,14 @@ instance NoThunks StakePoolSnapShot
 instance NFData StakePoolSnapShot
 
 instance ToKeyValuePairs StakePoolSnapShot where
-  toKeyValuePairs ss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _) =
+  toKeyValuePairs ss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = ss
      in [ "stake" .= spssStake
         , "stakeRatio" .= spssStakeRatio
         , "selfDelegatedOwners" .= spssSelfDelegatedOwners
         , "selfDelegatedOwnersStake" .= spssSelfDelegatedOwnersStake
         , "vrf" .= spssVrf
+        , "leiosKey" .= spssLeiosKey
         , "pledge" .= spssPledge
         , "cost" .= spssCost
         , "margin" .= spssMargin
@@ -237,14 +243,15 @@ instance ToKeyValuePairs StakePoolSnapShot where
         ]
 
 instance EncCBOR StakePoolSnapShot where
-  encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _) =
+  encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = spss
-     in encodeListLen 10
+     in encodeListLen 11
           <> encCBOR spssStake
           <> encCBOR spssStakeRatio
           <> encCBOR spssSelfDelegatedOwners
           <> encCBOR spssSelfDelegatedOwnersStake
           <> encCBOR spssVrf
+          <> encCBOR spssLeiosKey
           <> encCBOR spssPledge
           <> encCBOR spssCost
           <> encCBOR spssMargin
@@ -253,7 +260,7 @@ instance EncCBOR StakePoolSnapShot where
 
 instance DecShareCBOR StakePoolSnapShot where
   type Share StakePoolSnapShot = Interns (Credential Staking)
-  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 10) $ do
+  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 11) $ do
     credInterns <- get
     spssStake <- lift decCBOR
     spssStakeRatio <- lift decCBOR
@@ -262,6 +269,7 @@ instance DecShareCBOR StakePoolSnapShot where
     spssSelfDelegatedOwners <- Set.map (unwrap . interns credInterns . KeyHashObj) <$> lift decCBOR
     spssSelfDelegatedOwnersStake <- lift decCBOR
     spssVrf <- lift decCBOR
+    spssLeiosKey <- lift decCBOR
     spssPledge <- lift decCBOR
     spssCost <- lift decCBOR
     spssMargin <- lift decCBOR
@@ -456,6 +464,7 @@ calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
             { individualPoolStake = spssStakeRatio spss
             , individualTotalPoolStake = spssStake spss
             , individualPoolStakeVrf = spssVrf spss
+            , individualPoolStakeBls = spssLeiosKey spss
             }
       poolDistr =
         PoolDistr
