@@ -2,6 +2,10 @@
 
 ## 0.4.0.0
 
+* Restructure `EntitiesEnv`:
+  - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
+  - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
+* Change the `STS` `Signal` of `ENTITIES` to `StAnnTx TopTx era`
 * Add `localProducedValue` helper in `UTxO` module
 * Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
 * Rename:
