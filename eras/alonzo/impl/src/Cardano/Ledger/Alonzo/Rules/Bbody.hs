@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -14,6 +15,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Rules.Bbody (
   BBODY,
@@ -30,7 +35,7 @@ import Cardano.Ledger.Alonzo.Rules.Ledgers ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), OrdExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (totExUnits)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -60,7 +65,7 @@ import Lens.Micro ((^.))
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (Shelley.ShelleyBbodyPredFailure era)
-  | TooManyExUnits (Mismatch RelLTEQ ExUnits)
+  | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
   deriving (Generic)
 
 instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (AlonzoBbodyPredFailure era)
@@ -127,6 +132,10 @@ deriving instance
   (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
   Eq (AlonzoBbodyPredFailure era)
 
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  Ord (AlonzoBbodyPredFailure era)
+
 instance
   (Era era, EncCBOR (PredicateFailure (EraRule "LEDGERS" era))) =>
   EncCBOR (AlonzoBbodyPredFailure era)
@@ -161,8 +170,8 @@ validateExUnits txs ppMax =
         ?! injectFailure
           ( TooManyExUnits $
               Mismatch
-                { mismatchSupplied = txTotal
-                , mismatchExpected = ppMax
+                { mismatchSupplied = OrdExUnits txTotal
+                , mismatchExpected = OrdExUnits ppMax
                 }
           )
 

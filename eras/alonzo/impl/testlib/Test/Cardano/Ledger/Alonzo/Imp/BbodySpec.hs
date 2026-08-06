@@ -17,6 +17,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
+  OrdExUnits (..),
   hashPlutusScript,
   withSLanguage,
  )
@@ -98,8 +99,8 @@ spec = describe "BBODY" $ do
             txCount = 1 + max (bMem `div` tMem) (bSteps `div` tSteps)
             mismatch =
               Mismatch
-                { mismatchExpected = maxBlockUnits
-                , mismatchSupplied = ExUnits (txCount * tMem) (txCount * tSteps)
+                { mismatchExpected = OrdExUnits maxBlockUnits
+                , mismatchSupplied = OrdExUnits $ ExUnits (txCount * tMem) (txCount * tSteps)
                 }
 
           txIns <- replicateM (fromIntegral txCount) $ produceScript alwaysSucceedsWithDatumHash

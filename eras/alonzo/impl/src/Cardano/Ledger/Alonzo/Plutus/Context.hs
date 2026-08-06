@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -19,6 +20,10 @@
 -- Also `mkSupportedPlutusScript` has a constraint that is not required by the type system, but is
 -- necessary for the safety of the function.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
@@ -186,7 +191,7 @@ toPlutusTxInfoForPurpose proxy lti sp =
 
 class
   ( AlonzoEraScript era
-  , Eq (ContextError era)
+  , Ord (ContextError era)
   , Show (ContextError era)
   , NFData (ContextError era)
   , EncCBOR (ContextError era)
@@ -364,6 +369,10 @@ data CollectError era
 deriving instance
   (AlonzoEraScript era, Eq (ContextError era)) =>
   Eq (CollectError era)
+
+deriving instance
+  (AlonzoEraScript era, Ord (ContextError era)) =>
+  Ord (CollectError era)
 
 deriving instance
   (AlonzoEraScript era, Show (ContextError era)) =>

@@ -100,7 +100,7 @@ data Addr28Extra
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
-  deriving (Eq, Show, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Generic, NoThunks)
 
 instance MemPack Addr28Extra where
   packedByteCount _ = 32
@@ -115,7 +115,7 @@ data DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
-  deriving (Eq, Show, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Generic, NoThunks)
 
 instance MemPack DataHash32 where
   packedByteCount _ = 32
@@ -196,6 +196,8 @@ instance (Era era, MemPack (CompactForm (Value era))) => MemPack (AlonzoTxOut er
   {-# INLINE unpackM #-}
 
 deriving stock instance (Eq (Value era), Compactible (Value era)) => Eq (AlonzoTxOut era)
+
+deriving stock instance (Ord (Value era), Compactible (Value era)) => Ord (AlonzoTxOut era)
 
 deriving instance Generic (AlonzoTxOut era)
 

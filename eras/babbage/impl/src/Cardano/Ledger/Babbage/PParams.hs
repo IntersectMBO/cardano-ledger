@@ -47,6 +47,7 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
+  OrdExUnits (..),
   Prices (..),
   emptyCostModels,
  )

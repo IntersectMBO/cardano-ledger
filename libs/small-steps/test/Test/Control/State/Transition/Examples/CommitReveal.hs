@@ -120,7 +120,7 @@ newtype Id = Id {getId :: Int}
 data CRPredicateFailure hashAlgo (hashToDataMap :: Type -> Type -> Type) commitData
   = InvalidReveal Data
   | AlreadyComitted (Hash hashAlgo Data)
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance
   ( HashAlgorithm hashAlgo

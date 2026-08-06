@@ -52,8 +52,8 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
+  Decode (D, From, RecD),
+  Encode (Rec, To),
   decode,
   encode,
   (!>),
@@ -78,8 +78,8 @@ import qualified Data.ByteString.Short as SBS
 import Data.CanonicalMaps (
   canonicalMap,
   canonicalMapUnion,
-  pointWise,
  )
+import qualified Data.CanonicalMaps as CM
 import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
@@ -91,10 +91,10 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.MemPack
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
-import qualified Data.Monoid as M (Sum (Sum, getSum))
+import Data.Monoid (Sum (..))
+import Data.Ord (comparing)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
-import qualified Data.Semigroup as Semigroup (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -152,11 +152,15 @@ newtype PolicyID = PolicyID {policyID :: ScriptHash}
     )
 
 -- | The MultiAssets map
+--
+-- Note that the `Ord` instance isn't semantically meaningful and is used only
+-- to satisfy constraints on Haskell containers such as `Set` and `Map`.
+-- Do not use it for any purpose that would directly affect chain behavior.
 newtype MultiAsset = MultiAsset (Map PolicyID (Map AssetName Integer))
-  deriving (Show, Generic, ToJSON, EncCBOR)
+  deriving (Show, Ord, Generic, ToJSON, EncCBOR)
 
 instance Eq MultiAsset where
-  MultiAsset x == MultiAsset y = pointWise (pointWise (==)) x y
+  MultiAsset x == MultiAsset y = CM.pointwise (CM.pointwise (==)) x y
 
 instance NFData MultiAsset where
   rnf (MultiAsset m) = rnf m
@@ -178,8 +182,12 @@ instance DecCBOR MultiAsset where
   decCBOR = decodeMultiAsset decodeIntegerBounded64
 
 -- | The Value representing MultiAssets
+--
+-- Note that the `Ord` instance isn't semantically meaningful and is used only
+-- to satisfy constraints on Haskell containers such as `Set` and `Map`.
+-- Do not use it for any purpose that would directly affect chain behavior.
 data MaryValue = MaryValue !Coin !MultiAsset
-  deriving (Show, Generic)
+  deriving (Show, Ord, Generic)
   deriving (ToJSON) via KeyValuePairs MaryValue
 
 instance Eq MaryValue where
@@ -220,7 +228,7 @@ instance Val MaryValue where
   coin (MaryValue c _) = c
   modifyCoin f (MaryValue c m) = MaryValue (f c) m
   pointwise p (MaryValue (Coin c) (MultiAsset x)) (MaryValue (Coin d) (MultiAsset y)) =
-    p c d && pointWise (pointWise p) x y
+    p c d && CM.pointwise (CM.pointwise p) x y
 
   -- returns the size, in Word64's, of the CompactValue representation of MaryValue
   size vv@(MaryValue _ (MultiAsset m))
@@ -401,7 +409,7 @@ instance ToJSONKey AssetName where
 
 instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
-    deriving (Eq, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
+    deriving (Eq, Ord, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -466,6 +474,9 @@ instance NFData CompactValue where
 
 instance Eq CompactValue where
   a == b = from a == from b
+
+instance Ord CompactValue where
+  compare = comparing from
 
 deriving via
   OnlyCheckWhnfNamed "CompactValue" CompactValue
@@ -709,7 +720,7 @@ to v@(MaryValue _ ma) = do
 -- where: n = total number of assets, p = number of unique policy ids
 isMultiAssetSmallEnough :: MultiAsset -> Bool
 isMultiAssetSmallEnough (MultiAsset ma) =
-  44 * M.getSum (foldMap' (M.Sum . length) ma) + 28 * length ma <= 65535
+  44 * getSum (foldMap' (Sum . length) ma) + 28 * length ma <= 65535
 
 representationSize ::
   [(PolicyID, AssetName, Integer)] ->
@@ -725,7 +736,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
-      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetNameBytes) assetNames
+      getSum $ foldMap' (Sum . SBS.length . assetNameBytes) assetNames
 
 from :: CompactValue -> MaryValue
 from (CompactValueAdaOnly c) = MaryValue (fromCompact c) (MultiAsset Map.empty)
