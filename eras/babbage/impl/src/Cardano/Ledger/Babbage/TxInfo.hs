@@ -201,11 +201,11 @@ transRedeemerPtr ::
   (PlutusPurpose AsIxItem era -> Either (ContextError era) (PlutusPurposeScriptHash l)) ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
-transRedeemerPtr proxy pv txBody getScriptHash (ptr, (d, _)) =
+transRedeemerPtr proxy pv txBody resolveScriptHash (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
-      sh <- getScriptHash sp
+      sh <- resolveScriptHash sp
       plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sh sp
       Right (plutusScriptPurpose, transRedeemer d)
 
@@ -223,10 +223,10 @@ transTxRedeemers ::
   Tx t era ->
   (PlutusPurpose AsIxItem era -> Either (ContextError era) (PlutusPurposeScriptHash l)) ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemers proxy pv tx getScriptHash =
+transTxRedeemers proxy pv tx resolveScriptHash =
   PV2.unsafeFromList
     <$> mapM
-      (transRedeemerPtr proxy pv (tx ^. bodyTxL) getScriptHash)
+      (transRedeemerPtr proxy pv (tx ^. bodyTxL) resolveScriptHash)
       (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 instance EraPlutusContext BabbageEra where
