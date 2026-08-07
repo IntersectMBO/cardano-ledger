@@ -74,6 +74,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (def)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (SNothing))
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -529,6 +530,7 @@ pdEx5 =
             1
             (CompactCoin 1)
             Cast.aliceVRFKeyHash
+            SNothing -- TODO: Add a test scenario where this is SJust?
         )
     )
     (knownNonZeroCoin @1)

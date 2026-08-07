@@ -213,8 +213,9 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
       splitByPct yes no abstain alwaysAbstain noConfidence pools
   distr <- do
     vrf <- arbitrary
+    bls <- arbitrary
     let
-      indivStake = IndividualPoolStake (1 % unCoin (unNonZero totalStake)) (CompactCoin 1) vrf
+      indivStake = IndividualPoolStake (1 % unCoin (unNonZero totalStake)) (CompactCoin 1) vrf bls
       distr =
         unionAllFromLists
           [ (poolsYes, indivStake)

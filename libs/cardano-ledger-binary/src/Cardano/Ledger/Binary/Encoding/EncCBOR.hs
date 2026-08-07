@@ -25,6 +25,7 @@ module Cardano.Ledger.Binary.Encoding.EncCBOR (
   toByronCBOR,
 ) where
 
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
   SigDSIGN,
@@ -368,6 +369,15 @@ instance DSIGNAlgorithm v => EncCBOR (SigDSIGN v) where
 
 instance DSIGNAlgorithm v => EncCBOR (SignedDSIGN v a) where
   encCBOR = encodeSignedDSIGN
+
+instance EncCBOR BitField where
+  encCBOR (BitField ba) = encCBOR ba
+
+instance EncCBOR LeiosCert where
+  encCBOR (LeiosCert bf sig) =
+    encodeListLen 2
+      <> encCBOR bf
+      <> encCBOR sig
 
 --------------------------------------------------------------------------------
 -- Hash

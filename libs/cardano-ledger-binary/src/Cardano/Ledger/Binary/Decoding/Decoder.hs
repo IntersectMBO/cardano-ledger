@@ -23,6 +23,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   ByteArray (..),
   C.DecodeAction (..),
   C.TokenType (..),
+  decodeFixedSized,
 
   -- ** Versioning
   getDecoderVersion,
@@ -171,6 +172,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Base.Typeable (TypeName)
+import qualified Cardano.Binary.FixedSizeCodec as FSC
 import Cardano.Ledger.Binary.Plain (
   DecoderError (..),
   cborError,
@@ -343,6 +345,9 @@ withPlainDecoder vd f = Decoder $ \bsl -> f . runDecoder vd bsl
 enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
 enforceDecoderVersion version d = Decoder $ \bsl _ -> runDecoder d bsl version
 {-# INLINE enforceDecoderVersion #-}
+
+decodeFixedSized :: FSC.FixedSizeCodec a => Decoder s a
+decodeFixedSized = FSC.rawDecodeFixedSized =<< decodeBytes
 
 -- | Lookup the original bytes that are being used for deserialization. This action will
 -- fail deserialization whenever original bytes are not available.

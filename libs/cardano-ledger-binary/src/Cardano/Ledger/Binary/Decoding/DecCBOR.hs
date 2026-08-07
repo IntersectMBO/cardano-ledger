@@ -21,6 +21,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
 ) where
 
 import qualified Cardano.Binary as Plain (Decoder)
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
   SigDSIGN,
@@ -484,6 +485,16 @@ instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
 instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
   decCBOR = decodeSignedDSIGN
   {-# INLINE decCBOR #-}
+
+instance DecCBOR BitField where
+  decCBOR = BitField <$> decCBOR
+
+instance DecCBOR LeiosCert where
+  decCBOR =
+    decodeRecordNamed "LeiosCert" (const 2) $
+      LeiosCert
+        <$> decCBOR
+        <*> decCBOR
 
 --------------------------------------------------------------------------------
 -- Hash
