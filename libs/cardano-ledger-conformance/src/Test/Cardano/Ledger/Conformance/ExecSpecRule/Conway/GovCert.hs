@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert () where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Control.State.Transition.Extended (TRC (..))
-import Data.Bifunctor (Bifunctor (..))
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (ConwayCertExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
@@ -37,6 +36,6 @@ instance ExecSpecRule "GOVCERT" ConwayEra where
     agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  runAgdaRule (SpecTRC env (Agda.MkCertState dState pState vState) sig) =
-    second (Agda.MkCertState dState pState) . unComputationResult $
-      Agda.govCertStep env vState sig
+  runAgdaRule (SpecTRC env st sig) =
+    unComputationResult $
+      Agda.govCertStep env st sig
