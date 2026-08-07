@@ -216,6 +216,7 @@ instance
     21 -> SumD AccountBalanceIntervalsNotSupported <! From
     22 -> SumD GuardScriptHashesNotSupported <! From
     23 -> SumD RequiredTopLevelGuardsNotSupported <! From
+    24 -> SumD ScriptHashNotFoundForPurpose <! From
     k -> Invalid k
 
 instance
