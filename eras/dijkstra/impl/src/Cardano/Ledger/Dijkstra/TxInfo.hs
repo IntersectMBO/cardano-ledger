@@ -545,7 +545,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
-      txInfo <- mkAnyLevelTxInfo ltiTx
+      txInfo <- mkAnyLevelTxInfo tx
       Right $ \_ -> Right txInfo
     where
       mkAnyLevelTxInfo ::
