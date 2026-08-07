@@ -457,7 +457,9 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx (const $ Right ())
+      let
+        scriptsNeeded = getScriptsNeeded ltiUTxO txBody
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx scriptsNeeded
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -503,7 +505,9 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx (const $ Right ())
+      let
+        scriptsNeeded = getScriptsNeeded ltiUTxO txBody
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx scriptsNeeded
       -- It is important for memoization for `txInfo` to be a let binding
       let txInfo =
             PV3.TxInfo

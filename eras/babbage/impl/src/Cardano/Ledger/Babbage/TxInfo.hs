@@ -83,7 +83,7 @@ import Cardano.Ledger.Plutus.TxInfo (
   transTxIn,
   txOutSourceToText,
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
@@ -194,19 +194,19 @@ transRedeemerPtr ::
   ( EraPlutusTxInfo l era
   , AlonzoEraTxBody era
   , Inject (BabbageContextError era) (ContextError era)
+  , PlutusPurposeScriptHash l ~ ()
   ) =>
   proxy l ->
   ProtVer ->
   TxBody t era ->
-  (PlutusPurpose AsIxItem era -> Either (ContextError era) (PlutusPurposeScriptHash l)) ->
+  ScriptsNeeded era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
-transRedeemerPtr proxy pv txBody resolveScriptHash (ptr, (d, _)) =
+transRedeemerPtr proxy pv txBody _ (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
-      sh <- resolveScriptHash sp
-      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sh sp
+      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv () sp
       Right (plutusScriptPurpose, transRedeemer d)
 
 -- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
@@ -217,16 +217,17 @@ transTxRedeemers ::
   , EraTx era
   , AlonzoEraTxWits era
   , Inject (BabbageContextError era) (ContextError era)
+  , PlutusPurposeScriptHash l ~ ()
   ) =>
   proxy l ->
   ProtVer ->
   Tx t era ->
-  (PlutusPurpose AsIxItem era -> Either (ContextError era) (PlutusPurposeScriptHash l)) ->
+  ScriptsNeeded era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemers proxy pv tx resolveScriptHash =
+transTxRedeemers proxy pv tx scriptsNeeded =
   PV2.unsafeFromList
     <$> mapM
-      (transRedeemerPtr proxy pv (tx ^. bodyTxL) resolveScriptHash)
+      (transRedeemerPtr proxy pv (tx ^. bodyTxL) scriptsNeeded)
       (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 instance EraPlutusContext BabbageEra where
@@ -380,7 +381,9 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx (const $ Right ())
+      let
+        scriptsNeeded = getScriptsNeeded ltiUTxO txBody
+      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx scriptsNeeded
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
