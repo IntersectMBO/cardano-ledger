@@ -133,7 +133,7 @@ data DijkstraContextError era
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
     RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
-  | -- | A redeemer points to a KeyHash
+  | -- | Redeemer's purpose does not resolve to a script-locked item in scriptsNeeded
     ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
   deriving (Generic)
 
@@ -597,7 +597,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoCurrentTreasuryAmount =
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx = Nothing -- TODO collect subtransactions if this is a top tx
+            , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
             , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
             , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
             , PV4.txInfoAccountBalanceIntervals =
