@@ -123,6 +123,7 @@ import qualified PlutusLedgerApi.Common as P (
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Prettyprinter (Doc, Pretty (..), align, indent, line, vsep, (<+>))
 import System.Random.Stateful
 import qualified UntypedPlutusCore as UPLC
@@ -401,6 +402,9 @@ instance NFData PV2.ScriptContext where
 instance NFData PV3.ScriptContext where
   rnf = rnf . PV3.toData
 
+instance NFData PV4.ScriptContext where
+  rnf = rnf . PV4.toData
+
 instance PV3.ToData (PlutusScriptContext l) => EncCBOR (LegacyPlutusArgs l) where
   encCBOR = encCBOR . legacyPlutusArgsToData
 
@@ -576,7 +580,7 @@ instance PlutusLanguage 'PlutusV3 where
       . unPlutusV3Args
 
 instance PlutusLanguage 'PlutusV4 where
-  newtype PlutusArgs 'PlutusV4 = PlutusV4Args {unPlutusV4Args :: PV3.ScriptContext}
+  newtype PlutusArgs 'PlutusV4 = PlutusV4Args {unPlutusV4Args :: PV4.ScriptContext}
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV4
   plutusLanguageTag _ = 0x04
