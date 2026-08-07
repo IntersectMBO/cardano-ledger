@@ -545,7 +545,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusTxInfo proxy LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
-      txInfo <- mkAnyLevelTxInfo tx
+      txInfo <- mkAnyLevelTxInfo ltiTx
       Right $ \_ -> Right txInfo
     where
       mkAnyLevelTxInfo ::
@@ -577,7 +577,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             case lookup purpose scriptsNeeded of
               Just sh -> Right sh
               Nothing -> Left . inject $ ScriptHashNotFoundForPurpose $ hoistPlutusPurpose toAsIx purpose
-        plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx resolvePurposeScriptHash
+        plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx resolvePurposeScriptHash
         Right $
           PV4.TxInfo
             { PV4.txInfoInputs = inputsInfo
