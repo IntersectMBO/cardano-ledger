@@ -133,7 +133,7 @@ data DijkstraContextError era
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
     RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
-  | -- | TODO
+  | -- | A redeemer points to a KeyHash
     ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
   deriving (Generic)
 
@@ -568,6 +568,9 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             (F.toList (txBody ^. outputsTxBodyL))
         txCerts <- transTxBodyCerts proxy ltiProtVer txBody
         let
+          -- Here we precompute scriptsNeeded and pass it to the
+          -- `resolvePurposeScriptHash` closure, this way we don't recompute
+          -- scriptsNeeded for every PlutusPurpose
           AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded ltiUTxO txBody
           resolvePurposeScriptHash purpose =
             case lookup purpose scriptsNeeded of
