@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `withdrawalsWithUnacceptableAmount` to `Account` module
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`
