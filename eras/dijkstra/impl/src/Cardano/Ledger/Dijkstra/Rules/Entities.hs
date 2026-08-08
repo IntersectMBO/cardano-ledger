@@ -44,13 +44,14 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
+import Data.Foldable (Foldable (foldMap'))
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -242,11 +243,16 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (EntitiesEnv curEpoch pp committee committeeProposals _originalAccounts, certState, stAnnTx) <-
+  TRC (EntitiesEnv curEpoch pp committee committeeProposals originalAccounts, certState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+      subTxWithdrawals =
+        foldMap'
+          (\subTx -> subTx ^. bodyTxL . withdrawalsTxBodyL)
+          (tx ^. bodyTxL . subTransactionsTxBodyL)
+      batchWithdrawals = withdrawals <> subTxWithdrawals
       accounts = certState ^. certDStateL . accountsL
       certsEnv = Conway.CertsEnv tx pp curEpoch committee committeeProposals
 
@@ -255,6 +261,14 @@ dijkstraEntitiesTransition = do
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
   runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
+
+  if legacyMode
+    then do
+      runTest $ validateIncompleteWithdrawals withdrawals network accounts
+      runTest $ validateExceededBalancesInWithdrawals subTxWithdrawals network originalAccounts
+    else do
+      runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
+      runTest $ validateExceededBalancesInWithdrawals batchWithdrawals network originalAccounts
 
   validateWithdrawals legacyMode network withdrawals accounts
 
