@@ -101,7 +101,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   smartUTxOState,
   totalObligation,
-  utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
@@ -688,8 +687,12 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         )
         Map.empty
         Map.empty
-    -- In a wellformed LedgerState the deposited equals the obligation
-    deposited = totalObligation dpstate (utxostate ^. utxosGovStateL)
+    -- In a wellformed LedgerState the deposited equals the obligation.
+    -- NOTE: this must not go through `utxostate` (e.g. via `utxosGovStateL`) --
+    -- `utxostate` is defined above in terms of `deposited`, so routing back
+    -- through it creates a self-reference that only terminated by accident
+    -- while `utxosDeposited` was a lazy field.
+    deposited = totalObligation dpstate emptyGovState
     pools = gsInitialStakePoolParams gstate
     pp = mPParams (gsModel gstate)
     poolDeposit = pp ^. ppPoolDepositCompactL
