@@ -22,6 +22,8 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   validateMissingAccountsInDirectDeposits,
   validateMissingAccountsInWithdrawals,
   validateMissingOriginalAccountsInWithdrawals,
+  validateExceededBalancesInWithdrawals,
+  validateIncompleteWithdrawals,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -29,6 +31,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -313,6 +316,42 @@ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts =
   failureOnJust
     (withdrawalsMissingAccounts withdrawals originalAccounts)
     MissingOriginalAccountsInWithdrawals
+
+validateExceededBalancesInWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  Test (EntitiesPredFailure era)
+validateExceededBalancesInWithdrawals withdrawals networkId accounts =
+  failureOnJust
+    ( withdrawalsWithUnacceptableAmount
+        ( \withdrawalAmount account ->
+            withdrawalAmount <= fromCompact (account ^. balanceAccountStateL)
+        )
+        withdrawals
+        networkId
+        accounts
+    )
+    ExceededBalancesInWithdrawals
+
+validateIncompleteWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Network ->
+  Accounts era ->
+  Test (EntitiesPredFailure era)
+validateIncompleteWithdrawals withdrawals networkId accounts =
+  failureOnJust
+    ( withdrawalsWithUnacceptableAmount
+        ( \withdrawalAmount account ->
+            withdrawalAmount == fromCompact (account ^. balanceAccountStateL)
+        )
+        withdrawals
+        networkId
+        accounts
+    )
+    IncompleteWithdrawals
 
 validateWithdrawals ::
   EraAccounts era =>
