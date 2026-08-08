@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Remove `withdrawalsThatExceedAccountBalance` from `Account` module
 * Add `withdrawalsWithUnacceptableAmount` to `Account` module
 * Remove `numSegComponents` from `EraBlockBody`
 * Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances

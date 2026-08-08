@@ -25,7 +25,6 @@ module Cardano.Ledger.State.Account (
   sumDepositsAccounts,
   addToBalanceAccounts,
   withdrawalsThatDoNotDrainAccounts,
-  withdrawalsThatExceedAccountBalance,
   withdrawalsWithUnacceptableAmount,
   drainAccounts,
   applyWithdrawals,
@@ -224,18 +223,6 @@ withdrawalsThatDoNotDrainAccounts =
   categorizeWithdrawals
     ( \withdrawalAmount account ->
         withdrawalAmount == fromCompact (account ^. balanceAccountStateL)
-    )
-
-withdrawalsThatExceedAccountBalance ::
-  EraAccounts era =>
-  Withdrawals ->
-  Network ->
-  Accounts era ->
-  Maybe (Withdrawals, Map AccountAddress (Mismatch RelLTEQ Coin))
-withdrawalsThatExceedAccountBalance =
-  categorizeWithdrawals
-    ( \withdrawalAmount account ->
-        withdrawalAmount <= fromCompact (account ^. balanceAccountStateL)
     )
 
 withdrawalsWithUnacceptableAmount ::

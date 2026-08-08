@@ -51,7 +51,6 @@ import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Foldable (foldMap')
 import Data.Map.NonEmpty (NonEmptyMap)
-import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -268,8 +267,6 @@ dijkstraEntitiesTransition = do
       runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
       runTest $ validateExceededBalancesInWithdrawals batchWithdrawals network originalAccounts
 
-  validateWithdrawals legacyMode network withdrawals accounts
-
   let certStateBeforeCerts =
         certState
           & Conway.updateDormantDRepExpiries tx curEpoch
@@ -364,33 +361,6 @@ validateIncompleteWithdrawals withdrawals networkId accounts =
         accounts
     )
     IncompleteWithdrawals
-
-validateWithdrawals ::
-  EraAccounts era =>
-  Bool ->
-  Network ->
-  Withdrawals ->
-  Accounts era ->
-  Rule (ENTITIES era) ctx ()
-validateWithdrawals legacyMode network withdrawals accounts = do
-  missingWithdrawals <-
-    if legacyMode
-      then do
-        let (missingWithdrawals, incompleteWithdrawals) =
-              case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
-        failOnNonEmptyMap incompleteWithdrawals IncompleteWithdrawals
-        pure missingWithdrawals
-      else do
-        let (missingWithdrawals, exceededWithdrawals) =
-              case withdrawalsThatExceedAccountBalance withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
-        failOnNonEmptyMap exceededWithdrawals ExceededBalancesInWithdrawals
-        pure missingWithdrawals
-  failOnNonEmptyMap missingWithdrawals $
-    MissingAccountsInWithdrawals . Withdrawals . NEM.toMap
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
