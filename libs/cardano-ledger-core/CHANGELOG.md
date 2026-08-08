@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `withdrawalsWithUnacceptableAmount` to `Account` module
 * Remove `numSegComponents` from `EraBlockBody`
 * Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Change `decodeMetadatum` to require definite-length chunks in indefinite-length bytestrings
