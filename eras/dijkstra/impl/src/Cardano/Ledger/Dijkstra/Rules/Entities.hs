@@ -20,6 +20,7 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesEvent (..),
   validateWrongNetworkInDirectDeposit,
   validateMissingAccountsInDirectDeposits,
+  validateMissingAccountsInWithdrawals,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -246,6 +247,7 @@ dijkstraEntitiesTransition = do
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
+  runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
 
   validateWithdrawals legacyMode network withdrawals accounts
 
@@ -287,6 +289,16 @@ validateMissingAccountsInDirectDeposits dds accounts =
   failureOnJust
     (directDepositsMissingAccounts dds accounts)
     MissingAccountsInDirectDeposits
+
+validateMissingAccountsInWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Test (EntitiesPredFailure era)
+validateMissingAccountsInWithdrawals wdrls accounts =
+  failureOnJust
+    (withdrawalsMissingAccounts wdrls accounts)
+    MissingAccountsInWithdrawals
 
 validateWithdrawals ::
   EraAccounts era =>

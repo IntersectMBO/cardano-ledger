@@ -38,6 +38,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, SUBCERTS, SUBENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesPredFailure (..),
   validateMissingAccountsInDirectDeposits,
+  validateMissingAccountsInWithdrawals,
   validateWrongNetworkInDirectDeposit,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
@@ -265,16 +266,6 @@ validateMissingOriginalAccountsInWithdrawals wdrls originalAccounts =
     (withdrawalsMissingAccounts wdrls originalAccounts)
     SubMissingOriginalAccountsInWithdrawals
 
-validateMissingAccountsInWithdrawals ::
-  EraAccounts era =>
-  Withdrawals ->
-  Accounts era ->
-  Test (SubEntitiesPredFailure era)
-validateMissingAccountsInWithdrawals wdrls accounts =
-  failureOnJust
-    (withdrawalsMissingAccounts wdrls accounts)
-    SubMissingAccountsInWithdrawals
-
 conwayToDijkstraSubEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> SubEntitiesPredFailure era
 conwayToDijkstraSubEntitiesPredFailure = \case
@@ -296,7 +287,7 @@ entitiesToSubEntitiesPredFailure = \case
   WrongNetworkInWithdrawals net addrs -> SubWrongNetworkInWithdrawals net addrs
   WrongNetworkInDirectDeposits net addrs -> SubWrongNetworkInDirectDeposits net addrs
   CertsFailure _ -> impossible "CertsFailure"
-  MissingAccountsInWithdrawals _ -> impossible "MissingAccountsInWithdrawals"
+  MissingAccountsInWithdrawals w -> SubMissingAccountsInWithdrawals w
   IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
   ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
   MissingAccountsInDirectDeposits dds -> SubMissingAccountsInDirectDeposits dds
