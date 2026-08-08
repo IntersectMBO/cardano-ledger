@@ -39,6 +39,7 @@ import Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesPredFailure (..),
   validateMissingAccountsInDirectDeposits,
   validateMissingAccountsInWithdrawals,
+  validateMissingOriginalAccountsInWithdrawals,
   validateWrongNetworkInDirectDeposit,
  )
 import Cardano.Ledger.Dijkstra.Rules.SubCerts (
@@ -47,7 +48,7 @@ import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   SubCertsEnv (..),
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
-import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import Cardano.Ledger.Rules.ValidationMode (runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -256,16 +257,6 @@ dijkstraSubEntitiesTransition = do
   let appliedDirectDeposits = applyDirectDeposits directDeposits accountsAfterSubCerts
   pure $ certStateAfterSubCerts & certDStateL . accountsL .~ appliedDirectDeposits
 
-validateMissingOriginalAccountsInWithdrawals ::
-  EraAccounts era =>
-  Withdrawals ->
-  Accounts era ->
-  Test (SubEntitiesPredFailure era)
-validateMissingOriginalAccountsInWithdrawals wdrls originalAccounts =
-  failureOnJust
-    (withdrawalsMissingAccounts wdrls originalAccounts)
-    SubMissingOriginalAccountsInWithdrawals
-
 conwayToDijkstraSubEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> SubEntitiesPredFailure era
 conwayToDijkstraSubEntitiesPredFailure = \case
@@ -288,6 +279,7 @@ entitiesToSubEntitiesPredFailure = \case
   WrongNetworkInDirectDeposits net addrs -> SubWrongNetworkInDirectDeposits net addrs
   CertsFailure _ -> impossible "CertsFailure"
   MissingAccountsInWithdrawals w -> SubMissingAccountsInWithdrawals w
+  MissingOriginalAccountsInWithdrawals w -> SubMissingOriginalAccountsInWithdrawals w
   IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
   ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
   MissingAccountsInDirectDeposits dds -> SubMissingAccountsInDirectDeposits dds

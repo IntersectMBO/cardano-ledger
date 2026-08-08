@@ -2,7 +2,8 @@
 
 ## 0.4.0.0
 
-* Add `validateMissingAccountsInWithdrawals`
+* Add `MissingOriginalAccountsInWithdrawals` constructor to `EntitiesPredFailure`
+* Add `validateMissingOriginalAccountsInWithdrawals`, `validateMissingAccountsInWithdrawals`
 * Restructure `EntitiesEnv`:
   - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
   - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
