@@ -52,6 +52,8 @@ spec = describe "ENTITIES" $ do
               Mismatch amountX mempty
       , injectFailure . MissingAccountsInWithdrawals @era $
           Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . MissingOriginalAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
     account3 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
@@ -71,6 +73,8 @@ spec = describe "ENTITIES" $ do
                   , (account3, Mismatch amountY mempty)
                   ]
       , injectFailure . MissingAccountsInWithdrawals @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . MissingOriginalAccountsInWithdrawals @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
           Withdrawals [(account1, amountX), (account2, zero)]
