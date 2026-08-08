@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   validateWrongNetworkInDirectDeposit,
   validateMissingAccountsInDirectDeposits,
   validateMissingAccountsInWithdrawals,
+  validateMissingOriginalAccountsInWithdrawals,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -98,6 +99,7 @@ instance
 data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
   | MissingAccountsInWithdrawals Withdrawals
+  | MissingOriginalAccountsInWithdrawals Withdrawals
   | IncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | ExceededBalancesInWithdrawals (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | MissingAccountsInDirectDeposits DirectDeposits
@@ -141,6 +143,7 @@ instance
       MissingAccountsInDirectDeposits x -> Sum (MissingAccountsInDirectDeposits @era) 4 !> To x
       WrongNetworkInWithdrawals x y -> Sum (WrongNetworkInWithdrawals @era) 5 !> To x !> To y
       WrongNetworkInDirectDeposits x y -> Sum (WrongNetworkInDirectDeposits @era) 6 !> To x !> To y
+      MissingOriginalAccountsInWithdrawals x -> Sum (MissingOriginalAccountsInWithdrawals @era) 7 !> To x
 
 instance
   ( Era era
@@ -156,6 +159,7 @@ instance
     4 -> SumD MissingAccountsInDirectDeposits <! From
     5 -> SumD WrongNetworkInWithdrawals <! From <! From
     6 -> SumD WrongNetworkInDirectDeposits <! From <! From
+    7 -> SumD MissingOriginalAccountsInWithdrawals <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
@@ -302,6 +306,16 @@ validateMissingAccountsInWithdrawals wdrls accounts =
   failureOnJust
     (withdrawalsMissingAccounts wdrls accounts)
     MissingAccountsInWithdrawals
+
+validateMissingOriginalAccountsInWithdrawals ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Test (EntitiesPredFailure era)
+validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts =
+  failureOnJust
+    (withdrawalsMissingAccounts withdrawals originalAccounts)
+    MissingOriginalAccountsInWithdrawals
 
 validateWithdrawals ::
   EraAccounts era =>
