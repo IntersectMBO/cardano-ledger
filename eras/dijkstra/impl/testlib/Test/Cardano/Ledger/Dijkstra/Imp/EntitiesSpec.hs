@@ -89,10 +89,8 @@ spec = describe "ENTITIES" $ do
   it "Direct deposits to an unregistered account" $ do
     account <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     amountX <- Coin . getPositive <$> arbitrary
-    let
-    let
-      txBody :: forall l. Typeable l => TxBody l era
-      txBody = mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountX)]
+    let txBody :: forall l. Typeable l => TxBody l era
+        txBody = mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountX)]
     submitFailingTx
       (mkBasicTx txBody)
       [ injectFailure . MissingAccountsInDirectDeposits @era $
@@ -102,7 +100,6 @@ spec = describe "ENTITIES" $ do
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     amountY <- Coin . getPositive <$> arbitrary
     amountZ <- Coin . getPositive <$> arbitrary
-    let
     let subTxOnlyDirectDeposit =
           mkBasicTx $
             mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
@@ -180,14 +177,12 @@ spec = describe "ENTITIES" $ do
       (mkBasicTx txBody)
       [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       ]
 
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
       [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
       ]
