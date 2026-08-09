@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -32,14 +33,14 @@ import Cardano.Crypto.VRF.Class hiding (
   encodeVerKeyVRF,
  )
 import Cardano.Ledger.BaseTypes (Seed, shelleyProtVer)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), hashWithEncoder)
-import Cardano.Ledger.Binary.Crypto (
-  decodeCertVRF,
-  decodeSignKeyVRF,
-  decodeVerKeyVRF,
-  encodeCertVRF,
-  encodeSignKeyVRF,
-  encodeVerKeyVRF,
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FixedSizeCodec (..),
+  decodeFixedSized,
+  encodeFixedSized,
+  guardFixedSized,
+  hashWithEncoder,
  )
 import Control.DeepSeq (NFData (..))
 import Data.Bits
@@ -125,37 +126,32 @@ instance VRFAlgorithm FakeVRF where
       (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
       recomputedProof = fromIntegral . byteArrayToNatural $ recomputedProofBytes
 
-  sizeVerKeyVRF _ = 8
-  sizeSignKeyVRF _ = 8
-  sizeCertVRF _ = 26
   sizeOutputVRF _ = hashSize (Proxy :: Proxy Blake2b_224)
 
-  rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseCertVRF (CertFakeVRF k s v) =
-    writeBinaryWord64 k <> writeBinaryWord16 s <> getOutputVRFBytes v
+instance FixedSizeCodec (VerKeyVRF FakeVRF) where
+  type FixedSize (VerKeyVRF FakeVRF) = 8
 
-  rawDeserialiseVerKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        Just $! VerKeyFakeVRF k
-    | otherwise =
-        Nothing
+  rawDecodeFixedSized bs = guardFixedSized bs $ pure $! VerKeyFakeVRF (readBinaryWord64 bs)
+  rawEncodeFixedSized (VerKeyFakeVRF k) = writeBinaryWord64 k
 
-  rawDeserialiseSignKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb =
-        Just $! SignKeyFakeVRF k
-    | otherwise =
-        Nothing
+instance FixedSizeCodec (CertVRF FakeVRF) where
+  type FixedSize (CertVRF FakeVRF) = 26
 
-  rawDeserialiseCertVRF bs
+  rawDecodeFixedSized bs
     | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
     , let k = readBinaryWord64 kb
     , let s = readBinaryWord16 smb =
-        Just $! CertFakeVRF k s (OutputVRF $ byteArrayFromByteString xs)
+        pure $! CertFakeVRF k s (OutputVRF $ byteArrayFromByteString xs)
     | otherwise =
-        Nothing
+        fail "CertVRF FakeVRF: failed to deserialise"
+  rawEncodeFixedSized (CertFakeVRF k s v) =
+    writeBinaryWord64 k <> writeBinaryWord16 s <> getOutputVRFBytes v
+
+instance FixedSizeCodec (SignKeyVRF FakeVRF) where
+  type FixedSize (SignKeyVRF FakeVRF) = 8
+
+  rawDecodeFixedSized bs = guardFixedSized bs $ pure $! SignKeyFakeVRF (readBinaryWord64 bs)
+  rawEncodeFixedSized (SignKeyFakeVRF k) = writeBinaryWord64 k
 
 evalFakeVRF ::
   SneakilyContainResult a =>
@@ -174,22 +170,22 @@ evalFakeVRF a sk@(SignKeyFakeVRF n) =
    in (y, CertFakeVRF n proof y)
 
 instance DecCBOR (VerKeyVRF FakeVRF) where
-  decCBOR = decodeVerKeyVRF
+  decCBOR = decodeFixedSized
 
 instance EncCBOR (VerKeyVRF FakeVRF) where
-  encCBOR = encodeVerKeyVRF
+  encCBOR = encodeFixedSized
 
 instance DecCBOR (SignKeyVRF FakeVRF) where
-  decCBOR = decodeSignKeyVRF
+  decCBOR = decodeFixedSized
 
 instance EncCBOR (SignKeyVRF FakeVRF) where
-  encCBOR = encodeSignKeyVRF
+  encCBOR = encodeFixedSized
 
 instance DecCBOR (CertVRF FakeVRF) where
-  decCBOR = decodeCertVRF
+  decCBOR = decodeFixedSized
 
 instance EncCBOR (CertVRF FakeVRF) where
-  encCBOR = encodeCertVRF
+  encCBOR = encodeFixedSized
 
 readBinaryWord16 :: ByteString -> Word16
 readBinaryWord16 =

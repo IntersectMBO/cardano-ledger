@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 ) where
 
 import Cardano.Base.Typeable (TypeName (TypeName))
-import Cardano.Crypto.Leios (decodeLeiosCert)
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
@@ -244,7 +243,7 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
           (decCBOR @Word16)
     invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
     txs <- decodeSeq (decodeDijkstraTopTx @DijkstraEra False)
-    mbLeiosCert <- decodeNullStrictMaybe (fromPlainDecoder decodeLeiosCert)
+    mbLeiosCert <- decodeNullStrictMaybe decCBOR
     mbPerasCert <- decodeNullStrictMaybe decCBOR
 
     let txsLength = Seq.length txs

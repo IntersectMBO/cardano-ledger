@@ -66,8 +66,11 @@ packages:
   libs/ledger-state
   libs/cardano-ledger-repl-environment
 
+-- TODO: leios-prototype has deprecations
 program-options
-  ghc-options: -Werror
+  ghc-options:
+    -Werror
+    -Wno-deprecations
 
 package plutus-preprocessor
   haddock-options: "--optghc=-fplugin-opt=Plinth.Plugin:defer-errors"
@@ -142,4 +145,16 @@ if impl(ghc >=9.14)
     , serialise:base
     , serialise:containers
     , serialise:time
+
 -- cabal-allow-newer end
+-- cardano-base ch1bo/mk-committee (Leios committee/BLS + crypton memory revert).
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base
+  tag: 9c6078d9c39c542abcb5912d0d7c222b7ba8a03d
+  --sha256: sha256-FfzoMXitbX/pzEJDQExQikGef6FcantzGWvqu2g19ho=
+  subdir:
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-leios
+    cardano-crypto-praos
