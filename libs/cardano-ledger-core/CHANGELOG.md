@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Expose `updateAccountBalances`
 * Remove `withdrawalsThatExceedAccountBalance` from `Account` module
 * Add `withdrawalsWithUnacceptableAmount` to `Account` module
 * Remove `numSegComponents` from `EraBlockBody`
