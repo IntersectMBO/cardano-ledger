@@ -3,6 +3,7 @@
 ## 1.15.0.0
 
 * Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
+* Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`
 
 ## 1.14.0.0
 

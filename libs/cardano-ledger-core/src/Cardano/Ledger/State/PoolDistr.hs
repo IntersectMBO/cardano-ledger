@@ -25,11 +25,22 @@ module Cardano.Ledger.State.PoolDistr (
   individualTotalPoolStakeL,
 ) where
 
-import Cardano.Ledger.BaseTypes (KeyValuePairs (..), NonZero, ToKeyValuePairs (..))
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  NonZero,
+  StrictMaybe (..),
+  ToKeyValuePairs (..),
+ )
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  encodeListLen,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
+import Cardano.Ledger.State.StakePool (BlsKey (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default
@@ -59,6 +70,9 @@ data IndividualPoolStake = IndividualPoolStake
   -- is part of `individualPoolStake` we also add proposal-deposits to this
   -- field.
   , individualPoolStakeVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , individualPoolStakeBls :: !(StrictMaybe BlsKey)
+  -- ^ The pool's registered BLS key, used to select and verify the Leios
+  -- voting committee. 'SNothing' when the pool has not registered one.
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
@@ -68,29 +82,31 @@ individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
 
 instance EncCBOR IndividualPoolStake where
-  encCBOR (IndividualPoolStake stake stakeCoin vrf) =
+  encCBOR (IndividualPoolStake stake stakeCoin vrf bls) =
     mconcat
-      [ encodeListLen 3
+      [ encodeListLen 4
       , encCBOR stake
       , encCBOR stakeCoin
       , encCBOR vrf
+      , encCBOR bls
       ]
 
 instance DecCBOR IndividualPoolStake where
   decCBOR =
-    decodeRecordNamed "IndividualPoolStake" (const 3) $
+    decodeRecordNamed "IndividualPoolStake" (const 4) $
       IndividualPoolStake
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
+        <*> decCBOR
 
 instance ToKeyValuePairs IndividualPoolStake where
-  toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _) =
-    let IndividualPoolStake {..} = indivPoolStake
-     in [ "individualPoolStake" .= individualPoolStake
-        , "individualTotalPoolStake" .= individualTotalPoolStake
-        , "individualPoolStakeVrf" .= individualPoolStakeVrf
-        ]
+  toKeyValuePairs IndividualPoolStake {..} =
+    [ "individualPoolStake" .= individualPoolStake
+    , "individualTotalPoolStake" .= individualTotalPoolStake
+    , "individualPoolStakeVrf" .= individualPoolStakeVrf
+    , "individualPoolStakeBls" .= individualPoolStakeBls
+    ]
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values

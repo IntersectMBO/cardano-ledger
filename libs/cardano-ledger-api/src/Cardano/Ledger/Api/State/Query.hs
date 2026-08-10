@@ -102,6 +102,7 @@ import Cardano.Ledger.BaseTypes (
   Network,
   NonZero,
   ProtVer (..),
+  StrictMaybe,
   ToKeyValuePairs (..),
   strictMaybeToMaybe,
  )
@@ -743,6 +744,7 @@ data QueryResultIndividualPoolStake = QueryResultIndividualPoolStake
   { qripsStake :: !Rational
   , qripsTotalStake :: !(CompactForm Coin)
   , qripsVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , qripsBls :: !(StrictMaybe BlsKey)
   }
   deriving (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs QueryResultIndividualPoolStake
@@ -760,6 +762,7 @@ toQueryResultIndividualPoolStake ips =
     (individualPoolStake ips)
     (individualTotalPoolStake ips)
     (individualPoolStakeVrf ips)
+    (individualPoolStakeBls ips)
 
 toQueryResultPoolDistr :: PoolDistr -> QueryResultPoolDistr
 toQueryResultPoolDistr pd =
@@ -768,10 +771,11 @@ toQueryResultPoolDistr pd =
     (pdTotalActiveStake pd)
 
 instance ToKeyValuePairs QueryResultIndividualPoolStake where
-  toKeyValuePairs (QueryResultIndividualPoolStake stake totalStake vrf) =
+  toKeyValuePairs (QueryResultIndividualPoolStake stake totalStake vrf bls) =
     [ "individualPoolStake" .= stake
     , "individualTotalPoolStake" .= totalStake
     , "individualPoolStakeVrf" .= vrf
+    , "individualPoolStakeBls" .= bls
     ]
 
 instance ToKeyValuePairs QueryResultPoolDistr where
@@ -781,16 +785,21 @@ instance ToKeyValuePairs QueryResultPoolDistr where
     ]
 
 instance EncCBOR QueryResultIndividualPoolStake where
-  encCBOR (QueryResultIndividualPoolStake stake totalStake vrf) =
-    encodeListLen 3
+  encCBOR (QueryResultIndividualPoolStake stake totalStake vrf bls) =
+    encodeListLen 4
       <> encCBOR stake
       <> encCBOR totalStake
       <> encCBOR vrf
+      <> encCBOR bls
 
 instance DecCBOR QueryResultIndividualPoolStake where
   decCBOR =
-    decodeRecordNamed "QueryResultIndividualPoolStake" (const 3) $
-      QueryResultIndividualPoolStake <$> decCBOR <*> decCBOR <*> decCBOR
+    decodeRecordNamed "QueryResultIndividualPoolStake" (const 4) $
+      QueryResultIndividualPoolStake
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
 
 instance EncCBOR QueryResultPoolDistr where
   encCBOR (QueryResultPoolDistr distr total) =

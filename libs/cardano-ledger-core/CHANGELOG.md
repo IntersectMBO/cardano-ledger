@@ -14,6 +14,7 @@
 * Add `spsBlsKeyL` lens to `StakePoolState`
 * Add `BlsKey` type with `EncCBOR`/`DecCBOR`, `ToJSON`/`FromJSON` instances
 * Make `FromJSON StakePoolParams` backward-compatible: `blsKey` field is optional (defaults to `SNothing`)
+* Add `individualPoolStakeBls` field to `IndividualPoolStake`, threaded through `StakePoolSnapShot` (`spssBlsKey`). This is a breaking change to ledger state encoding.
 * Add `ToJSON`, `FromJSON` and `NFData` as `EraTxWits` superclass constraints
 * Add `ToJSONKey` and `FromJSONKey` instances to `AccountId`
 * Add `ToJSON` and `FromJSON` instances for `Inclusive a` and `Exclusive a`
