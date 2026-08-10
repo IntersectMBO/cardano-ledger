@@ -18,7 +18,7 @@
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
 
     CHaP = {
-      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      url = "github:intersectmbo/cardano-haskell-packages?ref=index-only";
       flake = false;
     };
 
