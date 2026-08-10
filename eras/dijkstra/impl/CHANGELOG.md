@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
 * Add `WithdrawalAccountsMissingPreBatch` constructor to `EntitiesPredFailure`
 * Rename `EntitiesPredFailure` constructors:
   - `MissingAccountsInWithdrawals` to `WithdrawalAccountsMissing`
