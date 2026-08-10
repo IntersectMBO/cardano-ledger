@@ -256,6 +256,16 @@ withdrawalsWithUnacceptableAmount amountAcceptable (Withdrawals withdrawals) net
                 accum
 {-# INLINE withdrawalsWithUnacceptableAmount #-}
 
+-- If the account in a withdrawal is registered, but the network is wrong, the withdrawal will be added to the first element in the resulting tuple.
+-- As a result, in Conway - where we use `categorizeWithdrawals` - in such a case we will emit two predicate failures:
+--  * one - arguably spurious one - for "missing account"
+--  * one for incorrect network
+-- In Dijkstra - where we don't use `categorizeWithdrawals` - we will only emit the failure for incorrect network.
+--
+-- TODO: once we are in Dijkstra, we can do the same for Conway, and replace `categorizeWithdrawals` with two checks:
+-- withdrawalsMissingAccounts and withdrawalsWithUnacceptableAmount.
+-- Hence the duplication between `categorizeWithdrawals` and `withdrawalsWithUnacceptableAmount` is short-lived.
+-- The complexity introduced by abstracting it away is not worth it.
 categorizeWithdrawals ::
   EraAccounts era =>
   (Coin -> AccountState era -> Bool) ->
