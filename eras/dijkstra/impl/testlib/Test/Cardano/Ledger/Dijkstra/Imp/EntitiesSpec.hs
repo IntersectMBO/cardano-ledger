@@ -16,7 +16,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraUtxoPredFailure (..),
   EntitiesPredFailure (..),
   SubEntitiesPredFailure (..),
  )
@@ -24,8 +23,6 @@ import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBala
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NE
-import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -47,11 +44,7 @@ spec = describe "ENTITIES" $ do
           & withdrawalsTxBodyL .~ Withdrawals [(account1, amountX), (account2, zero)]
     submitFailingTx
       (mkBasicTx txBody)
-      [ injectFailure $
-          WithdrawalsExceedAccountBalance @era $
-            NE.singleton account1 $
-              Mismatch amountX mempty
-      , injectFailure . WithdrawalAccountsMissing @era $
+      [ injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
@@ -65,15 +58,7 @@ spec = describe "ENTITIES" $ do
               & withdrawalsTxBodyL .~ Withdrawals [(account3, amountY)]
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
-      [ injectFailure $
-          WithdrawalsExceedAccountBalance @era $
-            fromJust $
-              NE.fromMap $
-                Map.fromList
-                  [ (account1, Mismatch (amountX <> amountX) mempty)
-                  , (account3, Mismatch amountY mempty)
-                  ]
-      , injectFailure . WithdrawalAccountsMissing @era $
+      [ injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
@@ -134,10 +119,6 @@ spec = describe "ENTITIES" $ do
                 ]
       )
       [ injectFailure $
-          WithdrawalsExceedAccountBalance @era $
-            NE.singleton accountAddress1 $
-              Mismatch (reward1 <+> Coin 1) reward1
-      , injectFailure $
           WithdrawalAmountsExceedingOriginalBalance @era $
             NE.singleton accountAddress1 $
               Mismatch (reward1 <+> Coin 1) reward1
