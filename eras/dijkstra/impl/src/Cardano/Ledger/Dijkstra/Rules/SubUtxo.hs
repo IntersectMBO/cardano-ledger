@@ -320,4 +320,3 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
-  WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
