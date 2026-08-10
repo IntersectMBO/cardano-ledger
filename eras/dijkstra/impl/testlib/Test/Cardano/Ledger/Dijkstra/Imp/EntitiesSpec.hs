@@ -83,7 +83,7 @@ spec = describe "ENTITIES" $ do
     legacyTx <- switchTxToLegacyMode tx
     submitFailingTx
       legacyTx
-      [ injectFailure . IncompleteWithdrawals @era $
+      [ injectFailure . InexactLegacyWithdrawals @era $
           NE.singleton account1 $
             Mismatch lessThanReward1 reward1
       ]
@@ -203,7 +203,7 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       tx
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch (topAmount <+> subAmount) reward)]
       ]
@@ -211,7 +211,7 @@ spec = describe "ENTITIES" $ do
     legacyTx <- switchTxToLegacyMode tx
     submitFailingTx
       legacyTx
-      [ injectFailure . IncompleteWithdrawals @era $
+      [ injectFailure . InexactLegacyWithdrawals @era $
           NE.singleton account $
             Mismatch topAmount (reward <-> subAmount)
       ]
@@ -230,14 +230,14 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       tx
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) reward)]
       ]
     legacyTx <- switchTxToLegacyMode tx
     submitFailingTx
       legacyTx
-      [ injectFailure . ExceededBalancesInWithdrawals @era $
+      [ injectFailure . WithdrawalsExceedAccountBalance @era $
           NE.singleton account $
             Mismatch (subAmount1 <+> subAmount2) reward
       ]
@@ -256,18 +256,18 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       subTxOverdraws
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch (atMostReward <+> moreThanReward) reward)]
       ]
     legacySubTxOverdraws <- switchTxToLegacyMode subTxOverdraws
     submitFailingTx
       legacySubTxOverdraws
-      [ injectFailure . IncompleteWithdrawals @era $
+      [ injectFailure . InexactLegacyWithdrawals @era $
           NE.singleton account $
             Mismatch atMostReward zero
       , injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch moreThanReward reward)]
       ]
@@ -280,7 +280,7 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       topTxOverdraws
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap
                 [(account, Mismatch (atMostReward <+> moreThanReward) reward)]
@@ -288,7 +288,7 @@ spec = describe "ENTITIES" $ do
     legacyTopTxOverdraws <- switchTxToLegacyMode topTxOverdraws
     submitFailingTx
       legacyTopTxOverdraws
-      [ injectFailure . IncompleteWithdrawals @era $
+      [ injectFailure . InexactLegacyWithdrawals @era $
           NE.singleton account $
             Mismatch moreThanReward (reward <-> atMostReward)
       ]
@@ -314,7 +314,7 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       tx
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch depositAmount zero)]
       ]
@@ -323,7 +323,7 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       legacyTx
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch depositAmount zero)]
       ]
@@ -344,7 +344,7 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       tx
       [ injectFailure $
-          ExceededBalancesInWithdrawals @era $
+          WithdrawalsExceedAccountBalance @era $
             fromJust $
               NE.fromMap [(account, Mismatch depositAmount zero)]
       ]

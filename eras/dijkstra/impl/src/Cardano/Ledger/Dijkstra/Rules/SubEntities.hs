@@ -289,8 +289,8 @@ entitiesToSubEntitiesPredFailure = \case
   CertsFailure _ -> impossible "CertsFailure"
   MissingAccountsInWithdrawals w -> SubMissingAccountsInWithdrawals w
   MissingOriginalAccountsInWithdrawals w -> SubMissingOriginalAccountsInWithdrawals w
-  IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
-  ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
+  InexactLegacyWithdrawals _ -> impossible "InexactLegacyWithdrawals"
+  WithdrawalsExceedAccountBalance _ -> impossible "WithdrawalsExceedAccountBalance"
   MissingAccountsInDirectDeposits dds -> SubMissingAccountsInDirectDeposits dds
   where
     impossible name = error $ "Impossible: `" <> name <> "` for SUBENTITIES"

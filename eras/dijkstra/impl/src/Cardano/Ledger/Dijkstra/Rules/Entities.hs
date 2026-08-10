@@ -101,8 +101,8 @@ data EntitiesPredFailure era
   = CertsFailure (PredicateFailure (EraRule "CERTS" era))
   | MissingAccountsInWithdrawals Withdrawals
   | MissingOriginalAccountsInWithdrawals Withdrawals
-  | IncompleteWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
-  | ExceededBalancesInWithdrawals (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | InexactLegacyWithdrawals (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
+  | WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | MissingAccountsInDirectDeposits DirectDeposits
   | WrongNetworkInWithdrawals
       -- | Expected network id
@@ -139,8 +139,8 @@ instance
     encode . \case
       CertsFailure x -> Sum (CertsFailure @era) 0 !> To x
       MissingAccountsInWithdrawals x -> Sum (MissingAccountsInWithdrawals @era) 1 !> To x
-      IncompleteWithdrawals x -> Sum (IncompleteWithdrawals @era) 2 !> To x
-      ExceededBalancesInWithdrawals x -> Sum (ExceededBalancesInWithdrawals @era) 3 !> To x
+      InexactLegacyWithdrawals x -> Sum (InexactLegacyWithdrawals @era) 2 !> To x
+      WithdrawalsExceedAccountBalance x -> Sum (WithdrawalsExceedAccountBalance @era) 3 !> To x
       MissingAccountsInDirectDeposits x -> Sum (MissingAccountsInDirectDeposits @era) 4 !> To x
       WrongNetworkInWithdrawals x y -> Sum (WrongNetworkInWithdrawals @era) 5 !> To x !> To y
       WrongNetworkInDirectDeposits x y -> Sum (WrongNetworkInDirectDeposits @era) 6 !> To x !> To y
@@ -155,8 +155,8 @@ instance
   decCBOR = decode . Summands "EntitiesPredFailure" $ \case
     0 -> SumD CertsFailure <! From
     1 -> SumD MissingAccountsInWithdrawals <! From
-    2 -> SumD IncompleteWithdrawals <! From
-    3 -> SumD ExceededBalancesInWithdrawals <! From
+    2 -> SumD InexactLegacyWithdrawals <! From
+    3 -> SumD WithdrawalsExceedAccountBalance <! From
     4 -> SumD MissingAccountsInDirectDeposits <! From
     5 -> SumD WrongNetworkInWithdrawals <! From <! From
     6 -> SumD WrongNetworkInDirectDeposits <! From <! From
@@ -345,7 +345,7 @@ validateExceededBalancesInWithdrawals withdrawals networkId accounts =
         networkId
         accounts
     )
-    ExceededBalancesInWithdrawals
+    WithdrawalsExceedAccountBalance
 
 validateIncompleteWithdrawals ::
   EraAccounts era =>
@@ -363,7 +363,7 @@ validateIncompleteWithdrawals withdrawals networkId accounts =
         networkId
         accounts
     )
-    IncompleteWithdrawals
+    InexactLegacyWithdrawals
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
