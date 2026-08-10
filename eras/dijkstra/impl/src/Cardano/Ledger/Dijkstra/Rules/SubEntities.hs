@@ -25,6 +25,7 @@ import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -244,7 +245,12 @@ dijkstraSubEntitiesTransition = do
   runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
   runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
 
-  let appliedWithdrawals = applyWithdrawals withdrawals accounts
+  -- In order to avoid Word64 underflow in predicate failures, we saturate the withdrawal application:
+  -- if a sub-tx tries to withdraw more than the current balance, we set the resulting balance to zero.
+  -- Without this, the balance would underflow to a huge Word64 value.
+  -- The tx would still be correctly rejected by the validation in ENTITIES,
+  -- but the underflowed balance would show up as expected value in the predicate failure, which is misleading.
+  let appliedWithdrawals = applyWithdrawalsSaturating withdrawals accounts
   let certStateBeforeSubCerts =
         certState
           & Conway.updateDormantDRepExpiries tx curEpoch
@@ -298,3 +304,16 @@ instance
   where
   wrapFailed = SubCertsFailure
   wrapEvent = SubCertsEvent
+
+applyWithdrawalsSaturating ::
+  EraAccounts era =>
+  Withdrawals ->
+  Accounts era ->
+  Accounts era
+applyWithdrawalsSaturating (Withdrawals wdrls) =
+  updateAccountBalances
+    ( \(CompactCoin amount) account ->
+        let CompactCoin source = account ^. balanceAccountStateL
+         in CompactCoin $ if source >= amount then source - amount else 0
+    )
+    wdrls

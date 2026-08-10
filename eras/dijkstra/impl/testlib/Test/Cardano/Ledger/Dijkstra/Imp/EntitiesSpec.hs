@@ -23,7 +23,6 @@ import qualified Data.Map.NonEmpty as NE
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
-import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -155,7 +154,7 @@ spec = describe "ENTITIES" $ do
       , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
       ]
 
-  it "Aggregate withdrawals across top and sub-transactions" $ do
+  it "Aggregate of top and sub withdrawals exceeds account balance" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, reward, _) <- setupAccountAddress
     let subAmount = reward <-> Coin 1
@@ -179,7 +178,7 @@ spec = describe "ENTITIES" $ do
             Mismatch reward (reward <-> subAmount)
       ]
 
-  it "Underflow of applied withdrawal amount is observable in legacy mode" $ do
+  it "Sub-transaction alone over-draws account" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, reward, _) <- setupAccountAddress
 
@@ -196,14 +195,11 @@ spec = describe "ENTITIES" $ do
               NE.fromMap [(account, Mismatch (reward <+> moreThanReward) reward)]
       ]
     legacyTx <- switchTxToLegacyMode tx
-    let underflowedBalance =
-          -- 18446744073709551615
-          Coin . toInteger $ (fromInteger (unCoin reward) :: Word64) - fromInteger (unCoin moreThanReward)
     submitFailingTx
       legacyTx
       [ injectFailure . IncompleteWithdrawals @era $
           NE.singleton account $
-            Mismatch reward underflowedBalance
+            Mismatch reward zero
       , injectFailure $
           ExceededBalancesInWithdrawals @era $
             fromJust $
