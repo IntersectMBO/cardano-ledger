@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Alonzo.Imp.BbodySpec qualified as AlonzoBBODY
 import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
 import Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec qualified as AlonzoUTXOW
@@ -29,6 +30,10 @@ import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as UTXOW
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import Test.Cardano.Ledger.Mary.Imp.UtxoSpec qualified as MaryUTXO
+import Test.Cardano.Ledger.Shelley.Imp.DelegSpec qualified as ShelleyDELEG
+import Test.Cardano.Ledger.Shelley.Imp.EpochSpec qualified as ShelleyEPOCH
+import Test.Cardano.Ledger.Shelley.Imp.LedgerSpec qualified as ShelleyLEDGER
+import Test.Cardano.Ledger.Shelley.Imp.PoolSpec qualified as ShelleyPOOL
 import Test.Cardano.Ledger.Shelley.Imp.UtxoSpec qualified as ShelleyUTXO
 import Test.Cardano.Ledger.Shelley.Imp.UtxowSpec qualified as ShelleyUTXOW
 
@@ -39,24 +44,41 @@ spec = do
       modifyImpInitProtVer @ConwayEra (natVersion @11) $
         modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
           modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
+            AlonzoBBODY.spec
             BBODY.spec
+
             CERTS.spec
+
+            ShelleyDELEG.spec
             DELEG.spec
+
             ENACT.spec
+
+            ShelleyEPOCH.spec
             EPOCH.spec
+
             GOV.spec
+
             GOVCERT.spec
+
+            ShelleyLEDGER.spec
             LEDGER.spec
+
+            xdescribe "disabled" ShelleyPOOL.spec
+
             RATIFY.spec
+
             ShelleyUTXO.spec
             MaryUTXO.spec
             AlonzoUTXO.spec
             BabbageUTXO.spec
             UTXO.spec
+
             ShelleyUTXOW.spec
             AlonzoUTXOW.spec
             BabbageUTXOW.spec
             UTXOW.spec
+
             AlonzoUTXOS.spec
             BabbageUTXOS.spec
             UTXOS.spec
