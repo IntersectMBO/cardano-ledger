@@ -32,6 +32,7 @@ import Cardano.Ledger.Dijkstra.Era (
   SUBDELEG,
  )
 import Cardano.Ledger.Dijkstra.State
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -53,6 +54,9 @@ type instance EraRuleFailure "SUBDELEG" DijkstraEra = DijkstraSubDelegPredFailur
 
 type instance EraRuleEvent "SUBDELEG" DijkstraEra = VoidEraRule "SUBDELEG" DijkstraEra
 
+instance InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered DijkstraEra where
+  injectFailure = DijkstraSubDelegPredFailure . Conway.DelegAccountAlreadyRegistered
+
 instance InjectRuleFailure "SUBDELEG" DijkstraSubDelegPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure DijkstraEra where
@@ -63,6 +67,7 @@ instance
   , ConwayEraCertState era
   , EraRule "SUBDELEG" era ~ SUBDELEG era
   , InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure era
+  , InjectRuleFailure "SUBDELEG" Shelley.AccountAlreadyRegistered era
   ) =>
   STS (SUBDELEG era)
   where

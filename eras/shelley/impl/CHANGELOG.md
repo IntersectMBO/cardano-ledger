@@ -2,6 +2,7 @@
 
 ## 1.19.1.0
 
+* Add `AccountAlreadyRegistered` predicate failure
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the

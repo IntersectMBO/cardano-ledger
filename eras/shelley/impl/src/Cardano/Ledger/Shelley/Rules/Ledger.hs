@@ -50,14 +50,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosDepositedL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
-import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules.Deleg (AccountAlreadyRegistered, ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (
   DELEGS,
   DelegsEnv (..),
   ShelleyDelegsEvent,
-  ShelleyDelegsPredFailure,
+  ShelleyDelegsPredFailure (..),
  )
-import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure (..))
 import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
@@ -143,6 +143,9 @@ ledgerAccountL :: Lens' (LedgerEnv era) ChainAccountState
 ledgerAccountL = lens ledgerAccount $ \x y -> x {ledgerAccount = y}
 
 type instance EraRuleFailure "LEDGER" ShelleyEra = ShelleyLedgerPredFailure ShelleyEra
+
+instance InjectRuleFailure "LEDGER" AccountAlreadyRegistered ShelleyEra where
+  injectFailure = DelegsFailure . DelplFailure . DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure ShelleyEra
 
