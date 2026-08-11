@@ -69,6 +69,7 @@ import Data.Function ((&))
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
+import Data.String (fromString)
 import Data.Text ()
 import Data.Text qualified as T
 import Data.Word (Word16, Word64)
@@ -1077,9 +1078,12 @@ instance HuddleRule "leios_certificate" DijkstraEra where
   huddleRuleNamed pname era =
     pname
       =.= arr
-        [ "signers" ==> VBytes & comment "bitfield"
-        , "aggregated_signature" ==> huddleRule @"leios_signature" era
+        [ "signers" ==> VBytes `sized` (0 :: Word64, maxSigners `div` 8 :: Word64)
+            & comment (fromString $ "bitfield with up to " <> show maxSigners <> " entries")
+        , "signature" ==> huddleRule @"leios_signature" era
         ]
+    where
+      maxSigners = 2 ^ (16 :: Word) + 1
 
 instance HuddleRule "leios_signature" DijkstraEra where
   huddleRuleNamed pname _era =
