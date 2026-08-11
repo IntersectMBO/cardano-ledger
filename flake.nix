@@ -37,7 +37,7 @@
 
     cardano-ledger-release-tool = {
       # Tag should match the ones used in .github/workflows/*.yml
-      url = "github:input-output-hk/cardano-ledger-release-tool?ref=0.5.0.0";
+      url = "github:input-output-hk/cardano-ledger-release-tool?ref=0.5.2.0";
       inputs.haskell-nix.follows = "haskellNix";
       inputs.hackage.follows = "hackageNix";
       inputs.pre-commit-hooks.follows = "pre-commit-hooks";

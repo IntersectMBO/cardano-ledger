@@ -86,7 +86,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.2.0
 
     - name: Install Haskell
       id: install-haskell
@@ -255,7 +255,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.2.0
 
     - name: Download Mainnet Mirror
       if: matrix.package == 'cardano-ledger-byron'
@@ -313,7 +313,7 @@ jobs:
     steps:
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.2.0
 
     - name: Download test failures artifacts
       uses: actions/download-artifact@v8
@@ -362,7 +362,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.2.0
 
     - name: Download state archive
       uses: actions/download-artifact@v8
@@ -581,7 +581,7 @@ jobs:
 
     - name: Install cleret
       # Tag should match the one that's used in flake.nix
-      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.0.0
+      uses: input-output-hk/cardano-ledger-release-tool/actions/install-cleret@0.5.2.0
 
     - name: Run linter
       run: scripts/format-changelogs.sh || (git diff; false)
