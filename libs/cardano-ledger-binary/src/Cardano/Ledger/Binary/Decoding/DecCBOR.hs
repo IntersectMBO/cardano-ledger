@@ -55,6 +55,7 @@ import Cardano.Slotting.Slot (
   EpochInterval (..),
   EpochNo (..),
   EpochSize (..),
+  SlotInterval (..),
   SlotNo (..),
   WithOrigin (..),
  )
@@ -650,6 +651,8 @@ instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
 instance DecCBOR SlotNo where
   decCBOR = fromPlainDecoder Serialise.decode
   {-# INLINE decCBOR #-}
+
+deriving instance DecCBOR SlotInterval
 
 instance (Serialise.Serialise t, Typeable t) => DecCBOR (WithOrigin t) where
   decCBOR = fromPlainDecoder Serialise.decode

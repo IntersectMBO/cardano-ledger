@@ -37,6 +37,12 @@
 * Add `FromJSON` instance for `TxIn`; fix `txInToText` to use `unTxIx` instead of `show`
 * Add `FromJSON` instance for `PoolCert`
 * Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
+* Add `ToPlutusData` instance for `OrdExUnits`
+* Add Leios protocol parameter default getters to `EraPParams`:
+  - `ppLeiosVotingPeriodLengthG`, `ppLeiosAdditionalDiffusionPeriodLengthG`
+  - `ppLeiosCommitteeStakeCoverageG`, `ppLeiosQuorumStakeThresholdG`
+  - `ppMaxEndorserBlockHeaderSizeG`, `ppMaxEndorserBlockBodySizeG`
+  - `ppMaxRefScriptSizePerEndorserBlockG`
 
 ### `testlib`
 

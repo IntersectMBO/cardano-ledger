@@ -105,6 +105,7 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   Nonce (..),
   ProtVer,
+  SlotInterval (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
   UnitInterval,
@@ -517,6 +518,62 @@ class
   ppMinPoolMarginG :: SimpleGetter (PParams era) UnitInterval
   default ppMinPoolMarginG :: AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
   ppMinPoolMarginG = L.to (const minBound)
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppLeiosHeaderDiffusionPeriodLengthG :: SimpleGetter (PParams era) SlotInterval
+  default ppLeiosHeaderDiffusionPeriodLengthG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) SlotInterval
+  ppLeiosHeaderDiffusionPeriodLengthG = L.to (const (SlotInterval 0))
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppLeiosVotingPeriodLengthG :: SimpleGetter (PParams era) SlotInterval
+  default ppLeiosVotingPeriodLengthG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) SlotInterval
+  ppLeiosVotingPeriodLengthG = L.to (const (SlotInterval 0))
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppLeiosAdditionalDiffusionPeriodLengthG :: SimpleGetter (PParams era) SlotInterval
+  default ppLeiosAdditionalDiffusionPeriodLengthG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) SlotInterval
+  ppLeiosAdditionalDiffusionPeriodLengthG = L.to (const (SlotInterval 0))
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppLeiosCommitteeStakeCoverageG :: SimpleGetter (PParams era) UnitInterval
+  default ppLeiosCommitteeStakeCoverageG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
+  ppLeiosCommitteeStakeCoverageG = L.to (const minBound)
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppLeiosQuorumStakeThresholdG :: SimpleGetter (PParams era) UnitInterval
+  default ppLeiosQuorumStakeThresholdG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
+  ppLeiosQuorumStakeThresholdG = L.to (const minBound)
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppMaxEndorserBlockHeaderSizeG :: SimpleGetter (PParams era) Word32
+  default ppMaxEndorserBlockHeaderSizeG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
+  ppMaxEndorserBlockHeaderSizeG = L.to (const 0)
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppMaxEndorserBlockBodySizeG :: SimpleGetter (PParams era) Word32
+  default ppMaxEndorserBlockBodySizeG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
+  ppMaxEndorserBlockBodySizeG = L.to (const 0)
+    where
+      _ = atMostEra @"Conway" @era
+
+  ppMaxRefScriptSizePerEndorserBlockG :: SimpleGetter (PParams era) Word32
+  default ppMaxRefScriptSizePerEndorserBlockG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
+  ppMaxRefScriptSizePerEndorserBlockG = L.to (const 0)
     where
       _ = atMostEra @"Conway" @era
 

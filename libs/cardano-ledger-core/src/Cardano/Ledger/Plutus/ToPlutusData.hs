@@ -16,6 +16,7 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   PositiveInterval,
   ProtVer (..),
+  SlotInterval (..),
   StrictMaybe (..),
   UnitInterval,
   nonZero,
@@ -29,7 +30,7 @@ import Cardano.Ledger.Plutus.CostModels (
   flattenCostModels,
   mkCostModelsLenient,
  )
-import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), OrdExUnits (..), Prices (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word
@@ -142,6 +143,10 @@ instance ToPlutusData Word8 where
   toPlutusData w8 = I (toInteger @Word8 w8)
   fromPlutusData (I n) | n >= 0 && n <= toInteger (maxBound @Word8) = Just $ fromInteger @Word8 n
   fromPlutusData _ = Nothing
+
+deriving instance ToPlutusData SlotInterval
+
+deriving instance ToPlutusData OrdExUnits
 
 deriving instance ToPlutusData EpochInterval
 

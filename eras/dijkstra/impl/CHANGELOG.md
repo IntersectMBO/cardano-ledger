@@ -57,6 +57,17 @@
   - Add `hkdMinPoolMarginL` to `DijkstraEraPParams`
   - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
   - Override `ppMinPoolMarginG` in `EraPParams` instance
+* Add Leios protocol parameters:
+  - Add `dppLeiosVotingPeriodLength`, `dppLeiosAdditionalDiffusionPeriodLength`,
+    `dppLeiosCommitteeStakeCoverage`, `dppLeiosQuorumStakeThreshold`,
+    `dppMaxEndorserBlockHeaderSize`, `dppMaxEndorserBlockBodySize`,
+    `dppMaxEndorserBlockExUnits`, `dppMaxRefScriptSizePerEndorserBlock` to `DijkstraPParams`
+  - Add corresponding fields to `UpgradeDijkstraPParams`
+  - Add corresponding HKD lenses, pp/ppu lenses to `DijkstraEraPParams`
+  - Override `ppLeiosVotingPeriodLengthG`, `ppLeiosAdditionalDiffusionPeriodLengthG`,
+    `ppLeiosCommitteeStakeCoverageG`, `ppLeiosQuorumStakeThresholdG`,
+    `ppMaxEndorserBlockHeaderSizeG`, `ppMaxEndorserBlockBodySizeG`,
+    `ppMaxRefScriptSizePerEndorserBlockG` in `EraPParams` instance
 
 ### `cddl`
 
@@ -64,6 +75,7 @@
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
 * Add `HuddleRule "vrf_cert"` instance
+* Add Leios protocol parameter entries (tags 40-48) in `protocol_param_update`
 * Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
 
 ### `testlib`

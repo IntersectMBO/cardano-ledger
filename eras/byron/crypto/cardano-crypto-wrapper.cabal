@@ -94,8 +94,8 @@ library
     deepseq,
     formatting,
     heapwords,
-    memory,
     nothunks,
+    ram,
     text,
 
 library testlib
@@ -136,7 +136,7 @@ library testlib
     cardano-prelude-test,
     crypton,
     hedgehog >=1.0.4,
-    memory,
+    ram,
 
 test-suite test
   type: exitcode-stdio-1.0

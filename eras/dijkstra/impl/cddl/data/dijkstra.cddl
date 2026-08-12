@@ -715,6 +715,15 @@ protocol_param_update =
   , ? 37 : positive_interval      ; refScript cost multiplier
   , ? 38 : max_pledge_leverage    ; max pledge leverage
   , ? 39 : unit_interval          ; min pool margin
+  , ? 40 : uint .size 4           ; leios header diffusion period length
+  , ? 41 : uint .size 4           ; leios voting period length
+  , ? 42 : uint .size 4           ; leios additional diffusion period length
+  , ? 43 : unit_interval          ; leios committee stake coverage
+  , ? 44 : unit_interval          ; leios quorum stake threshold
+  , ? 45 : uint .size 4           ; max endorser block header size
+  , ? 46 : uint .size 4           ; max endorser block body size
+  , ? 47 : ex_units               ; max endorser block ex units
+  , ? 48 : uint .size 4           ; max ref script size per endorser block
   }
 
 epoch_interval = uint .size 4
