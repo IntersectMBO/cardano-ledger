@@ -139,7 +139,7 @@
                 cabal-gild = "1.5.0.1";
                 cuddle = "latest";
                 fourmolu = fourmoluVersion;
-                haskell-language-server = "2.12.0.0";
+                haskell-language-server = "2.14.0.0";
                 hlint = "3.8";
                 nixfmt = nixfmtVersion;
               };
