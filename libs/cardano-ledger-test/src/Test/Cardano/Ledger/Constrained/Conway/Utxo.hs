@@ -250,6 +250,6 @@ genUtxoExecContext = do
     uePParams =
       gePParams (gsGenEnv gs)
         & ppMaxTxSizeL .~ fromIntegral txSize
-        & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+        & ppProtocolVersionL .~ ProtVer (natVersion @11) 0
     uecUtxoEnv = UtxoEnv {..}
   pure UtxoExecContext {..}
