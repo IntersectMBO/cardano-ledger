@@ -2,6 +2,7 @@
 
 ## 1.16.1.0
 
+* Add `ToPlutusData` instance for `OrdExUnits`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

@@ -32,6 +32,11 @@
             },
             "govActionDeposit": 0,
             "govActionLifetime": 0,
+            "leiosAdditionalDiffusionPeriodLength": 0,
+            "leiosCommitteeStakeCoverage": 0,
+            "leiosHeaderDiffusionPeriodLength": 0,
+            "leiosQuorumStakeThreshold": 0,
+            "leiosVotingPeriodLength": 0,
             "maxBlockBodySize": 0,
             "maxBlockExecutionUnits": {
                 "memory": 0,
@@ -39,8 +44,15 @@
             },
             "maxBlockHeaderSize": 0,
             "maxCollateralInputs": 5,
+            "maxEndorserBlockBodySize": 0,
+            "maxEndorserBlockExUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxEndorserBlockHeaderSize": 0,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerEndorserBlock": 0,
             "maxRefScriptSizePerTx": 0,
             "maxTxExecutionUnits": {
                 "memory": 0,
@@ -117,6 +129,11 @@
                     },
                     "govActionDeposit": 0,
                     "govActionLifetime": 0,
+                    "leiosAdditionalDiffusionPeriodLength": 0,
+                    "leiosCommitteeStakeCoverage": 0,
+                    "leiosHeaderDiffusionPeriodLength": 0,
+                    "leiosQuorumStakeThreshold": 0,
+                    "leiosVotingPeriodLength": 0,
                     "maxBlockBodySize": 0,
                     "maxBlockExecutionUnits": {
                         "memory": 0,
@@ -124,8 +141,15 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
+                    "maxEndorserBlockBodySize": 0,
+                    "maxEndorserBlockExUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxEndorserBlockHeaderSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerEndorserBlock": 0,
                     "maxRefScriptSizePerTx": 0,
                     "maxTxExecutionUnits": {
                         "memory": 0,
@@ -194,6 +218,11 @@
                     },
                     "govActionDeposit": 0,
                     "govActionLifetime": 0,
+                    "leiosAdditionalDiffusionPeriodLength": 0,
+                    "leiosCommitteeStakeCoverage": 0,
+                    "leiosHeaderDiffusionPeriodLength": 0,
+                    "leiosQuorumStakeThreshold": 0,
+                    "leiosVotingPeriodLength": 0,
                     "maxBlockBodySize": 0,
                     "maxBlockExecutionUnits": {
                         "memory": 0,
@@ -201,8 +230,15 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
+                    "maxEndorserBlockBodySize": 0,
+                    "maxEndorserBlockExUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxEndorserBlockHeaderSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerEndorserBlock": 0,
                     "maxRefScriptSizePerTx": 0,
                     "maxTxExecutionUnits": {
                         "memory": 0,
@@ -268,6 +304,11 @@
             },
             "govActionDeposit": 0,
             "govActionLifetime": 0,
+            "leiosAdditionalDiffusionPeriodLength": 0,
+            "leiosCommitteeStakeCoverage": 0,
+            "leiosHeaderDiffusionPeriodLength": 0,
+            "leiosQuorumStakeThreshold": 0,
+            "leiosVotingPeriodLength": 0,
             "maxBlockBodySize": 0,
             "maxBlockExecutionUnits": {
                 "memory": 0,
@@ -275,8 +316,15 @@
             },
             "maxBlockHeaderSize": 0,
             "maxCollateralInputs": 5,
+            "maxEndorserBlockBodySize": 0,
+            "maxEndorserBlockExUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxEndorserBlockHeaderSize": 0,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerEndorserBlock": 0,
             "maxRefScriptSizePerTx": 0,
             "maxTxExecutionUnits": {
                 "memory": 0,
@@ -1021,6 +1069,11 @@
             },
             "govActionDeposit": 100000000000,
             "govActionLifetime": 6,
+            "leiosAdditionalDiffusionPeriodLength": 5,
+            "leiosCommitteeStakeCoverage": 0.51,
+            "leiosHeaderDiffusionPeriodLength": 5,
+            "leiosQuorumStakeThreshold": 0.51,
+            "leiosVotingPeriodLength": 5,
             "maxBlockBodySize": 90112,
             "maxBlockExecutionUnits": {
                 "memory": 62000000,
@@ -1028,8 +1081,15 @@
             },
             "maxBlockHeaderSize": 1100,
             "maxCollateralInputs": 3,
+            "maxEndorserBlockBodySize": 524288,
+            "maxEndorserBlockExUnits": {
+                "memory": 40000000000,
+                "steps": 10000000
+            },
+            "maxEndorserBlockHeaderSize": 65536,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 1048576,
+            "maxRefScriptSizePerEndorserBlock": 1048576,
             "maxRefScriptSizePerTx": 204800,
             "maxTxExecutionUnits": {
                 "memory": 14000000,
@@ -1751,6 +1811,11 @@
                 },
                 "govActionDeposit": 100000000000,
                 "govActionLifetime": 6,
+                "leiosAdditionalDiffusionPeriodLength": 5,
+                "leiosCommitteeStakeCoverage": 0.51,
+                "leiosHeaderDiffusionPeriodLength": 5,
+                "leiosQuorumStakeThreshold": 0.51,
+                "leiosVotingPeriodLength": 5,
                 "maxBlockBodySize": 90112,
                 "maxBlockExecutionUnits": {
                     "memory": 62000000,
@@ -1758,8 +1823,15 @@
                 },
                 "maxBlockHeaderSize": 1100,
                 "maxCollateralInputs": 3,
+                "maxEndorserBlockBodySize": 524288,
+                "maxEndorserBlockExUnits": {
+                    "memory": 40000000000,
+                    "steps": 10000000
+                },
+                "maxEndorserBlockHeaderSize": 65536,
                 "maxPledgeLeverage": null,
                 "maxRefScriptSizePerBlock": 1048576,
+                "maxRefScriptSizePerEndorserBlock": 1048576,
                 "maxRefScriptSizePerTx": 204800,
                 "maxTxExecutionUnits": {
                     "memory": 14000000,
@@ -1832,6 +1904,11 @@
                     },
                     "govActionDeposit": 0,
                     "govActionLifetime": 0,
+                    "leiosAdditionalDiffusionPeriodLength": 0,
+                    "leiosCommitteeStakeCoverage": 0,
+                    "leiosHeaderDiffusionPeriodLength": 0,
+                    "leiosQuorumStakeThreshold": 0,
+                    "leiosVotingPeriodLength": 0,
                     "maxBlockBodySize": 0,
                     "maxBlockExecutionUnits": {
                         "memory": 0,
@@ -1839,8 +1916,15 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
+                    "maxEndorserBlockBodySize": 0,
+                    "maxEndorserBlockExUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxEndorserBlockHeaderSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerEndorserBlock": 0,
                     "maxRefScriptSizePerTx": 0,
                     "maxTxExecutionUnits": {
                         "memory": 0,
@@ -1909,6 +1993,11 @@
                     },
                     "govActionDeposit": 0,
                     "govActionLifetime": 0,
+                    "leiosAdditionalDiffusionPeriodLength": 0,
+                    "leiosCommitteeStakeCoverage": 0,
+                    "leiosHeaderDiffusionPeriodLength": 0,
+                    "leiosQuorumStakeThreshold": 0,
+                    "leiosVotingPeriodLength": 0,
                     "maxBlockBodySize": 0,
                     "maxBlockExecutionUnits": {
                         "memory": 0,
@@ -1916,8 +2005,15 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
+                    "maxEndorserBlockBodySize": 0,
+                    "maxEndorserBlockExUnits": {
+                        "memory": 0,
+                        "steps": 0
+                    },
+                    "maxEndorserBlockHeaderSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
+                    "maxRefScriptSizePerEndorserBlock": 0,
                     "maxRefScriptSizePerTx": 0,
                     "maxTxExecutionUnits": {
                         "memory": 0,
@@ -1983,6 +2079,11 @@
             },
             "govActionDeposit": 0,
             "govActionLifetime": 0,
+            "leiosAdditionalDiffusionPeriodLength": 0,
+            "leiosCommitteeStakeCoverage": 0,
+            "leiosHeaderDiffusionPeriodLength": 0,
+            "leiosQuorumStakeThreshold": 0,
+            "leiosVotingPeriodLength": 0,
             "maxBlockBodySize": 0,
             "maxBlockExecutionUnits": {
                 "memory": 0,
@@ -1990,8 +2091,15 @@
             },
             "maxBlockHeaderSize": 0,
             "maxCollateralInputs": 5,
+            "maxEndorserBlockBodySize": 0,
+            "maxEndorserBlockExUnits": {
+                "memory": 0,
+                "steps": 0
+            },
+            "maxEndorserBlockHeaderSize": 0,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 0,
+            "maxRefScriptSizePerEndorserBlock": 0,
             "maxRefScriptSizePerTx": 0,
             "maxTxExecutionUnits": {
                 "memory": 0,

@@ -16,6 +16,7 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   PositiveInterval,
   ProtVer (..),
+  SlotInterval (..),
   StrictMaybe (..),
   UnitInterval,
   nonZero,
@@ -142,6 +143,8 @@ instance ToPlutusData Word8 where
   toPlutusData w8 = I (toInteger @Word8 w8)
   fromPlutusData (I n) | n >= 0 && n <= toInteger (maxBound @Word8) = Just $ fromInteger @Word8 n
   fromPlutusData _ = Nothing
+
+deriving instance ToPlutusData SlotInterval
 
 deriving instance ToPlutusData EpochInterval
 
