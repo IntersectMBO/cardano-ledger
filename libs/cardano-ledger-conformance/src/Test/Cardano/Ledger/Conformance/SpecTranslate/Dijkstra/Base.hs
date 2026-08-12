@@ -205,7 +205,7 @@ instance SpecTranslate DijkstraEra (AccountBalanceIntervals DijkstraEra) where
       Agda.HSMap Agda.Credential Agda.BalanceInterval
 
   toSpecRep (AccountBalanceIntervals m) =
-    toSpecRepMap $ Map.mapKeys (\(AccountId c) -> c) m
+    toSpecRepMap $ Map.mapKeys (^. accountAddressCredentialL) m
 
 instance SpecTranslate DijkstraEra (AlonzoScript DijkstraEra) where
   type SpecRep DijkstraEra (AlonzoScript DijkstraEra) = Agda.Script

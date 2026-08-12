@@ -192,6 +192,7 @@ subTransactionBodyRule ::
   , HuddleRule "required_top_level_guards" era
   , HuddleRule "direct_deposits" era
   , HuddleRule "account_balance_intervals" era
+  , HuddleRule "starting_account_balance_intervals" era
   , HuddleRule1 "set" era
   , HuddleRule1 "nonempty_set" era
   ) =>
@@ -220,6 +221,7 @@ subTransactionBodyRule pname p =
       , opt (idx 24 ==> huddleRule @"required_top_level_guards" p)
       , opt (idx 25 ==> huddleRule @"direct_deposits" p)
       , opt (idx 26 ==> huddleRule @"account_balance_intervals" p)
+      , opt (idx 27 ==> huddleRule @"starting_account_balance_intervals" p)
       ]
 
 requiredTopLevelGuardsRule ::
@@ -256,7 +258,7 @@ directDepositsRule pname p =
 
 accountBalanceIntervals ::
   forall era name.
-  ( HuddleRule "credential" era
+  ( HuddleRule "reward_account" era
   , HuddleRule "account_balance_interval" era
   , KnownSymbol name
   ) =>
@@ -267,13 +269,13 @@ accountBalanceIntervals pname p =
   pname
     =.= mp
       [ 1
-          <+ asKey (huddleRule @"credential" p)
+          <+ asKey (huddleRule @"reward_account" p)
           ==> huddleRule @"account_balance_interval" p
       ]
 
 accountBalanceIntervalsRule ::
   forall era.
-  ( HuddleRule "credential" era
+  ( HuddleRule "reward_account" era
   , HuddleRule "account_balance_interval" era
   ) =>
   Proxy "account_balance_intervals" ->
@@ -283,7 +285,7 @@ accountBalanceIntervalsRule = accountBalanceIntervals
 
 startingAccountBalanceIntervalsRule ::
   forall era.
-  ( HuddleRule "credential" era
+  ( HuddleRule "reward_account" era
   , HuddleRule "account_balance_interval" era
   ) =>
   Proxy "starting_account_balance_intervals" ->
