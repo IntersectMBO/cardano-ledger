@@ -101,12 +101,13 @@ instance DecCBOR IndividualPoolStake where
         <*> decCBOR
 
 instance ToKeyValuePairs IndividualPoolStake where
-  toKeyValuePairs IndividualPoolStake {..} =
-    [ "individualPoolStake" .= individualPoolStake
-    , "individualTotalPoolStake" .= individualTotalPoolStake
-    , "individualPoolStakeVrf" .= individualPoolStakeVrf
-    , "individualPoolStakeBls" .= individualPoolStakeBls
-    ]
+  toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
+    let IndividualPoolStake {..} = indivPoolStake
+     in [ "individualPoolStake" .= individualPoolStake
+        , "individualTotalPoolStake" .= individualTotalPoolStake
+        , "individualPoolStakeVrf" .= individualPoolStakeVrf
+        , "individualPoolStakeBls" .= individualPoolStakeBls
+        ]
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values
