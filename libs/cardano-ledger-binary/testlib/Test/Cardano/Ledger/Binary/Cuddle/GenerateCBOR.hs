@@ -45,10 +45,10 @@ data GenerateCBOROpts = GenerateCBOROpts
   , gcboVerbose :: !Bool
   }
 
-readPositiveInt :: Opt.ReadM Int
-readPositiveInt = do
+readNonNegativeInt :: Opt.ReadM Int
+readNonNegativeInt = do
   n <- Opt.auto
-  when (n <= 0) $ Opt.readerError "Expected a positive number"
+  when (n < 0) $ Opt.readerError "Expected a nonnegative number"
   pure n
 
 optsParser :: [String] -> Opt.Parser GenerateCBOROpts
@@ -65,13 +65,13 @@ optsParser eras =
             <> Opt.help "CDDL rule names to generate CBOR for"
       )
     <*> Opt.optional
-      ( Opt.option readPositiveInt $
+      ( Opt.option readNonNegativeInt $
           Opt.long "zap"
             <> Opt.metavar "N"
             <> Opt.help "Generate corrupted (zapped) CBOR with N mistakes"
       )
     <*> Opt.option
-      Opt.auto
+      readNonNegativeInt
       ( Opt.long "count"
           <> Opt.short 'n'
           <> Opt.metavar "N"
@@ -90,7 +90,7 @@ optsParser eras =
           <> Opt.help "Output raw CBOR bytes instead of hex encoding"
       )
     <*> Opt.option
-      Opt.auto
+      readNonNegativeInt
       ( Opt.long "tries"
           <> Opt.short 't'
           <> Opt.metavar "N"
@@ -153,8 +153,10 @@ emitSample tries opts env ruleName sampleIx
           | otherwise = BS8.putStrLn (Base16.encode bs)
         validationResult = validateCBOR bs (Name ruleName) (mapIndex (heRoot env))
       case gcboZap opts of
-        Just _
-          | zrZapped == 0 -> warn "Warning: no decision points for the zapper to zap, retrying" >> retry
+        Just nZaps
+          | nZaps == 0 -> outputBinary
+          | zrZapped < nZaps ->
+              warn "Warning: not enough decision points for the zapper to zap, retrying" >> retry
           | otherwise -> case validationResult of
               Left (RuleDoesNotExist n) -> dieWithInfo $ "Failed to validate because rule does not exist: " <> show n
               Left (LeftoverBytes _) ->
@@ -172,4 +174,4 @@ emitSample tries opts env ruleName sampleIx
           hPutStrLn stderr $ msg <> extraInfo
       | otherwise = pure ()
     dieWithInfo msg =
-      dieWithInfo $ msg <> extraInfo
+      die $ msg <> extraInfo
