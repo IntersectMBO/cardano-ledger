@@ -235,7 +235,7 @@ conwayDelegTransition = do
   case cert of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
-      Shelley.checkAccountAlreadyRegistered @rule accounts stakeCred
+      Shelley.checkAccountAlreadyRegistered accounts stakeCred
       pure $
         certState
           & certDStateL . accountsL
