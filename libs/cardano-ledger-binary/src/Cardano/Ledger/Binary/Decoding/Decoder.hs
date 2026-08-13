@@ -92,10 +92,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   -- *** Time
   decodeUTCTime,
 
-  -- *** Network
-  decodeIPv4,
-  decodeIPv6,
-
   -- ** Lifted @cborg@ decoders
   decodeBool,
   decodeBreakOr,
@@ -144,6 +140,12 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeString,
   decodeStringCanonical,
   decodeStringIndef,
+  decodeStringIndefLen,
+  decodeStringDefOrIndef,
+  decodeBytesIndefLen,
+  decodeBytesDefOrIndef,
+  decodeByteArrayIndefLen,
+  decodeByteArrayDefOrIndef,
   decodeTag,
   decodeTag64,
   decodeTag64Canonical,
@@ -170,7 +172,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   liftST,
 ) where
 
-import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Base.Typeable (TypeName)
 import qualified Cardano.Binary.FixedSizeCodec as FSC
 import Cardano.Ledger.Binary.Plain (
@@ -183,7 +184,7 @@ import Cardano.Ledger.Binary.Plain (
 import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeBytes, decodeTagMaybe)
 import Cardano.Ledger.Binary.Version (Version, mkVersion32, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
-import Codec.CBOR.ByteArray (ByteArray (..), fromShortByteString, toShortByteString)
+import Codec.CBOR.ByteArray (ByteArray (..))
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
   DecodeAction (..),
@@ -263,11 +264,11 @@ import Control.Monad
 import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
-import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BSB
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Compose (Compose (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -280,6 +281,8 @@ import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.Builder as B
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (UTCTime (..), picosecondsToDiffTime)
 import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
@@ -358,19 +361,6 @@ decodeBytes =
     (natVersion @12)
     decodeBytesDefOrIndef
     decodeBytesDefinite
-  where
-    decodeBytesDefOrIndef = do
-      peekTokenType >>= \case
-        C.TypeBytesIndef -> do
-          decodeBytesIndef
-          let go !acc =
-                decodeBreakOr >>= \case
-                  True -> pure $! BS.concat (reverse acc)
-                  False -> do
-                    !chunk <- decodeBytesDefinite
-                    go (chunk : acc)
-          go []
-        _ -> decodeBytesDefinite
 
 decodeFixedSized :: FSC.FixedSizeCodec a => Decoder s a
 decodeFixedSized = FSC.rawDecodeFixedSized =<< decodeBytes
@@ -1338,46 +1328,6 @@ decodeUTCTime =
 {-# INLINE decodeUTCTime #-}
 
 --------------------------------------------------------------------------------
--- Network
---------------------------------------------------------------------------------
-
--- | Convert a `Get` monad from @binary@ package into a `Decoder`
-binaryGetDecoder ::
-  -- | Name of the function or type for error reporting
-  Text.Text ->
-  -- | Deserializer for the @binary@ package
-  Get a ->
-  Decoder s a
-binaryGetDecoder name getter = do
-  bs <- decodeBytes
-  case runGetOrFail getter (BSL.fromStrict bs) of
-    Left (_, _, err) -> cborError $ DecoderErrorCustom name (Text.pack err)
-    Right (leftOver, _, ha)
-      | BSL.null leftOver -> pure ha
-      | otherwise ->
-          cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
-{-# INLINE binaryGetDecoder #-}
-
-decodeIPv4 :: Decoder s IPv4
-decodeIPv4 =
-  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32le
-{-# INLINE decodeIPv4 #-}
-
-getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
-getHostAddress6 = do
-  !w1 <- getWord32le
-  !w2 <- getWord32le
-  !w3 <- getWord32le
-  !w4 <- getWord32le
-  return (w1, w2, w3, w4)
-{-# INLINE getHostAddress6 #-}
-
-decodeIPv6 :: Decoder s IPv6
-decodeIPv6 =
-  toIPv6w <$> binaryGetDecoder "decodeIPv6" getHostAddress6
-{-# INLINE decodeIPv6 #-}
-
---------------------------------------------------------------------------------
 -- Wrapped CBORG decoders
 --------------------------------------------------------------------------------
 
@@ -1432,19 +1382,6 @@ decodeByteArray =
     (natVersion @12)
     decodeByteArrayDefOrIndef
     decodeByteArrayDefinite
-  where
-    decodeByteArrayDefOrIndef = do
-      peekTokenType >>= \case
-        C.TypeBytesIndef -> do
-          decodeBytesIndef
-          let go !acc =
-                decodeBreakOr >>= \case
-                  True -> pure $! SBS.concat (reverse acc)
-                  False -> do
-                    !chunk <- toShortByteString <$> decodeByteArrayDefinite
-                    go (chunk : acc)
-          fromShortByteString <$> go []
-        _ -> decodeByteArrayDefinite
 {-# INLINE decodeByteArray #-}
 
 decodeByteArrayCanonical :: Decoder s ByteArray
@@ -1611,8 +1548,16 @@ decodeSimpleCanonical :: Decoder s Word8
 decodeSimpleCanonical = fromPlainDecoder C.decodeSimpleCanonical
 {-# INLINE decodeSimpleCanonical #-}
 
+decodeStringDefinite :: Decoder s Text.Text
+decodeStringDefinite = fromPlainDecoder C.decodeString
+{-# INLINE decodeStringDefinite #-}
+
 decodeString :: Decoder s Text.Text
-decodeString = fromPlainDecoder C.decodeString
+decodeString =
+  ifDecoderVersionAtLeast
+    (natVersion @12)
+    decodeStringDefOrIndef
+    decodeStringDefinite
 {-# INLINE decodeString #-}
 
 decodeStringCanonical :: Decoder s Text.Text
@@ -1622,6 +1567,67 @@ decodeStringCanonical = fromPlainDecoder C.decodeStringCanonical
 decodeStringIndef :: Decoder s ()
 decodeStringIndef = fromPlainDecoder C.decodeStringIndef
 {-# INLINE decodeStringIndef #-}
+
+-- | Loop over chunks of an indefinite-length text string until a break token is
+-- encountered, concatenating the chunks in order.
+decodeStringIndefLen :: Decoder s Text.Text
+decodeStringIndefLen = do
+  decodeStringIndef
+  decodeSequenceLenIndef
+    (\b t -> b <> B.fromText t)
+    mempty
+    (LT.toStrict . B.toLazyText)
+    decodeStringDefinite
+{-# INLINE decodeStringIndefLen #-}
+
+-- | Decode a text string that may be either definite-length or
+-- indefinite-length encoded.
+decodeStringDefOrIndef :: Decoder s Text.Text
+decodeStringDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeStringIndef -> decodeStringIndefLen
+    _ -> decodeStringDefinite
+{-# INLINE decodeStringDefOrIndef #-}
+
+-- | Loop over chunks of an indefinite-length byte string until a break token
+-- is encountered, concatenating the chunks in order.
+decodeBytesIndefLen :: Decoder s BS.ByteString
+decodeBytesIndefLen = do
+  decodeBytesIndef
+  decodeSequenceLenIndef
+    (\b bs -> b <> BSB.byteString bs)
+    mempty
+    (LBS.toStrict . BSB.toLazyByteString)
+    decodeBytesDefinite
+{-# INLINE decodeBytesIndefLen #-}
+
+-- | Decode a byte string that may be either definite-length or
+-- indefinite-length encoded.
+decodeBytesDefOrIndef :: Decoder s BS.ByteString
+decodeBytesDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeBytesIndef -> decodeBytesIndefLen
+    _ -> decodeBytesDefinite
+{-# INLINE decodeBytesDefOrIndef #-}
+
+-- | 'decodeBytesIndefLen' specialised to the cborg 'ByteArray' type.
+decodeByteArrayIndefLen :: Decoder s ByteArray
+decodeByteArrayIndefLen = do
+  decodeBytesIndef
+  decodeSequenceLenIndef
+    (flip (:))
+    []
+    (BA . mconcat . reverse . map unBA)
+    decodeByteArrayDefinite
+{-# INLINE decodeByteArrayIndefLen #-}
+
+-- | 'decodeBytesDefOrIndef' specialised to the cborg 'ByteArray' type.
+decodeByteArrayDefOrIndef :: Decoder s ByteArray
+decodeByteArrayDefOrIndef =
+  peekTokenType >>= \case
+    C.TypeBytesIndef -> decodeByteArrayIndefLen
+    _ -> decodeByteArrayDefinite
+{-# INLINE decodeByteArrayDefOrIndef #-}
 
 decodeTag :: Decoder s Word
 decodeTag = fromPlainDecoder C.decodeTag
