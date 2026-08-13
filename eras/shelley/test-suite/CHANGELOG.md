@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.9.0.1
+## 1.10.0.0
 
-*
+* Remove `TestingLedger`
+* Change constraints of `commonTests`, `Test.Cardano.Ledger.Shelley.Rules.Deleg.tests` and `delegTraceFromBlock`
 
 ## 1.9.0.0
 

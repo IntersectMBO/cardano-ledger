@@ -2,7 +2,7 @@
 
 ## 1.24.0.0
 
-* Replace `StakeKeyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ConwayDelegPredFailure`
+* Replace `StakeKeyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ConwayDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
