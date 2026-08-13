@@ -63,7 +63,6 @@ tests ::
   , ShelleyEraAccounts era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
-  , EraRule "DELEG" era ~ Shelley.DELEG era
   , EraRuleFailure "DELEG" era ~ Shelley.ShelleyDelegPredFailure era
   , InjectRuleFailure "DELEG" Shelley.AccountAlreadyRegistered era
   ) =>

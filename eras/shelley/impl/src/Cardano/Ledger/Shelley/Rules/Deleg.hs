@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -11,7 +10,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -101,11 +99,12 @@ instance InjectRuleFailure "DELEG" AccountAlreadyRegistered ShelleyEra where
 -- (hk ∉ dom (rewards ds))
 -- @
 checkAccountAlreadyRegistered ::
-  forall rule era.
+  forall rule sts era.
   ( InjectRuleFailure rule AccountAlreadyRegistered era
+  , PredicateFailure sts ~ EraRuleFailure rule era
   , EraAccounts era
   ) =>
-  Accounts era -> Credential Staking -> Rule (EraRule rule era) 'Transition ()
+  Accounts era -> Credential Staking -> Rule sts 'Transition ()
 checkAccountAlreadyRegistered accounts cred =
   not (isAccountRegistered cred accounts) ?!. AccountAlreadyRegistered cred
 
@@ -173,7 +172,6 @@ instance
   , ShelleyEraAccounts era
   , ShelleyEraTxCert era
   , AtMostEra "Babbage" era
-  , EraRule "DELEG" era ~ DELEG era
   , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
   , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
@@ -186,7 +184,7 @@ instance
   type PredicateFailure (DELEG era) = ShelleyDelegPredFailure era
   type Event (DELEG era) = ShelleyDelegEvent era
 
-  transitionRules = [delegationTransition @era]
+  transitionRules = [delegationTransition]
 
 instance NFData (ShelleyDelegPredFailure era)
 
@@ -290,17 +288,15 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
-  forall era.
   ( EraCertState era
   , ShelleyEraAccounts era
   , ShelleyEraTxCert era
   , EraPParams era
   , AtMostEra "Babbage" era
-  , EraRule "DELEG" era ~ DELEG era
   , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
   , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
-  TransitionRule (EraRule "DELEG" era)
+  TransitionRule (DELEG era)
 delegationTransition = do
   TRC (DelegEnv slot epochNo ptr chainAccountState pp, certState, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
@@ -428,14 +424,17 @@ delegationTransition = do
       pure certState
 
 checkSlotNotTooLate ::
-  ( PredicateFailure (EraRule rule era) ~ ShelleyDelegPredFailure era
-  , Event (EraRule rule era) ~ ShelleyDelegEvent era
-  , BaseM (EraRule rule era) ~ ShelleyBase
-  , STS (EraRule rule era)
+  ( EraCertState era
+  , ShelleyEraAccounts era
+  , ShelleyEraTxCert era
+  , EraPParams era
+  , AtMostEra "Babbage" era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   SlotNo ->
   EpochNo ->
-  Rule (EraRule rule era) 'Transition ()
+  Rule (DELEG era) 'Transition ()
 checkSlotNotTooLate slot curEpochNo = do
   sp <- liftSTS $ asks stabilityWindow
   ei <- liftSTS $ asks epochInfoPure

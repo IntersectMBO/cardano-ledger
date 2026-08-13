@@ -233,7 +233,6 @@ instance
   , AtMostEra "Babbage" era
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   , Event (EraRule "DELEG" era) ~ ShelleyDelegEvent era
-  , EraRule "DELEG" era ~ DELEG era
   , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
   , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>

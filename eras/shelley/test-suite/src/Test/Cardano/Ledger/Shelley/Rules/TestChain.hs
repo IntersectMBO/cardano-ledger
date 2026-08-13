@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
  )
 import Cardano.Ledger.Shelley.Rules
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.BlockHeader (
   BHeader (..),
@@ -229,7 +228,6 @@ delegTraceFromBlock ::
   ( ChainProperty era
   , ShelleyEraTxBody era
   , ShelleyEraAccounts era
-  , EraRule "DELEG" era ~ Shelley.DELEG era
   , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
   , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>

@@ -112,58 +112,64 @@ failOnJustStatic cond onJust =
 
 -- | Same as `?!`, except accepts injectable predicate failure
 (?!.) ::
-  InjectRuleFailure rule t era =>
-  Bool -> t era -> Rule (EraRule rule era) ctx ()
+  (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
+  Bool -> t era -> Rule sts ctx ()
 (?!.) cond predFailure = cond ?! injectFailure predFailure
 {-# INLINE (?!.) #-}
 
 -- | Same as `?!#`, except accepts injectable predicate failure
 (?!#.) ::
-  InjectRuleFailure rule t era =>
-  Bool -> t era -> Rule (EraRule rule era) ctx ()
+  (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
+  Bool -> t era -> Rule sts ctx ()
 (?!#.) cond predFailure = cond ?!# injectFailure predFailure
 {-# INLINE (?!#.) #-}
 
 -- | Same as `failOnJust`, except accepts injectable predicate failure
 checkFailOnJust ::
-  InjectRuleFailure rule t era =>
-  Maybe a -> (a -> t era) -> Rule (EraRule rule era) ctx ()
+  (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
+  Maybe a -> (a -> t era) -> Rule sts ctx ()
 checkFailOnJust cond onJust = failOnJust cond (injectFailure . onJust)
 {-# INLINE checkFailOnJust #-}
 
 -- | Same as `failOnNonEmpty`, except accepts injectable predicate failure
 checkFailOnNonEmpty ::
-  InjectRuleFailure rule t era =>
-  Foldable f =>
-  f a -> (NonEmpty a -> t era) -> Rule (EraRule rule era) ctx ()
+  ( InjectRuleFailure rule t era
+  , PredicateFailure sts ~ EraRuleFailure rule era
+  , Foldable f
+  ) =>
+  f a -> (NonEmpty a -> t era) -> Rule sts ctx ()
 checkFailOnNonEmpty cond onJust = failOnNonEmpty cond (injectFailure . onJust)
 {-# INLINE checkFailOnNonEmpty #-}
 
 -- | Same as `failOnNonEmptySet`, except accepts injectable predicate failure
 checkFailOnNonEmptySet ::
-  (InjectRuleFailure rule t era, Foldable f, Ord a) =>
-  f a -> (NES.NonEmptySet a -> t era) -> Rule (EraRule rule era) ctx ()
+  ( InjectRuleFailure rule t era
+  , PredicateFailure sts ~ EraRuleFailure rule era
+  , Foldable f
+  , Ord a
+  ) =>
+  f a -> (NES.NonEmptySet a -> t era) -> Rule sts ctx ()
 checkFailOnNonEmptySet cond onJust = failOnNonEmptySet cond (injectFailure . onJust)
 {-# INLINE checkFailOnNonEmptySet #-}
 
 -- | Same as `failOnNonEmptyMap`, except accepts injectable predicate failure
 checkFailOnNonEmptyMap ::
-  InjectRuleFailure rule t era =>
-  Map k v -> (NEM.NonEmptyMap k v -> t era) -> Rule (EraRule rule era) ctx ()
+  (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
+  Map k v -> (NEM.NonEmptyMap k v -> t era) -> Rule sts ctx ()
 checkFailOnNonEmptyMap cond onJust = failOnNonEmptyMap cond (injectFailure . onJust)
 {-# INLINE checkFailOnNonEmptyMap #-}
 
 -- | Same as `?!#:`, except accepts injectable predicate failure and is not designed to be used as
 -- infix operator
 checkFailOnLeftStatic ::
-  InjectRuleFailure rule t era =>
-  Either e () -> (e -> t era) -> Rule (EraRule rule era) ctx ()
+  (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
+  Either e () -> (e -> t era) -> Rule sts ctx ()
 checkFailOnLeftStatic cond predFailure = cond ?!#: (injectFailure . predFailure)
 {-# INLINE checkFailOnLeftStatic #-}
 
 -- | Same as `failOnJustStatic`, except accepts injectable predicate failure
 checkFailOnJustStatic ::
-  InjectRuleFailure rule t era =>
-  Maybe a -> (a -> t era) -> Rule (EraRule rule era) ctx ()
+  (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
+  Maybe a -> (a -> t era) -> Rule sts ctx ()
 checkFailOnJustStatic cond onJust = failOnJustStatic cond (injectFailure . onJust)
 {-# INLINE checkFailOnJustStatic #-}
