@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
 * Rename:
   - `DijkstraUtxoEnv` -> `UtxoEnv` and add `uePState` field
   - `dueSlot` -> `ueSlot`
