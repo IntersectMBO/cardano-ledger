@@ -2,6 +2,12 @@
 
 ## 0.4.0.0
 
+* Rename:
+  - `DijkstraUtxoEnv` -> `UtxoEnv` and add `uePState` field
+  - `dueSlot` -> `ueSlot`
+  - `duePParams` -> `uePParams`
+  - `dueCertState` -> `ueOriginalCertState`
+  - `dueOriginalUtxo` -> `ueOriginalUtxo`
 * Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
 * Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
 * Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
