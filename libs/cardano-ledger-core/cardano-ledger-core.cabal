@@ -320,6 +320,7 @@ test-suite tests
     Test.Cardano.Ledger.BinarySpec
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
+    Test.Cardano.Ledger.State.PoolDistrSpec
     Test.Cardano.Ledger.State.StakePoolSpec
     Test.Cardano.Ledger.StorableSpec
     Test.Cardano.Ledger.ToolsSpec
