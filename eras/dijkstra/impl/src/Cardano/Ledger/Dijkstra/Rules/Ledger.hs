@@ -72,7 +72,7 @@ import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubEntities (SubEntitiesPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
-import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), batchNonDistinctRefScriptsSize)
@@ -311,7 +311,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "ENTITIES" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
-  , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
@@ -374,7 +374,7 @@ dijkstraLedgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "ENTITIES" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
-  , Environment (EraRule "UTXOW" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
@@ -464,11 +464,17 @@ dijkstraLedgerTransition = do
           )
       else pure (utxoStateAfterSubLedgers, certStateAfterSubLedgers)
 
-  -- Call UTXOW with DijkstraUtxoEnv, passing the original UTxO and original certState
+  -- Call UTXOW with UtxoEnv, passing the original UTxO, the original certState,
+  -- and the PState updated by all sub-ledgers
   utxoStateFinal <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( DijkstraUtxoEnv slot pp (lsCertState ledgerState) originalUtxo
+        ( UtxoEnv
+            slot
+            pp
+            (certStateAfterSubLedgers ^. certPStateL)
+            (lsCertState ledgerState)
+            originalUtxo
         , utxoStateBeforeUtxow
         , stAnnTx
         )
@@ -480,7 +486,7 @@ instance
   , BabbageEraTxBody era
   , Embed (EraRule "UTXO" era) (UTXOW era)
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , Script era ~ AlonzoScript era
   , TxOut era ~ BabbageTxOut era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
