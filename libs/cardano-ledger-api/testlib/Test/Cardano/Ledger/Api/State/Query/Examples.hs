@@ -61,6 +61,8 @@ import Cardano.Ledger.BaseTypes (
   Port (..),
   StrictMaybe (..),
   UnitInterval,
+  Version,
+  natVersion,
   textToDns,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
@@ -73,6 +75,7 @@ import Cardano.Ledger.State (
   ChainAccountState (..),
   FuturePParams (..),
   IndividualPoolStake (..),
+  LeiosKey,
   PoolDistr (..),
   StakePoolParams (..),
   StakePoolRelay (..),
@@ -232,8 +235,11 @@ querySPOStakeDistrExamples =
       ]
   ]
 
-querySetSnapshotStakePoolDistrExamples :: [PoolDistr]
-querySetSnapshotStakePoolDistrExamples =
+-- | A pool only registers a BLS key from version 12 on, so earlier versions
+-- carry none. The encoder applies the same gate, so an example with a key at an
+-- earlier version does not round-trip.
+querySetSnapshotStakePoolDistrExamples :: Version -> [PoolDistr]
+querySetSnapshotStakePoolDistrExamples version =
   [ def
   , examplePoolDistr
   , PoolDistr
@@ -254,13 +260,18 @@ querySetSnapshotStakePoolDistrExamples =
                   { individualPoolStake = 3 % 8
                   , individualTotalPoolStake = CompactCoin 5_000_000_000
                   , individualPoolStakeVrf = exampleVrfVerKeyHash
-                  , individualPoolStakeBls = SJust exampleLeiosKey
+                  , individualPoolStakeBls = leiosKey
                   }
               )
             ]
       , pdTotalActiveStake = knownNonZeroCoin @6_000_000_000
       }
   ]
+  where
+    leiosKey :: StrictMaybe LeiosKey
+    leiosKey
+      | version >= natVersion @12 = SJust exampleLeiosKey
+      | otherwise = SNothing
 
 queryStakePoolDefaultVoteExamples :: [DefaultVote]
 queryStakePoolDefaultVoteExamples =

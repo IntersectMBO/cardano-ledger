@@ -140,7 +140,7 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "querySPOStakeDistr" querySPOStakeDistrExamples
       eraLedgerStateQueryGoldenSpec @era
         "querySetSnapshotStakePoolDistr"
-        querySetSnapshotStakePoolDistrExamples
+        (querySetSnapshotStakePoolDistrExamples (eraProtVerHigh @era))
       eraLedgerStateQueryGoldenSpec @era
         "queryStakePoolDefaultVote"
         queryStakePoolDefaultVoteExamples

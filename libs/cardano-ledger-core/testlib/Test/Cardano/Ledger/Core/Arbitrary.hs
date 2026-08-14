@@ -536,7 +536,12 @@ instance Arbitrary PoolDistr where
   arbitrary = PoolDistr <$> arbitrary <*> arbitrary
 
 instance Arbitrary IndividualPoolStake where
-  arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    IndividualPoolStake
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> pure BaseTypes.SNothing -- individualPoolStakeBls: only encoded in PV12+
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRepState --------------------------------------------------------------

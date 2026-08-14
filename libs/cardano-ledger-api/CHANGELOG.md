@@ -16,6 +16,7 @@
 ### `testlib`
 
 * Change constraints on `queryCurrentPParamsExamples`, `queryFuturePParamsExamples`, `queryRatifyStateExamples`, `queryGovStateExamples` to `EraTest era`.
+* Change `querySetSnapshotStakePoolDistrExamples` to take the encoding `Version`. A pool only registers a BLS key from version 12 on.
 * Tighten `queryProposalsExamples` constraint to `ConwayEraPParams era` (via `exampleProposalProcedureParameterChange`).
 * Populate `ensCurPParams`, `cgsCurPParams`, `cgsFuturePParams` with `examplePParams`.
 

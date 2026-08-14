@@ -38,6 +38,8 @@ import Cardano.Ledger.Binary (
   cborError,
   decodeListLen,
   encodeListLen,
+  natVersion,
+  withCurrentEncodingVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
@@ -83,13 +85,19 @@ individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individua
 
 instance EncCBOR IndividualPoolStake where
   encCBOR (IndividualPoolStake stake stakeCoin vrf bls) =
-    mconcat
-      [ encodeListLen 4
-      , encCBOR stake
-      , encCBOR stakeCoin
-      , encCBOR vrf
-      , encCBOR bls
-      ]
+    withCurrentEncodingVersion $ \v ->
+      -- Registration only carries 'individualPoolStakeBls' from version 12 on,
+      -- so before that we leave it out. 'StakePoolParams' uses the same gate.
+      let (len, blsEncoding)
+            | v >= natVersion @12 = (4, encCBOR bls)
+            | otherwise = (3, mempty)
+       in mconcat
+            [ encodeListLen len
+            , encCBOR stake
+            , encCBOR stakeCoin
+            , encCBOR vrf
+            , blsEncoding
+            ]
 
 instance DecCBOR IndividualPoolStake where
   decCBOR = do
