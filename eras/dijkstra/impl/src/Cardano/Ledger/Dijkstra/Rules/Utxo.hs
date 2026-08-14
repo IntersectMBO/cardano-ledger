@@ -22,7 +22,7 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Utxo (
   UTXO,
-  DijkstraUtxoEnv (..),
+  UtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
 ) where
@@ -96,11 +96,12 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import Validation (failureUnless)
 
-data DijkstraUtxoEnv era = DijkstraUtxoEnv
-  { dueSlot :: SlotNo
-  , duePParams :: PParams era
-  , dueCertState :: CertState era
-  , dueOriginalUtxo :: UTxO era
+data UtxoEnv era = UtxoEnv
+  { ueSlot :: SlotNo
+  , uePParams :: PParams era
+  , uePState :: PState era
+  , ueOriginalCertState :: CertState era
+  , ueOriginalUtxo :: UTxO era
   }
 
 -- | Predicate failure for the Dijkstra Era
@@ -340,7 +341,7 @@ dijkstraUtxoTransition ::
   , InjectRuleFailure "UTXO" Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
@@ -354,12 +355,12 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo, utxos, stAnnTx) <-
+  TRC (UtxoEnv slot pp _pState originalCertState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied
-  let accounts = certState ^. certDStateL . accountsL
-  let originalPState = certState ^. certPStateL
+  let accounts = originalCertState ^. certDStateL . accountsL
+  let originalPState = originalCertState ^. certPStateL
 
   let txBody = tx ^. bodyTxL
 
@@ -428,7 +429,7 @@ dijkstraUtxoTransition = do
   () <- trans @(EraRule "UTXOS" era) $ TRC ((), (), stAnnTx)
   Babbage.updateUTxOState
     pp
-    certState
+    originalCertState
     tx
     (Conway.updateTreasuryDonation tx utxos)
 
@@ -450,7 +451,7 @@ instance
   , InjectRuleFailure "UTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" Conway.ConwayUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
@@ -468,7 +469,7 @@ instance
   where
   type State (UTXO era) = UTxOState era
   type Signal (UTXO era) = StAnnTx TopTx era
-  type Environment (UTXO era) = DijkstraUtxoEnv era
+  type Environment (UTXO era) = UtxoEnv era
   type BaseM (UTXO era) = ShelleyBase
   type PredicateFailure (UTXO era) = DijkstraUtxoPredFailure era
   type Event (UTXO era) = Alonzo.AlonzoUtxoEvent era
