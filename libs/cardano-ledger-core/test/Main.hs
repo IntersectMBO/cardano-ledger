@@ -7,6 +7,7 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.JsonSpec as JsonSpec
 import qualified Test.Cardano.Ledger.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.State.PoolDistrSpec as PoolDistrSpec
+import qualified Test.Cardano.Ledger.State.SnapShotsSpec as SnapShotsSpec
 import qualified Test.Cardano.Ledger.State.StakePoolSpec as StakePoolSpec
 import qualified Test.Cardano.Ledger.StorableSpec as StorableSpec
 import qualified Test.Cardano.Ledger.ToolsSpec as ToolsSpec
@@ -21,6 +22,7 @@ main =
       JsonSpec.spec
       PlutusSpec.spec
       PoolDistrSpec.spec
+      SnapShotsSpec.spec
       StakePoolSpec.spec
       StorableSpec.spec
       ToolsSpec.spec
