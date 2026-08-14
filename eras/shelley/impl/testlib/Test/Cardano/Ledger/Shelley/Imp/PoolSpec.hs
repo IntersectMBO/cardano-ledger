@@ -47,6 +47,16 @@ spec = describe "POOL" $ do
         tx
         [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
+    it "re-register a pool with too low cost" $ do
+      (kh, vrf) <- registerNewPool
+      pps <- poolParams kh vrf
+      minPoolCost <- getsPParams ppMinPoolCostL
+      tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
+      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
+      submitFailingTx
+        tx
+        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+
     it "register a pool with a staking address having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL
       accountCredential <- KeyHashObj <$> freshKeyHash
