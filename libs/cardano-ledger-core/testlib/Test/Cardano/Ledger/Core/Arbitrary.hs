@@ -714,7 +714,7 @@ instance Arbitrary StakePoolSnapShot where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> pure BaseTypes.SNothing -- spssLeiosKey: only encoded in PV12+
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

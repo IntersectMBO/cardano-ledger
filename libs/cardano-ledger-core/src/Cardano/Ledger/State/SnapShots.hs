@@ -44,7 +44,7 @@ import Cardano.Ledger.BaseTypes (
   KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
-  StrictMaybe,
+  StrictMaybe (SNothing),
   ToKeyValuePairs (..),
   UnitInterval,
   knownNonZeroBounded,
@@ -67,6 +67,9 @@ import Cardano.Ledger.Binary (
   decodeRecordNamedT,
   decodeVMap,
   encodeListLen,
+  ifDecoderVersionAtLeast,
+  natVersion,
+  withCurrentEncodingVersion,
  )
 import Cardano.Ledger.Binary.Decoding (interns)
 import Cardano.Ledger.Coin (
@@ -253,37 +256,54 @@ instance ToKeyValuePairs StakePoolSnapShot where
 instance EncCBOR StakePoolSnapShot where
   encCBOR spss@(StakePoolSnapShot _ _ _ _ _ _ _ _ _ _ _) =
     let StakePoolSnapShot {..} = spss
-     in encodeListLen 11
-          <> encCBOR spssStake
-          <> encCBOR spssStakeRatio
-          <> encCBOR spssSelfDelegatedOwners
-          <> encCBOR spssSelfDelegatedOwnersStake
-          <> encCBOR spssVrf
-          <> encCBOR spssLeiosKey
-          <> encCBOR spssPledge
-          <> encCBOR spssCost
-          <> encCBOR spssMargin
-          <> encCBOR spssNumDelegators
-          <> encCBOR spssAccountId
+     in withCurrentEncodingVersion $ \v ->
+          -- Registration only carries 'spssLeiosKey' from version 12 on, so
+          -- before that we leave it out. 'StakePoolParams' uses the same gate.
+          let (len, leiosKeyEncoding)
+                | v >= natVersion @12 = (11, encCBOR spssLeiosKey)
+                | otherwise = (10, mempty)
+           in encodeListLen len
+                <> encCBOR spssStake
+                <> encCBOR spssStakeRatio
+                <> encCBOR spssSelfDelegatedOwners
+                <> encCBOR spssSelfDelegatedOwnersStake
+                <> encCBOR spssVrf
+                <> leiosKeyEncoding
+                <> encCBOR spssPledge
+                <> encCBOR spssCost
+                <> encCBOR spssMargin
+                <> encCBOR spssNumDelegators
+                <> encCBOR spssAccountId
 
 instance DecShareCBOR StakePoolSnapShot where
   type Share StakePoolSnapShot = Interns (Credential Staking)
-  decSharePlusCBOR = decodeRecordNamedT "StakePoolSnapShot" (const 11) $ do
-    credInterns <- get
-    spssStake <- lift decCBOR
-    spssStakeRatio <- lift decCBOR
-    let unwrap cred =
-          fromMaybe (error $ "Impossible: Unwrapping an intern " <> show cred) $ credKeyHash cred
-    spssSelfDelegatedOwners <- Set.map (unwrap . interns credInterns . KeyHashObj) <$> lift decCBOR
-    spssSelfDelegatedOwnersStake <- lift decCBOR
-    spssVrf <- lift decCBOR
-    spssLeiosKey <- lift decCBOR
-    spssPledge <- lift decCBOR
-    spssCost <- lift decCBOR
-    spssMargin <- lift decCBOR
-    spssNumDelegators <- lift decCBOR
-    spssAccountId <- AccountId . interns credInterns <$> lift decCBOR
-    pure StakePoolSnapShot {..}
+
+  -- The version decides whether 'spssLeiosKey' is on the wire, so the decoder
+  -- returns the size to match against: 11 from version 12 on, 10 before that.
+  decSharePlusCBOR = snd <$> decodeRecordNamedT "StakePoolSnapShot" fst decoder
+    where
+      decoder = do
+        credInterns <- get
+        spssStake <- lift decCBOR
+        spssStakeRatio <- lift decCBOR
+        let unwrap cred =
+              fromMaybe (error $ "Impossible: Unwrapping an intern " <> show cred) $ credKeyHash cred
+        spssSelfDelegatedOwners <-
+          Set.map (unwrap . interns credInterns . KeyHashObj) <$> lift decCBOR
+        spssSelfDelegatedOwnersStake <- lift decCBOR
+        spssVrf <- lift decCBOR
+        (leiosKeyLen, spssLeiosKey) <-
+          lift $
+            ifDecoderVersionAtLeast
+              (natVersion @12)
+              (fmap (\leiosKey -> (1, leiosKey)) decCBOR)
+              (pure (0, SNothing))
+        spssPledge <- lift decCBOR
+        spssCost <- lift decCBOR
+        spssMargin <- lift decCBOR
+        spssNumDelegators <- lift decCBOR
+        spssAccountId <- AccountId . interns credInterns <$> lift decCBOR
+        pure (10 + leiosKeyLen, StakePoolSnapShot {..})
 
 -- | Snapshot of the stake distribution.
 data SnapShot = SnapShot

@@ -39,6 +39,7 @@
 * Add `LeiosKey`, `LeiosPubKey`, `LeiosPossessionProof` types with `EncCBOR`/`DecCBOR`, `ToJSON`/`FromJSON` instances
 * Make `FromJSON StakePoolParams` backward-compatible: `leiosKey` field is optional (defaults to `SNothing`)
 * Add `individualPoolStakeBls` field to `IndividualPoolStake`, encoded from protocol version 12 on
+* Add `spssLeiosKey` field to `StakePoolSnapShot`, encoded from protocol version 12 on. Before that version the record holds 10 fields, as it did before the field was added.
 
 ### `cddl`
 
