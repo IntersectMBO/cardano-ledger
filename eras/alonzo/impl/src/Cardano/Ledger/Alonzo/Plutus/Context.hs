@@ -143,11 +143,10 @@ class
 
   toPlutusArgs ::
     proxy l ->
-    ProtVer ->
+    LedgerTxInfo era ->
     ScriptHash ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
-    Maybe (Data era) ->
     Data era ->
     Either (ContextError era) (PlutusArgs l)
 

@@ -100,11 +100,10 @@ collectTwoPhaseScriptInputsOutputOrdering = do
                   error "PlutusV1 ScriptPurpose should be unevaluated"
               toPlutusArgs
                 plutus
-                protVer
+                lti
                 (plutusRunnableScriptHash plutusRunnable)
                 txInfo
                 spendingPurpose1
-                (Just (datum @AlonzoEra))
                 (redeemer @AlonzoEra)
           , pwcExUnits = ExUnits 5000 5000
           , pwcCostModel = zeroTestingCostModel PlutusV1

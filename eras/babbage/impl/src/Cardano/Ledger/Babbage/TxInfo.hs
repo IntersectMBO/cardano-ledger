@@ -7,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -45,10 +46,10 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   toLegacyPlutusArgs,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (toAsIx)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..), getSpendingDatum)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
@@ -425,22 +426,26 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxOut _ = transTxOutV2
 
 toPlutusV2Args ::
-  EraPlutusTxInfo 'PlutusV2 era =>
+  ( AlonzoEraUTxO era
+  , EraPlutusTxInfo 'PlutusV2 era
+  ) =>
   proxy 'PlutusV2 ->
-  ProtVer ->
+  LedgerTxInfo era ->
   ScriptHash ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
-  Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy pv _ txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV2Args proxy LedgerTxInfo {..} _ txInfo scriptPurpose redeemerData =
   PlutusV2Args
     <$> toLegacyPlutusArgs
       proxy
-      pv
+      ltiProtVer
       ()
       (PV2.ScriptContext txInfo)
       scriptPurpose
-      maybeSpendingData
+      maybeSpendingDatum
       redeemerData
+  where
+    maybeSpendingDatum =
+      getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem scriptPurpose

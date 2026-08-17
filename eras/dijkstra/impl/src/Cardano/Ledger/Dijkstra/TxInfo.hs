@@ -45,6 +45,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (toAsItem)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transRedeemer, transReferenceScript)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -836,17 +838,20 @@ scriptPurposeToScriptInfo sp datum topInfo = case sp of
   PV4.Guarding _ ix -> PV4.GuardingScript ix topInfo
 
 toPlutusV4Args ::
+  ( AlonzoEraUTxO era
+  , EraPlutusTxInfo PlutusV4 era
+  ) =>
   proxy 'PlutusV4 ->
-  ProtVer ->
+  LedgerTxInfo era ->
   ScriptHash ->
   PV4.TxInfo ->
-  PlutusPurpose AsIxItem DijkstraEra ->
-  Maybe (Data DijkstraEra) ->
-  Data DijkstraEra ->
-  Either (ContextError DijkstraEra) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy pv sh txInfo plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy pv sh plutusPurpose
+  PlutusPurpose AsIxItem era ->
+  Data era ->
+  Either (ContextError era) (PlutusArgs 'PlutusV4)
+toPlutusV4Args proxy LedgerTxInfo {..} sh txInfo plutusPurpose redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer sh plutusPurpose
   let
+    maybeSpendingData = getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
     -- TODO TopTxInfo should be set if this is a top-level transaction
     scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
   pure $

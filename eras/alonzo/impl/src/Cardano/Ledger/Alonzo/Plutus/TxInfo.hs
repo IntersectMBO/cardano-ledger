@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -100,7 +101,6 @@ import qualified PlutusLedgerApi.V2 as PV2
 
 mkPlutusWithContext ::
   forall era.
-  AlonzoEraUTxO era =>
   SupportedPlutusRunnable era ->
   PlutusPurpose AsIxItem era ->
   LedgerTxInfo era ->
@@ -109,22 +109,19 @@ mkPlutusWithContext ::
   ExUnits ->
   CostModel ->
   Either (ContextError era) PlutusWithContext
-mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiTx, ltiProtVer} txInfoResult redeemerData exUnits costModel =
+mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoResult redeemerData exUnits costModel =
   case script of
     SupportedPlutusRunnable plutusRunnable -> do
       let slang = isLanguage `asSameLanguage` plutusRunnable
-          maybeSpendingDatum =
-            getSpendingDatum (ltiUTxO lti) ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
       mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
       txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
       plutusArgs <-
         toPlutusArgs
           slang
-          ltiProtVer
+          lti
           (plutusRunnableScriptHash plutusRunnable)
           txInfo
           plutusPurpose
-          maybeSpendingDatum
           redeemerData
       pure $
         PlutusWithContext
@@ -186,25 +183,29 @@ transRedeemerPointerV1 ::
 transRedeemerPointerV1 _ _ _ _ _ = Right ()
 
 toPlutusV1Args ::
-  EraPlutusTxInfo 'PlutusV1 era =>
+  ( AlonzoEraUTxO era
+  , EraPlutusTxInfo 'PlutusV1 era
+  ) =>
   proxy 'PlutusV1 ->
-  ProtVer ->
+  LedgerTxInfo era ->
   ScriptHash ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
-  Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy pv _ txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV1Args proxy LedgerTxInfo {..} _ txInfo plutusPurpose redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs
       proxy
-      pv
+      ltiProtVer
       ()
       (PV1.ScriptContext txInfo)
-      scriptPurpose
-      maybeSpendingData
+      plutusPurpose
+      maybeSpendingDatum
       redeemerData
+  where
+    maybeSpendingDatum =
+      getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
 
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
