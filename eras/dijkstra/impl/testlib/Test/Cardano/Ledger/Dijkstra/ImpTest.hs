@@ -221,5 +221,7 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
       | otherwise = do
           addr <- freshKeyAddr_
-          newTxIn <- sendCoinTo addr (Coin 1_000_000)
+          -- restore default fixup behaviour temporarily,
+          -- to make sure it isn't affected by any higher-level fixup modifications
+          newTxIn <- withFixup fixupTx $ sendCoinTo addr (Coin 1_000_000)
           pure $ subTx & bodyTxL . inputsTxBodyL .~ Set.singleton newTxIn
