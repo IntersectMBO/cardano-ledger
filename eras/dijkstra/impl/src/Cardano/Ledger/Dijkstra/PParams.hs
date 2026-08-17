@@ -62,7 +62,12 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.HKD (HKDApplicative (hkdLiftA2), HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
+import Cardano.Ledger.HKD (
+  HKDFunctor (..),
+  HKDNoUpdate,
+  HKDSemialign (..),
+  NoUpdate (..),
+ )
 import Cardano.Ledger.Plutus (
   CostModel,
   CostModels,
@@ -343,7 +348,7 @@ emptyDijkstraUpgradePParamsUpdate =
 
 upgradeDijkstraPParams ::
   forall f.
-  HKDApplicative f =>
+  HKDSemialign f =>
   UpgradeDijkstraPParams f DijkstraEra ->
   ConwayPParams f ConwayEra ->
   DijkstraPParams f DijkstraEra
@@ -366,14 +371,17 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
     , dppCoinsPerUTxOByte = cppCoinsPerUTxOByte
     , dppCostModels =
         THKD $
-          hkdLiftA2 @f
-            (\old new -> updateCostModels old (CostModelsUpdate new))
-            (unTHKD cppCostModels)
-            ( hkdMap
-                (Proxy @f)
-                (mkCostModels . Map.singleton PlutusV4)
-                udppPlutusV4CostModel
+          hkdAlignWith
+            (Proxy @f)
+            (const emptyCostModels)
+            id
+            ( \cm cms ->
+                updateCostModels
+                  (CostModelsUpdate cms)
+                  (mkCostModels $ Map.singleton PlutusV4 cm)
             )
+            udppPlutusV4CostModel
+            (unTHKD cppCostModels)
     , dppPrices = cppPrices
     , dppMaxTxExUnits = cppMaxTxExUnits
     , dppMaxBlockExUnits = cppMaxBlockExUnits
