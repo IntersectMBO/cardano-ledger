@@ -146,6 +146,7 @@ import Cardano.Slotting.Slot as Slotting (
   EpochInterval (..),
   EpochNo (..),
   EpochSize (..),
+  SlotInterval (..),
   SlotNo (..),
   WithOrigin (..),
   addEpochInterval,

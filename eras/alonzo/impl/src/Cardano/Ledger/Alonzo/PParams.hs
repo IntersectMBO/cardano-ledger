@@ -417,6 +417,10 @@ newtype OrdExUnits = OrdExUnits {unOrdExUnits :: ExUnits}
 instance Ord OrdExUnits where
   compare = coerce (zipSemiExUnits compare)
 
+instance ToPlutusData OrdExUnits where
+  toPlutusData (OrdExUnits eu) = toPlutusData eu
+  fromPlutusData pd = OrdExUnits <$> fromPlutusData pd
+
 -- | Parameters that were added in Alonzo
 data UpgradeAlonzoPParams f = UpgradeAlonzoPParams
   { uappCoinsPerUTxOWord :: !(HKD f CoinPerWord)

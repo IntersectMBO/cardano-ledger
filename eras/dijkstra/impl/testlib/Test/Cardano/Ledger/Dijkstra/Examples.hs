@@ -31,6 +31,7 @@ import Cardano.Crypto.DSIGN (
 import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address (DirectDeposits (..))
+import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -38,6 +39,7 @@ import Cardano.Ledger.BaseTypes (
   Exclusive (..),
   Inclusive (..),
   Network (..),
+  SlotInterval (..),
   StrictMaybe (..),
   boundRational,
   knownNonZeroBounded,
@@ -51,11 +53,29 @@ import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
   UpgradeDijkstraPParams (..),
+  ppLeiosAdditionalDiffusionPeriodLengthL,
+  ppLeiosCommitteeStakeCoverageL,
+  ppLeiosHeaderDiffusionPeriodLengthL,
+  ppLeiosQuorumStakeThresholdL,
+  ppLeiosVotingPeriodLengthL,
+  ppMaxEndorserBlockBodySizeL,
+  ppMaxEndorserBlockExUnitsL,
+  ppMaxEndorserBlockHeaderSizeL,
   ppMaxRefScriptSizePerBlockL,
+  ppMaxRefScriptSizePerEndorserBlockL,
   ppMaxRefScriptSizePerTxL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
+  ppuLeiosAdditionalDiffusionPeriodLengthL,
+  ppuLeiosCommitteeStakeCoverageL,
+  ppuLeiosHeaderDiffusionPeriodLengthL,
+  ppuLeiosQuorumStakeThresholdL,
+  ppuLeiosVotingPeriodLengthL,
+  ppuMaxEndorserBlockBodySizeL,
+  ppuMaxEndorserBlockExUnitsL,
+  ppuMaxEndorserBlockHeaderSizeL,
   ppuMaxRefScriptSizePerBlockL,
+  ppuMaxRefScriptSizePerEndorserBlockL,
   ppuMaxRefScriptSizePerTxL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
@@ -151,6 +171,15 @@ exampleDijkstraGenesis =
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
+          , udppLeiosHeaderDiffusionPeriodLength = SlotInterval 0
+          , udppLeiosVotingPeriodLength = SlotInterval 0
+          , udppLeiosAdditionalDiffusionPeriodLength = SlotInterval 0
+          , udppLeiosCommitteeStakeCoverage = minBound
+          , udppLeiosQuorumStakeThreshold = minBound
+          , udppMaxEndorserBlockHeaderSize = 0
+          , udppMaxEndorserBlockBodySize = 0
+          , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 0 0
+          , udppMaxRefScriptSizePerEndorserBlock = 0
           }
     }
 
@@ -307,6 +336,15 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxRefScriptSizePerTxL .~ 200 * 1024
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
+    & ppLeiosHeaderDiffusionPeriodLengthL .~ SlotInterval 5
+    & ppLeiosVotingPeriodLengthL .~ SlotInterval 5
+    & ppLeiosAdditionalDiffusionPeriodLengthL .~ SlotInterval 5
+    & ppLeiosCommitteeStakeCoverageL .~ 51 %! 100
+    & ppLeiosQuorumStakeThresholdL .~ 51 %! 100
+    & ppMaxEndorserBlockHeaderSizeL .~ 65536
+    & ppMaxEndorserBlockBodySizeL .~ 524288
+    & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 40_000_000_000 10_000_000)
+    & ppMaxRefScriptSizePerEndorserBlockL .~ 1024 * 1024
 
 exampleDijkstraOnwardsEraPParamsUpdate ::
   (DijkstraEraPParams era, ConwayEraPParams era) => PParamsUpdate era
@@ -316,6 +354,15 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
+    & ppuLeiosHeaderDiffusionPeriodLengthL .~ SJust (SlotInterval 5)
+    & ppuLeiosVotingPeriodLengthL .~ SJust (SlotInterval 5)
+    & ppuLeiosAdditionalDiffusionPeriodLengthL .~ SJust (SlotInterval 5)
+    & ppuLeiosCommitteeStakeCoverageL .~ SJust (51 %! 100)
+    & ppuLeiosQuorumStakeThresholdL .~ SJust (51 %! 100)
+    & ppuMaxEndorserBlockHeaderSizeL .~ SJust 65536
+    & ppuMaxEndorserBlockBodySizeL .~ SJust 524288
+    & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 40_000_000_000 10_000_000))
+    & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (1024 * 1024)
 
 exampleBlsKey :: BlsKey
 exampleBlsKey =
