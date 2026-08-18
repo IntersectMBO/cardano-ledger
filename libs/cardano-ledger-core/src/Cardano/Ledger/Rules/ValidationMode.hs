@@ -117,12 +117,16 @@ failOnJustStatic cond onJust =
 (?!.) cond predFailure = cond ?! injectFailure predFailure
 {-# INLINE (?!.) #-}
 
+infix 1 ?!.
+
 -- | Same as `?!#`, except accepts injectable predicate failure
 (?!#.) ::
   (InjectRuleFailure rule t era, PredicateFailure sts ~ EraRuleFailure rule era) =>
   Bool -> t era -> Rule sts ctx ()
 (?!#.) cond predFailure = cond ?!# injectFailure predFailure
 {-# INLINE (?!#.) #-}
+
+infix 1 ?!#.
 
 -- | Same as `failOnJust`, except accepts injectable predicate failure
 checkFailOnJust ::
