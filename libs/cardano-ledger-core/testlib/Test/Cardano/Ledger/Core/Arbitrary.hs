@@ -534,7 +534,14 @@ instance Arbitrary PoolDistr where
   arbitrary = PoolDistr <$> arbitrary <*> arbitrary
 
 instance Arbitrary IndividualPoolStake where
-  arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    IndividualPoolStake
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      -- TODO: generate `SJust` once an era index lets this instance know whether the
+      -- era encodes the key (#5962, #5963); `PoolDistrSpec` covers both branches meanwhile.
+      <*> pure SNothing -- BlsKey is only supported from version 12 (Dijkstra)
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRepState --------------------------------------------------------------

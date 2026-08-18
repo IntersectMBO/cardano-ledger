@@ -3,7 +3,7 @@
 ## 1.15.0.0
 
 * Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
-* Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`
+* Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`. Encoded and decoded only from protocol version 12 (Dijkstra) onwards, so the `GetPoolDistr2` wire format is unchanged in earlier eras
 
 ## 1.14.0.0
 

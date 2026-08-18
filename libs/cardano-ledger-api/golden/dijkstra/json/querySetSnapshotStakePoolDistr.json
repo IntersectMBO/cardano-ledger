@@ -11,7 +11,6 @@
                     "denominator": 1,
                     "numerator": 1
                 },
-                "individualPoolStakeBls": null,
                 "individualPoolStakeVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c",
                 "individualTotalPoolStake": 1
             }
@@ -37,7 +36,6 @@
                     "denominator": 4,
                     "numerator": 1
                 },
-                "individualPoolStakeBls": null,
                 "individualPoolStakeVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c",
                 "individualTotalPoolStake": 1000000000
             }

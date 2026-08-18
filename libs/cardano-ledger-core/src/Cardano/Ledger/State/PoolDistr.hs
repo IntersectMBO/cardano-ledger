@@ -35,6 +35,9 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   encodeListLen,
+  getDecoderVersion,
+  ifEncodingVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
@@ -81,24 +84,27 @@ data IndividualPoolStake = IndividualPoolStake
 individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
 
+-- BlsKey is only supported from version 12 (Dijkstra), so the record grows a
+-- fourth field exactly at the era boundary that introduces it.
 instance EncCBOR IndividualPoolStake where
-  encCBOR (IndividualPoolStake stake stakeCoin vrf bls) =
+  encCBOR (IndividualPoolStake stake stakeCoin vrf blsKey) =
     mconcat
-      [ encodeListLen 4
+      [ ifEncodingVersionAtLeast (natVersion @12) (encodeListLen 4) (encodeListLen 3)
       , encCBOR stake
       , encCBOR stakeCoin
       , encCBOR vrf
-      , encCBOR bls
+      , ifEncodingVersionAtLeast (natVersion @12) (encCBOR blsKey) mempty
       ]
 
 instance DecCBOR IndividualPoolStake where
-  decCBOR =
-    decodeRecordNamed "IndividualPoolStake" (const 4) $
+  decCBOR = do
+    blsKeySupported <- getDecoderVersion <&> (>= natVersion @12)
+    decodeRecordNamed "IndividualPoolStake" (const (if blsKeySupported then 4 else 3)) $
       IndividualPoolStake
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
-        <*> decCBOR
+        <*> if blsKeySupported then decCBOR else pure SNothing
 
 instance ToKeyValuePairs IndividualPoolStake where
   toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
@@ -106,8 +112,8 @@ instance ToKeyValuePairs IndividualPoolStake where
      in [ "individualPoolStake" .= individualPoolStake
         , "individualTotalPoolStake" .= individualTotalPoolStake
         , "individualPoolStakeVrf" .= individualPoolStakeVrf
-        , "individualPoolStakeBls" .= individualPoolStakeBls
         ]
+          <> ["individualPoolStakeBls" .= blsKey | SJust blsKey <- [individualPoolStakeBls]]
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values

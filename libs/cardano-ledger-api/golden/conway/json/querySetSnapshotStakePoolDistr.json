@@ -11,7 +11,6 @@
                     "denominator": 1,
                     "numerator": 1
                 },
-                "individualPoolStakeBls": null,
                 "individualPoolStakeVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c",
                 "individualTotalPoolStake": 1
             }
@@ -25,10 +24,6 @@
                     "denominator": 8,
                     "numerator": 3
                 },
-                "individualPoolStakeBls": {
-                    "blsPossessionProof": "8114c1b1ef41b6b826f612f6383989ccefc82fb4df4a49dbd828b8fd94db9d0e86a55e22861b585edf411a48374aa42a",
-                    "blsPubKey": "a57565542eaa01ef2b910bf0eaba4d98a1e5b8b79cc425db08f8780732d0ea9bc85fc6175f272b2344bb27bc572ebf14022e52689dcedfccf44a00e5bd1aa59db44517217d6b0f21b372169ee761938c28914ddcb9663de54db288e760a8e14f"
-                },
                 "individualPoolStakeVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c",
                 "individualTotalPoolStake": 5000000000
             },
@@ -37,7 +32,6 @@
                     "denominator": 4,
                     "numerator": 1
                 },
-                "individualPoolStakeBls": null,
                 "individualPoolStakeVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c",
                 "individualTotalPoolStake": 1000000000
             }
