@@ -2,6 +2,7 @@
 
 ## 1.11.1.0
 
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
