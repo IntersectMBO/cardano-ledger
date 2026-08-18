@@ -1,6 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Api.State.Query.Examples (
@@ -65,13 +67,16 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   textToDns,
  )
+import Cardano.Ledger.Binary (natVersion)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
+import Cardano.Ledger.Core (Era, eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.State (
+  BlsKey,
   ChainAccountState (..),
   FuturePParams (..),
   IndividualPoolStake (..),
@@ -103,6 +108,7 @@ import Test.Cardano.Ledger.Conway.Examples (
  )
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
+import Test.Cardano.Ledger.Dijkstra.Examples (exampleBlsKey)
 import Test.Cardano.Ledger.Era (EraTest (..))
 import Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
@@ -233,7 +239,7 @@ querySPOStakeDistrExamples =
       ]
   ]
 
-querySetSnapshotStakePoolDistrExamples :: [QueryResultPoolDistr]
+querySetSnapshotStakePoolDistrExamples :: forall era. Era era => [QueryResultPoolDistr]
 querySetSnapshotStakePoolDistrExamples =
   map
     toQueryResultPoolDistr
@@ -248,6 +254,7 @@ querySetSnapshotStakePoolDistrExamples =
                     { individualPoolStake = 1 % 4
                     , individualTotalPoolStake = CompactCoin 1_000_000_000
                     , individualPoolStakeVrf = exampleVrfVerKeyHash
+                    , individualPoolStakeBls = SNothing
                     }
                 )
               ,
@@ -256,12 +263,19 @@ querySetSnapshotStakePoolDistrExamples =
                     { individualPoolStake = 3 % 8
                     , individualTotalPoolStake = CompactCoin 5_000_000_000
                     , individualPoolStakeVrf = exampleVrfVerKeyHash
+                    , individualPoolStakeBls = exampleIndividualPoolStakeBls @era
                     }
                 )
               ]
         , pdTotalActiveStake = knownNonZeroCoin @6_000_000_000
         }
     ]
+
+-- | 'SNothing' before Dijkstra, where the key is neither encoded nor decoded.
+exampleIndividualPoolStakeBls :: forall era. Era era => StrictMaybe BlsKey
+exampleIndividualPoolStakeBls
+  | eraProtVerHigh @era >= natVersion @12 = SJust exampleBlsKey
+  | otherwise = SNothing
 
 queryStakePoolDefaultVoteExamples :: [DefaultVote]
 queryStakePoolDefaultVoteExamples =

@@ -1009,7 +1009,12 @@ genNewPool = do
   poolId <- genFreshKeyHash
   stakePoolParams <- genStakePoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake (toRational percent) mempty (sppVrf stakePoolParams)
+  let stake =
+        IndividualPoolStake
+          (toRational percent)
+          mempty
+          (sppVrf stakePoolParams)
+          SNothing
   modifyGenStateAvoidKey (Set.insert (coerceKeyRole poolId))
   pure (poolId, stakePoolParams, stake)
 

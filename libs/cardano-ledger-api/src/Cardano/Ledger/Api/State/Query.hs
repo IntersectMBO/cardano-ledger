@@ -102,6 +102,7 @@ import Cardano.Ledger.BaseTypes (
   Network,
   NonZero,
   ProtVer (..),
+  StrictMaybe (..),
   ToKeyValuePairs (..),
   strictMaybeToMaybe,
  )
@@ -743,6 +744,7 @@ data QueryResultIndividualPoolStake = QueryResultIndividualPoolStake
   { qripsStake :: !Rational
   , qripsTotalStake :: !(CompactForm Coin)
   , qripsVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , qripsBls :: !(StrictMaybe BlsKey)
   }
   deriving (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs QueryResultIndividualPoolStake
@@ -760,6 +762,7 @@ toQueryResultIndividualPoolStake ips =
     (individualPoolStake ips)
     (individualTotalPoolStake ips)
     (individualPoolStakeVrf ips)
+    (individualPoolStakeBls ips)
 
 toQueryResultPoolDistr :: PoolDistr -> QueryResultPoolDistr
 toQueryResultPoolDistr pd =
@@ -768,11 +771,12 @@ toQueryResultPoolDistr pd =
     (pdTotalActiveStake pd)
 
 instance ToKeyValuePairs QueryResultIndividualPoolStake where
-  toKeyValuePairs (QueryResultIndividualPoolStake stake totalStake vrf) =
+  toKeyValuePairs (QueryResultIndividualPoolStake stake totalStake vrf blsKey) =
     [ "individualPoolStake" .= stake
     , "individualTotalPoolStake" .= totalStake
     , "individualPoolStakeVrf" .= vrf
     ]
+      <> ["individualPoolStakeBls" .= bls | SJust bls <- [blsKey]]
 
 instance ToKeyValuePairs QueryResultPoolDistr where
   toKeyValuePairs (QueryResultPoolDistr distr total) =
@@ -780,17 +784,27 @@ instance ToKeyValuePairs QueryResultPoolDistr where
     , "pdTotalActiveStake" .= total
     ]
 
+-- Gated identically to `IndividualPoolStake`, so the two stay byte-identical
+-- and this query's wire format is unchanged for pre-Dijkstra eras.
 instance EncCBOR QueryResultIndividualPoolStake where
-  encCBOR (QueryResultIndividualPoolStake stake totalStake vrf) =
-    encodeListLen 3
-      <> encCBOR stake
-      <> encCBOR totalStake
-      <> encCBOR vrf
+  encCBOR (QueryResultIndividualPoolStake stake totalStake vrf blsKey) =
+    mconcat
+      [ ifEncodingVersionAtLeast (natVersion @12) (encodeListLen 4) (encodeListLen 3)
+      , encCBOR stake
+      , encCBOR totalStake
+      , encCBOR vrf
+      , ifEncodingVersionAtLeast (natVersion @12) (encCBOR blsKey) mempty
+      ]
 
 instance DecCBOR QueryResultIndividualPoolStake where
-  decCBOR =
-    decodeRecordNamed "QueryResultIndividualPoolStake" (const 3) $
-      QueryResultIndividualPoolStake <$> decCBOR <*> decCBOR <*> decCBOR
+  decCBOR = do
+    blsKeySupported <- getDecoderVersion <&> (>= natVersion @12)
+    decodeRecordNamed "QueryResultIndividualPoolStake" (const (if blsKeySupported then 4 else 3)) $
+      QueryResultIndividualPoolStake
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> if blsKeySupported then decCBOR else pure SNothing
 
 instance EncCBOR QueryResultPoolDistr where
   encCBOR (QueryResultPoolDistr distr total) =

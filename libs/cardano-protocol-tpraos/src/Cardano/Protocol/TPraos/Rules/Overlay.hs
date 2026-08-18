@@ -200,7 +200,7 @@ praosVrfChecks eta0 (PoolDistr pd _tot) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
-    Just (IndividualPoolStake sigma _ stakePoolVRFVerKeyHash) -> do
+    Just (IndividualPoolStake sigma _ stakePoolVRFVerKeyHash _) -> do
       unless
         (unVRFVerKeyHash stakePoolVRFVerKeyHash == unVRFVerKeyHash blockIssuerVRFVerKeyHash)
         (throwError $ VRFKeyWrongVRFKey hk stakePoolVRFVerKeyHash blockIssuerVRFVerKeyHash)
