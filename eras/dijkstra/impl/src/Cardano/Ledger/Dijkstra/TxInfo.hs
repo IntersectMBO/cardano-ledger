@@ -641,7 +641,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             accErrors
             (Right mempty)
             ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
-      txCerts <- transTxBodyCerts proxy ltiProtVer txBody
+      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx ltiUTxO
       let
         txInfo =
@@ -783,16 +783,6 @@ transTxCertV4 _proxy _pv = \case
   UpdateDRepTxCert drepCred _anchor ->
     PV4.TxCertUpdateDRep (transDRepCred drepCred)
   _ -> error "Impossible: All TxCerts should have been accounted for"
-
-transTxBodyCerts ::
-  ( EraTxBody era
-  , ConwayEraTxCert era
-  ) =>
-  proxy 'PlutusV4 ->
-  ProtVer ->
-  TxBody l era ->
-  Either (ContextError era) [PV4.TxCert]
-transTxBodyCerts proxy pv txb = pure . fmap (transTxCertV4 proxy pv) . F.toList $ txb ^. certsTxBodyL
 
 transTxBodyRequiredTopLevelGuards ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential (Maybe PV4.Datum)
