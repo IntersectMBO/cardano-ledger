@@ -37,6 +37,7 @@ import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (DELPL, ShelleyEra)
 import Cardano.Ledger.Shelley.Rules.Deleg (
+  AccountAlreadyRegistered,
   DELEG,
   DelegEnv (..),
   ShelleyDelegEvent,
@@ -232,6 +233,8 @@ instance
   , AtMostEra "Babbage" era
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   , Event (EraRule "DELEG" era) ~ ShelleyDelegEvent era
+  , EraRuleFailure "DELEG" era ~ ShelleyDelegPredFailure era
+  , InjectRuleFailure "DELEG" AccountAlreadyRegistered era
   ) =>
   Embed (DELEG era) (DELPL era)
   where

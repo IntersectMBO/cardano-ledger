@@ -18,6 +18,9 @@ instance InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure MaryEra
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyUtxowPredFailure MaryEra where
   injectFailure = Shelley.UtxowFailure
 
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered MaryEra where
+  injectFailure = Shelley.DelegsFailure . Shelley.DelplFailure . Shelley.DelegFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyUtxoPredFailure MaryEra where
   injectFailure = Shelley.UtxowFailure . injectFailure
 

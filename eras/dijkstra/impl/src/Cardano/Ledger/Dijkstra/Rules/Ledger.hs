@@ -61,6 +61,7 @@ import Cardano.Ledger.Dijkstra.Era (
   UTXOW,
  )
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
+import Cardano.Ledger.Dijkstra.Rules.Deleg ()
 import Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesEnv (..),
   EntitiesEvent,
@@ -109,6 +110,14 @@ type instance EraRuleFailure "LEDGER" DijkstraEra = DijkstraLedgerPredFailure Di
 type instance EraRuleEvent "LEDGER" DijkstraEra = DijkstraLedgerEvent DijkstraEra
 
 instance InjectRuleEvent "LEDGER" DijkstraLedgerEvent DijkstraEra
+
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered DijkstraEra where
+  injectFailure =
+    DijkstraEntitiesFailure
+      . CertsFailure
+      . Conway.CertFailure
+      . Conway.DelegFailure
+      . injectFailure
 
 instance InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure DijkstraEra
 

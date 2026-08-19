@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.19.1.0
+## 1.20.0.0
 
+* Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
+* Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the

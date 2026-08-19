@@ -50,6 +50,9 @@ type instance EraRuleFailure "LEDGER" AlonzoEra = Shelley.ShelleyLedgerPredFailu
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure AlonzoEra
 
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered AlonzoEra where
+  injectFailure = Shelley.DelegsFailure . Shelley.DelplFailure . Shelley.DelegFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure AlonzoEra where
   injectFailure = Shelley.UtxowFailure
 

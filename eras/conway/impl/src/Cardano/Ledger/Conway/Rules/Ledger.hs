@@ -135,6 +135,9 @@ type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure Conway
 
 type instance EraRuleEvent "LEDGER" ConwayEra = ConwayLedgerEvent ConwayEra
 
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered ConwayEra where
+  injectFailure = ConwayCertsFailure . CertFailure . DelegFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure ConwayEra
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure ConwayEra where

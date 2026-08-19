@@ -121,7 +121,7 @@ instance InjectRuleFailure "CERT" Shelley.ShelleyDelegPredFailure DijkstraEra wh
   injectFailure = Conway.DelegFailure . injectFailure
 
 instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure DijkstraEra where
-  injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = Conway.StakeKeyRegisteredDELEG c
+  injectFailure (Shelley.DelegAccountAlreadyRegistered c) = Conway.DelegAccountAlreadyRegistered c
   injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = Conway.StakeKeyNotRegisteredDELEG c
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = Conway.StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"

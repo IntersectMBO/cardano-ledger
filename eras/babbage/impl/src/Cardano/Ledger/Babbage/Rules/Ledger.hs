@@ -39,6 +39,9 @@ type instance EraRuleFailure "LEDGER" BabbageEra = Shelley.ShelleyLedgerPredFail
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure BabbageEra
 
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered BabbageEra where
+  injectFailure = Shelley.DelegsFailure . Shelley.DelplFailure . Shelley.DelegFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure BabbageEra where
   injectFailure = Shelley.UtxowFailure
 

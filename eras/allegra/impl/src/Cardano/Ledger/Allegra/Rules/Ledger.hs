@@ -13,6 +13,9 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 type instance EraRuleFailure "LEDGER" AllegraEra = Shelley.ShelleyLedgerPredFailure AllegraEra
 
+instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered AllegraEra where
+  injectFailure = Shelley.DelegsFailure . Shelley.DelplFailure . Shelley.DelegFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure AllegraEra
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyUtxowPredFailure AllegraEra where
