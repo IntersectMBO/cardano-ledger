@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -22,20 +23,25 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
   multiAssetFromList,
  )
+import Cardano.Ledger.Plutus
 import qualified Cardano.Ledger.Shelley.AdaPots as AdaPots
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
+import Cardano.Ledger.TxIn
 import Cardano.Ledger.Val
+import Control.Exception (assert)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
@@ -217,6 +223,141 @@ spec = describe "UTXO" $ do
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
       submitTx_ topTx
+  describe "Value preservation" $ do
+    let mkSubTx :: BatchAmounts -> ImpTestM era (Tx SubTx era)
+        mkSubTx BatchAmounts {..} = do
+          txIn <- txInWithFunds baSubTxIn
+          txOut <- mkTxOut baSubTxOut
+          account <- registerAccountAddress
+          pure $
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & outputsTxBodyL .~ [txOut]
+                & directDepositsTxBodyL .~ DirectDeposits [(account, baSubDirectDeposit)]
+
+    let mkTopTx :: BatchAmounts -> ImpTestM era (Tx TopTx era)
+        mkTopTx amounts@BatchAmounts {..} = do
+          txIn <- txInWithFunds baTopTxIn
+          txOut <- mkTxOut baTopTxOut
+          account <- registerAccountAddress
+          fundAccountBalance account baTopWithdrawal
+          subTx <- mkSubTx amounts
+          pure $
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & outputsTxBodyL .~ [txOut]
+                & feeTxBodyL .~ baFee
+                & withdrawalsTxBodyL .~ Withdrawals [(account, baTopWithdrawal)]
+                & subTransactionsTxBodyL .~ OMap.singleton subTx
+
+    let mkTopTxLegacyMode :: BatchAmounts -> Tx TopTx era -> ImpTestM era (Tx TopTx era)
+        mkTopTxLegacyMode BatchAmounts {..} tx = do
+          scriptTxIn <- produceScriptAt (hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2) baScriptTxIn
+          pure $
+            tx
+              & bodyTxL . inputsTxBodyL <>~ Set.singleton scriptTxIn
+              & bodyTxL . feeTxBodyL <>~ baScriptTxIn
+
+    it "tx balanced across the batch and at the top level - normal mode" $ do
+      amounts <- genFullyBalancedAmounts
+      topTx <- mkTopTx amounts
+      withFixup noBalanceFixup $ submitTx_ topTx
+
+    it "tx balanced across the batch and at the top level - legacy mode" $ do
+      amounts <- genFullyBalancedAmounts
+      topTx <- mkTopTx amounts
+      topTxLegacy <- mkTopTxLegacyMode amounts topTx
+      withFixup noBalanceFixup $ submitTx_ topTxLegacy
+
+    it "tx balanced across the batch and unbalanced at the top level - normal mode" $ do
+      amounts <- genBatchOnlyBalancedAmounts
+      topTx <- mkTopTx amounts
+      withFixup noBalanceFixup $ submitTx_ topTx
+
+    it "tx balanced across the batch and unbalanced at the top level - legacy mode" $ do
+      amounts <- genBatchOnlyBalancedAmounts
+      topTx <- mkTopTx amounts
+      topTxLegacy <- mkTopTxLegacyMode amounts topTx
+      let balances = batchBalances True amounts
+      withFixup noBalanceFixup $
+        submitFailingTx
+          topTxLegacy
+          [ injectFailure $
+              ValueNotConservedInLegacy
+                Mismatch
+                  { mismatchSupplied = inject (bbTopConsumed balances)
+                  , mismatchExpected = inject (bbTopProduced balances)
+                  }
+          ]
+
+    it "tx balanced at the top level and unbalanced across the batch - normal mode" $ do
+      amounts <- genTopOnlyBalancedAmounts
+      topTx <- mkTopTx amounts
+      let balances = batchBalances False amounts
+      withFixup noBalanceFixup $
+        submitFailingTx
+          topTx
+          [ injectFailure $
+              ValueNotConservedUTxO
+                Mismatch
+                  { mismatchSupplied = inject (bbBatchConsumed balances)
+                  , mismatchExpected = inject (bbBatchProduced balances)
+                  }
+          ]
+    it "tx balanced at the top level and unbalanced across the batch - legacy mode" $ do
+      amounts <- genTopOnlyBalancedAmounts
+      topTx <- mkTopTx amounts
+      topTxLegacy <- mkTopTxLegacyMode amounts topTx
+      let balances = batchBalances True amounts
+      withFixup noBalanceFixup $
+        submitFailingTx
+          topTxLegacy
+          [ injectFailure $
+              ValueNotConservedUTxO
+                Mismatch
+                  { mismatchSupplied = inject (bbBatchConsumed balances)
+                  , mismatchExpected = inject (bbBatchProduced balances)
+                  }
+          ]
+
+    it "tx unbalanced across the batch and at the top level - normal mode" $ do
+      amounts <- genFullyUnbalancedAmounts
+      topTx <- mkTopTx amounts
+      let balances = batchBalances False amounts
+      withFixup noBalanceFixup $
+        submitFailingTx
+          topTx
+          [ injectFailure $
+              ValueNotConservedUTxO
+                Mismatch
+                  { mismatchSupplied = inject (bbBatchConsumed balances)
+                  , mismatchExpected = inject (bbBatchProduced balances)
+                  }
+          ]
+
+    it "tx unbalanced across the batch and at the top level - legacy mode" $ do
+      amounts <- genFullyUnbalancedAmounts
+      topTx <- mkTopTx amounts
+      topTxLegacy <- mkTopTxLegacyMode amounts topTx
+      let balances = batchBalances True amounts
+      withFixup noBalanceFixup $
+        submitFailingTx
+          topTxLegacy
+          [ injectFailure $
+              ValueNotConservedInLegacy
+                Mismatch
+                  { mismatchSupplied = inject (bbTopConsumed balances)
+                  , mismatchExpected = inject (bbTopProduced balances)
+                  }
+          , injectFailure $
+              ValueNotConservedUTxO
+                Mismatch
+                  { mismatchSupplied = inject (bbBatchConsumed balances)
+                  , mismatchExpected = inject (bbBatchProduced balances)
+                  }
+          ]
   where
     registerPoolTxWithSubTxs ::
       [KeyHash StakePool] -> -- top's pool certs
@@ -250,3 +391,154 @@ spec = describe "UTXO" $ do
       addr <- freshKeyAddr_
       amount <- arbitrary @Coin
       pure $ ensureMinCoinTxOut pp (mkBasicTxOut addr (inject amount))
+    fundAccountBalance :: AccountAddress -> Coin -> ImpTestM era ()
+    fundAccountBalance account amount = do
+      submitTx_ $
+        mkBasicTx $
+          mkBasicTxBody
+            & directDepositsTxBodyL .~ DirectDeposits [(account, amount)]
+    txInWithFunds :: Coin -> ImpTestM era TxIn
+    txInWithFunds amount = freshKeyAddr_ >>= \a -> sendCoinTo a amount
+    mkTxOut :: Coin -> ImpTestM era (TxOut era)
+    mkTxOut amount = freshKeyAddr_ >>= \a -> pure $ mkBasicTxOut a (inject amount)
+    produceScriptAt :: ScriptHash -> Coin -> ImpTestM era TxIn
+    produceScriptAt scriptHash amount = do
+      let addr = mkAddr scriptHash StakeRefNull
+      let tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
+      txInAt 0 <$> submitTx tx
+
+noBalanceFixup ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+noBalanceFixup =
+  fixupSubTransactions
+    >=> addNativeScriptTxWits
+    >=> fixupAuxDataHash
+    >=> addCollateralInput
+    >=> fixupScriptWits
+    >=> fixupOutputDatums
+    >=> fixupDatums
+    >=> fixupRedeemerIndices
+    >=> fixupTxOuts
+    >=> fixupCollateralReturn
+    >=> fixupRedeemers
+    >=> fixupPPHash
+    >=> updateAddrTxWits
+
+-- A template for creating a transaction with exaclty one subtransaction,
+-- with values for different fields that contribute to consumed and produced.
+data BatchAmounts = BatchAmounts
+  { baSubTxIn :: Coin
+  , baSubTxOut :: Coin
+  , baSubDirectDeposit :: Coin
+  , baTopTxIn :: Coin
+  , baTopWithdrawal :: Coin
+  , baTopTxOut :: Coin
+  , baFee :: Coin
+  , baScriptTxIn :: Coin
+  }
+
+genBatchOnlyBalancedAmounts :: ImpTestM era BatchAmounts
+genBatchOnlyBalancedAmounts = do
+  -- we are restricted in the lower bound by min utxo size
+  -- and in the upper bound by the hardcoded collateral in `makeCollateralInput`
+  m <- Coin <$> choose (1_000_000, 2_000_000)
+  pure $ mkAmounts m
+  where
+    mkAmounts m =
+      -- These values create an unbalanced sub-transaction, with:
+      --      consumed = subTxIn   = 1
+      --      produced = subTxOut + subDirectDeposit  =  2 + 3
+      -- and an unbalanced top transaction, with:
+      --      consumed = topTxIn + topWithdrawal = 8 + 5
+      --      produced = topTxOut + fee    = 6 + 3
+      -- Legacy variant adds scriptTxIn on both sides (input + fee)
+      -- On the batch level, the transaction is balancing out.
+      let amounts =
+            BatchAmounts
+              { baSubTxIn = (1 :: Int) <×> m
+              , baSubTxOut = (2 :: Int) <×> m
+              , baSubDirectDeposit = (3 :: Int) <×> m
+              , baTopTxIn = (8 :: Int) <×> m
+              , baTopWithdrawal = (5 :: Int) <×> m
+              , baTopTxOut = (6 :: Int) <×> m
+              , baFee = (3 :: Int) <×> m
+              , baScriptTxIn = (4 :: Int) <×> m
+              }
+       in assertBatchBalanced amounts
+
+-- Amounts for a transaction that balances out both at batch level, and at top level
+genFullyBalancedAmounts :: ImpTestM era BatchAmounts
+genFullyBalancedAmounts = do
+  batchBalanced@BatchAmounts {..} <- genBatchOnlyBalancedAmounts
+  let BatchBalances {..} = batchBalances False batchBalanced
+      mismatch = bbTopConsumed <-> bbTopProduced
+      fullyBalanced =
+        batchBalanced
+          { -- because the batch is balanced, we can fix both top and sub balances with the same `mismatch`
+            baTopTxOut = baTopTxOut <> mismatch
+          , baSubTxIn = baSubTxIn <> mismatch
+          }
+  pure $
+    fullyBalanced
+      & assertBatchBalanced
+      & assertTopBalanced
+      & assertSubBalanced
+
+-- Amounts for a transaction that doesn't balance out - neither at top or batch level
+genFullyUnbalancedAmounts :: ImpTestM era BatchAmounts
+genFullyUnbalancedAmounts = do
+  balanced@BatchAmounts {..} <- genFullyBalancedAmounts
+  extra <- Coin . getPositive <$> arbitrary
+  pure $ balanced {baTopTxIn = baTopTxIn <> extra}
+
+genTopOnlyBalancedAmounts :: ImpTestM era BatchAmounts
+genTopOnlyBalancedAmounts = do
+  balanced@BatchAmounts {..} <- genFullyBalancedAmounts
+  extra <- Coin . getPositive <$> arbitrary
+  pure $ balanced {baSubTxIn = baSubTxIn <> extra}
+
+data BatchBalances = BatchBalances
+  { bbSubConsumed :: Coin
+  , bbSubProduced :: Coin
+  , bbTopConsumed :: Coin
+  , bbTopProduced :: Coin
+  , bbBatchConsumed :: Coin
+  , bbBatchProduced :: Coin
+  }
+
+assertBatchBalanced :: BatchAmounts -> BatchAmounts
+assertBatchBalanced ba =
+  let bb = batchBalances False ba
+   in assert (bbBatchConsumed bb == bbBatchProduced bb) ba
+
+assertTopBalanced :: BatchAmounts -> BatchAmounts
+assertTopBalanced ba =
+  let bb = batchBalances False ba
+   in assert (bbTopConsumed bb == bbTopProduced bb) ba
+
+assertSubBalanced :: BatchAmounts -> BatchAmounts
+assertSubBalanced ba =
+  let bb = batchBalances False ba
+   in assert (bbSubConsumed bb == bbSubProduced bb) ba
+
+batchBalances :: Bool -> BatchAmounts -> BatchBalances
+batchBalances isLegacy BatchAmounts {..} =
+  let script = if isLegacy then baScriptTxIn else mempty
+      subConsumed = baSubTxIn
+      subProduced = baSubTxOut <> baSubDirectDeposit
+      topConsumed = baTopTxIn <> baTopWithdrawal <> script
+      topProduced = baTopTxOut <> baFee <> script
+   in BatchBalances
+        { bbSubConsumed = subConsumed
+        , bbSubProduced = subProduced
+        , bbTopConsumed = topConsumed
+        , bbTopProduced = topProduced
+        , bbBatchConsumed = subConsumed <> topConsumed
+        , bbBatchProduced = subProduced <> topProduced
+        }

@@ -10,6 +10,7 @@
 
 ### `testlib`
 
+* Expose `fixupCollateralReturn`
 * Add `DecCBOR` instance for `Block`
 
 ## 1.14.0.0

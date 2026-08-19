@@ -44,6 +44,7 @@
 
 ### testlib
 
+* Expose `fixupSubtransactions`
 * Add `Inject (DijkstraContextError era) (ContextError era)` as a superclass of `DijkstraEraTest`
 * Add `DecCBOR` instance for `Block`
 * Add `DijkstraEraPParams` as a superclass of `DijkstraEraTest`

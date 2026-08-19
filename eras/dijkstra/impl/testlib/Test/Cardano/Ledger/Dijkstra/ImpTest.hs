@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
+  fixupSubTransactions,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
