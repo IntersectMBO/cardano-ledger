@@ -373,12 +373,10 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
         THKD $
           hkdAlignWith
             (Proxy @f)
-            (const emptyCostModels)
+            (mkCostModels . Map.singleton PlutusV4)
             id
-            ( \cm cms ->
-                updateCostModels
-                  (CostModelsUpdate cms)
-                  (mkCostModels $ Map.singleton PlutusV4 cm)
+            ( \new old ->
+                updateCostModels old (CostModelsUpdate . mkCostModels $ Map.singleton PlutusV4 new)
             )
             udppPlutusV4CostModel
             (unTHKD cppCostModels)
