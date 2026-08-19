@@ -11,6 +11,8 @@
   - `checkFailOnNonEmpty` -> `failOnNonEmpty`
   - `checkFailOnNonEmptySet` -> `failOnNonEmptySet`
   - `checkFailOnNonEmptyMap` -> `failOnNonEmptyMap`
+* Add `HKDSemialign` class with instances for `Identity`, `Maybe` and `StrictMaybe`
+* Add `HKDSemialign f` constraint to `upgradePParamsHKD`
 * Add `Ord` instance for `TxOutSource`
 * Change `PlutusArgs 'PlutusV4` to contain `PV4.ScriptContext` instead of `PV3.ScriptContext`
 * Add `NFData` instance for `PV4.ScriptContext`
