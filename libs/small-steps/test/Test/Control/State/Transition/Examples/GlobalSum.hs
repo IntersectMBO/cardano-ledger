@@ -24,7 +24,7 @@ data GSUM
 
 newtype GSUMEvent = ErrorEvent Void deriving (Eq, Show)
 
-data NoFailure = NoFailure deriving (Eq, Show)
+data NoFailure = NoFailure deriving (Eq, Ord, Show)
 
 instance STS GSUM where
   type Environment GSUM = ()

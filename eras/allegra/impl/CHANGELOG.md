@@ -11,6 +11,7 @@
 
 ## 1.10.0.0
 
+* Add `Ord` instances for `AllegraUtxoPredFailure`, `Timelock`, `TimelockRaw`
 * Add `TranslateEra` instance for `SnapShots`
 * Rename rule types and deprecate the old names:
   - `AllegraUTXO` -> `UTXO`

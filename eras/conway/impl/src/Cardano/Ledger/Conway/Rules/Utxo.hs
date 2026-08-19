@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -13,6 +14,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 910
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+{-# OPTIONS_GHC -fno-spec-eval #-}
+#endif
 
 module Cardano.Ledger.Conway.Rules.Utxo (
   UTXO,
@@ -52,7 +57,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra, UTXO, UTXOS)
 import Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUtxosPredFailure (..),
  )
-import Cardano.Ledger.Plutus (ExUnits)
+import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (EraCertState (..), EraStake, EraUTxO)
@@ -115,7 +120,7 @@ data ConwayUtxoPredFailure era
     ScriptsNotPaidUTxO
       (NonEmptyMap TxIn (TxOut era))
   | ExUnitsTooBigUTxO
-      (Mismatch RelLTEQ ExUnits) -- The values are serialised in reverse order
+      (Mismatch RelLTEQ OrdExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
@@ -188,6 +193,16 @@ deriving instance
   , Eq TxIn
   ) =>
   Eq (ConwayUtxoPredFailure era)
+
+deriving instance
+  ( Era era
+  , Ord (Value era)
+  , Ord (PredicateFailure (EraRule "UTXOS" era))
+  , Ord (TxOut era)
+  , Ord (Script era)
+  , Ord TxIn
+  ) =>
+  Ord (ConwayUtxoPredFailure era)
 
 instance
   ( Era era

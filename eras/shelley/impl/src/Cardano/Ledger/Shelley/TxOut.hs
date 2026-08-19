@@ -123,6 +123,8 @@ instance (Era era, Val (Value era)) => Show (ShelleyTxOut era) where
 
 deriving instance Eq (CompactForm (Value era)) => Eq (ShelleyTxOut era)
 
+deriving instance Ord (CompactForm (Value era)) => Ord (ShelleyTxOut era)
+
 instance NFData (ShelleyTxOut era) where
   rnf = (`seq` ())
 

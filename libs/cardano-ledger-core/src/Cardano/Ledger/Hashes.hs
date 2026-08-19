@@ -1,12 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -94,12 +92,11 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   FixedSizeCodec (..),
-  FromCBOR (..),
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
  )
-import Cardano.Ledger.Keys.Internal (DSIGN, HasKeyRole, KeyRole (..), VKey (..))
+import Cardano.Ledger.Keys.Internal (ADDRHASH, DSIGN, KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
@@ -120,10 +117,6 @@ import Quiet
 -- | Hashing algorithm used for hashing everything, except addresses, for which `ADDRHASH`
 -- is used.
 type HASH = Hash.Blake2b_256
-
--- | Hashing algorithm used for hashing cryptographic keys and scripts. As the type
--- synonym name alludes, this is the hashing algorithm used for addresses.
-type ADDRHASH = Hash.Blake2b_224
 
 --   $eraIndep
 --
@@ -159,35 +152,8 @@ data EraIndependentScriptIntegrity
 data EraIndependentEb
 
 --------------------------------------------------------------------------------
--- Key Hashes
+-- Signature Hashes
 --------------------------------------------------------------------------------
-
--- | Discriminated hash of public Key
-newtype KeyHash (r :: KeyRole) = KeyHash
-  {unKeyHash :: Hash.Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)}
-  deriving (Show, Eq, Ord)
-  deriving newtype
-    ( NFData
-    , NoThunks
-    , Generic
-    , ToCBOR
-    , FromCBOR
-    , EncCBOR
-    , DecCBOR
-    , ToJSONKey
-    , FromJSONKey
-    , ToJSON
-    , FromJSON
-    , Default
-    , MemPack
-    , Storable
-    )
-
-instance HasKeyRole KeyHash
-
--- | Hash a given public key
-hashKey :: VKey kd -> KeyHash kd
-hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 -- | Hash a given signature
 hashTxBodySignature ::

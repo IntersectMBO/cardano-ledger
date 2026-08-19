@@ -11,6 +11,12 @@
 
 ## 1.16.0.0
 
+* Add `Ord` constraints to `AlonzoEraScript` and `EraPlutusContext` classes
+* Add `Ord` instances for `AlonzoBbodyPredFailure`, `AlonzoUtxoPredFailure`,
+  `AlonzoUtxosPredFailure`, `AlonzoUtxowPredFailure`
+* Add `Ord` instances for `Addr28Extra`, `AlonzoContextError`, `AlonzoPlutusPurpose AsItem`,
+  `AlonzoPlutusPurpose AsIxItem`, `AlonzoScript`, `AlonzoTxOut`, `CollectError`, `DataHash32`,
+  `FailureDescription`, `IsValid`, `TagMismatchDescription`
 * Convert `IsValid` into the `IsPhase2Valid` sum type (`Phase2Valid`/`Phase2Invalid`) and rename its lens and field, deprecating the old names:
   - `isValidTxL` -> `isPhase2ValidTxL`
   - `isValidAlonzoTxL` -> `isPhase2ValidAlonzoTxL`

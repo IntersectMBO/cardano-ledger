@@ -39,7 +39,7 @@ class
   , ToJSON t
   , NFData t
   , Show t
-  , Eq t
+  , Ord t
   ) =>
   Val t
   where
