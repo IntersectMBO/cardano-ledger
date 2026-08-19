@@ -13,6 +13,7 @@
 module Test.Cardano.Ledger.Babbage.ImpTest (
   BabbageEraImp,
   babbageFixupTx,
+  fixupCollateralReturn,
   impBabbageExpectTxSuccess,
   module Test.Cardano.Ledger.Alonzo.ImpTest,
   produceRefScript,
