@@ -45,11 +45,9 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Hashes (
   GenDelegPair (..),
   GenDelegs (..),
-  KeyHash (..),
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
   fromVRFVerKeyHash,
-  hashKey,
   toVRFVerKeyHash,
  )
 import Cardano.Ledger.Keys.Bootstrap

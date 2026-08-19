@@ -6,15 +6,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeData #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Keys.Internal (
   -- * DSIGN
   DSIGN,
   DSignable,
   VKey (..),
+  ADDRHASH,
+  KeyHash (..),
+  hashKey,
   signedDSIGN,
   verifySignedDSIGN,
 
@@ -31,14 +34,22 @@ import Cardano.Crypto.DSIGN hiding (
   verifySignedDSIGN,
  )
 import qualified Cardano.Crypto.DSIGN as DSIGN
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR,
+  ToCBOR,
  )
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Coerce (Coercible, coerce)
+import Data.Default (Default)
 import Data.Kind (Type)
+import Data.MemPack (FailT (..), MemPack (..), StateT (..), Unpack (..))
+import Data.Ord (comparing)
+import Foreign.Storable (Storable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -107,9 +118,45 @@ type DSignable = DSIGN.Signable DSIGN
 newtype VKey (kd :: KeyRole) = VKey {unVKey :: DSIGN.VerKeyDSIGN DSIGN}
   deriving (Generic, Eq, NFData, NoThunks, DecCBOR, EncCBOR)
 
+instance Ord (VKey kd) where
+  -- `VerKeyDSIGN` disallows an `Ord` instance and specifies that hashes should be compared instead.
+  -- We need an `Ord` instance for `VKey`, so it can be stored inside other types that need an `Ord`
+  -- instance, so we define it using the `VerKeyDSIGN` hashes as requested.
+  compare = comparing hashKey
+
 deriving via Quiet (VKey kd) instance Show (VKey kd)
 
 instance HasKeyRole VKey
+
+-- | Hashing algorithm used for hashing cryptographic keys and scripts (aka addresses).
+type ADDRHASH = Hash.Blake2b_224
+
+-- | Discriminated hash of public Key
+newtype KeyHash (r :: KeyRole) = KeyHash
+  {unKeyHash :: Hash.Hash ADDRHASH (VerKeyDSIGN DSIGN)}
+  deriving (Show, Eq, Ord)
+  deriving newtype
+    ( NFData
+    , NoThunks
+    , Generic
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSONKey
+    , FromJSONKey
+    , ToJSON
+    , FromJSON
+    , Default
+    , MemPack
+    , Storable
+    )
+
+instance HasKeyRole KeyHash
+
+-- | Hash a given public key
+hashKey :: VKey kd -> KeyHash kd
+hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 -- | Produce a digital signature
 signedDSIGN ::
