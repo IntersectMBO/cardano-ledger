@@ -17,7 +17,6 @@ module Cardano.Ledger.HKD (
   HKDFunctor (..),
   NoUpdate (..),
   HKDApplicative (..),
-  These (..),
   HKDSemialign (..),
 ) where
 
@@ -82,11 +81,6 @@ instance HKDApplicative Maybe where
 instance HKDApplicative StrictMaybe where
   hkdPure = pure
   hkdLiftA2 = liftA2
-
-data These a b
-  = This a
-  | That b
-  | Both a b
 
 class HKDApplicative f => HKDSemialign f where
   hkdAlignWith :: proxy f -> (a -> c) -> (b -> c) -> (a -> b -> c) -> HKD f a -> HKD f b -> HKD f c
