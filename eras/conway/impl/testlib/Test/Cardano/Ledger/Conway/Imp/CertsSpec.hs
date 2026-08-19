@@ -10,15 +10,21 @@
 
 module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
+import Cardano.Ledger.Address
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.Rules (
+  ConwayCertsPredFailure (..),
+  ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure (..),
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NEM
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -131,6 +137,40 @@ spec = describe "CERTS" $ do
                   Mismatch zero reward1
             else injectFailure . WithdrawalsNotInRewardsCERTS @era $ Withdrawals [(accountAddress1, zero)]
         ]
+
+    it "Withdrawing with the wrong network" $ do
+      pv <- getsPParams @era ppProtocolVersionL
+      stakeKey <- freshKeyHash
+      accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
+      let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
+      let withdrawals = Withdrawals [(wrongNetworkAccount, zero)]
+      let
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ withdrawals
+        notInRewardsFailure =
+          ( if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule pv
+              then injectFailure . ConwayWithdrawalsMissingAccounts @era
+              else injectFailure . WithdrawalsNotInRewardsCERTS @era
+          )
+            withdrawals
+      let wrongNetworkFailure =
+            injectFailure . WrongNetworkWithdrawal @era Testnet $ NES.singleton wrongNetworkAccount
+       in -- when the network is wrong, missing account failure is emitted even if the stake credential is registered
+          submitBootstrapAware
+            (submitTx_ tx)
+            (submitFailingTx tx)
+            ( FailBootstrapAndPostBootstrap $
+                FailBoth
+                  { bootstrapFailures = [wrongNetworkFailure, notInRewardsFailure]
+                  , postBootstrapFailures =
+                      [ wrongNetworkFailure
+                      , notInRewardsFailure
+                      , injectFailure (ConwayWdrlNotDelegatedToDRep [stakeKey])
+                      ]
+                  }
+            )
   where
     setupAccountAddress = do
       kh <- freshKeyHash

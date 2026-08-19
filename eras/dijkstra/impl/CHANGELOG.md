@@ -2,6 +2,16 @@
 
 ## 0.4.0.0
 
+* Rename `EntitiesPredFailure` constructors:
+  - `IncompleteWithdrawals` to `InexactWithdrawalsInLegacy`
+  - `ExceededBalancesInWithdrawals` to `WithdrawalsExceedAccountBalance`
+* Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
+* Add `MissingOriginalAccountsInWithdrawals` constructor to `EntitiesPredFailure`
+* Add `validateMissingOriginalAccountsInWithdrawals`, `validateMissingAccountsInWithdrawals`
+* Restructure `EntitiesEnv`:
+  - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
+  - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
+* Change the `STS` `Signal` of `ENTITIES` to `StAnnTx TopTx era`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Remove `EncCBORGroup` instance for `DijkstraBlockBody`

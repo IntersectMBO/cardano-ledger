@@ -25,13 +25,14 @@ module Cardano.Ledger.State.Account (
   sumDepositsAccounts,
   addToBalanceAccounts,
   withdrawalsThatDoNotDrainAccounts,
-  withdrawalsThatExceedAccountBalance,
+  withdrawalsWithUnacceptableAmount,
   drainAccounts,
   applyWithdrawals,
   applyDirectDeposits,
   directDepositsMissingAccounts,
   withdrawalsMissingAccounts,
   removeStakePoolDelegations,
+  updateAccountBalances,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -49,6 +50,8 @@ import Data.Default (Default)
 import Data.Foldable (foldMap')
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
+import Data.Map.NonEmpty (NonEmptyMap)
+import qualified Data.Map.NonEmpty as NEM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (lookupInternMap)
@@ -153,6 +156,13 @@ lookupAccountState ::
   EraAccounts era => Credential Staking -> Accounts era -> Maybe (AccountState era)
 lookupAccountState cred accounts = Map.lookup cred (accounts ^. accountsMapL)
 
+-- | Lookup an accounts state by its AccountAddress - networks should match.
+lookupAccountAddress ::
+  EraAccounts era => AccountAddress -> Network -> Accounts era -> Maybe (AccountState era)
+lookupAccountAddress (AccountAddress aaNetworkId (AccountId credential)) networkId accounts
+  | aaNetworkId == networkId = lookupAccountState credential accounts
+  | otherwise = Nothing
+
 lookupAccountStateIntern ::
   EraAccounts era =>
   Credential Staking -> Accounts era -> Maybe (Credential Staking, AccountState era)
@@ -216,18 +226,47 @@ withdrawalsThatDoNotDrainAccounts =
         withdrawalAmount == fromCompact (account ^. balanceAccountStateL)
     )
 
-withdrawalsThatExceedAccountBalance ::
+withdrawalsWithUnacceptableAmount ::
   EraAccounts era =>
+  (Coin -> AccountState era -> Bool) ->
   Withdrawals ->
   Network ->
   Accounts era ->
-  Maybe (Withdrawals, Map AccountAddress (Mismatch RelLTEQ Coin))
-withdrawalsThatExceedAccountBalance =
-  categorizeWithdrawals
-    ( \withdrawalAmount account ->
-        withdrawalAmount <= fromCompact (account ^. balanceAccountStateL)
-    )
+  Maybe (NonEmptyMap AccountAddress (Mismatch r Coin))
+withdrawalsWithUnacceptableAmount amountAcceptable (Withdrawals withdrawals) networkId accounts
+  | Map.foldrWithKey' checkBadWithdrawals True withdrawals = Nothing
+  | otherwise = NEM.fromMap $ Map.foldrWithKey' collectBadWithdrawals Map.empty withdrawals
+  where
+    checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
+      noBadWithdrawals
+        && isGoodWithdrawal accountAddress withdrawalAmount
+    isGoodWithdrawal accountAddress withdrawalAmount =
+      maybe
+        True
+        (amountAcceptable withdrawalAmount)
+        (lookupAccountAddress accountAddress networkId accounts)
+    collectBadWithdrawals accountAddress withdrawalAmount accum =
+      case lookupAccountAddress accountAddress networkId accounts of
+        Nothing -> accum
+        Just account
+          | amountAcceptable withdrawalAmount account -> accum
+          | otherwise ->
+              Map.insert
+                accountAddress
+                (Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL))
+                accum
+{-# INLINE withdrawalsWithUnacceptableAmount #-}
 
+-- If the account in a withdrawal is registered, but the network is wrong, the withdrawal will be added to the first element in the resulting tuple.
+-- As a result, in Conway - where we use `categorizeWithdrawals` - in such a case we will emit two predicate failures:
+--  * one - arguably spurious one - for "missing account"
+--  * one for incorrect network
+-- In Dijkstra - where we don't use `categorizeWithdrawals` - we will only emit the failure for incorrect network.
+--
+-- TODO: once we are in Dijkstra, we can do the same for Conway, and replace `categorizeWithdrawals` with two checks:
+-- withdrawalsMissingAccounts and withdrawalsWithUnacceptableAmount.
+-- Hence the duplication between `categorizeWithdrawals` and `withdrawalsWithUnacceptableAmount` is short-lived.
+-- The complexity introduced by abstracting it away is not worth it.
 categorizeWithdrawals ::
   EraAccounts era =>
   (Coin -> AccountState era -> Bool) ->
@@ -246,9 +285,12 @@ categorizeWithdrawals amountAcceptable (Withdrawals withdrawals) networkId accou
     checkBadWithdrawals accountAddress withdrawalAmount noBadWithdrawals =
       noBadWithdrawals && isGoodWithdrawal accountAddress withdrawalAmount
     isGoodWithdrawal accountAddress withdrawalAmount =
-      maybe False (amountAcceptable withdrawalAmount) (lookupAccount accountAddress)
+      maybe
+        False
+        (amountAcceptable withdrawalAmount)
+        (lookupAccountAddress accountAddress networkId accounts)
     collectBadWithdrawals accountAddress withdrawalAmount accum@(!_, !_) =
-      case lookupAccount accountAddress of
+      case lookupAccountAddress accountAddress networkId accounts of
         Nothing -> first (Map.insert accountAddress withdrawalAmount) accum
         Just account
           | amountAcceptable withdrawalAmount account -> accum
@@ -259,9 +301,6 @@ categorizeWithdrawals amountAcceptable (Withdrawals withdrawals) networkId accou
                     $ Mismatch withdrawalAmount (fromCompact $ account ^. balanceAccountStateL)
                 )
                 accum
-    lookupAccount (AccountAddress aaNetworkId (AccountId credential))
-      | aaNetworkId == networkId = lookupAccountState credential accounts
-      | otherwise = Nothing
 {-# INLINE categorizeWithdrawals #-}
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.

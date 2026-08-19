@@ -88,8 +88,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
-import Data.Sequence (Seq)
-import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word32)
 import GHC.Generics (Generic (..))
 import Lens.Micro
@@ -306,7 +304,7 @@ instance
   , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , Signal (EraRule "ENTITIES" era) ~ Seq (TxCert era)
+  , Signal (EraRule "ENTITIES" era) ~ StAnnTx TopTx era
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
   , Signal (EraRule "SUBLEDGERS" era) ~ [StAnnTx SubTx era]
   , ConwayEraCertState era
@@ -369,7 +367,7 @@ dijkstraLedgerTransition ::
   , Environment (EraRule "GOV" era) ~ Conway.GovEnv era
   , Environment (EraRule "ENTITIES" era) ~ EntitiesEnv era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , Signal (EraRule "ENTITIES" era) ~ Seq (TxCert era)
+  , Signal (EraRule "ENTITIES" era) ~ StAnnTx TopTx era
   , Signal (EraRule "GOV" era) ~ Conway.GovSignal era
   , STS (LEDGER era)
   , EraRule "LEDGER" era ~ LEDGER era
@@ -423,10 +421,13 @@ dijkstraLedgerTransition = do
           trans @(EraRule "ENTITIES" era) $
             TRC
               ( EntitiesEnv
-                  (stAnnTx ^. plutusLegacyModeStAnnTxG)
-                  (Conway.CertsEnv tx pp curEpochNo committee committeeProposals)
+                  curEpochNo
+                  pp
+                  committee
+                  committeeProposals
+                  (lsCertState ledgerState ^. certDStateL . accountsL)
               , certStateAfterSubLedgers
-              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              , stAnnTx
               )
 
         let govSignal =
@@ -519,7 +520,7 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayTxRefScriptsSizeTooBig mm -> DijkstraTxRefScriptsSizeTooBig mm
   Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
   Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraEntitiesFailure (MissingAccountsInWithdrawals ws)
-  Conway.ConwayIncompleteWithdrawals ws -> DijkstraEntitiesFailure (IncompleteWithdrawals ws)
+  Conway.ConwayIncompleteWithdrawals ws -> DijkstraEntitiesFailure (InexactWithdrawalsInLegacy ws)
 
 shelleyToDijkstraLedgerPredFailure ::
   forall era.
@@ -529,7 +530,7 @@ shelleyToDijkstraLedgerPredFailure = \case
   Shelley.UtxowFailure x -> DijkstraUtxowFailure x
   Shelley.DelegsFailure _ -> error "Impossible: DELEGS has been removed in Dijkstra"
   Shelley.ShelleyWithdrawalsMissingAccounts x -> DijkstraEntitiesFailure (MissingAccountsInWithdrawals x)
-  Shelley.ShelleyIncompleteWithdrawals x -> DijkstraEntitiesFailure (IncompleteWithdrawals x)
+  Shelley.ShelleyIncompleteWithdrawals x -> DijkstraEntitiesFailure (InexactWithdrawalsInLegacy x)
 
 instance
   ( STS (ENTITIES era)
