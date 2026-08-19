@@ -24,6 +24,7 @@ module Test.Cardano.Ledger.Imp.Common (
   assertFailure,
   assertColorFailure,
   expectationFailure,
+  expectExprEqualWithMessage,
   shouldBe,
   shouldSatisfy,
   shouldSatisfyExpr,
@@ -88,7 +89,7 @@ import Control.Monad.IO.Class
 import Data.Array.Byte (ByteArray)
 import Data.List (isInfixOf)
 import qualified System.Random.Stateful as R
-import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
+import qualified Test.Cardano.Ledger.Binary.TreeDiff as TreeDiff
 import Test.Cardano.Ledger.Common as X hiding (
   arbitrary,
   assertBool,
@@ -167,8 +168,11 @@ infix 1 `shouldBeExpr`
         , `shouldBeRightExpr`
         , `shouldBeLeftExpr`
 
+expectExprEqualWithMessage :: (HasCallStack, ToExpr a, Eq a, MonadIO m) => String -> a -> a -> m ()
+expectExprEqualWithMessage msg actual expected = liftIO $ TreeDiff.expectExprEqualWithMessage msg actual expected
+
 shouldBeExpr :: (HasCallStack, ToExpr a, Eq a, MonadIO m) => a -> a -> m ()
-shouldBeExpr actual expected = liftIO $ expectExprEqualWithMessage "" actual expected
+shouldBeExpr = expectExprEqualWithMessage ""
 
 shouldSatisfyExpr :: (HasCallStack, MonadIO m, ToExpr a) => a -> (a -> Bool) -> m ()
 shouldSatisfyExpr x f

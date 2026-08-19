@@ -40,6 +40,7 @@
 
 ### `testlib`
 
+* Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
 
 ### `cddl`
