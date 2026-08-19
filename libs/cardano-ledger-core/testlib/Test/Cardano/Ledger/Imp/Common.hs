@@ -168,7 +168,7 @@ infix 1 `shouldBeExpr`
         , `shouldBeLeftExpr`
 
 shouldBeExpr :: (HasCallStack, ToExpr a, Eq a, MonadIO m) => a -> a -> m ()
-shouldBeExpr expected actual = liftIO $ expectExprEqualWithMessage "" expected actual
+shouldBeExpr actual expected = liftIO $ expectExprEqualWithMessage "" actual expected
 
 shouldSatisfyExpr :: (HasCallStack, MonadIO m, ToExpr a) => a -> (a -> Bool) -> m ()
 shouldSatisfyExpr x f
