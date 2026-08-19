@@ -7,6 +7,55 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 11.1
+
+* Significant performance improvements to Plutus script validation: scripts are now
+  deserialized and validated only once, with results memoized and cached across mempool
+  validation and block application:
+  [#5636](https://github.com/IntersectMBO/cardano-ledger/pull/5636),
+  [#5635](https://github.com/IntersectMBO/cardano-ledger/pull/5635),
+  [#5641](https://github.com/IntersectMBO/cardano-ledger/pull/5641),
+  [#5942](https://github.com/IntersectMBO/cardano-ledger/pull/5942),
+  [#5953](https://github.com/IntersectMBO/cardano-ledger/pull/5953)
+* Fixes to protocol version deserialization: the minor protocol version is now limited to
+  a 32-bit value and protocol parameter updates proposing a protocol version beyond the
+  maximum supported by the era are now rejected:
+  [#5736](https://github.com/IntersectMBO/cardano-ledger/pull/5736),
+  [#5935](https://github.com/IntersectMBO/cardano-ledger/pull/5935)
+* Made the mempool transaction decoder backwards compatible, so that transactions
+  serialized in pre-Alonzo era formats can be submitted again:
+  [#5946](https://github.com/IntersectMBO/cardano-ledger/pull/5946)
+* Improved handling of legacy pointer addresses in the UTxO, fixing address
+  normalization when deserializing the ledger state:
+  [#5654](https://github.com/IntersectMBO/cardano-ledger/pull/5654)
+* Prevent starting a network in an era that is incompatible with the configured protocol
+  version: [#5719](https://github.com/IntersectMBO/cardano-ledger/pull/5719)
+* New `cardano-protocol` package that consolidates protocol-related functionality (TPraos
+  and Praos block headers, operational certificates, protocol crypto), together with
+  initial groundwork for `Leios` and `Peras` in the Dijkstra era:
+  [#5887](https://github.com/IntersectMBO/cardano-ledger/pull/5887),
+  [#5872](https://github.com/IntersectMBO/cardano-ledger/pull/5872),
+  [#5927](https://github.com/IntersectMBO/cardano-ledger/pull/5927)
+* All remaining ledger state queries have been moved from `ouroboros-consensus` into the
+  ledger API, with golden tests guaranteeing the stability of query result serialization:
+  [#5764](https://github.com/IntersectMBO/cardano-ledger/pull/5764)
+* Support for initializing a testnet with large amounts of initial funds and staking by
+  streaming injection data from external files, without loading everything into memory:
+  [#5572](https://github.com/IntersectMBO/cardano-ledger/pull/5572),
+  [#5777](https://github.com/IntersectMBO/cardano-ledger/pull/5777)
+* Continued progress on the Dijkstra era, which as a whole is not functional yet:
+  - Nested transactions: rules for validating sub-transactions within a top-level
+    transaction, including UTxO, witnessing, fee and script handling
+  - Guards ([CIP-112](https://github.com/cardano-foundation/CIPs/pull/749)): required
+    top-level guards with optional datums
+  - Account balance assertions in the transaction body, including exact balance checks
+  - Direct deposits to reward accounts, with network validation
+  - Withdrawals no longer require the reward account to be delegated to a DRep
+  - New block body structure with memoized serialization and a more flexible block
+    header interface
+* New `generate-cbor` command line tool for producing random valid CBOR examples of any
+  ledger type in every era: [#5762](https://github.com/IntersectMBO/cardano-ledger/pull/5762)
+
 ## 11.0
 
 * Lift restriction for testnets of having major protocol version in the block header enforced to be equal to the current one or one higher from current major protocol version: [#5785](https://github.com/IntersectMBO/cardano-ledger/pull/5785)
@@ -687,28 +736,28 @@ Release tag `ledger/1.1.0`
 * Era specific type classes: `ShelleyEraTxBody`, `ShelleyMAEraTxBody`,
   `AlonzoEraTxBody`, `AlonzoEraTxOut`, `AlonzoEraTx`, `BabbageEraTxBody`, `BabbageEraTxOut`
 * Type class hierarchy:
-  ``` 
+  ```
   EraSegWits --> EraTx --> EraTxBody --> EraTxOut --> Era
                        \             `--> EraPParams --> Era
                         `--> EraTxWits --> EraScript --> Era
                          `--> EraAuxiliaryData --> Era
   ```
 * Shelley:
-  ``` 
+  ```
   ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
   ```
 * ShelleyMA:
-  ``` 
+  ```
   ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
   ```
 * Alonzo:
-  ``` 
+  ```
   AlonzoEraTx --> EraTx --> ...
              `--> AlonzoEraTxBody --> ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> ...
                                   `--> AlonzoEraTxOut -> ShelleyEraTxOut --> EraTxOut --> ...
   ```
 * Babbage:
-  ``` 
+  ```
   BabbageEraTxBody --> AlonzoEraTxBody --> ....
                   `--> BabbageEraTxOut -> AlonzoEraTxOut -->
   ```
