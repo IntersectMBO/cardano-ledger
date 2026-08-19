@@ -325,8 +325,9 @@ ratifyStateSpec RatifyEnv {..} =
     mconcat
       [ assert $ enacted ==. lit mempty
       , assert $ expired ==. lit mempty
-      , match ens $ \mbyCmt _ pp _ _ _ _ ->
-          [ (caseOn mbyCmt)
+      , match ens $ \mbyCmt _ pp _ _ wdrls _ ->
+          [ assert $ wdrls ==. lit mempty
+          , (caseOn mbyCmt)
               (branch $ \_ -> True)
               ( branch $ \cmt -> match cmt $ \cmtMap _ ->
                   exists
