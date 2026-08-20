@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.19.0.1
+
+* Force the initial-funds injection result in `Cardano.Ledger.Shelley.Transition`
+  to prevent holding onto the thunk for the lifetime of the process.
+
 ## 1.19.0.0
 
 * Change argument to `validateMetadata` from `Tx` to `StAnnTx`
