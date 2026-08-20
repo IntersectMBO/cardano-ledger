@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,6 +19,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
   fixupSubTransactions,
+  balanceSubTransactions,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -37,6 +41,10 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
   pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.UTxO (
+  dijkstraConsumed,
+  localProducedValue,
+ )
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -47,6 +55,9 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.State
+import Cardano.Ledger.Tools (ensureMinCoinTxOut)
+import Cardano.Ledger.Val
+import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -226,3 +237,51 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
           -- to make sure it isn't affected by any higher-level fixup modifications
           newTxIn <- withFixup fixupTx $ sendCoinTo addr (Coin 1_000_000)
           pure $ subTx & bodyTxL . inputsTxBodyL .~ Set.singleton newTxIn
+
+balanceSubTransactions ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+balanceSubTransactions topTx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  pools <- Map.keysSet <$> getsNES (nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL)
+  utxo <- getUTxO
+  let
+    subTransactions = topTx ^. bodyTxL . subTransactionsTxBodyL
+    subsCerts = foldMap' (^. bodyTxL . certsTxBodyL) subTransactions
+    subsConsumed = coin $ foldMap' (dijkstraConsumed pp utxo . (^. bodyTxL)) subTransactions
+    subsProduced =
+      foldMap' (coin . localProducedValue pp . (^. bodyTxL)) subTransactions
+        <> getTotalDepositsTxCerts pp (`Set.member` pools) subsCerts
+  balancer <- mkBalancerSubTx subsConsumed subsProduced
+  case balancer of
+    Nothing -> pure topTx
+    Just b -> pure $ topTx & bodyTxL . subTransactionsTxBodyL %~ (OMap.|> b)
+
+mkBalancerSubTx ::
+  DijkstraEraImp era =>
+  -- | Cumulated consumed value by all sub-transactions
+  Coin ->
+  -- | Cumulated produced value by all sub-transactions
+  Coin ->
+  ImpTestM era (Maybe (Tx SubTx era))
+mkBalancerSubTx consumed produced = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  case consumed `compare` produced of
+    EQ -> pure Nothing
+    ord -> do
+      addr <- freshKeyAddr_
+      let
+        (surplus, shortfall) = case ord of
+          GT -> (consumed <-> produced, mempty)
+          LT -> (mempty, produced <-> consumed)
+        -- a buffer to make both the input UTxO and the change output satisfy minCoin. It's added on both sides, so it cancels out.
+        minChangeCoin = ensureMinCoinTxOut pp (mkBasicTxOut addr mempty) ^. coinTxOutL
+        inputCoin = minChangeCoin <> shortfall
+        changeCoin = minChangeCoin <> surplus
+        changeOut = mkBasicTxOut addr (inject changeCoin)
+      newTxIn <- withFixup fixupTx $ sendCoinTo addr inputCoin
+      pure . Just $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ [newTxIn]
+          & bodyTxL . outputsTxBodyL .~ [changeOut]

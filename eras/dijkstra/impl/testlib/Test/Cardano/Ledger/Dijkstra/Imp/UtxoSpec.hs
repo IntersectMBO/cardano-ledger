@@ -357,6 +357,26 @@ spec = describe "UTXO" $ do
                   , mismatchExpected = inject (bbBatchProduced balances)
                   }
           ]
+
+    describe "fixup function for balancing subtransactions" $ do
+      it "top-only balanced - normal mode" $ do
+        amounts <- genTopOnlyBalancedAmounts
+        topTx <- mkTopTx amounts
+        balanced <- balanceSubTransactions topTx
+        withFixup noBalanceFixup $ submitTx_ balanced
+
+      it "top-only balanced - legacy mode" $ do
+        amounts <- genTopOnlyBalancedAmounts
+        topTx <- mkTopTx amounts
+        topTxLegacy <- mkTopTxLegacyMode amounts topTx
+        balanced <- balanceSubTransactions topTxLegacy
+        withFixup noBalanceFixup $ submitTx_ balanced
+
+      it "balanced on both levels keeps it balanced" $ do
+        amounts <- genFullyBalancedAmounts
+        topTx <- mkTopTx amounts
+        balanced <- balanceSubTransactions topTx
+        withFixup noBalanceFixup $ submitTx_ balanced
   where
     registerPoolTxWithSubTxs ::
       [KeyHash StakePool] -> -- top's pool certs
