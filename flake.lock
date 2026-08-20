@@ -84,6 +84,22 @@
         "type": "github"
       }
     },
+    "cardano-crypto-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785137178,
+        "narHash": "sha256-NvbMk41W2PQy2H91nkG0GtPyGDwia0y6DQNNf9RtoAc=",
+        "ref": "refs/heads/develop",
+        "rev": "ac2e12a471b735ad80949bcbf0f6f634e5dbef77",
+        "revCount": 278,
+        "type": "git",
+        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-crypto"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-crypto"
+      }
+    },
     "cardano-ledger-release-tool": {
       "inputs": {
         "flake-utils": [
@@ -872,6 +888,7 @@
     "root": {
       "inputs": {
         "CHaP": "CHaP",
+        "cardano-crypto-src": "cardano-crypto-src",
         "cardano-ledger-release-tool": "cardano-ledger-release-tool",
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
         "flake-compat": "flake-compat",
