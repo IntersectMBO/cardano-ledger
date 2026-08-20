@@ -11,6 +11,7 @@
   - `checkFailOnNonEmpty` -> `failOnNonEmpty`
   - `checkFailOnNonEmptySet` -> `failOnNonEmptySet`
   - `checkFailOnNonEmptyMap` -> `failOnNonEmptyMap`
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Remove `numSegComponents` from `EraBlockBody`
 * Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Change `decodeMetadatum` to require definite-length chunks in indefinite-length bytestrings

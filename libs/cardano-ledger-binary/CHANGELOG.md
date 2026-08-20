@@ -6,6 +6,7 @@
 * Move `decodeIPv4` and `decodeIPv6` into `Cardano.Ledger.Binary.Decoding.DecCBOR`
 * Add `decodeStringIndefLen`, `decodeStringDefOrIndef`, `decodeBytesIndefLen`, `decodeBytesDefOrIndef`, `decodeByteArrayIndefLen` and `decodeByteArrayDefOrIndef`
 * Change `DecCBOR` instances for `Text` and tuples to accept indefinite-length encoding starting with protocol version 12
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 
 ### `testlib`
 
