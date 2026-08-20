@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `localProducedValue` helper in `UTxO` module
 * Add `ValueNotConservedInLegacy` constructor to `DijkstraUtxoPredFailure`
 * Rename:
   - `DijkstraUtxoEnv` -> `UtxoEnv` and add `uePState` field
