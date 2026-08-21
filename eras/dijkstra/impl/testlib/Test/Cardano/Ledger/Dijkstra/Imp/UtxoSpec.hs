@@ -64,164 +64,174 @@ spec = describe "UTXO" $ do
 
   describe "value produced by a transaction" $ do
     it "counts each new pool deposit at most once across the batch" $ do
-      poolKh <- freshKeyHash
-      tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh], [poolKh]]
       pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      -- just the pool deposits are in `produced` because the transaction is not fixed up
-      produced pp pState (tx ^. bodyTxL) `shouldBe` inject (pp ^. ppPoolDepositL)
-      submitTx_ tx
+      let genTx = do
+            poolKh <- freshKeyHash
+            tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh], [poolKh]]
+            -- just the pool deposits are in `produced` because the transaction is not fixed up
+            expectProduced tx $ inject (pp ^. ppPoolDepositL)
+            pure tx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "counts distinct pool deposits in top and sub separately" $ do
-      poolA <- freshKeyHash
-      poolB <- freshKeyHash
-      tx <- registerPoolTxWithSubTxs [poolB, poolA, poolB] [[poolA, poolA, poolB], [poolA, poolB]]
-
-      pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (tx ^. bodyTxL) `shouldBe` inject ((2 :: Int) <×> (pp ^. ppPoolDepositL))
-      submitTx_ tx
+      let genTx = do
+            pp <- getsPParams id
+            poolA <- freshKeyHash
+            poolB <- freshKeyHash
+            tx <- registerPoolTxWithSubTxs [poolB, poolA, poolB] [[poolA, poolA, poolB], [poolA, poolB]]
+            expectProduced tx $ inject ((2 :: Int) <×> (pp ^. ppPoolDepositL))
+            pure tx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "includes sub-tx cert deposits when top has no certs" $ do
-      poolKh <- freshKeyHash
-      tx <- registerPoolTxWithSubTxs [] [[poolKh]]
-
       pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (tx ^. bodyTxL) `shouldBe` inject (pp ^. ppPoolDepositL)
-      submitTx_ tx
+      let genTx = do
+            poolKh <- freshKeyHash
+            tx <- registerPoolTxWithSubTxs [] [[poolKh]]
+            expectProduced tx $ inject (pp ^. ppPoolDepositL)
+            pure tx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "does not count re-registrations of an already-registered pool across the batch" $ do
-      poolKh <- freshKeyHash
-      registerPool poolKh
-      tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh]]
-      pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (tx ^. bodyTxL) `shouldBe` mempty
-      submitTx_ tx
+      let genTx = do
+            poolKh <- freshKeyHash
+            registerPool poolKh
+            tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh]]
+            expectProduced tx mempty
+            pure tx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "dedupes across multiple subtransactions registering the same fresh pool" $ do
-      poolKh <- freshKeyHash
-      tx <- registerPoolTxWithSubTxs [] [[poolKh], [poolKh]]
       pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (tx ^. bodyTxL) `shouldBe` inject (pp ^. ppPoolDepositL)
-      submitTx_ tx
+      let genTx = do
+            poolKh <- freshKeyHash
+            tx <- registerPoolTxWithSubTxs [] [[poolKh], [poolKh]]
+            expectProduced tx $ inject (pp ^. ppPoolDepositL)
+            pure tx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "sums outputs, fee, treasury donations and deposits across the batch" $ do
       pp <- getsPParams id
-      let poolDeposit = pp ^. ppPoolDepositL
-          dRepDeposit = pp ^. ppDRepDepositL
+      let genTx = do
+            let poolDeposit = pp ^. ppPoolDepositL
+                dRepDeposit = pp ^. ppDRepDepositL
 
-      let freshPoolCert = do
-            poolKh <- freshKeyHash
-            pps <- freshPoolParams poolKh =<< registerAccountAddress
-            pure $ RegPoolTxCert @era pps
-      topPoolCert <- freshPoolCert
-      subPoolCert <- freshPoolCert
+            let freshPoolCert = do
+                  poolKh <- freshKeyHash
+                  pps <- freshPoolParams poolKh =<< registerAccountAddress
+                  pure $ RegPoolTxCert @era pps
+            topPoolCert <- freshPoolCert
+            subPoolCert <- freshPoolCert
 
-      let freshDRepCert = do
-            kh <- freshKeyHash
-            pure $ RegDRepTxCert @era (KeyHashObj kh) dRepDeposit SNothing
-      topDRepCert <- freshDRepCert
-      subDRepCert <- freshDRepCert
+            let freshDRepCert = do
+                  kh <- freshKeyHash
+                  pure $ RegDRepTxCert @era (KeyHashObj kh) dRepDeposit SNothing
+            topDRepCert <- freshDRepCert
+            subDRepCert <- freshDRepCert
 
-      topDDAccount <- registerAccountAddress
-      subDDAccount <- registerAccountAddress
-      topDDAmount <- (Coin 1 <>) <$> arbitrary
-      subDDAmount <- (Coin 1 <>) <$> arbitrary
+            subDDAccount <- registerAccountAddress
+            subDDAmount <- (Coin 1 <>) <$> arbitrary
 
-      topOut <- freshTxOut
-      subOut <- freshTxOut
-      topTreasury <- arbitrary
-      subTreasury <- arbitrary
-      -- we are setting the fee manually in order to verify the `produced` value before the fixup.
-      topFee <- (Coin 1_000_000 <>) <$> arbitrary
+            topOut <- freshTxOut
+            subOut <- freshTxOut
+            topTreasury <- arbitrary
+            subTreasury <- arbitrary
+            -- we are setting the fee manually in order to verify the `produced` value before the fixup.
+            topFee <- (Coin 1_000_000 <>) <$> arbitrary
 
-      let subTx :: Tx SubTx era
-          subTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & outputsTxBodyL .~ [subOut]
-                & certsTxBodyL
-                  .~ [subPoolCert, subDRepCert]
-                & treasuryDonationTxBodyL .~ subTreasury
-                & directDepositsTxBodyL .~ DirectDeposits [(subDDAccount, subDDAmount)]
-          topTx :: Tx TopTx era
-          topTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & outputsTxBodyL .~ [topOut]
-                & feeTxBodyL .~ topFee
-                & certsTxBodyL
-                  .~ [topPoolCert, topDRepCert]
-                & treasuryDonationTxBodyL .~ topTreasury
-                & directDepositsTxBodyL .~ DirectDeposits [(topDDAccount, topDDAmount)]
-                & subTransactionsTxBodyL .~ [subTx]
-          expectedCoin =
-            (topOut ^. coinTxOutL)
-              <> (subOut ^. coinTxOutL)
-              <> topFee
-              <> topTreasury
-              <> subTreasury
-              <> ((2 :: Int) <×> poolDeposit)
-              <> ((2 :: Int) <×> dRepDeposit)
-              <> topDDAmount
-              <> subDDAmount
-          expected = MaryValue expectedCoin mempty
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
-      checkDepositCalculation
-        (topTx ^. bodyTxL)
-        (((2 :: Int) <×> poolDeposit) <> ((2 :: Int) <×> dRepDeposit))
-        (poolDeposit <> dRepDeposit)
-      submitTx_ topTx
+            let subTx :: Tx SubTx era
+                subTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & outputsTxBodyL .~ [subOut]
+                      & certsTxBodyL
+                        .~ [subPoolCert, subDRepCert]
+                      & treasuryDonationTxBodyL .~ subTreasury
+                      & directDepositsTxBodyL .~ DirectDeposits [(subDDAccount, subDDAmount)]
+                topTx :: Tx TopTx era
+                topTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & outputsTxBodyL .~ [topOut]
+                      & feeTxBodyL .~ topFee
+                      & certsTxBodyL
+                        .~ [topPoolCert, topDRepCert]
+                      & treasuryDonationTxBodyL .~ topTreasury
+                      & subTransactionsTxBodyL .~ [subTx]
+                -- we're not adding direct deposits at the top level
+                -- in order to be able to submit this transaction when switched to legacy mode
+                -- (which doesn't support direct deposits)
+                expectedCoin =
+                  (topOut ^. coinTxOutL)
+                    <> (subOut ^. coinTxOutL)
+                    <> topFee
+                    <> topTreasury
+                    <> subTreasury
+                    <> ((2 :: Int) <×> poolDeposit)
+                    <> ((2 :: Int) <×> dRepDeposit)
+                    <> subDDAmount
+            expectProduced topTx $ inject expectedCoin
+            checkDepositCalculation
+              (topTx ^. bodyTxL)
+              (((2 :: Int) <×> poolDeposit) <> ((2 :: Int) <×> dRepDeposit))
+              (poolDeposit <> dRepDeposit)
+            pure topTx
+
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
 
     disableInConformanceIt "sums assets burned by the top and the sub transaction" $ do
-      -- Mint upfront the tokens that the batch is going to burn: one output for the top
-      -- transaction to spend and one for the sub transaction.
-      policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
-      assetName <- arbitrary @AssetName
-      topBurnAmount <- getPositive <$> arbitrary
-      subBurnAmount <- getPositive <$> arbitrary
-      tokenAddr <- freshKeyAddr_
-      let tokens n = multiAssetFromList [(policyId, assetName, n)]
-      mintTx <-
-        submitTx $
-          mkBasicTx $
-            mkBasicTxBody
-              & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
-              & outputsTxBodyL
-                .~ [ mkBasicTxOut tokenAddr (MaryValue mempty (tokens topBurnAmount))
-                   , mkBasicTxOut tokenAddr (MaryValue mempty (tokens subBurnAmount))
-                   ]
-      topOut <- freshTxOut
-      subOut <- freshTxOut
-      topFee <- (Coin 1_000_000 <>) <$> arbitrary
-      let subTx :: Tx SubTx era
-          subTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txInAt (1 :: Int) mintTx]
-                & outputsTxBodyL .~ [subOut]
-                & mintTxBodyL .~ tokens (negate subBurnAmount)
-          topTx :: Tx TopTx era
-          topTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txInAt (0 :: Int) mintTx]
-                & outputsTxBodyL .~ [topOut]
-                & feeTxBodyL .~ topFee
-                & mintTxBodyL .~ tokens (negate topBurnAmount)
-                & subTransactionsTxBodyL .~ [subTx]
-          expected =
-            MaryValue
-              ((topOut ^. coinTxOutL) <> (subOut ^. coinTxOutL) <> topFee)
-              (tokens (topBurnAmount + subBurnAmount))
-      pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
-      submitTx_ topTx
+      let genTx = do
+            -- Mint upfront the tokens that the batch is going to burn: one output for the top
+            -- transaction to spend and one for the sub transaction.
+            policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
+            assetName <- arbitrary @AssetName
+            topBurnAmount <- getPositive <$> arbitrary
+            subBurnAmount <- getPositive <$> arbitrary
+            tokenAddr <- freshKeyAddr_
+            let tokens n = multiAssetFromList [(policyId, assetName, n)]
+            mintTx <-
+              submitTx $
+                mkBasicTx $
+                  mkBasicTxBody
+                    & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
+                    & outputsTxBodyL
+                      .~ [ mkBasicTxOut tokenAddr (MaryValue mempty (tokens topBurnAmount))
+                         , mkBasicTxOut tokenAddr (MaryValue mempty (tokens subBurnAmount))
+                         ]
+            topOut <- freshTxOut
+            subOut <- freshTxOut
+            topFee <- (Coin 1_000_000 <>) <$> arbitrary
+            let subTx :: Tx SubTx era
+                subTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & inputsTxBodyL .~ [txInAt (1 :: Int) mintTx]
+                      & outputsTxBodyL .~ [subOut]
+                      & mintTxBodyL .~ tokens (negate subBurnAmount)
+                topTx :: Tx TopTx era
+                topTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & inputsTxBodyL .~ [txInAt (0 :: Int) mintTx]
+                      & outputsTxBodyL .~ [topOut]
+                      & feeTxBodyL .~ topFee
+                      & mintTxBodyL .~ tokens (negate topBurnAmount)
+                      & subTransactionsTxBodyL .~ [subTx]
+                expected =
+                  MaryValue
+                    ((topOut ^. coinTxOutL) <> (subOut ^. coinTxOutL) <> topFee)
+                    (tokens (topBurnAmount + subBurnAmount))
+            expectProduced topTx expected
+            pure topTx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
+
   describe "Value preservation" $ do
     let mkSubTx :: BatchAmounts -> ImpTestM era (Tx SubTx era)
         mkSubTx BatchAmounts {..} = do
@@ -395,6 +405,11 @@ spec = describe "UTXO" $ do
           )
           khPools
       pure $ mkBasicTx mkBasicTxBody & bodyTxL . certsTxBodyL .~ StrictSeq.fromList certs
+    expectProduced :: Tx TopTx era -> Value era -> ImpTestM era ()
+    expectProduced tx expected = do
+      pp <- getsPParams id
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (tx ^. bodyTxL) `shouldBe` expected
 
     -- Check that `certsTotalDepositsTxBody` (used to set deposits in `UTxOState` and `AdaPots` calculations)
     -- returns the batch deposits, while `getTotalDepositsTxBody` returns the top-level deposits
