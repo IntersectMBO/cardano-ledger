@@ -294,7 +294,8 @@ mkBalancerSubTx consumed produced = do
         changeCoin = minChangeCoin <> surplus
         changeOut = mkBasicTxOut addr (inject changeCoin)
       newTxIn <- withFixup fixupTx $ sendCoinTo addr inputCoin
-      pure . Just $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ [newTxIn]
-          & bodyTxL . outputsTxBodyL .~ [changeOut]
+      let subTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [newTxIn]
+              & bodyTxL . outputsTxBodyL .~ [changeOut]
+      Just <$> updateAddrTxWits subTx
