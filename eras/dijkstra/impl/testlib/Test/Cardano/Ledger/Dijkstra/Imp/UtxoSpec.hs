@@ -133,46 +133,24 @@ spec = describe "UTXO" $ do
       -- we are setting the fee manually in order to verify the `produced` value before the fixup.
       topFee <- (Coin 1_000_000 <>) <$> arbitrary
 
-      -- Mint upfront the tokens that the batch is going to burn: one output for the top
-      -- transaction to spend and one for the sub transaction.
-      policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
-      assetName <- arbitrary @AssetName
-      topBurnAmount <- getPositive <$> arbitrary
-      subBurnAmount <- getPositive <$> arbitrary
-      let tokens n = multiAssetFromList [(policyId, assetName, n)]
-      tokenAddr <- freshKeyAddr_
-      mintTx <-
-        submitTx $
-          mkBasicTx $
-            mkBasicTxBody
-              & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
-              & outputsTxBodyL
-                .~ [ mkBasicTxOut tokenAddr (MaryValue mempty (tokens topBurnAmount))
-                   , mkBasicTxOut tokenAddr (MaryValue mempty (tokens subBurnAmount))
-                   ]
-
       let subTx :: Tx SubTx era
           subTx =
             mkBasicTx $
               mkBasicTxBody
-                & inputsTxBodyL .~ [txInAt (1 :: Int) mintTx]
                 & outputsTxBodyL .~ [subOut]
                 & certsTxBodyL
                   .~ [subPoolCert, subDRepCert]
                 & treasuryDonationTxBodyL .~ subTreasury
-                & mintTxBodyL .~ tokens (negate subBurnAmount)
                 & directDepositsTxBodyL .~ DirectDeposits [(subDDAccount, subDDAmount)]
           topTx :: Tx TopTx era
           topTx =
             mkBasicTx $
               mkBasicTxBody
-                & inputsTxBodyL .~ [txInAt (0 :: Int) mintTx]
                 & outputsTxBodyL .~ [topOut]
                 & feeTxBodyL .~ topFee
                 & certsTxBodyL
                   .~ [topPoolCert, topDRepCert]
                 & treasuryDonationTxBodyL .~ topTreasury
-                & mintTxBodyL .~ tokens (negate topBurnAmount)
                 & directDepositsTxBodyL .~ DirectDeposits [(topDDAccount, topDDAmount)]
                 & subTransactionsTxBodyL .~ [subTx]
           expectedCoin =
@@ -185,13 +163,59 @@ spec = describe "UTXO" $ do
               <> ((2 :: Int) <×> dRepDeposit)
               <> topDDAmount
               <> subDDAmount
-          expected = MaryValue expectedCoin (tokens (topBurnAmount + subBurnAmount))
+          expected = MaryValue expectedCoin mempty
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
       checkDepositCalculation
         (topTx ^. bodyTxL)
         (((2 :: Int) <×> poolDeposit) <> ((2 :: Int) <×> dRepDeposit))
         (poolDeposit <> dRepDeposit)
+      submitTx_ topTx
+
+    disableInConformanceIt "sums assets burned by the top and the sub transaction" $ do
+      -- Mint upfront the tokens that the batch is going to burn: one output for the top
+      -- transaction to spend and one for the sub transaction.
+      policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
+      assetName <- arbitrary @AssetName
+      topBurnAmount <- getPositive <$> arbitrary
+      subBurnAmount <- getPositive <$> arbitrary
+      tokenAddr <- freshKeyAddr_
+      let tokens n = multiAssetFromList [(policyId, assetName, n)]
+      mintTx <-
+        submitTx $
+          mkBasicTx $
+            mkBasicTxBody
+              & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
+              & outputsTxBodyL
+                .~ [ mkBasicTxOut tokenAddr (MaryValue mempty (tokens topBurnAmount))
+                   , mkBasicTxOut tokenAddr (MaryValue mempty (tokens subBurnAmount))
+                   ]
+      topOut <- freshTxOut
+      subOut <- freshTxOut
+      topFee <- (Coin 1_000_000 <>) <$> arbitrary
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txInAt (1 :: Int) mintTx]
+                & outputsTxBodyL .~ [subOut]
+                & mintTxBodyL .~ tokens (negate subBurnAmount)
+          topTx :: Tx TopTx era
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txInAt (0 :: Int) mintTx]
+                & outputsTxBodyL .~ [topOut]
+                & feeTxBodyL .~ topFee
+                & mintTxBodyL .~ tokens (negate topBurnAmount)
+                & subTransactionsTxBodyL .~ [subTx]
+          expected =
+            MaryValue
+              ((topOut ^. coinTxOutL) <> (subOut ^. coinTxOutL) <> topFee)
+              (tokens (topBurnAmount + subBurnAmount))
+      pp <- getsPParams id
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
       submitTx_ topTx
   where
     registerPoolTxWithSubTxs ::
