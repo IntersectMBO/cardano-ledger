@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec, alonzoToConwaySpec) where
 
@@ -15,6 +16,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
  )
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (Globals (networkId), StrictMaybe (..), inject, natVersion)
@@ -32,6 +34,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
  )
+import Data.Default (Default)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
@@ -44,7 +47,12 @@ import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  ( AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Valid transactions" $ do
   it "Non-script output with datum" $ do
     -- Attach a datum (hash) to a non-script output and then spend it.
@@ -130,7 +138,10 @@ spec = describe "Valid transactions" $ do
 
 alonzoToConwaySpec ::
   forall era.
-  (AlonzoEraImp era, ShelleyEraTxCert era) =>
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 alonzoToConwaySpec = do
   forM_ (eraLanguages @era) $ \lang ->

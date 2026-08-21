@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   generateGoldenFile,
@@ -9,6 +10,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (..),
   LedgerTxInfo (..),
   SupportedLanguage (..),
  )
@@ -16,6 +18,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Default (Default (..))
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
@@ -36,7 +39,9 @@ import Test.HUnit (Assertion, assertEqual)
 -- and serializes both arguments and result to golden/translations.cbor file
 generateGoldenFile ::
   forall era.
-  TranslatableGen era =>
+  ( TranslatableGen era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   FilePath ->
   IO ()
 generateGoldenFile file = do
@@ -50,6 +55,7 @@ assertTranslationResultsMatchGolden ::
   ( TranslatableGen era
   , DecCBOR (Tx TopTx era)
   , HasCallStack
+  , Default (LevelTxInfo TopTx era)
   ) =>
   IO FilePath ->
   Assertion
@@ -60,8 +66,9 @@ assertTranslationResultsMatchGolden file = do
 
 assertTranslationComparison ::
   forall era.
-  ( TranslatableGen era
-  , HasCallStack
+  ( HasCallStack
+  , TranslatableGen era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   TranslationInstance era ->
   Assertion
@@ -78,7 +85,7 @@ assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo 
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = def
         }
     errorMessage =
       unlines

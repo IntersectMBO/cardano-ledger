@@ -17,7 +17,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
+  EraPlutusContext (..),
   EraPlutusTxInfo,
   LedgerTxInfo (..),
   toPlutusArgs,
@@ -54,6 +54,7 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.Default (Default)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -121,7 +122,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
         , ltiSystemStart = testSystemStart
         , ltiUTxO = initUTxO
         , ltiTx = validatingTx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = ()
         }
 
 -- ============================== DATA ===============================
@@ -176,6 +177,7 @@ collectInputs ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->

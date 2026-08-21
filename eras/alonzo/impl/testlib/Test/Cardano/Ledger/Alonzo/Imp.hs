@@ -9,10 +9,12 @@ module Test.Cardano.Ledger.Alonzo.Imp (
   alonzoToConwaySpec,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
+import Data.Default (Default)
 import qualified Test.Cardano.Ledger.Alonzo.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as UTXO
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as UTXOS
@@ -25,6 +27,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 spec ::
   ( AlonzoEraImp era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
+  , Default (LevelTxInfo TopTx era)
   ) =>
   proxy era ->
   Spec
@@ -37,7 +40,10 @@ spec era = do
     UTXOW.spec
 
 alonzoToConwaySpec ::
-  (AlonzoEraImp era, ShelleyEraTxCert era) =>
+  ( AlonzoEraImp era
+  , ShelleyEraTxCert era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   proxy era ->
   Spec
 alonzoToConwaySpec era = withImpInitEachEraVersion era $ do

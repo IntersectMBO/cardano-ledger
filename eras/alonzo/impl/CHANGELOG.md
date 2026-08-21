@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Remove `ltiMemoizedSubTransactions` field from `LedgerTxInfo`, add `ltiLevelInfo`
+* Add `LevelTxInfo` associated type to `EraPlutusContext`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families
@@ -15,6 +17,7 @@
 
 ### `testlib`
 
+* Add `Default (LevelTxInfo TopTx)` constraint to some test functions
 * Add `Serialise` instances for `PlutusLedgerApi.V4` script context types
 * Change `TxInfoPV4` constructor of `VersionedTxInfo` to contain `PV4.TxInfo` instead of `PV3.TxInfo`
 * Add `DecCBOR` instance for `Block`

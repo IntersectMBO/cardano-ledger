@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Conway.Imp (
   conwayOnlySpec,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
@@ -22,6 +23,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
+import Data.Default (Default)
 import Data.Proxy
 import qualified Test.Cardano.Ledger.Babbage.Imp as Babbage
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as BBODY
@@ -47,6 +49,7 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
+  , Default (LevelTxInfo TopTx era)
   ) =>
   proxy era ->
   Spec

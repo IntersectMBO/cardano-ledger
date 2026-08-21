@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
+  EraPlutusContext (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
  )
@@ -68,6 +68,7 @@ import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.State.Transition.Extended (ValidationPolicy (..))
 import Data.Bifunctor (Bifunctor (first))
+import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -124,6 +125,7 @@ mkAlonzoStAnnTx ::
   , AlonzoEraTx era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -146,7 +148,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = def
         }
    in
     AlonzoStAnnTx

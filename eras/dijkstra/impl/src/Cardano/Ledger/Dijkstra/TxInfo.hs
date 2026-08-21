@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -26,6 +27,7 @@
 
 module Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
+  DijkstraLevelTxInfo (..),
   guardDijkstraFeaturesForPlutusV1toV3,
   transFailUnsupportedScriptInSubTx,
   transRedeemerPointerV4,
@@ -55,7 +57,7 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   ProtVer (..),
   StrictMaybe (..),
-  TxIx (TxIx),
+  TxIx (..),
   kindObjectValue,
   strictMaybe,
   strictMaybeToMaybe,
@@ -121,6 +123,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
@@ -283,8 +286,26 @@ instance Inject (Babbage.BabbageContextError era) (DijkstraContextError era) whe
 instance Inject (Alonzo.AlonzoContextError era) (DijkstraContextError era) where
   inject = ConwayContextError . inject
 
+data DijkstraLevelTxInfo (level :: TxLevel) era where
+  DijkstraTopTxInfo ::
+    -- | This is a tricky field that is only used starting with Dijkstra era and only by top level
+    -- transactions. It is always safe to leave it as `mempty` upon construction
+    Map.Map TxId (TxInfoResult era) ->
+    DijkstraLevelTxInfo TopTx era
+  DijkstraSubTxInfo ::
+    !TxIx -> DijkstraLevelTxInfo SubTx era
+
+instance Default (DijkstraLevelTxInfo TopTx era) where
+  def = DijkstraTopTxInfo mempty
+
+instance HasEraTxLevel DijkstraLevelTxInfo DijkstraEra where
+  toSTxLevel DijkstraTopTxInfo {} = STopTx
+  toSTxLevel DijkstraSubTxInfo {} = SSubTx
+
 instance EraPlutusContext DijkstraEra where
   type ContextError DijkstraEra = DijkstraContextError DijkstraEra
+
+  type LevelTxInfo level DijkstraEra = DijkstraLevelTxInfo level DijkstraEra
 
   data TxInfoResult DijkstraEra
     = DijkstraTxInfoResult -- Fields must be kept lazy
@@ -663,7 +684,11 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoCurrentTreasuryAmount =
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
+            , PV4.txInfoSubTxIx =
+                withBothTxLevels
+                  ltiLevelInfo
+                  (const Nothing)
+                  (\case DijkstraSubTxInfo (TxIx i) -> Just $ toInteger i)
             , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
             , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
             , PV4.txInfoAccountBalanceIntervals =

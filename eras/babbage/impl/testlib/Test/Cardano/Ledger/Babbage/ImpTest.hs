@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -40,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Control.Monad (forM, (>=>))
+import Data.Default (Default)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -71,6 +73,7 @@ babbageFixupTx ::
   ( HasCallStack
   , AlonzoEraImp era
   , BabbageEraTxBody era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)

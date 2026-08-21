@@ -32,7 +32,7 @@ import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
-import Data.Default (def)
+import Data.Default (Default, def)
 import Data.Foldable (for_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
@@ -54,7 +54,9 @@ import Test.Cardano.Ledger.Plutus.Examples (
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
   govPolicySpec
@@ -401,7 +403,9 @@ conwayFeaturesPlutusV1V2FailureSpec = do
 
 govPolicySpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   SpecWith (ImpInit (LedgerSpec era))
 govPolicySpec = do
   describe "Gov policy scripts" $ do
@@ -484,7 +488,12 @@ govPolicySpec = do
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
-costModelsSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+costModelsSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap

@@ -64,6 +64,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Bifunctor (first)
+import Data.Default (Default (..))
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -81,17 +82,18 @@ import qualified PlutusLedgerApi.Common as P
 -- ===============================================================
 
 collectPlutusScriptsWithContext ::
-  forall era l.
+  forall era.
   ( AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraPlutusContext era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx l era ->
+  Tx TopTx era ->
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
@@ -106,7 +108,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = def
         }
     (_, neededPlutusScripts) =
       resolveNeededPlutusScriptsWithPurpose
@@ -287,6 +289,7 @@ evalTxExUnits ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   PParams era ->
   -- | The transaction.
@@ -314,6 +317,7 @@ evalTxExUnitsWithLogs ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   PParams era ->
   -- | The transaction.
@@ -343,7 +347,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = def
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL

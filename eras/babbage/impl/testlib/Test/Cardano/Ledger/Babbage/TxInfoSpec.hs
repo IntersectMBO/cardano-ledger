@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
+  EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInInfo,
@@ -43,6 +44,7 @@ import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Data.Data (Proxy (..))
+import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -198,6 +200,7 @@ successfulTranslation ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue
+  , Default (LevelTxInfo TopTx era)
   ) =>
   SLanguage l ->
   Tx TopTx era ->
@@ -211,7 +214,7 @@ successfulTranslation slang tx f =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = def
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
@@ -222,6 +225,7 @@ expectTranslationError ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue
+  , Default (LevelTxInfo TopTx era)
   ) =>
   SLanguage l ->
   Tx TopTx era ->
@@ -235,7 +239,7 @@ expectTranslationError slang tx expected =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = def
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->
@@ -280,6 +284,7 @@ txInfoSpecV1 ::
   , Value era ~ MaryValue
   , EraPlutusTxInfo 'PlutusV1 era
   , Inject (BabbageContextError era) (ContextError era)
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Spec
 txInfoSpecV1 =
@@ -320,6 +325,7 @@ txInfoSpec ::
   , Inject (BabbageContextError era) (ContextError era)
   , Show (PlutusTxInInfo era l)
   , Eq (PlutusTxInInfo era l)
+  , Default (LevelTxInfo TopTx era)
   ) =>
   SLanguage l ->
   Spec
@@ -382,6 +388,7 @@ spec ::
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Spec
 spec =

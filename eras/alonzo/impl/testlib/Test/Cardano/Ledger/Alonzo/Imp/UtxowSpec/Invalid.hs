@@ -6,12 +6,14 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec, alonzoToConwaySpec) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
@@ -33,6 +35,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.LedgerState (epochStateStakePoolsL, nesEsL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Data.Default (Default)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
@@ -51,7 +54,12 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
-spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  ( AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid transactions" $ do
   it "Phase 1 script failure" $ do
     -- Script will be invalid because slot 100 will be in the future

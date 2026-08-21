@@ -49,7 +49,10 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
+  EraPlutusContext (..),
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScriptsWithLogs,
@@ -99,6 +102,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..), txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM)
+import Data.Default (Default)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -202,7 +206,10 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
 
 fixupRedeemers ::
   forall era.
-  (AlonzoEraImp era, HasCallStack) =>
+  ( AlonzoEraImp era
+  , HasCallStack
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
@@ -345,6 +352,7 @@ fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
 alonzoFixupTx ::
   ( HasCallStack
   , AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
@@ -476,7 +484,11 @@ impGetScriptContext sh =
     $ impLookupScriptContext @era sh
 
 impPlutusWithContexts ::
-  (HasCallStack, AlonzoEraImp era) => Tx TopTx era -> ImpTestM era [PlutusWithContext]
+  ( HasCallStack
+  , AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  Tx TopTx era -> ImpTestM era [PlutusWithContext]
 impPlutusWithContexts tx = do
   globals <- use impGlobalsL
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -488,7 +500,11 @@ impPlutusWithContexts tx = do
     Right pwcs -> pure pwcs
 
 impScriptPredicateFailure ::
-  (HasCallStack, AlonzoEraImp era) => Tx TopTx era -> ImpTestM era (AlonzoUtxosPredFailure era)
+  ( HasCallStack
+  , AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  Tx TopTx era -> ImpTestM era (AlonzoUtxosPredFailure era)
 impScriptPredicateFailure tx = do
   plutusWithContexts <- impPlutusWithContexts tx
   when (null plutusWithContexts) $
@@ -509,6 +525,7 @@ impScriptPredicateFailure tx = do
 submitPhase2Invalid_ ::
   ( HasCallStack
   , AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Tx TopTx era ->
   ImpTestM era ()
@@ -517,6 +534,7 @@ submitPhase2Invalid_ = void . submitPhase2Invalid
 submitPhase2Invalid ::
   ( HasCallStack
   , AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
