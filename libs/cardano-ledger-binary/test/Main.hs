@@ -2,6 +2,7 @@ module Main where
 
 import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Binary.Failure as Failure
+import qualified Test.Cardano.Ledger.Binary.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Binary.PlainSpec as PlainSpec
 import qualified Test.Cardano.Ledger.Binary.RoundTripSpec as RoundTripSpec
 import qualified Test.Cardano.Ledger.Binary.Success as Success
@@ -25,6 +26,7 @@ spec = do
     RoundTripSpec.spec
     Failure.spec
     Success.spec
+  GoldenSpec.spec
 
 main :: IO ()
 main = do
