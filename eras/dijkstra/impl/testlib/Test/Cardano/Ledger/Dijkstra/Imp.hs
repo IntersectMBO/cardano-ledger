@@ -14,6 +14,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -34,5 +35,6 @@ spec era = do
     CERT.spec
     ENTITIES.spec
     POOL.spec
+    SNAP.spec
     UTXOW.spec
     UTXO.spec
