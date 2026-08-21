@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `LevelTxInfo` type instance
 * Change `transTxRedeemers` to accept a `UTxO era` argument
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
 * Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`
@@ -10,6 +11,7 @@
 
 ### `testlib`
 
+* Add `Default (LevelTxInfo TopTx)` constraint to some test functions
 * Add `DecCBOR` instance for `Block`
 
 ## 1.14.0.0

@@ -2,6 +2,9 @@
 
 ## 0.4.0.0
 
+* Add `Default (LevelTxInfo TopTx era)` and `LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era` constraints to `mkDijkstraStAnnTopTx`
+* Add `LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era` constraint to `mkDijkstraStAnnSubTx`
+* Add `DijkstraLevelTxInfo` as the `LevelTxInfo` instance
 * Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
 * Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
 * Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
@@ -33,6 +36,7 @@
 
 ### cddl
 
+* Add `Default (LevelTxInfo TopTx era)` and `LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era` constraints to some testing functions
 * Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
 
 ### testlib
