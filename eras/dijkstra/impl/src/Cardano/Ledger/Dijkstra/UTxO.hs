@@ -16,6 +16,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   getDijkstraScriptsProvided,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
+  localProducedValue,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
@@ -112,25 +113,36 @@ dijkstraProducedValue ::
   TxBody TopTx era ->
   MaryValue
 dijkstraProducedValue pp isRegPoolId topTxBody =
-  producedPerTxBodyWithoutCerts topTxBody
-    <> foldMap' (producedPerTxBodyWithoutCerts . (^. bodyTxL)) subTxs
+  localProducedValue pp topTxBody
+    <> foldMap' (localProducedValue pp . (^. bodyTxL)) subTxs
     <> inject (topTxBody ^. feeTxBodyL)
     <> inject (getTotalDepositsTxCerts pp isRegPoolId batchTxCerts)
   where
     -- add all values that are produced by both top and sub-transactions
     -- Certs are excluded, since they need to be processed separately
     -- while maintaining the state through all of the certs of a transactions.
-    producedPerTxBodyWithoutCerts :: TxBody l era -> MaryValue
-    producedPerTxBodyWithoutCerts txBody =
-      sumAllValue (txBody ^. outputsTxBodyL)
-        <> inject (txBody ^. treasuryDonationTxBodyL)
-        <> inject (conwayProposalsDeposits pp txBody)
-        <> burnedMultiAssets txBody
-        <> inject (fold (unDirectDeposits (txBody ^. directDepositsTxBodyL)))
     batchTxCerts =
       foldMap' (^. bodyTxL . certsTxBodyL) subTxs
         <> (topTxBody ^. certsTxBodyL)
     subTxs = topTxBody ^. subTransactionsTxBodyL
+
+-- | Produced value that is local to a single transaction body, that is, the part
+-- that can be summed independently for each body in a batch.
+-- Excludes fees and certificate deposits, which are accounted for once per
+-- batch.
+localProducedValue ::
+  ( DijkstraEraTxBody era
+  , Value era ~ MaryValue
+  ) =>
+  PParams era ->
+  TxBody l era ->
+  MaryValue
+localProducedValue pp txBody =
+  sumAllValue (txBody ^. outputsTxBodyL)
+    <> inject (txBody ^. treasuryDonationTxBodyL)
+    <> inject (conwayProposalsDeposits pp txBody)
+    <> burnedMultiAssets txBody
+    <> inject (fold (unDirectDeposits (txBody ^. directDepositsTxBodyL)))
 
 instance EraUTxO DijkstraEra where
   type ScriptsNeeded DijkstraEra = AlonzoScriptsNeeded DijkstraEra

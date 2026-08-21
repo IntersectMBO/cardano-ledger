@@ -1,9 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -15,6 +19,9 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
+  fixupSubTransactions,
+  balanceSubTransactions,
+  switchTxToLegacyMode,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -36,7 +43,9 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
   pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.UTxO
 import Cardano.Ledger.Plutus (SLanguage (..))
+import Cardano.Ledger.Shelley.API (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
@@ -46,6 +55,10 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.State
+import Cardano.Ledger.Tools (ensureMinCoinTxOut)
+import Cardano.Ledger.Val
+import Control.Monad.State (gets)
+import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -55,6 +68,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -189,14 +203,44 @@ dijkstraGenUnRegTxCert stakingCredential = do
     Just accountState -> pure (fromCompact (accountState ^. depositAccountStateL))
   pure $ UnRegDepositTxCert stakingCredential deposit
 
+switchTxToLegacyMode ::
+  forall era.
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+switchTxToLegacyMode tx = do
+  let plutus = alwaysSucceedsWithDatum SPlutusV3
+  Just plutusScript <- pure $ mkPlutusScript @era plutus
+  let eraScript = fromPlutusScript plutusScript
+      scriptHash = hashScript eraScript
+  txIn <- produceScript scriptHash
+  pure $
+    tx
+      & bodyTxL . inputsTxBodyL <>~ [txIn]
+      & witsTxL . scriptTxWitsL %~ Map.insert scriptHash eraScript
+
 dijkstraFixupTx ::
   ( HasCallStack
   , DijkstraEraImp era
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
-dijkstraFixupTx =
-  fixupSubTransactions >=> babbageFixupTx
+dijkstraFixupTx tx = do
+  isLegacy <- detectLegacyMode tx
+  fixedUp <- fixupSubTransactions tx
+  balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
+  babbageFixupTx balancedInLegacy
+
+detectLegacyMode ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era Bool
+detectLegacyMode tx = do
+  Globals {systemStart, epochInfo} <- gets (^. impGlobalsL)
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getUTxO
+  let stAnnTx = mkStAnnTx epochInfo systemStart pp utxo mempty tx
+  pure $ stAnnTx ^. plutusLegacyModeStAnnTxG
 
 fixupSubTransactions ::
   ( HasCallStack
@@ -225,3 +269,52 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
           -- to make sure it isn't affected by any higher-level fixup modifications
           newTxIn <- withFixup fixupTx $ sendCoinTo addr (Coin 1_000_000)
           pure $ subTx & bodyTxL . inputsTxBodyL .~ Set.singleton newTxIn
+
+balanceSubTransactions ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+balanceSubTransactions topTx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  pools <- Map.keysSet <$> getsNES (nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL)
+  utxo <- getUTxO
+  let
+    subTransactions = topTx ^. bodyTxL . subTransactionsTxBodyL
+    subsCerts = foldMap' (^. bodyTxL . certsTxBodyL) subTransactions
+    subsConsumed = coin $ foldMap' (dijkstraConsumed pp utxo . (^. bodyTxL)) subTransactions
+    subsProduced =
+      foldMap' (coin . localProducedValue pp . (^. bodyTxL)) subTransactions
+        <> getTotalDepositsTxCerts pp (`Set.member` pools) subsCerts
+  balancer <- mkBalancerSubTx subsConsumed subsProduced
+  case balancer of
+    Nothing -> pure topTx
+    Just b -> pure $ topTx & bodyTxL . subTransactionsTxBodyL %~ (OMap.|> b)
+
+mkBalancerSubTx ::
+  DijkstraEraImp era =>
+  -- | Cumulated consumed value by all sub-transactions
+  Coin ->
+  -- | Cumulated produced value by all sub-transactions
+  Coin ->
+  ImpTestM era (Maybe (Tx SubTx era))
+mkBalancerSubTx consumed produced = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  case consumed `compare` produced of
+    EQ -> pure Nothing
+    ord -> do
+      addr <- freshKeyAddr_
+      let
+        (surplus, shortfall) = case ord of
+          GT -> (consumed <-> produced, mempty)
+          LT -> (mempty, produced <-> consumed)
+        -- a buffer to make both the input UTxO and the change output satisfy minCoin. It's added on both sides, so it cancels out.
+        minChangeCoin = ensureMinCoinTxOut pp (mkBasicTxOut addr mempty) ^. coinTxOutL
+        inputCoin = minChangeCoin <> shortfall
+        changeCoin = minChangeCoin <> surplus
+        changeOut = mkBasicTxOut addr (inject changeCoin)
+      newTxIn <- withFixup fixupTx $ sendCoinTo addr inputCoin
+      let subTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [newTxIn]
+              & bodyTxL . outputsTxBodyL .~ [changeOut]
+      Just <$> updateAddrTxWits subTx

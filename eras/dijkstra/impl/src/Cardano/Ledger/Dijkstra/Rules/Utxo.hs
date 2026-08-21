@@ -22,7 +22,7 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Utxo (
   UTXO,
-  DijkstraUtxoEnv (..),
+  UtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
 ) where
@@ -64,7 +64,11 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Dijkstra.UTxO (dijkstraConsumed)
+import Cardano.Ledger.Dijkstra.UTxO (
+  DijkstraEraUTxO,
+  dijkstraConsumed,
+  plutusLegacyModeStAnnTxG,
+ )
 import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -93,14 +97,15 @@ import qualified Data.OMap.Strict as OMap
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Validation (failureUnless)
 
-data DijkstraUtxoEnv era = DijkstraUtxoEnv
-  { dueSlot :: SlotNo
-  , duePParams :: PParams era
-  , dueCertState :: CertState era
-  , dueOriginalUtxo :: UTxO era
+data UtxoEnv era = UtxoEnv
+  { ueSlot :: SlotNo
+  , uePParams :: PParams era
+  , uePState :: PState era
+  , ueOriginalCertState :: CertState era
+  , ueOriginalUtxo :: UTxO era
   }
 
 -- | Predicate failure for the Dijkstra Era
@@ -164,6 +169,9 @@ data DijkstraUtxoPredFailure era
   | PtrPresentInCollateralReturn (TxOut era)
   | -- | Total withdrawals per account that exceed the original account balance
     WithdrawalsExceedAccountBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
+  | -- | Legacy-mode top-level transaction does not self-balance
+    ValueNotConservedInLegacy
+      (Mismatch RelEQ (Value era))
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -316,10 +324,11 @@ validateValueNotConservedUTxO ::
   UTxO era ->
   PState era ->
   TxBody TopTx era ->
-  Test (Shelley.ShelleyUtxoPredFailure era)
-validateValueNotConservedUTxO pp utxo pState txBody =
+  (Mismatch RelEQ (Value era) -> failure) ->
+  Test failure
+validateValueNotConservedUTxO pp utxo pState txBody mkFailure =
   failureUnless (consumedValue == producedValue) $
-    Shelley.ValueNotConservedUTxO
+    mkFailure
       Mismatch
         { mismatchSupplied = consumedValue
         , mismatchExpected = producedValue
@@ -330,7 +339,7 @@ validateValueNotConservedUTxO pp utxo pState txBody =
 
 dijkstraUtxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( DijkstraEraUTxO era
   , EraCertState era
   , DijkstraEraTxBody era
   , AlonzoEraTx era
@@ -340,7 +349,7 @@ dijkstraUtxoTransition ::
   , InjectRuleFailure "UTXO" Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
@@ -354,12 +363,12 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo, utxos, stAnnTx) <-
+  TRC (UtxoEnv slot pp postSubsPState originalCertState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied
-  let accounts = certState ^. certDStateL . accountsL
-  let originalPState = certState ^. certPStateL
+  let accounts = originalCertState ^. certDStateL . accountsL
+  let originalPState = originalCertState ^. certPStateL
 
   let txBody = tx ^. bodyTxL
 
@@ -392,7 +401,27 @@ dijkstraUtxoTransition = do
   runTest $ validateBatchWithdrawals accounts tx
 
   {- consumed pp utxo₀ txb = produced pp certState txb -}
-  runTest $ validateValueNotConservedUTxO pp originalUtxo originalPState txBody
+  runTest $
+    validateValueNotConservedUTxO
+      pp
+      originalUtxo
+      originalPState
+      txBody
+      Shelley.ValueNotConservedUTxO
+
+  {- legacyMode ≡ true → consumedLegacy ≡ producedLegacy -}
+  -- The `PState` has to be the one with all the sub-transactions already applied,
+  -- because if a sub-transaction registered a pool, then the top-transaction
+  -- must not add to the `produced` value if it registers the same pool,
+  -- since it will count as a re-registration.
+  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+    runTest $
+      validateValueNotConservedUTxO
+        pp
+        originalUtxo
+        postSubsPState
+        (txBody & subTransactionsTxBodyL .~ mempty)
+        ValueNotConservedInLegacy
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
@@ -428,7 +457,7 @@ dijkstraUtxoTransition = do
   () <- trans @(EraRule "UTXOS" era) $ TRC ((), (), stAnnTx)
   Babbage.updateUTxOState
     pp
-    certState
+    originalCertState
     tx
     (Conway.updateTreasuryDonation tx utxos)
 
@@ -439,7 +468,7 @@ dijkstraUtxoTransition = do
 instance
   forall era.
   ( EraTx era
-  , EraUTxO era
+  , DijkstraEraUTxO era
   , EraStake era
   , DijkstraEraTxBody era
   , AlonzoEraTx era
@@ -450,7 +479,7 @@ instance
   , InjectRuleFailure "UTXO" Babbage.BabbageUtxoPredFailure era
   , InjectRuleFailure "UTXO" Conway.ConwayUtxoPredFailure era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
@@ -468,7 +497,7 @@ instance
   where
   type State (UTXO era) = UTxOState era
   type Signal (UTXO era) = StAnnTx TopTx era
-  type Environment (UTXO era) = DijkstraUtxoEnv era
+  type Environment (UTXO era) = UtxoEnv era
   type BaseM (UTXO era) = ShelleyBase
   type PredicateFailure (UTXO era) = DijkstraUtxoPredFailure era
   type Event (UTXO era) = Alonzo.AlonzoUtxoEvent era
@@ -526,6 +555,7 @@ instance
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
+      ValueNotConservedInLegacy mm -> Sum ValueNotConservedInLegacy 25 !> To mm
 
 instance
   ( Era era
@@ -560,6 +590,7 @@ instance
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
     24 -> SumD WithdrawalsExceedAccountBalance <! From
+    25 -> SumD ValueNotConservedInLegacy <! From
     n -> Invalid n
 
 -- =====================================================
