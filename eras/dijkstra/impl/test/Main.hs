@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as GoldenBinary
 import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
+import qualified Test.Cardano.Ledger.Dijkstra.GenesisSpec as GenesisSpec
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
@@ -47,6 +48,7 @@ main =
               , roundTripAnnEraExpectation @DijkstraEra @(Block (Leios.Header StandardCrypto) DijkstraEra) block
               ]
     Cddl.spec
+    GenesisSpec.spec
     GoldenSpec.spec
     roundTripJsonShelleyEraSpec @DijkstraEra
     describe "TxInfo" $ do

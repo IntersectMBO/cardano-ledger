@@ -44,6 +44,7 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   Language (..),
+  PlutusRunnable (..),
   PlutusWithContext (..),
   decodePlutusRunnable,
   hashData,
@@ -92,17 +93,17 @@ collectTwoPhaseScriptInputsOutputOrdering = do
     `shouldBe` Right
       [ PlutusWithContext
           { pwcProtocolVersion = pvMajor protVer
-          , pwcScript = decodePlutusRunnable (pvMajor protVer) plutus
+          , pwcScript = plutusRunnable
           , pwcArgs = either (error . show) id $ do
               txInfo <-
                 toPlutusTxInfoForPurpose plutus lti $
                   error "PlutusV1 ScriptPurpose should be unevaluated"
               toPlutusArgs
                 plutus
-                (defaultPParams @AlonzoEra ^. ppProtocolVersionL)
+                lti
+                (plutusRunnableScriptHash plutusRunnable)
                 txInfo
                 spendingPurpose1
-                (Just (datum @AlonzoEra))
                 (redeemer @AlonzoEra)
           , pwcExUnits = ExUnits 5000 5000
           , pwcCostModel = zeroTestingCostModel PlutusV1
@@ -111,6 +112,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
   where
     protVer = defaultPParams @AlonzoEra ^. ppProtocolVersionL
     plutus = alwaysSucceedsPlutus @'PlutusV1 3
+    plutusRunnable = decodePlutusRunnable (pvMajor protVer) plutus
     lti :: LedgerTxInfo AlonzoEra
     lti =
       LedgerTxInfo

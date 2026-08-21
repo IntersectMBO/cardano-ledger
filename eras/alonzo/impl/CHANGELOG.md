@@ -1,12 +1,22 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.16.1.0
+## 1.17.0.0
 
+* Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
+* Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
+* Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families
+* Change `toPlutusScriptPurpose` to accept a `PlutusPurposeScriptHashArg l` argument
+* Change `toPlutusArgs` and `toPlutusV1Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
+* Change the `PlutusV4` instances of the `PlutusTxCert`, `PlutusScriptPurpose`, `PlutusTxInfo` and `PlutusTxInInfo` type families to point to `PlutusLedgerApi.V4` types instead of `PlutusLedgerApi.V3`
+* Change `toLegacyPlutusArgs` and `transPlutusPurpose` to accept a `PlutusPurposeScriptHashArg l` argument
+* Add `transRedeemerPointerV1`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
 ### `testlib`
 
+* Add `Serialise` instances for `PlutusLedgerApi.V4` script context types
+* Change `TxInfoPV4` constructor of `VersionedTxInfo` to contain `PV4.TxInfo` instead of `PV3.TxInfo`
 * Add `DecCBOR` instance for `Block`
 
 ## 1.16.0.0

@@ -3,6 +3,7 @@
 ## 1.3.2.0
 
 * Add `Ord` instances for `NonEmptyMap`, `NonEmptySet`
+* Add `Semigroup` instance for `NonEmptySet`
 
 ## 1.3.1.0
 

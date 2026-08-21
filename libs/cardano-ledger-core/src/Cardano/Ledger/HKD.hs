@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -16,10 +17,11 @@ module Cardano.Ledger.HKD (
   HKDFunctor (..),
   NoUpdate (..),
   HKDApplicative (..),
+  HKDSemialign (..),
 ) where
 
 import Control.DeepSeq (NFData)
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity (..))
 import Data.Maybe.Strict (StrictMaybe (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -79,3 +81,21 @@ instance HKDApplicative Maybe where
 instance HKDApplicative StrictMaybe where
   hkdPure = pure
   hkdLiftA2 = liftA2
+
+class HKDApplicative f => HKDSemialign f where
+  hkdAlignWith :: proxy f -> (a -> c) -> (b -> c) -> (a -> b -> c) -> HKD f a -> HKD f b -> HKD f c
+
+instance HKDSemialign Identity where
+  hkdAlignWith _ _ _ both = both
+
+instance HKDSemialign Maybe where
+  hkdAlignWith _ _ _ both (Just a) (Just b) = Just $ both a b
+  hkdAlignWith _ this _ _ (Just a) Nothing = Just $ this a
+  hkdAlignWith _ _ that _ Nothing (Just b) = Just $ that b
+  hkdAlignWith _ _ _ _ Nothing Nothing = Nothing
+
+instance HKDSemialign StrictMaybe where
+  hkdAlignWith _ _ _ both (SJust a) (SJust b) = SJust $ both a b
+  hkdAlignWith _ this _ _ (SJust a) SNothing = SJust $ this a
+  hkdAlignWith _ _ that _ SNothing (SJust b) = SJust $ that b
+  hkdAlignWith _ _ _ _ SNothing SNothing = SNothing

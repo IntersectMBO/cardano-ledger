@@ -47,14 +47,19 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusScriptPurpose,
   PlutusScriptContext,
   PlutusTxInInfo,
+  PlutusPurposeScriptHashArg,
+  PlutusRedeemerPointer,
+  PlutusTxOut,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
   AsItem (..),
+  AsIx,
   AsIxItem (..),
   AsPurpose,
+  ExUnits,
   PlutusPurpose,
   PlutusScript (..),
  )
@@ -72,6 +77,7 @@ import Cardano.Ledger.Plutus (
   PlutusRunnable (..),
   PlutusScriptContext,
   SLanguage (..),
+  TxOutSource,
   asSLanguage,
   plutusLanguage,
  )
@@ -92,6 +98,7 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era where
@@ -125,6 +132,7 @@ class
   toPlutusScriptPurpose ::
     proxy l ->
     ProtVer ->
+    PlutusPurposeScriptHashArg l ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
@@ -135,10 +143,10 @@ class
 
   toPlutusArgs ::
     proxy l ->
-    ProtVer ->
+    LedgerTxInfo era ->
+    ScriptHash ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
-    Maybe (Data era) ->
     Data era ->
     Either (ContextError era) (PlutusArgs l)
 
@@ -147,6 +155,20 @@ class
     UTxO era ->
     TxIn ->
     Either (ContextError era) (PlutusTxInInfo era l)
+
+  toPlutusRedeemerPointer ::
+    proxy l ->
+    ProtVer ->
+    TxBody t era ->
+    Map (PlutusPurpose AsIx era) ScriptHash ->
+    (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
+    Either (ContextError era) (PlutusRedeemerPointer l)
+
+  toPlutusTxOut ::
+    proxy l ->
+    TxOutSource ->
+    TxOut era ->
+    Either (ContextError era) (PlutusTxOut l)
 
 -- | This is the helper type that captures translation of `Tx` to `PlutusTxInfo`.
 --
@@ -238,19 +260,19 @@ type family PlutusTxCert (l :: Language) where
   PlutusTxCert 'PlutusV1 = PV1.DCert
   PlutusTxCert 'PlutusV2 = PV2.DCert
   PlutusTxCert 'PlutusV3 = PV3.TxCert
-  PlutusTxCert 'PlutusV4 = PV3.TxCert
+  PlutusTxCert 'PlutusV4 = PV4.TxCert
 
 type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
   PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
   PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
-  PlutusScriptPurpose 'PlutusV4 = PV3.ScriptPurpose
+  PlutusScriptPurpose 'PlutusV4 = PV4.ScriptPurpose
 
 type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
-  PlutusTxInfo 'PlutusV4 = PV3.TxInfo
+  PlutusTxInfo 'PlutusV4 = PV4.TxInfo
 
 type family PlutusTxInInfo era (l :: Language) where
   -- This special case is here because Alonzo does not have a ContextError
@@ -259,7 +281,27 @@ type family PlutusTxInInfo era (l :: Language) where
   PlutusTxInInfo _ 'PlutusV1 = PV1.TxInInfo
   PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
   PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
-  PlutusTxInInfo _ 'PlutusV4 = PV3.TxInInfo
+  PlutusTxInInfo _ 'PlutusV4 = PV4.TxInInfo
+
+type family PlutusPurposeScriptHashArg (l :: Language) where
+  PlutusPurposeScriptHashArg 'PlutusV1 = ()
+  PlutusPurposeScriptHashArg 'PlutusV2 = ()
+  PlutusPurposeScriptHashArg 'PlutusV3 = ()
+  PlutusPurposeScriptHashArg 'PlutusV4 = ScriptHash
+
+type family PlutusRedeemerPointer (l :: Language) where
+  PlutusRedeemerPointer 'PlutusV1 = ()
+  PlutusRedeemerPointer 'PlutusV2 = (PlutusScriptPurpose 'PlutusV2, PV2.Redeemer)
+  PlutusRedeemerPointer 'PlutusV3 = (PlutusScriptPurpose 'PlutusV3, PV3.Redeemer)
+  PlutusRedeemerPointer 'PlutusV4 = (PlutusScriptPurpose 'PlutusV4, PV4.Redeemer)
+
+type family PlutusTxOut (l :: Language) where
+  -- This special case is here because Alonzo does not have a ContextError
+  -- for the case where it encounters a Byron address in a TxIn
+  PlutusTxOut 'PlutusV1 = Maybe PV1.TxOut
+  PlutusTxOut 'PlutusV2 = PV2.TxOut
+  PlutusTxOut 'PlutusV3 = PV3.TxOut
+  PlutusTxOut 'PlutusV4 = PV4.TxOut
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

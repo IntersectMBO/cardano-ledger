@@ -33,7 +33,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraPParams,
-  UpgradeDijkstraPParams,
+  UpgradeDijkstraPParams (..),
  )
 import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts
@@ -42,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Plutus (Language (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
@@ -51,6 +52,7 @@ import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
@@ -112,7 +114,15 @@ instance Arbitrary (TxBody TopTx DijkstraEra) where
       <*> arbitrary
 
 instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
-  arbitrary = genericArbitraryU
+  arbitrary =
+    UpgradeDijkstraPParams
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> genValidCostModel PlutusV4
 
 instance Arbitrary DijkstraGenesis where
   arbitrary = genericArbitraryU

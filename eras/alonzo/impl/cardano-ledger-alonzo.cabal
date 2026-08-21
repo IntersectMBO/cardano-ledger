@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-alonzo
-version: 1.16.1.0
+version: 1.17.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -109,7 +109,7 @@ library
     mempack,
     microlens,
     nothunks,
-    plutus-ledger-api >=1.37,
+    plutus-ledger-api >=1.67,
     small-steps >=1.2,
     text,
     transformers,

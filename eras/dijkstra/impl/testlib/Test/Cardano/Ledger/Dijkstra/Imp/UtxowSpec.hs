@@ -9,22 +9,36 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..))
+import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.Scripts
-import Cardano.Ledger.Plutus (Data, Language (..))
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
+import Cardano.Ledger.Plutus (
+  Data,
+  ExUnits (..),
+  Language (..),
+  SLanguage (..),
+  hashPlutusScript,
+ )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
 spec ::
   forall era.
@@ -164,3 +178,38 @@ spec = describe "UTXOW" $ do
                 Right _ -> False
         hasMalformed (mkTx SNothing) `shouldReturn` True
         hasMalformed (mkTx (SJust datum)) `shouldReturn` False
+
+  describe "PlutusV4" $ do
+    it "Extra redeemer for a key-locked certificate fails" $ do
+      let plutus = alwaysSucceedsNoDatum SPlutusV4
+      script <- fromPlutusScript <$> mkPlutusScript plutus
+      refAddr <- freshKeyAddrNoPtr_
+      txInitial <-
+        impAnn "Sumbitting initial TX"
+          . submitTx
+          $ mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL
+              .~ [ mkBasicTxOut (mkAddr (hashPlutusScript plutus) StakeRefNull) mempty
+                 , mkBasicTxOut refAddr mempty & referenceScriptTxOutL .~ SJust script
+                 ]
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      redeemerData <- arbitrary @(Data era)
+      let prp = mkCertifyingPurpose $ AsIx 0
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+              & bodyTxL . certsTxBodyL .~ [RegDepositTxCert stakeCred deposit]
+      -- The extra redeemer resolves to an existing item that is not script-locked. UTXOW
+      -- reports it as ExtraRedeemers and, unlike earlier Plutus versions, PlutusV4 TxInfo
+      -- translation also fails with ScriptHashNotFoundForPurpose.
+      submitFailingTx
+        (tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (redeemerData, ExUnits 0 0))
+        [ injectFailure $ Alonzo.ExtraRedeemers [prp]
+        , injectFailure $
+            CollectErrors
+              [ BadTranslation . inject $ ScriptHashNotFoundForPurpose prp
+              ]
+        ]
+      submitTx_ tx

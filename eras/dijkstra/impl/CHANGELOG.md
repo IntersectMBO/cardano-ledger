@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
+* Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
+* Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
+* Add `HKDSemialign` constraint to `upgradeDijkstraPParams`
+* Add `transRedeemerPointerV4`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Remove `EncCBORGroup` instance for `DijkstraBlockBody`
@@ -32,6 +37,7 @@
 
 ### testlib
 
+* Add `Inject (DijkstraContextError era) (ContextError era)` as a superclass of `DijkstraEraTest`
 * Add `DecCBOR` instance for `Block`
 * Add `DijkstraEraPParams` as a superclass of `DijkstraEraTest`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec`

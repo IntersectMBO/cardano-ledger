@@ -62,14 +62,25 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.HKD (HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
+import Cardano.Ledger.HKD (
+  HKDFunctor (..),
+  HKDNoUpdate,
+  HKDSemialign (..),
+  NoUpdate (..),
+ )
 import Cardano.Ledger.Plutus (
+  CostModel,
   CostModels,
   CostModelsUpdate (..),
   ExUnits (..),
+  Language (..),
   OrdExUnits (..),
   Prices (..),
+  decodeCostModel,
   emptyCostModels,
+  encodeCostModel,
+  mkCostModels,
+  parseCostModelAsArray,
   updateCostModels,
  )
 import Cardano.Ledger.Shelley.PParams
@@ -80,6 +91,7 @@ import qualified Data.Aeson as Aeson
 import Data.Data (Proxy (..))
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
+import qualified Data.Map.Strict as Map
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (^.))
@@ -267,6 +279,7 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppRefScriptCostMultiplier :: !(HKD f PositiveInterval)
   , udppMaxPledgeLeverage :: !(HKD f MaxPledgeLeverage)
   , udppMinPoolMargin :: !(HKD f UnitInterval)
+  , udppPlutusV4CostModel :: !(HKD f CostModel)
   }
   deriving (Generic)
 
@@ -282,6 +295,7 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppRefScriptCostMultiplier <- o .: "refScriptCostMultiplier"
     udppMaxPledgeLeverage <- o .:? "maxPledgeLeverage" .!= MaxPledgeLeverage SNothing
     udppMinPoolMargin <- o .: "minPoolMargin"
+    udppPlutusV4CostModel <- parseCostModelAsArray False PlutusV4 =<< o .: "plutusV4CostModel"
     pure UpgradeDijkstraPParams {..}
 
 instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
@@ -292,6 +306,7 @@ instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
     , "refScriptCostMultiplier" .= udppRefScriptCostMultiplier udpp
     , "maxPledgeLeverage" .= udppMaxPledgeLeverage udpp
     , "minPoolMargin" .= udppMinPoolMargin udpp
+    , "plutusV4CostModel" .= toJSON @CostModel (udppPlutusV4CostModel udpp)
     ]
 
 deriving via
@@ -313,6 +328,7 @@ instance Era era => DecCBOR (UpgradeDijkstraPParams Identity era) where
         <! From
         <! From
         <! From
+        <! D (decodeCostModel PlutusV4)
 
 instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
   encCBOR UpgradeDijkstraPParams {..} =
@@ -324,12 +340,15 @@ instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
         !> To udppRefScriptCostMultiplier
         !> To udppMaxPledgeLeverage
         !> To udppMinPoolMargin
+        !> E encodeCostModel udppPlutusV4CostModel
 
 emptyDijkstraUpgradePParamsUpdate :: UpgradeDijkstraPParams StrictMaybe era
 emptyDijkstraUpgradePParamsUpdate =
-  UpgradeDijkstraPParams SNothing SNothing SNothing SNothing SNothing SNothing
+  UpgradeDijkstraPParams SNothing SNothing SNothing SNothing SNothing SNothing SNothing
 
 upgradeDijkstraPParams ::
+  forall f.
+  HKDSemialign f =>
   UpgradeDijkstraPParams f DijkstraEra ->
   ConwayPParams f ConwayEra ->
   DijkstraPParams f DijkstraEra
@@ -350,7 +369,17 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
     , dppProtocolVersion = cppProtocolVersion
     , dppMinPoolCost = cppMinPoolCost
     , dppCoinsPerUTxOByte = cppCoinsPerUTxOByte
-    , dppCostModels = cppCostModels
+    , dppCostModels =
+        THKD $
+          hkdAlignWith
+            (Proxy @f)
+            (mkCostModels . Map.singleton PlutusV4)
+            id
+            ( \new old ->
+                updateCostModels old (CostModelsUpdate . mkCostModels $ Map.singleton PlutusV4 new)
+            )
+            udppPlutusV4CostModel
+            (unTHKD cppCostModels)
     , dppPrices = cppPrices
     , dppMaxTxExUnits = cppMaxTxExUnits
     , dppMaxBlockExUnits = cppMaxBlockExUnits

@@ -3,6 +3,9 @@
 ## 1.24.0.0
 
 * Replace `StakeKeyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ConwayDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
+* Change `toPlutusV3Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
+* Change `transPlutusPurposeV3` and `transPlutusPurposeV1V2` to accept an extra `()` argument for `PlutusPurposeScriptHashArg`
+* Export `transVoter`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

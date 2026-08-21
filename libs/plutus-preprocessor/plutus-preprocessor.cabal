@@ -24,9 +24,11 @@ library
     Cardano.Ledger.Plutus.Preprocessor.Binary.V1
     Cardano.Ledger.Plutus.Preprocessor.Binary.V2
     Cardano.Ledger.Plutus.Preprocessor.Binary.V3
+    Cardano.Ledger.Plutus.Preprocessor.Binary.V4
     Cardano.Ledger.Plutus.Preprocessor.Source.V1
     Cardano.Ledger.Plutus.Preprocessor.Source.V2
     Cardano.Ledger.Plutus.Preprocessor.Source.V3
+    Cardano.Ledger.Plutus.Preprocessor.Source.V4
 
   hs-source-dirs: src
   ghc-options:

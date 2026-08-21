@@ -1173,6 +1173,7 @@ fixupTxOuts tx = do
   pure $ tx & bodyTxL . outputsTxBodyL .~ fixedUpTxOuts
 
 fixupFees ::
+  forall era.
   (ShelleyEraImp era, HasCallStack) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
@@ -1182,7 +1183,12 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  addr <- freshKeyAddr_
+  addr <-
+    if eraProtVerLow @era < natVersion @12
+      then freshKeyAddr_
+      else
+        -- Stake pointers are not allowed starting with Dijkstra
+        freshKeyAddrNoPtr_
   nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
   let
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs

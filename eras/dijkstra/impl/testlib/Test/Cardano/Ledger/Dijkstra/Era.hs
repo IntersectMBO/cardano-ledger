@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,6 +11,8 @@ module Test.Cardano.Ledger.Dijkstra.Era (
   DijkstraEraTest,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEraBlockHeader (..))
@@ -17,6 +20,7 @@ import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
 import Data.Maybe (fromJust)
@@ -81,6 +85,7 @@ class
   , DijkstraEraPParams era
   , DijkstraEraTxBody era
   , DijkstraEraScript era
+  , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   DijkstraEraTest era
 

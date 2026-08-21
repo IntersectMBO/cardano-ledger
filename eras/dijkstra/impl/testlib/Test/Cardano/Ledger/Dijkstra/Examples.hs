@@ -111,7 +111,7 @@ import Test.Cardano.Ledger.Conway.Examples (
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Mary.Examples (exampleMultiAssetValue)
-import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus)
+import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus, testingCostModel)
 import Test.Cardano.Ledger.Shelley.Examples (
   LedgerExamples (..),
   addShelleyBasedTopTxExampleFee,
@@ -151,6 +151,7 @@ exampleDijkstraGenesis =
           , udppRefScriptCostMultiplier = fromJust $ boundRational 1.2
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
+          , udppPlutusV4CostModel = testingCostModel PlutusV4
           }
     }
 

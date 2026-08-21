@@ -2,17 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
--- Builtin casing (enabled by the SumsOfProducts datatype style) is only supported starting
--- with protocol version 11, while these scripts also need to run at protocol versions 9 and 10.
-{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:datatypes=ScottEncoding #-}
 {-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:target-version=1.1.0 #-}
 
-module Cardano.Ledger.Plutus.Preprocessor.Binary.V3 where
+module Cardano.Ledger.Plutus.Preprocessor.Binary.V4 where
 
 import Cardano.Ledger.Plutus.Language (PlutusBinary (..))
-import Cardano.Ledger.Plutus.Preprocessor.Source.V3
+import Cardano.Ledger.Plutus.Preprocessor.Source.V4
 import Language.Haskell.TH
-import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.Common as Common
 import qualified PlutusTx as P (compile)
 
 -- ==========================================================================
@@ -41,89 +38,89 @@ $ensureTreasuryReserveQ
 alwaysSucceedsNoDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysSucceedsNoDatumBytes =
   ( alwaysSucceedsNoDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||alwaysSucceedsNoDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||alwaysSucceedsNoDatum||])
   )
 
 alwaysSucceedsWithDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysSucceedsWithDatumBytes =
   ( alwaysSucceedsWithDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||alwaysSucceedsWithDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||alwaysSucceedsWithDatum||])
   )
 
 alwaysFailsNoDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysFailsNoDatumBytes =
   ( alwaysFailsNoDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||alwaysFailsNoDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||alwaysFailsNoDatum||])
   )
 
 alwaysFailsWithDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysFailsWithDatumBytes =
   ( alwaysFailsWithDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||alwaysFailsWithDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||alwaysFailsWithDatum||])
   )
 
 redeemerSameAsDatumBytes :: (Q [Dec], PlutusBinary)
 redeemerSameAsDatumBytes =
   ( redeemerSameAsDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||redeemerSameAsDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||redeemerSameAsDatum||])
   )
 
 evenDatumBytes :: (Q [Dec], PlutusBinary)
 evenDatumBytes =
   ( evenDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||evenDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||evenDatum||])
   )
 
 evenRedeemerNoDatumBytes :: (Q [Dec], PlutusBinary)
 evenRedeemerNoDatumBytes =
   ( evenRedeemerNoDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||evenRedeemerNoDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||evenRedeemerNoDatum||])
   )
 
 evenRedeemerWithDatumBytes :: (Q [Dec], PlutusBinary)
 evenRedeemerWithDatumBytes =
   ( evenRedeemerWithDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
   )
 
 purposeIsWellformedNoDatumBytes :: (Q [Dec], PlutusBinary)
 purposeIsWellformedNoDatumBytes =
   ( purposeIsWellformedNoDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||purposeIsWellformedNoDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||purposeIsWellformedNoDatum||])
   )
 
 purposeIsWellformedWithDatumBytes :: (Q [Dec], PlutusBinary)
 purposeIsWellformedWithDatumBytes =
   ( purposeIsWellformedWithDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||purposeIsWellformedWithDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||purposeIsWellformedWithDatum||])
   )
 
 datumIsWellformedBytes :: (Q [Dec], PlutusBinary)
 datumIsWellformedBytes =
   ( datumIsWellformedQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||datumIsWellformed||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||datumIsWellformed||])
   )
 
 inputsOutputsAreNotEmptyNoDatumBytes :: (Q [Dec], PlutusBinary)
 inputsOutputsAreNotEmptyNoDatumBytes =
   ( inputsOutputsAreNotEmptyNoDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyNoDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyNoDatum||])
   )
 
 inputsOutputsAreNotEmptyWithDatumBytes :: (Q [Dec], PlutusBinary)
 inputsOutputsAreNotEmptyWithDatumBytes =
   ( inputsOutputsAreNotEmptyWithDatumQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyWithDatum||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmptyWithDatum||])
   )
 
 inputsOverlapsWithRefInputsBytes :: (Q [Dec], PlutusBinary)
 inputsOverlapsWithRefInputsBytes =
   ( inputsOverlapsWithRefInputsQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||inputsOverlapsWithRefInputs||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||inputsOverlapsWithRefInputs||])
   )
 
 ensureTreasuryReserveBytes :: (Q [Dec], PlutusBinary)
 ensureTreasuryReserveBytes =
   ( ensureTreasuryReserveQ
-  , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||ensureTreasuryReserve||])
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||ensureTreasuryReserve||])
   )
