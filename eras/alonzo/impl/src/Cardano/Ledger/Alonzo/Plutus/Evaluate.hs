@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded (..),
   resolveNeededPlutusScriptsWithPurpose,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
@@ -64,6 +64,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Bifunctor (first)
+import Data.Default (Default (..))
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -87,6 +88,7 @@ collectPlutusScriptsWithContext ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraPlutusContext era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -106,8 +108,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
-        , ltiSubTxIx = SNothing
+        , ltiLevelInfo = def
         }
     (_, neededPlutusScripts) =
       resolveNeededPlutusScriptsWithPurpose
@@ -288,6 +289,7 @@ evalTxExUnits ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   PParams era ->
   -- | The transaction.
@@ -315,6 +317,7 @@ evalTxExUnitsWithLogs ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   PParams era ->
   -- | The transaction.
@@ -344,8 +347,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
-        , ltiSubTxIx = SNothing
+        , ltiLevelInfo = def
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL

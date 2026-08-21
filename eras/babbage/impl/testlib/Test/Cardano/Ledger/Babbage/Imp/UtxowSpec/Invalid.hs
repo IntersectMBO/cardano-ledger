@@ -6,9 +6,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Invalid (spec) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts
@@ -31,6 +33,7 @@ import Cardano.Ledger.Plutus (
   withSLanguage,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Data.Default (Default)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
@@ -41,7 +44,12 @@ import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  ( BabbageEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid" $ do
   it "Inline datum with Plutus V1" $ do
     let scriptHash = withSLanguage PlutusV1 $ hashPlutusScript . alwaysSucceedsWithDatum

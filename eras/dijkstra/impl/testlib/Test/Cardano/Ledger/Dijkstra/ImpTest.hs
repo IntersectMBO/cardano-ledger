@@ -21,6 +21,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -46,6 +47,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.State
+import Data.Default (Default)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -192,6 +194,7 @@ dijkstraGenUnRegTxCert stakingCredential = do
 dijkstraFixupTx ::
   ( HasCallStack
   , DijkstraEraImp era
+  , Default (LevelTxInfo TopTx era)
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)

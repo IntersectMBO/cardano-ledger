@@ -9,6 +9,7 @@
 module Test.Cardano.Ledger.Conway.Imp.UtxowSpec (spec) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Babbage.Tx (ScriptIntegrity (..), getLanguageView)
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -41,6 +42,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference)
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Data.Default (Default)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
@@ -51,7 +53,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, Default (LevelTxInfo TopTx era)) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   it "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
@@ -152,7 +154,9 @@ setupBadPPViewHashTx = do
 
 substituteIntegrityHashAndFixWits ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   StrictMaybe (SafeHash EraIndependentScriptIntegrity) ->
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)

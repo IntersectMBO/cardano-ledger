@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
@@ -21,6 +22,7 @@ import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
+import Data.Default (Default)
 import Data.Foldable (for_)
 import Data.List (inits)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -38,7 +40,10 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellfor
 
 spec ::
   forall era.
-  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  ( ConwayEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2

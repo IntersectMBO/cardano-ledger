@@ -8,7 +8,10 @@
 
 module Test.Cardano.Ledger.Conway.Spec (spec) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.Core (TxLevel (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import Data.Default (Default)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
@@ -23,7 +26,12 @@ import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
-spec :: forall era. ConwayEraImp era => Spec
+spec ::
+  forall era.
+  ( ConwayEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  Spec
 spec =
   describe "Conway features" $ do
     Proposals.spec @era

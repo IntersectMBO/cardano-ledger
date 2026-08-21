@@ -82,7 +82,7 @@ import Cardano.Ledger.Plutus (
   plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
-import Cardano.Ledger.TxIn (TxId, TxIn)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..))
@@ -93,6 +93,7 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Map.Strict (Map)
 import Data.Text (Text)
+import Data.Typeable (Typeable)
 import GHC.Generics
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -103,16 +104,14 @@ import qualified PlutusLedgerApi.V4 as PV4
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era where
   LedgerTxInfo ::
+    forall era level.
+    Typeable level =>
     { ltiProtVer :: !ProtVer
     , ltiEpochInfo :: !(EpochInfo (Either Text))
     , ltiSystemStart :: !SystemStart
     , ltiUTxO :: !(UTxO era)
     , ltiTx :: !(Tx level era)
-    , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
-    -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
-    -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
-    , ltiSubTxIx :: !(StrictMaybe TxIx)
-    -- ^ This should be set only if we're dealing with a subtransaction.
+    , ltiLevelInfo :: LevelTxInfo level era
     } ->
     LedgerTxInfo era
 
@@ -225,6 +224,8 @@ class
   EraPlutusContext era
   where
   type ContextError era = (r :: Type) | r -> era
+
+  type LevelTxInfo (level :: TxLevel) era :: Type
 
   -- | This data type family is used to memoize the results of `toPlutusTxInfo`, so the outcome can
   -- be shared between execution of different scripts with the same language version.

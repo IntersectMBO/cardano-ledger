@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.TxInfoSpec (spec) where
 
@@ -23,7 +24,6 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   Network (..),
   ProtVer (..),
-  StrictMaybe (..),
   TxIx (..),
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -32,7 +32,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
  )
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
-import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..), DijkstraLevelTxInfo (..))
 import Cardano.Ledger.Plutus (
   Language (..),
   SLanguage (..),
@@ -47,6 +47,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
+import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -73,6 +74,8 @@ spec ::
   , EraTx era
   , Arbitrary (Value era)
   , AlonzoEraTxWits era
+  , Default (LevelTxInfo TopTx era)
+  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   ) =>
   Spec
 spec = describe "TxInfo" $ do
@@ -103,8 +106,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = utxo
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            , ltiSubTxIx = SNothing
+            , ltiLevelInfo = def
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -133,8 +135,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            , ltiSubTxIx = SNothing
+            , ltiLevelInfo = def
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -163,8 +164,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            , ltiSubTxIx = SNothing
+            , ltiLevelInfo = def
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -192,8 +192,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            , ltiSubTxIx = SNothing
+            , ltiLevelInfo = def
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -222,8 +221,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            , ltiSubTxIx = SNothing
+            , ltiLevelInfo = def
             }
       pure $
         case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
@@ -270,9 +268,8 @@ spec = describe "TxInfo" $ do
               , ltiTx = tx
               , ltiSystemStart = systemStart testGlobals
               , ltiProtVer = protVer
-              , ltiMemoizedSubTransactions = mempty
               , ltiEpochInfo = epochInfo testGlobals
-              , ltiSubTxIx = SNothing
+              , ltiLevelInfo = def
               }
           purpose = SpendingPurpose @era $ AsIxItem 0 txIn
           TxIn (TxId txIdHash) (TxIx txIx) = txIn
@@ -349,8 +346,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              , ltiSubTxIx = SJust subTxIx
+              , ltiLevelInfo = DijkstraSubTxInfo subTxIx
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -373,8 +369,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              , ltiSubTxIx = SNothing
+              , ltiLevelInfo = def
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -394,8 +389,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              , ltiSubTxIx = SNothing
+              , ltiLevelInfo = def
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -416,8 +410,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              , ltiSubTxIx = SNothing
+              , ltiLevelInfo = def
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -436,8 +429,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              , ltiSubTxIx = SNothing
+              , ltiLevelInfo = def
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)

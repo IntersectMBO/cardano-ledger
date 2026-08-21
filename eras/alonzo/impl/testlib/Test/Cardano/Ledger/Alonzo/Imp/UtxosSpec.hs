@@ -8,12 +8,17 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfoForPurpose)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (..),
+  LedgerTxInfo (..),
+  toPlutusTxInfoForPurpose,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -43,6 +48,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Control.Monad.Reader (asks)
+import Data.Default (Default (..))
 import Data.Either (isLeft)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
@@ -63,7 +69,12 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
-spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  ( AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
   it
     "transaction validity interval has closed upper bound when protocol version < 9 and open otherwise"
@@ -87,8 +98,7 @@ spec = describe "UTXOS" $ do
               , ltiSystemStart = ss
               , ltiUTxO = utxo
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              , ltiSubTxIx = SNothing
+              , ltiLevelInfo = def
               }
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e

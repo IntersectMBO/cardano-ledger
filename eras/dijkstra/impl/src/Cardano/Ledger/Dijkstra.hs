@@ -19,7 +19,7 @@ module Cardano.Ledger.Dijkstra (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (mkTxInfoResult),
+  EraPlutusContext (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
  )
@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
  )
-import Cardano.Ledger.BaseTypes (Inject (inject), StrictMaybe (..), TxIx (..))
+import Cardano.Ledger.BaseTypes (Inject (inject), TxIx (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
@@ -54,7 +54,7 @@ import Cardano.Ledger.Dijkstra.Transition ()
 import Cardano.Ledger.Dijkstra.Translation ()
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody ()
-import Cardano.Ledger.Dijkstra.TxInfo ()
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraLevelTxInfo (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (Language (..), plutusLanguage)
@@ -108,6 +108,8 @@ mkDijkstraStAnnTopTx ::
   , DijkstraEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
+  , LevelTxInfo TopTx era ~ DijkstraLevelTxInfo TopTx era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -138,12 +140,12 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions =
-            Map.fromList
-              [ (txIdTx dsastTx, dsastTxInfoResult)
-              | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
-              ]
-        , ltiSubTxIx = SNothing
+        , ltiLevelInfo =
+            DijkstraTopTxInfo $
+              Map.fromList
+                [ (txIdTx dsastTx, dsastTxInfoResult)
+                | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
+                ]
         }
     languagesUsed =
       Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
@@ -165,6 +167,7 @@ mkDijkstraStAnnSubTx ::
   , AlonzoEraTx era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -188,8 +191,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx s
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
-        , ltiSubTxIx = SJust subTxIx
+        , ltiLevelInfo = DijkstraSubTxInfo subTxIx
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
    in

@@ -5,10 +5,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.BbodySpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (TooManyExUnits))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
@@ -22,6 +24,7 @@ import Cardano.Ledger.Plutus (
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Data.Default (Default)
 import Data.Foldable (for_)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -32,7 +35,10 @@ import Test.Cardano.Ledger.Plutus.Examples
 
 spec ::
   forall era.
-  AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  ( AlonzoEraImp era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->

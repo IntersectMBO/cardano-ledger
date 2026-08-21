@@ -198,6 +198,7 @@ library testlib
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,
     containers,
+    data-default,
     generic-random,
     microlens,
     plutus-ledger-api,

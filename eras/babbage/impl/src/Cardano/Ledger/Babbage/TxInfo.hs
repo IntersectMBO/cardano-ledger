@@ -240,6 +240,7 @@ transTxRedeemers proxy pv tx utxo =
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
+  type LevelTxInfo level BabbageEra = ()
   data TxInfoResult BabbageEra
     = BabbageTxInfoResult -- Fields must be kept lazy
         (PlutusTxInfoResult 'PlutusV1 BabbageEra)

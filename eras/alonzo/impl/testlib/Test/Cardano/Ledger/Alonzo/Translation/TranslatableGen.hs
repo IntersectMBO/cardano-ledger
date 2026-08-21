@@ -1,9 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
@@ -17,7 +19,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
+  EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInfo,
@@ -26,13 +28,14 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Scripts (AsIx, PlutusPurpose, hoistPlutusPurpose, toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
-import Cardano.Ledger.BaseTypes (ProtVer (ProtVer), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -61,7 +64,10 @@ instance TranslatableGen AlonzoEra where
     pure $ UTxO (Map.fromList $ Set.toList ins `zip` outs)
 
 translationInstances ::
-  TranslatableGen era =>
+  forall era.
+  ( TranslatableGen era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   Int ->
   Int ->
   [TranslationInstance era]
@@ -78,7 +84,9 @@ toVersionedTxInfo slang txInfo =
 
 genTranslationInstance ::
   forall era.
-  TranslatableGen era =>
+  ( TranslatableGen era
+  , Default (LevelTxInfo TopTx era)
+  ) =>
   Gen (TranslationInstance era)
 genTranslationInstance = do
   version <- choose (eraProtVerLow @era, eraProtVerHigh @era)
@@ -93,8 +101,7 @@ genTranslationInstance = do
           , ltiSystemStart = systemStart
           , ltiUTxO = utxo
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
-          , ltiSubTxIx = SNothing
+          , ltiLevelInfo = def
           }
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of
