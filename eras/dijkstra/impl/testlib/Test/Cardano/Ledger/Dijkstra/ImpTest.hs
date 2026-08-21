@@ -41,11 +41,9 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
   pattern RequireGuard,
  )
-import Cardano.Ledger.Dijkstra.UTxO (
-  dijkstraConsumed,
-  localProducedValue,
- )
+import Cardano.Ledger.Dijkstra.UTxO
 import Cardano.Ledger.Plutus (SLanguage (..))
+import Cardano.Ledger.Shelley.API (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
@@ -57,6 +55,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
+import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -207,8 +206,22 @@ dijkstraFixupTx ::
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
-dijkstraFixupTx =
-  fixupSubTransactions >=> babbageFixupTx
+dijkstraFixupTx tx = do
+  isLegacy <- detectLegacyMode tx
+  fixedUp <- fixupSubTransactions tx
+  balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
+  babbageFixupTx balancedInLegacy
+
+detectLegacyMode ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era Bool
+detectLegacyMode tx = do
+  Globals {systemStart, epochInfo} <- gets (^. impGlobalsL)
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getUTxO
+  let stAnnTx = mkStAnnTx epochInfo systemStart pp utxo mempty tx
+  pure $ stAnnTx ^. plutusLegacyModeStAnnTxG
 
 fixupSubTransactions ::
   ( HasCallStack
