@@ -44,7 +44,9 @@ spec = describe "BBODY" $ do
           alwaysFailsNoDatumHash = hashPlutusScript $ alwaysFailsNoDatum slang :: ScriptHash
           evenRedeemerNoDatumHash = hashPlutusScript $ evenRedeemerNoDatum slang :: ScriptHash
 
-        it "succeeds with eight Plutus scripts" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "succeeds with eight Plutus scripts" $ do
           accountAddress <- registerStakeCredential $ ScriptHashObj evenRedeemerNoDatumHash
           txCert <- genUnRegTxCert $ ScriptHashObj evenRedeemerNoDatumHash
 
