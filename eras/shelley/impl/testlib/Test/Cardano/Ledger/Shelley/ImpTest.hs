@@ -130,6 +130,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impEraStartEpochNo,
   impSetSeed,
   shelleyModifyImpInitProtVer,
+  enableImpInitRunningInConformance,
   modifyImpInitPostSubmitTxHook,
   disableImpInitPostSubmitTxHook,
   withPostSubmitTxHook,
@@ -321,7 +322,7 @@ import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
 import Test.ImpSpec
 import Type.Reflection (Typeable, typeOf)
-import UnliftIO (evaluateDeep)
+import UnliftIO (evaluateDeep, fromException, tryJust)
 
 type ImpTestM era = ImpM (LedgerSpec era)
 
@@ -338,6 +339,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
         { impInitEnv =
             ImpTestEnv
               { iteFixup = fixupTx
+              , iteRunningInConformance = False
               , itePostSubmitTxHook = \_ _ _ -> pure ()
               , itePostEpochBoundaryHook = \_ _ _ -> pure ()
               }
@@ -797,15 +799,35 @@ disableImpInitPostEpochBoundaryHook ::
 disableImpInitPostEpochBoundaryHook =
   modifyImpInitPostEpochBoundaryHook $ \_ _ _ -> pure ()
 
+enableImpInitRunningInConformance ::
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+enableImpInitRunningInConformance = modifyImpInit $ \impInit ->
+  impInit
+    { impInitEnv =
+        impInitEnv impInit
+          & iteRunningInConformanceL .~ True
+    }
+
 disableInConformanceIt ::
   ShelleyEraImp era =>
   String ->
   ImpTestM era () ->
   SpecWith (ImpInit (LedgerSpec era))
-disableInConformanceIt s =
-  disableImpInitPostSubmitTxHook
-    . disableImpInitPostEpochBoundaryHook
-    . it (s ++ " [disabled in conformance]")
+disableInConformanceIt s = it (s ++ " [disabled in conformance]") . wrap
+  where
+    wrap :: ImpM (LedgerSpec era) () -> ImpM (LedgerSpec era) ()
+    wrap test = do
+      runningInConformance <- asks $ iteRunningInConformance
+      if runningInConformance then
+        tryJust (fromException @ImpException) test >>= \case
+          Left _ -> pure ()
+          Right () ->
+            liftIO $
+             assertFailure
+               "expected this test to fail, but it succeeded"
+      else
+        test
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -930,6 +952,7 @@ impWitsVKeyNeeded txBody = do
 
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx TopTx era -> ImpTestM era (Tx TopTx era)
+  , iteRunningInConformance :: Bool
   , itePostSubmitTxHook ::
       forall t.
       Globals ->
@@ -948,6 +971,9 @@ data ImpTestEnv era = ImpTestEnv
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx TopTx era -> ImpTestM era (Tx TopTx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
+
+iteRunningInConformanceL :: Lens' (ImpTestEnv era) Bool
+iteRunningInConformanceL = lens iteRunningInConformance (\x y -> x {iteRunningInConformance = y})
 
 itePostSubmitTxHookL ::
   forall era.
