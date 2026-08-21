@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -18,19 +19,21 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Mary.Value (
   AssetName,
   MaryValue (..),
-  MultiAsset,
-  PolicyID,
+  PolicyID (..),
   multiAssetFromList,
  )
 import qualified Cardano.Ledger.Shelley.AdaPots as AdaPots
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
-import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -56,124 +59,89 @@ spec = describe "UTXO" $ do
 
   describe "value produced by a transaction" $ do
     it "counts each new pool deposit at most once across the batch" $ do
-      poolDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ ppPoolDepositL .~ poolDeposit
-      cert <- RegPoolTxCert <$> arbitrary
-      txIn1 <- arbitrary
-      txIn2 <- arbitrary
-      let topTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & certsTxBodyL .~ [cert]
-                -- distinguish subs by an input
-                & subTransactionsTxBodyL .~ [mkSubTx txIn1 cert, mkSubTx txIn2 cert]
+      poolKh <- freshKeyHash
+      tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh], [poolKh]]
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       -- just the pool deposits are in `produced` because the transaction is not fixed up
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+      produced pp pState (tx ^. bodyTxL) `shouldBe` inject (pp ^. ppPoolDepositL)
+      submitTx_ tx
 
     it "counts distinct pool deposits in top and sub separately" $ do
-      poolDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ ppPoolDepositL .~ poolDeposit
-      poolA <- RegPoolTxCert <$> arbitrary
-      poolB <- RegPoolTxCert <$> arbitrary
-      txIn1 <- arbitrary
-      txIn2 <- arbitrary
-      txIn3 <- arbitrary
-      let topTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & certsTxBodyL .~ [poolB, poolA, poolB]
-                & subTransactionsTxBodyL .~ [mkSubTx txIn1 poolA, mkSubTx txIn2 poolA, mkSubTx txIn3 poolB]
+      poolA <- freshKeyHash
+      poolB <- freshKeyHash
+      tx <- registerPoolTxWithSubTxs [poolB, poolA, poolB] [[poolA, poolA, poolB], [poolA, poolB]]
+
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject ((2 :: Int) <×> poolDeposit)
+      produced pp pState (tx ^. bodyTxL) `shouldBe` inject ((2 :: Int) <×> (pp ^. ppPoolDepositL))
+      submitTx_ tx
 
     it "includes sub-tx cert deposits when top has no certs" $ do
-      poolDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ ppPoolDepositL .~ poolDeposit
-      poolParams <- arbitrary
-      let subTx = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [RegPoolTxCert poolParams]
-          topTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & subTransactionsTxBodyL .~ [subTx]
+      poolKh <- freshKeyHash
+      tx <- registerPoolTxWithSubTxs [] [[poolKh]]
+
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+      produced pp pState (tx ^. bodyTxL) `shouldBe` inject (pp ^. ppPoolDepositL)
+      submitTx_ tx
 
     it "does not count re-registrations of an already-registered pool across the batch" $ do
-      poolDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ ppPoolDepositL .~ poolDeposit
-      kh <- freshKeyHash
-      poolParams <- registerAccountAddress >>= freshPoolParams kh
-      let cert = RegPoolTxCert poolParams
-          regTx :: forall l. Typeable l => Tx l era
-          regTx = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert]
-          topTx = regTx & bodyTxL . subTransactionsTxBodyL .~ [regTx :: Tx SubTx era]
-      submitTx_ (regTx :: Tx TopTx era)
+      poolKh <- freshKeyHash
+      registerPool poolKh
+      tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh]]
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` mempty
+      produced pp pState (tx ^. bodyTxL) `shouldBe` mempty
+      submitTx_ tx
 
     it "dedupes across multiple subtransactions registering the same fresh pool" $ do
-      poolDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ ppPoolDepositL .~ poolDeposit
-      cert <- RegPoolTxCert <$> arbitrary
-      txInA <- arbitrary @TxIn
-      txInB <- arbitrary @TxIn
-      let topTx =
-            mkBasicTx $
-              mkBasicTxBody
-                & subTransactionsTxBodyL
-                  .~ [mkSubTx txInA cert, mkSubTx txInB cert]
+      poolKh <- freshKeyHash
+      tx <- registerPoolTxWithSubTxs [] [[poolKh], [poolKh]]
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-      produced pp pState (topTx ^. bodyTxL) `shouldBe` inject poolDeposit
+      produced pp pState (tx ^. bodyTxL) `shouldBe` inject (pp ^. ppPoolDepositL)
+      submitTx_ tx
 
-    it "sums outputs, fee, treasury donations, deposits and burned assets across the batch" $ do
-      poolDeposit <- (Coin 1 <>) <$> arbitrary
-      dRepDeposit <- (Coin 1 <>) <$> arbitrary
-      modifyPParams $ (ppPoolDepositL .~ poolDeposit) . (ppDRepDepositL .~ dRepDeposit)
-      poolParams <- arbitrary
-      drepA <- arbitrary
-      drepB <- arbitrary
-      topAddr <- arbitrary
-      subAddr <- arbitrary
-      policyA <- arbitrary @PolicyID
-      asset <- arbitrary @AssetName
-      topOutValue <- arbitrary
-      subOutValue <- arbitrary
-      topFee <- arbitrary
-      topTreasury <- arbitrary
-      subTreasury <- arbitrary
-      topBurnAmount <- getPositive <$> arbitrary
-      subBurnAmount <- getPositive <$> arbitrary
-      topDDAddr <- arbitrary
-      subDDAddr <- arbitrary
+    it "sums outputs, fee, treasury donations and deposits across the batch" $ do
+      pp <- getsPParams id
+      let poolDeposit = pp ^. ppPoolDepositL
+          dRepDeposit = pp ^. ppDRepDepositL
+
+      let freshPoolCert = do
+            poolKh <- freshKeyHash
+            pps <- freshPoolParams poolKh =<< registerAccountAddress
+            pure $ RegPoolTxCert @era pps
+      topPoolCert <- freshPoolCert
+      subPoolCert <- freshPoolCert
+
+      let freshDRepCert = do
+            kh <- freshKeyHash
+            pure $ RegDRepTxCert @era (KeyHashObj kh) dRepDeposit SNothing
+      topDRepCert <- freshDRepCert
+      subDRepCert <- freshDRepCert
+
+      topDDAccount <- registerAccountAddress
+      subDDAccount <- registerAccountAddress
       topDDAmount <- (Coin 1 <>) <$> arbitrary
       subDDAmount <- (Coin 1 <>) <$> arbitrary
-      let topMint = multiAssetFromList [(policyA, asset, -topBurnAmount)]
-          subMint = multiAssetFromList [(policyA, asset, -subBurnAmount)]
-          expectedBurned :: MultiAsset
-          expectedBurned =
-            multiAssetFromList
-              [ (policyA, asset, topBurnAmount + subBurnAmount)
-              ]
-          regPool :: TxCert era
-          regPool = RegPoolTxCert poolParams
-          topOut = mkBasicTxOut topAddr (inject topOutValue)
-          subOut = mkBasicTxOut subAddr (inject subOutValue)
-          subTx :: Tx SubTx era
+
+      topOut <- freshTxOut
+      subOut <- freshTxOut
+      topTreasury <- arbitrary
+      subTreasury <- arbitrary
+      -- we are setting the fee manually in order to verify the `produced` value before the fixup.
+      topFee <- (Coin 1_000_000 <>) <$> arbitrary
+
+      let subTx :: Tx SubTx era
           subTx =
             mkBasicTx $
               mkBasicTxBody
                 & outputsTxBodyL .~ [subOut]
                 & certsTxBodyL
-                  .~ [regPool, RegDRepTxCert drepB dRepDeposit SNothing]
+                  .~ [subPoolCert, subDRepCert]
                 & treasuryDonationTxBodyL .~ subTreasury
-                & mintTxBodyL .~ subMint
-                & directDepositsTxBodyL .~ DirectDeposits [(subDDAddr, subDDAmount)]
+                & directDepositsTxBodyL .~ DirectDeposits [(subDDAccount, subDDAmount)]
           topTx :: Tx TopTx era
           topTx =
             mkBasicTx $
@@ -181,31 +149,93 @@ spec = describe "UTXO" $ do
                 & outputsTxBodyL .~ [topOut]
                 & feeTxBodyL .~ topFee
                 & certsTxBodyL
-                  .~ [regPool, RegDRepTxCert drepA dRepDeposit SNothing]
+                  .~ [topPoolCert, topDRepCert]
                 & treasuryDonationTxBodyL .~ topTreasury
-                & mintTxBodyL .~ topMint
-                & directDepositsTxBodyL .~ DirectDeposits [(topDDAddr, topDDAmount)]
+                & directDepositsTxBodyL .~ DirectDeposits [(topDDAccount, topDDAmount)]
                 & subTransactionsTxBodyL .~ [subTx]
           expectedCoin =
-            topOutValue
-              <> subOutValue
+            (topOut ^. coinTxOutL)
+              <> (subOut ^. coinTxOutL)
               <> topFee
               <> topTreasury
               <> subTreasury
-              <> poolDeposit
+              <> ((2 :: Int) <×> poolDeposit)
               <> ((2 :: Int) <×> dRepDeposit)
               <> topDDAmount
               <> subDDAmount
-          expected = MaryValue expectedCoin expectedBurned
-      pp <- getsPParams id
+          expected = MaryValue expectedCoin mempty
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
       checkDepositCalculation
         (topTx ^. bodyTxL)
-        (poolDeposit <> ((2 :: Int) <×> dRepDeposit))
+        (((2 :: Int) <×> poolDeposit) <> ((2 :: Int) <×> dRepDeposit))
         (poolDeposit <> dRepDeposit)
+      submitTx_ topTx
+
+    disableInConformanceIt "sums assets burned by the top and the sub transaction" $ do
+      -- Mint upfront the tokens that the batch is going to burn: one output for the top
+      -- transaction to spend and one for the sub transaction.
+      policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
+      assetName <- arbitrary @AssetName
+      topBurnAmount <- getPositive <$> arbitrary
+      subBurnAmount <- getPositive <$> arbitrary
+      tokenAddr <- freshKeyAddr_
+      let tokens n = multiAssetFromList [(policyId, assetName, n)]
+      mintTx <-
+        submitTx $
+          mkBasicTx $
+            mkBasicTxBody
+              & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
+              & outputsTxBodyL
+                .~ [ mkBasicTxOut tokenAddr (MaryValue mempty (tokens topBurnAmount))
+                   , mkBasicTxOut tokenAddr (MaryValue mempty (tokens subBurnAmount))
+                   ]
+      topOut <- freshTxOut
+      subOut <- freshTxOut
+      topFee <- (Coin 1_000_000 <>) <$> arbitrary
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txInAt (1 :: Int) mintTx]
+                & outputsTxBodyL .~ [subOut]
+                & mintTxBodyL .~ tokens (negate subBurnAmount)
+          topTx :: Tx TopTx era
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txInAt (0 :: Int) mintTx]
+                & outputsTxBodyL .~ [topOut]
+                & feeTxBodyL .~ topFee
+                & mintTxBodyL .~ tokens (negate topBurnAmount)
+                & subTransactionsTxBodyL .~ [subTx]
+          expected =
+            MaryValue
+              ((topOut ^. coinTxOutL) <> (subOut ^. coinTxOutL) <> topFee)
+              (tokens (topBurnAmount + subBurnAmount))
+      pp <- getsPParams id
+      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      produced pp pState (topTx ^. bodyTxL) `shouldBe` expected
+      submitTx_ topTx
   where
-    mkSubTx i cert = mkBasicTx $ mkBasicTxBody & certsTxBodyL .~ [cert] & inputsTxBodyL .~ [i]
+    registerPoolTxWithSubTxs ::
+      [KeyHash StakePool] -> -- top's pool certs
+      [[KeyHash StakePool]] -> -- one sub-tx per inner list, with one pool cert per key
+      ImpTestM era (Tx TopTx era)
+    registerPoolTxWithSubTxs topKhs subKhs = do
+      top <- registerPoolTx @TopTx topKhs
+      subs <- traverse (registerPoolTx @SubTx) subKhs
+      pure $ top & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subs
+    registerPoolTx :: forall l. Typeable l => [KeyHash StakePool] -> ImpTestM era (Tx l era)
+    registerPoolTx khPools = do
+      certs <-
+        traverse
+          ( \khPool ->
+              RegPoolTxCert @era <$> (freshPoolParams khPool =<< registerAccountAddress)
+          )
+          khPools
+      pure $ mkBasicTx mkBasicTxBody & bodyTxL . certsTxBodyL .~ StrictSeq.fromList certs
+
     -- Check that `certsTotalDepositsTxBody` (used to set deposits in `UTxOState` and `AdaPots` calculations)
     -- returns the batch deposits, while `getTotalDepositsTxBody` returns the top-level deposits
     checkDepositCalculation topBody batchDeposits topLevelDeposits = do
@@ -215,3 +245,8 @@ spec = describe "UTXO" $ do
         `shouldBe` batchDeposits
       let isPoolReg = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
       getTotalDepositsTxBody pp isPoolReg topBody `shouldBe` topLevelDeposits
+    freshTxOut = do
+      pp <- getsPParams id
+      addr <- freshKeyAddr_
+      amount <- arbitrary @Coin
+      pure $ ensureMinCoinTxOut pp (mkBasicTxOut addr (inject amount))

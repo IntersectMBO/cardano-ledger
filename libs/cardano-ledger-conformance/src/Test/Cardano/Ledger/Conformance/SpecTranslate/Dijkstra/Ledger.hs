@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State (ChainAccountState (..))
 import Cardano.Ledger.TxIn (TxId)
-import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import qualified Data.OMap.Strict as OMap
@@ -105,7 +104,7 @@ instance SpecTranslate DijkstraEra (TxBody TopTx DijkstraEra) where
         <*> toSpecRep (txb ^. currentTreasuryValueTxBodyL)
         <*> pure 0
         <*> fmap (fmap (const 0)) (toSpecRep (txb ^. scriptIntegrityHashTxBodyL))
-        <*> traverse toSpecRep (toList $ OMap.toMap $ txb ^. subTransactionsTxBodyL)
+        <*> traverse toSpecRep (OMap.elems $ txb ^. subTransactionsTxBodyL)
         <*> (Agda.MkHSSet <$> traverse toSpecRepTuple (Map.toList $ txb ^. requiredTopLevelGuardsL))
         <*> (Agda.MkHSSet <$> toSpecRep (txb ^. guardsTxBodyL))
         <*> toSpecRep (txb ^. directDepositsTxBodyL)
