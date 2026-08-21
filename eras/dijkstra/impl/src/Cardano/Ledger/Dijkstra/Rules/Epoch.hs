@@ -218,14 +218,9 @@ epochTransition = do
       ledgerState0
         & lsCertStateL .~ certState2
         & lsUTxOStateL .~ utxoState2
-  snapshots1 <-
-    trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ledgerState1 curPParams, snapshots0, ())
-  let
-    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
     epochState1 =
       epochState0
         & chainAccountStateL .~ chainAccountState3
-        & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
   tellEvent $ EpochBoundaryRatifyState ratifyState
   epochState2 <- do
@@ -233,7 +228,17 @@ epochTransition = do
     if curPv /= epochState1 ^. prevPParamsEpochStateL . ppProtocolVersionL
       then trans @(EraRule "HARDFORK" era) $ TRC ((), epochState1, curPv)
       else pure epochState1
-  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState2
+  snapshots1 <-
+    trans @(EraRule "SNAP" era) $
+      TRC
+        ( Shelley.SnapEnv (epochState2 ^. esLStateL) (epochState2 ^. curPParamsEpochStateL)
+        , snapshots0
+        , ()
+        )
+  let
+    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
+    epochState3 = epochState2 & esSnapshotsL .~ snapshots1
+  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState3
 
 instance
   ( Era era

@@ -12,6 +12,7 @@
 
 ### `testlib`
 
+* Add reusable `SNAP` voting-stake test helpers (shared with the Dijkstra testlib) to `Test.Cardano.Ledger.Conway.Imp.SnapSpec`: `getSpoVotingStake`, `getDRepVotingStake`, `getLeaderElectionStake`, `isPoolInLeaderDistr`, `isPoolInRewardSnapshot`, `setupExpiredRefundScenario`, `setupReapedPoolScenario`, `setupWithdrawalScenario`, `setupCombinedScenario`, `setupRetiredPoolInLeaderDistr`
 * Add `DecCBOR` instance for `Block`
 
 ## 1.23.0.0
