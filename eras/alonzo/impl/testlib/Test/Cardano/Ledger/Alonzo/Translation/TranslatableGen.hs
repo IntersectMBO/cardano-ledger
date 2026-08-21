@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Scripts (AsIx, PlutusPurpose, hoistPlutusPurpose, toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
-import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
+import Cardano.Ledger.BaseTypes (ProtVer (ProtVer), StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
@@ -94,6 +94,7 @@ genTranslationInstance = do
           , ltiUTxO = utxo
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
+          , ltiSubTxIx = SNothing
           }
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of

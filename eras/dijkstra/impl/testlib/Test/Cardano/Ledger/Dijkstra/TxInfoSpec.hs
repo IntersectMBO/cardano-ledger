@@ -23,6 +23,7 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   Network (..),
   ProtVer (..),
+  StrictMaybe (..),
   TxIx (..),
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -103,6 +104,7 @@ spec = describe "TxInfo" $ do
             , ltiUTxO = utxo
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -132,6 +134,7 @@ spec = describe "TxInfo" $ do
             , ltiUTxO = mempty
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -161,6 +164,7 @@ spec = describe "TxInfo" $ do
             , ltiUTxO = mempty
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -189,6 +193,7 @@ spec = describe "TxInfo" $ do
             , ltiUTxO = mempty
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -218,6 +223,7 @@ spec = describe "TxInfo" $ do
             , ltiUTxO = mempty
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       pure $
         case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
@@ -266,6 +272,7 @@ spec = describe "TxInfo" $ do
               , ltiProtVer = protVer
               , ltiMemoizedSubTransactions = mempty
               , ltiEpochInfo = epochInfo testGlobals
+              , ltiSubTxIx = SNothing
               }
           purpose = SpendingPurpose @era $ AsIxItem 0 txIn
           TxIn (TxId txIdHash) (TxIx txIx) = txIn
@@ -331,7 +338,8 @@ spec = describe "TxInfo" $ do
           , SupportedLanguage SPlutusV3
           ]
     forM_ plutusV1toV3 $ \(SupportedLanguage slang) -> do
-      it "UnsupportedScriptInSubTx" $ do
+      prop "UnsupportedScriptInSubTx" $ do
+        subTxIx <- arbitrary
         let
           tx = mkBasicTx @era @SubTx mkBasicTxBody
           ledgerTxInfo =
@@ -342,12 +350,14 @@ spec = describe "TxInfo" $ do
               , ltiUTxO = mempty
               , ltiTx = tx
               , ltiMemoizedSubTransactions = mempty
+              , ltiSubTxIx = SJust subTxIx
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        txInfoResult
-          `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
+        pure $
+          txInfoResult
+            `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
       prop "DirectDepositsNotSupported" $ do
         accountAddr <- arbitrary
         coin <- arbitrary
@@ -364,6 +374,7 @@ spec = describe "TxInfo" $ do
               , ltiUTxO = mempty
               , ltiTx = tx
               , ltiMemoizedSubTransactions = mempty
+              , ltiSubTxIx = SNothing
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -384,6 +395,7 @@ spec = describe "TxInfo" $ do
               , ltiUTxO = mempty
               , ltiTx = tx
               , ltiMemoizedSubTransactions = mempty
+              , ltiSubTxIx = SNothing
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -405,6 +417,7 @@ spec = describe "TxInfo" $ do
               , ltiUTxO = mempty
               , ltiTx = tx
               , ltiMemoizedSubTransactions = mempty
+              , ltiSubTxIx = SNothing
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -424,6 +437,7 @@ spec = describe "TxInfo" $ do
               , ltiUTxO = mempty
               , ltiTx = tx
               , ltiMemoizedSubTransactions = mempty
+              , ltiSubTxIx = SNothing
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)

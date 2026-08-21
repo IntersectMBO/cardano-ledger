@@ -88,6 +88,7 @@ spec = describe "UTXOS" $ do
               , ltiUTxO = utxo
               , ltiTx = tx
               , ltiMemoizedSubTransactions = mempty
+              , ltiSubTxIx = SNothing
               }
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e

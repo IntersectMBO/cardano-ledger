@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
  )
-import Cardano.Ledger.BaseTypes (Inject (inject))
+import Cardano.Ledger.BaseTypes (Inject (inject), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
@@ -127,9 +127,10 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
     -- We do not need to fold over sub-transactions in order to get updated cache, since
     -- `getScriptsProvided` is recursive and will collect all scripts from sub-transactions
     stAnnSubTxs =
-      map
+      zipWith
         (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided newStAnnTxCache)
         (toList (txBody ^. subTransactionsTxBodyL))
+        (TxIx <$> [0 ..])
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -142,6 +143,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
               [ (txIdTx dsastTx, dsastTxInfoResult)
               | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
               ]
+        , ltiSubTxIx = SNothing
         }
     languagesUsed =
       Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
@@ -171,8 +173,9 @@ mkDijkstraStAnnSubTx ::
   ScriptsProvided era ->
   Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   Tx SubTx era ->
+  TxIx ->
   DijkstraStAnnTx SubTx era
-mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
+mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx subTxIx =
   let
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -186,6 +189,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
         , ltiUTxO = utxo
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
+        , ltiSubTxIx = SJust subTxIx
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
    in

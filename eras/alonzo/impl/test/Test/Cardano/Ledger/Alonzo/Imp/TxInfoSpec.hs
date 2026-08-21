@@ -49,6 +49,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiUTxO = utxo
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
@@ -77,5 +78,6 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiUTxO = utxo
             , ltiTx = tx
             , ltiMemoizedSubTransactions = mempty
+            , ltiSubTxIx = SNothing
             }
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti

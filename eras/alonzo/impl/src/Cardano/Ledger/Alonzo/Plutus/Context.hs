@@ -63,7 +63,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   PlutusPurpose,
   PlutusScript (..),
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe, TxIx, Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -111,6 +111,8 @@ data LedgerTxInfo era where
     , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
     -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
     -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
+    , ltiSubTxIx :: !(StrictMaybe TxIx)
+    -- ^ This should be set only if we're dealing with a subtransaction.
     } ->
     LedgerTxInfo era
 

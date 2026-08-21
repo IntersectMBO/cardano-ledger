@@ -55,7 +55,7 @@ import Cardano.Ledger.BaseTypes (
   Inject (..),
   ProtVer (..),
   StrictMaybe (..),
-  TxIx (TxIx),
+  TxIx (..),
   kindObjectValue,
   strictMaybe,
   strictMaybeToMaybe,
@@ -663,7 +663,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoCurrentTreasuryAmount =
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
+            , PV4.txInfoSubTxIx = toInteger . unTxIx <$> strictMaybeToMaybe ltiSubTxIx
             , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
             , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
             , PV4.txInfoAccountBalanceIntervals =

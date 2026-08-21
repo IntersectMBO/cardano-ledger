@@ -212,6 +212,7 @@ successfulTranslation slang tx f =
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
+          , ltiSubTxIx = SNothing
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
@@ -236,6 +237,7 @@ expectTranslationError slang tx expected =
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
+          , ltiSubTxIx = SNothing
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->

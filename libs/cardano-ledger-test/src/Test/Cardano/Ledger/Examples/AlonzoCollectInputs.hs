@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (..),
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraScript, AlonzoEraTxBody (..))
 import Cardano.Ledger.Core
@@ -122,6 +122,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
         , ltiUTxO = initUTxO
         , ltiTx = validatingTx
         , ltiMemoizedSubTransactions = mempty
+        , ltiSubTxIx = SNothing
         }
 
 -- ============================== DATA ===============================

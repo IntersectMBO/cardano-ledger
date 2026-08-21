@@ -16,6 +16,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Maybe.Strict (StrictMaybe (..))
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
@@ -79,6 +80,7 @@ assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo 
         , ltiUTxO = utxo
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
+        , ltiSubTxIx = SNothing
         }
     errorMessage =
       unlines

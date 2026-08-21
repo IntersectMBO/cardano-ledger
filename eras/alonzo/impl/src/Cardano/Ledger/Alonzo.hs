@@ -147,6 +147,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiUTxO = utxo
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
+        , ltiSubTxIx = SNothing
         }
    in
     AlonzoStAnnTx
