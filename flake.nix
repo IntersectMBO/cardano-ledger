@@ -51,7 +51,7 @@
 
     cardano-crypto-src = {
       url =
-        "git+file:///media/nvme/git/iog/cardano-node-release-11.2-ai/cardano-crypto";
+        "github:input-output-hk/cardano-crypto/ac2e12a471b735ad80949bcbf0f6f634e5dbef77";
       flake = false;
     };
   };
