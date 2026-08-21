@@ -149,7 +149,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
           when (null (unAccountBalanceIntervals x)) $
             fail (emptyFailure "AccountBalanceIntervals" "non-empty")
           pure $ accountBalanceIntervalsDijkstraTxBodyRawL .~ x $ acc
-        27 | STopTx <- sTxLevel -> Just $ do
+        27 -> Just $ do
           x <- decCBOR
           when (null (unAccountBalanceIntervals x)) $
             fail (emptyFailure "StartingAccountBalanceIntervals" "non-empty")

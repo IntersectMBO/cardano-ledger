@@ -20,6 +20,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   EntitiesPredFailure (..),
   SubEntitiesPredFailure (..),
  )
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBalanceIntervals (..))
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NE
@@ -187,6 +188,39 @@ spec = describe "ENTITIES" $ do
       , injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
       ]
+
+  describe "Account balance intervals" $ do
+    it "Account balance intervals for the top-level transaction" $
+      intervalCases
+        submitTopFailing
+        (accountBalanceIntervalsTxBodyL .~)
+        AccountBalanceIntervalsWrongNetwork
+        AccountBalanceIntervalsUnknownAccounts
+        AccountBalanceIntervalsMismatch
+
+    it "Account balance intervals within each sub-transaction" $
+      intervalCases
+        submitSubFailing
+        (accountBalanceIntervalsTxBodyL .~)
+        SubAccountBalanceIntervalsWrongNetwork
+        SubAccountBalanceIntervalsUnknownAccounts
+        SubAccountBalanceIntervalsMismatch
+
+    it "Starting account balance intervals for the top-level transaction" $
+      intervalCases
+        submitTopFailing
+        (startingAccountBalanceIntervalsTxBodyL .~)
+        StartingAccountBalanceIntervalsWrongNetwork
+        StartingAccountBalanceIntervalsUnknownAccounts
+        StartingAccountBalanceIntervalsMismatch
+
+    it "Starting account balance intervals within each sub-transaction" $
+      intervalCases
+        submitSubFailing
+        (startingAccountBalanceIntervalsTxBodyL .~)
+        SubStartingAccountBalanceIntervalsWrongNetwork
+        SubStartingAccountBalanceIntervalsUnknownAccounts
+        SubStartingAccountBalanceIntervalsMismatch
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
     setupAccountAddress = do
@@ -196,3 +230,44 @@ spec = describe "ENTITIES" $ do
       submitAndExpireProposalToMakeReward cred
       b <- getBalance cred
       pure (ra, b, kh)
+
+    registeredAccount :: ImpTestM era AccountAddress
+    registeredAccount = freshKeyHash >>= registerStakeCredential . KeyHashObj
+
+    unregisteredAccount :: ImpTestM era AccountAddress
+    unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
+
+    unmet :: AccountBalanceInterval era
+    unmet = AccountBalanceLowerBound (Inclusive (Coin 1))
+
+    satisfied :: AccountBalanceInterval era
+    satisfied = AccountBalanceExact (Coin 0)
+
+    submitTopFailing modifyBody failure =
+      submitFailingTx (mkBasicTx (mkBasicTxBody & modifyBody)) [injectFailure failure]
+
+    submitSubFailing modifyBody failure =
+      submitFailingTx
+        (mkBasicTx (mkBasicTxBody & subTransactionsTxBodyL .~ [mkBasicTx (mkBasicTxBody & modifyBody)]))
+        [injectFailure failure]
+
+    intervalCases ::
+      ((TxBody l era -> TxBody l era) -> t era -> ImpTestM era ()) ->
+      (AccountBalanceIntervals era -> TxBody l era -> TxBody l era) ->
+      (Network -> NES.NonEmptySet AccountAddress -> t era) ->
+      (NE.NonEmptyMap AccountAddress (AccountBalanceInterval era) -> t era) ->
+      (NE.NonEmptyMap AccountAddress (AccountBalanceInterval era) -> t era) ->
+      ImpTestM era ()
+    intervalCases submitFailing setField mkWrongNetwork mkUnknownAccounts mkMismatch = do
+      registered <- registeredAccount
+      let onWrongNetwork = registered & accountAddressNetworkIdL .~ Mainnet
+      submitFailing
+        (setField (AccountBalanceIntervals [(onWrongNetwork, satisfied)]))
+        (mkWrongNetwork Testnet (NES.singleton onWrongNetwork))
+      unregistered <- unregisteredAccount
+      submitFailing
+        (setField (AccountBalanceIntervals [(unregistered, satisfied)]))
+        (mkUnknownAccounts (NE.singleton unregistered satisfied))
+      submitFailing
+        (setField (AccountBalanceIntervals [(registered, unmet)]))
+        (mkMismatch (NE.singleton registered unmet))

@@ -129,6 +129,7 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               , ("dstbrRequiredTopLevelGuards", toExpr dstbrRequiredTopLevelGuards)
               , ("dstbrDirectDeposits", toExpr dstbrDirectDeposits)
               , ("dstbrAccountBalanceIntervals", toExpr dstbrAccountBalanceIntervals)
+              , ("dstbrStartingAccountBalanceIntervals", toExpr dstbrStartingAccountBalanceIntervals)
               ]
 
 instance ToExpr (TxBody l DijkstraEra)

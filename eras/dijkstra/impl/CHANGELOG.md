@@ -2,6 +2,21 @@
 
 ## 0.4.0.0
 
+* Enforce account balance intervals per transaction level in `ENTITIES` and `SUBENTITIES`, for both `accountBalanceIntervals` and `startingAccountBalanceIntervals`:
+  - Add `checkAccountBalanceIntervals`
+  - Add `AccountBalanceIntervalsMismatch`, `AccountBalanceIntervalsUnknownAccounts`, and `AccountBalanceIntervalsWrongNetwork` to `EntitiesPredFailure`
+  - Add `StartingAccountBalanceIntervalsMismatch`, `StartingAccountBalanceIntervalsUnknownAccounts`, and `StartingAccountBalanceIntervalsWrongNetwork` to `EntitiesPredFailure`
+  - Add `SubAccountBalanceIntervalsMismatch`, `SubAccountBalanceIntervalsUnknownAccounts`, and `SubAccountBalanceIntervalsWrongNetwork` to `SubEntitiesPredFailure`
+  - Add `SubStartingAccountBalanceIntervalsMismatch`, `SubStartingAccountBalanceIntervalsUnknownAccounts`, and `SubStartingAccountBalanceIntervalsWrongNetwork` to `SubEntitiesPredFailure`
+* Make `startingAccountBalanceIntervals` available at each transaction level:
+  - Change `startingAccountBalanceIntervalsTxBodyL` and `startingAccountBalanceIntervalsDijkstraTxBodyRawL` to be polymorphic over the transaction level
+  - Add `dstbStartingAccountBalanceIntervals` to the `DijkstraSubTxBody` pattern and `dstbrStartingAccountBalanceIntervals` to `DijkstraSubTxBodyRaw`
+* Key `AccountBalanceIntervals` by `AccountAddress` (reward account) instead of `AccountId` (bare credential), consistent with `withdrawals`/`direct_deposits`:
+  - Change `AccountBalanceIntervals` to `Map AccountAddress (AccountBalanceInterval era)`
+* Restructure `EntitiesEnv`:
+  - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
+  - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
+* Change the `STS` `Signal` of `ENTITIES` to `StAnnTx TopTx era`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Remove `EncCBORGroup` instance for `DijkstraBlockBody`
@@ -28,6 +43,8 @@
 
 ### cddl
 
+* Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
+* Add `starting_account_balance_intervals` (key 27) to `sub_transaction_body`
 * Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
 
 ### testlib

@@ -822,18 +822,22 @@ sub_transaction_body =
   , ? 24 : required_top_level_guards
   , ? 25 : direct_deposits
   , ? 26 : account_balance_intervals
+  , ? 27 : starting_account_balance_intervals
   }
 
 required_top_level_guards = {+ credential => plutus_data/ nil}
 
 direct_deposits = {+ reward_account => coin}
 
-account_balance_intervals = {+ credential => account_balance_interval}
+account_balance_intervals = {+ reward_account => account_balance_interval}
 
 account_balance_interval =
   [inclusive_lower_bound : coin, exclusive_upper_bound : coin/ nil]
   / [inclusive_lower_bound : coin/ nil, exclusive_upper_bound : coin]
   / coin
+
+starting_account_balance_intervals =
+  {+ reward_account => account_balance_interval}
 
 transaction_witness_set =
   { ? 0 : nonempty_set<vkeywitness>
@@ -905,8 +909,6 @@ auxiliary_data_map =
     , ? 5 : [* plutus_v4_script]
     }
   )
-
-starting_account_balance_intervals = {+ credential => account_balance_interval}
 
 leios_certificate =
   [ signers              : bytes           ;bitfield
