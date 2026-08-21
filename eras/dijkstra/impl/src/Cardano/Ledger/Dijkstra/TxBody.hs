@@ -1351,7 +1351,7 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
 
   subTransactionsTxBodyL :: Lens' (TxBody TopTx era) (OMap TxId (Tx SubTx era))
 
-  requiredTopLevelGuardsL ::
+  requiredTopLevelGuardsTxBodyL ::
     Lens' (TxBody l era) (Map (Credential Guard) (StrictMaybe (Data era)))
 
   directDepositsTxBodyL :: Lens' (TxBody l era) DirectDeposits
@@ -1404,7 +1404,7 @@ instance
   {-# INLINE subTransactionsTxBodyL #-}
   subTransactionsTxBodyL = memoRawTypeL @DijkstraEra . subTransactionsDijkstraTxBodyRawL
 
-  requiredTopLevelGuardsL = memoRawTypeL @DijkstraEra . requiredTopLevelGuardsDijkstraTxBodyRawL
+  requiredTopLevelGuardsTxBodyL = memoRawTypeL @DijkstraEra . requiredTopLevelGuardsDijkstraTxBodyRawL
 
   directDepositsTxBodyL = memoRawTypeL @DijkstraEra . directDepositsDijkstraTxBodyRawL
   {-# INLINE directDepositsTxBodyL #-}

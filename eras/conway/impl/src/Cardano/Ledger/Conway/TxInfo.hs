@@ -39,6 +39,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transTxCertV1V2,
   transPlutusPurposeV1V2,
   transPlutusPurposeV3,
+  transSlotToPOSIXTime,
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
   scriptPurposeToScriptInfo,
@@ -72,6 +73,7 @@ import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
   Inject (..),
   ProtVer (..),
+  SlotNo,
   StrictMaybe (..),
   getVersion32,
   isSJust,
@@ -155,6 +157,7 @@ import qualified PlutusLedgerApi.V3.MintValue as PV3
 
 instance EraPlutusContext ConwayEra where
   type ContextError ConwayEra = ConwayContextError ConwayEra
+  type LevelTxInfo level ConwayEra = ()
 
   data TxInfoResult ConwayEra
     = ConwayTxInfoResult -- Fields must be kept lazy
@@ -183,6 +186,8 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
+
+  mkTopTxInfo = ()
 
 data ConwayContextError era
   = BabbageContextError (BabbageContextError era)
@@ -822,32 +827,40 @@ class
 instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
+transSlotToPOSIXTime ::
+  forall era proxy.
+  Inject (AlonzoContextError era) (ContextError era) =>
+  proxy era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  SlotNo ->
+  Either (ContextError era) PV3.POSIXTime
+transSlotToPOSIXTime _ epochInfo systemStart =
+  left (inject . TimeTranslationPastHorizon @era)
+    . slotToPOSIXTime epochInfo systemStart
+
 -- | Translate a validity interval to POSIX time
 transValidityInterval ::
-  forall proxy era a.
-  Inject (AlonzoContextError era) a =>
+  forall proxy era.
+  Inject (AlonzoContextError era) (ContextError era) =>
   proxy era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
-  Either a PV1.POSIXTimeRange
-transValidityInterval _ epochInfo systemStart = \case
+  Either (ContextError era) PV1.POSIXTimeRange
+transValidityInterval era epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
-  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
+  ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime era epochInfo systemStart i
   ValidityInterval SNothing (SJust i) -> do
-    t <- transSlotToPOSIXTime i
+    t <- transSlotToPOSIXTime era epochInfo systemStart i
     pure $ PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.strictUpperBound t)
   ValidityInterval (SJust i) (SJust j) -> do
-    t1 <- transSlotToPOSIXTime i
-    t2 <- transSlotToPOSIXTime j
+    t1 <- transSlotToPOSIXTime era epochInfo systemStart i
+    t2 <- transSlotToPOSIXTime era epochInfo systemStart j
     pure $
       PV1.Interval
         (PV1.lowerBound t1)
         (PV1.strictUpperBound t2)
-  where
-    transSlotToPOSIXTime =
-      left (inject . TimeTranslationPastHorizon @era)
-        . slotToPOSIXTime epochInfo systemStart
 
 checkReferenceInputsNotDisjointFromInputs ::
   forall l era.

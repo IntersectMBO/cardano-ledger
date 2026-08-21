@@ -240,6 +240,7 @@ transTxRedeemers proxy pv tx utxo =
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
+  type LevelTxInfo level BabbageEra = ()
   data TxInfoResult BabbageEra
     = BabbageTxInfoResult -- Fields must be kept lazy
         (PlutusTxInfoResult 'PlutusV1 BabbageEra)
@@ -262,6 +263,8 @@ instance EraPlutusContext BabbageEra where
   lookupTxInfoResult SPlutusV1 (BabbageTxInfoResult tirPlutusV1 _) = tirPlutusV1
   lookupTxInfoResult SPlutusV2 (BabbageTxInfoResult _ tirPlutusV2) = tirPlutusV2
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
+
+  mkTopTxInfo = ()
 
 data BabbageContextError era
   = AlonzoContextError (AlonzoContextError era)

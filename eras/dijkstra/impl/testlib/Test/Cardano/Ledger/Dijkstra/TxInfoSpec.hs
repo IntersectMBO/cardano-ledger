@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.TxInfoSpec (spec) where
 
@@ -31,7 +32,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
  )
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
-import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..), DijkstraLevelTxInfo (..))
 import Cardano.Ledger.Plutus (
   Language (..),
   SLanguage (..),
@@ -72,6 +73,7 @@ spec ::
   , EraTx era
   , Arbitrary (Value era)
   , AlonzoEraTxWits era
+  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   ) =>
   Spec
 spec = describe "TxInfo" $ do
@@ -102,7 +104,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = utxo
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
+            , ltiLevelInfo = mkTopTxInfo @era
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -131,7 +133,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
+            , ltiLevelInfo = mkTopTxInfo @era
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -160,7 +162,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
+            , ltiLevelInfo = mkTopTxInfo @era
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -188,7 +190,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
+            , ltiLevelInfo = mkTopTxInfo @era
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -217,7 +219,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
+            , ltiLevelInfo = mkTopTxInfo @era
             }
       pure $
         case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
@@ -264,8 +266,8 @@ spec = describe "TxInfo" $ do
               , ltiTx = tx
               , ltiSystemStart = systemStart testGlobals
               , ltiProtVer = protVer
-              , ltiMemoizedSubTransactions = mempty
               , ltiEpochInfo = epochInfo testGlobals
+              , ltiLevelInfo = mkTopTxInfo @era
               }
           purpose = SpendingPurpose @era $ AsIxItem 0 txIn
           TxIn (TxId txIdHash) (TxIx txIx) = txIn
@@ -281,7 +283,7 @@ spec = describe "TxInfo" $ do
               `shouldBeRight` PV4.TxInfo
                 { PV4.txInfoWithdrawals = PV4.unsafeFromList []
                 , PV4.txInfoVotes = PV4.unsafeFromList []
-                , PV4.txInfoValidRange = PV4.always
+                , PV4.txInfoValidRange = PV4.POSIXTimeRange Nothing Nothing
                 , PV4.txInfoTxCerts = []
                 , PV4.txInfoTreasuryDonation = PV4.Lovelace 0
                 , PV4.txInfoSubTxIx = Nothing
@@ -315,7 +317,6 @@ spec = describe "TxInfo" $ do
                     ]
                 , PV4.txInfoId = PV4.TxId $ transSafeHash txBodyHash
                 , PV4.txInfoGuards = []
-                , PV4.txInfoFee = PV4.Lovelace 0
                 , PV4.txInfoDirectDeposits = PV4.unsafeFromList []
                 , PV4.txInfoData = PV4.unsafeFromList []
                 , PV4.txInfoCurrentTreasuryAmount = Nothing
@@ -331,7 +332,8 @@ spec = describe "TxInfo" $ do
           , SupportedLanguage SPlutusV3
           ]
     forM_ plutusV1toV3 $ \(SupportedLanguage slang) -> do
-      it "UnsupportedScriptInSubTx" $ do
+      prop "UnsupportedScriptInSubTx" $ do
+        subTxIx <- arbitrary
         let
           tx = mkBasicTx @era @SubTx mkBasicTxBody
           ledgerTxInfo =
@@ -341,13 +343,14 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
+              , ltiLevelInfo = DijkstraSubTxInfo subTxIx
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
               <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
-        txInfoResult
-          `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
+        pure $
+          txInfoResult
+            `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
       prop "DirectDepositsNotSupported" $ do
         accountAddr <- arbitrary
         coin <- arbitrary
@@ -363,7 +366,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
+              , ltiLevelInfo = mkTopTxInfo @era
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -383,7 +386,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
+              , ltiLevelInfo = mkTopTxInfo @era
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -404,7 +407,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
+              , ltiLevelInfo = mkTopTxInfo @era
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -415,7 +418,7 @@ spec = describe "TxInfo" $ do
         let
           tx =
             mkBasicTx @era @TopTx $
-              mkBasicTxBody & requiredTopLevelGuardsL .~ NEM.toMap neRequiredTopLevelGuards
+              mkBasicTxBody & requiredTopLevelGuardsTxBodyL .~ NEM.toMap neRequiredTopLevelGuards
           ledgerTxInfo =
             LedgerTxInfo
               { ltiProtVer = ProtVer (eraProtVerLow @era) 0
@@ -423,7 +426,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
+              , ltiLevelInfo = mkTopTxInfo @era
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)

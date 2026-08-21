@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (..),
   LedgerTxInfo (..),
   SupportedLanguage (..),
  )
@@ -78,7 +79,7 @@ assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo 
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = mkTopTxInfo @era
         }
     errorMessage =
       unlines

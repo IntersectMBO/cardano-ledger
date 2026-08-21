@@ -13,7 +13,11 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfoForPurpose)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (..),
+  LedgerTxInfo (..),
+  toPlutusTxInfoForPurpose,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -87,7 +91,7 @@ spec = describe "UTXOS" $ do
               , ltiSystemStart = ss
               , ltiUTxO = utxo
               , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
+              , ltiLevelInfo = mkTopTxInfo @era
               }
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e

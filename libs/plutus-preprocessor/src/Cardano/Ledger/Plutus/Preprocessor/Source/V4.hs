@@ -163,7 +163,7 @@ purposeIsWellformedNoDatumQ =
               -- this later:
               --
               -- null $ P.filter (propProc P.==) $ PV4.txInfoProposalProcedures txInfo
-              PV4D.WithdrawingScript account -> PAMD.member account infoWithdrawals
+              PV4D.WithdrawingScript (PV4D.AccountId account) -> PAMD.member account infoWithdrawals
               PV4D.GuardingScript ix topTxInfo ->
                 (PV4D.ScriptCredential sh P.== infoGuards PLD.!! ix)
                   P.&& (P.isJust infoSubTxIx P.== P.isNothing topTxInfo)

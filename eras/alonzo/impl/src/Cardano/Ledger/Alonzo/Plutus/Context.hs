@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -82,7 +83,7 @@ import Cardano.Ledger.Plutus (
   plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
-import Cardano.Ledger.TxIn (TxId, TxIn)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..))
@@ -108,9 +109,7 @@ data LedgerTxInfo era where
     , ltiSystemStart :: !SystemStart
     , ltiUTxO :: !(UTxO era)
     , ltiTx :: !(Tx level era)
-    , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
-    -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
-    -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
+    , ltiLevelInfo :: LevelTxInfo level era
     } ->
     LedgerTxInfo era
 
@@ -224,6 +223,8 @@ class
   where
   type ContextError era = (r :: Type) | r -> era
 
+  type LevelTxInfo (level :: TxLevel) era :: Type
+
   -- | This data type family is used to memoize the results of `toPlutusTxInfo`, so the outcome can
   -- be shared between execution of different scripts with the same language version.
   data TxInfoResult era :: Type
@@ -245,6 +246,8 @@ class
     SLanguage l ->
     TxInfoResult era ->
     PlutusTxInfoResult l era
+
+  mkTopTxInfo :: LevelTxInfo TopTx era
 
 -- | Helper function to use when implementing `lookupTxInfoResult` for plutus languages that are not
 -- supported by the era.

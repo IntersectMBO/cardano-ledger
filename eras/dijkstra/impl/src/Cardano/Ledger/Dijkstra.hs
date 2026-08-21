@@ -19,7 +19,7 @@ module Cardano.Ledger.Dijkstra (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (mkTxInfoResult),
+  EraPlutusContext (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
  )
@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
  )
-import Cardano.Ledger.BaseTypes (Inject (inject))
+import Cardano.Ledger.BaseTypes (Inject (inject), TxIx (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
@@ -47,14 +47,13 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure,
   DijkstraMempoolPredFailure (LedgerFailure),
  )
-import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Dijkstra.State.Stake ()
 import Cardano.Ledger.Dijkstra.Transition ()
 import Cardano.Ledger.Dijkstra.Translation ()
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody ()
-import Cardano.Ledger.Dijkstra.TxInfo ()
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraLevelTxInfo (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (Language (..), plutusLanguage)
@@ -108,6 +107,8 @@ mkDijkstraStAnnTopTx ::
   , DijkstraEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
+  , LevelTxInfo TopTx era ~ DijkstraLevelTxInfo TopTx era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -127,9 +128,10 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
     -- We do not need to fold over sub-transactions in order to get updated cache, since
     -- `getScriptsProvided` is recursive and will collect all scripts from sub-transactions
     stAnnSubTxs =
-      map
+      zipWith
         (mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided newStAnnTxCache)
         (toList (txBody ^. subTransactionsTxBodyL))
+        [TxIx i | i <- [0 ..]]
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -137,11 +139,13 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions =
-            Map.fromList
-              [ (txIdTx dsastTx, dsastTxInfoResult)
-              | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
-              ]
+        , ltiLevelInfo =
+            DijkstraTopTxInfo
+              ( Map.fromList
+                  [ (txIdTx dsastTx, dsastTxInfoResult)
+                  | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
+                  ]
+              )
         }
     languagesUsed =
       Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
@@ -163,6 +167,7 @@ mkDijkstraStAnnSubTx ::
   , AlonzoEraTx era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -171,8 +176,9 @@ mkDijkstraStAnnSubTx ::
   ScriptsProvided era ->
   Map.Map ScriptHash (SupportedPlutusRunnable era) ->
   Tx SubTx era ->
+  TxIx ->
   DijkstraStAnnTx SubTx era
-mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
+mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx subTxIx =
   let
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -185,7 +191,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = DijkstraSubTxInfo subTxIx
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
    in

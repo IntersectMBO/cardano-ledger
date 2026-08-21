@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
+  EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInInfo,
@@ -211,7 +212,7 @@ successfulTranslation slang tx f =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = mkTopTxInfo @era
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
@@ -235,7 +236,7 @@ expectTranslationError slang tx expected =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = mkTopTxInfo @era
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->
