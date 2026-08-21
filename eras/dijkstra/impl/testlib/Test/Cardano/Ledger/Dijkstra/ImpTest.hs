@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -20,6 +21,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   impDijkstraSatisfyNativeScript,
   fixupSubTransactions,
   balanceSubTransactions,
+  switchTxToLegacyMode,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -66,6 +68,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -199,6 +202,22 @@ dijkstraGenUnRegTxCert stakingCredential = do
     Nothing -> getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
     Just accountState -> pure (fromCompact (accountState ^. depositAccountStateL))
   pure $ UnRegDepositTxCert stakingCredential deposit
+
+switchTxToLegacyMode ::
+  forall era.
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+switchTxToLegacyMode tx = do
+  let plutus = alwaysSucceedsWithDatum SPlutusV3
+  Just plutusScript <- pure $ mkPlutusScript @era plutus
+  let eraScript = fromPlutusScript plutusScript
+      scriptHash = hashScript eraScript
+  txIn <- produceScript scriptHash
+  pure $
+    tx
+      & bodyTxL . inputsTxBodyL <>~ [txIn]
+      & witsTxL . scriptTxWitsL %~ Map.insert scriptHash eraScript
 
 dijkstraFixupTx ::
   ( HasCallStack

@@ -45,6 +45,7 @@
 
 ### testlib
 
+* Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubtransactions`
 * Add `Inject (DijkstraContextError era) (ContextError era)` as a superclass of `DijkstraEraTest`
