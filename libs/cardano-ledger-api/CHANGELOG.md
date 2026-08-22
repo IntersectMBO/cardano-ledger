@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Re-export `isPhase2Valid` and `toIsPhase2Valid` from `Cardano.Ledger.Api.Tx`
 * Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
 * Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`. Encoded and decoded only from protocol version 12 (Dijkstra) onwards, so the `GetPoolDistr2` wire format is unchanged in earlier eras
 

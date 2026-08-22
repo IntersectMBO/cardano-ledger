@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Export `isPhase2Valid` and `toIsPhase2Valid` from `Cardano.Ledger.Alonzo.Tx`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families

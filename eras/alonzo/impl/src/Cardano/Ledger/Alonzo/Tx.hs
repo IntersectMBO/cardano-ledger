@@ -39,6 +39,8 @@ module Cardano.Ledger.Alonzo.Tx (
   Data,
   DataHash,
   IsPhase2Valid (..),
+  isPhase2Valid,
+  toIsPhase2Valid,
   hashData,
   nonNativeLanguages,
   hashScriptIntegrity,

@@ -66,6 +66,8 @@ module Cardano.Ledger.Api.Tx (
   AlonzoEraTx,
   isPhase2ValidTxL,
   IsPhase2Valid (..),
+  isPhase2Valid,
+  toIsPhase2Valid,
 
   -- ** Execution units
   evalTxExUnits,
