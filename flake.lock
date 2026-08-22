@@ -222,11 +222,11 @@
     "formal-ledger-specifications": {
       "flake": false,
       "locked": {
-        "lastModified": 1785425266,
-        "narHash": "sha256-mmvDtwb+sUO6AVL67Jpxhr40LtzICapq1/NITFlytdQ=",
+        "lastModified": 1786392170,
+        "narHash": "sha256-4VSi+UVYMXXZWxcIEUMDt+NN47TYDNrl4MWVuUkYHm0=",
         "owner": "IntersectMBO",
         "repo": "formal-ledger-specifications",
-        "rev": "acb729666717e3d1791ade785658bfc70de38e92",
+        "rev": "d7e19b24d5f37c34859087b284c75de4ebf48c8d",
         "type": "github"
       },
       "original": {
