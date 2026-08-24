@@ -44,7 +44,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   pattern RequireGuard,
  )
 import Cardano.Ledger.Dijkstra.UTxO
-import Cardano.Ledger.Plutus (SLanguage (..))
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.API (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -204,20 +204,12 @@ dijkstraGenUnRegTxCert stakingCredential = do
   pure $ UnRegDepositTxCert stakingCredential deposit
 
 switchTxToLegacyMode ::
-  forall era.
   DijkstraEraImp era =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 switchTxToLegacyMode tx = do
-  let plutus = alwaysSucceedsWithDatum SPlutusV3
-  Just plutusScript <- pure $ mkPlutusScript @era plutus
-  let eraScript = fromPlutusScript plutusScript
-      scriptHash = hashScript eraScript
-  txIn <- produceScript scriptHash
-  pure $
-    tx
-      & bodyTxL . inputsTxBodyL <>~ [txIn]
-      & witsTxL . scriptTxWitsL %~ Map.insert scriptHash eraScript
+  txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
+  pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]
 
 dijkstraFixupTx ::
   ( HasCallStack
@@ -226,8 +218,9 @@ dijkstraFixupTx ::
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 dijkstraFixupTx tx = do
-  isLegacy <- detectLegacyMode tx
-  fixedUp <- fixupSubTransactions tx
+  -- add top-level Plutus script witnesses so legacy detection sees them
+  fixedUp <- fixupScriptWits =<< fixupSubTransactions tx
+  isLegacy <- detectLegacyMode fixedUp
   balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
   babbageFixupTx balancedInLegacy
 
