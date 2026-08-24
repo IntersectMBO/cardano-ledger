@@ -227,9 +227,7 @@ spec = describe "DELEG" $ do
           getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
           expectDelegatedVote cred (DRepCredential drepCred)
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1284
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt
+    it
       "Delegate stake to a DRep that is unregistered and reregistered in the same transaction"
       $ whenPostBootstrap
       $ do
