@@ -508,12 +508,18 @@ jobs:
   branch-history:
     name: Check branch history
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
     steps:
     - uses: actions/checkout@v7
     - name: Ensure the branch doesn't contain any merges
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
-        PR_TARGET=${{ github.base_ref }}
+        PR_NUMBER=${{ github.event.pull_request.number }}
+        PR_TARGET=$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName)
         PR_MERGE=${{ github.ref }}
         PR_HEAD=${PR_MERGE%/merge}/head
         git fetch origin -n --refmap= +$PR_TARGET:pr-target +$PR_HEAD:pr-head
