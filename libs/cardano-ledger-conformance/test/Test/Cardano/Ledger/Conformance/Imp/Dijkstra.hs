@@ -75,7 +75,7 @@ spec = do
             ConwayLEDGER.spec
             LEDGER.spec
 
-            xdescribe "disabled" ShelleyPOOL.spec
+            ShelleyPOOL.spec
             POOL.spec
 
             ConwayRATIFY.spec

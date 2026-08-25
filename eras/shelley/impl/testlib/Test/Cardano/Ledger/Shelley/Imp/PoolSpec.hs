@@ -64,7 +64,9 @@ spec = describe "POOL" $ do
         else
           submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
 
-    it "register a pool with too big metadata" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "register a pool with too big metadata" $ do
       pv <- getsPParams ppProtocolVersionL
       let maxMetadataSize = hashSize (Proxy :: Proxy HASH)
       tooBigSize <- choose (maxMetadataSize + 1, maxMetadataSize + 50)
