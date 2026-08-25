@@ -83,7 +83,8 @@ instance SpecTranslate DijkstraEra StakePoolSnapShot where
       <*> toSpecRep spssCost
       <*> toSpecRep spssMargin
       <*> toSpecRep spssPledge
-      <*> toSpecRep (unAccountId spssAccountId)
+      <*> (Agda.RewardAddress <$> pure 0 <*> toSpecRep (unAccountId spssAccountId))
+      <*> toSpecRep spssVrf
 
 instance SpecTranslate DijkstraEra Stake where
   type SpecRep DijkstraEra Stake = Agda.HSMap Agda.Credential Agda.Coin
