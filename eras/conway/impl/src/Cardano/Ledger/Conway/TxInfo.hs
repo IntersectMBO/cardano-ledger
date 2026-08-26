@@ -454,7 +454,7 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 
   toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
 
-  toPlutusTxOut _ src txOut = Just <$> transTxOutV1 src txOut
+  toPlutusTxOut _ = transTxOutV1
 
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2

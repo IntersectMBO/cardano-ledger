@@ -168,7 +168,7 @@ class
     proxy l ->
     TxOutSource ->
     TxOut era ->
-    Either (ContextError era) (PlutusTxOut l)
+    Either (ContextError era) (PlutusTxOut era l)
 
 -- | This is the helper type that captures translation of `Tx` to `PlutusTxInfo`.
 --
@@ -295,13 +295,14 @@ type family PlutusRedeemerPointer (l :: Language) where
   PlutusRedeemerPointer 'PlutusV3 = (PlutusScriptPurpose 'PlutusV3, PV3.Redeemer)
   PlutusRedeemerPointer 'PlutusV4 = (PlutusScriptPurpose 'PlutusV4, PV4.Redeemer)
 
-type family PlutusTxOut (l :: Language) where
+type family PlutusTxOut era (l :: Language) where
   -- This special case is here because Alonzo does not have a ContextError
   -- for the case where it encounters a Byron address in a TxIn
-  PlutusTxOut 'PlutusV1 = Maybe PV1.TxOut
-  PlutusTxOut 'PlutusV2 = PV2.TxOut
-  PlutusTxOut 'PlutusV3 = PV3.TxOut
-  PlutusTxOut 'PlutusV4 = PV4.TxOut
+  PlutusTxOut AlonzoEra PlutusV1 = Maybe PV1.TxOut
+  PlutusTxOut _ PlutusV1 = PV1.TxOut
+  PlutusTxOut _ PlutusV2 = PV2.TxOut
+  PlutusTxOut _ PlutusV3 = PV3.TxOut
+  PlutusTxOut _ PlutusV4 = PV4.TxOut
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

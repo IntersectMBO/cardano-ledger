@@ -377,7 +377,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 
   toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
 
-  toPlutusTxOut _ src txOut = Just <$> transTxOutV1 src txOut
+  toPlutusTxOut _ = transTxOutV1
 
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
