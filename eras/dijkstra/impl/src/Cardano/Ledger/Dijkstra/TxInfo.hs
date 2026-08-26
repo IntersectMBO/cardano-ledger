@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose, toAsItem, toAsPurpose)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transRedeemer, transReferenceScript)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -80,7 +80,6 @@ import Cardano.Ledger.Conway.TxInfo (
   transTxInInfoV1,
   transTxInInfoV3,
   transVoter,
-  transVotingProcedures,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -135,7 +134,6 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
@@ -901,13 +899,8 @@ transTopTxInfo ::
   ( EraUTxO era
   , DijkstraEraTxBody era
   , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
-  , Value era ~ MaryValue
-  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
-  , Inject (BabbageContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   , ConwayEraPlutusTxInfo PlutusV4 era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraTxWits era
   ) =>
   proxy PlutusV4 ->
   ProtVer ->
@@ -919,10 +912,9 @@ transTopTxInfo ::
   ScriptHash ->
   Tx TopTx era ->
   Either (ContextError era) PV4.TopTxInfo
-transTopTxInfo proxy pv utxo systemStart epochInfo plutusTxInfo plutusPurpose sh tx = do
+transTopTxInfo proxy pv utxo systemStart epochInfo _plutusTxInfo plutusPurpose sh tx = do
   let
     txb = tx ^. bodyTxL
-    era = Proxy @era
     mkLedgerTxInfo :: Tx SubTx era -> TxIx -> LedgerTxInfo era
     mkLedgerTxInfo subTx txIx =
       LedgerTxInfo
@@ -933,12 +925,6 @@ transTopTxInfo proxy pv utxo systemStart epochInfo plutusTxInfo plutusPurpose sh
         , ltiLevelInfo = DijkstraSubTxInfo txIx
         , ltiEpochInfo = epochInfo
         }
-  txOuts <-
-    zipWithM (transTxOutV4 . TxOutFromOutput) [TxIx i | i <- [0 ..]] . toList $ txb ^. outputsTxBodyL
-  inputs <- traverse (toPlutusTxInInfo proxy utxo) . toList $ txb ^. inputsTxBodyL
-  refInputs <- traverse (toPlutusTxInInfo proxy utxo) . toList $ txb ^. referenceInputsTxBodyL
-  txCerts <- traverse (toPlutusTxCert proxy pv) $ toList (txb ^. certsTxBodyL)
-  validityInterval <- transValidityInterval era epochInfo systemStart $ txb ^. vldtTxBodyL
   let
     subTxs = txb ^. subTransactionsTxBodyL
   subTxInfosPartial <-
@@ -952,9 +938,6 @@ transTopTxInfo proxy pv utxo systemStart epochInfo plutusTxInfo plutusPurpose sh
       (toList subTxs)
       [TxIx i | i <- [0 ..]]
   subTxInfos <- traverse ($ plutusPurpose) subTxInfosPartial
-  let
-    txIds = foldr' ((:) . transTxId . fst) [transTxId $ txIdTxBody txb] $ OMap.assocList subTxs
-  redeemers <- Babbage.transTxRedeemers proxy pv tx utxo
   let
     datums =
       foldMap
@@ -971,30 +954,26 @@ transTopTxInfo proxy pv utxo systemStart epochInfo plutusTxInfo plutusPurpose sh
           transAccountBalanceIntervals $ txb ^. accountBalanceIntervalsTxBodyL
       , topTxInfoDatums = transMap transTxId transDatum datums
       , topTxInfoSimplified =
-          -- TODO aggregate over subtransactions
+          -- TODO implement TopTxInfoSimplified translation
           PV4.TopTxInfoSimplified
-            { ttisWithdrawals =
-                transMap transAccountAddress transCoinToLovelace
-                  . unWithdrawals
-                  $ txb ^. withdrawalsTxBodyL
-            , ttisVotes = transVotingProcedures $ txb ^. votingProceduresTxBodyL
-            , ttisValidRange = validityInterval
-            , ttisTxCerts = txCerts
-            , ttisTreasuryDonations = transCoinToLovelace $ txb ^. treasuryDonationTxBodyL
-            , ttisScriptPurposes = AssocMap.keys redeemers
-            , ttisReferenceInputs = refInputs
-            , ttisProposalProcedures = transProposal proxy <$> toList (txb ^. proposalProceduresTxBodyL)
-            , ttisOutputs = txOuts
-            , ttisMints = Conway.transMintValue $ txb ^. mintTxBodyL
-            , ttisInputs = inputs
-            , ttisIds = txIds
-            , ttisGuards = transCred <$> toList (txb ^. guardsTxBodyL)
-            , ttisDirectDeposits = transTxBodyDirectDeposits txb
-            , ttisData = PV4.txInfoData plutusTxInfo
-            , ttisCurrentTreasuryAmount =
-                transCoinToLovelace <$> strictMaybeToMaybe (txb ^. currentTreasuryValueTxBodyL)
-            , ttisBurns = error "stub"
-            , ttisRequiredTopLevelGuards = transCred <$> Map.keys (txb ^. requiredTopLevelGuardsTxBodyL)
+            { ttisWithdrawals = AssocMap.empty
+            , ttisVotes = AssocMap.empty
+            , ttisValidRange = PV4.POSIXTimeRange Nothing Nothing
+            , ttisTxCerts = mempty
+            , ttisTreasuryDonations = PV4.Lovelace 0
+            , ttisScriptPurposes = mempty
+            , ttisReferenceInputs = mempty
+            , ttisProposalProcedures = mempty
+            , ttisOutputs = mempty
+            , ttisMints = PV4.emptyMintValue
+            , ttisInputs = mempty
+            , ttisIds = mempty
+            , ttisGuards = mempty
+            , ttisDirectDeposits = AssocMap.empty
+            , ttisData = AssocMap.empty
+            , ttisCurrentTreasuryAmount = Nothing
+            , ttisBurns = PV4.emptyMintValue
+            , ttisRequiredTopLevelGuards = mempty
             }
       }
 
