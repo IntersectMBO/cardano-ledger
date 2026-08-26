@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Enforce `accountBalanceIntervals` in `ENTITIES` and `SUBENTITIES`, and `startingAccountBalanceIntervals` in `ENTITIES`:
+  - Add `validateAccountBalanceIntervals` and `validateStartingAccountBalanceIntervals`
+  - Add `WrongNetworkInAccountBalanceIntervals`, `MissingAccountsInAccountBalanceIntervals`, and `BalancesOutsideAccountBalanceIntervals` to `EntitiesPredFailure`
+  - Add `WrongNetworkInStartingAccountBalanceIntervals`, `MissingAccountsInStartingAccountBalanceIntervals`, and `BalancesOutsideStartingAccountBalanceIntervals` to `EntitiesPredFailure`
+  - Add `SubWrongNetworkInAccountBalanceIntervals`, `SubMissingAccountsInAccountBalanceIntervals`, and `SubBalancesOutsideAccountBalanceIntervals` to `SubEntitiesPredFailure`
 * Key `AccountBalanceIntervals` by `AccountAddress` (reward account) instead of `AccountId` (bare credential), consistent with `withdrawals`/`direct_deposits`:
   - Change `AccountBalanceIntervals` to `Map AccountAddress (AccountBalanceInterval era)`
 * Restructure `EntitiesEnv`:

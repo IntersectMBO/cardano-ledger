@@ -24,6 +24,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Base (
 
 import Cardano.Ledger.Address (
   DirectDeposits (..),
+  accountAddressCredentialL,
  )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,

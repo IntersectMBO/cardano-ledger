@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -20,13 +21,16 @@ module Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesEvent (..),
   validateWrongNetworkInDirectDeposit,
   validateMissingAccountsInDirectDeposits,
+  validateAccountBalanceIntervals,
+  validateStartingAccountBalanceIntervals,
 ) where
 
-import Cardano.Ledger.Address (DirectDeposits (..))
+import Cardano.Ledger.Address (DirectDeposits (..), accountAddressCredentialL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -39,18 +43,27 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBalanceIntervals (..))
+import Cardano.Ledger.Dijkstra.TxBody (
+  DijkstraEraTxBody,
+  accountBalanceIntervalsTxBodyL,
+  directDepositsTxBodyL,
+  startingAccountBalanceIntervalsTxBodyL,
+ )
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
+import Data.Foldable (sequenceA_)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -110,6 +123,15 @@ data EntitiesPredFailure era
       Network
       -- | Direct-deposit accounts with wrong network id
       (NonEmptySet AccountAddress)
+  | WrongNetworkInAccountBalanceIntervals Network (NonEmptySet AccountAddress)
+  | MissingAccountsInAccountBalanceIntervals (NonEmptyMap AccountAddress (AccountBalanceInterval era))
+  | BalancesOutsideAccountBalanceIntervals
+      (NonEmptyMap AccountAddress (Coin, AccountBalanceInterval era))
+  | WrongNetworkInStartingAccountBalanceIntervals Network (NonEmptySet AccountAddress)
+  | MissingAccountsInStartingAccountBalanceIntervals
+      (NonEmptyMap AccountAddress (AccountBalanceInterval era))
+  | BalancesOutsideStartingAccountBalanceIntervals
+      (NonEmptyMap AccountAddress (Coin, AccountBalanceInterval era))
   deriving (Generic)
 
 deriving stock instance
@@ -140,6 +162,12 @@ instance
       MissingAccountsInDirectDeposits x -> Sum (MissingAccountsInDirectDeposits @era) 4 !> To x
       WrongNetworkInWithdrawals x y -> Sum (WrongNetworkInWithdrawals @era) 5 !> To x !> To y
       WrongNetworkInDirectDeposits x y -> Sum (WrongNetworkInDirectDeposits @era) 6 !> To x !> To y
+      WrongNetworkInAccountBalanceIntervals x y -> Sum (WrongNetworkInAccountBalanceIntervals @era) 7 !> To x !> To y
+      MissingAccountsInAccountBalanceIntervals x -> Sum (MissingAccountsInAccountBalanceIntervals @era) 8 !> To x
+      BalancesOutsideAccountBalanceIntervals x -> Sum (BalancesOutsideAccountBalanceIntervals @era) 9 !> To x
+      WrongNetworkInStartingAccountBalanceIntervals x y -> Sum (WrongNetworkInStartingAccountBalanceIntervals @era) 10 !> To x !> To y
+      MissingAccountsInStartingAccountBalanceIntervals x -> Sum (MissingAccountsInStartingAccountBalanceIntervals @era) 11 !> To x
+      BalancesOutsideStartingAccountBalanceIntervals x -> Sum (BalancesOutsideStartingAccountBalanceIntervals @era) 12 !> To x
 
 instance
   ( Era era
@@ -155,6 +183,12 @@ instance
     4 -> SumD MissingAccountsInDirectDeposits <! From
     5 -> SumD WrongNetworkInWithdrawals <! From <! From
     6 -> SumD WrongNetworkInDirectDeposits <! From <! From
+    7 -> SumD WrongNetworkInAccountBalanceIntervals <! From <! From
+    8 -> SumD MissingAccountsInAccountBalanceIntervals <! From
+    9 -> SumD BalancesOutsideAccountBalanceIntervals <! From
+    10 -> SumD WrongNetworkInStartingAccountBalanceIntervals <! From <! From
+    11 -> SumD MissingAccountsInStartingAccountBalanceIntervals <! From
+    12 -> SumD BalancesOutsideStartingAccountBalanceIntervals <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
@@ -237,7 +271,7 @@ dijkstraEntitiesTransition ::
   ) =>
   TransitionRule (ENTITIES era)
 dijkstraEntitiesTransition = do
-  TRC (EntitiesEnv curEpoch pp committee committeeProposals _originalAccounts, certState, stAnnTx) <-
+  TRC (EntitiesEnv curEpoch pp committee committeeProposals originalAccounts, certState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
@@ -249,7 +283,8 @@ dijkstraEntitiesTransition = do
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
-
+  runTest $ validateAccountBalanceIntervals network accounts (tx ^. bodyTxL)
+  runTest $ validateStartingAccountBalanceIntervals network originalAccounts (tx ^. bodyTxL)
   validateWithdrawals legacyMode network withdrawals accounts
 
   let certStateBeforeCerts =
@@ -359,3 +394,67 @@ instance
   where
   wrapFailed = CertsFailure
   wrapEvent = CertsEvent
+
+accountBalanceIntervalContains :: Coin -> AccountBalanceInterval era -> Bool
+accountBalanceIntervalContains bal = \case
+  AccountBalanceLowerBound (Inclusive lo) -> lo <= bal
+  AccountBalanceUpperBound (Exclusive hi) -> bal < hi
+  AccountBalanceBothBounds (Inclusive lo) (Exclusive hi) -> lo <= bal && bal < hi
+  AccountBalanceExact n -> bal == n
+
+categorizeAccountBalanceIntervals ::
+  EraAccounts era =>
+  Network ->
+  Accounts era ->
+  AccountBalanceIntervals era ->
+  ( Set AccountAddress
+  , Map.Map AccountAddress (AccountBalanceInterval era)
+  , Map.Map AccountAddress (Coin, AccountBalanceInterval era)
+  )
+categorizeAccountBalanceIntervals network accounts (AccountBalanceIntervals intervals) =
+  Map.foldlWithKey' categorize (Set.empty, Map.empty, Map.empty) intervals
+  where
+    categorize (!wrongNetwork, !missing, !outside) acct interval
+      | aaNetworkId acct /= network = (Set.insert acct wrongNetwork, missing, outside)
+      | otherwise =
+          case lookupAccountState (acct ^. accountAddressCredentialL) accounts of
+            Nothing -> (wrongNetwork, Map.insert acct interval missing, outside)
+            Just accountState ->
+              let balance = fromCompact (accountState ^. balanceAccountStateL)
+               in if accountBalanceIntervalContains balance interval
+                    then (wrongNetwork, missing, outside)
+                    else (wrongNetwork, missing, Map.insert acct (balance, interval) outside)
+
+validateAccountBalanceIntervals ::
+  (EraAccounts era, DijkstraEraTxBody era) =>
+  Network ->
+  Accounts era ->
+  TxBody l era ->
+  Test (EntitiesPredFailure era)
+validateAccountBalanceIntervals network accounts txBody =
+  sequenceA_
+    [ failureOnNonEmptySet wrongNetwork (WrongNetworkInAccountBalanceIntervals network)
+    , failureOnNonEmptyMap missing MissingAccountsInAccountBalanceIntervals
+    , failureOnNonEmptyMap outside BalancesOutsideAccountBalanceIntervals
+    ]
+  where
+    (wrongNetwork, missing, outside) =
+      categorizeAccountBalanceIntervals network accounts $
+        txBody ^. accountBalanceIntervalsTxBodyL
+
+validateStartingAccountBalanceIntervals ::
+  (EraAccounts era, DijkstraEraTxBody era) =>
+  Network ->
+  Accounts era ->
+  TxBody TopTx era ->
+  Test (EntitiesPredFailure era)
+validateStartingAccountBalanceIntervals network accounts txBody =
+  sequenceA_
+    [ failureOnNonEmptySet wrongNetwork (WrongNetworkInStartingAccountBalanceIntervals network)
+    , failureOnNonEmptyMap missing MissingAccountsInStartingAccountBalanceIntervals
+    , failureOnNonEmptyMap outside BalancesOutsideStartingAccountBalanceIntervals
+    ]
+  where
+    (wrongNetwork, missing, outside) =
+      categorizeAccountBalanceIntervals network accounts $
+        txBody ^. startingAccountBalanceIntervalsTxBodyL

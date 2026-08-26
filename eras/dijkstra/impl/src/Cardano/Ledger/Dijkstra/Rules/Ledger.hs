@@ -395,6 +395,7 @@ dijkstraLedgerTransition = do
   -- and SUBLEDGERS, and used for all witness/validation lookups.
   let originalUtxo = utxosUtxo (ledgerState ^. lsUTxOStateL)
       subStAnnTxs = subTransactionsStAnnTx stAnnTx
+      originalAccounts = lsCertState ledgerState ^. certDStateL . accountsL
 
   -- Process all subtransactions first
   LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-
@@ -406,7 +407,7 @@ dijkstraLedgerTransition = do
             pp
             chainAccountState
             originalUtxo
-            (lsCertState ledgerState ^. certDStateL . accountsL)
+            originalAccounts
             (tx ^. isPhase2ValidTxL)
         , ledgerState
         , subStAnnTxs
@@ -434,7 +435,7 @@ dijkstraLedgerTransition = do
                   pp
                   committee
                   committeeProposals
-                  (lsCertState ledgerState ^. certDStateL . accountsL)
+                  originalAccounts
               , certStateAfterSubLedgers
               , stAnnTx
               )
