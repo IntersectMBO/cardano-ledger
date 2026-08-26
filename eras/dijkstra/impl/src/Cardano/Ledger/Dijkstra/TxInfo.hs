@@ -655,7 +655,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoTxCerts = txCerts
             , PV4.txInfoValidRange = timeRange
             , PV4.txInfoRedeemers = plutusRedeemers
-            , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+            , PV4.txInfoData = PV4.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
             , PV4.txInfoId = Conway.transTxBodyId txBody
             , PV4.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
             , PV4.txInfoProposalProcedures =
