@@ -741,9 +741,6 @@ transTxOutV4 txOutSource txOut = do
       , txOutAddress = addr
       }
 
-transAccountId :: AccountId -> PV4.AccountId
-transAccountId (AccountId cred) = PV4.AccountId $ transCred cred
-
 transTxBodyWithdrawals ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.AccountId PV4.Lovelace
 transTxBodyWithdrawals txb = transMap transAccountAddressToAccountId transCoinToLovelace withdrawals
@@ -808,7 +805,8 @@ transAccountBalanceInterval = \case
 
 transAccountBalanceIntervals :: AccountBalanceIntervals era -> PV4.AccountBalanceIntervals
 transAccountBalanceIntervals (AccountBalanceIntervals balanceIntervals) =
-  PV4.AccountBalanceIntervals $ transMap transAccountId transAccountBalanceInterval balanceIntervals
+  PV4.AccountBalanceIntervals $
+    transMap transAccountAddressToAccountId transAccountBalanceInterval balanceIntervals
 
 transTxBodyGuards :: DijkstraEraTxBody era => TxBody l era -> [PV4.Credential]
 transTxBodyGuards txb = fmap transCred . F.toList $ txb ^. guardsTxBodyL

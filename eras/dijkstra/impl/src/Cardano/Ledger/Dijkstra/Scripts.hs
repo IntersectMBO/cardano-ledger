@@ -698,6 +698,6 @@ instance FromJSON (AccountBalanceInterval era) where
 
 newtype AccountBalanceIntervals era
   = AccountBalanceIntervals
-  {unAccountBalanceIntervals :: Map.Map AccountId (AccountBalanceInterval era)}
+  {unAccountBalanceIntervals :: Map.Map AccountAddress (AccountBalanceInterval era)}
   deriving (Generic)
   deriving newtype (Show, Ord, Eq, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON, FromJSON)

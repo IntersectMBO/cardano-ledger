@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Key `AccountBalanceIntervals` by `AccountAddress` (reward account) instead of `AccountId` (bare credential), consistent with `withdrawals`/`direct_deposits`:
+  - Change `AccountBalanceIntervals` to `Map AccountAddress (AccountBalanceInterval era)`
 * Restructure `EntitiesEnv`:
   - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
   - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
@@ -53,6 +55,7 @@
 
 ### `cddl`
 
+* Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
 * Add `HuddleRule "vrf_cert"` instance

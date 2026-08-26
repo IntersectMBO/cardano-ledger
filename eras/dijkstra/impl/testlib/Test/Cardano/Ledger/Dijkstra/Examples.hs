@@ -293,10 +293,16 @@ exampleAccountBalanceIntervals :: AccountBalanceIntervals era
 exampleAccountBalanceIntervals =
   AccountBalanceIntervals $
     Map.fromList
-      [ (AccountId $ KeyHashObj $ mkKeyHash 400, AccountBalanceLowerBound (Inclusive $ Coin 500))
-      , (AccountId $ KeyHashObj $ mkKeyHash 401, AccountBalanceUpperBound (Exclusive $ Coin 10_000))
+      [
+        ( AccountAddress Mainnet (AccountId $ KeyHashObj $ mkKeyHash 400)
+        , AccountBalanceLowerBound (Inclusive $ Coin 500)
+        )
       ,
-        ( AccountId $ ScriptHashObj $ mkScriptHash 402
+        ( AccountAddress Mainnet (AccountId $ KeyHashObj $ mkKeyHash 401)
+        , AccountBalanceUpperBound (Exclusive $ Coin 10_000)
+        )
+      ,
+        ( AccountAddress Mainnet (AccountId $ ScriptHashObj $ mkScriptHash 402)
         , AccountBalanceBothBounds (Inclusive $ Coin 100) (Exclusive $ Coin 5000)
         )
       ]
