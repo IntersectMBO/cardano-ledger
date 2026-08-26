@@ -89,10 +89,12 @@ import Control.State.Transition.Extended (
   trans,
   validate,
  )
+import qualified Data.Foldable as F (toList)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
@@ -362,7 +364,7 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (UtxoEnv slot pp postSubsPState originalCertState originalUtxo, utxos, stAnnTx) <-
+  TRC (UtxoEnv slot pp _postSubsPState originalCertState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   -- this is the original Accounts, before any transactions were applied
@@ -413,12 +415,23 @@ dijkstraUtxoTransition = do
   -- because if a sub-transaction registered a pool, then the top-transaction
   -- must not add to the `produced` value if it registers the same pool,
   -- since it will count as a re-registration.
-  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $ do
+    let subTxsList = F.toList $ tx ^. bodyTxL . subTransactionsTxBodyL
+    let poolsRegisteredBySubTransactions =
+          Set.fromList
+            [ sppId spp
+            | subTx <- subTxsList
+            , RegPoolTxCert spp <- F.toList (subTx ^. bodyTxL . certsTxBodyL)
+            ]
+    let poolsRegisteredSoFar =
+          Set.union
+            (Map.keysSet (originalPState ^. psStakePoolsL))
+            poolsRegisteredBySubTransactions
     runTest $
       validateValueNotConservedUTxO
         pp
         originalUtxo
-        (`Map.member` (postSubsPState ^. psStakePoolsL))
+        (`Set.member` poolsRegisteredSoFar)
         (txBody & subTransactionsTxBodyL .~ mempty)
         ValueNotConservedInLegacy
 
