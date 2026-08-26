@@ -22,7 +22,8 @@ module Cardano.Ledger.HKD (
 
 import Control.DeepSeq (NFData)
 import Data.Functor.Identity (Identity (..))
-import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe, strictMaybeToMaybe)
+import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -95,7 +96,6 @@ instance HKDSemialign Maybe where
   hkdAlignWith _ _ _ _ Nothing Nothing = Nothing
 
 instance HKDSemialign StrictMaybe where
-  hkdAlignWith _ _ _ both (SJust a) (SJust b) = SJust $ both a b
-  hkdAlignWith _ this _ _ (SJust a) SNothing = SJust $ this a
-  hkdAlignWith _ _ that _ SNothing (SJust b) = SJust $ that b
-  hkdAlignWith _ _ _ _ SNothing SNothing = SNothing
+  hkdAlignWith _ this that both sa sb =
+    maybeToStrictMaybe $
+      hkdAlignWith (Proxy @Maybe) this that both (strictMaybeToMaybe sa) (strictMaybeToMaybe sb)
