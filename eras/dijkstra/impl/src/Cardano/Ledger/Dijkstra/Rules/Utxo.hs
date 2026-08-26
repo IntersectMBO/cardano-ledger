@@ -72,7 +72,6 @@ import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
@@ -285,10 +284,10 @@ validateValueNotConservedUTxO ::
   EraUTxO era =>
   PParams era ->
   UTxO era ->
-  PState era ->
+  (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   Test (Mismatch RelEQ (Value era))
-validateValueNotConservedUTxO pp utxo pState txBody =
+validateValueNotConservedUTxO pp utxo isRegPoolId txBody =
   failureUnless (consumedValue == producedValue) $
     Mismatch
       { mismatchSupplied = consumedValue
@@ -296,7 +295,7 @@ validateValueNotConservedUTxO pp utxo pState txBody =
       }
   where
     consumedValue = dijkstraConsumed pp utxo txBody
-    producedValue = produced pp pState txBody
+    producedValue = getProducedValue pp isRegPoolId txBody
 
 dijkstraUtxoTransition ::
   forall era.
@@ -363,7 +362,7 @@ dijkstraUtxoTransition = do
       validateValueNotConservedUTxO
         pp
         originalUtxo
-        originalPState
+        (`Map.member` (originalPState ^. psStakePoolsL))
         txBody
 
   {- legacyMode ≡ true → consumedLegacy ≡ producedLegacy -}
@@ -377,7 +376,7 @@ dijkstraUtxoTransition = do
         validateValueNotConservedUTxO
           pp
           originalUtxo
-          postSubsPState
+          (`Map.member` (postSubsPState ^. psStakePoolsL))
           (txBody & subTransactionsTxBodyL .~ mempty)
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
