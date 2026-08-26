@@ -359,7 +359,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
 
-  toPlutusTxOut _ src txOut = Just <$> Conway.transTxOutV1 src txOut
+  toPlutusTxOut _ = Conway.transTxOutV1
 
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
