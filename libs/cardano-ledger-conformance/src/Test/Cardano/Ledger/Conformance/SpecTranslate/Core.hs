@@ -50,6 +50,8 @@ import Cardano.Ledger.Conway.Core (
   PParamsHKD,
   PParamsUpdate (..),
   ScriptHash (..),
+  VRFVerKeyHash,
+  fromVRFVerKeyHash,
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -187,6 +189,11 @@ instance SpecTranslate era (WitVKey k) where
   type SpecRep era (WitVKey k) = (SpecRep era (VKey k), Integer)
 
   toSpecRep (WitVKey vk sk) = toSpecRepTuple (vk, sk)
+
+instance SpecTranslate era (VRFVerKeyHash r) where
+  type SpecRep era (VRFVerKeyHash r) = Integer
+
+  toSpecRep = toSpecRep . fromVRFVerKeyHash
 
 instance SpecTranslate era CommitteeAuthorization where
   type

@@ -24,7 +24,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Base (
 
 import Cardano.Ledger.Address (
   DirectDeposits (..),
-  accountAddressCredentialL,
  )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
@@ -285,6 +284,7 @@ instance SpecTranslate DijkstraEra (DijkstraPParams Identity DijkstraEra) where
       ppMaxHeaderSize = toInteger $ unTHKD dppMaxBHSize
     ppKeyDeposit <- toSpecRep dppKeyDeposit
     ppPoolDeposit <- toSpecRep dppPoolDeposit
+    ppMinPoolCost <- toSpecRep dppMinPoolCost
     ppEmax <- toSpecRep dppEMax
     ppNopt <- toSpecRep (toInteger $ unTHKD dppNOpt)
     let
@@ -377,7 +377,8 @@ instance SpecTranslate DijkstraEra StakePoolParams where
       <*> toSpecRep sppCost
       <*> toSpecRep sppMargin
       <*> toSpecRep sppPledge
-      <*> toSpecRep (sppAccountAddress ^. accountAddressCredentialL)
+      <*> toSpecRep sppAccountAddress
+      <*> toSpecRep sppVrf
 
 instance SpecTranslate DijkstraEra DRep where
   type SpecRep DijkstraEra DRep = Agda.VDeleg
@@ -501,6 +502,7 @@ instance SpecTranslate DijkstraEra (DijkstraPParams StrictMaybe DijkstraEra) whe
       ppuMaxHeaderSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ dppMaxBHSize
     ppuKeyDeposit <- toSpecRep dppKeyDeposit
     ppuPoolDeposit <- toSpecRep dppPoolDeposit
+    ppuMinPoolCost <- toSpecRep dppMinPoolCost
     ppuEmax <- toSpecRep dppEMax
     ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe $ unTHKD dppNOpt)
     let

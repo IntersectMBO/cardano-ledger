@@ -47,6 +47,16 @@ spec = describe "POOL" $ do
         tx
         [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
+    it "re-register a pool with too low cost" $ do
+      (kh, vrf) <- registerNewPool
+      pps <- poolParams kh vrf
+      minPoolCost <- getsPParams ppMinPoolCostL
+      tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
+      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
+      submitFailingTx
+        tx
+        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+
     it "register a pool with a staking address having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL
       accountCredential <- KeyHashObj <$> freshKeyHash
@@ -64,7 +74,9 @@ spec = describe "POOL" $ do
         else
           submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
 
-    it "register a pool with too big metadata" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "register a pool with too big metadata" $ do
       pv <- getsPParams ppProtocolVersionL
       let maxMetadataSize = hashSize (Proxy :: Proxy HASH)
       tooBigSize <- choose (maxMetadataSize + 1, maxMetadataSize + 50)
