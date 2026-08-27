@@ -41,7 +41,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
@@ -113,6 +113,20 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [] [[poolKh], [poolKh]]
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
+
+    it "xxx" $ do
+      poolKh <- freshKeyHash
+      scriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
+      tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh]]
+      submitPhase2Invalid_ $ tx & bodyTxL . inputsTxBodyL <>~ [scriptTxIn]
+
+    it "top re-registers a pre-existing pool" $ do
+      let genTx = do
+            poolKh <- freshKeyHash
+            registerPool poolKh -- pre-registered
+            registerPoolTxWithSubTxs [poolKh] [] -- top only, no subs
       submitTx_ =<< genTx
       submitTx_ =<< switchTxToLegacyMode =<< genTx
 
@@ -395,6 +409,23 @@ spec = describe "UTXO" $ do
       ImpTestM era (Tx TopTx era)
     registerPoolTxWithSubTxs topKhs subKhs = do
       top <- registerPoolTx @TopTx topKhs
+      subs <- traverse (registerPoolTx @SubTx) subKhs
+      pure $ top & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subs
+    registerPoolTx :: forall l. Typeable l => [KeyHash StakePool] -> ImpTestM era (Tx l era)
+    registerPoolTx khPools = do
+      certs <-
+        traverse
+          ( \khPool ->
+              RegPoolTxCert @era <$> (freshPoolParams khPool =<< registerAccountAddress)
+          )
+          khPools
+      pure $ mkBasicTx mkBasicTxBody & bodyTxL . certsTxBodyL .~ StrictSeq.fromList certs
+    registerCredTxWithSubTxs ::
+      [KeyHash Staking] -> -- top's pool certs
+      [[KeyHash Staking]] -> -- one sub-tx per inner list, with one pool cert per key
+      ImpTestM era (Tx TopTx era)
+    registerCredTxWithSubTxs topKhs subKhs = do
+      top <- registerStakeCredentialTx cred @TopTx topKhs
       subs <- traverse (registerPoolTx @SubTx) subKhs
       pure $ top & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subs
     registerPoolTx :: forall l. Typeable l => [KeyHash StakePool] -> ImpTestM era (Tx l era)
