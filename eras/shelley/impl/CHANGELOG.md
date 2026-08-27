@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Allow re-registering a stake pool with the VRF key hash recorded in its own
+  `futureStakePoolParams`, instead of rejecting it with `VRFKeyHashAlreadyRegistered`
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
 * Add `EncCBOR`, `ToCBOR` for `Block`
