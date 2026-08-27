@@ -277,7 +277,12 @@ poolTransition = do
         -- re-register Pool
         Just stakePoolState -> do
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
+            -- A pool's own VRF key hashes are exempt from the duplication check:
+            -- both its active one and the one recorded in futureStakePoolParams
+            -- by an earlier re-registration within the same epoch.
+            let mbFutureVrf = (^. sppVrfL) <$> Map.lookup sppId psFutureStakePoolParams
             sppVrf == stakePoolState ^. spsVrfL
+              || Just sppVrf == mbFutureVrf
               || Map.notMember sppVrf psVRFKeyHashes
                 ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           let updateFutureVRFKeyHash

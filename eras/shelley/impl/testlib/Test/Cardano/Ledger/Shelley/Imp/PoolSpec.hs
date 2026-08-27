@@ -192,6 +192,24 @@ spec = describe "POOL" $ do
       expectPool kh (Just vrf)
       expectFuturePool kh Nothing
 
+    it "re-register a pool with its own future VRF" $ do
+      (kh, vrf) <- registerNewPool
+      vrfNew <- freshKeyHashVRF
+      tx <- registerPoolTx <$> poolParams kh vrfNew
+      submitTx_ tx
+      expectPool kh (Just vrf)
+      expectFuturePool kh (Just vrfNew)
+      -- re-registering with the VRF already recorded in the pool's own
+      -- future params should succeed
+      submitTx_ tx
+      expectPool kh (Just vrf)
+      expectFuturePool kh (Just vrfNew)
+      expectVRFs [vrf, vrfNew]
+      passEpoch
+      expectPool kh (Just vrfNew)
+      expectFuturePool kh Nothing
+      expectVRFs [vrfNew]
+
     it "re-register a pool with a fresh VRF" $ do
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
