@@ -102,10 +102,10 @@ import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   KeyValuePairs (..),
+  Milliseconds (..),
   NonNegativeInterval,
   Nonce (..),
   ProtVer,
-  SlotInterval (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
   UnitInterval,
@@ -521,31 +521,33 @@ class
     where
       _ = atMostEra @"Conway" @era
 
-  ppLeiosHeaderDiffusionPeriodLengthG :: SimpleGetter (PParams era) SlotInterval
-  default ppLeiosHeaderDiffusionPeriodLengthG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) SlotInterval
-  ppLeiosHeaderDiffusionPeriodLengthG = L.to (const (SlotInterval 0))
+  ppLeiosHeaderPeriodLengthG :: SimpleGetter (PParams era) Milliseconds
+  default ppLeiosHeaderPeriodLengthG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Milliseconds
+  ppLeiosHeaderPeriodLengthG = L.to (const (Milliseconds 0))
     where
       _ = atMostEra @"Conway" @era
 
-  ppLeiosVotingPeriodLengthG :: SimpleGetter (PParams era) SlotInterval
+  ppLeiosVotingPeriodLengthG :: SimpleGetter (PParams era) Milliseconds
   default ppLeiosVotingPeriodLengthG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) SlotInterval
-  ppLeiosVotingPeriodLengthG = L.to (const (SlotInterval 0))
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Milliseconds
+  ppLeiosVotingPeriodLengthG = L.to (const (Milliseconds 0))
     where
       _ = atMostEra @"Conway" @era
 
-  ppLeiosAdditionalDiffusionPeriodLengthG :: SimpleGetter (PParams era) SlotInterval
-  default ppLeiosAdditionalDiffusionPeriodLengthG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) SlotInterval
-  ppLeiosAdditionalDiffusionPeriodLengthG = L.to (const (SlotInterval 0))
+  ppLeiosDiffusionPeriodLengthG :: SimpleGetter (PParams era) Milliseconds
+  default ppLeiosDiffusionPeriodLengthG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Milliseconds
+  -- Eras without Leios report the value that turns it off, which for a diffusion period is
+  -- 'maxBound': no certificate is ever includable in time.
+  ppLeiosDiffusionPeriodLengthG = L.to (const maxBound)
     where
       _ = atMostEra @"Conway" @era
 
-  ppLeiosCommitteeStakeCoverageG :: SimpleGetter (PParams era) UnitInterval
-  default ppLeiosCommitteeStakeCoverageG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
-  ppLeiosCommitteeStakeCoverageG = L.to (const minBound)
+  ppLeiosCommitteeSizeG :: SimpleGetter (PParams era) Word16
+  default ppLeiosCommitteeSizeG ::
+    AtMostEra "Conway" era => SimpleGetter (PParams era) Word16
+  ppLeiosCommitteeSizeG = L.to (const 0)
     where
       _ = atMostEra @"Conway" @era
 
@@ -556,17 +558,17 @@ class
     where
       _ = atMostEra @"Conway" @era
 
-  ppMaxEndorserBlockHeaderSizeG :: SimpleGetter (PParams era) Word32
-  default ppMaxEndorserBlockHeaderSizeG ::
+  ppMaxEndorserBlockSizeG :: SimpleGetter (PParams era) Word32
+  default ppMaxEndorserBlockSizeG ::
     AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
-  ppMaxEndorserBlockHeaderSizeG = L.to (const 0)
+  ppMaxEndorserBlockSizeG = L.to (const 0)
     where
       _ = atMostEra @"Conway" @era
 
-  ppMaxEndorserBlockBodySizeG :: SimpleGetter (PParams era) Word32
-  default ppMaxEndorserBlockBodySizeG ::
+  ppMaxEndorserBlockTxsSizeG :: SimpleGetter (PParams era) Word32
+  default ppMaxEndorserBlockTxsSizeG ::
     AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
-  ppMaxEndorserBlockBodySizeG = L.to (const 0)
+  ppMaxEndorserBlockTxsSizeG = L.to (const 0)
     where
       _ = atMostEra @"Conway" @era
 

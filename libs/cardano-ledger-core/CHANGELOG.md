@@ -38,16 +38,21 @@
 * Add `FromJSON` instance for `PoolCert`
 * Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
 * Add `ToPlutusData` instance for `OrdExUnits`
-* Add Leios protocol parameter default getters to `EraPParams`:
-  - `ppLeiosVotingPeriodLengthG`, `ppLeiosAdditionalDiffusionPeriodLengthG`
-  - `ppLeiosCommitteeStakeCoverageG`, `ppLeiosQuorumStakeThresholdG`
-  - `ppMaxEndorserBlockHeaderSizeG`, `ppMaxEndorserBlockBodySizeG`
+* Add `Milliseconds`, a duration in whole milliseconds bounded by `Word32`
+* Add `ToPlutusData` instance for `Milliseconds`
+* Add Leios protocol parameter default getters to `EraPParams` (CIP-164), which for eras up to
+  Conway report the value that turns Leios off: `maxBound` for `ppLeiosDiffusionPeriodLengthG`,
+  zero or `minBound` for the rest:
+  - `ppLeiosHeaderPeriodLengthG`, `ppLeiosVotingPeriodLengthG`, `ppLeiosDiffusionPeriodLengthG`
+  - `ppLeiosCommitteeSizeG`, `ppLeiosQuorumStakeThresholdG`
+  - `ppMaxEndorserBlockSizeG`, `ppMaxEndorserBlockTxsSizeG`
   - `ppMaxRefScriptSizePerEndorserBlockG`
 
 ### `testlib`
 
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
+* Add `Arbitrary` and `ToExpr` instances for `Milliseconds`
 
 ### `cddl`
 

@@ -3551,7 +3551,7 @@
         "updateToConstitution": 0.459123666828615424
     },
     "govActionDeposit": 784351,
-    "leiosCommitteeStakeCoverage": 0.758186,
+    "leiosCommitteeSize": 5314,
     "leiosQuorumStakeThreshold": 0.6034623758631827,
     "leiosVotingPeriodLength": 2724633359,
     "maxBlockBodySize": 938825652,
@@ -3561,7 +3561,7 @@
     },
     "maxBlockHeaderSize": 22385,
     "maxCollateralInputs": 42033,
-    "maxEndorserBlockHeaderSize": 3027405659,
+    "maxEndorserBlockSize": 3027405659,
     "maxPledgeLeverage": 7.112083425886304788e10,
     "maxRefScriptSizePerBlock": 700426415,
     "maxRefScriptSizePerEndorserBlock": 17123247,

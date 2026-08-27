@@ -55,6 +55,7 @@ import Cardano.Ledger.BaseTypes (
   Exclusive (..),
   HasZero,
   Inclusive (..),
+  Milliseconds (..),
   Mismatch (..),
   Network (..),
   NonNegativeInterval,
@@ -186,6 +187,9 @@ instance Arbitrary Url where
 
 instance Arbitrary Port where
   arbitrary = fromIntegral @Word16 @Port <$> arbitrary
+
+instance Arbitrary Milliseconds where
+  arbitrary = Milliseconds <$> arbitrary
 
 -- JSON instances can't roundtrip, unless these are decimal.
 

@@ -57,16 +57,16 @@
   - Add `hkdMinPoolMarginL` to `DijkstraEraPParams`
   - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
   - Override `ppMinPoolMarginG` in `EraPParams` instance
-* Add Leios protocol parameters:
-  - Add `dppLeiosVotingPeriodLength`, `dppLeiosAdditionalDiffusionPeriodLength`,
-    `dppLeiosCommitteeStakeCoverage`, `dppLeiosQuorumStakeThreshold`,
-    `dppMaxEndorserBlockHeaderSize`, `dppMaxEndorserBlockBodySize`,
+* Add the nine Leios protocol parameters of CIP-164:
+  - Add `dppLeiosHeaderPeriodLength`, `dppLeiosVotingPeriodLength`,
+    `dppLeiosDiffusionPeriodLength`, `dppLeiosCommitteeSize`, `dppLeiosQuorumStakeThreshold`,
+    `dppMaxEndorserBlockSize`, `dppMaxEndorserBlockTxsSize`,
     `dppMaxEndorserBlockExUnits`, `dppMaxRefScriptSizePerEndorserBlock` to `DijkstraPParams`
   - Add corresponding fields to `UpgradeDijkstraPParams`
   - Add corresponding HKD lenses, pp/ppu lenses to `DijkstraEraPParams`
-  - Override `ppLeiosVotingPeriodLengthG`, `ppLeiosAdditionalDiffusionPeriodLengthG`,
-    `ppLeiosCommitteeStakeCoverageG`, `ppLeiosQuorumStakeThresholdG`,
-    `ppMaxEndorserBlockHeaderSizeG`, `ppMaxEndorserBlockBodySizeG`,
+  - Override `ppLeiosHeaderPeriodLengthG`, `ppLeiosVotingPeriodLengthG`,
+    `ppLeiosDiffusionPeriodLengthG`, `ppLeiosCommitteeSizeG`, `ppLeiosQuorumStakeThresholdG`,
+    `ppMaxEndorserBlockSizeG`, `ppMaxEndorserBlockTxsSizeG`,
     `ppMaxRefScriptSizePerEndorserBlockG` in `EraPParams` instance
 
 ### `cddl`

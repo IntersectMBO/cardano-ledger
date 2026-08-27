@@ -56,6 +56,7 @@ import Cardano.Ledger.State (
  )
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless)
+import Data.Bits (finiteBitSize)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
 import Data.List (nub)
@@ -64,7 +65,7 @@ import Data.Proxy (Proxy (..))
 import Data.String (fromString)
 import Data.Text ()
 import Data.Text qualified as T
-import Data.Word (Word64)
+import Data.Word (Word16, Word64)
 import GHC.TypeLits (KnownSymbol)
 import Test.AntiGen (withAnnotation)
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
@@ -1004,13 +1005,13 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 37 ==> huddleRule @"positive_interval" p) //- "refScript cost multiplier"
         , opt (idx 38 ==> huddleRule @"max_pledge_leverage" p) //- "max pledge leverage"
         , opt (idx 39 ==> huddleRule @"unit_interval" p) //- "min pool margin"
-        , opt (idx 40 ==> VUInt `sized` (4 :: Word64)) //- "leios header diffusion period length"
-        , opt (idx 41 ==> VUInt `sized` (4 :: Word64)) //- "leios voting period length"
-        , opt (idx 42 ==> VUInt `sized` (4 :: Word64)) //- "leios additional diffusion period length"
-        , opt (idx 43 ==> huddleRule @"unit_interval" p) //- "leios committee stake coverage"
+        , opt (idx 40 ==> VUInt `sized` (4 :: Word64)) //- "leios header period length in ms"
+        , opt (idx 41 ==> VUInt `sized` (4 :: Word64)) //- "leios voting period length in ms"
+        , opt (idx 42 ==> VUInt `sized` (4 :: Word64)) //- "leios diffusion period length in ms"
+        , opt (idx 43 ==> VUInt `sized` leiosCommitteeSizeBytes) //- "leios committee size"
         , opt (idx 44 ==> huddleRule @"unit_interval" p) //- "leios quorum stake threshold"
-        , opt (idx 45 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block header size"
-        , opt (idx 46 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block body size"
+        , opt (idx 45 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block size"
+        , opt (idx 46 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block txs size"
         , opt (idx 47 ==> huddleRule @"ex_units" p) //- "max endorser block ex units"
         , opt (idx 48 ==> VUInt `sized` (4 :: Word64)) //- "max ref script size per endorser block"
         ]
@@ -1075,6 +1076,19 @@ instance HuddleRule "block" DijkstraEra where
 
 instance HuddleRule "peras_certificate" DijkstraEra where
   huddleRuleNamed pname _era = pname =.= VBytes
+
+-- | Byte width of a Leios committee size: the @leiosCommitteeSize@ protocol
+-- parameter is a 'Word16', and so is the @LeiosVoterId@ index with which a
+-- certificate addresses a seat.
+leiosCommitteeSizeBytes :: Word64
+leiosCommitteeSizeBytes = fromIntegral $ finiteBitSize maxLeiosCommitteeSize `div` 8
+
+-- | Largest committee the @leiosCommitteeSize@ protocol parameter can name, which also
+-- caps a certificate's signer bitfield at @ceiling (maxLeiosCommitteeSize / 8)@ = 8192
+-- bytes, once there is a decoder to enforce it.
+-- TODO: use this in the bitfield definition to constrain its byte size
+maxLeiosCommitteeSize :: Word16
+maxLeiosCommitteeSize = maxBound
 
 instance HuddleRule "leios_certificate" DijkstraEra where
   huddleRuleNamed pname era =

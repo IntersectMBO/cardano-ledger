@@ -59,7 +59,6 @@ import Cardano.Slotting.Slot (
   EpochInterval (..),
   EpochNo (..),
   EpochSize (..),
-  SlotInterval (..),
   SlotNo (..),
   WithOrigin (..),
  )
@@ -432,8 +431,6 @@ deriving instance EncCBOR (CertVRF Praos.PraosVRF)
 -- TODO: Remove usage of 'serialise' package
 instance EncCBOR SlotNo where
   encCBOR = fromPlainEncoding . Serialise.encode
-
-deriving instance EncCBOR SlotInterval
 
 instance Serialise.Serialise t => EncCBOR (WithOrigin t) where
   encCBOR = fromPlainEncoding . Serialise.encode

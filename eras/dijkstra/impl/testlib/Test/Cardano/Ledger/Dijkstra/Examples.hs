@@ -37,8 +37,8 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (
   Exclusive (..),
   Inclusive (..),
+  Milliseconds (..),
   Network (..),
-  SlotInterval (..),
   StrictMaybe (..),
   boundRational,
   knownNonZeroBounded,
@@ -52,27 +52,27 @@ import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
   UpgradeDijkstraPParams (..),
-  ppLeiosAdditionalDiffusionPeriodLengthL,
-  ppLeiosCommitteeStakeCoverageL,
-  ppLeiosHeaderDiffusionPeriodLengthL,
+  ppLeiosCommitteeSizeL,
+  ppLeiosDiffusionPeriodLengthL,
+  ppLeiosHeaderPeriodLengthL,
   ppLeiosQuorumStakeThresholdL,
   ppLeiosVotingPeriodLengthL,
-  ppMaxEndorserBlockBodySizeL,
   ppMaxEndorserBlockExUnitsL,
-  ppMaxEndorserBlockHeaderSizeL,
+  ppMaxEndorserBlockSizeL,
+  ppMaxEndorserBlockTxsSizeL,
   ppMaxRefScriptSizePerBlockL,
   ppMaxRefScriptSizePerEndorserBlockL,
   ppMaxRefScriptSizePerTxL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
-  ppuLeiosAdditionalDiffusionPeriodLengthL,
-  ppuLeiosCommitteeStakeCoverageL,
-  ppuLeiosHeaderDiffusionPeriodLengthL,
+  ppuLeiosCommitteeSizeL,
+  ppuLeiosDiffusionPeriodLengthL,
+  ppuLeiosHeaderPeriodLengthL,
   ppuLeiosQuorumStakeThresholdL,
   ppuLeiosVotingPeriodLengthL,
-  ppuMaxEndorserBlockBodySizeL,
   ppuMaxEndorserBlockExUnitsL,
-  ppuMaxEndorserBlockHeaderSizeL,
+  ppuMaxEndorserBlockSizeL,
+  ppuMaxEndorserBlockTxsSizeL,
   ppuMaxRefScriptSizePerBlockL,
   ppuMaxRefScriptSizePerEndorserBlockL,
   ppuMaxRefScriptSizePerTxL,
@@ -172,15 +172,16 @@ exampleDijkstraGenesis =
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
           , udppPlutusV4CostModel = testingCostModel PlutusV4
-          , udppLeiosHeaderDiffusionPeriodLength = SlotInterval 0
-          , udppLeiosVotingPeriodLength = SlotInterval 0
-          , udppLeiosAdditionalDiffusionPeriodLength = SlotInterval 0
-          , udppLeiosCommitteeStakeCoverage = minBound
-          , udppLeiosQuorumStakeThreshold = minBound
-          , udppMaxEndorserBlockHeaderSize = 0
-          , udppMaxEndorserBlockBodySize = 0
-          , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 0 0
-          , udppMaxRefScriptSizePerEndorserBlock = 0
+          , -- Feasible values of CIP-164 Table 7
+            udppLeiosHeaderPeriodLength = Milliseconds 1_000 -- L_hdr
+          , udppLeiosVotingPeriodLength = Milliseconds 4_000 -- L_vote
+          , udppLeiosDiffusionPeriodLength = Milliseconds 7_000 -- L_diff
+          , udppLeiosCommitteeSize = 900 -- N_c
+          , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
+          , udppMaxEndorserBlockSize = 512 * 1024 -- 512 KiB
+          , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
+          , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
+          , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
           }
     }
 
@@ -343,15 +344,15 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxRefScriptSizePerTxL .~ 200 * 1024
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
-    & ppLeiosHeaderDiffusionPeriodLengthL .~ SlotInterval 5
-    & ppLeiosVotingPeriodLengthL .~ SlotInterval 5
-    & ppLeiosAdditionalDiffusionPeriodLengthL .~ SlotInterval 5
-    & ppLeiosCommitteeStakeCoverageL .~ 51 %! 100
-    & ppLeiosQuorumStakeThresholdL .~ 51 %! 100
-    & ppMaxEndorserBlockHeaderSizeL .~ 65536
-    & ppMaxEndorserBlockBodySizeL .~ 524288
-    & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 40_000_000_000 10_000_000)
-    & ppMaxRefScriptSizePerEndorserBlockL .~ 1024 * 1024
+    & ppLeiosHeaderPeriodLengthL .~ Milliseconds 1_000
+    & ppLeiosVotingPeriodLengthL .~ Milliseconds 4_000
+    & ppLeiosDiffusionPeriodLengthL .~ Milliseconds 7_000
+    & ppLeiosCommitteeSizeL .~ 900
+    & ppLeiosQuorumStakeThresholdL .~ 3 %! 4
+    & ppMaxEndorserBlockSizeL .~ 512 * 1024
+    & ppMaxEndorserBlockTxsSizeL .~ 12 * 1024 * 1024
+    & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000)
+    & ppMaxRefScriptSizePerEndorserBlockL .~ 12 * 1024 * 1024
 
 exampleDijkstraOnwardsEraPParamsUpdate ::
   (DijkstraEraPParams era, ConwayEraPParams era) => PParamsUpdate era
@@ -361,15 +362,15 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
-    & ppuLeiosHeaderDiffusionPeriodLengthL .~ SJust (SlotInterval 5)
-    & ppuLeiosVotingPeriodLengthL .~ SJust (SlotInterval 5)
-    & ppuLeiosAdditionalDiffusionPeriodLengthL .~ SJust (SlotInterval 5)
-    & ppuLeiosCommitteeStakeCoverageL .~ SJust (51 %! 100)
-    & ppuLeiosQuorumStakeThresholdL .~ SJust (51 %! 100)
-    & ppuMaxEndorserBlockHeaderSizeL .~ SJust 65536
-    & ppuMaxEndorserBlockBodySizeL .~ SJust 524288
-    & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 40_000_000_000 10_000_000))
-    & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (1024 * 1024)
+    & ppuLeiosHeaderPeriodLengthL .~ SJust (Milliseconds 1_000)
+    & ppuLeiosVotingPeriodLengthL .~ SJust (Milliseconds 4_000)
+    & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds 7_000)
+    & ppuLeiosCommitteeSizeL .~ SJust 900
+    & ppuLeiosQuorumStakeThresholdL .~ SJust (3 %! 4)
+    & ppuMaxEndorserBlockSizeL .~ SJust (512 * 1024)
+    & ppuMaxEndorserBlockTxsSizeL .~ SJust (12 * 1024 * 1024)
+    & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000))
+    & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (12 * 1024 * 1024)
 
 exampleBlsKey :: BlsKey
 exampleBlsKey =

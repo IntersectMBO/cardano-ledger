@@ -26,13 +26,13 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppMaxRefScriptSizePerBlockL,
   ppMaxPledgeLeverageL,
   ppMinPoolMarginL,
-  ppLeiosHeaderDiffusionPeriodLengthL,
+  ppLeiosHeaderPeriodLengthL,
   ppLeiosVotingPeriodLengthL,
-  ppLeiosAdditionalDiffusionPeriodLengthL,
-  ppLeiosCommitteeStakeCoverageL,
+  ppLeiosDiffusionPeriodLengthL,
+  ppLeiosCommitteeSizeL,
   ppLeiosQuorumStakeThresholdL,
-  ppMaxEndorserBlockHeaderSizeL,
-  ppMaxEndorserBlockBodySizeL,
+  ppMaxEndorserBlockSizeL,
+  ppMaxEndorserBlockTxsSizeL,
   ppMaxEndorserBlockExUnitsL,
   ppMaxRefScriptSizePerEndorserBlockL,
   ppuRefScriptCostMultiplierL,
@@ -41,13 +41,13 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppuMaxRefScriptSizePerBlockL,
   ppuMaxPledgeLeverageL,
   ppuMinPoolMarginL,
-  ppuLeiosHeaderDiffusionPeriodLengthL,
+  ppuLeiosHeaderPeriodLengthL,
   ppuLeiosVotingPeriodLengthL,
-  ppuLeiosAdditionalDiffusionPeriodLengthL,
-  ppuLeiosCommitteeStakeCoverageL,
+  ppuLeiosDiffusionPeriodLengthL,
+  ppuLeiosCommitteeSizeL,
   ppuLeiosQuorumStakeThresholdL,
-  ppuMaxEndorserBlockHeaderSizeL,
-  ppuMaxEndorserBlockBodySizeL,
+  ppuMaxEndorserBlockSizeL,
+  ppuMaxEndorserBlockTxsSizeL,
   ppuMaxEndorserBlockExUnitsL,
   ppuMaxRefScriptSizePerEndorserBlockL,
 
@@ -61,11 +61,11 @@ import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   KeyValuePairs (..),
+  Milliseconds (..),
   NonNegativeInterval,
   NonZero,
   PositiveInterval,
   ProtVer (..),
-  SlotInterval (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
   UnitInterval,
@@ -198,24 +198,40 @@ data DijkstraPParams f era = DijkstraPParams
   , dppRefScriptCostMultiplier :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f PositiveInterval)
   , dppMaxPledgeLeverage :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f MaxPledgeLeverage)
   , dppMinPoolMargin :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f UnitInterval)
-  , dppLeiosHeaderDiffusionPeriodLength ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f SlotInterval)
+  , dppLeiosHeaderPeriodLength ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds)
+  -- ^ Duration for announcement headers (extended praos headers) to propagate
+  -- through the network, @L_hdr@ in CIP-164.
   , dppLeiosVotingPeriodLength ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f SlotInterval)
-  , dppLeiosAdditionalDiffusionPeriodLength ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f SlotInterval)
-  , dppLeiosCommitteeStakeCoverage ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f UnitInterval)
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds)
+  -- ^ Duration during which committee members can vote on endorser blocks,
+  -- @L_vote@ in CIP-164.
+  , dppLeiosDiffusionPeriodLength ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds)
+  -- ^ Duration after voting that ensures network-wide availability of a
+  -- certified endorser block, @L_diff@ in CIP-164.
+  , dppLeiosCommitteeSize ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
+  -- ^ Number of top-stake pools seated on the epoch's voting committee, @N_c@
+  -- in CIP-164.
   , dppLeiosQuorumStakeThreshold ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f UnitInterval)
-  , dppMaxEndorserBlockHeaderSize ::
+  -- ^ Minimum fraction of total active stake that the votes in a certificate
+  -- must represent, @tau@ in CIP-164.
+  , dppMaxEndorserBlockSize ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
-  , dppMaxEndorserBlockBodySize ::
+  -- ^ Limit on the size of an endorser block itself, i.e. of its transaction
+  -- references and sizes contained.
+  , dppMaxEndorserBlockTxsSize ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
+  -- ^ Limit on the total size of all endorsed transactions in endorser block.
   , dppMaxEndorserBlockExUnits ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f OrdExUnits)
+  -- ^ Max total script execution resources units allowed per endorser block.
   , dppMaxRefScriptSizePerEndorserBlock ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
+  -- ^ Limit on the total number of bytes of all reference scripts combined from
+  -- all transactions within an endorser block.
   }
   deriving (Generic)
 
@@ -281,13 +297,13 @@ dijkstraApplyPPUpdates pp ppu = do
     , dppRefScriptCostMultiplier = ppApplyUpdate dppRefScriptCostMultiplier
     , dppMaxPledgeLeverage = ppApplyUpdate dppMaxPledgeLeverage
     , dppMinPoolMargin = ppApplyUpdate dppMinPoolMargin
-    , dppLeiosHeaderDiffusionPeriodLength = ppApplyUpdate dppLeiosHeaderDiffusionPeriodLength
+    , dppLeiosHeaderPeriodLength = ppApplyUpdate dppLeiosHeaderPeriodLength
     , dppLeiosVotingPeriodLength = ppApplyUpdate dppLeiosVotingPeriodLength
-    , dppLeiosAdditionalDiffusionPeriodLength = ppApplyUpdate dppLeiosAdditionalDiffusionPeriodLength
-    , dppLeiosCommitteeStakeCoverage = ppApplyUpdate dppLeiosCommitteeStakeCoverage
+    , dppLeiosDiffusionPeriodLength = ppApplyUpdate dppLeiosDiffusionPeriodLength
+    , dppLeiosCommitteeSize = ppApplyUpdate dppLeiosCommitteeSize
     , dppLeiosQuorumStakeThreshold = ppApplyUpdate dppLeiosQuorumStakeThreshold
-    , dppMaxEndorserBlockHeaderSize = ppApplyUpdate dppMaxEndorserBlockHeaderSize
-    , dppMaxEndorserBlockBodySize = ppApplyUpdate dppMaxEndorserBlockBodySize
+    , dppMaxEndorserBlockSize = ppApplyUpdate dppMaxEndorserBlockSize
+    , dppMaxEndorserBlockTxsSize = ppApplyUpdate dppMaxEndorserBlockTxsSize
     , dppMaxEndorserBlockExUnits = ppApplyUpdate dppMaxEndorserBlockExUnits
     , dppMaxRefScriptSizePerEndorserBlock = ppApplyUpdate dppMaxRefScriptSizePerEndorserBlock
     }
@@ -326,13 +342,13 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppMaxPledgeLeverage :: !(HKD f MaxPledgeLeverage)
   , udppMinPoolMargin :: !(HKD f UnitInterval)
   , udppPlutusV4CostModel :: !(HKD f CostModel)
-  , udppLeiosHeaderDiffusionPeriodLength :: !(HKD f SlotInterval)
-  , udppLeiosVotingPeriodLength :: !(HKD f SlotInterval)
-  , udppLeiosAdditionalDiffusionPeriodLength :: !(HKD f SlotInterval)
-  , udppLeiosCommitteeStakeCoverage :: !(HKD f UnitInterval)
+  , udppLeiosHeaderPeriodLength :: !(HKD f Milliseconds)
+  , udppLeiosVotingPeriodLength :: !(HKD f Milliseconds)
+  , udppLeiosDiffusionPeriodLength :: !(HKD f Milliseconds)
+  , udppLeiosCommitteeSize :: !(HKD f Word16)
   , udppLeiosQuorumStakeThreshold :: !(HKD f UnitInterval)
-  , udppMaxEndorserBlockHeaderSize :: !(HKD f Word32)
-  , udppMaxEndorserBlockBodySize :: !(HKD f Word32)
+  , udppMaxEndorserBlockSize :: !(HKD f Word32)
+  , udppMaxEndorserBlockTxsSize :: !(HKD f Word32)
   , udppMaxEndorserBlockExUnits :: !(HKD f OrdExUnits)
   , udppMaxRefScriptSizePerEndorserBlock :: !(HKD f Word32)
   }
@@ -351,13 +367,13 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppMaxPledgeLeverage <- o .:? "maxPledgeLeverage" .!= MaxPledgeLeverage SNothing
     udppMinPoolMargin <- o .: "minPoolMargin"
     udppPlutusV4CostModel <- parseCostModelAsArray False PlutusV4 =<< o .: "plutusV4CostModel"
-    udppLeiosHeaderDiffusionPeriodLength <- o .: "leiosHeaderDiffusionPeriodLength"
+    udppLeiosHeaderPeriodLength <- o .: "leiosHeaderPeriodLength"
     udppLeiosVotingPeriodLength <- o .: "leiosVotingPeriodLength"
-    udppLeiosAdditionalDiffusionPeriodLength <- o .: "leiosAdditionalDiffusionPeriodLength"
-    udppLeiosCommitteeStakeCoverage <- o .: "leiosCommitteeStakeCoverage"
+    udppLeiosDiffusionPeriodLength <- o .: "leiosDiffusionPeriodLength"
+    udppLeiosCommitteeSize <- o .: "leiosCommitteeSize"
     udppLeiosQuorumStakeThreshold <- o .: "leiosQuorumStakeThreshold"
-    udppMaxEndorserBlockHeaderSize <- o .: "maxEndorserBlockHeaderSize"
-    udppMaxEndorserBlockBodySize <- o .: "maxEndorserBlockBodySize"
+    udppMaxEndorserBlockSize <- o .: "maxEndorserBlockSize"
+    udppMaxEndorserBlockTxsSize <- o .: "maxEndorserBlockTxsSize"
     udppMaxEndorserBlockExUnits <- o .: "maxEndorserBlockExUnits"
     udppMaxRefScriptSizePerEndorserBlock <- o .: "maxRefScriptSizePerEndorserBlock"
     pure UpgradeDijkstraPParams {..}
@@ -371,13 +387,13 @@ instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
     , "maxPledgeLeverage" .= udppMaxPledgeLeverage udpp
     , "minPoolMargin" .= udppMinPoolMargin udpp
     , "plutusV4CostModel" .= toJSON @CostModel (udppPlutusV4CostModel udpp)
-    , "leiosHeaderDiffusionPeriodLength" .= udppLeiosHeaderDiffusionPeriodLength udpp
+    , "leiosHeaderPeriodLength" .= udppLeiosHeaderPeriodLength udpp
     , "leiosVotingPeriodLength" .= udppLeiosVotingPeriodLength udpp
-    , "leiosAdditionalDiffusionPeriodLength" .= udppLeiosAdditionalDiffusionPeriodLength udpp
-    , "leiosCommitteeStakeCoverage" .= udppLeiosCommitteeStakeCoverage udpp
+    , "leiosDiffusionPeriodLength" .= udppLeiosDiffusionPeriodLength udpp
+    , "leiosCommitteeSize" .= udppLeiosCommitteeSize udpp
     , "leiosQuorumStakeThreshold" .= udppLeiosQuorumStakeThreshold udpp
-    , "maxEndorserBlockHeaderSize" .= udppMaxEndorserBlockHeaderSize udpp
-    , "maxEndorserBlockBodySize" .= udppMaxEndorserBlockBodySize udpp
+    , "maxEndorserBlockSize" .= udppMaxEndorserBlockSize udpp
+    , "maxEndorserBlockTxsSize" .= udppMaxEndorserBlockTxsSize udpp
     , "maxEndorserBlockExUnits" .= udppMaxEndorserBlockExUnits udpp
     , "maxRefScriptSizePerEndorserBlock" .= udppMaxRefScriptSizePerEndorserBlock udpp
     ]
@@ -423,13 +439,13 @@ instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
         !> To udppMaxPledgeLeverage
         !> To udppMinPoolMargin
         !> E encodeCostModel udppPlutusV4CostModel
-        !> To udppLeiosHeaderDiffusionPeriodLength
+        !> To udppLeiosHeaderPeriodLength
         !> To udppLeiosVotingPeriodLength
-        !> To udppLeiosAdditionalDiffusionPeriodLength
-        !> To udppLeiosCommitteeStakeCoverage
+        !> To udppLeiosDiffusionPeriodLength
+        !> To udppLeiosCommitteeSize
         !> To udppLeiosQuorumStakeThreshold
-        !> To udppMaxEndorserBlockHeaderSize
-        !> To udppMaxEndorserBlockBodySize
+        !> To udppMaxEndorserBlockSize
+        !> To udppMaxEndorserBlockTxsSize
         !> To udppMaxEndorserBlockExUnits
         !> To udppMaxRefScriptSizePerEndorserBlock
 
@@ -508,13 +524,13 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
     , dppRefScriptCostMultiplier = THKD udppRefScriptCostMultiplier
     , dppMaxPledgeLeverage = THKD udppMaxPledgeLeverage
     , dppMinPoolMargin = THKD udppMinPoolMargin
-    , dppLeiosHeaderDiffusionPeriodLength = THKD udppLeiosHeaderDiffusionPeriodLength
+    , dppLeiosHeaderPeriodLength = THKD udppLeiosHeaderPeriodLength
     , dppLeiosVotingPeriodLength = THKD udppLeiosVotingPeriodLength
-    , dppLeiosAdditionalDiffusionPeriodLength = THKD udppLeiosAdditionalDiffusionPeriodLength
-    , dppLeiosCommitteeStakeCoverage = THKD udppLeiosCommitteeStakeCoverage
+    , dppLeiosDiffusionPeriodLength = THKD udppLeiosDiffusionPeriodLength
+    , dppLeiosCommitteeSize = THKD udppLeiosCommitteeSize
     , dppLeiosQuorumStakeThreshold = THKD udppLeiosQuorumStakeThreshold
-    , dppMaxEndorserBlockHeaderSize = THKD udppMaxEndorserBlockHeaderSize
-    , dppMaxEndorserBlockBodySize = THKD udppMaxEndorserBlockBodySize
+    , dppMaxEndorserBlockSize = THKD udppMaxEndorserBlockSize
+    , dppMaxEndorserBlockTxsSize = THKD udppMaxEndorserBlockTxsSize
     , dppMaxEndorserBlockExUnits = THKD udppMaxEndorserBlockExUnits
     , dppMaxRefScriptSizePerEndorserBlock = THKD udppMaxRefScriptSizePerEndorserBlock
     }
@@ -593,13 +609,13 @@ instance EraPParams DijkstraEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueCompactL = notSupportedInThisEraL
   ppMinPoolMarginG = ppLensHKD . hkdMinPoolMarginL
-  ppLeiosHeaderDiffusionPeriodLengthG = ppLensHKD . hkdLeiosHeaderDiffusionPeriodLengthL
+  ppLeiosHeaderPeriodLengthG = ppLensHKD . hkdLeiosHeaderPeriodLengthL
   ppLeiosVotingPeriodLengthG = ppLensHKD . hkdLeiosVotingPeriodLengthL
-  ppLeiosAdditionalDiffusionPeriodLengthG = ppLensHKD . hkdLeiosAdditionalDiffusionPeriodLengthL
-  ppLeiosCommitteeStakeCoverageG = ppLensHKD . hkdLeiosCommitteeStakeCoverageL
+  ppLeiosDiffusionPeriodLengthG = ppLensHKD . hkdLeiosDiffusionPeriodLengthL
+  ppLeiosCommitteeSizeG = ppLensHKD . hkdLeiosCommitteeSizeL
   ppLeiosQuorumStakeThresholdG = ppLensHKD . hkdLeiosQuorumStakeThresholdL
-  ppMaxEndorserBlockHeaderSizeG = ppLensHKD . hkdMaxEndorserBlockHeaderSizeL
-  ppMaxEndorserBlockBodySizeG = ppLensHKD . hkdMaxEndorserBlockBodySizeL
+  ppMaxEndorserBlockSizeG = ppLensHKD . hkdMaxEndorserBlockSizeL
+  ppMaxEndorserBlockTxsSizeG = ppLensHKD . hkdMaxEndorserBlockTxsSizeL
   ppMaxRefScriptSizePerEndorserBlockG = ppLensHKD . hkdMaxRefScriptSizePerEndorserBlockL
   eraPParams =
     [ ppTxFeePerByte
@@ -639,13 +655,13 @@ instance EraPParams DijkstraEra where
     , ppRefScriptCostMultiplier
     , ppMaxPledgeLeverage
     , ppMinPoolMargin
-    , ppLeiosHeaderDiffusionPeriodLength
+    , ppLeiosHeaderPeriodLength
     , ppLeiosVotingPeriodLength
-    , ppLeiosAdditionalDiffusionPeriodLength
-    , ppLeiosCommitteeStakeCoverage
+    , ppLeiosDiffusionPeriodLength
+    , ppLeiosCommitteeSize
     , ppLeiosQuorumStakeThreshold
-    , ppMaxEndorserBlockHeaderSize
-    , ppMaxEndorserBlockBodySize
+    , ppMaxEndorserBlockSize
+    , ppMaxEndorserBlockTxsSize
     , ppMaxEndorserBlockExUnits
     , ppMaxRefScriptSizePerEndorserBlock
     ]
@@ -734,17 +750,17 @@ ppMinPoolMargin =
             }
     }
 
-ppLeiosHeaderDiffusionPeriodLength :: PParam DijkstraEra
-ppLeiosHeaderDiffusionPeriodLength =
+ppLeiosHeaderPeriodLength :: PParam DijkstraEra
+ppLeiosHeaderPeriodLength =
   PParam
-    { ppName = "leiosHeaderDiffusionPeriodLength"
-    , ppLens = ppLeiosHeaderDiffusionPeriodLengthL
+    { ppName = "leiosHeaderPeriodLength"
+    , ppLens = ppLeiosHeaderPeriodLengthL
     , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 40
-            , ppuLens = ppuLeiosHeaderDiffusionPeriodLengthL
+            , ppuLens = ppuLeiosHeaderPeriodLengthL
             }
     }
 
@@ -762,31 +778,31 @@ ppLeiosVotingPeriodLength =
             }
     }
 
-ppLeiosAdditionalDiffusionPeriodLength :: PParam DijkstraEra
-ppLeiosAdditionalDiffusionPeriodLength =
+ppLeiosDiffusionPeriodLength :: PParam DijkstraEra
+ppLeiosDiffusionPeriodLength =
   PParam
-    { ppName = "leiosAdditionalDiffusionPeriodLength"
-    , ppLens = ppLeiosAdditionalDiffusionPeriodLengthL
+    { ppName = "leiosDiffusionPeriodLength"
+    , ppLens = ppLeiosDiffusionPeriodLengthL
     , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 42
-            , ppuLens = ppuLeiosAdditionalDiffusionPeriodLengthL
+            , ppuLens = ppuLeiosDiffusionPeriodLengthL
             }
     }
 
-ppLeiosCommitteeStakeCoverage :: PParam DijkstraEra
-ppLeiosCommitteeStakeCoverage =
+ppLeiosCommitteeSize :: PParam DijkstraEra
+ppLeiosCommitteeSize =
   PParam
-    { ppName = "leiosCommitteeStakeCoverage"
-    , ppLens = ppLeiosCommitteeStakeCoverageL
+    { ppName = "leiosCommitteeSize"
+    , ppLens = ppLeiosCommitteeSizeL
     , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 43
-            , ppuLens = ppuLeiosCommitteeStakeCoverageL
+            , ppuLens = ppuLeiosCommitteeSizeL
             }
     }
 
@@ -804,31 +820,31 @@ ppLeiosQuorumStakeThreshold =
             }
     }
 
-ppMaxEndorserBlockHeaderSize :: PParam DijkstraEra
-ppMaxEndorserBlockHeaderSize =
+ppMaxEndorserBlockSize :: PParam DijkstraEra
+ppMaxEndorserBlockSize =
   PParam
-    { ppName = "maxEndorserBlockHeaderSize"
-    , ppLens = ppMaxEndorserBlockHeaderSizeL
+    { ppName = "maxEndorserBlockSize"
+    , ppLens = ppMaxEndorserBlockSizeL
     , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 45
-            , ppuLens = ppuMaxEndorserBlockHeaderSizeL
+            , ppuLens = ppuMaxEndorserBlockSizeL
             }
     }
 
-ppMaxEndorserBlockBodySize :: PParam DijkstraEra
-ppMaxEndorserBlockBodySize =
+ppMaxEndorserBlockTxsSize :: PParam DijkstraEra
+ppMaxEndorserBlockTxsSize =
   PParam
-    { ppName = "maxEndorserBlockBodySize"
-    , ppLens = ppMaxEndorserBlockBodySizeL
+    { ppName = "maxEndorserBlockTxsSize"
+    , ppLens = ppMaxEndorserBlockTxsSizeL
     , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 46
-            , ppuLens = ppuMaxEndorserBlockBodySizeL
+            , ppuLens = ppuMaxEndorserBlockTxsSizeL
             }
     }
 
@@ -975,13 +991,13 @@ emptyDijkstraPParams =
     , dppRefScriptCostMultiplier = THKD minBound
     , dppMaxPledgeLeverage = THKD (MaxPledgeLeverage SNothing)
     , dppMinPoolMargin = THKD minBound
-    , dppLeiosHeaderDiffusionPeriodLength = THKD (SlotInterval 0)
-    , dppLeiosVotingPeriodLength = THKD (SlotInterval 0)
-    , dppLeiosAdditionalDiffusionPeriodLength = THKD (SlotInterval 0)
-    , dppLeiosCommitteeStakeCoverage = THKD minBound
+    , dppLeiosHeaderPeriodLength = THKD (Milliseconds 0)
+    , dppLeiosVotingPeriodLength = THKD (Milliseconds 0)
+    , dppLeiosDiffusionPeriodLength = THKD (Milliseconds 0)
+    , dppLeiosCommitteeSize = THKD 0
     , dppLeiosQuorumStakeThreshold = THKD minBound
-    , dppMaxEndorserBlockHeaderSize = THKD 0
-    , dppMaxEndorserBlockBodySize = THKD 0
+    , dppMaxEndorserBlockSize = THKD 0
+    , dppMaxEndorserBlockTxsSize = THKD 0
     , dppMaxEndorserBlockExUnits = THKD (OrdExUnits $ ExUnits 0 0)
     , dppMaxRefScriptSizePerEndorserBlock = THKD 0
     }
@@ -1026,13 +1042,13 @@ emptyDijkstraPParamsUpdate =
     , dppRefScriptCostMultiplier = THKD SNothing
     , dppMaxPledgeLeverage = THKD SNothing
     , dppMinPoolMargin = THKD SNothing
-    , dppLeiosHeaderDiffusionPeriodLength = THKD SNothing
+    , dppLeiosHeaderPeriodLength = THKD SNothing
     , dppLeiosVotingPeriodLength = THKD SNothing
-    , dppLeiosAdditionalDiffusionPeriodLength = THKD SNothing
-    , dppLeiosCommitteeStakeCoverage = THKD SNothing
+    , dppLeiosDiffusionPeriodLength = THKD SNothing
+    , dppLeiosCommitteeSize = THKD SNothing
     , dppLeiosQuorumStakeThreshold = THKD SNothing
-    , dppMaxEndorserBlockHeaderSize = THKD SNothing
-    , dppMaxEndorserBlockBodySize = THKD SNothing
+    , dppMaxEndorserBlockSize = THKD SNothing
+    , dppMaxEndorserBlockTxsSize = THKD SNothing
     , dppMaxEndorserBlockExUnits = THKD SNothing
     , dppMaxRefScriptSizePerEndorserBlock = THKD SNothing
     }
@@ -1044,13 +1060,13 @@ class DijkstraEraPParams era => DijkstraEraPParams era where
   hkdRefScriptCostMultiplierL :: Lens' (PParamsHKD f era) (HKD f PositiveInterval)
   hkdMaxPledgeLeverageL :: Lens' (PParamsHKD f era) (HKD f MaxPledgeLeverage)
   hkdMinPoolMarginL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
-  hkdLeiosHeaderDiffusionPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f SlotInterval)
-  hkdLeiosVotingPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f SlotInterval)
-  hkdLeiosAdditionalDiffusionPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f SlotInterval)
-  hkdLeiosCommitteeStakeCoverageL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
+  hkdLeiosHeaderPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds)
+  hkdLeiosVotingPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds)
+  hkdLeiosDiffusionPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds)
+  hkdLeiosCommitteeSizeL :: Lens' (PParamsHKD f era) (HKD f Word16)
   hkdLeiosQuorumStakeThresholdL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
-  hkdMaxEndorserBlockHeaderSizeL :: Lens' (PParamsHKD f era) (HKD f Word32)
-  hkdMaxEndorserBlockBodySizeL :: Lens' (PParamsHKD f era) (HKD f Word32)
+  hkdMaxEndorserBlockSizeL :: Lens' (PParamsHKD f era) (HKD f Word32)
+  hkdMaxEndorserBlockTxsSizeL :: Lens' (PParamsHKD f era) (HKD f Word32)
   hkdMaxEndorserBlockExUnitsL :: Lens' (PParamsHKD f era) (HKD f OrdExUnits)
   hkdMaxRefScriptSizePerEndorserBlockL :: Lens' (PParamsHKD f era) (HKD f Word32)
 
@@ -1061,13 +1077,13 @@ instance DijkstraEraPParams DijkstraEra where
   hkdRefScriptCostMultiplierL = lens (unTHKD . dppRefScriptCostMultiplier) $ \pp x -> pp {dppRefScriptCostMultiplier = THKD x}
   hkdMaxPledgeLeverageL = lens (unTHKD . dppMaxPledgeLeverage) $ \pp x -> pp {dppMaxPledgeLeverage = THKD x}
   hkdMinPoolMarginL = lens (unTHKD . dppMinPoolMargin) $ \pp x -> pp {dppMinPoolMargin = THKD x}
-  hkdLeiosHeaderDiffusionPeriodLengthL = lens (unTHKD . dppLeiosHeaderDiffusionPeriodLength) $ \pp x -> pp {dppLeiosHeaderDiffusionPeriodLength = THKD x}
+  hkdLeiosHeaderPeriodLengthL = lens (unTHKD . dppLeiosHeaderPeriodLength) $ \pp x -> pp {dppLeiosHeaderPeriodLength = THKD x}
   hkdLeiosVotingPeriodLengthL = lens (unTHKD . dppLeiosVotingPeriodLength) $ \pp x -> pp {dppLeiosVotingPeriodLength = THKD x}
-  hkdLeiosAdditionalDiffusionPeriodLengthL = lens (unTHKD . dppLeiosAdditionalDiffusionPeriodLength) $ \pp x -> pp {dppLeiosAdditionalDiffusionPeriodLength = THKD x}
-  hkdLeiosCommitteeStakeCoverageL = lens (unTHKD . dppLeiosCommitteeStakeCoverage) $ \pp x -> pp {dppLeiosCommitteeStakeCoverage = THKD x}
+  hkdLeiosDiffusionPeriodLengthL = lens (unTHKD . dppLeiosDiffusionPeriodLength) $ \pp x -> pp {dppLeiosDiffusionPeriodLength = THKD x}
+  hkdLeiosCommitteeSizeL = lens (unTHKD . dppLeiosCommitteeSize) $ \pp x -> pp {dppLeiosCommitteeSize = THKD x}
   hkdLeiosQuorumStakeThresholdL = lens (unTHKD . dppLeiosQuorumStakeThreshold) $ \pp x -> pp {dppLeiosQuorumStakeThreshold = THKD x}
-  hkdMaxEndorserBlockHeaderSizeL = lens (unTHKD . dppMaxEndorserBlockHeaderSize) $ \pp x -> pp {dppMaxEndorserBlockHeaderSize = THKD x}
-  hkdMaxEndorserBlockBodySizeL = lens (unTHKD . dppMaxEndorserBlockBodySize) $ \pp x -> pp {dppMaxEndorserBlockBodySize = THKD x}
+  hkdMaxEndorserBlockSizeL = lens (unTHKD . dppMaxEndorserBlockSize) $ \pp x -> pp {dppMaxEndorserBlockSize = THKD x}
+  hkdMaxEndorserBlockTxsSizeL = lens (unTHKD . dppMaxEndorserBlockTxsSize) $ \pp x -> pp {dppMaxEndorserBlockTxsSize = THKD x}
   hkdMaxEndorserBlockExUnitsL = lens (unTHKD . dppMaxEndorserBlockExUnits) $ \pp x -> pp {dppMaxEndorserBlockExUnits = THKD x}
   hkdMaxRefScriptSizePerEndorserBlockL = lens (unTHKD . dppMaxRefScriptSizePerEndorserBlock) $ \pp x -> pp {dppMaxRefScriptSizePerEndorserBlock = THKD x}
 
@@ -1086,27 +1102,27 @@ ppRefScriptCostMultiplierL = ppLensHKD . hkdRefScriptCostMultiplierL @_ @Identit
 ppMinPoolMarginL :: DijkstraEraPParams era => Lens' (PParams era) UnitInterval
 ppMinPoolMarginL = ppLensHKD . hkdMinPoolMarginL @_ @Identity
 
-ppLeiosHeaderDiffusionPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) SlotInterval
-ppLeiosHeaderDiffusionPeriodLengthL = ppLensHKD . hkdLeiosHeaderDiffusionPeriodLengthL @_ @Identity
+ppLeiosHeaderPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) Milliseconds
+ppLeiosHeaderPeriodLengthL = ppLensHKD . hkdLeiosHeaderPeriodLengthL @_ @Identity
 
-ppLeiosVotingPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) SlotInterval
+ppLeiosVotingPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) Milliseconds
 ppLeiosVotingPeriodLengthL = ppLensHKD . hkdLeiosVotingPeriodLengthL @_ @Identity
 
-ppLeiosAdditionalDiffusionPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParams era) SlotInterval
-ppLeiosAdditionalDiffusionPeriodLengthL = ppLensHKD . hkdLeiosAdditionalDiffusionPeriodLengthL @_ @Identity
+ppLeiosDiffusionPeriodLengthL ::
+  DijkstraEraPParams era => Lens' (PParams era) Milliseconds
+ppLeiosDiffusionPeriodLengthL = ppLensHKD . hkdLeiosDiffusionPeriodLengthL @_ @Identity
 
-ppLeiosCommitteeStakeCoverageL :: DijkstraEraPParams era => Lens' (PParams era) UnitInterval
-ppLeiosCommitteeStakeCoverageL = ppLensHKD . hkdLeiosCommitteeStakeCoverageL @_ @Identity
+ppLeiosCommitteeSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word16
+ppLeiosCommitteeSizeL = ppLensHKD . hkdLeiosCommitteeSizeL @_ @Identity
 
 ppLeiosQuorumStakeThresholdL :: DijkstraEraPParams era => Lens' (PParams era) UnitInterval
 ppLeiosQuorumStakeThresholdL = ppLensHKD . hkdLeiosQuorumStakeThresholdL @_ @Identity
 
-ppMaxEndorserBlockHeaderSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word32
-ppMaxEndorserBlockHeaderSizeL = ppLensHKD . hkdMaxEndorserBlockHeaderSizeL @_ @Identity
+ppMaxEndorserBlockSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word32
+ppMaxEndorserBlockSizeL = ppLensHKD . hkdMaxEndorserBlockSizeL @_ @Identity
 
-ppMaxEndorserBlockBodySizeL :: DijkstraEraPParams era => Lens' (PParams era) Word32
-ppMaxEndorserBlockBodySizeL = ppLensHKD . hkdMaxEndorserBlockBodySizeL @_ @Identity
+ppMaxEndorserBlockTxsSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word32
+ppMaxEndorserBlockTxsSizeL = ppLensHKD . hkdMaxEndorserBlockTxsSizeL @_ @Identity
 
 ppMaxEndorserBlockExUnitsL :: DijkstraEraPParams era => Lens' (PParams era) OrdExUnits
 ppMaxEndorserBlockExUnitsL = ppLensHKD . hkdMaxEndorserBlockExUnitsL @_ @Identity
@@ -1142,33 +1158,33 @@ ppuMaxPledgeLeverageL = ppuLensHKD . hkdMaxPledgeLeverageL @_ @StrictMaybe
 ppuMinPoolMarginL :: DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
 ppuMinPoolMarginL = ppuLensHKD . hkdMinPoolMarginL @_ @StrictMaybe
 
-ppuLeiosHeaderDiffusionPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe SlotInterval)
-ppuLeiosHeaderDiffusionPeriodLengthL = ppuLensHKD . hkdLeiosHeaderDiffusionPeriodLengthL @_ @StrictMaybe
+ppuLeiosHeaderPeriodLengthL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds)
+ppuLeiosHeaderPeriodLengthL = ppuLensHKD . hkdLeiosHeaderPeriodLengthL @_ @StrictMaybe
 
 ppuLeiosVotingPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe SlotInterval)
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds)
 ppuLeiosVotingPeriodLengthL = ppuLensHKD . hkdLeiosVotingPeriodLengthL @_ @StrictMaybe
 
-ppuLeiosAdditionalDiffusionPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe SlotInterval)
-ppuLeiosAdditionalDiffusionPeriodLengthL = ppuLensHKD . hkdLeiosAdditionalDiffusionPeriodLengthL @_ @StrictMaybe
+ppuLeiosDiffusionPeriodLengthL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds)
+ppuLeiosDiffusionPeriodLengthL = ppuLensHKD . hkdLeiosDiffusionPeriodLengthL @_ @StrictMaybe
 
-ppuLeiosCommitteeStakeCoverageL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
-ppuLeiosCommitteeStakeCoverageL = ppuLensHKD . hkdLeiosCommitteeStakeCoverageL @_ @StrictMaybe
+ppuLeiosCommitteeSizeL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
+ppuLeiosCommitteeSizeL = ppuLensHKD . hkdLeiosCommitteeSizeL @_ @StrictMaybe
 
 ppuLeiosQuorumStakeThresholdL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
 ppuLeiosQuorumStakeThresholdL = ppuLensHKD . hkdLeiosQuorumStakeThresholdL @_ @StrictMaybe
 
-ppuMaxEndorserBlockHeaderSizeL ::
+ppuMaxEndorserBlockSizeL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
-ppuMaxEndorserBlockHeaderSizeL = ppuLensHKD . hkdMaxEndorserBlockHeaderSizeL @_ @StrictMaybe
+ppuMaxEndorserBlockSizeL = ppuLensHKD . hkdMaxEndorserBlockSizeL @_ @StrictMaybe
 
-ppuMaxEndorserBlockBodySizeL ::
+ppuMaxEndorserBlockTxsSizeL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
-ppuMaxEndorserBlockBodySizeL = ppuLensHKD . hkdMaxEndorserBlockBodySizeL @_ @StrictMaybe
+ppuMaxEndorserBlockTxsSizeL = ppuLensHKD . hkdMaxEndorserBlockTxsSizeL @_ @StrictMaybe
 
 ppuMaxEndorserBlockExUnitsL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe OrdExUnits)

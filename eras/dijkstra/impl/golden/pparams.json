@@ -64,13 +64,13 @@
     "dRepActivity":0,
     "minFeeRefScriptCostPerByte":23896.4809186040265,
     "minPoolMargin":0,
-    "leiosHeaderDiffusionPeriodLength":0,
+    "leiosHeaderPeriodLength":0,
     "leiosVotingPeriodLength":0,
-    "leiosAdditionalDiffusionPeriodLength":0,
-    "leiosCommitteeStakeCoverage":0,
+    "leiosDiffusionPeriodLength":0,
+    "leiosCommitteeSize":0,
     "leiosQuorumStakeThreshold":0,
-    "maxEndorserBlockHeaderSize":0,
-    "maxEndorserBlockBodySize":0,
+    "maxEndorserBlockSize":0,
+    "maxEndorserBlockTxsSize":0,
     "maxEndorserBlockExUnits":{
        "memory":0,
        "steps":0
