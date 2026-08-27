@@ -40,7 +40,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
@@ -71,8 +71,7 @@ spec = describe "UTXO" $ do
             -- just the pool deposits are in `produced` because the transaction is not fixed up
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
 
     it "counts distinct pool deposits in top and sub separately" $ do
       let genTx = do
@@ -82,8 +81,7 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [poolB, poolA, poolB] [[poolA, poolA, poolB], [poolA, poolB]]
             expectProduced tx $ inject ((2 :: Int) <×> (pp ^. ppPoolDepositL))
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
 
     it "includes sub-tx cert deposits when top has no certs" $ do
       pp <- getsPParams id
@@ -92,8 +90,7 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [] [[poolKh]]
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
 
     it "does not count re-registrations of an already-registered pool across the batch" $ do
       let genTx = do
@@ -102,8 +99,7 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh]]
             expectProduced tx mempty
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
 
     it "dedupes across multiple subtransactions registering the same fresh pool" $ do
       pp <- getsPParams id
@@ -112,8 +108,25 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [] [[poolKh], [poolKh]]
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
+
+    it "top re-registers a pre-existing pool" $ do
+      let genTx = do
+            poolKh <- freshKeyHash
+            registerPool poolKh -- pre-registered
+            tx <- registerPoolTxWithSubTxs [poolKh] [] -- top only, no subs
+            expectProduced tx mempty
+            pure tx
+      submitInAllModes genTx
+
+    it "sub re-registers a pre-existing pool" $ do
+      let genTx = do
+            poolKh <- freshKeyHash
+            registerPool poolKh -- pre-registered
+            tx <- registerPoolTxWithSubTxs [] [[poolKh]] -- sub only, no top
+            expectProduced tx mempty
+            pure tx
+      submitInAllModes genTx
 
     it "sums outputs, fee, treasury donations and deposits across the batch" $ do
       pp <- getsPParams id
@@ -142,7 +155,7 @@ spec = describe "UTXO" $ do
             topTreasury <- arbitrary
             subTreasury <- arbitrary
             -- we are setting the fee manually in order to verify the `produced` value before the fixup.
-            topFee <- (Coin 1_000_000 <>) <$> arbitrary
+            topFee <- (Coin 3_000_000 <>) <$> arbitrary
 
             let subTx :: Tx SubTx era
                 subTx =
@@ -182,8 +195,7 @@ spec = describe "UTXO" $ do
               (poolDeposit <> dRepDeposit)
             pure topTx
 
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
 
     disableInConformanceIt "sums assets burned by the top and the sub transaction" $ do
       let genTx = do
@@ -206,7 +218,7 @@ spec = describe "UTXO" $ do
                          ]
             topOut <- freshTxOut
             subOut <- freshTxOut
-            topFee <- (Coin 1_000_000 <>) <$> arbitrary
+            topFee <- (Coin 3_000_000 <>) <$> arbitrary
             let subTx :: Tx SubTx era
                 subTx =
                   mkBasicTx $
@@ -229,8 +241,7 @@ spec = describe "UTXO" $ do
                     (tokens (topBurnAmount + subBurnAmount))
             expectProduced topTx expected
             pure topTx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitInAllModes genTx
 
   describe "Value preservation" $ do
     let mkSubTx :: BatchAmounts -> ImpTestM era (Tx SubTx era)
@@ -269,6 +280,14 @@ spec = describe "UTXO" $ do
               & bodyTxL . inputsTxBodyL <>~ Set.singleton scriptTxIn
               & bodyTxL . feeTxBodyL <>~ baScriptTxIn
 
+    let mkTopTxLegacyModePhase2Invalid :: BatchAmounts -> Tx TopTx era -> ImpTestM era (Tx TopTx era)
+        mkTopTxLegacyModePhase2Invalid BatchAmounts {..} tx = do
+          scriptTxIn <- produceScriptAt (hashPlutusScript $ alwaysFailsWithDatum SPlutusV3) baScriptTxIn
+          pure $
+            tx
+              & bodyTxL . inputsTxBodyL <>~ Set.singleton scriptTxIn
+              & bodyTxL . feeTxBodyL <>~ baScriptTxIn
+
     it "tx balanced across the batch and at the top level - normal mode" $ do
       amounts <- genFullyBalancedAmounts
       topTx <- mkTopTx amounts
@@ -279,6 +298,11 @@ spec = describe "UTXO" $ do
       topTx <- mkTopTx amounts
       topTxLegacy <- mkTopTxLegacyMode amounts topTx
       withFixup noBalanceFixup $ submitTx_ topTxLegacy
+
+    it "tx balanced across the batch and at the top level - legacy mode, phase2 invalid" $ do
+      amounts <- genFullyBalancedAmounts
+      topTxInvalid <- mkTopTxLegacyModePhase2Invalid amounts =<< mkTopTx amounts
+      withFixup noBalanceFixup $ submitPhase2Invalid_ topTxInvalid
 
     it "tx balanced across the batch and unbalanced at the top level - normal mode" $ do
       amounts <- genBatchOnlyBalancedAmounts
@@ -388,6 +412,12 @@ spec = describe "UTXO" $ do
         balanced <- balanceSubTransactions topTx
         withFixup noBalanceFixup $ submitTx_ balanced
   where
+    submitInAllModes :: HasCallStack => ImpTestM era (Tx TopTx era) -> ImpTestM era ()
+    submitInAllModes genTx = do
+      submitTx_ =<< genTx
+      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitPhase2Invalid_ =<< switchTxToPhase2InvalidLegacyMode =<< genTx
+    -- TODO add switchTxToFailing, after Plutus V4 support is complete
     registerPoolTxWithSubTxs ::
       [KeyHash StakePool] -> -- top's pool certs
       [[KeyHash StakePool]] -> -- one sub-tx per inner list, with one pool cert per key

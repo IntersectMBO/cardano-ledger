@@ -97,6 +97,7 @@
 
 ### `testlib`
 
+* Add `switchTxToPhase2InvalidLegacyMode`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
 * Add `submitFailingSubTx`
 * Preserve explicitly supplied redeemers when fixing up subtransactions.
