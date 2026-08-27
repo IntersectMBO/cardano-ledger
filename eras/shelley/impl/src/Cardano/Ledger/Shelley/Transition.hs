@@ -658,7 +658,8 @@ registerInitialFunds hasFS tc newEpochState = do
   (newUtxoEntries, totalCoins) <-
     foldInjectionData hasFS source addInitialFund (Map.empty, mempty)
 
-  pure $ applyFunds newUtxoEntries totalCoins
+  -- Forced: left lazy, this thunk retains both inputs of `mergeUtxoNoOverlap`.
+  pure $! applyFunds newUtxoEntries totalCoins
   where
     epochState = nesEs newEpochState
     accountState = esChainAccountState epochState
