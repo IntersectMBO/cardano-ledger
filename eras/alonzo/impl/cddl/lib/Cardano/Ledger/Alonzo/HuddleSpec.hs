@@ -316,6 +316,9 @@ instance HuddleRule "block" AlonzoEra where
           , "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" p)] //- "new"
           ]
 
+instance HuddleRule "vrf_cert" AlonzoEra where
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+
 instance HuddleRule "header" AlonzoEra where
   huddleRuleNamed pname p =
     pname

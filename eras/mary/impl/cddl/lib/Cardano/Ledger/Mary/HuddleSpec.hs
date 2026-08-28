@@ -79,6 +79,9 @@ instance HuddleRule "block" MaryEra where
 instance HuddleRule "transaction" MaryEra where
   huddleRuleNamed = transactionRule
 
+instance HuddleRule "vrf_cert" MaryEra where
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+
 instance HuddleRule "header" MaryEra where
   huddleRuleNamed = headerRule
 

@@ -42,6 +42,10 @@
 
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
 
+### `cddl`
+
+* Remove `HuddleRule "vrf_cert"` instance
+
 ## 1.21.0.0
 
 * Add `Ord` constraint to `Val` class
