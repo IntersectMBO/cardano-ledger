@@ -15,6 +15,11 @@
 * Add `DecCBOR` instance for `Block`
 * Add `registerPoolWithParams`, which registers a stake pool with adjusted parameters
 
+## 1.19.0.1
+
+* Force the initial-funds injection result in `Cardano.Ledger.Shelley.Transition`
+  to prevent holding onto the thunk for the lifetime of the process.
+
 ## 1.19.0.0
 
 * Add `Ord` instances for `ShelleyBbodyPredFailure`, `ShelleyDelegPredFailure`,
