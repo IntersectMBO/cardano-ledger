@@ -505,7 +505,6 @@ exampleStakePoolParams =
             { pmUrl = fromJust $ textToUrl 64 "consensus.pool"
             , pmHash = byteArrayFromShortByteString "{}"
             }
-    , sppBlsKey = SNothing
     }
 
 examplePayKey :: KeyPair Payment

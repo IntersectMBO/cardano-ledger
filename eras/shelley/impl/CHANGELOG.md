@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Change `NEWEPOCH` to expire Leios voting keys older than `maxKeyAgeEpochs` from the pool
+  distribution, judged against the epoch the distribution becomes active for (CIP-0164)
+
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
 * Add `EncCBOR`, `ToCBOR` for `Block`

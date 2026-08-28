@@ -14,7 +14,7 @@ module Cardano.Ledger.Dijkstra.Rules.Cert (
   CERT,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Dijkstra.Core
@@ -24,8 +24,9 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxCert
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
+import qualified Data.Map.Strict as Map
 import Data.Void (absurd)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 
 type instance EraRuleFailure "CERT" DijkstraEra = Conway.ConwayCertPredFailure DijkstraEra
 
@@ -55,6 +56,7 @@ instance
   , Environment (EraRule "GOVCERT" era) ~ Conway.ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Signal (EraRule "POOL" era) ~ PoolCert
+  , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Embed (EraRule "DELEG" era) (CERT era)
   , Embed (EraRule "POOL" era) (CERT era)
@@ -83,6 +85,7 @@ certTransition ::
   , Environment (EraRule "GOVCERT" era) ~ Conway.ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Signal (EraRule "POOL" era) ~ PoolCert
+  , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Embed (EraRule "DELEG" era) (CERT era)
   , Embed (EraRule "POOL" era) (CERT era)
@@ -107,6 +110,13 @@ certTransition = do
     DijkstraTxCertGov govCert -> do
       trans @(EraRule "GOVCERT" era) $
         TRC (Conway.ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)
+    DijkstraTxCertRegBlsKey poolId blsKey -> do
+      -- A voting key belongs to a registered pool, and is honoured from the epoch this
+      -- certificate is accepted in. Registering again renews it (CIP-0164).
+      Map.member poolId pools
+        ?! Conway.PoolFailure (Shelley.StakePoolNotRegisteredOnKeyPOOL poolId)
+      let registerKey = spsBlsKeyL .~ SJust (BlsKeyState blsKey currentEpoch)
+      pure $ certState & certPStateL . psStakePoolsL %~ Map.adjust registerKey poolId
 
 instance
   ( STS (GOVCERT era)

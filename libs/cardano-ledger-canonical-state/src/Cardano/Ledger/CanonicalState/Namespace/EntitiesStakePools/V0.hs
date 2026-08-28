@@ -45,7 +45,7 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State (
-  BlsKey,
+
   BlsKeyState,
   PoolMetadata,
   StakePoolParams (..),
@@ -231,7 +231,6 @@ fromCanonicalStakePoolState (CanonicalStakePoolState {..}) =
 data CanonicalStakePoolParams = CanonicalStakePoolParams
   { csppId :: !(KeyHash StakePool)
   , csppVrf :: !(VRFVerKeyHash StakePoolVRF)
-  , csppBlsKey :: !(StrictMaybe BlsKey)
   , csppPledge :: !CanonicalCoin
   , csppCost :: !CanonicalCoin
   , csppMargin :: !UnitInterval
@@ -248,7 +247,6 @@ instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalStakePool
       [ mkEncodablePair v ("account_address" :: Text) csppAccountAddress
       , mkEncodablePair v ("cost" :: Text) csppCost
       , mkEncodablePair v ("id" :: Text) csppId
-      , mkEncodablePair v ("bls_key" :: Text) csppBlsKey
       , mkEncodablePair v ("margin" :: Text) csppMargin
       , mkEncodablePair v ("metadata" :: Text) csppMetadata
       , mkEncodablePair v ("owners" :: Text) csppOwners
@@ -267,7 +265,6 @@ instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePo
     Versioned csppOwners <- decodeNamespacedField @v "owners"
     Versioned csppPledge <- decodeNamespacedField @v "pledge"
     Versioned csppRelays <- decodeNamespacedField @v "relays"
-    Versioned csppBlsKey <- decodeNamespacedField @v "bls_key"
     Versioned csppMetadata <- decodeNamespacedField @v "metadata"
     Versioned csppAccountAddress <- decodeNamespacedField @v "account_address"
     pure $ Versioned CanonicalStakePoolParams {..}
@@ -277,7 +274,6 @@ mkCanonicalStakePoolParams (StakePoolParams {..}) =
   CanonicalStakePoolParams
     { csppId = sppId
     , csppVrf = sppVrf
-    , csppBlsKey = sppBlsKey
     , csppCost = CanonicalCoin (toCompactPartial sppCost)
     , csppMargin = sppMargin
     , csppPledge = CanonicalCoin (toCompactPartial sppPledge)
@@ -292,7 +288,6 @@ fromCanonicalStakePoolParams (CanonicalStakePoolParams {..}) =
   StakePoolParams
     { sppId = csppId
     , sppVrf = csppVrf
-    , sppBlsKey = csppBlsKey
     , sppCost = fromCompact $ unCoin csppCost
     , sppMargin = csppMargin
     , sppPledge = fromCompact $ unCoin csppPledge

@@ -2,6 +2,16 @@
 
 ## 1.22.0.0
 
+* Add `BlsKeyState`, a registered Leios voting key together with the epoch it was
+  registered in, along with `bksKeyL` and `bksRegisteredInL`
+* Change `spsBlsKey` in `StakePoolState` and `spssBlsKey` in `StakePoolSnapShot` to hold a
+  `BlsKeyState`
+* Remove `sppBlsKey` from `StakePoolParams`: voting keys are registered with a dedicated
+  certificate (CIP-0164), so pool parameters no longer carry one and their encoding is a
+  static nine element list again
+* Add `expireBlsKeys`, which drops voting keys older than `maxKeyAgeEpochs` from a
+  `PoolDistr` as of the epoch it becomes active for
+
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`

@@ -33,6 +33,9 @@ module Cardano.Ledger.State.StakePool (
   -- * Lenses
   spsVrfL,
   spsBlsKeyL,
+  BlsKeyState (..),
+  bksKeyL,
+  bksRegisteredInL,
   spsPledgeL,
   spsCostL,
   spsMarginL,
@@ -45,9 +48,6 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Conversions
   mkStakePoolState,
-  BlsKeyState (..),
-  bksKeyL,
-  bksRegisteredInL,
   stakePoolStateToStakePoolParams,
 
   -- * Pool Parameters and Related Types
@@ -59,7 +59,6 @@ module Cardano.Ledger.State.StakePool (
     PoolParams,
     ppId,
     ppVrf,
-    ppBlsKey,
     ppPledge,
     ppCost,
     ppMargin,
@@ -104,9 +103,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Encoding,
   Interns,
-  TokenType (TypeListLen, TypeListLen64, TypeListLenIndef, TypeNull),
   decodeFixedSized,
-  decodeNull,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeRecordNamedT,
@@ -114,12 +111,8 @@ import Cardano.Ledger.Binary (
   encodeFixedSized,
   encodeListLen,
   encodeNullStrictMaybe,
-  ifDecoderVersionAtLeast,
-  natVersion,
-  peekTokenType,
   rawDecodeFixedSized,
   rawEncodeFixedSized,
-  withCurrentEncodingVersion,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -283,15 +276,13 @@ instance Default StakePoolState where
 
 -- | Convert 'StakePoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
--- or update parameters. The epoch is the one the parameters take effect in:
--- a voting key carried by the parameters is stamped with it, so registering
--- again renews the key.
+-- or update parameters.
 mkStakePoolState ::
-  EpochNo -> CompactForm Coin -> Set (Credential Staking) -> StakePoolParams -> StakePoolState
-mkStakePoolState epochNo deposit delegators spp =
+  CompactForm Coin -> Set (Credential Staking) -> StakePoolParams -> StakePoolState
+mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
-    , spsBlsKey = (`BlsKeyState` epochNo) <$> sppBlsKey spp
+    , spsBlsKey = SNothing
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
@@ -311,7 +302,7 @@ stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
-    , sppBlsKey = bksKey <$> spsBlsKey sps
+
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
@@ -459,7 +450,6 @@ instance DecCBOR StakePoolRelay where
 data StakePoolParams = StakePoolParams
   { sppId :: !(KeyHash StakePool)
   , sppVrf :: !(VRFVerKeyHash StakePoolVRF)
-  , sppBlsKey :: !(StrictMaybe BlsKey)
   , sppPledge :: !Coin
   , sppCost :: !Coin
   , sppMargin :: !UnitInterval
@@ -524,9 +514,9 @@ instance DecCBOR BlsKey where
     blsPossessionProof <- decodeFixedSized
     pure BlsKey {blsPubKey, blsPossessionProof}
 
--- | A registered voting key, together with the epoch its registration took
--- effect in. The key stops being honoured @maxKeyAgeEpochs@ epochs later, at
--- which point the pool's committee seat is keyless until it registers again.
+-- | A registered voting key, together with the epoch its registration certificate was
+-- accepted in. The key stops being honoured @maxKeyAgeEpochs@ epochs later, at which
+-- point the pool's committee seat is keyless until it registers again.
 data BlsKeyState = BlsKeyState
   { bksKey :: !BlsKey
   , bksRegisteredIn :: !EpochNo
@@ -563,7 +553,7 @@ sppMetadataL :: Lens' StakePoolParams (StrictMaybe PoolMetadata)
 sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
 
 instance Default StakePoolParams where
-  def = StakePoolParams def def def (Coin 0) (Coin 0) def def def def def
+  def = StakePoolParams def def (Coin 0) (Coin 0) def def def def def
 
 instance NoThunks StakePoolParams
 
@@ -574,7 +564,6 @@ instance ToJSON StakePoolParams where
     Aeson.object
       [ "poolId" .= sppId spp
       , "vrf" .= sppVrf spp
-      , "blsKey" .= sppBlsKey spp
       , "pledge" .= sppPledge spp
       , "cost" .= sppCost spp
       , "margin" .= sppMargin spp
@@ -592,7 +581,6 @@ instance FromJSON StakePoolParams where
       StakePoolParams
         <$> ((obj .: "poolId") <|> (obj .: "publicKey"))
         <*> obj .: "vrf"
-        <*> obj .:? "blsKey" .!= SNothing
         <*> obj .: "pledge"
         <*> obj .: "cost"
         <*> obj .: "margin"
@@ -606,7 +594,6 @@ type PoolParams = StakePoolParams
 pattern PoolParams ::
   KeyHash StakePool ->
   VRFVerKeyHash StakePoolVRF ->
-  StrictMaybe BlsKey ->
   Coin ->
   Coin ->
   UnitInterval ->
@@ -618,7 +605,6 @@ pattern PoolParams ::
 pattern PoolParams
   { ppId
   , ppVrf
-  , ppBlsKey
   , ppPledge
   , ppCost
   , ppMargin
@@ -630,7 +616,6 @@ pattern PoolParams
   StakePoolParams
     ppId
     ppVrf
-    ppBlsKey
     ppPledge
     ppCost
     ppMargin
@@ -646,7 +631,6 @@ pattern PoolParams
 {-# DEPRECATED
   ppId
   , ppVrf
-  , ppBlsKey
   , ppPledge
   , ppCost
   , ppMargin
@@ -703,24 +687,16 @@ withStakePoolParamsFlatEncoding ::
   (Int -> Encoding -> Encoding) ->
   Encoding
 withStakePoolParamsFlatEncoding poolParams f =
-  withCurrentEncodingVersion $ \v -> do
-    let (extraLen, blsKeyEncoding)
-          | v >= natVersion @12 =
-              case sppBlsKey poolParams of
-                SJust lk -> (1, encCBOR lk)
-                SNothing -> (0, mempty)
-          | otherwise = (0, mempty)
-    f (9 + extraLen) $
-      encCBOR (sppId poolParams)
-        <> encCBOR (sppVrf poolParams)
-        <> blsKeyEncoding
-        <> encCBOR (sppPledge poolParams)
-        <> encCBOR (sppCost poolParams)
-        <> encCBOR (sppMargin poolParams)
-        <> encCBOR (sppAccountAddress poolParams)
-        <> encCBOR (sppOwners poolParams)
-        <> encCBOR (sppRelays poolParams)
-        <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
+  f 9 $
+    encCBOR (sppId poolParams)
+      <> encCBOR (sppVrf poolParams)
+      <> encCBOR (sppPledge poolParams)
+      <> encCBOR (sppCost poolParams)
+      <> encCBOR (sppMargin poolParams)
+      <> encCBOR (sppAccountAddress poolParams)
+      <> encCBOR (sppOwners poolParams)
+      <> encCBOR (sppRelays poolParams)
+      <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
 
 instance DecCBOR StakePoolParams where
   decCBOR = do
@@ -730,11 +706,6 @@ decodeStakePoolParamsFlat :: Decoder s (Int, StakePoolParams)
 decodeStakePoolParamsFlat = do
   sppId <- decCBOR
   sppVrf <- decCBOR
-  (extraBlsKeyLen, sppBlsKey) <-
-    ifDecoderVersionAtLeast
-      (natVersion @12)
-      decodeBlsKeyBackwardsCompatible
-      (pure (0, SNothing))
   sppPledge <- decCBOR
   sppCost <- decCBOR
   sppMargin <- decCBOR
@@ -742,14 +713,4 @@ decodeStakePoolParamsFlat = do
   sppOwners <- decCBOR
   sppRelays <- decCBOR
   sppMetadata <- decodeNullStrictMaybe decCBOR
-  pure (9 + extraBlsKeyLen, StakePoolParams {..})
-  where
-    decodeBlsKeyBackwardsCompatible = do
-      peekTokenType >>= \case
-        TypeListLen -> (\lk -> (1, SJust lk)) <$> decCBOR
-        TypeListLen64 -> (\lk -> (1, SJust lk)) <$> decCBOR
-        TypeListLenIndef -> (\lk -> (1, SJust lk)) <$> decCBOR
-        TypeNull -> do
-          decodeNull
-          pure (1, SNothing)
-        _ -> pure (0, SNothing)
+  pure (9, StakePoolParams {..})

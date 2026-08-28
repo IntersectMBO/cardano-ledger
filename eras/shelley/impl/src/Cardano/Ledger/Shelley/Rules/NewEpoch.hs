@@ -27,6 +27,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (SJust, SNothing),
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
+import Cardano.Ledger.Core (ppMaxKeyAgeEpochsG)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Rewards (Reward)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
