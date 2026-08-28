@@ -58,7 +58,7 @@ import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
-import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoEnv (..), DijkstraUtxoPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Keys (VKey)
@@ -227,13 +227,13 @@ dijkstraUtxowTransition ::
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (UTXOW era)
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 dijkstraUtxowTransition = do
-  TRC (DijkstraUtxoEnv slot pp certState originalUtxo, u, stAnnTx) <- judgmentContext
+  TRC (UtxoEnv slot pp pState originalCertState originalUtxo, u, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       scriptsProvided = scriptsProvidedStAnnTx stAnnTx
 
@@ -290,7 +290,7 @@ dijkstraUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {- witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
+  runTest $ Shelley.validateNeededWitnesses witsKeyHashes originalCertState originalUtxo txBody
 
   -- check metadata hash
   {- ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad) -}
@@ -318,7 +318,7 @@ dijkstraUtxowTransition = do
 
   -- Pass through to UTXO sub-rule, carrying the original UTxO
   trans @(EraRule "UTXO" era) $
-    TRC (DijkstraUtxoEnv slot pp certState originalUtxo, u, stAnnTx)
+    TRC (UtxoEnv slot pp pState originalCertState originalUtxo, u, stAnnTx)
 
 instance
   forall era.
@@ -335,7 +335,7 @@ instance
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (UTXOW era)
-  , Environment (EraRule "UTXO" era) ~ DijkstraUtxoEnv era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ StAnnTx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
@@ -345,7 +345,7 @@ instance
   where
   type State (UTXOW era) = UTxOState era
   type Signal (UTXOW era) = StAnnTx TopTx era
-  type Environment (UTXOW era) = DijkstraUtxoEnv era
+  type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = DijkstraUtxowPredFailure era
   type Event (UTXOW era) = Alonzo.AlonzoUtxowEvent era

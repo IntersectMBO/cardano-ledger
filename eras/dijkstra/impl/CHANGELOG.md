@@ -2,6 +2,14 @@
 
 ## 0.4.0.0
 
+* Add `localProducedValue` helper in `UTxO` module
+* Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
+* Rename:
+  - `DijkstraUtxoEnv` -> `UtxoEnv` and add `uePState` field
+  - `dueSlot` -> `ueSlot`
+  - `duePParams` -> `uePParams`
+  - `dueCertState` -> `ueOriginalCertState`
+  - `dueOriginalUtxo` -> `ueOriginalUtxo`
 * Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
 * Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
 * Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
@@ -37,6 +45,9 @@
 
 ### testlib
 
+* Add `switchTxToLegacyMode` helper
+* Add `balanceSubTransactions`
+* Expose `fixupSubTransactions`
 * Add `Inject (DijkstraContextError era) (ContextError era)` as a superclass of `DijkstraEraTest`
 * Add `DecCBOR` instance for `Block`
 * Add `DijkstraEraPParams` as a superclass of `DijkstraEraTest`
