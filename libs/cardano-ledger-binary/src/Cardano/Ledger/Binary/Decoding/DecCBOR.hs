@@ -615,7 +615,16 @@ instance DecCBOR (CertVRF Praos.PraosVRF) where
   {-# INLINE decCBOR #-}
 
 instance Typeable v => DecCBOR (OutputVRF v) where
-  decCBOR = OutputVRF <$> decCBOR
+  decCBOR = do
+    bs <- decCBOR
+    whenDecoderVersionAtLeast (natVersion @12) $ do
+      let
+        len = BS.length bs
+        vrfOutputLen = sizeOutputVRF (Proxy :: Proxy v)
+      when (len /= vrfOutputLen) $
+        fail $
+          "OutputVRF is expected to be " <> show vrfOutputLen <> " bytes, but received " <> show len
+    pure $ OutputVRF bs
   {-# INLINE decCBOR #-}
 
 instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
