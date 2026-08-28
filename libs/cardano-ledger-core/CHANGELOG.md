@@ -4,6 +4,9 @@
 
 * Bump `plutus-ledger-api` lower bound to `>=1.68`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
+* Remove `sppBlsKey` from `StakePoolParams`: voting keys are registered with a dedicated
+  certificate (CIP-0164), so pool parameters no longer carry one and their encoding is a
+  static nine element list again
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`

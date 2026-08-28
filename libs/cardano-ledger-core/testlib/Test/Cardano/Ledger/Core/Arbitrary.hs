@@ -471,7 +471,6 @@ instance Arbitrary (StakePoolParams era) where
     StakePoolParams
       <$> arbitrary
       <*> arbitrary
-      <*> pure SNothing -- BlsKey is only supported from version 12 (Dijkstra)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -484,7 +483,7 @@ instance Arbitrary StakePoolState where
   arbitrary =
     StakePoolState
       <$> arbitrary
-      <*> pure SNothing -- BlsKey is only supported from version 12 (Dijkstra)
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -781,7 +780,7 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
     snapShotFromStakePoolParams stakePoolParams =
       let delegations = Map.findWithDefault mempty (sppId stakePoolParams) delegatorsPerStakePool
        in mkStakePoolSnapShot ssActiveStake ssTotalActiveStake $
-            mkStakePoolState (BaseTypes.EpochNo 0) mempty delegations stakePoolParams
+            mkStakePoolState mempty delegations stakePoolParams
     delegatorsPerStakePool =
       VMap.foldlWithKey
         (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)

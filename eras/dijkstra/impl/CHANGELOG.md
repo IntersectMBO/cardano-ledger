@@ -33,6 +33,13 @@
   - `duePParams` -> `uePParams`
   - `dueCertState` -> `ueOriginalCertState`
   - `dueOriginalUtxo` -> `ueOriginalUtxo`
+* Add a dedicated certificate for registering a stake pool's Leios voting key (CIP-0164):
+  - Add `DijkstraTxCertRegBlsKey` to `DijkstraTxCert`, encoded with certificate tag 19
+  - Add `DijkstraEraTxCert` with `mkRegBlsKeyTxCert`/`getRegBlsKeyTxCert` and the
+    `RegBlsKeyTxCert` pattern
+  - Handle it in `CERT` and `SUBCERT`: the pool must be registered, and the key is stamped
+    with the epoch the certificate is accepted in, so registering again renews it
+
 * Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
 * Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
 * Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
