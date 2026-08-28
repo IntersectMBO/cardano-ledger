@@ -642,6 +642,7 @@ instance ConwayEraPParams DijkstraEra where
       , isValid ((/= CompactCoin 0) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
       , isValid (/= 0) ppuNOptL
+      , isValid (/= EpochInterval 0) ppuEMaxL
       ]
     where
       isValid ::
