@@ -155,11 +155,13 @@ poolReapTransition = do
               Map.dropMissing
               Map.preserveMissing
               ( Map.zipWithMatched $ \_ futureParams currentState ->
+                  -- Re-registration updates the parameters only: the voting key
+                  -- is registered through its own certificate and survives.
                   mkStakePoolState
-                    e
                     (currentState ^. spsDepositL)
                     (currentState ^. spsDelegatorsL)
                     futureParams
+                    & spsBlsKeyL .~ (currentState ^. spsBlsKeyL)
               )
               (ps0 ^. psFutureStakePoolParamsL)
               (ps0 ^. psStakePoolsL)

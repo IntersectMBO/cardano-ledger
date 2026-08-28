@@ -40,3 +40,7 @@ instance SpecTranslate DijkstraEra (DijkstraTxCert DijkstraEra) where
   toSpecRep (DijkstraTxCertPool p) = toSpecRep p
   toSpecRep (DijkstraTxCertGov c) = toSpecRep c
   toSpecRep (DijkstraTxCertDeleg x) = toSpecRep x
+  -- The pinned formal spec has no voting-key registration certificate yet; conformance for
+  -- it unlocks when the specification's Leios branch lands (CIP-0164).
+  toSpecRep DijkstraTxCertRegBlsKey {} =
+    error "RegBlsKey certificates are not yet represented in the formal specification"

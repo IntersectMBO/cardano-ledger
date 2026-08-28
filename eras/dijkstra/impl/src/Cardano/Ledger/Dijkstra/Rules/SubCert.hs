@@ -28,6 +28,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubCert (
 
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
+  StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -48,11 +49,12 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
+import qualified Data.Map.Strict as Map
 import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -157,6 +159,7 @@ instance
   , Embed (EraRule "SUBDELEG" era) (SUBCERT era)
   , Embed (EraRule "SUBPOOL" era) (SUBCERT era)
   , Embed (EraRule "SUBGOVCERT" era) (SUBCERT era)
+  , PredicateFailure (EraRule "SUBPOOL" era) ~ DijkstraSubPoolPredFailure era
   , TxCert era ~ DijkstraTxCert era
   ) =>
   STS (SUBCERT era)
@@ -199,6 +202,13 @@ dijkstraSubCertTransition = do
     DijkstraTxCertGov govCert -> do
       trans @(EraRule "SUBGOVCERT" era) $
         TRC (Conway.ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)
+    DijkstraTxCertRegBlsKey poolId blsKey -> do
+      -- Same rule as at the top level: a voting key belongs to a registered pool and is
+      -- honoured from the epoch this certificate is accepted in (CIP-0164).
+      Map.member poolId pools
+        ?! SubPoolFailure (DijkstraSubPoolPredFailure (Shelley.StakePoolNotRegisteredOnKeyPOOL poolId))
+      let registerKey = spsBlsKeyL .~ SJust (BlsKeyState blsKey currentEpoch)
+      pure $ certState & certPStateL . psStakePoolsL %~ Map.adjust registerKey poolId
 
 instance
   ( STS (SUBDELEG era)

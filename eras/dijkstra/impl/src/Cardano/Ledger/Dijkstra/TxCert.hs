@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,12 +11,15 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.TxCert (
   DijkstraTxCertUpgradeError,
   DijkstraTxCert (..),
   DijkstraDelegCert (..),
+  DijkstraEraTxCert (..),
+  pattern RegBlsKeyTxCert,
   dijkstraToConwayDelegCert,
 ) where
 
@@ -25,7 +29,9 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decodeFixedSized,
   decodeRecordSum,
+  encodeFixedSized,
   encodeListLen,
   encodeWord8,
   invalidKey,
@@ -72,12 +78,14 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Credential (Credential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams ()
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   encodePoolCert,
   encodeShelleyDelegCert,
   poolTxCertDecoder,
  )
+import Cardano.Ledger.State (BlsKey (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), KeyValue ((.=)), ToJSON (..), (.:))
@@ -186,6 +194,8 @@ data DijkstraTxCert era
   = DijkstraTxCertDeleg !DijkstraDelegCert
   | DijkstraTxCertPool !(PoolCert era)
   | DijkstraTxCertGov !ConwayGovCert
+  | -- | Register or rotate a stake pool's Leios voting key (CIP-0164).
+    DijkstraTxCertRegBlsKey !(KeyHash StakePool) !BlsKey
   deriving (Show, Generic, Eq, Ord)
 
 data DijkstraTxCertUpgradeError
@@ -202,6 +212,12 @@ instance Era era => ToJSON (DijkstraTxCert era) where
     DijkstraTxCertDeleg delegCert -> toJSON delegCert
     DijkstraTxCertPool poolCert -> toJSON poolCert
     DijkstraTxCertGov govCert -> toJSON govCert
+    DijkstraTxCertRegBlsKey poolId blsKey ->
+      kindObjectValue
+        "RegBlsKey"
+        [ "poolId" .= toJSON poolId
+        , "blsKey" .= toJSON blsKey
+        ]
 
 instance Era era => FromJSON (DijkstraTxCert era) where
   parseJSON = Aeson.withObject "DijkstraTxCert" $ \o -> do
@@ -220,6 +236,8 @@ instance Era era => FromJSON (DijkstraTxCert era) where
                    , "ResignCommitteeColdKey"
                    ] ->
             DijkstraTxCertGov <$> parseJSON (Aeson.Object o)
+        | k == "RegBlsKey" ->
+            DijkstraTxCertRegBlsKey <$> o .: "poolId" <*> o .: "blsKey"
       _ -> fail $ "Unknown DijkstraTxCert kind: " <> show kind
 
 instance
@@ -246,6 +264,11 @@ instance
       | 3 <= t && t < 5 -> poolTxCertDecoder t
       | t == 5 -> fail "Genesis delegation certificates are no longer supported"
       | t == 6 -> fail "MIR certificates are no longer supported"
+      | t == 19 -> do
+          poolId <- decCBOR
+          blsPubKey <- decodeFixedSized
+          blsPossessionProof <- decodeFixedSized
+          pure (4, DijkstraTxCertRegBlsKey poolId BlsKey {blsPubKey, blsPossessionProof})
       | 7 <= t -> conwayTxCertDelegDecoder t
     t -> invalidKey t
 
@@ -257,6 +280,12 @@ instance Era era => EncCBOR (DijkstraTxCert era) where
     DijkstraTxCertDeleg delegCert -> encCBOR delegCert
     DijkstraTxCertPool poolCert -> encodePoolCert poolCert
     DijkstraTxCertGov govCert -> encCBOR govCert
+    DijkstraTxCertRegBlsKey poolId blsKey ->
+      encodeListLen 4
+        <> encodeWord8 19
+        <> encCBOR poolId
+        <> encodeFixedSized (blsPubKey blsKey)
+        <> encodeFixedSized (blsPossessionProof blsKey)
 
 -- | Unlike previous eras, we no longer need to lookup refunds from the ledger state, since all of
 -- the certificates specify the actual refund and ledger rules will validate that they are accurate.
@@ -329,6 +358,7 @@ getScriptWitnessDijkstraTxCert = \case
       DijkstraDelegCert cred _ -> credScriptHash cred
       DijkstraRegDelegCert cred _ _ -> credScriptHash cred
   DijkstraTxCertPool {} -> Nothing
+  DijkstraTxCertRegBlsKey {} -> Nothing
   DijkstraTxCertGov govCert -> govWitness govCert
   where
     govWitness :: ConwayGovCert -> Maybe ScriptHash
@@ -348,7 +378,28 @@ getVKeyWitnessDijkstraTxCert = \case
       DijkstraDelegCert cred _ -> credKeyHashWitness cred
       DijkstraRegDelegCert cred _ _ -> credKeyHashWitness cred
   DijkstraTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
+  DijkstraTxCertRegBlsKey poolId _ -> Just $ asWitness poolId
   DijkstraTxCertGov govCert -> conwayGovCertVKeyWitness govCert
+
+-- | Certificates that are new in the Dijkstra era.
+class ConwayEraTxCert era => DijkstraEraTxCert era where
+  mkRegBlsKeyTxCert :: KeyHash StakePool -> BlsKey -> TxCert era
+  getRegBlsKeyTxCert :: TxCert era -> Maybe (KeyHash StakePool, BlsKey)
+
+-- | Register or rotate the Leios voting key of an already registered stake pool. The
+-- key is honoured for @maxKeyAgeEpochs@ epochs from the epoch this certificate is
+-- accepted in; registering again renews it.
+pattern RegBlsKeyTxCert ::
+  DijkstraEraTxCert era => KeyHash StakePool -> BlsKey -> TxCert era
+pattern RegBlsKeyTxCert poolId blsKey <- (getRegBlsKeyTxCert -> Just (poolId, blsKey))
+  where
+    RegBlsKeyTxCert poolId blsKey = mkRegBlsKeyTxCert poolId blsKey
+
+instance DijkstraEraTxCert DijkstraEra where
+  mkRegBlsKeyTxCert = DijkstraTxCertRegBlsKey
+
+  getRegBlsKeyTxCert (DijkstraTxCertRegBlsKey poolId blsKey) = Just (poolId, blsKey)
+  getRegBlsKeyTxCert _ = Nothing
 
 instance ConwayEraTxCert DijkstraEra where
   mkRegDepositTxCert cred c = DijkstraTxCertDeleg $ DijkstraRegCert cred c
