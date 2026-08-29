@@ -9,7 +9,9 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Pool () where
 
-import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Crypto.Util (bytesToNatural)
+import Cardano.Ledger.BaseTypes (Network, strictMaybeToMaybe)
+import Cardano.Ledger.Binary (rawEncodeFixedSized)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -33,10 +35,25 @@ instance SpecTranslate DijkstraEra (PState DijkstraEra) where
     netId <- askSpecTransM
     withCtxSpecTransM () $
       Agda.MkPState
-        <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams netId) psStakePools)
+        <$> (Agda.MkHSMap <$> traverse (toSpecStakePool netId) (Map.toList psStakePools))
         <*> toSpecRepMap psFutureStakePoolParams
         <*> toSpecRepMap psRetiring
         <*> toSpecRepMap (fromCompact . spsDeposit <$> psStakePools)
+    where
+      toSpecStakePool netId (poolId, sps) =
+        (,)
+          <$> toSpecRep poolId
+          <*> ( Agda.StakePoolState
+                  <$> toSpecRep (stakePoolStateToStakePoolParams netId poolId sps)
+                  <*> traverse toSpecRep (strictMaybeToMaybe (spsBlsKey sps))
+              )
+
+instance SpecTranslate DijkstraEra BlsKeyState where
+  type SpecRep DijkstraEra BlsKeyState = Agda.BlsKeyState
+
+  toSpecRep BlsKeyState {..} =
+    Agda.BlsKeyState (toInteger . bytesToNatural . rawEncodeFixedSized $ blsPubKey bksKey)
+      <$> toSpecRep bksRegisteredIn
 
 instance SpecTranslate DijkstraEra PoolCert where
   type SpecRep DijkstraEra PoolCert = Agda.DCert

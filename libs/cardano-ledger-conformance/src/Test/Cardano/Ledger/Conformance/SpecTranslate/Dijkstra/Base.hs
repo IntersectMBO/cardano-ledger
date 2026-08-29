@@ -317,6 +317,18 @@ instance SpecTranslate DijkstraEra (DijkstraPParams Identity DijkstraEra) where
     ppMonetaryExpansion <- toSpecRep dppRho
     ppTreasuryCut <- toSpecRep dppTau
 
+    ppLeiosMaxEBExUnits <- toSpecRep dppMaxEndorserBlockExUnits
+    ppLeiosQuorumStakeThreshold <- toSpecRep dppLeiosQuorumStakeThreshold
+    let
+      ppLeiosHeaderPeriod = toInteger . unMilliseconds $ unTHKD dppLeiosHeaderPeriodLength
+      ppLeiosVotingPeriod = toInteger . unMilliseconds $ unTHKD dppLeiosVotingPeriodLength
+      ppLeiosDiffusionPeriod = toInteger . unMilliseconds $ unTHKD dppLeiosDiffusionPeriodLength
+      ppLeiosCommitteeSize = toInteger $ unTHKD dppLeiosCommitteeSize
+      ppLeiosMaxEBSize = toInteger $ unTHKD dppMaxEndorserBlockSize
+      ppLeiosMaxEBTxsSize = toInteger $ unTHKD dppMaxEndorserBlockTxsSize
+      ppLeiosMaxRefScriptSizePerEB = toInteger $ unTHKD dppMaxRefScriptSizePerEndorserBlock
+      ppMaxKeyAgeEpochs = toInteger . unEpochInterval $ unTHKD dppMaxKeyAgeEpochs
+
     pure Agda.MkPParams {..}
 
 instance SpecTranslate DijkstraEra ValidityInterval where
@@ -535,6 +547,24 @@ instance SpecTranslate DijkstraEra (DijkstraPParams StrictMaybe DijkstraEra) whe
     ppuMonetaryExpansion <- toSpecRep dppRho
     ppuTreasuryCut <- toSpecRep dppTau
 
+    ppuLeiosMaxEBExUnits <- toSpecRep dppMaxEndorserBlockExUnits
+    ppuLeiosQuorumStakeThreshold <- toSpecRep dppLeiosQuorumStakeThreshold
+    let
+      ppuLeiosHeaderPeriod =
+        fmap (toInteger . unMilliseconds) . strictMaybeToMaybe $ unTHKD dppLeiosHeaderPeriodLength
+      ppuLeiosVotingPeriod =
+        fmap (toInteger . unMilliseconds) . strictMaybeToMaybe $ unTHKD dppLeiosVotingPeriodLength
+      ppuLeiosDiffusionPeriod =
+        fmap (toInteger . unMilliseconds) . strictMaybeToMaybe $
+          unTHKD dppLeiosDiffusionPeriodLength
+      ppuLeiosCommitteeSize = fmap toInteger . strictMaybeToMaybe $ unTHKD dppLeiosCommitteeSize
+      ppuLeiosMaxEBSize = fmap toInteger . strictMaybeToMaybe $ unTHKD dppMaxEndorserBlockSize
+      ppuLeiosMaxEBTxsSize = fmap toInteger . strictMaybeToMaybe $ unTHKD dppMaxEndorserBlockTxsSize
+      ppuLeiosMaxRefScriptSizePerEB =
+        fmap toInteger . strictMaybeToMaybe $ unTHKD dppMaxRefScriptSizePerEndorserBlock
+      ppuMaxKeyAgeEpochs =
+        fmap (toInteger . unEpochInterval) . strictMaybeToMaybe $ unTHKD dppMaxKeyAgeEpochs
+
     pure Agda.MkPParamsUpdate {..}
 
 instance SpecTranslate DijkstraEra (GovAction DijkstraEra) where
@@ -705,6 +735,12 @@ instance SpecNormalize Agda.VDeleg
 instance SpecNormalize Agda.DState
 
 instance SpecNormalize Agda.StakePoolParams
+
+instance SpecNormalize Agda.BlsKeyState
+
+instance SpecNormalize Agda.StakePoolState
+
+instance SpecNormalize Agda.LeiosSeat
 
 instance SpecNormalize Agda.PState
 

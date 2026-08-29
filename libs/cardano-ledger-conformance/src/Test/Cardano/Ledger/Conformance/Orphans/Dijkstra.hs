@@ -77,6 +77,12 @@ instance NFData VDeleg
 
 instance NFData StakePoolParams
 
+instance NFData BlsKeyState
+
+instance NFData LeiosSeat
+
+instance NFData StakePoolState
+
 instance NFData DCert
 
 instance NFData TxBodyTop
@@ -158,6 +164,12 @@ instance ToExpr EnactState
 instance ToExpr VDeleg
 
 instance ToExpr StakePoolParams
+
+instance ToExpr BlsKeyState
+
+instance ToExpr LeiosSeat
+
+instance ToExpr StakePoolState
 
 instance ToExpr DCert
 
