@@ -607,25 +607,27 @@ instance HuddleRule "relay" DijkstraEra where
 instance HuddleRule "pool_metadata" DijkstraEra where
   huddleRuleNamed = poolMetadataRule
 
-instance HuddleRule "bls_key" DijkstraEra where
+instance HuddleRule "bls_pubkey" DijkstraEra where
   huddleRuleNamed pname _p =
-    withCBORGen blsKeyGen $
-      ( pname
-          =.= arr
-            [ "bls_pubkey" ==> VBytes `sized` (96 :: Word64)
-            , "bls_possession_proof" ==> VBytes `sized` (48 :: Word64)
-            ]
-      )
-        //- "BLS key"
+    withCBORGen blsPubKeyGen $
+      (pname =.= VBytes `sized` (96 :: Word64))
+        //- "BLS verification key"
     where
-      blsKeyGen = do
+      -- Generated from a real key: random bytes of the right length are not valid
+      -- BLS12-381 group elements and would fail to decode.
+      blsPubKeyGen = do
         lk <- liftGen Gen.arbitrary
-        pure $
-          SingleTerm $
-            TList
-              [ TBytes (rawEncodeFixedSized $ blsPubKey lk)
-              , TBytes (rawEncodeFixedSized $ blsPossessionProof lk)
-              ]
+        pure $ SingleTerm $ TBytes (rawEncodeFixedSized $ blsPubKey lk)
+
+instance HuddleRule "bls_possession_proof" DijkstraEra where
+  huddleRuleNamed pname _p =
+    withCBORGen blsPoPGen $
+      (pname =.= VBytes `sized` (48 :: Word64))
+        //- "BLS proof of possession"
+    where
+      blsPoPGen = do
+        lk <- liftGen Gen.arbitrary
+        pure $ SingleTerm $ TBytes (rawEncodeFixedSized $ blsPossessionProof lk)
 
 instance HuddleGroup "bls_key_registration_cert" DijkstraEra where
   huddleGroupNamed pname p =
@@ -633,8 +635,8 @@ instance HuddleGroup "bls_key_registration_cert" DijkstraEra where
         =.~ grp
           [ 19
           , a $ huddleRule @"pool_keyhash" p
-          , "bls_pubkey" ==> VBytes `sized` (96 :: Word64)
-          , "bls_possession_proof" ==> VBytes `sized` (48 :: Word64)
+          , a $ huddleRule @"bls_pubkey" p
+          , a $ huddleRule @"bls_possession_proof" p
           ]
     )
       //- "Register or rotate a stake pool's Leios voting key"

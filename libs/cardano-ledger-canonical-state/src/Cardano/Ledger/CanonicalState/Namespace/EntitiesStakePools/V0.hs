@@ -257,7 +257,7 @@ instance (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v CanonicalStakePool
 
 instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePoolParams where
   fromCanonicalCBOR = do
-    decodeMapLenCanonicalOf 10
+    decodeMapLenCanonicalOf 9
     Versioned csppId <- decodeNamespacedField @v "id"
     Versioned csppVrf <- decodeNamespacedField @v "vrf"
     Versioned csppCost <- decodeNamespacedField @v "cost"
