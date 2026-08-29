@@ -3,6 +3,8 @@
 ## 1.20.0.0
 
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
+* Add `BlsKeyPossessionProofInvalidPOOL` to `ShelleyPoolPredFailure`, raised when the proof
+  of possession supplied with a Leios voting key does not verify (CIP-0164)
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
 * Add `EncCBOR`, `ToCBOR` for `Block`
