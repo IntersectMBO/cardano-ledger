@@ -409,7 +409,7 @@ witAccountAddressSpec univ =
 
 owners_ ::
   Term StakePoolParams -> Term (Set (KeyHash Staking))
-owners_ = sel @7
+owners_ = sel @6
 
 witStakePoolParamsSpec ::
   forall era.

@@ -57,7 +57,7 @@ stake_pool_state =
       , "relays" ==> arr [0 <+ a relay]
       , "deposit" ==> coin
       , "metadata" ==> pool_metadata / VNil
-      , "bls_key" ==> bls_key_rule / VNil
+      , "bls_key" ==> bls_key_state_rule / VNil
       , "account_id" ==> account_id
       , "delegators" ==> set credential
       ]
@@ -68,7 +68,6 @@ stake_pool_params =
     =:= mp
       [ "id" ==> pool_keyhash
       , "vrf" ==> vrf_keyhash
-      , "bls_key" ==> bls_key_rule / VNil
       , "cost" ==> coin
       , "margin" ==> unit_interval
       , "owners" ==> set staking_keyhash
@@ -80,3 +79,7 @@ stake_pool_params =
 
 bls_key_rule :: Rule
 bls_key_rule = "bls_key" =:= arr [a VBytes, a VBytes]
+
+-- | A registered voting key together with the epoch it was registered in (CIP-0164).
+bls_key_state_rule :: Rule
+bls_key_state_rule = "bls_key_state" =:= arr [a bls_key_rule, a epoch_no]

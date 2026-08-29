@@ -8,7 +8,6 @@
                 },
                 "network": "Testnet"
             },
-            "blsKey": null,
             "cost": 5,
             "margin": 0.1,
             "metadata": {
@@ -49,7 +48,6 @@
                 },
                 "network": "Testnet"
             },
-            "blsKey": null,
             "cost": 340000000,
             "margin": 0.1,
             "metadata": {
@@ -84,7 +82,6 @@
                 },
                 "network": "Testnet"
             },
-            "blsKey": null,
             "cost": 170000000,
             "margin": 0.1,
             "metadata": null,
