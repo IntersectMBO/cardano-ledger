@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,10 +11,14 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Cert () where
 
+import Cardano.Crypto.Util (bytesToNatural)
 import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Ledger.Binary (rawEncodeFixedSized)
 import Cardano.Ledger.Conway.State (ConwayCertState (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert (..))
+import Cardano.Ledger.Keys (KeyHash (..))
+import Cardano.Ledger.State (BlsKey (..))
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
@@ -40,7 +45,12 @@ instance SpecTranslate DijkstraEra (DijkstraTxCert DijkstraEra) where
   toSpecRep (DijkstraTxCertPool p) = toSpecRep p
   toSpecRep (DijkstraTxCertGov c) = toSpecRep c
   toSpecRep (DijkstraTxCertDeleg x) = toSpecRep x
-  -- The pinned formal spec has no voting-key registration certificate yet; conformance for
-  -- it unlocks when the specification's Leios branch lands (CIP-0164).
-  toSpecRep DijkstraTxCertRegBlsKey {} =
-    error "RegBlsKey certificates are not yet represented in the formal specification"
+  -- The specification abstracts the key and its proof as naturals, so both are carried
+  -- across as the integer their fixed-size encoding denotes.
+  toSpecRep (DijkstraTxCertRegBlsKey (KeyHash poolHash) BlsKey {blsPubKey, blsPossessionProof}) =
+    Agda.Regblskey
+      <$> toSpecRep poolHash
+      <*> pure (bytesToInteger (rawEncodeFixedSized blsPubKey))
+      <*> pure (bytesToInteger (rawEncodeFixedSized blsPossessionProof))
+    where
+      bytesToInteger = toInteger . bytesToNatural

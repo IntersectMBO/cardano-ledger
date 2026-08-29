@@ -733,6 +733,12 @@ instance SpecNormalize Agda.DState
 
 instance SpecNormalize Agda.StakePoolParams
 
+instance SpecNormalize Agda.BlsKeyState
+
+instance SpecNormalize Agda.StakePoolState
+
+instance SpecNormalize Agda.LeiosSeat
+
 instance SpecNormalize Agda.PState
 
 instance SpecNormalize Agda.GState
