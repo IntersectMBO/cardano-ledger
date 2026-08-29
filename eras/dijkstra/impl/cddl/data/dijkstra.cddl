@@ -556,12 +556,13 @@ drep_unregistration_cert = (17, drep_credential, coin)
 drep_update_cert = (18, drep_credential, anchor/ nil)
 
 ; Register or rotate a stake pool's Leios voting key
-bls_key_registration_cert =
-  ( 19
-  , pool_keyhash
-  , bls_pubkey           : bytes .size 96
-  , bls_possession_proof : bytes .size 48
-  )
+bls_key_registration_cert = (19, pool_keyhash, bls_pubkey, bls_possession_proof)
+
+; BLS verification key
+bls_pubkey = bytes .size 96
+
+; BLS proof of possession
+bls_possession_proof = bytes .size 48
 
 withdrawals = {+ reward_account => coin}
 
