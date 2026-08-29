@@ -26,6 +26,8 @@ module Cardano.Ledger.Dijkstra.Rules.SubCert (
   DijkstraSubCertEvent (..),
 ) where
 
+import Cardano.Crypto.DSIGN (DSIGNAggregatable (verifyPossessionProofDSIGN))
+import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
@@ -54,6 +56,7 @@ import Cardano.Ledger.Dijkstra.TxCert
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
+import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import Data.Void (absurd)
 import GHC.Generics (Generic)
@@ -207,6 +210,10 @@ dijkstraSubCertTransition = do
       -- honoured from the epoch this certificate is accepted in (CIP-0164).
       Map.member poolId pools
         ?! SubPoolFailure (DijkstraSubPoolPredFailure (Shelley.StakePoolNotRegisteredOnKeyPOOL poolId))
+      -- A voting key is only usable if its proof of possession verifies against it;
+      -- without that check an aggregate signature could name a signer that never signed.
+      isRight (verifyPossessionProofDSIGN minSigPoPDST (blsPubKey blsKey) (blsPossessionProof blsKey))
+        ?! SubPoolFailure (DijkstraSubPoolPredFailure (Shelley.BlsKeyPossessionProofInvalidPOOL poolId))
       let registerKey = spsBlsKeyL .~ SJust (BlsKeyState blsKey currentEpoch)
       pure $ certState & certPStateL . psStakePoolsL %~ Map.adjust registerKey poolId
 
