@@ -14,6 +14,8 @@ module Cardano.Ledger.Dijkstra.Rules.Cert (
   CERT,
 ) where
 
+import Cardano.Crypto.DSIGN (DSIGNAggregatable (verifyPossessionProofDSIGN))
+import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
@@ -24,6 +26,7 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxCert
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
+import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import Data.Void (absurd)
 import Lens.Micro ((%~), (&), (.~), (^.))
@@ -115,6 +118,10 @@ certTransition = do
       -- certificate is accepted in. Registering again renews it (CIP-0164).
       Map.member poolId pools
         ?! Conway.PoolFailure (Shelley.StakePoolNotRegisteredOnKeyPOOL poolId)
+      -- A voting key is only usable if its proof of possession verifies against it;
+      -- without that check an aggregate signature could name a signer that never signed.
+      isRight (verifyPossessionProofDSIGN minSigPoPDST (blsPubKey blsKey) (blsPossessionProof blsKey))
+        ?! Conway.PoolFailure (Shelley.BlsKeyPossessionProofInvalidPOOL poolId)
       let registerKey = spsBlsKeyL .~ SJust (BlsKeyState blsKey currentEpoch)
       pure $ certState & certPStateL . psStakePoolsL %~ Map.adjust registerKey poolId
 

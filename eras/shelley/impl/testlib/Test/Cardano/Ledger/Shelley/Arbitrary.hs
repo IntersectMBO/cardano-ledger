@@ -658,6 +658,7 @@ instance Era era => Arbitrary (ShelleyPoolPredFailure era) where
       , StakePoolCostTooLowPOOL <$> arbitrary
       , WrongNetworkPOOL <$> arbitrary <*> arbitrary
       , PoolMedataHashTooBig <$> arbitrary <*> arbitrary
+      , BlsKeyPossessionProofInvalidPOOL <$> arbitrary
       ]
   shrink = genericShrink
 

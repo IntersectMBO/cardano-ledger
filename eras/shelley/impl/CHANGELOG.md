@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* Add `BlsKeyPossessionProofInvalidPOOL` to `ShelleyPoolPredFailure`, raised when the proof
+  of possession supplied with a Leios voting key does not verify (CIP-0164)
+
 * Change `NEWEPOCH` to expire Leios voting keys older than `maxKeyAgeEpochs` from the pool
   distribution, judged against the epoch the distribution becomes active for (CIP-0164)
 
