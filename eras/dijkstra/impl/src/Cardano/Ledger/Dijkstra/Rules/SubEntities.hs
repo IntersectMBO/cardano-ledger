@@ -272,7 +272,7 @@ dijkstraSubEntitiesTransition = do
       TRC (subCertsEnv, certStateBeforeSubCerts, StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL)
 
   let accountsAfterSubCerts = certStateAfterSubCerts ^. certDStateL . accountsL
-  runTest $ validateMissingAccountsInDirectDeposits directDeposits accountsAfterSubCerts
+  runTest $ validateMissingAccountsInDirectDeposits directDeposits network accountsAfterSubCerts
 
   let appliedDirectDeposits = applyDirectDeposits directDeposits accountsAfterSubCerts
   pure $ certStateAfterSubCerts & certDStateL . accountsL .~ appliedDirectDeposits

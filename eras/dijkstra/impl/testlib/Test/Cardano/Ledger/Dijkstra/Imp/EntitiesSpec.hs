@@ -165,13 +165,13 @@ spec = describe "ENTITIES" $ do
     stakeKey <- freshKeyHash
     accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
     let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
+    let dd = DirectDeposits [(wrongNetworkAccount, Coin 50)]
     let txBody :: forall l. Typeable l => TxBody l era
         txBody =
           mkBasicTxBody
             & withdrawalsTxBodyL
               .~ Withdrawals [(wrongNetworkAccount, mempty)]
-            & directDepositsTxBodyL
-              .~ DirectDeposits [(wrongNetworkAccount, Coin 50)]
+            & directDepositsTxBodyL .~ dd
 
     submitFailingTx
       (mkBasicTx txBody)
@@ -179,6 +179,7 @@ spec = describe "ENTITIES" $ do
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
       , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
     submitFailingTx
@@ -187,6 +188,7 @@ spec = describe "ENTITIES" $ do
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
       , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . DirectDepositAccountsMissing @era $ dd
       , injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
       , injectFailure . SubDirectDepositAddressesWithWrongNetwork @era Testnet $
@@ -194,6 +196,7 @@ spec = describe "ENTITIES" $ do
       , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . SubWithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubDirectDepositAccountsMissing @era $ dd
       ]
 
   describe "Account balance intervals" $ do
