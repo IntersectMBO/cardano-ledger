@@ -301,7 +301,7 @@ dijkstraEntitiesTransition = do
 
   let directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accountsAfterCerts = certStateAfterCerts ^. certDStateL . accountsL
-  runTest $ validateMissingAccountsInDirectDeposits directDeposits accountsAfterCerts
+  runTest $ validateMissingAccountsInDirectDeposits directDeposits network accountsAfterCerts
 
   pure $ certStateAfterCerts & certDStateL . accountsL %~ applyDirectDeposits directDeposits
 
@@ -322,11 +322,12 @@ validateWrongNetworkInDirectDeposit netId txb =
 validateMissingAccountsInDirectDeposits ::
   EraAccounts era =>
   DirectDeposits ->
+  Network ->
   Accounts era ->
   Test (EntitiesPredFailure era)
-validateMissingAccountsInDirectDeposits dds accounts =
+validateMissingAccountsInDirectDeposits dds network accounts =
   failureOnJust
-    (directDepositsMissingAccounts dds accounts)
+    (directDepositsMissingAccounts dds network accounts)
     DirectDepositAccountsMissing
 
 validateWithdrawals ::
