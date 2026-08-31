@@ -44,19 +44,15 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBalanceIntervals (..))
-import Cardano.Ledger.Dijkstra.TxBody (
-  DijkstraEraTxBody,
-  accountBalanceIntervalsTxBodyL,
-  directDepositsTxBodyL,
-  startingAccountBalanceIntervalsTxBodyL,
- )
+import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
+import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import Data.Foldable (sequenceA_)
+import Data.Foldable
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -277,24 +273,23 @@ dijkstraEntitiesTransition = do
   TRC (EntitiesEnv curEpoch pp committee committeeProposals originalAccounts, certState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
-      legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
-      withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
       certsEnv = Conway.CertsEnv pp curEpoch committee committeeProposals
-
+      topTxWithdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
   network <- liftSTS $ asks networkId
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
   runTest $ validateAccountBalanceIntervals network accounts (tx ^. bodyTxL)
   runTest $ validateStartingAccountBalanceIntervals network originalAccounts (tx ^. bodyTxL)
-  validateWithdrawals legacyMode network withdrawals accounts
+
+  runTest $ validateWithdrawals stAnnTx network accounts originalAccounts
 
   let certStateBeforeCerts =
         certState
           & Conway.updateDormantDRepExpiries tx curEpoch
           & Conway.updateVotingDRepExpiries tx curEpoch (pp ^. ppDRepActivityL)
-          & certDStateL . accountsL %~ applyWithdrawals withdrawals
+          & certDStateL . accountsL %~ applyWithdrawals topTxWithdrawals
   certStateAfterCerts <-
     trans @(EraRule "CERTS" era) $
       TRC (certsEnv, certStateBeforeCerts, StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL)
@@ -331,31 +326,59 @@ validateMissingAccountsInDirectDeposits dds network accounts =
     DirectDepositAccountsMissing
 
 validateWithdrawals ::
-  EraAccounts era =>
-  Bool ->
+  ( EraAccounts era
+  , DijkstraEraUTxO era
+  , DijkstraEraTxBody era
+  ) =>
+  StAnnTx TopTx era ->
   Network ->
-  Withdrawals ->
   Accounts era ->
-  Rule (ENTITIES era) ctx ()
-validateWithdrawals legacyMode network withdrawals accounts = do
-  missingWithdrawals <-
-    if legacyMode
-      then do
-        let (missingWithdrawals, incompleteWithdrawals) =
-              case withdrawalsThatDoNotDrainAccounts withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, incomplete) -> (unWithdrawals missing, incomplete)
-        failOnNonEmptyMap incompleteWithdrawals WithdrawalAmountsInexactInLegacyMode
-        pure missingWithdrawals
-      else do
-        let (missingWithdrawals, exceededWithdrawals) =
-              case withdrawalsThatExceedAccountBalance withdrawals network accounts of
-                Nothing -> (Map.empty, Map.empty)
-                Just (missing, exceeded) -> (unWithdrawals missing, exceeded)
-        failOnNonEmptyMap exceededWithdrawals WithdrawalAmountsExceedingOriginalBalance
-        pure missingWithdrawals
-  failOnNonEmptyMap missingWithdrawals $
-    WithdrawalAccountsMissing . Withdrawals . NEM.toMap
+  Accounts era ->
+  Test (EntitiesPredFailure era)
+validateWithdrawals stAnnTx network accounts originalAccounts =
+  let
+    tx = stAnnTx ^. txStAnnTxG
+    legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
+    topTxWithdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+    subTxWithdrawals =
+      foldMap'
+        (\subTx -> subTx ^. bodyTxL . withdrawalsTxBodyL)
+        (tx ^. bodyTxL . subTransactionsTxBodyL)
+    batchWithdrawals = topTxWithdrawals <> subTxWithdrawals
+
+    -- Top-tx withdrawals must exist in current Accounts.
+    -- In legacy mode, they must drain the account.
+    checkTopAgainstCurrent =
+      for_ (withdrawalsThatDoNotDrainAccounts topTxWithdrawals network accounts) $
+        \(Withdrawals missingAccounts, inexact) ->
+          failWithdrawalsMap missingAccounts WithdrawalAccountsMissing
+            *> when legacyMode (failureOnNonEmptyMap inexact WithdrawalAmountsInexactInLegacyMode)
+
+    -- In normal mode, all withdrawals in the batch must not exceed the pre-batch balance,
+    -- and all top tx-withdrawals must exist in the pre-batch Accounts
+    checkNonLegacyAgainstOriginal =
+      unless legacyMode $
+        for_ (withdrawalsThatExceedAccountBalance batchWithdrawals network originalAccounts) $
+          \(Withdrawals missingAccounts, exceedingBalances) ->
+            -- we only check the accounts in the top transactions here, because the subtransactions are checked in SUBENTITES
+            let topMissingAccounts =
+                  Map.intersection (unWithdrawals topTxWithdrawals) missingAccounts
+             in failWithdrawalsMap topMissingAccounts WithdrawalAccountsMissingPreBatch
+                  *> failureOnNonEmptyMap exceedingBalances WithdrawalAmountsExceedingOriginalBalance
+
+    -- In legacy mode, all withdrawals from subtransactions must not exceed the pre-batch balance.
+    checkLegacySubsAgainstOriginal =
+      when legacyMode $
+        for_ (withdrawalsThatExceedAccountBalance subTxWithdrawals network originalAccounts) $
+          -- missing accounts are discarded, because they are checked in SUBENTITIES
+          \(_, exceedingBalances) ->
+            failureOnNonEmptyMap exceedingBalances WithdrawalAmountsExceedingOriginalBalance
+   in
+    checkTopAgainstCurrent
+      *> checkNonLegacyAgainstOriginal
+      *> checkLegacySubsAgainstOriginal
+  where
+    failWithdrawalsMap m mkFailure = failureOnNonEmptyMap m (mkFailure . Withdrawals . NEM.toMap)
 
 conwayToDijkstraEntitiesPredFailure ::
   forall era. Conway.ConwayLedgerPredFailure era -> EntitiesPredFailure era
