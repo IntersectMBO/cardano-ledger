@@ -24,7 +24,7 @@ import qualified Data.Map.NonEmpty as NEM
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
-import Lens.Micro ((&), (.~))
+import Lens.Micro
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -313,6 +313,66 @@ spec = describe "ENTITIES" $ do
           NEM.singleton account $
             Mismatch moreThanReward (reward <-> atMostReward)
       ]
+  it "Direct deposits cannot fund withdrawals in subsequent sub-transactions" $ do
+    account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+    depositAmount <- Coin . getPositive <$> arbitrary
+    let subDeposit =
+          mkBasicTx $
+            mkBasicTxBody
+              & directDepositsTxBodyL
+                .~ DirectDeposits [(account, depositAmount)]
+        subWithdraw =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL
+                .~ Withdrawals [(account, depositAmount)]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & subTransactionsTxBodyL .~ [subDeposit, subWithdraw]
+
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch depositAmount zero)]
+      ]
+
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx
+      legacyTx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch depositAmount zero)]
+      ]
+
+  it "Top transaction can drain an account funded by a sub-transaction direct deposit, in legacy mode" $ do
+    account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+    depositAmount <- Coin . getPositive <$> arbitrary
+    let subDeposit =
+          mkBasicTx $
+            mkBasicTxBody
+              & directDepositsTxBodyL .~ DirectDeposits [(account, depositAmount)]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(account, depositAmount)]
+              & subTransactionsTxBodyL .~ [subDeposit]
+
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch depositAmount zero)]
+      ]
+
+    legacyTx <- switchTxToLegacyMode tx
+    submitTx_ legacyTx
+    getBalance (account ^. accountAddressCredentialL) `shouldReturn` zero
+
   describe "Account balance intervals" $ do
     it "Account balance intervals for the top-level transaction" $
       accountBalanceIntervalCases
