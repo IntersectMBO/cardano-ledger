@@ -2,6 +2,19 @@
 
 ## 0.4.0.0
 
+* Rename `EntitiesPredFailure` constructors:
+  - `MissingAccountsInWithdrawals` to `WithdrawalAccountsMissing`
+  - `IncompleteWithdrawals` to `WithdrawalAmountsInexactInLegacyMode`
+  - `ExceededBalancesInWithdrawals` to `WithdrawalAmountsExceedingOriginalBalance`
+  - `WrongNetworkInWithdrawals` to `WithdrawalAddressesWithWrongNetwork`
+  - `MissingAccountsInDirectDeposits` to `DirectDepositAccountsMissing`
+  - `WrongNetworkInDirectDeposits` to `DirectDepositAddressesWithWrongNetwork`
+* Rename `SubEntitiesPredFailure` constructors:
+  - `SubMissingAccountsInWithdrawals` to `SubWithdrawalAccountsMissing`
+  - `SubMissingOriginalAccountsInWithdrawals` to `SubWithdrawalAccountsMissingPreBatch`
+  - `SubWrongNetworkInWithdrawals` to `SubWithdrawalAddressesWithWrongNetwork`
+  - `SubMissingAccountsInDirectDeposits` to `SubDirectDepositAccountsMissing`
+  - `SubWrongNetworkInDirectDeposits` to `SubDirectDepositAddressesWithWrongNetwork`
 * Add `AlonzoEraTransition` instance for `DijkstraEra`
 * Re-export `GuardingPurpose` from `Cardano.Ledger.Dijkstra.Core` for consistency with prior eras.
 * Adapt to `plutus-ledger-api` v1.38: remove `txInfoFee` from PV4 `TxInfo`, convert `txInfoValidRange` via `transPOSIXTimeRange`, use `Credential` instead of `AccountId` for withdrawals and direct deposits
