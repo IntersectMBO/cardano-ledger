@@ -61,6 +61,44 @@ spec = describe "ENTITIES" $ do
     finalBalance2 `shouldBe` mempty
     finalBalanceD `shouldBe` (reward3 <-> partialWithdrawal)
 
+  it "Partial withdrawals" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+
+    (account1, reward1, kh1) <- setupAccountAddress
+    (account2, reward2, kh2) <- setupAccountAddress
+    lessThanReward1 <- Coin <$> choose (1, unCoin reward1 - 1)
+    atMostReward2 <- Coin <$> choose (1, unCoin reward2)
+    let tx =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account1, lessThanReward1)])
+            [Withdrawals [(account2, atMostReward2)]]
+    submitTx_ tx
+    getBalance (KeyHashObj kh1) `shouldReturn` (reward1 <-> lessThanReward1)
+    getBalance (KeyHashObj kh2) `shouldReturn` (reward2 <-> atMostReward2)
+
+    -- restore balances, to test legacy mode
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & directDepositsTxBodyL .~ DirectDeposits [(account1, lessThanReward1), (account2, atMostReward2)]
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx
+      legacyTx
+      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account1 $
+            Mismatch lessThanReward1 reward1
+      ]
+
+    -- drain top withdrawal
+    submitTx_
+      =<< switchTxToLegacyMode
+        ( mkTxWithBatchWithdrawals
+            (Withdrawals [(account1, reward1)])
+            [Withdrawals [(account2, atMostReward2)]]
+        )
+    getBalance (KeyHashObj kh1) `shouldReturn` zero
+    getBalance (KeyHashObj kh2) `shouldReturn` (reward2 <-> atMostReward2)
+
   it "Withdrawals from an unregistered staking address" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
@@ -179,17 +217,17 @@ spec = describe "ENTITIES" $ do
   it "Aggregate of top and sub withdrawals exceeds account balance" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, reward, _) <- setupAccountAddress
-    let subAmount = reward <-> Coin 1
+    (topAmount, subAmount) <- genCoinPairExceeding reward
     let tx =
           mkTxWithBatchWithdrawals
-            (Withdrawals [(account, reward)])
+            (Withdrawals [(account, topAmount)])
             [Withdrawals [(account, subAmount)]]
     submitFailingTx
       tx
       [ injectFailure $
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
-              NEM.fromMap [(account, Mismatch (reward <+> subAmount) reward)]
+              NEM.fromMap [(account, Mismatch (topAmount <+> subAmount) reward)]
       ]
     -- legacy mode
     legacyTx <- switchTxToLegacyMode tx
@@ -197,37 +235,84 @@ spec = describe "ENTITIES" $ do
       legacyTx
       [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
           NEM.singleton account $
-            Mismatch reward (reward <-> subAmount)
+            Mismatch topAmount (reward <-> subAmount)
       ]
 
-  it "Sub-transaction alone over-draws account" $ do
+  it "Aggregate of sub withdrawals exceeds account balance" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, reward, _) <- setupAccountAddress
+    (subAmount1, subAmount2) <- genCoinPairExceeding reward
+    (subAmount1 <+> subAmount2) `shouldSatisfy` (> reward)
 
-    let moreThanReward = reward <+> Coin 1
     let tx =
           mkTxWithBatchWithdrawals
-            (Withdrawals [(account, reward)])
-            [Withdrawals [(account, moreThanReward)]]
+            (Withdrawals [(account, zero)])
+            [Withdrawals [(account, subAmount1)], Withdrawals [(account, subAmount2)]]
     submitFailingTx
       tx
       [ injectFailure $
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
-              NEM.fromMap [(account, Mismatch (reward <+> moreThanReward) reward)]
+              NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) reward)]
       ]
     legacyTx <- switchTxToLegacyMode tx
     submitFailingTx
       legacyTx
+      [ injectFailure . WithdrawalAmountsExceedingOriginalBalance @era $
+          NEM.singleton account $
+            Mismatch (subAmount1 <+> subAmount2) reward
+      ]
+
+  it "Individual withdrawal exceeds account balance" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    (account, reward, _) <- setupAccountAddress
+    atMostReward <- Coin <$> choose (1, unCoin reward)
+    moreThanReward <- (reward <+>) . Coin . getPositive <$> arbitrary
+
+    -- A sub-transaction overdraws
+    let subTxOverdraws =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account, atMostReward)])
+            [Withdrawals [(account, moreThanReward)]]
+    submitFailingTx
+      subTxOverdraws
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch (atMostReward <+> moreThanReward) reward)]
+      ]
+    legacySubTxOverdraws <- switchTxToLegacyMode subTxOverdraws
+    submitFailingTx
+      legacySubTxOverdraws
       [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
           NEM.singleton account $
-            Mismatch reward zero
+            Mismatch atMostReward zero
       , injectFailure $
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
               NEM.fromMap [(account, Mismatch moreThanReward reward)]
       ]
 
+    -- The top transaction overdraws
+    let topTxOverdraws =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account, moreThanReward)])
+            [Withdrawals [(account, atMostReward)]]
+    submitFailingTx
+      topTxOverdraws
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap
+                [(account, Mismatch (atMostReward <+> moreThanReward) reward)]
+      ]
+    legacyTopTxOverdraws <- switchTxToLegacyMode topTxOverdraws
+    submitFailingTx
+      legacyTopTxOverdraws
+      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account $
+            Mismatch moreThanReward (reward <-> atMostReward)
+      ]
   describe "Account balance intervals" $ do
     it "Account balance intervals for the top-level transaction" $
       accountBalanceIntervalCases
@@ -382,7 +467,6 @@ spec = describe "ENTITIES" $ do
       submitAndExpireProposalToMakeReward cred
       b <- getBalance cred
       pure (ra, b, kh)
-
     mkTxWithBatchWithdrawals :: Withdrawals -> [Withdrawals] -> Tx TopTx era
     mkTxWithBatchWithdrawals topWdrls subs =
       mkBasicTx $
@@ -392,7 +476,10 @@ spec = describe "ENTITIES" $ do
       where
         mkSubTx :: Withdrawals -> Tx SubTx era
         mkSubTx w = mkBasicTx (mkBasicTxBody & withdrawalsTxBodyL .~ w)
-
+    genCoinPairExceeding (Coin maxSum) = do
+      a <- choose (1, maxSum)
+      b <- choose (maxSum - a + 1, maxSum)
+      pure (Coin a, Coin b)
     unregisteredAccount :: ImpTestM era AccountAddress
     unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
 
