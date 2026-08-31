@@ -32,6 +32,7 @@ module Cardano.Ledger.State.Account (
   directDepositsMissingAccounts,
   withdrawalsMissingAccounts,
   removeStakePoolDelegations,
+  updateAccountBalances,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))

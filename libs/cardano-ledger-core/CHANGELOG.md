@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Expose `updateAccountBalances`
 * Change `directDepositsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
 * Change `withdrawalsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
 * Bump `plutus-ledger-api` lower bound to `>=1.68`
