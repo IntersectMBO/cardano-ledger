@@ -53,6 +53,8 @@ spec = describe "ENTITIES" $ do
               Mismatch amountX mempty
       , injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
     account3 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
@@ -72,6 +74,8 @@ spec = describe "ENTITIES" $ do
                   , (account3, Mismatch amountY mempty)
                   ]
       , injectFailure . WithdrawalAccountsMissing @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
@@ -179,15 +183,21 @@ spec = describe "ENTITIES" $ do
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
       , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
-      [ injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $ NES.singleton wrongNetworkAccount
+      [ injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
-      , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissing @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . DirectDepositAccountsMissing @era $ dd
       , injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
@@ -195,7 +205,8 @@ spec = describe "ENTITIES" $ do
           NES.singleton wrongNetworkAccount
       , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
-      , injectFailure . SubWithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubWithdrawalAccountsMissing @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . SubDirectDepositAccountsMissing @era $ dd
       ]
 
