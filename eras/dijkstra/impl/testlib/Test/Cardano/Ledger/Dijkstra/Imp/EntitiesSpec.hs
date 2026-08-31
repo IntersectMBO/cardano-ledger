@@ -24,7 +24,6 @@ import qualified Data.Map.NonEmpty as NEM
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
-import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -201,7 +200,7 @@ spec = describe "ENTITIES" $ do
             Mismatch reward (reward <-> subAmount)
       ]
 
-  it "Underflow of applied withdrawal amount is observable in legacy mode" $ do
+  it "Sub-transaction alone over-draws account" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, reward, _) <- setupAccountAddress
 
@@ -218,14 +217,11 @@ spec = describe "ENTITIES" $ do
               NEM.fromMap [(account, Mismatch (reward <+> moreThanReward) reward)]
       ]
     legacyTx <- switchTxToLegacyMode tx
-    let underflowedBalance =
-          -- 18446744073709551615
-          Coin . toInteger $ (fromInteger (unCoin reward) :: Word64) - fromInteger (unCoin moreThanReward)
     submitFailingTx
       legacyTx
       [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
           NEM.singleton account $
-            Mismatch reward underflowedBalance
+            Mismatch reward zero
       , injectFailure $
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
