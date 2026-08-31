@@ -131,10 +131,8 @@ spec = describe "UTXOS" $ do
                   Map.dropMissing -- Ignore purposes not already in the redeemers
                   Map.preserveMissing -- Don't touch purposes not being updated
                   (Map.zipWithMatched $ \_ -> set _2) -- Replace the units, keep the datum
-              redoAddrWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
-
             txIn <- produceScript alwaysSucceedsWithDatumHash
-            withPostFixup (overrideExUnits >=> fixupPPHash >=> redoAddrWits) $
+            withPostFixup (overrideExUnits >=> fixupPPHash >=> resetAddrTxWits) $
               submitTx_ $
                 mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
