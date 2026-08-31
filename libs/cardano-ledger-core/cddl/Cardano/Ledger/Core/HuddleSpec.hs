@@ -133,9 +133,6 @@ instance Era era => HuddleRule "vkey" era where
 instance Era era => HuddleRule "vrf_vkey" era where
   huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
 
-instance Era era => HuddleRule "vrf_cert" era where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `H.sized` (80 :: Word64))]
-
 instance Era era => HuddleRule "kes_vkey" era where
   huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
 

@@ -186,6 +186,9 @@ instance HuddleRule "update" AllegraEra where
 instance HuddleRule "genesis_hash" AllegraEra where
   huddleRuleNamed = genesisHashRule
 
+instance HuddleRule "vrf_cert" AllegraEra where
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+
 instance HuddleGroup "operational_cert" AllegraEra where
   huddleGroupNamed = shelleyOperationalCertGroup
 

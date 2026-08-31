@@ -119,7 +119,9 @@ protocolParamUpdateRule pname p =
 
 shelleyHeaderBodyRule ::
   forall era.
-  HuddleGroup "operational_cert" era =>
+  ( HuddleRule "vrf_cert" era
+  , HuddleGroup "operational_cert" era
+  ) =>
   Proxy "header_body" ->
   Proxy era ->
   Rule
@@ -491,6 +493,9 @@ instance HuddleRule "proposed_protocol_parameter_updates" ShelleyEra where
 
 instance HuddleRule "update" ShelleyEra where
   huddleRuleNamed = updateRule
+
+instance HuddleRule "vrf_cert" ShelleyEra where
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
 
 instance HuddleGroup "operational_cert" ShelleyEra where
   huddleGroupNamed = shelleyOperationalCertGroup

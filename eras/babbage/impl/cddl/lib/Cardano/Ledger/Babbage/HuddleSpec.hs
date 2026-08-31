@@ -139,7 +139,8 @@ babbageScript pname p =
 
 babbageHeaderBodyRule ::
   forall era.
-  ( HuddleRule "operational_cert" era
+  ( HuddleRule "vrf_cert" era
+  , HuddleRule "operational_cert" era
   , HuddleRule "protocol_version" era
   ) =>
   Proxy "header_body" ->
@@ -318,6 +319,9 @@ instance HuddleRule "block" BabbageEra where
                 ]
           , "invalid_transactions" ==> arr [0 <+ a (huddleRule @"transaction_index" p)]
           ]
+
+instance HuddleRule "vrf_cert" BabbageEra where
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
 
 instance HuddleRule "header" BabbageEra where
   huddleRuleNamed pname p =

@@ -43,6 +43,7 @@ import Cardano.Crypto.VRF.Class (
   SignKeyVRF,
   VRFAlgorithm,
   VerKeyVRF,
+  sizeOutputVRF,
  )
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import qualified Cardano.Crypto.VRF.Praos as Praos
@@ -614,8 +615,17 @@ instance DecCBOR (CertVRF Praos.PraosVRF) where
   decCBOR = decodeFixedSized
   {-# INLINE decCBOR #-}
 
-instance Typeable v => DecCBOR (OutputVRF v) where
-  decCBOR = OutputVRF <$> decCBOR
+instance VRFAlgorithm v => DecCBOR (OutputVRF v) where
+  decCBOR = do
+    ba <- decCBOR
+    whenDecoderVersionAtLeast (natVersion @12) $ do
+      let
+        len = fromIntegral @Int @Word $ Prim.sizeofByteArray ba
+        vrfOutputLen = sizeOutputVRF (Proxy :: Proxy v)
+      when (len /= vrfOutputLen) $
+        fail $
+          "OutputVRF is expected to be " <> show vrfOutputLen <> " bytes, but received " <> show len
+    pure $ OutputVRF ba
   {-# INLINE decCBOR #-}
 
 instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where

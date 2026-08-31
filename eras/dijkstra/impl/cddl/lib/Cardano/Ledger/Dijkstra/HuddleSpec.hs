@@ -1005,7 +1005,8 @@ instance HuddleRule "update" DijkstraEra where
 
 leiosHeaderBodyRule ::
   forall era.
-  ( HuddleRule "operational_cert" era
+  ( HuddleRule "vrf_cert" era
+  , HuddleRule "operational_cert" era
   , HuddleRule "protocol_version" era
   , HuddleRule "eb_announcement" era
   ) =>
@@ -1028,6 +1029,9 @@ leiosHeaderBodyRule pname p =
       , "block_body_contains_leios_cert" ==> VBool
       , "eb_announcement" ==> (huddleRule @"eb_announcement" p / VNil)
       ]
+
+instance HuddleRule "vrf_cert" DijkstraEra where
+  huddleRuleNamed pname _ = pname =.= arr [a (VBytes `sized` (64 :: Word64)), a (VBytes `sized` (80 :: Word64))]
 
 instance HuddleRule "header_body" DijkstraEra where
   huddleRuleNamed = leiosHeaderBodyRule

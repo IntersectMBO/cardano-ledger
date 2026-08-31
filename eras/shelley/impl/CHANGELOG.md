@@ -15,6 +15,10 @@
 * Add `DecCBOR` instance for `Block`
 * Add `registerPoolWithParams`, which registers a stake pool with adjusted parameters
 
+### `cddl`
+
+* Add `HuddleRule "vrf_cert"` instance
+
 ## 1.19.0.1
 
 * Force the initial-funds injection result in `Cardano.Ledger.Shelley.Transition`

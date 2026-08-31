@@ -39,11 +39,12 @@
   - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
   - Override `ppMinPoolMarginG` in `EraPParams` instance
 
-### cddl
+### `cddl`
 
+* Add `HuddleRule "vrf_cert"` instance
 * Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
 
-### testlib
+### `testlib`
 
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
@@ -212,7 +213,7 @@
   - Remove `WdrlNotDelegatedToDRep` constructor from `EntitiesPredFailure`
   - Remove `SubWdrlNotDelegatedToDRep` constructor from `SubEntitiesPredFailure`
 
-### cddl
+### `cddl`
 
 * Add `eb_announcement` rule and extend `header_body` with `block_body_contains_leios_cert` and `eb_announcement` for the Leios block header
 * Remove re-exported `genByteString`, `distinct`, `genHash28`, `majorProtocolVersionRule`, `ipRule` and `ipValidator`
@@ -223,7 +224,7 @@
 * Add optional `bls_key` field to `pool_params`
 * Add `bls_key` rule with `bls_pubkey` (96 bytes) and `bls_possession_proof` (48 bytes)
 
-### testlib
+### `testlib`
 
 * Add `exampleBlsKey` to `Test.Cardano.Ledger.Dijkstra.Examples`
 * Add `genSmallDijkstraBlockBody`
@@ -365,7 +366,7 @@
 * Move `cddl-files` to `cddl/data`.
 * Add full `HuddleSpec`.
 
-### testlib
+### `testlib`
 
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec`

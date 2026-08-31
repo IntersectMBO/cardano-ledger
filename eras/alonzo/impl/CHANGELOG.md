@@ -19,6 +19,10 @@
 * Change `TxInfoPV4` constructor of `VersionedTxInfo` to contain `PV4.TxInfo` instead of `PV3.TxInfo`
 * Add `DecCBOR` instance for `Block`
 
+### `cddl`
+
+* Add `HuddleRule "vrf_cert"` instance
+
 ## 1.16.0.0
 
 * Add `Ord` constraints to `AlonzoEraScript` and `EraPlutusContext` classes

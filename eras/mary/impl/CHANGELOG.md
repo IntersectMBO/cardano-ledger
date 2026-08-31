@@ -9,6 +9,10 @@
 
 * Add `DecCBOR` instance for `Block`
 
+### `cddl`
+
+* Add `HuddleRule "vrf_cert"` instance
+
 ## 1.11.0.0
 
 * Add `Ord` instances for `MaryValue`, `CompactForm MaryValue`

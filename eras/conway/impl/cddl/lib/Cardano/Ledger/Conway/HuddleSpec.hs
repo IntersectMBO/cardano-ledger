@@ -1352,6 +1352,9 @@ instance HuddleRule "proposed_protocol_parameter_updates" ConwayEra where
 instance HuddleRule "update" ConwayEra where
   huddleRuleNamed = updateRule
 
+instance HuddleRule "vrf_cert" ConwayEra where
+  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+
 instance HuddleRule "header_body" ConwayEra where
   huddleRuleNamed = babbageHeaderBodyRule
 
