@@ -320,6 +320,7 @@ entitiesToSubEntitiesPredFailure = \case
   DirectDepositAccountsMissing dds -> SubDirectDepositAccountsMissing dds
   CertsFailure _ -> impossible "CertsFailure"
   WithdrawalAccountsMissing _ -> impossible "WithdrawalAccountsMissing"
+  WithdrawalAccountsMissingPreBatch _ -> impossible "WithdrawalAccountsMissingPreBatch"
   WithdrawalAmountsInexactInLegacyMode _ -> impossible "WithdrawalAmountsInexactInLegacyMode"
   WithdrawalAmountsExceedingOriginalBalance _ -> impossible "WithdrawalAmountsExceedingOriginalBalance"
   WrongNetworkInAccountBalanceIntervals net addrs -> SubWrongNetworkInAccountBalanceIntervals net addrs

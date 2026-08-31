@@ -115,6 +115,7 @@ data EntitiesPredFailure era
       -- | Withdrawal account addresses with wrong network id
       (NonEmptySet AccountAddress)
   | WithdrawalAccountsMissing Withdrawals
+  | WithdrawalAccountsMissingPreBatch Withdrawals
   | WithdrawalAmountsInexactInLegacyMode (NonEmptyMap AccountAddress (Mismatch RelEQ Coin))
   | WithdrawalAmountsExceedingOriginalBalance (NonEmptyMap AccountAddress (Mismatch RelLTEQ Coin))
   | DirectDepositAddressesWithWrongNetwork
@@ -158,16 +159,17 @@ instance
       CertsFailure x -> Sum (CertsFailure @era) 0 !> To x
       WithdrawalAddressesWithWrongNetwork x y -> Sum (WithdrawalAddressesWithWrongNetwork @era) 1 !> To x !> To y
       WithdrawalAccountsMissing x -> Sum (WithdrawalAccountsMissing @era) 2 !> To x
-      WithdrawalAmountsInexactInLegacyMode x -> Sum (WithdrawalAmountsInexactInLegacyMode @era) 3 !> To x
-      WithdrawalAmountsExceedingOriginalBalance x -> Sum (WithdrawalAmountsExceedingOriginalBalance @era) 4 !> To x
-      DirectDepositAddressesWithWrongNetwork x y -> Sum (DirectDepositAddressesWithWrongNetwork @era) 5 !> To x !> To y
-      DirectDepositAccountsMissing x -> Sum (DirectDepositAccountsMissing @era) 6 !> To x
-      WrongNetworkInAccountBalanceIntervals x y -> Sum (WrongNetworkInAccountBalanceIntervals @era) 7 !> To x !> To y
-      MissingAccountsInAccountBalanceIntervals x -> Sum (MissingAccountsInAccountBalanceIntervals @era) 8 !> To x
-      BalancesOutsideAccountBalanceIntervals x -> Sum (BalancesOutsideAccountBalanceIntervals @era) 9 !> To x
-      WrongNetworkInStartingAccountBalanceIntervals x y -> Sum (WrongNetworkInStartingAccountBalanceIntervals @era) 10 !> To x !> To y
-      MissingAccountsInStartingAccountBalanceIntervals x -> Sum (MissingAccountsInStartingAccountBalanceIntervals @era) 11 !> To x
-      BalancesOutsideStartingAccountBalanceIntervals x -> Sum (BalancesOutsideStartingAccountBalanceIntervals @era) 12 !> To x
+      WithdrawalAccountsMissingPreBatch x -> Sum (WithdrawalAccountsMissingPreBatch @era) 3 !> To x
+      WithdrawalAmountsInexactInLegacyMode x -> Sum (WithdrawalAmountsInexactInLegacyMode @era) 4 !> To x
+      WithdrawalAmountsExceedingOriginalBalance x -> Sum (WithdrawalAmountsExceedingOriginalBalance @era) 5 !> To x
+      DirectDepositAddressesWithWrongNetwork x y -> Sum (DirectDepositAddressesWithWrongNetwork @era) 6 !> To x !> To y
+      DirectDepositAccountsMissing x -> Sum (DirectDepositAccountsMissing @era) 7 !> To x
+      WrongNetworkInAccountBalanceIntervals x y -> Sum (WrongNetworkInAccountBalanceIntervals @era) 8 !> To x !> To y
+      MissingAccountsInAccountBalanceIntervals x -> Sum (MissingAccountsInAccountBalanceIntervals @era) 9 !> To x
+      BalancesOutsideAccountBalanceIntervals x -> Sum (BalancesOutsideAccountBalanceIntervals @era) 10 !> To x
+      WrongNetworkInStartingAccountBalanceIntervals x y -> Sum (WrongNetworkInStartingAccountBalanceIntervals @era) 11 !> To x !> To y
+      MissingAccountsInStartingAccountBalanceIntervals x -> Sum (MissingAccountsInStartingAccountBalanceIntervals @era) 12 !> To x
+      BalancesOutsideStartingAccountBalanceIntervals x -> Sum (BalancesOutsideStartingAccountBalanceIntervals @era) 13 !> To x
 
 instance
   ( Era era
@@ -179,16 +181,17 @@ instance
     0 -> SumD CertsFailure <! From
     1 -> SumD WithdrawalAddressesWithWrongNetwork <! From <! From
     2 -> SumD WithdrawalAccountsMissing <! From
-    3 -> SumD WithdrawalAmountsInexactInLegacyMode <! From
-    4 -> SumD WithdrawalAmountsExceedingOriginalBalance <! From
-    5 -> SumD DirectDepositAddressesWithWrongNetwork <! From <! From
-    6 -> SumD DirectDepositAccountsMissing <! From
-    7 -> SumD WrongNetworkInAccountBalanceIntervals <! From <! From
-    8 -> SumD MissingAccountsInAccountBalanceIntervals <! From
-    9 -> SumD BalancesOutsideAccountBalanceIntervals <! From
-    10 -> SumD WrongNetworkInStartingAccountBalanceIntervals <! From <! From
-    11 -> SumD MissingAccountsInStartingAccountBalanceIntervals <! From
-    12 -> SumD BalancesOutsideStartingAccountBalanceIntervals <! From
+    3 -> SumD WithdrawalAccountsMissingPreBatch <! From
+    4 -> SumD WithdrawalAmountsInexactInLegacyMode <! From
+    5 -> SumD WithdrawalAmountsExceedingOriginalBalance <! From
+    6 -> SumD DirectDepositAddressesWithWrongNetwork <! From <! From
+    7 -> SumD DirectDepositAccountsMissing <! From
+    8 -> SumD WrongNetworkInAccountBalanceIntervals <! From <! From
+    9 -> SumD MissingAccountsInAccountBalanceIntervals <! From
+    10 -> SumD BalancesOutsideAccountBalanceIntervals <! From
+    11 -> SumD WrongNetworkInStartingAccountBalanceIntervals <! From <! From
+    12 -> SumD MissingAccountsInStartingAccountBalanceIntervals <! From
+    13 -> SumD BalancesOutsideStartingAccountBalanceIntervals <! From
     n -> Invalid n
 
 newtype EntitiesEvent era = CertsEvent (Event (EraRule "CERTS" era))
