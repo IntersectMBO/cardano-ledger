@@ -341,16 +341,18 @@ directDepositsMissingAccounts ::
 directDepositsMissingAccounts (DirectDeposits dds) accounts =
   DirectDeposits <$> missingAccounts dds accounts
 
--- | Returns `Nothing` iff every credential targeted by the supplied
--- `Withdrawals` is a registered account. Otherwise it returns the subset of
--- withdrawals whose target credential is not registered.
+-- | Returns `Nothing` iff every withdrawal address resolves to a registered
+-- account on the supplied network. Otherwise returns the subset of withdrawals
+-- whose address does not resolve — either because the network id does not
+-- match, or because the credential is not registered.
 withdrawalsMissingAccounts ::
   EraAccounts era =>
   Withdrawals ->
+  Network ->
   Accounts era ->
   Maybe Withdrawals
-withdrawalsMissingAccounts (Withdrawals wdrls) accounts =
-  Withdrawals <$> missingAccounts wdrls accounts
+withdrawalsMissingAccounts withdrawals network accounts =
+  fst <$> categorizeWithdrawals (\_ _ -> True) withdrawals network accounts
 
 missingAccounts ::
   EraAccounts era =>
