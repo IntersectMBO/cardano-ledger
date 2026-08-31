@@ -191,6 +191,9 @@ spec = describe "ENTITIES" $ do
           NES.singleton wrongNetworkAccount
       , injectFailure . SubDirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
+      , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubWithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       ]
 
   describe "Account balance intervals" $ do
