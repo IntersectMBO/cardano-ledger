@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Change `directDepositsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
 * Change `withdrawalsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
