@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1786548406,
-        "narHash": "sha256-ulRkDpM4ajVofbnagpi3bO3MyDEL7yOdZ6rIw5te+y0=",
+        "lastModified": 1788340313,
+        "narHash": "sha256-JhRJSoyPPXPUA2IwcrR+oK5JJCwv326IPkyGBLz8g08=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "452420d4a4366a770e5785f9035d3b14639bf4d9",
+        "rev": "2e648337e75e3ccc137644ecf351af9018b38621",
         "type": "github"
       },
       "original": {
@@ -81,6 +81,23 @@
         "owner": "haskell",
         "ref": "3.6",
         "repo": "cabal",
+        "type": "github"
+      }
+    },
+    "cardano-crypto-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785137178,
+        "narHash": "sha256-NvbMk41W2PQy2H91nkG0GtPyGDwia0y6DQNNf9RtoAc=",
+        "owner": "input-output-hk",
+        "repo": "cardano-crypto",
+        "rev": "ac2e12a471b735ad80949bcbf0f6f634e5dbef77",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "cardano-crypto",
+        "rev": "ac2e12a471b735ad80949bcbf0f6f634e5dbef77",
         "type": "github"
       }
     },
@@ -308,11 +325,11 @@
     "hackageNix": {
       "flake": false,
       "locked": {
-        "lastModified": 1784153046,
-        "narHash": "sha256-W6/dzXu2M1bIJI2zIWkcd7npfzxDKyHS2ALhm4KhHOQ=",
+        "lastModified": 1788358854,
+        "narHash": "sha256-NIF+y/9ctwQILbHsCZCOFN7dxuwWXKnFn5T0+ya49+Y=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "4740f5a1e2c33fdde1fcea79d3063289c82db1e0",
+        "rev": "04149d44d879f7115282c442f8904b5eb5a78c4e",
         "type": "github"
       },
       "original": {
@@ -872,6 +889,7 @@
     "root": {
       "inputs": {
         "CHaP": "CHaP",
+        "cardano-crypto-src": "cardano-crypto-src",
         "cardano-ledger-release-tool": "cardano-ledger-release-tool",
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
         "flake-compat": "flake-compat",

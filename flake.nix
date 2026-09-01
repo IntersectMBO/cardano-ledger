@@ -48,6 +48,12 @@
       url = "github:IntersectMBO/formal-ledger-specifications";
       flake = false;
     };
+
+    cardano-crypto-src = {
+      url =
+        "github:input-output-hk/cardano-crypto/ac2e12a471b735ad80949bcbf0f6f634e5dbef77";
+      flake = false;
+    };
   };
 
   outputs = inputs:
@@ -96,6 +102,8 @@
             "https://chap.intersectmbo.org/" = inputs.CHaP;
             "https://github.com/IntersectMBO/formal-ledger-specifications.git" =
               inputs.formal-ledger-specifications;
+            "https://github.com/input-output-hk/cardano-crypto" =
+              inputs.cardano-crypto-src;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local

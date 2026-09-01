@@ -649,11 +649,9 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             { PV4.txInfoInputs = inputsInfo
             , PV4.txInfoOutputs = outputs
             , PV4.txInfoReferenceInputs = refInputsInfo
-            , PV4.txInfoFee =
-                withBothTxLevels txBody (\topTxBody -> transCoinToLovelace (topTxBody ^. feeTxBodyL)) (const 0)
             , PV4.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
             , PV4.txInfoTxCerts = txCerts
-            , PV4.txInfoValidRange = timeRange
+            , PV4.txInfoValidRange = transPOSIXTimeRange timeRange
             , PV4.txInfoRedeemers = plutusRedeemers
             , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
             , PV4.txInfoId = Conway.transTxBodyId txBody
@@ -742,8 +740,8 @@ transTxOutV4 txOutSource txOut = do
       }
 
 transTxBodyWithdrawals ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.AccountId PV4.Lovelace
-transTxBodyWithdrawals txb = transMap transAccountAddressToAccountId transCoinToLovelace withdrawals
+  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
+transTxBodyWithdrawals txb = transMap transAccountAddressToCredential transCoinToLovelace withdrawals
   where
     Withdrawals withdrawals = txb ^. withdrawalsTxBodyL
 
@@ -790,11 +788,25 @@ transTxBodyRequiredTopLevelGuards txb = transMap transCred (fmap transDatum . st
 transAccountAddressToAccountId :: AccountAddress -> PV4.AccountId
 transAccountAddressToAccountId (AccountAddress _ (AccountId c)) = PV4.AccountId $ transCred c
 
+transAccountAddressToCredential :: AccountAddress -> PV4.Credential
+transAccountAddressToCredential (AccountAddress _ (AccountId c)) = transCred c
+
 transTxBodyDirectDeposits ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.AccountId PV4.Lovelace
-transTxBodyDirectDeposits txb = transMap transAccountAddressToAccountId transCoinToLovelace deposits
+  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
+transTxBodyDirectDeposits txb = transMap transAccountAddressToCredential transCoinToLovelace deposits
   where
     DirectDeposits deposits = txb ^. directDepositsTxBodyL
+
+transPOSIXTimeRange :: PV1.POSIXTimeRange -> PV4.POSIXTimeRange
+transPOSIXTimeRange (PV1.Interval (PV1.LowerBound lo _) (PV1.UpperBound hi _)) =
+  PV4.POSIXTimeRange
+    { PV4.fromInclusive = case lo of
+        PV1.Finite t -> Just t
+        _ -> Nothing
+    , PV4.untilExclusive = case hi of
+        PV1.Finite t -> Just t
+        _ -> Nothing
+    }
 
 transAccountBalanceInterval :: AccountBalanceInterval era -> PV4.AccountBalanceInterval
 transAccountBalanceInterval = \case
