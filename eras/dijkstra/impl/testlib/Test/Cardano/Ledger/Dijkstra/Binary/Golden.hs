@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -29,18 +30,19 @@ import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Data (Proxy (..))
 import qualified Data.OMap.Strict as OMap
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
-import Test.Cardano.Ledger.Common (Spec, describe, it)
+import Test.Cardano.Ledger.Common (Spec, ToExpr, describe, it)
 import Test.Cardano.Ledger.Conway.Binary.Golden hiding (spec)
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
 import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
-spec :: forall era. DijkstraEraTest era => Spec
+spec :: forall era. (DijkstraEraTest era, ToExpr (BlockBody era)) => Spec
 spec = describe "Golden" . forEachEraVersion @era $ \version -> do
   describe "Redeemers" $ do
     goldenListRedeemersDisallowed @era version
@@ -58,6 +60,8 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     goldenSubTransactions @era
   describe "IsPhase2Valid flag" $ do
     goldenIsPhase2ValidFlag @era
+  describe "Block transactions" $ do
+    goldenBlockTransaction @era
 
 goldenEmptyFields :: forall era. DijkstraEraTest era => Version -> Spec
 goldenEmptyFields version =
@@ -333,6 +337,75 @@ goldenIsPhase2ValidFlag = do
         , txBodyEnc
         , E (TkMapLen 0)
         , E (TkBool False)
+        , E TkNull
+        ]
+    txBodyEnc =
+      mconcat
+        [ E $ TkMapLen 3
+        , Em [E @Int 0, Ev version $ Set.empty @TxIn]
+        , Em [E @Int 1, Ev version $ [] @(TxOut era)]
+        , Em [E @Int 2, E $ Coin 0]
+        ]
+
+goldenBlockTransaction ::
+  forall era. (DijkstraEraTest era, ToExpr (BlockBody era)) => Spec
+goldenBlockTransaction = do
+  it "Deserialize a block body with a valid transaction" $
+    expectDecoderResultOn @(BlockBody era)
+      version
+      (blockBodyEnc True)
+      (blockBodyWithFlag Phase2Valid)
+      id
+  it "Deserialize a block body with an invalid transaction" $
+    expectDecoderResultOn @(BlockBody era)
+      version
+      (blockBodyEnc False)
+      (blockBodyWithFlag Phase2Invalid)
+      id
+  it "Fail to deserialize a block transaction with `isPhase2Valid` before auxiliary data" $
+    expectDecoderFailureAnn @(BlockBody era)
+      version
+      blockBodyLegacyFlagEnc
+      ( DecoderErrorDeserialiseFailure
+          "Annotator (MemoBytes (DijkstraBlockBodyRaw DijkstraEra))"
+          (DeserialiseFailure 14 "Failed to decode AlonzoTxAuxData")
+      )
+  where
+    version = eraProtVerLow @era
+    blockBodyWithFlag isPhase2Valid =
+      mkBasicBlockBody @era
+        & txSeqBlockBodyL
+          .~ SSeq.singleton
+            (mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isPhase2ValidTxL .~ isPhase2Valid)
+    blockBodyEnc isValid =
+      mconcat
+        [ E $ TkListLen 3
+        , E $ TkListLen 1
+        , txInBlockEnc isValid
+        , E TkNull
+        , E TkNull
+        ]
+    -- The `isPhase2Valid` flag comes after the auxiliary data in a block transaction
+    txInBlockEnc isPhase2Valid =
+      mconcat
+        [ E $ TkListLen 4
+        , txBodyEnc
+        , E (TkMapLen 0)
+        , E TkNull
+        , E (TkBool isPhase2Valid)
+        ]
+    -- The mempool position of the `isPhase2Valid` flag (before the auxiliary data)
+    -- is not allowed in a block transaction
+    blockBodyLegacyFlagEnc =
+      mconcat
+        [ E $ TkListLen 3
+        , E $ TkListLen 1
+        , E $ TkListLen 4
+        , txBodyEnc
+        , E (TkMapLen 0)
+        , E (TkBool True)
+        , E TkNull
+        , E TkNull
         , E TkNull
         ]
     txBodyEnc =

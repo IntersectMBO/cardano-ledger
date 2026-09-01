@@ -44,9 +44,7 @@ import Cardano.Ledger.Huddle.Gen (
   genArrayTerm,
   genRule,
   generateFromName,
-  liftAntiGen,
   scale,
-  shuffle,
   unwrapSingle,
   validateArrayTerm,
   validateFromName,
@@ -57,7 +55,7 @@ import Cardano.Ledger.State (
   BlsKey (..),
  )
 import Codec.CBOR.Term (Term (..))
-import Control.Monad (unless, zipWithM)
+import Control.Monad (unless)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
 import Data.List (nub)
@@ -66,9 +64,9 @@ import Data.Proxy (Proxy (..))
 import Data.String (fromString)
 import Data.Text ()
 import Data.Text qualified as T
-import Data.Word (Word16, Word64)
+import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
-import Test.AntiGen (withAnnotation, (|!))
+import Test.AntiGen (withAnnotation)
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Text.Heredoc
@@ -78,8 +76,8 @@ dijkstraCDDL :: Huddle
 dijkstraCDDL =
   collectFromInit
     [ HIRule $ huddleRule @"block" (Proxy @DijkstraEra)
-    , HIRule $ huddleRule @"transaction" (Proxy @DijkstraEra)
-    , HIRule $ huddleRule @"transaction_mempool" (Proxy @DijkstraEra)
+    , HIRule $ huddleRule @"block_transaction" (Proxy @DijkstraEra)
+    , HIRule $ huddleRule @"mempool_transaction" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"kes_signature" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"language" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"potential_languages" (Proxy @DijkstraEra)
@@ -910,21 +908,26 @@ instance HuddleRule "script_data_hash" DijkstraEra where
           |]
       $ scriptDataHashRule pname p
 
-instance HuddleRule "transaction_mempool" DijkstraEra where
+instance HuddleRule "mempool_transaction" DijkstraEra where
   huddleRuleNamed pname p =
     comment
-      [str| In Dijkstra we're deprecating the `is_valid` flag, but for backwards
-          | compatibility we still allow this flag to be present in incoming
-          | transactions. Once the transaction is added to a block, the flag will
-          | be stripped, so the `is_valid` flag cannot appear in transactions that
-          | are in a block.
+      [str| In Dijkstra we're deprecating the `is_valid` flag in submitted
+          | transactions, since it is set by the block producer rather than the
+          | transaction author. For backwards compatibility we still allow this
+          | flag to be present in incoming transactions, but only with its value
+          | set to `true`. Once the transaction is added to a block, the flag is
+          | moved to the end of the transaction (see the `block_transaction` rule).
           |
-          | In the next era `is_valid` flags will not be allowed even in mempool
-          | transactions, so it's strongly recommended to encode transactions
-          | according to the `transaction` rule.
+          | In the next era the `is_valid` flag will not be allowed in mempool
+          | transactions at all, so it's strongly recommended to encode
+          | transactions without the flag.
           |]
       $ pname
-        =.= huddleRule @"transaction" p
+        =.= sarr
+          [ a $ huddleRule @"transaction_body" p
+          , a $ huddleRule @"transaction_witness_set" p
+          , a (huddleRule @"auxiliary_data" p / VNil)
+          ]
         / sarr
           [ a $ huddleRule @"transaction_body" p
           , a $ huddleRule @"transaction_witness_set" p
@@ -932,14 +935,20 @@ instance HuddleRule "transaction_mempool" DijkstraEra where
           , a (huddleRule @"auxiliary_data" p / VNil)
           ]
 
-instance HuddleRule "transaction" DijkstraEra where
+instance HuddleRule "block_transaction" DijkstraEra where
   huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ a $ huddleRule @"transaction_body" p
-        , a $ huddleRule @"transaction_witness_set" p
-        , a (huddleRule @"auxiliary_data" p / VNil)
-        ]
+    comment
+      [str| Transactions in a block carry a trailing `is_valid` flag, which is
+          | set by the block producer. It is placed after all the fields that are
+          | supplied by the transaction author.
+          |]
+      $ pname
+        =.= arr
+          [ a $ huddleRule @"transaction_body" p
+          , a $ huddleRule @"transaction_witness_set" p
+          , a (huddleRule @"auxiliary_data" p / VNil)
+          , a VBool
+          ]
 
 instance HuddleRule "ex_unit_prices" DijkstraEra where
   huddleRuleNamed pname p =
@@ -1078,19 +1087,12 @@ instance HuddleRule "leios_signature" DijkstraEra where
         sig <- liftGen genLeiosSignature
         pure $ SingleTerm $ TBytes (leiosSignatureToBytes sig)
 
-instance HuddleRule "invalid_transactions" DijkstraEra where
-  huddleRuleNamed pname era = pname =.= huddleRule1 @"nonempty_set" era (huddleRule @"transaction_index" era)
-
 instance HuddleRule "block_body" DijkstraEra where
   huddleRuleNamed pname era =
-    comment
-      [str| Note that every transaction_index must be strictly smaller than the length of transaction_bodies
-          |]
-      $ withCBORGen blockBodyGen
-      $ pname
+    withCBORGen blockBodyGen $
+      pname
         =.= arr
-          [ "invalid_transactions" ==> huddleRule @"invalid_transactions" era / VNil
-          , "transactions" ==> arr [0 <+ a (huddleRule @"transaction" era)]
+          [ "transactions" ==> arr [0 <+ a (huddleRule @"block_transaction" era)]
           , "leios_certificate" ==> huddleRule @"leios_certificate" era / VNil
           , "peras_certificate" ==> huddleRule @"peras_certificate" era / VNil
           ]
@@ -1102,38 +1104,15 @@ blockBodyGen = do
     mapM
       ( \i ->
           withAntiGen (withAnnotation (T.pack $ show i)) . scale (`div` max 1 numTxs) $
-            generateFromName "transaction"
+            generateFromName "block_transaction"
       )
       [0 .. numTxs - 1]
-  invalidIxIxs <-
-    if numTxs == 0
-      then pure []
-      else do
-        n <-
-          liftAntiGen $
-            choose (0, numTxs) |! choose (numTxs + 1, 2 * numTxs)
-        txIndices <- liftGen $ shuffle [0 .. toInteger numTxs - 1]
-        -- We need this so that a zapped `n` still produces indices
-        txIndicesOverflow <- liftGen $ shuffle txIndices
-        let
-          txIndicesWithOverflow = take n $ txIndices <> txIndicesOverflow
-          faultyIndex pos i =
-            withAnnotation (T.pack $ show pos) $
-              pure i
-                |! choose (toInteger numTxs + 1, toInteger $ maxBound @Word16)
-        liftAntiGen $
-          withAnnotation "invalid_transactions" $
-            zipWithM faultyIndex [0 :: Int ..] txIndicesWithOverflow
-  invalidTxIxsTerm <-
-    if null invalidIxIxs
-      then pure TNull
-      else genArrayTerm $ TInteger . toInteger <$> invalidIxIxs
   txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
   -- NOTE: This would not be a valid block because txs are not allowed when a
   -- leios cert is also included
   leiosCertTerm <- generateFromName "leios_certificate"
   perasCertTerm <- generateFromName "peras_certificate"
-  SingleTerm <$> genArrayTerm [invalidTxIxsTerm, txsTerm, leiosCertTerm, perasCertTerm]
+  SingleTerm <$> genArrayTerm [txsTerm, leiosCertTerm, perasCertTerm]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule
