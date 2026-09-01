@@ -37,7 +37,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusPurposeScriptHashArg,
-  PlutusRedeemerPointer,
   PlutusScriptPurpose,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -46,6 +45,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transRedeemer, transReferenceScript)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
@@ -361,8 +361,6 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusTxInInfo _ = transTxInInfoV1
 
-  toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
-
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
   , Inject (ConwayContextError era) (ContextError era)
@@ -405,7 +403,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -428,8 +426,6 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusArgs = Babbage.toPlutusV2Args
 
   toPlutusTxInInfo _ = Babbage.transTxInInfoV2
-
-  toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
 
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxCert _ _ = pure . transTxCertV3
@@ -454,7 +450,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -486,8 +482,6 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusArgs = Conway.toPlutusV3Args
 
   toPlutusTxInInfo _ = transTxInInfoV3
-
-  toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
 
 guardDijkstraFeaturesForPlutusV1toV3 ::
   forall era.
@@ -583,7 +577,6 @@ transRedeemerPointerV4 ::
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo l era
   , PlutusPurposeScriptHashArg l ~ ScriptHash
-  , PlutusRedeemerPointer l ~ (PlutusScriptPurpose l, PV4.Redeemer)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   proxy l ->
@@ -591,7 +584,7 @@ transRedeemerPointerV4 ::
   TxBody t era ->
   Map.Map (PlutusPurpose AsIx era) ScriptHash ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
-  Either (ContextError era) (PlutusRedeemerPointer l)
+  Either (ContextError era) (PlutusScriptPurpose l, PV4.Redeemer)
 transRedeemerPointerV4 proxy pv txBody scriptHashes (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left . inject $ RedeemerPointerPointsToNothing ptr
@@ -641,7 +634,8 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             (Right mempty)
             ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx ltiUTxO
+      let scriptHashes = mempty -- TODO: Pipe in resolved ScriptHashes
+      plutusRedeemers <- transTxRedeemersV4 proxy ltiProtVer ltiTx scriptHashes
       let
         txInfo =
           PV4.TxInfo
@@ -673,8 +667,6 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusArgs = toPlutusV4Args
 
   toPlutusTxInInfo _ = transTxInInfoV4
-
-  toPlutusRedeemerPointer = transRedeemerPointerV4
 
 transTxInV4 :: TxIn -> PV4.TxOutRef
 transTxInV4 (TxIn txid txIx) = PV4.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
@@ -735,6 +727,31 @@ transTxOutV4 txOutSource txOut = do
       , txOutValue = val
       , txOutAddress = addr
       }
+
+-- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
+-- to a `PV2.Redeemer`
+transTxRedeemersV4 ::
+  ( EraPlutusTxInfo l era
+  , AlonzoEraTxBody era
+  , EraTx era
+  , AlonzoEraTxWits era
+  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (DijkstraContextError era) (ContextError era)
+  , PlutusPurposeScriptHashArg l ~ ScriptHash
+  ) =>
+  proxy l ->
+  ProtVer ->
+  Tx t era ->
+  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
+  Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
+transTxRedeemersV4 proxy pv tx scriptHashes =
+  PV2.unsafeFromList
+    <$> mapM
+      (transRedeemerPointerV4 proxy pv (tx ^. bodyTxL) scriptHashes)
+      (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+
+transAccountId :: AccountId -> PV4.AccountId
+transAccountId (AccountId cred) = PV4.AccountId $ transCred cred
 
 transTxBodyWithdrawals ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace

@@ -34,7 +34,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusPurposeScriptHashArg,
-  PlutusRedeemerPointer,
   PlutusScriptPurpose,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -46,10 +45,10 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   toLegacyPlutusArgs,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..), getSpendingDatum)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, getSpendingDatum)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
@@ -88,13 +87,12 @@ import Cardano.Ledger.Plutus.TxInfo (
   transTxIn,
   txOutSourceToText,
  )
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
-import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -205,10 +203,9 @@ transRedeemerPointerV2V3 ::
   proxy l ->
   ProtVer ->
   TxBody t era ->
-  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
-transRedeemerPointerV2V3 proxy pv txBody _ (ptr, (d, _)) =
+transRedeemerPointerV2V3 proxy pv txBody (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
@@ -219,24 +216,21 @@ transRedeemerPointerV2V3 proxy pv txBody _ (ptr, (d, _)) =
 -- to a `PV2.Redeemer`
 transTxRedeemers ::
   ( EraPlutusTxInfo l era
-  , EraUTxO era
+  , AlonzoEraTxBody era
+  , EraTx era
   , AlonzoEraTxWits era
-  , PlutusRedeemerPointer l ~ (PlutusScriptPurpose l, PV2.Redeemer)
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (BabbageContextError era) (ContextError era)
+  , PlutusPurposeScriptHashArg l ~ ()
   ) =>
   proxy l ->
   ProtVer ->
   Tx t era ->
-  UTxO era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemers proxy pv tx utxo =
+transTxRedeemers proxy pv tx =
   PV2.unsafeFromList
     <$> mapM
-      (toPlutusRedeemerPointer proxy pv (tx ^. bodyTxL) scriptHashes)
+      (transRedeemerPointerV2V3 proxy pv (tx ^. bodyTxL))
       (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
-  where
-    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo $ tx ^. bodyTxL
-    scriptHashes = Map.fromList $ first (hoistPlutusPurpose toAsIx) <$> scriptsNeeded
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
@@ -375,8 +369,6 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 
   toPlutusTxInInfo _ = transTxInInfoV1
 
-  toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
-
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
@@ -395,7 +387,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx ltiUTxO
+      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -418,8 +410,6 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusArgs = toPlutusV2Args
 
   toPlutusTxInInfo _ = transTxInInfoV2
-
-  toPlutusRedeemerPointer = transRedeemerPointerV2V3
 
 toPlutusV2Args ::
   ( AlonzoEraUTxO era

@@ -48,17 +48,14 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusScriptContext,
   PlutusTxInInfo,
   PlutusPurposeScriptHashArg,
-  PlutusRedeemerPointer,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
   AsItem (..),
-  AsIx,
   AsIxItem (..),
   AsPurpose,
-  ExUnits,
   PlutusPurpose,
   PlutusScript (..),
  )
@@ -153,14 +150,6 @@ class
     UTxO era ->
     TxIn ->
     Either (ContextError era) (PlutusTxInInfo era l)
-
-  toPlutusRedeemerPointer ::
-    proxy l ->
-    ProtVer ->
-    TxBody t era ->
-    Map (PlutusPurpose AsIx era) ScriptHash ->
-    (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
-    Either (ContextError era) (PlutusRedeemerPointer l)
 
 -- | This is the helper type that captures translation of `Tx` to `PlutusTxInfo`.
 --
@@ -280,12 +269,6 @@ type family PlutusPurposeScriptHashArg (l :: Language) where
   PlutusPurposeScriptHashArg 'PlutusV2 = ()
   PlutusPurposeScriptHashArg 'PlutusV3 = ()
   PlutusPurposeScriptHashArg 'PlutusV4 = ScriptHash
-
-type family PlutusRedeemerPointer (l :: Language) where
-  PlutusRedeemerPointer 'PlutusV1 = ()
-  PlutusRedeemerPointer 'PlutusV2 = (PlutusScriptPurpose 'PlutusV2, PV2.Redeemer)
-  PlutusRedeemerPointer 'PlutusV3 = (PlutusScriptPurpose 'PlutusV3, PV3.Redeemer)
-  PlutusRedeemerPointer 'PlutusV4 = (PlutusScriptPurpose 'PlutusV4, PV4.Redeemer)
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

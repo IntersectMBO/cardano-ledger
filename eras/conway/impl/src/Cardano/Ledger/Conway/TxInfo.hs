@@ -454,8 +454,6 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 
   toPlutusTxInInfo _ = transTxInInfoV1
 
-  toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
-
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
@@ -475,7 +473,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -499,8 +497,6 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
 
   toPlutusTxInInfo _ = Babbage.transTxInInfoV2
 
-  toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
-
 instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
@@ -523,7 +519,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
+      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
       -- It is important for memoization for `txInfo` to be a let binding
       let txInfo =
             PV3.TxInfo
@@ -554,8 +550,6 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusArgs = toPlutusV3Args
 
   toPlutusTxInInfo _ = transTxInInfoV3
-
-  toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
 
 transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))

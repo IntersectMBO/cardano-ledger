@@ -41,7 +41,6 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transTxBodyWithdrawals,
   transTxBodyReqSignerHashes,
   transTxWitsDatums,
-  transRedeemerPointerV1,
 
   -- * LegacyPlutusArgs helpers
   toPlutusV1Args,
@@ -168,17 +167,6 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxInInfo _ utxo txIn = do
     txOut <- transLookupTxOut utxo txIn
     pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
-
-  toPlutusRedeemerPointer = transRedeemerPointerV1
-
-transRedeemerPointerV1 ::
-  proxy 'PlutusV1 ->
-  ProtVer ->
-  TxBody t era ->
-  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
-  (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
-  Either (ContextError era) (PlutusRedeemerPointer 'PlutusV1)
-transRedeemerPointerV1 _ _ _ _ _ = Right ()
 
 toPlutusV1Args ::
   ( AlonzoEraUTxO era
