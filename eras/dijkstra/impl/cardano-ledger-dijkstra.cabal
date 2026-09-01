@@ -158,6 +158,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.UtxosSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
     Test.Cardano.Ledger.Dijkstra.TreeDiff
