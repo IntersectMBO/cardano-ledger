@@ -44,7 +44,6 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   Language (..),
-  PlutusRunnable (..),
   PlutusWithContext (..),
   decodePlutusRunnable,
   hashData,
@@ -101,7 +100,6 @@ collectTwoPhaseScriptInputsOutputOrdering = do
               toPlutusArgs
                 plutus
                 lti
-                (plutusRunnableScriptHash plutusRunnable)
                 txInfo
                 spendingPurpose1
                 (redeemer @AlonzoEra)

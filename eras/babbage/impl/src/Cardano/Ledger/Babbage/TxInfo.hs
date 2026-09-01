@@ -33,7 +33,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
-  PlutusPurposeScriptHashArg,
   PlutusScriptPurpose,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -198,7 +197,6 @@ transRedeemerPointerV2V3 ::
   ( EraPlutusTxInfo l era
   , AlonzoEraTxBody era
   , Inject (BabbageContextError era) (ContextError era)
-  , PlutusPurposeScriptHashArg l ~ ()
   ) =>
   proxy l ->
   ProtVer ->
@@ -209,7 +207,7 @@ transRedeemerPointerV2V3 proxy pv txBody (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
-      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv () sp
+      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv sp
       Right (plutusScriptPurpose, transRedeemer d)
 
 -- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
@@ -220,7 +218,6 @@ transTxRedeemers ::
   , EraTx era
   , AlonzoEraTxWits era
   , Inject (BabbageContextError era) (ContextError era)
-  , PlutusPurposeScriptHashArg l ~ ()
   ) =>
   proxy l ->
   ProtVer ->
@@ -417,17 +414,15 @@ toPlutusV2Args ::
   ) =>
   proxy 'PlutusV2 ->
   LedgerTxInfo era ->
-  ScriptHash ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy LedgerTxInfo {..} _ txInfo scriptPurpose redeemerData =
+toPlutusV2Args proxy LedgerTxInfo {..} txInfo scriptPurpose redeemerData =
   PlutusV2Args
     <$> toLegacyPlutusArgs
       proxy
       ltiProtVer
-      ()
       (PV2.ScriptContext txInfo)
       scriptPurpose
       maybeSpendingDatum

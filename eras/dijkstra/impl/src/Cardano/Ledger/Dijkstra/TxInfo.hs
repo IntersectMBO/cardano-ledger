@@ -36,7 +36,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
-  PlutusPurposeScriptHashArg,
   PlutusScriptPurpose,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -112,7 +111,6 @@ import Cardano.Ledger.Plutus (
   transEpochNo,
   transKeyHash,
   transSafeHash,
-  transScriptHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -576,7 +574,6 @@ transRedeemerPointerV4 ::
   ( AlonzoEraTxBody era
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo l era
-  , PlutusPurposeScriptHashArg l ~ ScriptHash
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   proxy l ->
@@ -590,7 +587,7 @@ transRedeemerPointerV4 proxy pv txBody scriptHashes (ptr, (d, _)) =
     SNothing -> Left . inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
       case Map.lookup ptr scriptHashes of
-        Just sh -> (,transRedeemer d) <$> toPlutusScriptPurpose proxy pv sh sp
+        Just _sh -> (,transRedeemer d) <$> toPlutusScriptPurpose proxy pv sp
         Nothing -> Left . inject $ ScriptHashNotFoundForPurpose @era ptr
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
@@ -737,7 +734,6 @@ transTxRedeemersV4 ::
   , AlonzoEraTxWits era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
-  , PlutusPurposeScriptHashArg l ~ ScriptHash
   ) =>
   proxy l ->
   ProtVer ->
@@ -860,24 +856,24 @@ toPlutusV4Args ::
   ) =>
   proxy 'PlutusV4 ->
   LedgerTxInfo era ->
-  ScriptHash ->
   PV4.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy LedgerTxInfo {..} sh txInfo plutusPurpose redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer sh plutusPurpose
+toPlutusV4Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
   let
     maybeSpendingData = getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
     -- TODO TopTxInfo should be set if this is a top-level transaction
     scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
+    sh = error "Unimplemented: ScriptHash for ScriptContext"
   pure $
     PlutusV4Args $
       PV4.ScriptContext
         { PV4.scriptContextTxInfo = txInfo
         , PV4.scriptContextRedeemer = Babbage.transRedeemer redeemerData
         , PV4.scriptContextScriptInfo = scriptInfo
-        , PV4.scriptContextScriptHash = transScriptHash sh
+        , PV4.scriptContextScriptHash = sh
         }
 
 transTxId :: TxId -> PV4.TxId
@@ -889,10 +885,9 @@ transPlutusPurposeV4 ::
   ) =>
   proxy 'PlutusV4 ->
   ProtVer ->
-  ScriptHash ->
   DijkstraPlutusPurpose AsIxItem era ->
   Either (ContextError era) (PlutusScriptPurpose PlutusV4)
-transPlutusPurposeV4 proxy pv (transScriptHash -> sh) = \case
+transPlutusPurposeV4 proxy pv = \case
   DijkstraSpending (AsIxItem _ (TxIn txId (TxIx ix))) ->
     pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
   DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
@@ -904,3 +899,5 @@ transPlutusPurposeV4 proxy pv (transScriptHash -> sh) = \case
   DijkstraProposing (AsIxItem ix proc) ->
     pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
   DijkstraGuarding (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
+  where
+    sh = error "Unimplemented: ScriptHash for purpose"

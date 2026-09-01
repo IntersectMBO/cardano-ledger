@@ -51,7 +51,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
-  PlutusPurposeScriptHashArg,
   PlutusTxCert,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -649,10 +648,9 @@ transPlutusPurposeV3 ::
   ) =>
   proxy 'PlutusV3 ->
   ProtVer ->
-  () ->
   PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
-transPlutusPurposeV3 proxy pv _ = \case
+transPlutusPurposeV3 proxy pv = \case
   SpendingPurpose (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
   MintingPurpose (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   CertifyingPurpose (AsIxItem ix txCert) ->
@@ -743,20 +741,18 @@ transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAc
 transPlutusPurposeV1V2 ::
   forall l era proxy.
   ( PlutusTxCert l ~ PV2.DCert
-  , PlutusPurposeScriptHashArg l ~ ()
   , EraPlutusTxInfo l era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
   proxy l ->
   ProtVer ->
-  () ->
   PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV2.ScriptPurpose
-transPlutusPurposeV1V2 proxy pv sh = \case
-  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoSpending asIxItem
-  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoMinting asIxItem
-  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoCertifying asIxItem
-  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv sh $ AlonzoWithdrawing asIxItem
+transPlutusPurposeV1V2 proxy pv = \case
+  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending asIxItem
+  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting asIxItem
+  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying asIxItem
+  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoWithdrawing asIxItem
   purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
@@ -769,13 +765,12 @@ toPlutusV3Args ::
   ) =>
   proxy 'PlutusV3 ->
   LedgerTxInfo era ->
-  ScriptHash ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args proxy LedgerTxInfo {..} _ txInfo plutusPurpose redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer () plutusPurpose
+toPlutusV3Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
   let
     maybeSpendingData =
       getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose

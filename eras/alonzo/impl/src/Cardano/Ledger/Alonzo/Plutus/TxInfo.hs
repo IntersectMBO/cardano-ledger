@@ -118,7 +118,6 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
         toPlutusArgs
           slang
           lti
-          (plutusRunnableScriptHash plutusRunnable)
           txInfo
           plutusPurpose
           redeemerData
@@ -174,17 +173,15 @@ toPlutusV1Args ::
   ) =>
   proxy 'PlutusV1 ->
   LedgerTxInfo era ->
-  ScriptHash ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy LedgerTxInfo {..} _ txInfo plutusPurpose redeemerData =
+toPlutusV1Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs
       proxy
       ltiProtVer
-      ()
       (PV1.ScriptContext txInfo)
       plutusPurpose
       maybeSpendingDatum
@@ -197,14 +194,13 @@ toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
   ProtVer ->
-  PlutusPurposeScriptHashArg l ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (LegacyPlutusArgs l)
-toLegacyPlutusArgs proxy pv sh mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
-  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy pv sh scriptPurpose
+toLegacyPlutusArgs proxy pv mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
+  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy pv scriptPurpose
   let redeemer = getPlutusData redeemerData
   pure $ case maybeSpendingData of
     Nothing -> LegacyPlutusArgs2 redeemer scriptContext
@@ -399,10 +395,9 @@ transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
   ProtVer ->
-  PlutusPurposeScriptHashArg l ->
   AlonzoPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV1.ScriptPurpose
-transPlutusPurpose proxy pv _ = \case
+transPlutusPurpose proxy pv = \case
   AlonzoSpending (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
   AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
   AlonzoCertifying (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert

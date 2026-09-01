@@ -47,7 +47,6 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusScriptPurpose,
   PlutusScriptContext,
   PlutusTxInInfo,
-  PlutusPurposeScriptHashArg,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -127,7 +126,6 @@ class
   toPlutusScriptPurpose ::
     proxy l ->
     ProtVer ->
-    PlutusPurposeScriptHashArg l ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
@@ -139,7 +137,6 @@ class
   toPlutusArgs ::
     proxy l ->
     LedgerTxInfo era ->
-    ScriptHash ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Data era ->
@@ -263,12 +260,6 @@ type family PlutusTxInInfo era (l :: Language) where
   PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
   PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
   PlutusTxInInfo _ 'PlutusV4 = PV4.TxInInfo
-
-type family PlutusPurposeScriptHashArg (l :: Language) where
-  PlutusPurposeScriptHashArg 'PlutusV1 = ()
-  PlutusPurposeScriptHashArg 'PlutusV2 = ()
-  PlutusPurposeScriptHashArg 'PlutusV3 = ()
-  PlutusPurposeScriptHashArg 'PlutusV4 = ScriptHash
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus
