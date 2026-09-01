@@ -120,6 +120,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectTreasury,
   disableTreasuryExpansion,
   updateAddrTxWits,
+  resetAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
   fixupTxOuts,
@@ -1097,7 +1098,14 @@ addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
     tx
       & witsTxL . scriptTxWitsL <>~ fmap fromNativeScript scriptsToAdd
 
--- | Adds @TxWits@ that will satisfy all of the required key witnesses
+-- | Add the @TxWits@ that are needed to satisfy the required key
+-- witnesses and are not already present.
+--
+-- Witnesses that are already present are retained, and this acts as a
+-- fixup step: a test can supply a witness of its own and it will be
+-- retained. But a witness signed over a transaction body that has since
+-- changed is left in place, since its key hash is already covered. If
+-- we want to reset all use `resetAddrTxWits`.
 updateAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
@@ -1134,6 +1142,20 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
     tx
       & witsTxL . addrTxWitsL <>~ extraAddrVKeyWits <> extraNativeScriptVKeyWits
       & witsTxL . bootAddrTxWitsL <>~ Set.fromList extraBootAddrWits
+
+-- | Discard Shelley-based address witnesses and derive them afresh for
+-- the current transaction body. Leave bootstrap witnesses untouched.
+--
+-- Required when transaction body is modified after witnesses have been
+-- added, because `updateAddrTxWits` leaves witnesses signed over the
+-- previous body in place.
+resetAddrTxWits ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Tx l era ->
+  ImpTestM era (Tx l era)
+resetAddrTxWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
 
 -- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::
