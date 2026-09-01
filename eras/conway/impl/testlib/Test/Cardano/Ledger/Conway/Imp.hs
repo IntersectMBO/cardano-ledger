@@ -54,6 +54,7 @@ spec era = do
   Babbage.spec era
   describe "ConwayEra Onwards" $ withImpInitEachEraVersion era $ do
     BBODY.spec
+    CERTS.spec
     DELEG.spec
     ENACT.spec
     EPOCH.spec
@@ -70,7 +71,6 @@ spec era = do
 conwayOnlySpec :: Spec
 conwayOnlySpec = do
   describe "ConwayEra Specific" $ withImpInitEachEraVersion (Proxy @ConwayEra) $ do
-    -- TODO: move to `spec` when ready: https://github.com/IntersectMBO/cardano-ledger/issues/5805
-    CERTS.spec
+    CERTS.conwayOnlySpec
     SNAP.conwayOnlySpec
     UTXO.conwayOnlySpec

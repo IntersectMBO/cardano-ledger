@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.CertsSpec (conwayOnlySpec, spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -26,11 +26,11 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
-spec ::
+conwayOnlySpec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
-spec = describe "CERTS" $ do
+conwayOnlySpec = describe "CERTS" $ do
   describe "Withdrawals" $ do
     it "Withdrawing from an unregistered staking address" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -91,6 +91,12 @@ spec = describe "CERTS" $ do
                 }
           )
 
+spec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era))
+spec = describe "CERTS" $ do
+  describe "Withdrawals" $ do
     it "Withdrawing the wrong amount" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       pv <- getsPParams @era ppProtocolVersionL
@@ -142,11 +148,15 @@ spec = describe "CERTS" $ do
               injectFailure . WithdrawalsNotInRewardsCERTS @era $
                 Withdrawals [(accountAddress1, zero)]
         ]
-  where
-    setupAccountAddress = do
-      kh <- freshKeyHash
-      let cred = KeyHashObj kh
-      ra <- registerStakeCredential cred
-      submitAndExpireProposalToMakeReward cred
-      b <- getBalance cred
-      pure (ra, b, kh)
+
+setupAccountAddress ::
+  forall era.
+  ConwayEraImp era =>
+  ImpM (LedgerSpec era) (AccountAddress, Coin, KeyHash Staking)
+setupAccountAddress = do
+  kh <- freshKeyHash
+  let cred = KeyHashObj kh
+  ra <- registerStakeCredential cred
+  submitAndExpireProposalToMakeReward cred
+  b <- getBalance cred
+  pure (ra, b, kh)
