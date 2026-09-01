@@ -22,6 +22,8 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   impLookupPlutusScript,
   malformedPlutus,
   addCollateralInput,
+  makeCollateralInput,
+  txWithMaxRedeemers,
   impGetPlutusContexts,
   alonzoFixupTx,
   plutusTestScripts,
