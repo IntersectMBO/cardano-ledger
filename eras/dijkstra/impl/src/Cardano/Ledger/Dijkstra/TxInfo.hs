@@ -363,8 +363,6 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
 
-  toPlutusTxOut _ src txOut = Just <$> Conway.transTxOutV1 src txOut
-
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
   , Inject (ConwayContextError era) (ContextError era)
@@ -433,8 +431,6 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 
   toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
 
-  toPlutusTxOut _ = Babbage.transTxOutV2
-
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxCert _ _ = pure . transTxCertV3
 
@@ -492,8 +488,6 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxInInfo _ = transTxInInfoV3
 
   toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
-
-  toPlutusTxOut _ = Babbage.transTxOutV2
 
 guardDijkstraFeaturesForPlutusV1toV3 ::
   forall era.
@@ -681,8 +675,6 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxInInfo _ = transTxInInfoV4
 
   toPlutusRedeemerPointer = transRedeemerPointerV4
-
-  toPlutusTxOut _ = transTxOutV4
 
 transTxInV4 :: TxIn -> PV4.TxOutRef
 transTxInV4 (TxIn txid txIx) = PV4.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))

@@ -456,8 +456,6 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 
   toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
 
-  toPlutusTxOut _ src txOut = Just <$> transTxOutV1 src txOut
-
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
@@ -502,8 +500,6 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxInInfo _ = Babbage.transTxInInfoV2
 
   toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
-
-  toPlutusTxOut _ = transTxOutV2
 
 instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
@@ -560,8 +556,6 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxInInfo _ = transTxInInfoV3
 
   toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
-
-  toPlutusTxOut _ = transTxOutV2
 
 transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))

@@ -171,8 +171,6 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
 
   toPlutusRedeemerPointer = transRedeemerPointerV1
 
-  toPlutusTxOut _ _ = pure . transTxOut
-
 transRedeemerPointerV1 ::
   proxy 'PlutusV1 ->
   ProtVer ->
