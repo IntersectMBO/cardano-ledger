@@ -11,6 +11,7 @@
 
 ### `testlib`
 
+* Add `resetAddrTxWits`, which re-derives key witnesses for a modified transaction body
 * Make `fixupTxOuts` parametric on level
 * Add `DecCBOR` instance for `Block`
 * Add `registerPoolWithParams`, which registers a stake pool with adjusted parameters
