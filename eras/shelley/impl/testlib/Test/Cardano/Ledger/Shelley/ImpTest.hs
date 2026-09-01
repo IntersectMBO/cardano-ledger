@@ -63,6 +63,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitTxAnn_,
   submitFailingTx,
   submitFailingTxM,
+  submitFailingSubsetTx,
+  submitFailingSubsetTxM,
   trySubmitTx,
   submitBlock_,
   submitBlock,
@@ -1372,7 +1374,44 @@ submitFailingTxM ::
 submitFailingTxM tx mkExpectedFailures = do
   (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
   expectedFailures <- mkExpectedFailures fixedUpTx
-  predFailures `shouldBeExpr` expectedFailures
+  expectExprEqualWithMessage
+    "The predicate failures were not as expected"
+    predFailures
+    expectedFailures
+
+-- | Submit a transaction that is expected to be rejected with at least the given predicate failures.
+-- The inputs and outputs are automatically balanced.
+submitFailingSubsetTx ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Tx TopTx era ->
+  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  ImpTestM era ()
+submitFailingSubsetTx tx = submitFailingSubsetTxM tx . const . pure
+
+-- | Submit a transaction that is expected to be rejected, and compute
+-- the expected subset of predicate failures from the fixed-up tx using the supplied action.
+-- The inputs and outputs are automatically balanced.
+submitFailingSubsetTxM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Tx TopTx era ->
+  (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
+  ImpTestM era ()
+submitFailingSubsetTxM tx mkExpectedFailures = do
+  (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
+  expectedFailures <- mkExpectedFailures fixedUpTx
+  let
+    predSet = Set.fromList $ toList predFailures
+    expectedSet = Set.fromList $ toList expectedFailures
+    significantSet = predSet `Set.intersection` expectedSet
+  logToExpr predFailures
+  expectExprEqualWithMessage
+    "Some required predicate failures were absent"
+    significantSet
+    expectedSet
 
 -- * Submitting blocks
 

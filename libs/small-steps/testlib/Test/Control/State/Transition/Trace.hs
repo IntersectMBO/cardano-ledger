@@ -445,7 +445,7 @@ mSt .- sig = do
   m st
 mSt .->> stExpected = do
   stActual <- mSt
-  liftIO $ expectExprEqualWithMessage "Check trace with (.->>) fails" stExpected stActual
+  liftIO $ expectExprEqualWithMessage "Check trace with (.->>) fails" stActual stExpected
   return stActual
 
 -- | Bind the state inside the first argument, and check whether it is equal to

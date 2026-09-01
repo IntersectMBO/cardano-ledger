@@ -230,8 +230,8 @@ expectExprEqualWithMessage = requireExprEqualWithMessage (assertColorFailure . a
 
 requireExprEqualWithMessage ::
   (ToExpr a, Eq a, Monoid b) => (Doc AnsiStyle -> b) -> Doc AnsiStyle -> a -> a -> b
-requireExprEqualWithMessage fail_ message expected actual =
+requireExprEqualWithMessage fail_ message actual expected =
   if actual == expected then mempty else fail_ doc
   where
     doc = Pretty.width message (\w -> if w == 0 then diff else Pretty.line <> Pretty.indent 2 diff)
-    diff = diffExpr actual expected
+    diff = diffExpr expected actual
