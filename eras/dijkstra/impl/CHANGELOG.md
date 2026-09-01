@@ -45,6 +45,10 @@
 
 ### testlib
 
+* Add `InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era` as a superclass of `DijkstraEraImp`
+* Add `submitFailingSubTx` and `withPostFixupSubTxs`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec`
+* Run the Plutus fixup steps and add collateral for sub-transactions in `dijkstraFixupTx`
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubTransactions`
