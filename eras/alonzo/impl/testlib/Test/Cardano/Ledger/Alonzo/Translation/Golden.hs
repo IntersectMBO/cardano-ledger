@@ -8,15 +8,13 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (
-  LedgerTxInfo (..),
-  SupportedLanguage (..),
- )
+import Cardano.Ledger.Alonzo.Plutus.Context (SupportedLanguage (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
   epochInfo,
@@ -71,15 +69,7 @@ assertTranslationComparison (TranslationInstance protVer supportedLanguage utxo 
       let actual = mkPlutusTxInfo slang lti plutusPurpose
       assertEqual errorMessage expected $ toVersionedTxInfo slang actual
   where
-    lti =
-      LedgerTxInfo
-        { ltiProtVer = protVer
-        , ltiEpochInfo = epochInfo
-        , ltiSystemStart = systemStart
-        , ltiUTxO = utxo
-        , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
-        }
+    lti = mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx
     errorMessage =
       unlines
         [ "Unexpected TxInfo with arguments: "

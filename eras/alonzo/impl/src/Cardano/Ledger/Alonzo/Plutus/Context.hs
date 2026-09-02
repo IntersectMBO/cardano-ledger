@@ -102,6 +102,7 @@ data LedgerTxInfo era where
     , ltiSystemStart :: !SystemStart
     , ltiUTxO :: !(UTxO era)
     , ltiTx :: !(Tx level era)
+    , ltiScriptsUsed :: [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
     , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
     -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
     -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra

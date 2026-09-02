@@ -13,13 +13,13 @@ module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo (..),
-  LedgerTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
   toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
+import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (..),
@@ -37,7 +37,7 @@ import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -53,6 +53,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCredential, mkKeyPair)
@@ -191,60 +192,50 @@ expectOneOutput o slang txInfo =
 
 successfulTranslation ::
   forall era l.
-  ( BabbageEraTxOut era
+  ( EraUTxO era
+  , BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   SLanguage l ->
   Tx TopTx era ->
   (SLanguage l -> PlutusTxInfo l -> Expectation) ->
   Expectation
 successfulTranslation slang tx f =
-  let lti =
-        LedgerTxInfo
-          { ltiProtVer = ProtVer (eraProtVerLow @era) 0
-          , ltiEpochInfo = ei
-          , ltiSystemStart = ss
-          , ltiUTxO = exampleUTxO
-          , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
-          }
+  let lti = mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss exampleUTxO tx
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
 
 expectTranslationError ::
   forall era l.
-  ( BabbageEraTxOut era
+  ( EraUTxO era
+  , BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   SLanguage l ->
   Tx TopTx era ->
   ContextError era ->
   Expectation
 expectTranslationError slang tx expected =
-  let lti =
-        LedgerTxInfo
-          { ltiProtVer = ProtVer (eraProtVerLow @era) 0
-          , ltiEpochInfo = ei
-          , ltiSystemStart = ss
-          , ltiUTxO = exampleUTxO
-          , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
-          }
+  let lti = mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss exampleUTxO tx
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->
           assertFailure $ "This translation was expected to fail, but it succeeded: " <> show txInfo
         Left e -> e `shouldBe` expected
 
 expectV1TranslationError ::
-  ( BabbageEraTxOut era
+  ( EraUTxO era
+  , BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , Value era ~ MaryValue
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   Tx TopTx era ->
   ContextError era ->
@@ -286,9 +277,10 @@ translatedOutputEx2 =
 
 txInfoSpecV1 ::
   forall era.
-  ( EraTx era
+  ( EraUTxO era
   , BabbageEraTxBody era
   , Value era ~ MaryValue
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
@@ -319,11 +311,12 @@ txInfoSpecV1 =
 
 txInfoSpec ::
   forall era l.
-  ( EraTx era
+  ( EraUTxO era
   , EraPlutusTxInfo l era
   , EraPlutusTxInfo 'PlutusV2 era
   , BabbageEraTxBody era
   , Value era ~ MaryValue
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Inject (BabbageContextError era) (ContextError era)
   , Show (PlutusTxInInfo era l)
   , Eq (PlutusTxInInfo era l)
@@ -376,9 +369,10 @@ txInfoSpec lang =
 
 spec ::
   forall era.
-  ( EraTx era
+  ( EraUTxO era
   , BabbageEraTxBody era
   , Value era ~ MaryValue
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era

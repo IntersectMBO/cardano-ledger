@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
@@ -26,10 +27,11 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Scripts (AsIx, PlutusPurpose, hoistPlutusPurpose, toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
@@ -38,6 +40,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   VersionedTxInfo (..),
@@ -45,7 +48,12 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
 import Test.Cardano.Ledger.Common
 
 class
-  (EraTx era, EraPlutusContext era, Arbitrary (Script era), Arbitrary (PlutusPurpose AsIx era)) =>
+  ( EraUTxO era
+  , EraPlutusContext era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Arbitrary (Script era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  ) =>
   TranslatableGen era
   where
   tgRedeemers :: Gen (Redeemers era)
@@ -86,15 +94,7 @@ genTranslationInstance = do
   supportedLanguage :: SupportedLanguage era <- arbitrary
   tx <- tgTx supportedLanguage
   utxo <- tgUtxo supportedLanguage tx
-  let lti =
-        LedgerTxInfo
-          { ltiProtVer = protVer
-          , ltiEpochInfo = epochInfo
-          , ltiSystemStart = systemStart
-          , ltiUTxO = utxo
-          , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
-          }
+  let lti = mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of
     SupportedLanguage slang ->

@@ -58,6 +58,7 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
@@ -112,15 +113,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
     plutus = alwaysSucceedsPlutus @'PlutusV1 3
     plutusRunnable = decodePlutusRunnable (pvMajor protVer) plutus
     lti :: LedgerTxInfo AlonzoEra
-    lti =
-      LedgerTxInfo
-        { ltiProtVer = protVer
-        , ltiEpochInfo = testEpochInfo
-        , ltiSystemStart = testSystemStart
-        , ltiUTxO = initUTxO
-        , ltiTx = validatingTx
-        , ltiMemoizedSubTransactions = mempty
-        }
+    lti = mkTestLedgerTxInfo protVer testEpochInfo testSystemStart initUTxO validatingTx
 
 -- ============================== DATA ===============================
 

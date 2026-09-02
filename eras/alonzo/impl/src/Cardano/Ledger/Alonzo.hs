@@ -146,6 +146,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
    in
@@ -157,5 +158,5 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
       , asatPlutusLanguagesUsed =
           Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
       , asatPlutusScriptsWithContext =
-          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
+          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
       }

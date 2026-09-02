@@ -137,6 +137,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = plutusScriptsUsed
         , ltiMemoizedSubTransactions =
             Map.fromList
               [ (txIdTx dsastTx, dsastTxInfoResult)
@@ -154,7 +155,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
       , dsattPlutusRunnableCache = newStAnnTxCache
       , dsattPlutusLanguagesUsed = languagesUsed
       , dsattPlutusScriptsWithContext =
-          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
+          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
       , dsattSubTransactions = stAnnSubTxs
       }
 
@@ -185,6 +186,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
@@ -203,5 +205,4 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
             ledgerTxInfo
             txInfoResult
             (pp ^. ppCostModelsL)
-            plutusScriptsUsed
       }

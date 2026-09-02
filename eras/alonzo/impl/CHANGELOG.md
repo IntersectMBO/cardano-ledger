@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Add `ltiScriptsUsed` to `LedgerTxInfo`
+* Remove no longer necessary argument from `scriptsWithContextFromLedgerTxInfoWithResult` and `scriptsWithContextFromLedgerTxInfo`, since it is now available as `ltiScriptsUsed`
 * Add `FromJSON` instance for `AlonzoTxOut era`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Change `toPlutusArgs` and `toPlutusV1Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
@@ -12,6 +14,7 @@
 
 ### `testlib`
 
+* Add `mkTestLedgerTxInfo` helper
 * Add `Serialise` instance for `PV4.POSIXTimeRange`
 * Add `Serialise` instances for `PlutusLedgerApi.V4` script context types
 * Change `TxInfoPV4` constructor of `VersionedTxInfo` to contain `PV4.TxInfo` instead of `PV3.TxInfo`

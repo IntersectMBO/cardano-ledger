@@ -95,7 +95,7 @@ collectPlutusScriptsWithContext ::
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
-  scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) neededPlutusScripts
+  scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
   where
     -- We need to pass major protocol version to the script for script evaluation
     protVer = pp ^. ppProtocolVersionL
@@ -106,6 +106,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = neededPlutusScripts
         , ltiMemoizedSubTransactions = mempty
         }
     (_, neededPlutusScripts) =
@@ -123,7 +124,6 @@ scriptsWithContextFromLedgerTxInfo ::
   ) =>
   LedgerTxInfo era ->
   CostModels ->
-  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfo lti =
   scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
@@ -136,12 +136,11 @@ scriptsWithContextFromLedgerTxInfoWithResult ::
   LedgerTxInfo era ->
   TxInfoResult era ->
   CostModels ->
-  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
-scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels plutusScriptsUsed =
+scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels =
   merge
     apply
-    (map getScriptWithRedeemer plutusScriptsUsed)
+    (map getScriptWithRedeemer (ltiScriptsUsed lti))
     (Right [])
   where
     redeemers =
@@ -343,6 +342,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
@@ -352,8 +352,9 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
     rdmrs = wits ^. rdmrsTxWitsL . unRedeemersL
     protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
-    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
-    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo txBody
+    provided@(ScriptsProvided scriptsProvided) = getScriptsProvided utxo tx
+    needed@(AlonzoScriptsNeeded scriptsNeeded) = getScriptsNeeded utxo txBody
+    (_, plutusScriptsUsed) = resolveNeededPlutusScriptsWithPurpose protVer provided needed mempty
     findAndCount pointer (redeemerData, exUnits) = do
       (plutusPurpose, plutusScriptHash) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
