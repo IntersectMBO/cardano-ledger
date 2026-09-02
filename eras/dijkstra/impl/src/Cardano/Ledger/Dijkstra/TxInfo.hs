@@ -591,7 +591,7 @@ transRedeemerPointerV4 proxy pv txBody scriptHashes (ptr, (d, _)) =
         Nothing -> Left . inject $ ScriptHashNotFoundForPurpose @era ptr
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
-  toPlutusTxCert proxy pv cert = pure $ transTxCertV4 proxy pv cert
+  toPlutusTxCert proxy _pv cert = pure $ transTxCertV4 proxy cert
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
@@ -758,8 +758,8 @@ transTxBodyWithdrawals txb = transMap transAccountAddressToCredential transCoinT
 transCredToAccountId :: Credential r -> PV4.AccountId
 transCredToAccountId = PV4.AccountId . transCred
 
-transTxCertV4 :: ConwayEraTxCert era => proxy 'PlutusV4 -> ProtVer -> TxCert era -> PV4.TxCert
-transTxCertV4 _proxy _pv = \case
+transTxCertV4 :: ConwayEraTxCert era => proxy 'PlutusV4 -> TxCert era -> PV4.TxCert
+transTxCertV4 _proxy = \case
   RegPoolTxCert StakePoolParams {sppId, sppVrf} ->
     PV4.TxCertPoolRegister
       (transKeyHash sppId)
@@ -880,9 +880,7 @@ transTxId :: TxId -> PV4.TxId
 transTxId (TxId h) = PV4.TxId $ transSafeHash h
 
 transPlutusPurposeV4 ::
-  ( ConwayEraTxCert era
-  , ConwayEraPlutusTxInfo PlutusV4 era
-  ) =>
+  ConwayEraPlutusTxInfo PlutusV4 era =>
   proxy 'PlutusV4 ->
   ProtVer ->
   DijkstraPlutusPurpose AsIxItem era ->
@@ -892,7 +890,7 @@ transPlutusPurposeV4 proxy pv = \case
     pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
   DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
   DijkstraCertifying (AsIxItem ix cert) ->
-    pure $ PV4.Certifying sh (toInteger ix) (transTxCertV4 proxy pv cert)
+    PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
   DijkstraWithdrawing (AsIxItem _ (AccountAddress _ (AccountId c))) ->
     pure $ PV4.Withdrawing sh (transCred c)
   DijkstraVoting (AsIxItem _ voter) -> pure $ PV4.Voting sh (transVoter voter)
