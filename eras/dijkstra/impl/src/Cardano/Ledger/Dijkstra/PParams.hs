@@ -374,7 +374,7 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppLeiosQuorumStakeThreshold <- o .: "leiosQuorumStakeThreshold"
     udppMaxEndorserBlockSize <- o .: "maxEndorserBlockSize"
     udppMaxEndorserBlockTxsSize <- o .: "maxEndorserBlockTxsSize"
-    udppMaxEndorserBlockExUnits <- o .: "maxEndorserBlockExUnits"
+    udppMaxEndorserBlockExUnits <- o .: "maxEndorserBlockExecutionUnits"
     udppMaxRefScriptSizePerEndorserBlock <- o .: "maxRefScriptSizePerEndorserBlock"
     pure UpgradeDijkstraPParams {..}
 
@@ -394,7 +394,7 @@ instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
     , "leiosQuorumStakeThreshold" .= udppLeiosQuorumStakeThreshold udpp
     , "maxEndorserBlockSize" .= udppMaxEndorserBlockSize udpp
     , "maxEndorserBlockTxsSize" .= udppMaxEndorserBlockTxsSize udpp
-    , "maxEndorserBlockExUnits" .= udppMaxEndorserBlockExUnits udpp
+    , "maxEndorserBlockExecutionUnits" .= udppMaxEndorserBlockExUnits udpp
     , "maxRefScriptSizePerEndorserBlock" .= udppMaxRefScriptSizePerEndorserBlock udpp
     ]
 
@@ -843,7 +843,7 @@ ppMaxEndorserBlockTxsSize =
 ppMaxEndorserBlockExUnits :: PParam DijkstraEra
 ppMaxEndorserBlockExUnits =
   PParam
-    { ppName = "maxEndorserBlockExUnits"
+    { ppName = "maxEndorserBlockExecutionUnits"
     , ppLens = ppMaxEndorserBlockExUnitsL
     , ppEraDecoder = Nothing
     , ppUpdate =

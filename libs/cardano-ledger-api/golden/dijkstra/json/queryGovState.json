@@ -44,7 +44,7 @@
             },
             "maxBlockHeaderSize": 0,
             "maxCollateralInputs": 5,
-            "maxEndorserBlockExUnits": {
+            "maxEndorserBlockExecutionUnits": {
                 "memory": 0,
                 "steps": 0
             },
@@ -141,7 +141,7 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
-                    "maxEndorserBlockExUnits": {
+                    "maxEndorserBlockExecutionUnits": {
                         "memory": 0,
                         "steps": 0
                     },
@@ -230,7 +230,7 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
-                    "maxEndorserBlockExUnits": {
+                    "maxEndorserBlockExecutionUnits": {
                         "memory": 0,
                         "steps": 0
                     },
@@ -316,7 +316,7 @@
             },
             "maxBlockHeaderSize": 0,
             "maxCollateralInputs": 5,
-            "maxEndorserBlockExUnits": {
+            "maxEndorserBlockExecutionUnits": {
                 "memory": 0,
                 "steps": 0
             },
@@ -1081,7 +1081,7 @@
             },
             "maxBlockHeaderSize": 1100,
             "maxCollateralInputs": 3,
-            "maxEndorserBlockExUnits": {
+            "maxEndorserBlockExecutionUnits": {
                 "memory": 7000000000,
                 "steps": 2000000000000
             },
@@ -1823,7 +1823,7 @@
                 },
                 "maxBlockHeaderSize": 1100,
                 "maxCollateralInputs": 3,
-                "maxEndorserBlockExUnits": {
+                "maxEndorserBlockExecutionUnits": {
                     "memory": 7000000000,
                     "steps": 2000000000000
                 },
@@ -1916,7 +1916,7 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
-                    "maxEndorserBlockExUnits": {
+                    "maxEndorserBlockExecutionUnits": {
                         "memory": 0,
                         "steps": 0
                     },
@@ -2005,7 +2005,7 @@
                     },
                     "maxBlockHeaderSize": 0,
                     "maxCollateralInputs": 5,
-                    "maxEndorserBlockExUnits": {
+                    "maxEndorserBlockExecutionUnits": {
                         "memory": 0,
                         "steps": 0
                     },
@@ -2091,7 +2091,7 @@
             },
             "maxBlockHeaderSize": 0,
             "maxCollateralInputs": 5,
-            "maxEndorserBlockExUnits": {
+            "maxEndorserBlockExecutionUnits": {
                 "memory": 0,
                 "steps": 0
             },

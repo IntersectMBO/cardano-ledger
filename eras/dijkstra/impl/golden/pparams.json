@@ -71,7 +71,7 @@
     "leiosQuorumStakeThreshold":0,
     "maxEndorserBlockSize":0,
     "maxEndorserBlockTxsSize":0,
-    "maxEndorserBlockExUnits":{
+    "maxEndorserBlockExecutionUnits":{
        "memory":0,
        "steps":0
     },
