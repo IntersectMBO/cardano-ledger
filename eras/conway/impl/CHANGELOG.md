@@ -2,6 +2,9 @@
 
 ## 1.24.0.0
 
+* Remove `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule`
+* Remove `WithdrawalsNotInRewardsCERTS` from `ConwayCertsPredFailure`
+* Remove `certsTx` field from `CertsEnv`
 * Export `applyEnactedWithdrawals`, `returnProposalDeposits`, `updateCommitteeState` and `updateNumDormantEpochs`
 * Replace `StakeKeyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ConwayDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Change `toPlutusV3Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`

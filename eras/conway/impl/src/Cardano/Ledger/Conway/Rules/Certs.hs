@@ -35,8 +35,6 @@ module Cardano.Ledger.Conway.Rules.Certs (
 import Cardano.Ledger.BaseTypes (
   EpochInterval,
   EpochNo (EpochNo),
-  Globals (..),
-  Mismatch (..),
   ShelleyBase,
   StrictMaybe,
   binOpEpochNo,
@@ -55,7 +53,6 @@ import Cardano.Ledger.Conway.Era (
   CERT,
   CERTS,
   ConwayEra,
-  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -72,15 +69,12 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.DRep (drepExpiryL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
-  failOnJust,
   judgmentContext,
-  liftSTS,
   trans,
  )
 import qualified Data.Map.Strict as Map
@@ -90,8 +84,7 @@ import GHC.Generics (Generic)
 import Lens.Micro
 
 data CertsEnv era = CertsEnv
-  { certsTx :: Tx TopTx era
-  , certsPParams :: PParams era
+  { certsPParams :: PParams era
   , certsCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , certsCurrentCommittee :: StrictMaybe (Committee era)
@@ -100,11 +93,10 @@ data CertsEnv era = CertsEnv
   deriving (Generic)
 
 instance EraTx era => EncCBOR (CertsEnv era) where
-  encCBOR x@(CertsEnv _ _ _ _ _) =
+  encCBOR x@(CertsEnv {}) =
     let CertsEnv {..} = x
      in encode $
           Rec CertsEnv
-            !> To certsTx
             !> To certsPParams
             !> To certsCurrentEpoch
             !> To certsCurrentCommittee
@@ -116,10 +108,8 @@ deriving instance (EraPParams era, Show (Tx TopTx era)) => Show (CertsEnv era)
 
 instance (EraPParams era, NFData (Tx TopTx era)) => NFData (CertsEnv era)
 
-data ConwayCertsPredFailure era
-  = -- | Withdrawals that are missing or do not withdraw the entire amount (pv < 11)
-    WithdrawalsNotInRewardsCERTS Withdrawals
-  | -- | CERT rule subtransition Failures
+newtype ConwayCertsPredFailure era
+  = -- | CERT rule subtransition Failures
     CertFailure (PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
 
@@ -172,7 +162,6 @@ instance
   where
   encCBOR =
     encode . \case
-      WithdrawalsNotInRewardsCERTS rs -> Sum (WithdrawalsNotInRewardsCERTS @era) 0 !> To rs
       CertFailure x -> Sum (CertFailure @era) 1 !> To x
 
 instance
@@ -182,7 +171,6 @@ instance
   DecCBOR (ConwayCertsPredFailure era)
   where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
-    0 -> SumD WithdrawalsNotInRewardsCERTS <! From
     1 -> SumD CertFailure <! From
     k -> Invalid k
 
@@ -223,31 +211,13 @@ conwayCertsTransition ::
   TransitionRule (CERTS era)
 conwayCertsTransition = do
   TRC
-    ( env@(CertsEnv tx pp currentEpoch committee committeeProposals)
+    ( env@(CertsEnv pp currentEpoch committee committeeProposals)
       , certState
       , certificates
       ) <-
     judgmentContext
   case certificates of
-    Empty ->
-      if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
-        then pure certState
-        else do
-          network <- liftSTS $ asks networkId
-          let accounts = certState ^. certDStateL . accountsL
-              withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-          failOnJust
-            (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
-            ( \(invalid, incomplete) ->
-                WithdrawalsNotInRewardsCERTS $
-                  Withdrawals $
-                    unWithdrawals invalid <> fmap mismatchSupplied incomplete
-            )
-          pure $
-            certState
-              & updateDormantDRepExpiries tx currentEpoch
-              & updateVotingDRepExpiries tx currentEpoch (pp ^. ppDRepActivityL)
-              & certDStateL . accountsL %~ drainAccounts withdrawals
+    Empty -> pure certState
     gamma :|> txCert -> do
       certState' <-
         trans @(CERTS era) $ TRC (env, certState, gamma)

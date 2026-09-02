@@ -8,7 +8,6 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -165,7 +164,7 @@ data SubCertsEnv era = SubCertsEnv
   deriving (Generic)
 
 instance EraTx era => EncCBOR (SubCertsEnv era) where
-  encCBOR x@(SubCertsEnv _ _ _ _ _) =
+  encCBOR x@(SubCertsEnv {}) =
     let SubCertsEnv {..} = x
      in encode $
           Rec SubCertsEnv
@@ -188,5 +187,4 @@ conwayToDijkstraSubCertsPredFailure ::
   ) =>
   Conway.ConwayCertsPredFailure era -> DijkstraSubCertsPredFailure era
 conwayToDijkstraSubCertsPredFailure = \case
-  Conway.WithdrawalsNotInRewardsCERTS _ -> error "Impossible: `WithdrawalsNotInRewardsCERTS` for SUBCERTS"
   Conway.CertFailure f -> SubCertFailure (injectFailure @"SUBCERT" f)
