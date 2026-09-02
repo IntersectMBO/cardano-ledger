@@ -445,7 +445,7 @@ dijkstraUtxoTransition = do
   validateNoPtrInCollateralReturn txBody
 
   {- txsize tx ≤ maxTxSize pp -}
-  runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+  runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {- totExunits tx ≤ maxTxExUnits pp -}
   runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
