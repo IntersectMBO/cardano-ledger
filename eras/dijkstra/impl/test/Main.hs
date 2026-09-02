@@ -54,7 +54,6 @@ main =
     describe "TxInfo" $ do
       BabbageTxInfo.spec @DijkstraEra
       txInfoSpec @DijkstraEra SPlutusV3
-      txInfoSpec @DijkstraEra SPlutusV4
       DijkstraTxInfoSpec.spec @DijkstraEra
     GoldenBinary.spec @DijkstraEra
     PlutusSpec.spec

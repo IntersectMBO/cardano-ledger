@@ -14,6 +14,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
+  toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
@@ -48,6 +49,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -105,7 +107,7 @@ spec = describe "TxInfo" $ do
               & inputsTxBodyL .~ [txIn]
         ledgerTxInfo = mkLocalLedgerTxInfo utxo tx
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
           `shouldBeLeft` inject (PointerPresentInOutput @era (NES.singleton . TxOutFromOutput $ TxIx 0))
     prop "Collects all Ptr sources when multiple outputs have pointers" $ do
       pc0 <- arbitrary
@@ -126,7 +128,7 @@ spec = describe "TxInfo" $ do
         tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
         ledgerTxInfo = mkLocalLedgerTxInfo mempty tx
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
           `shouldBeLeft` inject
             ( PointerPresentInOutput @era . fromJust $
                 NES.fromSet [TxOutFromOutput $ TxIx 0, TxOutFromOutput $ TxIx 2]
@@ -147,7 +149,7 @@ spec = describe "TxInfo" $ do
         tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
         ledgerTxInfo = mkLocalLedgerTxInfo mempty tx
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
           `shouldBeLeft` inject (ByronTxOutInContext @era (TxOutFromOutput $ TxIx 0))
     prop "Reports the first error kind when Ptr and Byron outputs are mixed" $ do
       pc0 <- arbitrary
@@ -167,7 +169,7 @@ spec = describe "TxInfo" $ do
         tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
         ledgerTxInfo = mkLocalLedgerTxInfo mempty tx
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
           `shouldBeLeft` inject
             ( PointerPresentInOutput @era . fromJust $
                 NES.fromSet [TxOutFromOutput $ TxIx 0, TxOutFromOutput $ TxIx 2]
@@ -188,8 +190,8 @@ spec = describe "TxInfo" $ do
         tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
         ledgerTxInfo = mkLocalLedgerTxInfo mempty tx
       pure $
-        case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
-          Right (Right txInfo) ->
+        case toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose) of
+          Right txInfo ->
             map PV4.txOutAddress (PV4.txInfoOutputs txInfo)
               `shouldBe` [PV4.Address (transCred pc) Nothing | pc <- [pc0, pc1, pc2]]
           err -> expectationFailure $ "Failed to translate TxInfo: " <> show err
@@ -203,10 +205,11 @@ spec = describe "TxInfo" $ do
         txIn <- arbitrary
         redeemer <- arbitrary
         exUnits <- arbitrary
+        let plutusScript = Plutus.alwaysSucceedsNoDatum SPlutusV4
+            script = errorFail $ mkPlutusScript plutusScript
         let
           proxy = Proxy @PlutusV4
-          script = Plutus.alwaysSucceedsNoDatum SPlutusV4
-          scriptHash = hashPlutusScript script
+          scriptHash = hashPlutusScript plutusScript
           paymentCred2 = ScriptHashObj scriptHash
           txOut = mkBasicTxOut (Addr Testnet paymentCred1 stakeRef1) (Val.inject coin1)
           utxo =
@@ -224,6 +227,7 @@ spec = describe "TxInfo" $ do
               )
               & witsTxL . rdmrsTxWitsL . unRedeemersL
                 .~ Map.singleton (SpendingPurpose $ AsIx 0) (redeemer, exUnits)
+              & witsTxL . scriptTxWitsL .~ Map.singleton scriptHash (fromPlutusScript script)
           lti = mkLocalLedgerTxInfo utxo tx
           purpose = SpendingPurpose @era $ AsIxItem 0 txIn
           TxIn (TxId txIdHash) (TxIx txIx) = txIn
@@ -233,10 +237,10 @@ spec = describe "TxInfo" $ do
           transStakeRef _ = Nothing
           addr1 = PV4.Address (transCred paymentCred1) (transStakeRef stakeRef1)
           addr2 = PV4.Address (transCred paymentCred2) (transStakeRef stakeRef2)
-        pure $ case toPlutusTxInfo proxy lti of
-          PlutusTxInfoResult (Right f) ->
-            f (hoistPlutusPurpose toAsPurpose purpose)
-              `shouldBeRight` PV4.TxInfo
+        pure $ case toPlutusTxInfoForPurpose proxy lti (hoistPlutusPurpose toAsPurpose purpose) of
+          Right txInfo ->
+            txInfo
+              `shouldBe` PV4.TxInfo
                 { PV4.txInfoWithdrawals = PV4.unsafeFromList []
                 , PV4.txInfoVotes = PV4.unsafeFromList []
                 , PV4.txInfoValidRange = PV4.POSIXTimeRange Nothing Nothing
@@ -279,7 +283,7 @@ spec = describe "TxInfo" $ do
                 , PV4.txInfoAccountBalanceIntervals =
                     PV4.AccountBalanceIntervals $ PV4.unsafeFromList []
                 }
-          _ -> expectationFailure "Failed to translate TxInfo"
+          Left failure -> expectationFailure $ "Failed to translate TxInfo: " <> show failure
   describe "PlutusV1-V3" $ do
     let plutusV1toV3 :: [SupportedLanguage era]
         plutusV1toV3 =

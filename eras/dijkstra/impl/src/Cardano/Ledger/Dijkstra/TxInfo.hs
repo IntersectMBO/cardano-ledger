@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
@@ -83,7 +83,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceInterval (..),
   AccountBalanceIntervals (..),
-  DijkstraPlutusPurpose (..),
+  DijkstraEraScript,
   PlutusScript (..),
  )
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert)
@@ -109,6 +109,7 @@ import Cardano.Ledger.Plutus (
   transEpochNo,
   transKeyHash,
   transSafeHash,
+  transScriptHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -735,9 +736,6 @@ transTxRedeemersV4 proxy lti@LedgerTxInfo {ltiTx} =
       (transRedeemerPointerV4 proxy lti)
       (Map.toList $ ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
-transAccountId :: AccountId -> PV4.AccountId
-transAccountId (AccountId cred) = PV4.AccountId $ transCred cred
-
 transTxBodyWithdrawals ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
 transTxBodyWithdrawals txb = transMap transAccountAddressToCredential transCoinToLovelace withdrawals
@@ -842,6 +840,7 @@ scriptPurposeToScriptInfo sp datum topInfo = case sp of
 toPlutusV4Args ::
   ( AlonzoEraUTxO era
   , EraPlutusTxInfo PlutusV4 era
+  , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV4 ->
   LedgerTxInfo era ->
@@ -855,7 +854,11 @@ toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = d
     maybeSpendingData = getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
     -- TODO TopTxInfo should be set if this is a top-level transaction
     scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
-    sh = error "Unimplemented: ScriptHash for ScriptContext"
+    ixPurpose = hoistPlutusPurpose toAsIx plutusPurpose
+  sh <-
+    case Map.lookup ixPurpose ltiScriptHashesUsed of
+      Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPurpose
+      Just scriptHash -> Right $ transScriptHash scriptHash
   pure $
     PlutusV4Args $
       PV4.ScriptContext
@@ -869,23 +872,34 @@ transTxId :: TxId -> PV4.TxId
 transTxId (TxId h) = PV4.TxId $ transSafeHash h
 
 transPlutusPurposeV4 ::
-  ConwayEraPlutusTxInfo PlutusV4 era =>
+  forall era proxy.
+  ( DijkstraEraScript era
+  , ConwayEraPlutusTxInfo PlutusV4 era
+  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (DijkstraContextError era) (ContextError era)
+  ) =>
   proxy 'PlutusV4 ->
   LedgerTxInfo era ->
-  DijkstraPlutusPurpose AsIxItem era ->
+  PlutusPurpose AsIxItem era ->
   Either (ContextError era) (PlutusScriptPurpose PlutusV4)
-transPlutusPurposeV4 proxy lti = \case
-  DijkstraSpending (AsIxItem _ (TxIn txId (TxIx ix))) ->
-    pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
-  DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
-  DijkstraCertifying (AsIxItem ix cert) ->
-    PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
-  DijkstraWithdrawing (AsIxItem _ (AccountAddress _ (AccountId c))) ->
-    pure $ PV4.Withdrawing sh (transCred c)
-  DijkstraVoting (AsIxItem _ voter) -> pure $ PV4.Voting sh (transVoter voter)
-  DijkstraProposing (AsIxItem ix proc) ->
-    pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
-  DijkstraGuarding (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
-  where
+transPlutusPurposeV4 proxy lti plutusPurpose = do
+  let
     pv = ltiProtVer lti
-    sh = error "Unimplemented: ScriptHash for purpose"
+    ixPurpose = hoistPlutusPurpose toAsIx plutusPurpose
+  sh <-
+    case Map.lookup ixPurpose (ltiScriptHashesUsed lti) of
+      Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose @era ixPurpose
+      Just scriptHash -> Right $ transScriptHash scriptHash
+  case plutusPurpose of
+    SpendingPurpose (AsIxItem _ (TxIn txId (TxIx ix))) ->
+      pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
+    MintingPurpose (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
+    CertifyingPurpose (AsIxItem ix cert) ->
+      PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
+    WithdrawingPurpose (AsIxItem _ (AccountAddress _ (AccountId c))) ->
+      pure $ PV4.Withdrawing sh (transCred c)
+    VotingPurpose (AsIxItem _ voter) -> pure $ PV4.Voting sh (transVoter voter)
+    ProposingPurpose (AsIxItem ix proc) ->
+      pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
+    GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
+    _ -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose
