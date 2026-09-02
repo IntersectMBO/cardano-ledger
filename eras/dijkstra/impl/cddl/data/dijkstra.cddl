@@ -715,8 +715,8 @@ protocol_param_update =
   , ? 37 : positive_interval      ; refScript cost multiplier
   , ? 38 : max_pledge_leverage    ; max pledge leverage
   , ? 39 : unit_interval          ; min pool margin
-  , ? 40 : uint .size 4           ; leios header period length in ms
   , ? 41 : uint .size 4           ; leios voting period length in ms
+  , ? 40 : uint .size 4           ; leios announcement period length in ms
   , ? 42 : uint .size 4           ; leios diffusion period length in ms
   , ? 43 : uint .size 2           ; leios committee size
   , ? 44 : unit_interval          ; leios quorum stake threshold

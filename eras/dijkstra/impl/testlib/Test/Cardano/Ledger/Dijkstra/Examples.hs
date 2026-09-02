@@ -52,9 +52,9 @@ import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
   UpgradeDijkstraPParams (..),
+  ppLeiosAnnouncementPeriodLengthL,
   ppLeiosCommitteeSizeL,
   ppLeiosDiffusionPeriodLengthL,
-  ppLeiosHeaderPeriodLengthL,
   ppLeiosQuorumStakeThresholdL,
   ppLeiosVotingPeriodLengthL,
   ppMaxEndorserBlockExUnitsL,
@@ -65,9 +65,9 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppMaxRefScriptSizePerTxL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
+  ppuLeiosAnnouncementPeriodLengthL,
   ppuLeiosCommitteeSizeL,
   ppuLeiosDiffusionPeriodLengthL,
-  ppuLeiosHeaderPeriodLengthL,
   ppuLeiosQuorumStakeThresholdL,
   ppuLeiosVotingPeriodLengthL,
   ppuMaxEndorserBlockExUnitsL,
@@ -173,7 +173,7 @@ exampleDijkstraGenesis =
           , udppMinPoolMargin = fromJust $ boundRational 0.015
           , udppPlutusV4CostModel = testingCostModel PlutusV4
           , -- Feasible values of CIP-164 Table 7
-            udppLeiosHeaderPeriodLength = Milliseconds32 1_000 -- L_hdr
+            udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
           , udppLeiosVotingPeriodLength = Milliseconds32 4_000 -- L_vote
           , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
           , udppLeiosCommitteeSize = 900 -- N_c
@@ -344,7 +344,7 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxRefScriptSizePerTxL .~ 200 * 1024
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
-    & ppLeiosHeaderPeriodLengthL .~ Milliseconds32 1_000
+    & ppLeiosAnnouncementPeriodLengthL .~ Milliseconds32 1_000
     & ppLeiosVotingPeriodLengthL .~ Milliseconds32 4_000
     & ppLeiosDiffusionPeriodLengthL .~ Milliseconds32 7_000
     & ppLeiosCommitteeSizeL .~ 900
@@ -362,7 +362,7 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
-    & ppuLeiosHeaderPeriodLengthL .~ SJust (Milliseconds32 1_000)
+    & ppuLeiosAnnouncementPeriodLengthL .~ SJust (Milliseconds32 1_000)
     & ppuLeiosVotingPeriodLengthL .~ SJust (Milliseconds32 4_000)
     & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds32 7_000)
     & ppuLeiosCommitteeSizeL .~ SJust 900

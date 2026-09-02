@@ -58,7 +58,7 @@
   - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
   - Override `ppMinPoolMarginG` in `EraPParams` instance
 * Add the nine Leios protocol parameters of CIP-164:
-  - Add `dppLeiosHeaderPeriodLength`, `dppLeiosVotingPeriodLength`,
+  - Add `dppLeiosAnnouncementPeriodLength`, `dppLeiosVotingPeriodLength`,
     `dppLeiosDiffusionPeriodLength`, `dppLeiosCommitteeSize`, `dppLeiosQuorumStakeThreshold`,
     `dppMaxEndorserBlockSize`, `dppMaxEndorserBlockTxsSize`,
     `dppMaxEndorserBlockExUnits`, `dppMaxRefScriptSizePerEndorserBlock` to `DijkstraPParams`
