@@ -11,7 +11,7 @@ import Cardano.Ledger.BaseTypes (
   BoundedRational (boundRational, unboundRational),
   EpochInterval (..),
   HasZero,
-  Milliseconds (..),
+  Milliseconds32 (..),
   NonNegativeInterval,
   NonZero (..),
   Nonce,
@@ -144,7 +144,7 @@ instance ToPlutusData Word8 where
   fromPlutusData (I n) | n >= 0 && n <= toInteger (maxBound @Word8) = Just $ fromInteger @Word8 n
   fromPlutusData _ = Nothing
 
-deriving instance ToPlutusData Milliseconds
+deriving instance ToPlutusData Milliseconds32
 
 deriving instance ToPlutusData OrdExUnits
 

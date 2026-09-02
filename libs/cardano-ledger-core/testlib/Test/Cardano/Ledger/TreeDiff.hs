@@ -206,7 +206,7 @@ instance (Typeable r, ToExpr a) => ToExpr (Mismatch r a) where
         , ("expected", toExpr expected)
         ]
 
-instance ToExpr Milliseconds
+instance ToExpr Milliseconds32
 
 instance ToExpr EpochInterval
 

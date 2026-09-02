@@ -45,7 +45,7 @@
 
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
-* Add `Arbitrary` and `ToExpr` instances for `Milliseconds`
+* Add `Arbitrary` and `ToExpr` instances for `Milliseconds32`
 
 ### `cddl`
 

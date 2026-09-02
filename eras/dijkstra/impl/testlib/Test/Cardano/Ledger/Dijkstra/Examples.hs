@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (
   Exclusive (..),
   Inclusive (..),
-  Milliseconds (..),
+  Milliseconds32 (..),
   Network (..),
   StrictMaybe (..),
   boundRational,
@@ -173,9 +173,9 @@ exampleDijkstraGenesis =
           , udppMinPoolMargin = fromJust $ boundRational 0.015
           , udppPlutusV4CostModel = testingCostModel PlutusV4
           , -- Feasible values of CIP-164 Table 7
-            udppLeiosHeaderPeriodLength = Milliseconds 1_000 -- L_hdr
-          , udppLeiosVotingPeriodLength = Milliseconds 4_000 -- L_vote
-          , udppLeiosDiffusionPeriodLength = Milliseconds 7_000 -- L_diff
+            udppLeiosHeaderPeriodLength = Milliseconds32 1_000 -- L_hdr
+          , udppLeiosVotingPeriodLength = Milliseconds32 4_000 -- L_vote
+          , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
           , udppLeiosCommitteeSize = 900 -- N_c
           , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
           , udppMaxEndorserBlockSize = 512 * 1024 -- 512 KiB
@@ -344,9 +344,9 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxRefScriptSizePerTxL .~ 200 * 1024
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
-    & ppLeiosHeaderPeriodLengthL .~ Milliseconds 1_000
-    & ppLeiosVotingPeriodLengthL .~ Milliseconds 4_000
-    & ppLeiosDiffusionPeriodLengthL .~ Milliseconds 7_000
+    & ppLeiosHeaderPeriodLengthL .~ Milliseconds32 1_000
+    & ppLeiosVotingPeriodLengthL .~ Milliseconds32 4_000
+    & ppLeiosDiffusionPeriodLengthL .~ Milliseconds32 7_000
     & ppLeiosCommitteeSizeL .~ 900
     & ppLeiosQuorumStakeThresholdL .~ 3 %! 4
     & ppMaxEndorserBlockSizeL .~ 512 * 1024
@@ -362,9 +362,9 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
-    & ppuLeiosHeaderPeriodLengthL .~ SJust (Milliseconds 1_000)
-    & ppuLeiosVotingPeriodLengthL .~ SJust (Milliseconds 4_000)
-    & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds 7_000)
+    & ppuLeiosHeaderPeriodLengthL .~ SJust (Milliseconds32 1_000)
+    & ppuLeiosVotingPeriodLengthL .~ SJust (Milliseconds32 4_000)
+    & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds32 7_000)
     & ppuLeiosCommitteeSizeL .~ SJust 900
     & ppuLeiosQuorumStakeThresholdL .~ SJust (3 %! 4)
     & ppuMaxEndorserBlockSizeL .~ SJust (512 * 1024)

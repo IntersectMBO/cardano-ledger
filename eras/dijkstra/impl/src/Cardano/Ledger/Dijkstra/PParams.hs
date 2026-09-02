@@ -61,7 +61,7 @@ import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   KeyValuePairs (..),
-  Milliseconds (..),
+  Milliseconds32 (..),
   NonNegativeInterval,
   NonZero,
   PositiveInterval,
@@ -199,15 +199,15 @@ data DijkstraPParams f era = DijkstraPParams
   , dppMaxPledgeLeverage :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f MaxPledgeLeverage)
   , dppMinPoolMargin :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f UnitInterval)
   , dppLeiosHeaderPeriodLength ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds)
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds32)
   -- ^ Duration for announcement headers (extended praos headers) to propagate
   -- through the network, @L_hdr@ in CIP-164.
   , dppLeiosVotingPeriodLength ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds)
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds32)
   -- ^ Duration during which committee members can vote on endorser blocks,
   -- @L_vote@ in CIP-164.
   , dppLeiosDiffusionPeriodLength ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds)
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Milliseconds32)
   -- ^ Duration after voting that ensures network-wide availability of a
   -- certified endorser block, @L_diff@ in CIP-164.
   , dppLeiosCommitteeSize ::
@@ -342,9 +342,9 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppMaxPledgeLeverage :: !(HKD f MaxPledgeLeverage)
   , udppMinPoolMargin :: !(HKD f UnitInterval)
   , udppPlutusV4CostModel :: !(HKD f CostModel)
-  , udppLeiosHeaderPeriodLength :: !(HKD f Milliseconds)
-  , udppLeiosVotingPeriodLength :: !(HKD f Milliseconds)
-  , udppLeiosDiffusionPeriodLength :: !(HKD f Milliseconds)
+  , udppLeiosHeaderPeriodLength :: !(HKD f Milliseconds32)
+  , udppLeiosVotingPeriodLength :: !(HKD f Milliseconds32)
+  , udppLeiosDiffusionPeriodLength :: !(HKD f Milliseconds32)
   , udppLeiosCommitteeSize :: !(HKD f Word16)
   , udppLeiosQuorumStakeThreshold :: !(HKD f UnitInterval)
   , udppMaxEndorserBlockSize :: !(HKD f Word32)
@@ -983,9 +983,9 @@ emptyDijkstraPParams =
     , dppRefScriptCostMultiplier = THKD minBound
     , dppMaxPledgeLeverage = THKD (MaxPledgeLeverage SNothing)
     , dppMinPoolMargin = THKD minBound
-    , dppLeiosHeaderPeriodLength = THKD (Milliseconds 0)
-    , dppLeiosVotingPeriodLength = THKD (Milliseconds 0)
-    , dppLeiosDiffusionPeriodLength = THKD (Milliseconds 0)
+    , dppLeiosHeaderPeriodLength = THKD (Milliseconds32 0)
+    , dppLeiosVotingPeriodLength = THKD (Milliseconds32 0)
+    , dppLeiosDiffusionPeriodLength = THKD (Milliseconds32 0)
     , dppLeiosCommitteeSize = THKD 0
     , dppLeiosQuorumStakeThreshold = THKD minBound
     , dppMaxEndorserBlockSize = THKD 0
@@ -1052,9 +1052,9 @@ class DijkstraEraPParams era => DijkstraEraPParams era where
   hkdRefScriptCostMultiplierL :: Lens' (PParamsHKD f era) (HKD f PositiveInterval)
   hkdMaxPledgeLeverageL :: Lens' (PParamsHKD f era) (HKD f MaxPledgeLeverage)
   hkdMinPoolMarginL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
-  hkdLeiosHeaderPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds)
-  hkdLeiosVotingPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds)
-  hkdLeiosDiffusionPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds)
+  hkdLeiosHeaderPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds32)
+  hkdLeiosVotingPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds32)
+  hkdLeiosDiffusionPeriodLengthL :: Lens' (PParamsHKD f era) (HKD f Milliseconds32)
   hkdLeiosCommitteeSizeL :: Lens' (PParamsHKD f era) (HKD f Word16)
   hkdLeiosQuorumStakeThresholdL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
   hkdMaxEndorserBlockSizeL :: Lens' (PParamsHKD f era) (HKD f Word32)
@@ -1094,14 +1094,14 @@ ppRefScriptCostMultiplierL = ppLensHKD . hkdRefScriptCostMultiplierL @_ @Identit
 ppMinPoolMarginL :: DijkstraEraPParams era => Lens' (PParams era) UnitInterval
 ppMinPoolMarginL = ppLensHKD . hkdMinPoolMarginL @_ @Identity
 
-ppLeiosHeaderPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) Milliseconds
+ppLeiosHeaderPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) Milliseconds32
 ppLeiosHeaderPeriodLengthL = ppLensHKD . hkdLeiosHeaderPeriodLengthL @_ @Identity
 
-ppLeiosVotingPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) Milliseconds
+ppLeiosVotingPeriodLengthL :: DijkstraEraPParams era => Lens' (PParams era) Milliseconds32
 ppLeiosVotingPeriodLengthL = ppLensHKD . hkdLeiosVotingPeriodLengthL @_ @Identity
 
 ppLeiosDiffusionPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParams era) Milliseconds
+  DijkstraEraPParams era => Lens' (PParams era) Milliseconds32
 ppLeiosDiffusionPeriodLengthL = ppLensHKD . hkdLeiosDiffusionPeriodLengthL @_ @Identity
 
 ppLeiosCommitteeSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word16
@@ -1151,15 +1151,15 @@ ppuMinPoolMarginL :: DijkstraEraPParams era => Lens' (PParamsUpdate era) (Strict
 ppuMinPoolMarginL = ppuLensHKD . hkdMinPoolMarginL @_ @StrictMaybe
 
 ppuLeiosHeaderPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds)
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds32)
 ppuLeiosHeaderPeriodLengthL = ppuLensHKD . hkdLeiosHeaderPeriodLengthL @_ @StrictMaybe
 
 ppuLeiosVotingPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds)
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds32)
 ppuLeiosVotingPeriodLengthL = ppuLensHKD . hkdLeiosVotingPeriodLengthL @_ @StrictMaybe
 
 ppuLeiosDiffusionPeriodLengthL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds)
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Milliseconds32)
 ppuLeiosDiffusionPeriodLengthL = ppuLensHKD . hkdLeiosDiffusionPeriodLengthL @_ @StrictMaybe
 
 ppuLeiosCommitteeSizeL ::
