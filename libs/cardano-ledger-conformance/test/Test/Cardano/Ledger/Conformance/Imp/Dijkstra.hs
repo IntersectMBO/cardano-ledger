@@ -57,7 +57,9 @@ spec = do
 
             xdescribe "disabled" ConwayCERTS.spec
 
-            ENTITIES.spec
+            xdescribe
+              "disabled until the formal spec models starting account balance intervals"
+              ENTITIES.spec
 
             ShelleyDELEG.spec
             ConwayDELEG.spec

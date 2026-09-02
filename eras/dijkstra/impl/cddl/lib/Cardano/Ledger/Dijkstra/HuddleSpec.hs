@@ -255,7 +255,7 @@ directDepositsRule pname p =
 
 accountBalanceIntervals ::
   forall era name.
-  ( HuddleRule "credential" era
+  ( HuddleRule "reward_account" era
   , HuddleRule "account_balance_interval" era
   , KnownSymbol name
   ) =>
@@ -266,13 +266,13 @@ accountBalanceIntervals pname p =
   pname
     =.= mp
       [ 1
-          <+ asKey (huddleRule @"credential" p)
+          <+ asKey (huddleRule @"reward_account" p)
           ==> huddleRule @"account_balance_interval" p
       ]
 
 accountBalanceIntervalsRule ::
   forall era.
-  ( HuddleRule "credential" era
+  ( HuddleRule "reward_account" era
   , HuddleRule "account_balance_interval" era
   ) =>
   Proxy "account_balance_intervals" ->
@@ -282,7 +282,7 @@ accountBalanceIntervalsRule = accountBalanceIntervals
 
 startingAccountBalanceIntervalsRule ::
   forall era.
-  ( HuddleRule "credential" era
+  ( HuddleRule "reward_account" era
   , HuddleRule "account_balance_interval" era
   ) =>
   Proxy "starting_account_balance_intervals" ->

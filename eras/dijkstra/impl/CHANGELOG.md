@@ -2,6 +2,19 @@
 
 ## 0.4.0.0
 
+* Enforce `accountBalanceIntervals` in `ENTITIES` and `SUBENTITIES`, and `startingAccountBalanceIntervals` in `ENTITIES`:
+  - Add `validateAccountBalanceIntervals` and `validateStartingAccountBalanceIntervals`
+  - Add `WrongNetworkInAccountBalanceIntervals`, `MissingAccountsInAccountBalanceIntervals`, and `BalancesOutsideAccountBalanceIntervals` to `EntitiesPredFailure`
+  - Add `WrongNetworkInStartingAccountBalanceIntervals`, `MissingAccountsInStartingAccountBalanceIntervals`, and `BalancesOutsideStartingAccountBalanceIntervals` to `EntitiesPredFailure`
+  - Add `SubWrongNetworkInAccountBalanceIntervals`, `SubMissingAccountsInAccountBalanceIntervals`, and `SubBalancesOutsideAccountBalanceIntervals` to `SubEntitiesPredFailure`
+* Key `AccountBalanceIntervals` by `AccountAddress` (reward account) instead of `AccountId` (bare credential), consistent with `withdrawals`/`direct_deposits`:
+  - Change `AccountBalanceIntervals` to `Map AccountAddress (AccountBalanceInterval era)`
+* Restructure `EntitiesEnv`:
+  - Remove `eePlutusLegacyMode` and `eeCertsEnv` fields
+  - Add `eeCurrentEpoch`, `eePParams`, `eeCurrentCommittee`, `eeCommitteeProposals`, `eeOriginalAccounts`
+* Change the `STS` `Signal` of `ENTITIES` to `StAnnTx TopTx era`
+* Add `localProducedValue` helper in `UTxO` module
+* Add `ValueNotConservedInLegacy` constructor to `DijkstraUtxoPredFailure`
 * Change the block body serialization: each transaction in a block now carries its `is_valid` flag as the trailing element and the `invalid_transactions` field was removed from the block body:
   - Add `toCBORForBlockInclusion` and `decodeDijkstraTopTxInBlock`
   - Change `decodeDijkstraTopTx` to only decode the mempool format, by removing its `Bool` parameter
@@ -47,6 +60,7 @@
 
 ### `cddl`
 
+* Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
 * Add `HuddleRule "vrf_cert"` instance

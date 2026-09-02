@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -25,6 +24,7 @@ import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee,
@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, SUBCERTS, SUBENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Entities (
   EntitiesPredFailure (..),
+  validateAccountBalanceIntervals,
   validateMissingAccountsInDirectDeposits,
   validateWrongNetworkInDirectDeposit,
  )
@@ -45,12 +46,17 @@ import Cardano.Ledger.Dijkstra.Rules.SubCerts (
   DijkstraSubCertsPredFailure,
   SubCertsEnv (..),
  )
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody, directDepositsTxBodyL)
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval)
+import Cardano.Ledger.Dijkstra.TxBody (
+  DijkstraEraTxBody,
+  directDepositsTxBodyL,
+ )
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
+import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -112,6 +118,11 @@ data SubEntitiesPredFailure era
       Network
       -- | Direct-deposit accounts with wrong network id
       (NonEmptySet AccountAddress)
+  | SubBalancesOutsideAccountBalanceIntervals
+      (NonEmptyMap AccountAddress (Coin, AccountBalanceInterval era))
+  | SubMissingAccountsInAccountBalanceIntervals
+      (NonEmptyMap AccountAddress (AccountBalanceInterval era))
+  | SubWrongNetworkInAccountBalanceIntervals Network (NonEmptySet AccountAddress)
   deriving (Generic)
 
 deriving stock instance
@@ -141,6 +152,9 @@ instance
       SubMissingAccountsInDirectDeposits x -> Sum (SubMissingAccountsInDirectDeposits @era) 3 !> To x
       SubWrongNetworkInWithdrawals expected wrongs -> Sum (SubWrongNetworkInWithdrawals @era) 4 !> To expected !> To wrongs
       SubWrongNetworkInDirectDeposits expected wrongs -> Sum (SubWrongNetworkInDirectDeposits @era) 5 !> To expected !> To wrongs
+      SubBalancesOutsideAccountBalanceIntervals x -> Sum (SubBalancesOutsideAccountBalanceIntervals @era) 6 !> To x
+      SubMissingAccountsInAccountBalanceIntervals x -> Sum (SubMissingAccountsInAccountBalanceIntervals @era) 7 !> To x
+      SubWrongNetworkInAccountBalanceIntervals expected wrongs -> Sum (SubWrongNetworkInAccountBalanceIntervals @era) 8 !> To expected !> To wrongs
 
 instance
   ( Era era
@@ -155,6 +169,9 @@ instance
     3 -> SumD SubMissingAccountsInDirectDeposits <! From
     4 -> SumD SubWrongNetworkInWithdrawals <! From <! From
     5 -> SumD SubWrongNetworkInDirectDeposits <! From <! From
+    6 -> SumD SubBalancesOutsideAccountBalanceIntervals <! From
+    7 -> SumD SubMissingAccountsInAccountBalanceIntervals <! From
+    8 -> SumD SubWrongNetworkInAccountBalanceIntervals <! From <! From
     n -> Invalid n
 
 newtype SubEntitiesEvent era = SubCertsEvent (Event (EraRule "SUBCERTS" era))
@@ -239,6 +256,7 @@ dijkstraSubEntitiesTransition = do
 
   runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
+  runTest $ validateAccountBalanceIntervals network accounts (tx ^. bodyTxL)
   runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals originalAccounts
   runTest $ validateMissingAccountsInWithdrawals withdrawals accounts
 
@@ -298,11 +316,20 @@ entitiesToSubEntitiesPredFailure ::
 entitiesToSubEntitiesPredFailure = \case
   WrongNetworkInWithdrawals net addrs -> SubWrongNetworkInWithdrawals net addrs
   WrongNetworkInDirectDeposits net addrs -> SubWrongNetworkInDirectDeposits net addrs
+  WrongNetworkInAccountBalanceIntervals net addrs -> SubWrongNetworkInAccountBalanceIntervals net addrs
+  MissingAccountsInAccountBalanceIntervals x -> SubMissingAccountsInAccountBalanceIntervals x
+  BalancesOutsideAccountBalanceIntervals x -> SubBalancesOutsideAccountBalanceIntervals x
   CertsFailure _ -> impossible "CertsFailure"
   MissingAccountsInWithdrawals _ -> impossible "MissingAccountsInWithdrawals"
   IncompleteWithdrawals _ -> impossible "IncompleteWithdrawals"
   ExceededBalancesInWithdrawals _ -> impossible "ExceededBalancesInWithdrawals"
   MissingAccountsInDirectDeposits dds -> SubMissingAccountsInDirectDeposits dds
+  WrongNetworkInStartingAccountBalanceIntervals _ _ ->
+    impossible "WrongNetworkInStartingAccountBalanceIntervals"
+  MissingAccountsInStartingAccountBalanceIntervals _ ->
+    impossible "MissingAccountsInStartingAccountBalanceIntervals"
+  BalancesOutsideStartingAccountBalanceIntervals _ ->
+    impossible "BalancesOutsideStartingAccountBalanceIntervals"
   where
     impossible name = error $ "Impossible: `" <> name <> "` for SUBENTITIES"
 

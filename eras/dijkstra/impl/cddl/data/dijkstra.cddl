@@ -828,7 +828,7 @@ required_top_level_guards = {+ credential => plutus_data/ nil}
 
 direct_deposits = {+ reward_account => coin}
 
-account_balance_intervals = {+ credential => account_balance_interval}
+account_balance_intervals = {+ reward_account => account_balance_interval}
 
 account_balance_interval =
   [inclusive_lower_bound : coin, exclusive_upper_bound : coin/ nil]
@@ -906,7 +906,8 @@ auxiliary_data_map =
     }
   )
 
-starting_account_balance_intervals = {+ credential => account_balance_interval}
+starting_account_balance_intervals =
+  {+ reward_account => account_balance_interval}
 
 leios_certificate =
   [ signers   : bytes .size (0 .. 8192) ;bitfield with up to 65536 entries
