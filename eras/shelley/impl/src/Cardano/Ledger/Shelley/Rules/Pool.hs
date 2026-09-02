@@ -133,7 +133,7 @@ instance
   where
   type State (POOL era) = PState era
 
-  type Signal (POOL era) = PoolCert
+  type Signal (POOL era) = PoolCert era
 
   type Environment (POOL era) = PoolEnv era
 
@@ -209,7 +209,7 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
 poolTransition ::
   forall rule era.
   ( EraPParams era
-  , Signal (EraRule rule era) ~ PoolCert
+  , Signal (EraRule rule era) ~ PoolCert era
   , Environment (EraRule rule era) ~ PoolEnv era
   , State (EraRule rule era) ~ PState era
   , STS (EraRule rule era)

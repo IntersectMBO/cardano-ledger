@@ -126,6 +126,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Core.Era (Era)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
@@ -281,7 +282,7 @@ instance Default StakePoolState where
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
 mkStakePoolState ::
-  CompactForm Coin -> Set (Credential Staking) -> StakePoolParams -> StakePoolState
+  CompactForm Coin -> Set (Credential Staking) -> StakePoolParams era -> StakePoolState
 mkStakePoolState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
@@ -300,7 +301,8 @@ mkStakePoolState deposit delegators spp =
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
-stakePoolStateToStakePoolParams :: Network -> KeyHash StakePool -> StakePoolState -> StakePoolParams
+stakePoolStateToStakePoolParams ::
+  Network -> KeyHash StakePool -> StakePoolState -> StakePoolParams era
 stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
@@ -450,7 +452,7 @@ instance DecCBOR StakePoolRelay where
       k -> invalidKey k
 
 -- | A stake pool.
-data StakePoolParams = StakePoolParams
+data StakePoolParams era = StakePoolParams
   { sppId :: !(KeyHash StakePool)
   , sppVrf :: !(VRFVerKeyHash StakePoolVRF)
   , sppBlsKey :: !(StrictMaybe BlsKey)
@@ -518,23 +520,23 @@ instance DecCBOR BlsKey where
     blsPossessionProof <- decodeFixedSized
     pure BlsKey {blsPubKey, blsPossessionProof}
 
-sppVrfL :: Lens' StakePoolParams (VRFVerKeyHash StakePoolVRF)
+sppVrfL :: Lens' (StakePoolParams era) (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
 
-sppCostL :: Lens' StakePoolParams Coin
+sppCostL :: Lens' (StakePoolParams era) Coin
 sppCostL = lens sppCost (\spp u -> spp {sppCost = u})
 
-sppMetadataL :: Lens' StakePoolParams (StrictMaybe PoolMetadata)
+sppMetadataL :: Lens' (StakePoolParams era) (StrictMaybe PoolMetadata)
 sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
 
-instance Default StakePoolParams where
+instance Default (StakePoolParams era) where
   def = StakePoolParams def def def (Coin 0) (Coin 0) def def def def def
 
-instance NoThunks StakePoolParams
+instance NoThunks (StakePoolParams era)
 
-deriving instance NFData StakePoolParams
+deriving instance NFData (StakePoolParams era)
 
-instance ToJSON StakePoolParams where
+instance ToJSON (StakePoolParams era) where
   toJSON spp =
     Aeson.object
       [ "poolId" .= sppId spp
@@ -549,7 +551,7 @@ instance ToJSON StakePoolParams where
       , "metadata" .= sppMetadata spp
       ]
 
-instance FromJSON StakePoolParams where
+instance FromJSON (StakePoolParams era) where
   parseJSON =
     Aeson.withObject "StakePoolParams" $ \obj ->
       -- Preserved for backward-compatibility,
@@ -579,7 +581,7 @@ pattern PoolParams ::
   Set (KeyHash Staking) ->
   StrictSeq StakePoolRelay ->
   StrictMaybe PoolMetadata ->
-  PoolParams
+  PoolParams era
 pattern PoolParams
   { ppId
   , ppVrf
@@ -646,7 +648,7 @@ data SizeOfPoolRelays = SizeOfPoolRelays
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance EncCBOR StakePoolParams where
+instance EncCBOR (StakePoolParams era) where
   encCBOR poolParams =
     withStakePoolParamsFlatEncoding poolParams $ \stakePoolParamsListLen stakePoolParamsEncoding ->
       encodeListLen (fromIntegral stakePoolParamsListLen)
@@ -662,7 +664,7 @@ instance EncCBOR StakePoolParams where
 -- Instead, we want `StakePoolParams` to have a dynamic list length based on the
 -- protocol version.
 withStakePoolParamsFlatEncoding ::
-  StakePoolParams ->
+  StakePoolParams era ->
   -- | Function with stake pool params flat encoded list length and actual flat
   -- encoded stake pool params
   (Int -> Encoding -> Encoding) ->
@@ -687,11 +689,11 @@ withStakePoolParamsFlatEncoding poolParams f =
         <> encCBOR (sppRelays poolParams)
         <> encodeNullStrictMaybe encCBOR (sppMetadata poolParams)
 
-instance DecCBOR StakePoolParams where
+instance Era era => DecCBOR (StakePoolParams era) where
   decCBOR = do
     snd <$> decodeRecordNamed "StakePoolParams" fst decodeStakePoolParamsFlat
 
-decodeStakePoolParamsFlat :: Decoder s (Int, StakePoolParams)
+decodeStakePoolParamsFlat :: Decoder s (Int, StakePoolParams era)
 decodeStakePoolParamsFlat = do
   sppId <- decCBOR
   sppVrf <- decCBOR

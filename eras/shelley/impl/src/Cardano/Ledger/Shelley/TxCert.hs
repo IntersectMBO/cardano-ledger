@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -109,6 +110,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
+import Data.Coerce (coerce)
 import Data.Foldable as F (Foldable (..), foldMap', foldl')
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust)
@@ -392,7 +394,7 @@ instance ToJSON MIRCert where
 -- | A heavyweight certificate.
 data ShelleyTxCert era
   = ShelleyTxCertDelegCert !ShelleyDelegCert
-  | ShelleyTxCertPool !PoolCert
+  | ShelleyTxCertPool !(PoolCert era)
   | ShelleyTxCertGenesisDeleg !GenesisDelegCert
   | ShelleyTxCertMir !MIRCert
   deriving (Show, Generic, Eq, Ord, NFData)
@@ -411,7 +413,7 @@ upgradeShelleyTxCert ::
   ShelleyTxCert era2
 upgradeShelleyTxCert = \case
   ShelleyTxCertDelegCert cert -> ShelleyTxCertDelegCert cert
-  ShelleyTxCertPool cert -> ShelleyTxCertPool cert
+  ShelleyTxCertPool cert -> ShelleyTxCertPool $ coerce cert
   ShelleyTxCertGenesisDeleg cert -> ShelleyTxCertGenesisDeleg cert
   ShelleyTxCertMir cert -> ShelleyTxCertMir cert
 
@@ -434,7 +436,7 @@ encodeShelleyDelegCert = \case
   ShelleyDelegCert cred poolId ->
     encodeListLen 3 <> encodeWord8 2 <> encCBOR cred <> encCBOR poolId
 
-encodePoolCert :: PoolCert -> Encoding
+encodePoolCert :: PoolCert era -> Encoding
 encodePoolCert = \case
   RegPool poolParams ->
     withStakePoolParamsFlatEncoding poolParams $ \stakePoolParamsListLen stakePoolParamsEncoding ->

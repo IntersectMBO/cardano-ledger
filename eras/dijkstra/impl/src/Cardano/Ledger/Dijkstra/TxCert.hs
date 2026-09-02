@@ -83,6 +83,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), KeyValue ((.=)), ToJSON (..), (.:))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
+import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -183,7 +184,7 @@ instance FromJSON DijkstraDelegCert where
 
 data DijkstraTxCert era
   = DijkstraTxCertDeleg !DijkstraDelegCert
-  | DijkstraTxCertPool !PoolCert
+  | DijkstraTxCertPool !(PoolCert era)
   | DijkstraTxCertGov !ConwayGovCert
   deriving (Show, Generic, Eq, Ord)
 
@@ -276,7 +277,7 @@ instance EraTxCert DijkstraEra where
   type TxCertUpgradeError DijkstraEra = DijkstraTxCertUpgradeError
 
   upgradeTxCert = \case
-    RegPoolTxCert poolParams -> Right $ RegPoolTxCert poolParams
+    RegPoolTxCert poolParams -> Right . RegPoolTxCert $ coerce poolParams
     RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
     RegDepositTxCert cred c -> Right $ RegDepositTxCert cred c
     UnRegDepositTxCert cred c -> Right $ UnRegDepositTxCert cred c

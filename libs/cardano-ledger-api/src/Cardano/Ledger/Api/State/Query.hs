@@ -456,20 +456,20 @@ queryStakePoolDefaultVote nes poolId =
 
 -- | Used only for the `queryPoolState` query. This resembles the older way of
 -- representing StakePoolState in Ledger.
-data QueryPoolStateResult = QueryPoolStateResult
-  { qpsrStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
-  , qpsrFutureStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+data QueryPoolStateResult era = QueryPoolStateResult
+  { qpsrStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
+  , qpsrFutureStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
   , qpsrRetiring :: !(Map (KeyHash StakePool) EpochNo)
   , qpsrDeposits :: !(Map (KeyHash StakePool) Coin)
   }
   deriving (Show, Eq, Generic)
-  deriving (ToJSON) via KeyValuePairs QueryPoolStateResult
+  deriving (ToJSON) via KeyValuePairs (QueryPoolStateResult era)
 
-instance EncCBOR QueryPoolStateResult where
+instance EncCBOR (QueryPoolStateResult era) where
   encCBOR (QueryPoolStateResult a b c d) =
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
-instance DecCBOR QueryPoolStateResult where
+instance Era era => DecCBOR (QueryPoolStateResult era) where
   decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 4) $ do
     qpsrStakePoolParams <- decCBOR
     qpsrFutureStakePoolParams <- decCBOR
@@ -478,7 +478,7 @@ instance DecCBOR QueryPoolStateResult where
     pure
       QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
 
-instance ToKeyValuePairs QueryPoolStateResult where
+instance ToKeyValuePairs (QueryPoolStateResult era) where
   toKeyValuePairs qpsr@(QueryPoolStateResult _ _ _ _) =
     let QueryPoolStateResult {..} = qpsr
      in [ "stakePoolParams" .= qpsrStakePoolParams
@@ -491,7 +491,7 @@ mkQueryPoolStateResult ::
   (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
   PState era ->
   Network ->
-  QueryPoolStateResult
+  QueryPoolStateResult era
 mkQueryPoolStateResult f ps network =
   QueryPoolStateResult
     { qpsrStakePoolParams =
@@ -508,7 +508,7 @@ mkQueryPoolStateResult f ps network =
 -- representation used to be.
 queryPoolState ::
   EraCertState era =>
-  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> Network -> QueryPoolStateResult
+  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> Network -> QueryPoolStateResult era
 queryPoolState nes mPoolKeys network =
   let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
       f :: forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x
@@ -523,7 +523,7 @@ queryPoolParameters ::
   Network ->
   NewEpochState era ->
   Set (KeyHash StakePool) ->
-  Map (KeyHash StakePool) StakePoolParams
+  Map (KeyHash StakePool) (StakePoolParams era)
 queryPoolParameters network nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
    in Map.mapWithKey (stakePoolStateToStakePoolParams network) $ Map.restrictKeys pools poolKeys

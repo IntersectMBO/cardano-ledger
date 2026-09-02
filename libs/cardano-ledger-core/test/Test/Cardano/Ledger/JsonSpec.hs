@@ -29,7 +29,6 @@ spec = do
     roundTripJsonSpec @CostModels
     roundTripJsonSpec @PoolMetadata
     roundTripJsonSpec @StakePoolRelay
-    roundTripJsonSpec @StakePoolParams
     roundTripJsonSpec @StakePoolState
     roundTripJsonSpec @Addr
     roundTripJsonSpec @AccountAddress

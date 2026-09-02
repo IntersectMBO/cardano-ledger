@@ -182,7 +182,7 @@ instance
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
-  , Signal (EraRule "POOL" era) ~ PoolCert
+  , Signal (EraRule "POOL" era) ~ PoolCert era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Embed (EraRule "DELEG" era) (CERT era)
   , Embed (EraRule "POOL" era) (CERT era)
@@ -210,7 +210,7 @@ certTransition ::
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
-  , Signal (EraRule "POOL" era) ~ PoolCert
+  , Signal (EraRule "POOL" era) ~ PoolCert era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Embed (EraRule "DELEG" era) (CERT era)
   , Embed (EraRule "POOL" era) (CERT era)

@@ -78,8 +78,8 @@ class
   -- | Return a ScriptHash for certificate types that require a witness
   getScriptWitnessTxCert :: TxCert era -> Maybe ScriptHash
 
-  mkRegPoolTxCert :: StakePoolParams -> TxCert era
-  getRegPoolTxCert :: TxCert era -> Maybe StakePoolParams
+  mkRegPoolTxCert :: StakePoolParams era -> TxCert era
+  getRegPoolTxCert :: TxCert era -> Maybe (StakePoolParams era)
 
   mkRetirePoolTxCert :: KeyHash StakePool -> EpochNo -> TxCert era
   getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash StakePool, EpochNo)
@@ -108,7 +108,7 @@ class
     f (TxCert era) ->
     Coin
 
-pattern RegPoolTxCert :: EraTxCert era => StakePoolParams -> TxCert era
+pattern RegPoolTxCert :: EraTxCert era => StakePoolParams era -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
   where
     RegPoolTxCert d = mkRegPoolTxCert d
@@ -122,25 +122,25 @@ pattern RetirePoolTxCert poolId epochNo <- (getRetirePoolTxCert -> Just (poolId,
   where
     RetirePoolTxCert poolId epochNo = mkRetirePoolTxCert poolId epochNo
 
-getPoolCertTxCert :: EraTxCert era => TxCert era -> Maybe PoolCert
+getPoolCertTxCert :: EraTxCert era => TxCert era -> Maybe (PoolCert era)
 getPoolCertTxCert = \case
   RegPoolTxCert poolParams -> Just $ RegPool poolParams
   RetirePoolTxCert poolId epochNo -> Just $ RetirePool poolId epochNo
   _ -> Nothing
 
-data PoolCert
+data PoolCert era
   = -- | A stake pool registration certificate.
-    RegPool !StakePoolParams
+    RegPool !(StakePoolParams era)
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash StakePool) !EpochNo
   deriving (Show, Generic, Eq, Ord)
 
-instance NoThunks PoolCert
+instance NoThunks (PoolCert era)
 
-instance NFData PoolCert where
+instance NFData (PoolCert era) where
   rnf = rwhnf
 
-instance ToJSON PoolCert where
+instance ToJSON (PoolCert era) where
   toJSON = \case
     RegPool poolParams ->
       kindObjectValue "RegPool" ["poolParams" .= toJSON poolParams]
@@ -151,7 +151,7 @@ instance ToJSON PoolCert where
         , "epochNo" .= toJSON epochNo
         ]
 
-instance FromJSON PoolCert where
+instance FromJSON (PoolCert era) where
   parseJSON = Aeson.withObject "PoolCert" $ \o -> do
     kind <- o .: "kind" :: Parser Text
     case kind of
@@ -159,7 +159,7 @@ instance FromJSON PoolCert where
       "RetirePool" -> RetirePool <$> o .: "poolId" <*> o .: "epochNo"
       _ -> fail $ "Unknown PoolCert kind: " <> show kind
 
-poolCertKeyHashWitness :: PoolCert -> KeyHash Witness
+poolCertKeyHashWitness :: PoolCert era -> KeyHash Witness
 poolCertKeyHashWitness = \case
   RegPool stakePoolParams -> asWitness $ sppId stakePoolParams
   RetirePool poolId _ -> asWitness poolId

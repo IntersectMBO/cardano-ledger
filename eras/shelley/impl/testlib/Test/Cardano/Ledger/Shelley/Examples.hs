@@ -480,7 +480,7 @@ exampleProposedPPUpdates =
       (mkKeyHash 1)
       (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
 
-exampleStakePoolParams :: StakePoolParams
+exampleStakePoolParams :: StakePoolParams era
 exampleStakePoolParams =
   StakePoolParams
     { sppId = hashKey $ vKey $ mkDSIGNKeyPair 1

@@ -341,8 +341,8 @@ instance SpecTranslate ConwayEra (AlonzoTxAuxData ConwayEra) where
 
   toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate ConwayEra StakePoolParams where
-  type SpecRep ConwayEra StakePoolParams = Agda.StakePoolParams
+instance SpecTranslate ConwayEra (StakePoolParams ConwayEra) where
+  type SpecRep ConwayEra (StakePoolParams ConwayEra) = Agda.StakePoolParams
 
   toSpecRep StakePoolParams {..} =
     Agda.StakePoolParams
@@ -629,7 +629,7 @@ instance SpecTranslate ConwayEra (RatifyEnv ConwayEra) where
         <*> dreps
         <*> toSpecRep reCommitteeState
         <*> toSpecRep treasury
-        <*> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) reStakePools)
+        <*> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams @ConwayEra Testnet) reStakePools)
         <*> toSpecRepMap (Map.mapMaybe (view dRepDelegationAccountStateL) (reAccounts ^. accountsMapL))
 
 instance SpecTranslate ConwayEra (RatifyState ConwayEra) where

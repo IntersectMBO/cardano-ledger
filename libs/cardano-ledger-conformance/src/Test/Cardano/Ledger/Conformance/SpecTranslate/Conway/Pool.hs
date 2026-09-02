@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -35,7 +36,7 @@ instance SpecTranslate ConwayEra (PState ConwayEra) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) psStakePools)
+      <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams @ConwayEra Testnet) psStakePools)
       <*> toSpecRepMap psFutureStakePoolParams
       <*> toSpecRepMap psRetiring
 
@@ -43,14 +44,14 @@ instance SpecTranslate ConwayEra (PState ConwayEra) where
 -- This instance uses arbitrary tags (0 and 1) that don't match the CDDL spec.
 --
 -- The actual spec-compliant CBOR encoding that follows the CDDL is handled by 'encodePoolCert'.
-instance EncCBOR PoolCert where
+instance EncCBOR (PoolCert era) where
   encCBOR =
     encode . \case
       RegPool pp -> Sum RegPool 0 !> To pp
       RetirePool kh eNo -> Sum RetirePool 1 !> To kh !> To eNo
 
-instance SpecTranslate ConwayEra PoolCert where
-  type SpecRep ConwayEra PoolCert = Agda.DCert
+instance SpecTranslate ConwayEra (PoolCert ConwayEra) where
+  type SpecRep ConwayEra (PoolCert ConwayEra) = Agda.DCert
 
   toSpecRep (RegPool p@StakePoolParams {sppId = KeyHash ppHash}) =
     Agda.Regpool

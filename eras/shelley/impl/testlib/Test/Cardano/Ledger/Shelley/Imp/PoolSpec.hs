@@ -568,7 +568,7 @@ spec = describe "POOL" $ do
     poolParams ::
       KeyHash StakePool ->
       VRFVerKeyHash StakePoolVRF ->
-      ImpTestM era StakePoolParams
+      ImpTestM era (StakePoolParams era)
     poolParams kh vrf = do
       pps <- registerAccountAddress >>= freshPoolParams kh
       pure $ pps & sppVrfL .~ vrf

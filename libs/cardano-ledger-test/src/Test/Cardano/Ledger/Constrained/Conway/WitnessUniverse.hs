@@ -408,12 +408,12 @@ witAccountAddressSpec univ =
         satisfies accountCred (witCredSpec @era univ)
 
 owners_ ::
-  Term StakePoolParams -> Term (Set (KeyHash Staking))
+  Era era => Term (StakePoolParams era) -> Term (Set (KeyHash Staking))
 owners_ = sel @7
 
 witStakePoolParamsSpec ::
   forall era.
-  WitUniv era -> Specification StakePoolParams
+  Era era => WitUniv era -> Specification (StakePoolParams era)
 witStakePoolParamsSpec univ =
   explainWit "stakepoolparams :: (StakePoolParams c)" univ $
     constrained $ \ [var|stakepoolparams|] ->
@@ -692,7 +692,7 @@ instance Era era => Witnessed era DRep where
 instance Era era => Witnessed era AccountAddress where
   witness univ t = satisfies t (witAccountAddressSpec univ)
 
-instance Era era => Witnessed era StakePoolParams where
+instance Era era => Witnessed era (StakePoolParams era) where
   witness univ t = satisfies t (witStakePoolParamsSpec univ)
 
 instance Era era => Witnessed era StakePoolState where

@@ -15,6 +15,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
 import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (
@@ -188,11 +189,11 @@ mkOCertIssueNos (GenDelegs delegs0) =
 --
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
-  (EraGov era, EraStake era, EraCertState era, ShelleyEraAccounts era, MonadST m, MonadThrow m) =>
+  (MonadST m, MonadThrow m) =>
   HasFS m h ->
   ShelleyGenesisStaking ->
-  ChainState era ->
-  m (ChainState era)
+  ChainState ShelleyEra ->
+  m (ChainState ShelleyEra)
 registerGenesisStaking hasFS sgs cs@STS.ChainState {chainNes = oldChainNes} = do
   updatedNes <-
     injectStakePools Testnet hasFS (EmbeddedInjection (sgsPools sgs)) oldChainNes

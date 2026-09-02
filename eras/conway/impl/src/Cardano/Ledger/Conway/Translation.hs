@@ -45,6 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   lsUTxOStateL,
  )
+import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -143,7 +144,7 @@ instance TranslateEra ConwayEra DState where
           }
 
 instance TranslateEra ConwayEra PState where
-  translateEra _ PState {..} = pure PState {..}
+  translateEra _ PState {..} = pure $ coerce PState {..}
 
 instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =

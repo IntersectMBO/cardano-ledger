@@ -224,8 +224,8 @@ emptySetupArgs =
     , poolMembers = Nothing
     }
 
-data PoolInfo = PoolInfo
-  { params :: StakePoolParams
+data PoolInfo era = PoolInfo
+  { params :: StakePoolParams era
   , coldKey :: KeyPair StakePool
   , ownerKey :: KeyPair Staking
   , ownerStake :: Coin
@@ -253,7 +253,7 @@ genMargin = do
   numer <- choose (0, denom)
   pure $ unsafeBoundRational (numer % denom)
 
-genPoolInfo :: PoolSetUpArgs Maybe -> Gen PoolInfo
+genPoolInfo :: PoolSetUpArgs Maybe -> Gen (PoolInfo era)
 genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
   pledge <- getOrGen poolPledge $ genCoin 0 maxPoolPledeg
   cost <- getOrGen poolCost $ genCoin 0 maxPoolCost
@@ -294,7 +294,7 @@ genRewardPPs = do
   where
     g xs = unsafeBoundRational <$> elements xs
 
-genBlocksMade :: [StakePoolParams] -> Gen BlocksMade
+genBlocksMade :: [StakePoolParams era] -> Gen BlocksMade
 genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
   where
     f p = (sppId p,) <$> genNatural 0 maxPoolBlocks
@@ -749,7 +749,7 @@ mkRewardAns ::
   BlocksMade ->
   Coin ->
   Set (Credential Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) (StakePoolParams era) ->
   ActiveStake ->
   Coin ->
   ShelleyBase RewardAns

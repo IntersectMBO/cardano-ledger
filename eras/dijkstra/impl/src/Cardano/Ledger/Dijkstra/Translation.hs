@@ -112,7 +112,7 @@ instance TranslateEra DijkstraEra DState where
     pure DState {dsAccounts = ConwayAccounts (Map.map coerce accounts), ..}
 
 instance TranslateEra DijkstraEra PState where
-  translateEra _ PState {..} = pure PState {..}
+  translateEra _ PState {..} = pure $ coerce PState {..}
 
 instance TranslateEra DijkstraEra VState where
   translateEra _ vState = pure $ coerce vState

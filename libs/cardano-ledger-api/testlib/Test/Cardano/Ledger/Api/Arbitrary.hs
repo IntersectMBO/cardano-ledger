@@ -10,7 +10,7 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 instance Arbitrary MemberStatus where
   arbitrary = arbitraryBoundedEnum
 
-instance Arbitrary QueryPoolStateResult where
+instance Arbitrary (QueryPoolStateResult era) where
   arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary StakeSnapshot where

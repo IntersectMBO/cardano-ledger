@@ -130,8 +130,8 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryFuturePParams" (queryFuturePParamsExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryGovState" (queryGovStateExamples @era)
-      eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" queryPoolParametersExamples
-      eraLedgerStateQueryGoldenSpec @era "queryPoolState" queryPoolStateExamples
+      eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" (queryPoolParametersExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryPoolState" (queryPoolStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryProposals" (queryProposalsExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryRatifyState" (queryRatifyStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era
@@ -150,7 +150,7 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryStakePoolRelays" queryStakePoolRelaysExamples
       eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
-      prop "QueryPoolStateResult" $ roundTripEraExpectation @era @QueryPoolStateResult
+      prop "QueryPoolStateResult" $ roundTripEraExpectation @era @(QueryPoolStateResult era)
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
     describe "Queries" $ do
       committeeMembersStateSpec @era

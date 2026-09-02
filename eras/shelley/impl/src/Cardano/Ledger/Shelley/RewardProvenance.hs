@@ -13,6 +13,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.State (StakePoolParams (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
@@ -38,7 +39,7 @@ data RewardProvenancePool = RewardProvenancePool
   -- ^ The number of Lovelace owned by the stake pool owners.
   -- If this value is not at least as large as the 'pledgeRatioP',
   -- the stake pool will not earn any rewards for the given epoch.
-  , stakePoolParamsP :: !StakePoolParams
+  , stakePoolParamsP :: !(StakePoolParams ShelleyEra)
   -- ^ The stake pool's registered parameters.
   , pledgeRatioP :: !Rational
   -- ^ The stake pool's pledge.
@@ -190,7 +191,7 @@ instance Show RewardProvenancePool where
         , "lReward = " ++ show (lRewardP t)
         ]
 
-showPoolParams :: StakePoolParams -> String
+showPoolParams :: StakePoolParams era -> String
 showPoolParams x =
   "StakePoolParams\n"
     ++ mylines

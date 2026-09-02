@@ -293,7 +293,7 @@ instance AggregateStat PoolParamsStats where
   aggregateStat PoolParamsStats {..} =
     mempty {gsCredentialStaking = ppsAccountId, gsKeyHashStakePool = ppsPoolId}
 
-countPoolParamsStats :: StakePoolParams -> PoolParamsStats
+countPoolParamsStats :: StakePoolParams era -> PoolParamsStats
 countPoolParamsStats StakePoolParams {..} =
   PoolParamsStats
     { ppsPoolId = statSingleton sppId

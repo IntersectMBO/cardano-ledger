@@ -78,7 +78,7 @@ instance
   STS (SUBPOOL era)
   where
   type State (SUBPOOL era) = PState era
-  type Signal (SUBPOOL era) = PoolCert
+  type Signal (SUBPOOL era) = PoolCert era
   type Environment (SUBPOOL era) = Shelley.PoolEnv era
   type BaseM (SUBPOOL era) = ShelleyBase
   type PredicateFailure (SUBPOOL era) = DijkstraSubPoolPredFailure era

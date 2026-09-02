@@ -268,7 +268,7 @@ instance ToExpr CompactAddr
 -- PoolParams
 instance ToExpr PoolMetadata
 
-instance ToExpr StakePoolParams
+instance ToExpr (StakePoolParams era)
 
 instance ToExpr BlsKey
 
@@ -276,7 +276,7 @@ instance ToExpr StakePoolState
 
 instance ToExpr StakePoolRelay
 
-instance ToExpr PoolCert
+instance ToExpr (PoolCert era)
 
 instance ToExpr (PlutusData era) where
   toExpr = trimExprViaShow 30

@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Core.JSON (
 ) where
 
 import Cardano.Ledger.Core
+import Cardano.Ledger.State (StakePoolParams)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, eitherDecodeFileStrict, encode)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BSL
@@ -64,6 +65,7 @@ roundTripJsonEraSpec =
       roundTripJsonSpec @(PParams era)
       roundTripJsonSpec @(PParamsUpdate era)
       roundTripJsonSpec @(TranslationContext era)
+      roundTripJsonSpec @(StakePoolParams era)
 
 goldenJsonPParamsSpec ::
   forall era.

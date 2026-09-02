@@ -103,7 +103,7 @@ instance TranslateEra MaryEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
 instance TranslateEra MaryEra PState where
-  translateEra _ PState {..} = pure PState {..}
+  translateEra _ PState {..} = pure $ coerce PState {..}
 
 instance TranslateEra MaryEra ShelleyCertState where
   translateEra ctxt ls =
