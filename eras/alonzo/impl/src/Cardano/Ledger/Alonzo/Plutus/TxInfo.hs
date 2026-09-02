@@ -133,7 +133,7 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
 
-  toPlutusScriptPurpose = transPlutusPurpose
+  toPlutusScriptPurpose proxy lti = transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -177,11 +177,11 @@ toPlutusV1Args ::
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
+toPlutusV1Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs
       proxy
-      ltiProtVer
+      lti
       (PV1.ScriptContext txInfo)
       plutusPurpose
       maybeSpendingDatum
@@ -193,14 +193,14 @@ toPlutusV1Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
-  ProtVer ->
+  LedgerTxInfo era ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (LegacyPlutusArgs l)
-toLegacyPlutusArgs proxy pv mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
-  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy pv scriptPurpose
+toLegacyPlutusArgs proxy lti mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
+  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy lti scriptPurpose
   let redeemer = getPlutusData redeemerData
   pure $ case maybeSpendingData of
     Nothing -> LegacyPlutusArgs2 redeemer scriptContext

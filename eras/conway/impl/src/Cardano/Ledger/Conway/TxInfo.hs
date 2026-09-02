@@ -416,7 +416,7 @@ transTxCertV1V2 = \case
 instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose = transPlutusPurposeV1V2
+  toPlutusScriptPurpose proxy lti = transPlutusPurposeV1V2 proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -456,9 +456,9 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose = transPlutusPurposeV1V2
+  toPlutusScriptPurpose proxy lti = transPlutusPurposeV1V2 proxy (ltiProtVer lti)
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
       let txBody = tx ^. bodyTxL
       guardConwayFeaturesForPlutusV1V2 tx
@@ -472,7 +472,7 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -499,9 +499,9 @@ instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
 instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
-  toPlutusScriptPurpose = transPlutusPurposeV3
+  toPlutusScriptPurpose proxy lti = transPlutusPurposeV3 proxy (ltiProtVer lti)
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
       let
         txBody = tx ^. bodyTxL
@@ -518,7 +518,7 @@ instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       -- It is important for memoization for `txInfo` to be a let binding
       let txInfo =
             PV3.TxInfo
@@ -769,8 +769,8 @@ toPlutusV3Args ::
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
+toPlutusV3Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy lti plutusPurpose
   let
     maybeSpendingData =
       getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose

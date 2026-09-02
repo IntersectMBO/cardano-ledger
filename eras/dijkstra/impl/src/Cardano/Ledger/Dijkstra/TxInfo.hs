@@ -46,13 +46,11 @@ import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
-import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transRedeemer, transReferenceScript)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
   Exclusive (..),
   Inclusive (..),
   Inject (..),
-  ProtVer (..),
   StrictMaybe (..),
   TxIx (TxIx),
   kindObjectValue,
@@ -322,7 +320,7 @@ instance EraPlutusContext DijkstraEra where
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
+  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV1V2 proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
@@ -384,9 +382,9 @@ transTxCertV1V2 = \case
 instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
+  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV1V2 proxy (ltiProtVer lti)
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
@@ -401,7 +399,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -428,9 +426,9 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxCert _ _ = pure . transTxCertV3
 
-  toPlutusScriptPurpose = Conway.transPlutusPurposeV3
+  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV3 proxy (ltiProtVer lti)
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
       let
         txBody = tx ^. bodyTxL
@@ -448,7 +446,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx
+      plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -570,32 +568,27 @@ instance ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
 transRedeemerPointerV4 ::
-  forall era t l proxy.
-  ( AlonzoEraTxBody era
-  , Inject (BabbageContextError era) (ContextError era)
+  forall era l proxy.
+  ( EraTx era
+  , AlonzoEraTxBody era
   , EraPlutusTxInfo l era
-  , Inject (DijkstraContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  ProtVer ->
-  TxBody t era ->
-  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
+  LedgerTxInfo era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV4.Redeemer)
-transRedeemerPointerV4 proxy pv txBody scriptHashes (ptr, (d, _)) =
-  case redeemerPointerInverse txBody ptr of
-    SNothing -> Left . inject $ RedeemerPointerPointsToNothing ptr
-    SJust sp -> do
-      case Map.lookup ptr scriptHashes of
-        Just _sh -> (,transRedeemer d) <$> toPlutusScriptPurpose proxy pv sp
-        Nothing -> Left . inject $ ScriptHashNotFoundForPurpose @era ptr
+transRedeemerPointerV4 proxy lti@LedgerTxInfo {ltiTx} (ptr, (d, _)) =
+  case redeemerPointerInverse (ltiTx ^. bodyTxL) ptr of
+    SNothing -> Left . inject $ Babbage.RedeemerPointerPointsToNothing ptr
+    SJust sp -> (,Babbage.transRedeemer d) <$> toPlutusScriptPurpose proxy lti sp
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxCert proxy _pv cert = pure $ transTxCertV4 proxy cert
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
-  toPlutusTxInfo proxy LedgerTxInfo {..} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
       let
         era = Proxy @DijkstraEra
@@ -631,8 +624,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             (Right mempty)
             ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      let scriptHashes = mempty -- TODO: Pipe in resolved ScriptHashes
-      plutusRedeemers <- transTxRedeemersV4 proxy ltiProtVer ltiTx scriptHashes
+      plutusRedeemers <- transTxRedeemersV4 proxy lti
       let
         txInfo =
           PV4.TxInfo
@@ -672,14 +664,14 @@ transTxInInfoV4 ::
   forall era.
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
-  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   UTxO era ->
   TxIn ->
   Either (ContextError era) PV4.TxInInfo
 transTxInInfoV4 utxo txIn = do
-  txOut <- first (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  txOut <- first (inject . Babbage.AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV4 (TxOutFromInput txIn) txOut
   Right (PV4.TxInInfo (transTxInV4 txIn) plutusTxOut)
 
@@ -687,7 +679,7 @@ transTxOutV4 ::
   forall era.
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
-  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   TxOutSource ->
@@ -696,7 +688,7 @@ transTxOutV4 ::
 transTxOutV4 txOutSource txOut = do
   let
     val = transValue $ txOut ^. valueTxOutL
-    referenceScript = transReferenceScript $ txOut ^. referenceScriptTxOutL
+    referenceScript = Babbage.transReferenceScript $ txOut ^. referenceScriptTxOutL
     datum =
       case txOut ^. datumTxOutF of
         NoDatum -> PV2.NoOutputDatum
@@ -716,7 +708,7 @@ transTxOutV4 txOutSource txOut = do
           StakeRefBase sCred -> Right . Just $ transCredToAccountId sCred
           StakeRefNull -> Right Nothing
           StakeRefPtr _ -> Left . inject . PointerPresentInOutput @era $ NES.singleton txOutSource
-      AddrBootstrap _ -> Left . inject $ ByronTxOutInContext @era txOutSource
+      AddrBootstrap _ -> Left . inject $ Babbage.ByronTxOutInContext @era txOutSource
   pure $
     PV4.TxOut
       { txOutReferenceScript = referenceScript
@@ -732,19 +724,16 @@ transTxRedeemersV4 ::
   , AlonzoEraTxBody era
   , EraTx era
   , AlonzoEraTxWits era
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (DijkstraContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  ProtVer ->
-  Tx t era ->
-  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
+  LedgerTxInfo era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemersV4 proxy pv tx scriptHashes =
+transTxRedeemersV4 proxy lti@LedgerTxInfo {ltiTx} =
   PV2.unsafeFromList
     <$> mapM
-      (transRedeemerPointerV4 proxy pv (tx ^. bodyTxL) scriptHashes)
-      (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+      (transRedeemerPointerV4 proxy lti)
+      (Map.toList $ ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 transAccountId :: AccountId -> PV4.AccountId
 transAccountId (AccountId cred) = PV4.AccountId $ transCred cred
@@ -860,8 +849,8 @@ toPlutusV4Args ::
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy ltiProtVer plutusPurpose
+toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy lti plutusPurpose
   let
     maybeSpendingData = getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
     -- TODO TopTxInfo should be set if this is a top-level transaction
@@ -882,10 +871,10 @@ transTxId (TxId h) = PV4.TxId $ transSafeHash h
 transPlutusPurposeV4 ::
   ConwayEraPlutusTxInfo PlutusV4 era =>
   proxy 'PlutusV4 ->
-  ProtVer ->
+  LedgerTxInfo era ->
   DijkstraPlutusPurpose AsIxItem era ->
   Either (ContextError era) (PlutusScriptPurpose PlutusV4)
-transPlutusPurposeV4 proxy pv = \case
+transPlutusPurposeV4 proxy lti = \case
   DijkstraSpending (AsIxItem _ (TxIn txId (TxIx ix))) ->
     pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
   DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
@@ -898,4 +887,5 @@ transPlutusPurposeV4 proxy pv = \case
     pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
   DijkstraGuarding (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
   where
+    pv = ltiProtVer lti
     sh = error "Unimplemented: ScriptHash for purpose"

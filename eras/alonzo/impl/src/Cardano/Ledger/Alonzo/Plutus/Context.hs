@@ -143,7 +143,7 @@ class
 
   toPlutusScriptPurpose ::
     proxy l ->
-    ProtVer ->
+    LedgerTxInfo era ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 

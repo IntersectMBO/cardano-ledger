@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Switch `toPlutusScriptPurpose` to accept `LedgerTxInfo` instead of `ProtVer`
 * Add `ltiScriptsUsed` and `ltiScriptHashesUsed` to `LedgerTxInfo`
 * Add `toScriptHashByPurpose` helper
 * Remove no longer necessary argument from `scriptsWithContextFromLedgerTxInfoWithResult` and `scriptsWithContextFromLedgerTxInfo`, since it is now available as `ltiScriptsUsed`
