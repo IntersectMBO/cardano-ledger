@@ -77,6 +77,8 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   cborError,
+  decodeBreakOr,
+  decodeListLenOrIndef,
   decodeRational,
   decodeRecordNamed,
   decodeRecordSum,
@@ -532,8 +534,14 @@ instance FromJSON ShelleyGenesisStaking where
 
 -- | Genesis are always encoded with the version of era they are defined in.
 instance DecCBOR ShelleyGenesis where
-  decCBOR =
-    decodeRecordNamed "ShelleyGenesis" (const 16) $ do
+  decCBOR = do
+    mLen <- decodeListLenOrIndef
+    let expectBreakAfterExtraConfig = do
+          isBreak <- decodeBreakOr
+          unless isBreak $
+            cborError $
+              DecoderErrorCustom "ShelleyGenesis" "unexpected field after sgExtraConfig"
+    do
       sgSystemStart <- decCBOR
       sgNetworkMagic <- decCBOR
       sgNetworkId <- decCBOR
@@ -549,7 +557,17 @@ instance DecCBOR ShelleyGenesis where
       sgGenDelegs <- decCBOR
       sgInitialFunds <- decCBOR
       sgStaking <- decCBOR
-      sgExtraConfig <- decCBOR
+      sgExtraConfig <- case mLen of
+        Just 15 -> pure SNothing
+        Just 16 -> decCBOR
+        Just n ->
+          cborError $
+            DecoderErrorCustom "ShelleyGenesis" ("unexpected number of fields: " <> Text.pack (show n))
+        Nothing -> do
+          atEnd <- decodeBreakOr
+          if atEnd
+            then pure SNothing
+            else decCBOR <* expectBreakAfterExtraConfig
       pure $
         ShelleyGenesis
           sgSystemStart
