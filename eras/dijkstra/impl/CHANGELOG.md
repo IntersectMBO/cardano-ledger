@@ -33,7 +33,7 @@
   - `dueCertState` -> `ueOriginalCertState`
   - `dueOriginalUtxo` -> `ueOriginalUtxo`
 * Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
-* Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
+* Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `TxOutSource` instead of `NonEmpty (TxOut era)`
 * Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
 * Add `HKDSemialign` constraint to `upgradeDijkstraPParams`
 * Add `EncCBOR`, `ToCBOR` for `Block`

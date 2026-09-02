@@ -127,8 +127,6 @@ import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
-import Data.Set.NonEmpty (NonEmptySet)
-import qualified Data.Set.NonEmpty as NES
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -142,7 +140,7 @@ data DijkstraContextError era
   | -- | Failure translating sub-transactions for Guarding purpose at the top level
     SubTxContextError TxId (ContextError era)
   | -- | From Dijkstra onwards, attempt to use a script when there are stake ref pointers present in any outputs will result in this failure
-    PointerPresentInOutput (NonEmptySet TxOutSource)
+    PointerPresentInOutput TxOutSource
   | -- | Attempt to use PlutusV1-V3 in a sub-transaction will result in this failure
     UnsupportedScriptInSubTx Language TxId
   | -- | Attempt to use PlutusV1-V3 with non-empty direct deposits will result in this failure
@@ -582,29 +580,11 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
       inputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList txInputs)
       refInputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList refInputs)
       Conway.checkReferenceInputsNotDisjointFromInputs txBody
-      let
-        accErrors acc (ix, txOut) =
-          let res = transTxOutV4 (TxOutFromOutput ix) txOut
-           in case acc of
-                Right l -> case res of
-                  Right x -> Right $ x : l
-                  Left e -> Left e
-                Left (PointerPresentInOutput errs)
-                  -- If the accumulator contains a PointerPresentInOutput, then
-                  -- continue translating to collect all the other PointerPresentInOutput
-                  -- failures
-                  | Left (PointerPresentInOutput err) <- res ->
-                      Left . PointerPresentInOutput $ err <> errs
-                Left e -> Left e
       outputs <-
-        reverse
-          <$>
-          -- Use foldl here to collect errors from left to right (leftmost failure
-          -- takes precedence)
-          foldl'
-            accErrors
-            (Right mempty)
-            ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
+        zipWithM
+          (transTxOutV4 . TxOutFromOutput)
+          [minBound ..]
+          (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       let
@@ -689,7 +669,7 @@ transTxOutV4 txOutSource txOut = do
         PV4.Address (transCred pCred) <$> case stakeRef of
           StakeRefBase sCred -> Right . Just $ transCredToAccountId sCred
           StakeRefNull -> Right Nothing
-          StakeRefPtr _ -> Left . inject . PointerPresentInOutput @era $ NES.singleton txOutSource
+          StakeRefPtr _ -> Left . inject $ PointerPresentInOutput @era txOutSource
       AddrBootstrap _ -> Left . inject $ Babbage.ByronTxOutInContext @era txOutSource
   pure $
     PV4.TxOut
