@@ -25,6 +25,11 @@
         },
         "govActionDeposit": 0,
         "govActionLifetime": 0,
+        "leiosAnnouncementPeriodLength": 0,
+        "leiosCommitteeSize": 0,
+        "leiosDiffusionPeriodLength": 0,
+        "leiosQuorumStakeThreshold": 0,
+        "leiosVotePeriodLength": 0,
         "maxBlockBodySize": 0,
         "maxBlockExecutionUnits": {
             "memory": 0,
@@ -32,8 +37,15 @@
         },
         "maxBlockHeaderSize": 0,
         "maxCollateralInputs": 5,
+        "maxEndorserBlockExecutionUnits": {
+            "memory": 0,
+            "steps": 0
+        },
+        "maxEndorserBlockReferencesSize": 0,
+        "maxEndorserBlockTxsSize": 0,
         "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 0,
+        "maxRefScriptSizePerEndorserBlock": 0,
         "maxRefScriptSizePerTx": 0,
         "maxTxExecutionUnits": {
             "memory": 0,
@@ -757,6 +769,11 @@
         },
         "govActionDeposit": 100000000000,
         "govActionLifetime": 6,
+        "leiosAnnouncementPeriodLength": 1000,
+        "leiosCommitteeSize": 900,
+        "leiosDiffusionPeriodLength": 7000,
+        "leiosQuorumStakeThreshold": 0.75,
+        "leiosVotePeriodLength": 4000,
         "maxBlockBodySize": 90112,
         "maxBlockExecutionUnits": {
             "memory": 62000000,
@@ -764,8 +781,15 @@
         },
         "maxBlockHeaderSize": 1100,
         "maxCollateralInputs": 3,
+        "maxEndorserBlockExecutionUnits": {
+            "memory": 7000000000,
+            "steps": 2000000000000
+        },
+        "maxEndorserBlockReferencesSize": 524288,
+        "maxEndorserBlockTxsSize": 12582912,
         "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
+        "maxRefScriptSizePerEndorserBlock": 12582912,
         "maxRefScriptSizePerTx": 204800,
         "maxTxExecutionUnits": {
             "memory": 14000000,

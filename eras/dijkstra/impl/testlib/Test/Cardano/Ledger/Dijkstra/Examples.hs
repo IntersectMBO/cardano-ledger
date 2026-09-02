@@ -37,6 +37,7 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (
   Exclusive (..),
   Inclusive (..),
+  Milliseconds32 (..),
   Network (..),
   StrictMaybe (..),
   boundRational,
@@ -51,11 +52,29 @@ import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
   UpgradeDijkstraPParams (..),
+  ppLeiosAnnouncementPeriodLengthL,
+  ppLeiosCommitteeSizeL,
+  ppLeiosDiffusionPeriodLengthL,
+  ppLeiosQuorumStakeThresholdL,
+  ppLeiosVotePeriodLengthL,
+  ppMaxEndorserBlockExUnitsL,
+  ppMaxEndorserBlockReferencesSizeL,
+  ppMaxEndorserBlockTxsSizeL,
   ppMaxRefScriptSizePerBlockL,
+  ppMaxRefScriptSizePerEndorserBlockL,
   ppMaxRefScriptSizePerTxL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
+  ppuLeiosAnnouncementPeriodLengthL,
+  ppuLeiosCommitteeSizeL,
+  ppuLeiosDiffusionPeriodLengthL,
+  ppuLeiosQuorumStakeThresholdL,
+  ppuLeiosVotePeriodLengthL,
+  ppuMaxEndorserBlockExUnitsL,
+  ppuMaxEndorserBlockReferencesSizeL,
+  ppuMaxEndorserBlockTxsSizeL,
   ppuMaxRefScriptSizePerBlockL,
+  ppuMaxRefScriptSizePerEndorserBlockL,
   ppuMaxRefScriptSizePerTxL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
@@ -76,6 +95,7 @@ import Cardano.Ledger.Dijkstra.TxBody (
   subTransactionsTxBodyL,
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Plutus (OrdExUnits (..))
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
@@ -152,6 +172,16 @@ exampleDijkstraGenesis =
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
           , udppPlutusV4CostModel = testingCostModel PlutusV4
+          , -- Feasible values of CIP-164 Table 7
+            udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
+          , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
+          , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
+          , udppLeiosCommitteeSize = 900 -- N_c
+          , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
+          , udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
+          , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
+          , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
+          , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
           }
     }
 
@@ -314,6 +344,15 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxRefScriptSizePerTxL .~ 200 * 1024
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
+    & ppLeiosAnnouncementPeriodLengthL .~ Milliseconds32 1_000
+    & ppLeiosVotePeriodLengthL .~ Milliseconds32 4_000
+    & ppLeiosDiffusionPeriodLengthL .~ Milliseconds32 7_000
+    & ppLeiosCommitteeSizeL .~ 900
+    & ppLeiosQuorumStakeThresholdL .~ 3 %! 4
+    & ppMaxEndorserBlockReferencesSizeL .~ 512 * 1024
+    & ppMaxEndorserBlockTxsSizeL .~ 12 * 1024 * 1024
+    & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000)
+    & ppMaxRefScriptSizePerEndorserBlockL .~ 12 * 1024 * 1024
 
 exampleDijkstraOnwardsEraPParamsUpdate ::
   (DijkstraEraPParams era, ConwayEraPParams era) => PParamsUpdate era
@@ -323,6 +362,15 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
+    & ppuLeiosAnnouncementPeriodLengthL .~ SJust (Milliseconds32 1_000)
+    & ppuLeiosVotePeriodLengthL .~ SJust (Milliseconds32 4_000)
+    & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds32 7_000)
+    & ppuLeiosCommitteeSizeL .~ SJust 900
+    & ppuLeiosQuorumStakeThresholdL .~ SJust (3 %! 4)
+    & ppuMaxEndorserBlockReferencesSizeL .~ SJust (512 * 1024)
+    & ppuMaxEndorserBlockTxsSizeL .~ SJust (12 * 1024 * 1024)
+    & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000))
+    & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (12 * 1024 * 1024)
 
 exampleBlsKey :: BlsKey
 exampleBlsKey =

@@ -60,6 +60,7 @@ module Cardano.Ledger.BaseTypes (
   dnsToText,
   textToDns,
   Port (..),
+  Milliseconds32 (..),
   ActiveSlotCoeff,
   mkActiveSlotCoeff,
   activeSlotVal,
@@ -699,6 +700,12 @@ instance DecCBOR DnsName where
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (Num, DecCBOR, EncCBOR, NFData, NoThunks, ToJSON, FromJSON)
+
+-- | A non-negative duration in milliseconds using 32 bits, yielding a
+-- `maxBound` of ~49.7 days.
+newtype Milliseconds32 = Milliseconds32 {unMilliseconds32 :: Word32}
+  deriving (Eq, Ord, Generic, Show)
+  deriving newtype (Num, Bounded, DecCBOR, EncCBOR, NFData, NoThunks, ToJSON, FromJSON)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in

@@ -56,6 +56,7 @@ import Cardano.Ledger.State (
  )
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless)
+import Data.Bits (finiteBitSize)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
 import Data.List (nub)
@@ -64,7 +65,7 @@ import Data.Proxy (Proxy (..))
 import Data.String (fromString)
 import Data.Text ()
 import Data.Text qualified as T
-import Data.Word (Word64)
+import Data.Word (Word16, Word64)
 import GHC.TypeLits (KnownSymbol)
 import Test.AntiGen (withAnnotation)
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
@@ -1004,7 +1005,22 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 37 ==> huddleRule @"positive_interval" p) //- "refScript cost multiplier"
         , opt (idx 38 ==> huddleRule @"max_pledge_leverage" p) //- "max pledge leverage"
         , opt (idx 39 ==> huddleRule @"unit_interval" p) //- "min pool margin"
+        , opt (idx 40 ==> VUInt `sized` (4 :: Word64)) //- "leios announcement period length in ms"
+        , opt (idx 41 ==> VUInt `sized` (4 :: Word64)) //- "leios vote period length in ms"
+        , opt (idx 42 ==> VUInt `sized` (4 :: Word64)) //- "leios diffusion period length in ms"
+        , opt (idx 43 ==> VUInt `sized` leiosCommitteeSizeBytes) //- "leios committee size"
+        , opt (idx 44 ==> huddleRule @"unit_interval" p) //- "leios quorum stake threshold"
+        , opt (idx 45 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block references size"
+        , opt (idx 46 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block txs size"
+        , opt (idx 47 ==> huddleRule @"ex_units" p) //- "max endorser block ex units"
+        , opt (idx 48 ==> VUInt `sized` (4 :: Word64)) //- "max ref script size per endorser block"
         ]
+    where
+      -- The maximum addressable 'LeiosSeatId' in bytes.
+      leiosCommitteeSizeBytes =
+        fromIntegral @Int @Word64 $
+          -- TODO: add FiniteBits and/or Bounded to LeiosSeatId
+          finiteBitSize (maxBound :: Word16) `div` 8
 
 instance HuddleRule "proposed_protocol_parameter_updates" DijkstraEra where
   huddleRuleNamed = proposedProtocolParameterUpdatesRule

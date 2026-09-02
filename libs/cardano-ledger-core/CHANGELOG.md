@@ -37,11 +37,15 @@
 * Add `FromJSON` instance for `TxIn`; fix `txInToText` to use `unTxIx` instead of `show`
 * Add `FromJSON` instance for `PoolCert`
 * Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
+* Add `ToPlutusData` instance for `OrdExUnits`
+* Add `Milliseconds32`, a duration in whole milliseconds bounded by `Word32`
+* Add `ToPlutusData` instance for `Milliseconds32`
 
 ### `testlib`
 
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
+* Add `Arbitrary` and `ToExpr` instances for `Milliseconds32`
 
 ### `cddl`
 
