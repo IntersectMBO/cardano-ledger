@@ -28,6 +28,7 @@
 module Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   LedgerTxInfo (..),
+  toScriptHashByPurpose,
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
   mkPlutusTxInfoFromResult,
@@ -53,10 +54,13 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (eraMaxLanguage, mkPlutusScript),
   AsItem (..),
+  AsIx,
   AsIxItem (..),
   AsPurpose,
   PlutusPurpose,
   PlutusScript (..),
+  hoistPlutusPurpose,
+  toAsIx,
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -86,6 +90,7 @@ import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import GHC.Generics
 import GHC.Stack
@@ -103,11 +108,23 @@ data LedgerTxInfo era where
     , ltiUTxO :: !(UTxO era)
     , ltiTx :: !(Tx level era)
     , ltiScriptsUsed :: [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
+    , ltiScriptHashesUsed :: Map.Map (PlutusPurpose AsIx era) ScriptHash
+    -- ^ Map that will be used for looking up `ScriptHash`. Currently unused until Dijkstra era, hence is lazy.
     , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
     -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
     -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
     } ->
     LedgerTxInfo era
+
+toScriptHashByPurpose ::
+  Ord (PlutusPurpose AsIx era) =>
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
+  Map (PlutusPurpose AsIx era) ScriptHash
+toScriptHashByPurpose scriptsUsed =
+  Map.fromList
+    [ (hoistPlutusPurpose toAsIx sp, plutusRunnableScriptHash sr)
+    | (sp, SupportedPlutusRunnable sr) <- scriptsUsed
+    ]
 
 class
   ( PlutusLanguage l

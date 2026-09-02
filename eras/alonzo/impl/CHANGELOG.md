@@ -2,7 +2,8 @@
 
 ## 1.17.0.0
 
-* Add `ltiScriptsUsed` to `LedgerTxInfo`
+* Add `ltiScriptsUsed` and `ltiScriptHashesUsed` to `LedgerTxInfo`
+* Add `toScriptHashByPurpose` helper
 * Remove no longer necessary argument from `scriptsWithContextFromLedgerTxInfoWithResult` and `scriptsWithContextFromLedgerTxInfo`, since it is now available as `ltiScriptsUsed`
 * Add `FromJSON` instance for `AlonzoTxOut era`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`

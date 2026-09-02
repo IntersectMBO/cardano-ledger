@@ -112,5 +112,6 @@ mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx =
       , ltiUTxO = utxo
       , ltiTx = tx
       , ltiScriptsUsed = plutusScriptsUsed
+      , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
       , ltiMemoizedSubTransactions = mempty
       }

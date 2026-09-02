@@ -39,6 +39,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
+  toScriptHashByPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (mkPlutusWithContext)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
@@ -106,10 +107,11 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiScriptsUsed = neededPlutusScripts
+        , ltiScriptsUsed = plutusScriptsUsed
+        , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
-    (_, neededPlutusScripts) =
+    (_, plutusScriptsUsed) =
       resolveNeededPlutusScriptsWithPurpose
         protVer
         (getScriptsProvided utxo tx)
@@ -343,6 +345,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiUTxO = utxo
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
+        , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo

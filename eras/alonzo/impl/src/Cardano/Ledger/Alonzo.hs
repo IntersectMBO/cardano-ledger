@@ -35,6 +35,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext,
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
+  toScriptHashByPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   scriptsWithContextFromLedgerTxInfo,
@@ -147,6 +148,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiUTxO = utxo
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
+        , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
    in
