@@ -1015,6 +1015,12 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 47 ==> huddleRule @"ex_units" p) //- "max endorser block ex units"
         , opt (idx 48 ==> VUInt `sized` (4 :: Word64)) //- "max ref script size per endorser block"
         ]
+    where
+      -- The maximum addressable 'LeiosSeatId' in bytes.
+      leiosCommitteeSizeBytes =
+        fromIntegral @Int @Word64 $
+          -- TODO: add FiniteBits and/or Bounded to LeiosSeatId
+          finiteBitSize (maxBound :: Word16) `div` 8
 
 instance HuddleRule "proposed_protocol_parameter_updates" DijkstraEra where
   huddleRuleNamed = proposedProtocolParameterUpdatesRule
@@ -1076,19 +1082,6 @@ instance HuddleRule "block" DijkstraEra where
 
 instance HuddleRule "peras_certificate" DijkstraEra where
   huddleRuleNamed pname _era = pname =.= VBytes
-
--- | Byte width of a Leios committee size: the @leiosCommitteeSize@ protocol
--- parameter is a 'Word16', and so is the @LeiosVoterId@ index with which a
--- certificate addresses a seat.
-leiosCommitteeSizeBytes :: Word64
-leiosCommitteeSizeBytes = fromIntegral $ finiteBitSize maxLeiosCommitteeSize `div` 8
-
--- | Largest committee the @leiosCommitteeSize@ protocol parameter can name, which also
--- caps a certificate's signer bitfield at @ceiling (maxLeiosCommitteeSize / 8)@ = 8192
--- bytes, once there is a decoder to enforce it.
--- TODO: use this in the bitfield definition to constrain its byte size
-maxLeiosCommitteeSize :: Word16
-maxLeiosCommitteeSize = maxBound
 
 instance HuddleRule "leios_certificate" DijkstraEra where
   huddleRuleNamed pname era =
