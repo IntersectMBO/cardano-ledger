@@ -56,7 +56,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppLeiosCommitteeSizeL,
   ppLeiosDiffusionPeriodLengthL,
   ppLeiosQuorumStakeThresholdL,
-  ppLeiosVotingPeriodLengthL,
+  ppLeiosVotePeriodLengthL,
   ppMaxEndorserBlockExUnitsL,
   ppMaxEndorserBlockSizeL,
   ppMaxEndorserBlockTxsSizeL,
@@ -69,7 +69,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuLeiosCommitteeSizeL,
   ppuLeiosDiffusionPeriodLengthL,
   ppuLeiosQuorumStakeThresholdL,
-  ppuLeiosVotingPeriodLengthL,
+  ppuLeiosVotePeriodLengthL,
   ppuMaxEndorserBlockExUnitsL,
   ppuMaxEndorserBlockSizeL,
   ppuMaxEndorserBlockTxsSizeL,
@@ -174,7 +174,7 @@ exampleDijkstraGenesis =
           , udppPlutusV4CostModel = testingCostModel PlutusV4
           , -- Feasible values of CIP-164 Table 7
             udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
-          , udppLeiosVotingPeriodLength = Milliseconds32 4_000 -- L_vote
+          , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
           , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
           , udppLeiosCommitteeSize = 900 -- N_c
           , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
@@ -345,7 +345,7 @@ exampleDijkstraOnwardsEraPParams =
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
     & ppLeiosAnnouncementPeriodLengthL .~ Milliseconds32 1_000
-    & ppLeiosVotingPeriodLengthL .~ Milliseconds32 4_000
+    & ppLeiosVotePeriodLengthL .~ Milliseconds32 4_000
     & ppLeiosDiffusionPeriodLengthL .~ Milliseconds32 7_000
     & ppLeiosCommitteeSizeL .~ 900
     & ppLeiosQuorumStakeThresholdL .~ 3 %! 4
@@ -363,7 +363,7 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
     & ppuLeiosAnnouncementPeriodLengthL .~ SJust (Milliseconds32 1_000)
-    & ppuLeiosVotingPeriodLengthL .~ SJust (Milliseconds32 4_000)
+    & ppuLeiosVotePeriodLengthL .~ SJust (Milliseconds32 4_000)
     & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds32 7_000)
     & ppuLeiosCommitteeSizeL .~ SJust 900
     & ppuLeiosQuorumStakeThresholdL .~ SJust (3 %! 4)

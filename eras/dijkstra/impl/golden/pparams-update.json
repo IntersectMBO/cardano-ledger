@@ -3553,7 +3553,7 @@
     "govActionDeposit": 784351,
     "leiosCommitteeSize": 5314,
     "leiosQuorumStakeThreshold": 0.6034623758631827,
-    "leiosVotingPeriodLength": 2724633359,
+    "leiosVotePeriodLength": 2724633359,
     "maxBlockBodySize": 938825652,
     "maxBlockExecutionUnits": {
         "memory": 7427740266323082817,

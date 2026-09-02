@@ -65,7 +65,7 @@
     "minFeeRefScriptCostPerByte":23896.4809186040265,
     "minPoolMargin":0,
     "leiosAnnouncementPeriodLength":0,
-    "leiosVotingPeriodLength":0,
+    "leiosVotePeriodLength":0,
     "leiosDiffusionPeriodLength":0,
     "leiosCommitteeSize":0,
     "leiosQuorumStakeThreshold":0,

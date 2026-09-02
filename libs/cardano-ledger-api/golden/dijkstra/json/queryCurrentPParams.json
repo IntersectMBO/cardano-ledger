@@ -28,7 +28,7 @@
         "leiosCommitteeSize": 0,
         "leiosDiffusionPeriodLength": 0,
         "leiosQuorumStakeThreshold": 0,
-        "leiosVotingPeriodLength": 0,
+        "leiosVotePeriodLength": 0,
         "maxBlockBodySize": 0,
         "maxBlockExecutionUnits": {
             "memory": 0,
@@ -772,7 +772,7 @@
         "leiosCommitteeSize": 900,
         "leiosDiffusionPeriodLength": 7000,
         "leiosQuorumStakeThreshold": 0.75,
-        "leiosVotingPeriodLength": 4000,
+        "leiosVotePeriodLength": 4000,
         "maxBlockBodySize": 90112,
         "maxBlockExecutionUnits": {
             "memory": 62000000,
