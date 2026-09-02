@@ -64,10 +64,6 @@
     `dppMaxEndorserBlockExUnits`, `dppMaxRefScriptSizePerEndorserBlock` to `DijkstraPParams`
   - Add corresponding fields to `UpgradeDijkstraPParams`
   - Add corresponding HKD lenses, pp/ppu lenses to `DijkstraEraPParams`
-  - Override `ppLeiosHeaderPeriodLengthG`, `ppLeiosVotingPeriodLengthG`,
-    `ppLeiosDiffusionPeriodLengthG`, `ppLeiosCommitteeSizeG`, `ppLeiosQuorumStakeThresholdG`,
-    `ppMaxEndorserBlockSizeG`, `ppMaxEndorserBlockTxsSizeG`,
-    `ppMaxRefScriptSizePerEndorserBlockG` in `EraPParams` instance
 
 ### `cddl`
 

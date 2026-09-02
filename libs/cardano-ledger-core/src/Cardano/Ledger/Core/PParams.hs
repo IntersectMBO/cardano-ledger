@@ -102,7 +102,6 @@ import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   KeyValuePairs (..),
-  Milliseconds (..),
   NonNegativeInterval,
   Nonce (..),
   ProtVer,
@@ -518,64 +517,6 @@ class
   ppMinPoolMarginG :: SimpleGetter (PParams era) UnitInterval
   default ppMinPoolMarginG :: AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
   ppMinPoolMarginG = L.to (const minBound)
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppLeiosHeaderPeriodLengthG :: SimpleGetter (PParams era) Milliseconds
-  default ppLeiosHeaderPeriodLengthG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Milliseconds
-  ppLeiosHeaderPeriodLengthG = L.to (const (Milliseconds 0))
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppLeiosVotingPeriodLengthG :: SimpleGetter (PParams era) Milliseconds
-  default ppLeiosVotingPeriodLengthG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Milliseconds
-  ppLeiosVotingPeriodLengthG = L.to (const (Milliseconds 0))
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppLeiosDiffusionPeriodLengthG :: SimpleGetter (PParams era) Milliseconds
-  default ppLeiosDiffusionPeriodLengthG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Milliseconds
-  -- Eras without Leios report the value that turns it off, which for a diffusion period is
-  -- 'maxBound': no certificate is ever includable in time.
-  ppLeiosDiffusionPeriodLengthG = L.to (const maxBound)
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppLeiosCommitteeSizeG :: SimpleGetter (PParams era) Word16
-  default ppLeiosCommitteeSizeG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Word16
-  ppLeiosCommitteeSizeG = L.to (const 0)
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppLeiosQuorumStakeThresholdG :: SimpleGetter (PParams era) UnitInterval
-  default ppLeiosQuorumStakeThresholdG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) UnitInterval
-  ppLeiosQuorumStakeThresholdG = L.to (const minBound)
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppMaxEndorserBlockSizeG :: SimpleGetter (PParams era) Word32
-  default ppMaxEndorserBlockSizeG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
-  ppMaxEndorserBlockSizeG = L.to (const 0)
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppMaxEndorserBlockTxsSizeG :: SimpleGetter (PParams era) Word32
-  default ppMaxEndorserBlockTxsSizeG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
-  ppMaxEndorserBlockTxsSizeG = L.to (const 0)
-    where
-      _ = atMostEra @"Conway" @era
-
-  ppMaxRefScriptSizePerEndorserBlockG :: SimpleGetter (PParams era) Word32
-  default ppMaxRefScriptSizePerEndorserBlockG ::
-    AtMostEra "Conway" era => SimpleGetter (PParams era) Word32
-  ppMaxRefScriptSizePerEndorserBlockG = L.to (const 0)
     where
       _ = atMostEra @"Conway" @era
 

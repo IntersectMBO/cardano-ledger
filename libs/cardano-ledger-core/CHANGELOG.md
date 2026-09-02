@@ -38,15 +38,8 @@
 * Add `FromJSON` instance for `PoolCert`
 * Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
 * Add `ToPlutusData` instance for `OrdExUnits`
-* Add `Milliseconds`, a duration in whole milliseconds bounded by `Word32`
-* Add `ToPlutusData` instance for `Milliseconds`
-* Add Leios protocol parameter default getters to `EraPParams` (CIP-164), which for eras up to
-  Conway report the value that turns Leios off: `maxBound` for `ppLeiosDiffusionPeriodLengthG`,
-  zero or `minBound` for the rest:
-  - `ppLeiosHeaderPeriodLengthG`, `ppLeiosVotingPeriodLengthG`, `ppLeiosDiffusionPeriodLengthG`
-  - `ppLeiosCommitteeSizeG`, `ppLeiosQuorumStakeThresholdG`
-  - `ppMaxEndorserBlockSizeG`, `ppMaxEndorserBlockTxsSizeG`
-  - `ppMaxRefScriptSizePerEndorserBlockG`
+* Add `Milliseconds32`, a duration in whole milliseconds bounded by `Word32`
+* Add `ToPlutusData` instance for `Milliseconds32`
 
 ### `testlib`
 

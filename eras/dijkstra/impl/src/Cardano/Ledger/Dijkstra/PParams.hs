@@ -609,14 +609,6 @@ instance EraPParams DijkstraEra where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueCompactL = notSupportedInThisEraL
   ppMinPoolMarginG = ppLensHKD . hkdMinPoolMarginL
-  ppLeiosHeaderPeriodLengthG = ppLensHKD . hkdLeiosHeaderPeriodLengthL
-  ppLeiosVotingPeriodLengthG = ppLensHKD . hkdLeiosVotingPeriodLengthL
-  ppLeiosDiffusionPeriodLengthG = ppLensHKD . hkdLeiosDiffusionPeriodLengthL
-  ppLeiosCommitteeSizeG = ppLensHKD . hkdLeiosCommitteeSizeL
-  ppLeiosQuorumStakeThresholdG = ppLensHKD . hkdLeiosQuorumStakeThresholdL
-  ppMaxEndorserBlockSizeG = ppLensHKD . hkdMaxEndorserBlockSizeL
-  ppMaxEndorserBlockTxsSizeG = ppLensHKD . hkdMaxEndorserBlockTxsSizeL
-  ppMaxRefScriptSizePerEndorserBlockG = ppLensHKD . hkdMaxRefScriptSizePerEndorserBlockL
   eraPParams =
     [ ppTxFeePerByte
     , ppTxFeeFixed
