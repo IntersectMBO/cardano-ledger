@@ -27,7 +27,6 @@ module Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
   guardDijkstraFeaturesForPlutusV1toV3,
   transFailUnsupportedScriptInSubTx,
-  transRedeemerPointerV4,
   transValidityInterval,
 ) where
 
@@ -44,7 +43,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -91,7 +89,6 @@ import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus (
   Datum (..),
-  ExUnits,
   Language (..),
   PlutusArgs (..),
   PlutusLanguage,
@@ -568,22 +565,6 @@ instance ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
 instance ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
-transRedeemerPointerV4 ::
-  forall era l proxy.
-  ( EraTx era
-  , AlonzoEraTxBody era
-  , EraPlutusTxInfo l era
-  , Inject (Babbage.BabbageContextError era) (ContextError era)
-  ) =>
-  proxy l ->
-  LedgerTxInfo era ->
-  (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
-  Either (ContextError era) (PlutusScriptPurpose l, PV4.Redeemer)
-transRedeemerPointerV4 proxy lti@LedgerTxInfo {ltiTx} (ptr, (d, _)) =
-  case redeemerPointerInverse (ltiTx ^. bodyTxL) ptr of
-    SNothing -> Left . inject $ Babbage.RedeemerPointerPointsToNothing ptr
-    SJust sp -> (,Babbage.transRedeemer d) <$> toPlutusScriptPurpose proxy lti sp
-
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxCert proxy _pv cert = pure $ transTxCertV4 proxy cert
 
@@ -625,7 +606,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             (Right mempty)
             ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemersV4 proxy lti
+      plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       let
         txInfo =
           PV4.TxInfo
@@ -717,24 +698,6 @@ transTxOutV4 txOutSource txOut = do
       , txOutValue = val
       , txOutAddress = addr
       }
-
--- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
--- to a `PV2.Redeemer`
-transTxRedeemersV4 ::
-  ( EraPlutusTxInfo l era
-  , AlonzoEraTxBody era
-  , EraTx era
-  , AlonzoEraTxWits era
-  , Inject (Babbage.BabbageContextError era) (ContextError era)
-  ) =>
-  proxy l ->
-  LedgerTxInfo era ->
-  Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemersV4 proxy lti@LedgerTxInfo {ltiTx} =
-  PV2.unsafeFromList
-    <$> mapM
-      (transRedeemerPointerV4 proxy lti)
-      (Map.toList $ ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 transTxBodyWithdrawals ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
