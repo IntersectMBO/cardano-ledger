@@ -3561,7 +3561,7 @@
     },
     "maxBlockHeaderSize": 22385,
     "maxCollateralInputs": 42033,
-    "maxEndorserBlockSize": 3027405659,
+    "maxEndorserBlockReferencesSize": 3027405659,
     "maxPledgeLeverage": 7.112083425886304788e10,
     "maxRefScriptSizePerBlock": 700426415,
     "maxRefScriptSizePerEndorserBlock": 17123247,

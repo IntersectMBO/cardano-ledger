@@ -58,7 +58,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppLeiosQuorumStakeThresholdL,
   ppLeiosVotePeriodLengthL,
   ppMaxEndorserBlockExUnitsL,
-  ppMaxEndorserBlockSizeL,
+  ppMaxEndorserBlockReferencesSizeL,
   ppMaxEndorserBlockTxsSizeL,
   ppMaxRefScriptSizePerBlockL,
   ppMaxRefScriptSizePerEndorserBlockL,
@@ -71,7 +71,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuLeiosQuorumStakeThresholdL,
   ppuLeiosVotePeriodLengthL,
   ppuMaxEndorserBlockExUnitsL,
-  ppuMaxEndorserBlockSizeL,
+  ppuMaxEndorserBlockReferencesSizeL,
   ppuMaxEndorserBlockTxsSizeL,
   ppuMaxRefScriptSizePerBlockL,
   ppuMaxRefScriptSizePerEndorserBlockL,
@@ -178,7 +178,7 @@ exampleDijkstraGenesis =
           , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
           , udppLeiosCommitteeSize = 900 -- N_c
           , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
-          , udppMaxEndorserBlockSize = 512 * 1024 -- 512 KiB
+          , udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
           , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
           , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
           , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
@@ -349,7 +349,7 @@ exampleDijkstraOnwardsEraPParams =
     & ppLeiosDiffusionPeriodLengthL .~ Milliseconds32 7_000
     & ppLeiosCommitteeSizeL .~ 900
     & ppLeiosQuorumStakeThresholdL .~ 3 %! 4
-    & ppMaxEndorserBlockSizeL .~ 512 * 1024
+    & ppMaxEndorserBlockReferencesSizeL .~ 512 * 1024
     & ppMaxEndorserBlockTxsSizeL .~ 12 * 1024 * 1024
     & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000)
     & ppMaxRefScriptSizePerEndorserBlockL .~ 12 * 1024 * 1024
@@ -367,7 +367,7 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds32 7_000)
     & ppuLeiosCommitteeSizeL .~ SJust 900
     & ppuLeiosQuorumStakeThresholdL .~ SJust (3 %! 4)
-    & ppuMaxEndorserBlockSizeL .~ SJust (512 * 1024)
+    & ppuMaxEndorserBlockReferencesSizeL .~ SJust (512 * 1024)
     & ppuMaxEndorserBlockTxsSizeL .~ SJust (12 * 1024 * 1024)
     & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000))
     & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (12 * 1024 * 1024)

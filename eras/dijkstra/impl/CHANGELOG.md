@@ -60,7 +60,7 @@
 * Add the nine Leios protocol parameters of CIP-164:
   - Add `dppLeiosAnnouncementPeriodLength`, `dppLeiosVotePeriodLength`,
     `dppLeiosDiffusionPeriodLength`, `dppLeiosCommitteeSize`, `dppLeiosQuorumStakeThreshold`,
-    `dppMaxEndorserBlockSize`, `dppMaxEndorserBlockTxsSize`,
+    `dppMaxEndorserBlockReferencesSize`, `dppMaxEndorserBlockTxsSize`,
     `dppMaxEndorserBlockExUnits`, `dppMaxRefScriptSizePerEndorserBlock` to `DijkstraPParams`
   - Add corresponding fields to `UpgradeDijkstraPParams`
   - Add corresponding HKD lenses, pp/ppu lenses to `DijkstraEraPParams`

@@ -1010,7 +1010,7 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 42 ==> VUInt `sized` (4 :: Word64)) //- "leios diffusion period length in ms"
         , opt (idx 43 ==> VUInt `sized` leiosCommitteeSizeBytes) //- "leios committee size"
         , opt (idx 44 ==> huddleRule @"unit_interval" p) //- "leios quorum stake threshold"
-        , opt (idx 45 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block size"
+        , opt (idx 45 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block references size"
         , opt (idx 46 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block txs size"
         , opt (idx 47 ==> huddleRule @"ex_units" p) //- "max endorser block ex units"
         , opt (idx 48 ==> VUInt `sized` (4 :: Word64)) //- "max ref script size per endorser block"

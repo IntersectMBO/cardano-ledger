@@ -48,7 +48,7 @@
                 "memory": 0,
                 "steps": 0
             },
-            "maxEndorserBlockSize": 0,
+            "maxEndorserBlockReferencesSize": 0,
             "maxEndorserBlockTxsSize": 0,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 0,
@@ -145,7 +145,7 @@
                         "memory": 0,
                         "steps": 0
                     },
-                    "maxEndorserBlockSize": 0,
+                    "maxEndorserBlockReferencesSize": 0,
                     "maxEndorserBlockTxsSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
@@ -234,7 +234,7 @@
                         "memory": 0,
                         "steps": 0
                     },
-                    "maxEndorserBlockSize": 0,
+                    "maxEndorserBlockReferencesSize": 0,
                     "maxEndorserBlockTxsSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
@@ -320,7 +320,7 @@
                 "memory": 0,
                 "steps": 0
             },
-            "maxEndorserBlockSize": 0,
+            "maxEndorserBlockReferencesSize": 0,
             "maxEndorserBlockTxsSize": 0,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 0,
@@ -1085,7 +1085,7 @@
                 "memory": 7000000000,
                 "steps": 2000000000000
             },
-            "maxEndorserBlockSize": 524288,
+            "maxEndorserBlockReferencesSize": 524288,
             "maxEndorserBlockTxsSize": 12582912,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 1048576,
@@ -1827,7 +1827,7 @@
                     "memory": 7000000000,
                     "steps": 2000000000000
                 },
-                "maxEndorserBlockSize": 524288,
+                "maxEndorserBlockReferencesSize": 524288,
                 "maxEndorserBlockTxsSize": 12582912,
                 "maxPledgeLeverage": null,
                 "maxRefScriptSizePerBlock": 1048576,
@@ -1920,7 +1920,7 @@
                         "memory": 0,
                         "steps": 0
                     },
-                    "maxEndorserBlockSize": 0,
+                    "maxEndorserBlockReferencesSize": 0,
                     "maxEndorserBlockTxsSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
@@ -2009,7 +2009,7 @@
                         "memory": 0,
                         "steps": 0
                     },
-                    "maxEndorserBlockSize": 0,
+                    "maxEndorserBlockReferencesSize": 0,
                     "maxEndorserBlockTxsSize": 0,
                     "maxPledgeLeverage": null,
                     "maxRefScriptSizePerBlock": 0,
@@ -2095,7 +2095,7 @@
                 "memory": 0,
                 "steps": 0
             },
-            "maxEndorserBlockSize": 0,
+            "maxEndorserBlockReferencesSize": 0,
             "maxEndorserBlockTxsSize": 0,
             "maxPledgeLeverage": null,
             "maxRefScriptSizePerBlock": 0,

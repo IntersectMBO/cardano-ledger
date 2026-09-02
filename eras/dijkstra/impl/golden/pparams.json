@@ -69,7 +69,7 @@
     "leiosDiffusionPeriodLength":0,
     "leiosCommitteeSize":0,
     "leiosQuorumStakeThreshold":0,
-    "maxEndorserBlockSize":0,
+    "maxEndorserBlockReferencesSize":0,
     "maxEndorserBlockTxsSize":0,
     "maxEndorserBlockExecutionUnits":{
        "memory":0,
