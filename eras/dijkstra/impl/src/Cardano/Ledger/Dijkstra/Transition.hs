@@ -7,10 +7,11 @@ module Cardano.Ledger.Dijkstra.Transition (
   TransitionConfig (..),
 ) where
 
+import Cardano.Ledger.Alonzo.Transition (AlonzoEraTransition)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Transition (
   ConwayEraTransition,
-  conwayRegisterInitialFundsThenStaking,
+  conwayInjectIntoTestState,
  )
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Genesis
@@ -29,13 +30,15 @@ instance EraTransition DijkstraEra where
 
   mkTransitionConfig = DijkstraTransitionConfig
 
-  injectIntoTestState = conwayRegisterInitialFundsThenStaking
+  injectIntoTestState = conwayInjectIntoTestState
 
   tcPreviousEraConfigL =
     lens dtcConwayTransitionConfig (\dtc pc -> dtc {dtcConwayTransitionConfig = pc})
 
   tcTranslationContextL =
     lens dtcDijkstraGenesis (\dtc ag -> dtc {dtcDijkstraGenesis = ag})
+
+instance AlonzoEraTransition DijkstraEra
 
 instance ConwayEraTransition DijkstraEra
 
