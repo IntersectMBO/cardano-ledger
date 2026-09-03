@@ -257,7 +257,7 @@ data GenState era = GenState
   , gsModel :: !(ModelNewEpochState era)
   , gsInitialUtxo :: !(Map TxIn (TxOut era))
   , gsInitialAccounts :: !(Map (Credential Staking) (AccountState era))
-  , gsInitialStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+  , gsInitialStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
   , gsInitialPoolDistr ::
       !(Map (KeyHash StakePool) IndividualPoolStake)
   , -- Stable fields are stable from initialization to the end of the generation process
@@ -418,8 +418,8 @@ modifyGenStateStablePools ::
 modifyGenStateStablePools f = modify (\gs -> gs {gsStablePools = f (gsStablePools gs)})
 
 modifyGenStateInitialStakePoolParams ::
-  ( Map.Map (KeyHash StakePool) StakePoolParams ->
-    Map.Map (KeyHash StakePool) StakePoolParams
+  ( Map.Map (KeyHash StakePool) (StakePoolParams era) ->
+    Map.Map (KeyHash StakePool) (StakePoolParams era)
   ) ->
   GenRS era ()
 modifyGenStateInitialStakePoolParams f = modify (\gs -> gs {gsInitialStakePoolParams = f (gsInitialStakePoolParams gs)})
@@ -962,7 +962,7 @@ genFreshRegCred tag = do
 genStakePoolParams ::
   Reflect era =>
   KeyHash StakePool ->
-  GenRS era StakePoolParams
+  GenRS era (StakePoolParams era)
 genStakePoolParams sppId = do
   sppVrf <- lift arbitrary
   sppPledge <- lift genPositiveVal
@@ -1002,7 +1002,7 @@ genNewPool ::
   GenRS
     era
     ( KeyHash StakePool
-    , StakePoolParams
+    , StakePoolParams era
     , IndividualPoolStake
     )
 genNewPool = do
@@ -1107,7 +1107,7 @@ genRetirementHash = do
 genPool ::
   forall era.
   Reflect era =>
-  GenRS era (KeyHash StakePool, StakePoolParams)
+  GenRS era (KeyHash StakePool, StakePoolParams era)
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do

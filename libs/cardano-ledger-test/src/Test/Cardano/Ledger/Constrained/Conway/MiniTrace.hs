@@ -415,7 +415,7 @@ enactStateSpec =
     [ assert $ sum_ (rng_ wdrls) <=. treasury
     ]
 
-namePoolCert :: PoolCert -> String
+namePoolCert :: PoolCert era -> String
 namePoolCert RegPool {} = "RegPool"
 namePoolCert RetirePool {} = "RetirePool"
 

@@ -369,8 +369,8 @@ instance SpecTranslate DijkstraEra (AlonzoTxAuxData DijkstraEra) where
 
   toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate DijkstraEra StakePoolParams where
-  type SpecRep DijkstraEra StakePoolParams = Agda.StakePoolParams
+instance SpecTranslate DijkstraEra (StakePoolParams DijkstraEra) where
+  type SpecRep DijkstraEra (StakePoolParams DijkstraEra) = Agda.StakePoolParams
 
   toSpecRep StakePoolParams {..} =
     Agda.StakePoolParams

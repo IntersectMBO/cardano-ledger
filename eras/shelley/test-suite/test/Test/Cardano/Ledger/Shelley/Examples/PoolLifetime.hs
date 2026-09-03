@@ -518,7 +518,7 @@ snapEx5 =
   where
     mkSwd = (`StakeWithDelegation` aikColdKeyHash Cast.alicePoolKeys) . unsafeNonZero . toCompactPartial
 
-poolParamsEx5 :: [StakePoolParams]
+poolParamsEx5 :: [StakePoolParams era]
 poolParamsEx5 = [Cast.aliceStakePoolParams]
 
 pdEx5 :: PoolDistr

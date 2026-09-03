@@ -326,7 +326,7 @@ instance AnyEraTxCert ConwayEra where
 
 instance AnyEraTxCert DijkstraEra
 
-pattern AnyEraRegPoolTxCert :: EraTxCert era => StakePoolParams -> TxCert era
+pattern AnyEraRegPoolTxCert :: EraTxCert era => StakePoolParams era -> TxCert era
 pattern AnyEraRegPoolTxCert poolParams = RegPoolTxCert poolParams
 
 pattern AnyEraRetirePoolTxCert ::

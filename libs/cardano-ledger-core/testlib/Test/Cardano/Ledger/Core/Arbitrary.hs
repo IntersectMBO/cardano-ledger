@@ -466,7 +466,7 @@ instance Arbitrary Reward where
 -- Cardano.Ledger.PoolParams -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary StakePoolParams where
+instance Arbitrary (StakePoolParams era) where
   arbitrary =
     StakePoolParams
       <$> arbitrary
@@ -754,7 +754,7 @@ instance Arbitrary SnapShot where
 mkSnapShotFromStakePoolParams ::
   Foldable f =>
   ActiveStake ->
-  f StakePoolParams ->
+  f (StakePoolParams era) ->
   SnapShot
 mkSnapShotFromStakePoolParams activeStake poolParams =
   resetStakePoolSnapShotFromPoolParams poolParams $
@@ -763,7 +763,7 @@ mkSnapShotFromStakePoolParams activeStake poolParams =
 -- | Given a snapshot and stake pool params fully override the stake pools snapshot.
 resetStakePoolSnapShotFromPoolParams ::
   Foldable f =>
-  f StakePoolParams ->
+  f (StakePoolParams era) ->
   SnapShot ->
   SnapShot
 resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
@@ -825,7 +825,7 @@ instance Arbitrary ActiveStake where
 -- Cardano.Ledger.Core.TxCert ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary PoolCert where
+instance Arbitrary (PoolCert era) where
   arbitrary =
     oneof
       [ RegPool <$> arbitrary

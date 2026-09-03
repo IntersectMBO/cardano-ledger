@@ -234,7 +234,7 @@ data PState era = PState
   -- ^ VRF key hashes that have been registered via PoolParams
   , psStakePools :: !(Map (KeyHash StakePool) StakePoolState)
   -- ^ The state of current stake pools.
-  , psFutureStakePoolParams :: !(Map (KeyHash StakePool) StakePoolParams)
+  , psFutureStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
   -- ^ Future pool params
   -- Changes to existing stake pool parameters are staged in order
   -- to give delegators time to react to changes.
@@ -254,7 +254,7 @@ instance Era era => EncCBOR (PState era) where
   encCBOR (PState a b c d) =
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
-instance DecShareCBOR (PState era) where
+instance Era era => DecShareCBOR (PState era) where
   type Share (PState era) = (Interns (VRFVerKeyHash StakePoolVRF), Interns (KeyHash StakePool))
 
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
@@ -484,7 +484,7 @@ dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u}
 psStakePoolsL :: Lens' (PState era) (Map (KeyHash StakePool) StakePoolState)
 psStakePoolsL = lens psStakePools (\ps u -> ps {psStakePools = u})
 
-psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash StakePool) StakePoolParams)
+psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash StakePool) (StakePoolParams era))
 psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ps u -> ps {psFutureStakePoolParams = u})
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash StakePool) EpochNo)

@@ -18,7 +18,7 @@ spec :: Spec
 spec = do
   describe "StakePoolState" $ do
     prop "mkStakePoolState/stakePoolStateToPoolParams round-trip" $
-      \( stakePoolParams :: StakePoolParams
+      \( stakePoolParams :: StakePoolParams era
          , deposit :: CompactForm Coin
          , delegs :: Set (Credential Staking)
          ) ->

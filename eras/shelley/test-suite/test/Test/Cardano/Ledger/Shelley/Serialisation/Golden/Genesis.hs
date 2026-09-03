@@ -249,7 +249,7 @@ exampleShelleyGenesis =
         , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
         , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
-    stakePoolParams :: L.StakePoolParams
+    stakePoolParams :: L.StakePoolParams era
     stakePoolParams =
       L.StakePoolParams
         { L.sppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)

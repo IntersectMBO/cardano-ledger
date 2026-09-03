@@ -689,7 +689,7 @@ instance (HashAlgorithm a, Typeable b) => HasSpec (Hash a b) where
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
-instance HasSimpleRep (ConwayTxCert era)
+instance Era era => HasSimpleRep (ConwayTxCert era)
 
 instance Era era => HasSpec (ConwayTxCert era)
 
@@ -697,9 +697,9 @@ instance HasSimpleRep ConwayDelegCert
 
 instance HasSpec ConwayDelegCert
 
-instance HasSimpleRep PoolCert
+instance Era era => HasSimpleRep (PoolCert era)
 
-instance HasSpec PoolCert
+instance Era era => HasSpec (PoolCert era)
 
 instance HasSpec BlsKey where
   type TypeSpec BlsKey = ()
@@ -712,9 +712,9 @@ instance HasSpec BlsKey where
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
-instance HasSimpleRep StakePoolParams
+instance Era era => HasSimpleRep (StakePoolParams era)
 
-instance HasSpec StakePoolParams
+instance Era era => HasSpec (StakePoolParams era)
 
 instance HasSimpleRep StakePoolState
 
@@ -1075,7 +1075,7 @@ instance Typeable era => HasSimpleRep (VState era)
 
 instance Era era => HasSpec (VState era)
 
-instance HasSimpleRep (PState era)
+instance Era era => HasSimpleRep (PState era)
 
 instance Era era => HasSpec (PState era)
 
@@ -2075,7 +2075,7 @@ instance HasSimpleRep MIRPot
 
 instance HasSpec MIRPot
 
-instance HasSimpleRep (ShelleyTxCert era)
+instance Era era => HasSimpleRep (ShelleyTxCert era)
 
 instance Era era => HasSpec (ShelleyTxCert era)
 

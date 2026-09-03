@@ -78,6 +78,7 @@ import qualified Data.Aeson as Aeson (Value (..))
 import Data.Aeson.Key (Key, fromString)
 import Data.Aeson.Types (Parser)
 import Data.Char (toLower)
+import Data.Coerce (coerce)
 import Data.Default
 import Data.Kind
 import qualified Data.ListMap as ListMap
@@ -262,7 +263,7 @@ injectInitialFundsAndStaking hasFS injectCreds cfg nes = do
   -- We must first register the initial funds, because the stake
   -- information depends on it.
   registerInitialFunds hasFS cfg nes
-    >>= injectStakePools network hasFS poolsSource
+    >>= injectStakePools network hasFS (coerce poolsSource)
     >>= injectCreds network hasFS credsSource
 
 -- | Folds over an 'InjectionData' source of stake credentials and registers them
@@ -527,7 +528,7 @@ injectStakePools ::
   (EraCertState era, EraGov era, MonadST m, MonadThrow m) =>
   Network ->
   HasFS m h ->
-  InjectionData (KeyHash StakePool) StakePoolParams ->
+  InjectionData (KeyHash StakePool) (StakePoolParams era) ->
   NewEpochState era ->
   m (NewEpochState era)
 injectStakePools network fs source nes = do

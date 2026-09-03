@@ -93,6 +93,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
+import Data.Coerce (coerce)
 import Data.Foldable as F (foldMap')
 import Data.Monoid (Sum (getSum))
 import GHC.Generics (Generic)
@@ -110,7 +111,7 @@ instance EraTxCert ConwayEra where
   type TxCertUpgradeError ConwayEra = ConwayTxCertUpgradeError
 
   upgradeTxCert = \case
-    RegPoolTxCert poolParams -> Right $ RegPoolTxCert poolParams
+    RegPoolTxCert poolParams -> Right . RegPoolTxCert $ coerce poolParams
     RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
     RegTxCert cred -> Right $ RegTxCert cred
     UnRegTxCert cred -> Right $ UnRegTxCert cred
@@ -674,7 +675,7 @@ instance EncCBOR ConwayGovCert where
 
 data ConwayTxCert era
   = ConwayTxCertDeleg !ConwayDelegCert
-  | ConwayTxCertPool !PoolCert
+  | ConwayTxCertPool !(PoolCert era)
   | ConwayTxCertGov !ConwayGovCert
   deriving (Show, Generic, Eq, Ord)
 

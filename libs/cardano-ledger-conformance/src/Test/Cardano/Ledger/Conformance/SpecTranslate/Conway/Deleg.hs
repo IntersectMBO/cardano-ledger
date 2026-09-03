@@ -44,11 +44,10 @@ instance SpecTranslate ConwayEra (Conway.ConwayDelegEnv ConwayEra) where
     withCtxSpecTransM () $
       Agda.MkDelegEnv
         <$> toSpecRep cdePParams
-        <*> ( toSpecRepMap
-                ( Map.mapKeys (hashToInteger . unKeyHash) $
-                    Map.mapWithKey (stakePoolStateToStakePoolParams Testnet) cdePools
-                )
-            )
+        <*> toSpecRepMap
+          ( Map.mapKeys (hashToInteger . unKeyHash) $
+              Map.mapWithKey (stakePoolStateToStakePoolParams @ConwayEra Testnet) cdePools
+          )
         <*> toSpecRep delegatees
 
 instance SpecTranslate ConwayEra ConwayDelegCert where

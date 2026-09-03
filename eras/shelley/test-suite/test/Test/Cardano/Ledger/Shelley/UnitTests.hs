@@ -561,7 +561,7 @@ alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-aliceStakePoolParamsSmallCost :: StakePoolParams
+aliceStakePoolParamsSmallCost :: StakePoolParams era
 aliceStakePoolParamsSmallCost =
   StakePoolParams
     { sppId = hashKey $ vKey alicePoolColdKeys

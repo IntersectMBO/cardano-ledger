@@ -99,7 +99,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
 -- | Calculate pool leader reward
 leaderRew ::
   Coin ->
-  StakePoolParams ->
+  StakePoolParams era ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -129,7 +129,7 @@ calcStakePoolOperatorReward f cost margin (StakeShare s) (StakeShare sigma)
 -- | Calculate pool member reward
 memberRew ::
   Coin ->
-  StakePoolParams ->
+  StakePoolParams era ->
   StakeShare ->
   StakeShare ->
   Coin

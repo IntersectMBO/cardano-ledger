@@ -331,7 +331,7 @@ firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 vrfKeyHash :: VRFVerKeyHash StakePoolVRF
 vrfKeyHash = hashVerKeyVRF @MockCrypto . vrfVerKey . mkVRFKeyPair @MockCrypto $ RawSeed 0 0 0 0 0
 
-mkStakePoolParams :: KeyPair StakePool -> StakePoolParams
+mkStakePoolParams :: KeyPair StakePool -> StakePoolParams ShelleyEra
 mkStakePoolParams keys =
   StakePoolParams
     { sppId = hashKey (vKey keys)

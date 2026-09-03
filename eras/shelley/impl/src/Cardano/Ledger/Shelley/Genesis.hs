@@ -167,7 +167,7 @@ import System.FS.API (
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
 data ShelleyGenesisStaking = ShelleyGenesisStaking
-  { sgsPools :: LM.ListMap (KeyHash StakePool) StakePoolParams
+  { sgsPools :: LM.ListMap (KeyHash StakePool) (StakePoolParams ShelleyEra)
   -- ^ Pools to register
   --
   --   The key in this map is the hash of the public key of the _pool_. This
@@ -214,7 +214,7 @@ emptyGenesisStaking = mempty
 data ShelleyExtraConfig = ShelleyExtraConfig
   { secInitialFunds :: !(InjectionData Addr Coin)
   -- ^ Initial funds to inject.
-  , secStakePools :: !(InjectionData (KeyHash StakePool) StakePoolParams)
+  , secStakePools :: !(InjectionData (KeyHash StakePool) (StakePoolParams ShelleyEra))
   -- ^ Stake pools to register.
   , secStakeCredentials :: !(InjectionData (KeyHash Staking) (KeyHash StakePool))
   -- ^ Stake credential delegations to stake pools.

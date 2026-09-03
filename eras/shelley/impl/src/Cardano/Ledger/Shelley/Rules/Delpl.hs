@@ -131,7 +131,7 @@ instance
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (DELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ PoolCert
+  , Signal (EraRule "POOL" era) ~ PoolCert era
   , TxCert era ~ ShelleyTxCert era
   ) =>
   STS (DELPL era)
@@ -192,7 +192,7 @@ delplTransition ::
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (DELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ PoolCert
+  , Signal (EraRule "POOL" era) ~ PoolCert era
   , TxCert era ~ ShelleyTxCert era
   , EraCertState era
   ) =>

@@ -120,7 +120,7 @@ alicePtrAddr :: Addr
 alicePtrAddr = mkAddr alicePHK (Ptr 10 minBound minBound)
 
 -- | Alice's stake pool parameters
-aliceStakePoolParams :: StakePoolParams
+aliceStakePoolParams :: StakePoolParams era
 aliceStakePoolParams =
   StakePoolParams
     { sppId = hashKey . vKey $ aikCold alicePoolKeys
@@ -176,7 +176,7 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobStakePoolParams :: StakePoolParams
+bobStakePoolParams :: StakePoolParams era
 bobStakePoolParams =
   StakePoolParams
     { sppId = hashKey . vKey $ aikCold bobPoolKeys

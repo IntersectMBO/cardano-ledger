@@ -2094,7 +2094,7 @@ freshPoolParams ::
   ShelleyEraImp era =>
   KeyHash StakePool ->
   AccountAddress ->
-  ImpTestM era StakePoolParams
+  ImpTestM era (StakePoolParams era)
 freshPoolParams khPool accountAddress = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -2132,7 +2132,7 @@ registerPoolWithAccountAddress = registerPoolWithParams id
 -- the stake pool are adjusted with the supplied function before it is registered.
 registerPoolWithParams ::
   ShelleyEraImp era =>
-  (StakePoolParams -> StakePoolParams) ->
+  (StakePoolParams era -> StakePoolParams era) ->
   KeyHash StakePool ->
   AccountAddress ->
   ImpTestM era ()

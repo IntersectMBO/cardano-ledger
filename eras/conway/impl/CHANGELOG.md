@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Add `era` parameter to `PoolCert`s
 * Remove `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule`
 * Remove `WithdrawalsNotInRewardsCERTS` from `ConwayCertsPredFailure`
 * Remove `certsTx` field from `CertsEnv`

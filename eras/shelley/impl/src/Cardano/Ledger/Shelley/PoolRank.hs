@@ -304,7 +304,7 @@ desirability ::
   NonNegativeInterval ->
   NonZero Word16 ->
   Coin ->
-  StakePoolParams ->
+  StakePoolParams era ->
   PerformanceEstimate ->
   Coin ->
   Double
@@ -344,7 +344,7 @@ getTopRankedPoolsVMap ::
   Coin ->
   Coin ->
   PParams era ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) StakePoolParams ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash StakePool) (StakePoolParams era) ->
   Map (KeyHash StakePool) PerformanceEstimate ->
   Set (KeyHash StakePool)
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
@@ -357,7 +357,7 @@ getTopRankedPoolsInternal ::
   Coin ->
   Coin ->
   PParams era ->
-  [(KeyHash StakePool, (StakePoolParams, PerformanceEstimate))] ->
+  [(KeyHash StakePool, (StakePoolParams era, PerformanceEstimate))] ->
   Set (KeyHash StakePool)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
@@ -433,7 +433,7 @@ nonMyopicMemberRew ::
   EraPParams era =>
   PParams era ->
   Coin ->
-  StakePoolParams ->
+  StakePoolParams era ->
   StakeShare ->
   StakeShare ->
   StakeShare ->

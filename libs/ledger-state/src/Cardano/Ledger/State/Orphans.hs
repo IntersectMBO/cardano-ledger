@@ -146,9 +146,9 @@ deriving via Enc GenDelegs instance PersistField GenDelegs
 
 deriving via Enc GenDelegs instance PersistFieldSql GenDelegs
 
-deriving via Enc StakePoolParams instance PersistField StakePoolParams
+deriving via Enc (StakePoolParams CurrentEra) instance PersistField (StakePoolParams CurrentEra)
 
-deriving via Enc StakePoolParams instance PersistFieldSql StakePoolParams
+deriving via Enc (StakePoolParams CurrentEra) instance PersistFieldSql (StakePoolParams CurrentEra)
 
 deriving via Enc StakePoolSnapShot instance PersistField StakePoolSnapShot
 

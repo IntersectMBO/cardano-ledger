@@ -455,7 +455,7 @@ queryRegisteredDRepStakeDistrExamples =
       ]
   ]
 
-queryPoolParametersExamples :: [Map (KeyHash StakePool) StakePoolParams]
+queryPoolParametersExamples :: [Map (KeyHash StakePool) (StakePoolParams era)]
 queryPoolParametersExamples =
   [ Map.empty
   , Map.fromList
@@ -485,7 +485,7 @@ queryPoolParametersExamples =
       ]
   ]
 
-queryPoolStateExamples :: [QueryPoolStateResult]
+queryPoolStateExamples :: [QueryPoolStateResult era]
 queryPoolStateExamples =
   [ QueryPoolStateResult
       { qpsrStakePoolParams = Map.empty

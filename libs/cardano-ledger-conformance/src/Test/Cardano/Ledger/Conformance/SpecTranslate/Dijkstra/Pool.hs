@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -33,13 +34,13 @@ instance SpecTranslate DijkstraEra (PState DijkstraEra) where
     netId <- askSpecTransM
     withCtxSpecTransM () $
       Agda.MkPState
-        <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams netId) psStakePools)
+        <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams @DijkstraEra netId) psStakePools)
         <*> toSpecRepMap psFutureStakePoolParams
         <*> toSpecRepMap psRetiring
         <*> toSpecRepMap (fromCompact . spsDeposit <$> psStakePools)
 
-instance SpecTranslate DijkstraEra PoolCert where
-  type SpecRep DijkstraEra PoolCert = Agda.DCert
+instance SpecTranslate DijkstraEra (PoolCert DijkstraEra) where
+  type SpecRep DijkstraEra (PoolCert DijkstraEra) = Agda.DCert
 
   toSpecRep (RegPool p@StakePoolParams {sppId = KeyHash ppHash}) =
     Agda.Regpool

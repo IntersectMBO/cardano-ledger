@@ -271,7 +271,7 @@ instance (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v CanonicalStakePo
     Versioned csppAccountAddress <- decodeNamespacedField @v "account_address"
     pure $ Versioned CanonicalStakePoolParams {..}
 
-mkCanonicalStakePoolParams :: StakePoolParams -> CanonicalStakePoolParams
+mkCanonicalStakePoolParams :: StakePoolParams era -> CanonicalStakePoolParams
 mkCanonicalStakePoolParams (StakePoolParams {..}) =
   CanonicalStakePoolParams
     { csppId = sppId
@@ -286,7 +286,7 @@ mkCanonicalStakePoolParams (StakePoolParams {..}) =
     , csppAccountAddress = sppAccountAddress
     }
 
-fromCanonicalStakePoolParams :: CanonicalStakePoolParams -> StakePoolParams
+fromCanonicalStakePoolParams :: CanonicalStakePoolParams -> StakePoolParams era
 fromCanonicalStakePoolParams (CanonicalStakePoolParams {..}) =
   StakePoolParams
     { sppId = csppId

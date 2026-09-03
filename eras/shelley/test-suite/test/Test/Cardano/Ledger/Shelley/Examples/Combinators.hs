@@ -251,7 +251,7 @@ regPool ::
   ( EraCertState era
   , EraGov era
   ) =>
-  StakePoolParams ->
+  StakePoolParams era ->
   ChainState era ->
   ChainState era
 regPool pool cs = cs {chainNes = nes'}
@@ -296,7 +296,7 @@ updatePoolParams ::
   , EraGov era
   ) =>
   Network ->
-  StakePoolParams ->
+  StakePoolParams era ->
   ChainState era ->
   ChainState era
 updatePoolParams network pool cs = cs {chainNes = nes'}
@@ -356,7 +356,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 reapPool ::
   forall era.
   (EraGov era, EraCertState era) =>
-  StakePoolParams ->
+  StakePoolParams era ->
   ChainState era ->
   ChainState era
 reapPool pool cs = cs {chainNes = nes'}

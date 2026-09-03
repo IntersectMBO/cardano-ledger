@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`
@@ -43,6 +44,7 @@
 
 ### `testlib`
 
+* Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
 * Add `Arbitrary` and `ToExpr` instances for `Milliseconds32`

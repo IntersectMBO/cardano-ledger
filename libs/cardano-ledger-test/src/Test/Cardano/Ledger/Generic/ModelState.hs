@@ -109,7 +109,7 @@ data ModelNewEpochState era = ModelNewEpochState
   , mCount :: !Int
   , mIndex :: !(Map Int TxId)
   , -- below here NO EFFECT until we model EpochBoundary
-    mFStakePools :: !(Map (KeyHash StakePool) StakePoolParams)
+    mFStakePools :: !(Map (KeyHash StakePool) (StakePoolParams era))
   , mRetiring :: !(Map (KeyHash StakePool) EpochNo)
   , mSnapshots :: !(SnapShots era)
   , mEL :: !EpochNo -- The current epoch,
