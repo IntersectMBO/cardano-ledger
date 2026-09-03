@@ -18,6 +18,7 @@
 * Add `Ord` instance for `TxOutSource`
 * Change `PlutusArgs 'PlutusV4` to contain `PV4.ScriptContext` instead of `PV3.ScriptContext`
 * Add `NFData` instance for `PV4.ScriptContext`
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Remove `numSegComponents` from `EraBlockBody`
 * Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Change `decodeMetadatum` to require definite-length chunks in indefinite-length bytestrings

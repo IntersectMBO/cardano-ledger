@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-crypto-wrapper
-version: 1.7.0.0
+version: 1.8.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -77,6 +77,8 @@ library
     -Wno-unsafe
     -Wunused-packages
 
+  -- crypton: We cannot make the dependency on a wider range because earlier
+  -- versions depend on `memory` and `crypton >= 1.1` depends on `ram`.
   build-depends:
     aeson,
     base >=4.18 && <5,
@@ -89,13 +91,13 @@ library
     cardano-crypto,
     cardano-ledger-binary >=1.3.1,
     cardano-prelude >=0.2.0.0,
-    crypton,
+    crypton >=1.1,
     data-default,
     deepseq,
     formatting,
     heapwords,
-    memory,
     nothunks,
+    ram,
     text,
 
 library testlib
@@ -136,7 +138,7 @@ library testlib
     cardano-prelude-test,
     crypton,
     hedgehog >=1.0.4,
-    memory,
+    ram,
 
 test-suite test
   type: exitcode-stdio-1.0

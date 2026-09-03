@@ -2,6 +2,7 @@
 
 ## 1.11.1.0
 
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Add `FromJSON` instance for `MaryValue`
 * Add `FromJSON` and `FromJSONKey` instances for `AssetName` (hex-decoding from `ToJSON` format)
 * Add `EncCBOR`, `ToCBOR` for `Block`
