@@ -57,17 +57,9 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedPlutusRunnable (..),
   lookupTxInfoResultImpossible,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  AlonzoContextError (..),
-  TxOutSource (..),
- )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
-import Cardano.Ledger.Babbage.TxInfo (
-  BabbageContextError (..),
-  transTxOutV2,
- )
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -121,6 +113,7 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
+  TxOutSource (..),
   slotToPOSIXTime,
   transAccountAddress,
   transBoundedRational,
@@ -186,7 +179,7 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
 
 data ConwayContextError era
-  = BabbageContextError (BabbageContextError era)
+  = BabbageContextError (Babbage.BabbageContextError era)
   | CertificateNotSupported (TxCert era)
   | PlutusPurposeNotSupported (PlutusPurpose AsItem era)
   | CurrentTreasuryFieldNotSupported Coin
@@ -197,7 +190,7 @@ data ConwayContextError era
   deriving (Generic)
 
 deriving instance
-  ( Eq (BabbageContextError era)
+  ( Eq (Babbage.BabbageContextError era)
   , Eq (TxCert era)
   , Eq (PlutusPurpose AsItem era)
   , Eq (PlutusPurpose AsIx era)
@@ -206,7 +199,7 @@ deriving instance
   Eq (ConwayContextError era)
 
 deriving instance
-  ( Ord (BabbageContextError era)
+  ( Ord (Babbage.BabbageContextError era)
   , Ord (TxCert era)
   , Ord (PlutusPurpose AsItem era)
   , Ord (PlutusPurpose AsIx era)
@@ -215,7 +208,7 @@ deriving instance
   Ord (ConwayContextError era)
 
 deriving instance
-  ( Show (BabbageContextError era)
+  ( Show (Babbage.BabbageContextError era)
   , Show (TxCert era)
   , Show (PlutusPurpose AsItem era)
   , Show (PlutusPurpose AsIx era)
@@ -223,10 +216,10 @@ deriving instance
   ) =>
   Show (ConwayContextError era)
 
-instance Inject (BabbageContextError era) (ConwayContextError era) where
+instance Inject (Babbage.BabbageContextError era) (ConwayContextError era) where
   inject = BabbageContextError
 
-instance Inject (AlonzoContextError era) (ConwayContextError era) where
+instance Inject (Alonzo.AlonzoContextError era) (ConwayContextError era) where
   inject = BabbageContextError . inject
 
 instance
@@ -322,7 +315,7 @@ instance
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
 transTxOutV1 ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
+  ( Inject (Babbage.BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
@@ -331,15 +324,16 @@ transTxOutV1 ::
   Either (ContextError era) PV1.TxOut
 transTxOutV1 txOutSource txOut = do
   when (isSJust (txOut ^. dataTxOutL)) $ do
-    Left $ inject $ InlineDatumsNotSupported @era txOutSource
+    Left $ inject $ Babbage.InlineDatumsNotSupported @era txOutSource
   case Alonzo.transTxOut txOut of
-    Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
+    Nothing -> Left $ inject $ Babbage.ByronTxOutInContext @era txOutSource
     Just plutusTxOut -> Right plutusTxOut
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 transTxInInfoV1 ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
+  ( Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
@@ -347,14 +341,15 @@ transTxInInfoV1 ::
   TxIn ->
   Either (ContextError era) PV1.TxInInfo
 transTxInInfoV1 utxo txIn = do
-  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  txOut <- Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV1 (TxOutFromInput txIn) txOut
   Right (PV1.TxInInfo (TxInfo.transTxIn txIn) plutusTxOut)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V3 context
 transTxInInfoV3 ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
+  ( Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
@@ -362,8 +357,8 @@ transTxInInfoV3 ::
   TxIn ->
   Either (ContextError era) PV3.TxInInfo
 transTxInInfoV3 utxo txIn = do
-  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
-  plutusTxOut <- transTxOutV2 (TxOutFromInput txIn) txOut
+  txOut <- Alonzo.transLookupTxOut utxo txIn
+  plutusTxOut <- Babbage.transTxOutV2 (TxOutFromInput txIn) txOut
   Right (PV3.TxInInfo (transTxIn txIn) plutusTxOut)
 
 guardConwayFeaturesForPlutusV1V2 ::
@@ -810,7 +805,7 @@ instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
 -- | Translate a validity interval to POSIX time
 transValidityInterval ::
   forall proxy era.
-  Inject (AlonzoContextError era) (ContextError era) =>
+  Inject (Alonzo.AlonzoContextError era) (ContextError era) =>
   proxy era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -832,14 +827,14 @@ transValidityInterval era epochInfo systemStart = \case
 
 transSlotToPOSIXTime ::
   forall era proxy.
-  Inject (AlonzoContextError era) (ContextError era) =>
+  Inject (Alonzo.AlonzoContextError era) (ContextError era) =>
   proxy era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   SlotNo ->
   Either (ContextError era) PV3.POSIXTime
 transSlotToPOSIXTime _ epochInfo systemStart =
-  left (inject . TimeTranslationPastHorizon @era)
+  left (inject . Alonzo.TimeTranslationPastHorizon @era)
     . slotToPOSIXTime epochInfo systemStart
 
 checkReferenceInputsNotDisjointFromInputs ::

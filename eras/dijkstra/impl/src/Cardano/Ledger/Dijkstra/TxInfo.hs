@@ -117,7 +117,6 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
-import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
@@ -626,6 +625,7 @@ transTxInInfoV4 ::
   forall era.
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   , Inject (Babbage.BabbageContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
@@ -633,7 +633,7 @@ transTxInInfoV4 ::
   TxIn ->
   Either (ContextError era) PV4.TxInInfo
 transTxInInfoV4 utxo txIn = do
-  txOut <- first (inject . Babbage.AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  txOut <- Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV4 (TxOutFromInput txIn) txOut
   Right (PV4.TxInInfo (transTxInV4 txIn) plutusTxOut)
 

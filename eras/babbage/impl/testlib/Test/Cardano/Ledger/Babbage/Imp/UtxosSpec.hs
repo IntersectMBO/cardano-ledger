@@ -10,9 +10,6 @@
 module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  TxOutSource (..),
- )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -55,6 +52,9 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   mkInlineDatum,
   withSLanguage,
+ )
+import Cardano.Ledger.Plutus.TxInfo (
+  TxOutSource (..),
  )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Lens.Micro

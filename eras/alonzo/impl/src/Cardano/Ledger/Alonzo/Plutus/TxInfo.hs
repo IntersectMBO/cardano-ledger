@@ -12,6 +12,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -22,7 +23,6 @@
 module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   mkPlutusWithContext,
   AlonzoContextError (..),
-  TxOutSource (..),
   transLookupTxOut,
   transTxOut,
   transValidityInterval,
@@ -59,7 +59,12 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
-import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (
+  ProtVer (..),
+  StrictMaybe (..),
+  kindObjectValue,
+  strictMaybeToMaybe,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -86,7 +91,7 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM, guard)
-import Data.Aeson (ToJSON (..), pattern String)
+import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
@@ -226,16 +231,51 @@ instance EraPlutusContext AlonzoEra where
 data AlonzoContextError era
   = TranslationLogicMissingInput TxIn
   | TimeTranslationPastHorizon Text
-  deriving (Eq, Ord, Show, Generic)
+  | CertificateNotSupported (TxCert era)
+  | PlutusPurposeNotSupported (PlutusPurpose AsItem era)
+  deriving (Generic)
 
-instance Era era => NFData (AlonzoContextError era)
+deriving instance
+  ( Eq (TxCert era)
+  , Eq (PlutusPurpose AsItem era)
+  , EraPParams era
+  ) =>
+  Eq (AlonzoContextError era)
 
-instance Era era => EncCBOR (AlonzoContextError era) where
+deriving instance
+  ( Ord (TxCert era)
+  , Ord (PlutusPurpose AsItem era)
+  , EraPParams era
+  ) =>
+  Ord (AlonzoContextError era)
+
+deriving instance
+  ( Show (TxCert era)
+  , Show (PlutusPurpose AsItem era)
+  , EraPParams era
+  ) =>
+  Show (AlonzoContextError era)
+
+instance
+  ( Era era
+  , NFData (TxCert era)
+  , NFData (PlutusPurpose AsItem era)
+  ) =>
+  NFData (AlonzoContextError era)
+
+instance
+  (Era era, EncCBOR (TxCert era), EncCBOR (PlutusPurpose AsItem era)) =>
+  EncCBOR (AlonzoContextError era)
+  where
   encCBOR = \case
     TranslationLogicMissingInput txIn ->
       encode $ Sum (TranslationLogicMissingInput @era) 1 !> To txIn
     TimeTranslationPastHorizon err ->
       encode $ Sum (TimeTranslationPastHorizon @era) 7 !> To err
+    CertificateNotSupported txCert ->
+      encode $ Sum CertificateNotSupported 9 !> To txCert
+    PlutusPurposeNotSupported purpose ->
+      encode $ Sum PlutusPurposeNotSupported 10 !> To purpose
 
 instance Era era => DecCBOR (AlonzoContextError era) where
   decCBOR = decode $ Summands "ContextError" $ \case
@@ -243,19 +283,26 @@ instance Era era => DecCBOR (AlonzoContextError era) where
     7 -> SumD (TimeTranslationPastHorizon @era) <! From
     n -> Invalid n
 
-instance ToJSON (AlonzoContextError era) where
+instance
+  (ToJSON (TxCert era), ToJSON (PlutusPurpose AsItem era)) =>
+  ToJSON (AlonzoContextError era)
+  where
   toJSON = \case
     TranslationLogicMissingInput txin ->
       String $ "Transaction input does not exist in the UTxO: " <> txInToText txin
     TimeTranslationPastHorizon msg ->
       String $ "Time translation requested past the horizon: " <> msg
+    CertificateNotSupported txCert ->
+      kindObjectValue "CertificateNotSupported" ["certificate" .= toJSON txCert]
+    PlutusPurposeNotSupported purpose ->
+      kindObjectValue "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
 
 transLookupTxOut ::
-  forall era a.
-  Inject (AlonzoContextError era) a =>
+  forall era.
+  Inject (AlonzoContextError era) (ContextError era) =>
   UTxO era ->
   TxIn ->
-  Either a (TxOut era)
+  Either (ContextError era) (TxOut era)
 transLookupTxOut (UTxO utxo) txIn =
   case Map.lookup txIn utxo of
     Nothing -> Left $ inject $ TranslationLogicMissingInput @era txIn
@@ -263,13 +310,13 @@ transLookupTxOut (UTxO utxo) txIn =
 
 -- | Translate a validity interval to POSIX time
 transValidityInterval ::
-  forall proxy era a.
-  Inject (AlonzoContextError era) a =>
+  forall proxy era.
+  Inject (AlonzoContextError era) (ContextError era) =>
   proxy era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
-  Either a PV1.POSIXTimeRange
+  Either (ContextError era) PV1.POSIXTimeRange
 transValidityInterval _ epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
   ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
