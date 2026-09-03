@@ -97,7 +97,7 @@ instance
   ) =>
   EncCBOR (EntitiesEnv era)
   where
-  encCBOR x@(EntitiesEnv _ _ _ _ _) =
+  encCBOR x@(EntitiesEnv {}) =
     let EntitiesEnv {..} = x
      in encode $
           Rec EntitiesEnv
@@ -277,7 +277,7 @@ dijkstraEntitiesTransition = do
       legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
       withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       accounts = certState ^. certDStateL . accountsL
-      certsEnv = Conway.CertsEnv tx pp curEpoch committee committeeProposals
+      certsEnv = Conway.CertsEnv pp curEpoch committee committeeProposals
 
   network <- liftSTS $ asks networkId
 

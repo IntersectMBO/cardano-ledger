@@ -59,7 +59,6 @@ import Cardano.Ledger.Conway.Era (
   LEDGER,
   UTXOW,
   hardforkConwayBootstrapPhase,
-  hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule,
  )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -395,22 +394,18 @@ conwayLedgerTransitionTRC
           unless (hardforkConwayBootstrapPhase (pp ^. ppProtocolVersionL)) $ do
             runTest $ validateWithdrawalsDelegated accounts tx
 
-          certState' <-
-            if hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule $ pp ^. ppProtocolVersionL
-              then do
-                let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-                Shelley.testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
-                pure $
-                  certState
-                    & updateDormantDRepExpiries tx curEpochNo
-                    & updateVotingDRepExpiries tx curEpochNo (pp ^. ppDRepActivityL)
-                    & certDStateL . accountsL %~ drainAccounts withdrawals
-              else pure certState
+          let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+          Shelley.testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
+          let certState' =
+                certState
+                  & updateDormantDRepExpiries tx curEpochNo
+                  & updateVotingDRepExpiries tx curEpochNo (pp ^. ppDRepActivityL)
+                  & certDStateL . accountsL %~ drainAccounts withdrawals
 
           certStateAfterCERTS <-
             trans @(EraRule "CERTS" era) $
               TRC
-                ( CertsEnv tx pp curEpochNo committee committeeProposals
+                ( CertsEnv pp curEpochNo committee committeeProposals
                 , certState'
                 , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
                 )
@@ -479,12 +474,11 @@ validateRefScriptSize pp utxo tx =
   let totalRefScriptSize = txNonDistinctRefScriptsSize utxo tx
       maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
    in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
-        ( ConwayTxRefScriptsSizeTooBig
-            Mismatch
-              { mismatchSupplied = totalRefScriptSize
-              , mismatchExpected = maxRefScriptSizePerTx
-              }
-        )
+        ConwayTxRefScriptsSizeTooBig
+          Mismatch
+            { mismatchSupplied = totalRefScriptSize
+            , mismatchExpected = maxRefScriptSizePerTx
+            }
 
 validateWithdrawalsDelegated ::
   ( EraTx era

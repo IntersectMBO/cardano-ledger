@@ -1,10 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the CERTS rule
@@ -35,9 +33,8 @@ certsEnvSpec ::
   (EraSpecPParams era, HasSpec (Tx TopTx era)) =>
   Specification (Conway.CertsEnv era)
 certsEnvSpec = constrained $ \ce ->
-  match ce $ \tx pp _currepoch _currcommittee commproposals ->
+  match ce $ \pp _currepoch _currcommittee commproposals ->
     [ satisfies pp pparamsSpec
-    , assert $ tx ==. lit txZero
     , genHint 3 commproposals
     ]
 
