@@ -35,9 +35,6 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   encodeListLen,
-  getDecoderVersion,
-  ifEncodingVersionAtLeast,
-  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
@@ -89,22 +86,21 @@ individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individua
 instance EncCBOR IndividualPoolStake where
   encCBOR (IndividualPoolStake stake stakeCoin vrf blsKey) =
     mconcat
-      [ ifEncodingVersionAtLeast (natVersion @12) (encodeListLen 4) (encodeListLen 3)
+      [ encodeListLen 4
       , encCBOR stake
       , encCBOR stakeCoin
       , encCBOR vrf
-      , ifEncodingVersionAtLeast (natVersion @12) (encCBOR blsKey) mempty
+      , encCBOR blsKey
       ]
 
 instance DecCBOR IndividualPoolStake where
-  decCBOR = do
-    blsKeySupported <- getDecoderVersion <&> (>= natVersion @12)
-    decodeRecordNamed "IndividualPoolStake" (const (if blsKeySupported then 4 else 3)) $
+  decCBOR =
+    decodeRecordNamed "IndividualPoolStake" (const 4) $
       IndividualPoolStake
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
-        <*> if blsKeySupported then decCBOR else pure SNothing
+        <*> decCBOR
 
 instance ToKeyValuePairs IndividualPoolStake where
   toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
