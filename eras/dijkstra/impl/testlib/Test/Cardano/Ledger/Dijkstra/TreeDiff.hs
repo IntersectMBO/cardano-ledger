@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 
 import Cardano.Crypto.Leios (LeiosCert (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -35,6 +36,7 @@ import Cardano.Ledger.Dijkstra.Core (
   Era,
   EraPParams (..),
   EraRule,
+  EraScript (..),
   EraTx (..),
   EraTxBody (..),
   EraTxCert (..),
@@ -56,6 +58,11 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxWits (
+  DijkstraTxWits,
+  DijkstraTxWitsRaw,
+  PoolVoteWitness (..),
+ )
 import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
@@ -132,6 +139,29 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
               ]
 
 instance ToExpr (TxBody l DijkstraEra)
+
+-- Manual ToExpr for the same reason as 'LeiosCert' below: no orphan
+-- 'ToExpr (SigDSIGN BLS12381MinSigDSIGN)'.
+instance ToExpr PoolVoteWitness where
+  toExpr (BlsPoolVoteWitness sig) =
+    Rec "BlsPoolVoteWitness" $
+      OMap.fromList [("blsSignature", toExpr . HexBytes $ rawEncodeFixedSized sig)]
+
+instance
+  ( Era era
+  , ToExpr (TxDats era)
+  , ToExpr (Redeemers era)
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (DijkstraTxWitsRaw era)
+
+instance
+  ( Era era
+  , ToExpr (TxDats era)
+  , ToExpr (Redeemers era)
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (DijkstraTxWits era)
 
 instance ToExpr PerasCert
 

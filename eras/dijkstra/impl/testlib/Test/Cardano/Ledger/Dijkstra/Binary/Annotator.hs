@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
 
 import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
+import Cardano.Ledger.Alonzo.TxWits (alonzoPlutusScriptDecoder, asHashedScriptPair)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Block (Block (..))
@@ -31,13 +32,22 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody
+import Cardano.Ledger.Dijkstra.TxWits (
+  DijkstraTxWits (..),
+  DijkstraTxWitsRaw (..),
+  addScriptsDijkstraTxWitsRaw,
+  emptyDijkstraTxWitsRaw,
+ )
 import Cardano.Ledger.MemoBytes (decodeMemoized)
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Control.Monad (when)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
@@ -194,6 +204,59 @@ instance Era era => DecCBOR (DijkstraNativeScriptRaw era) where
 
 instance Era era => DecCBOR (DijkstraNativeScript era) where
   decCBOR = MkDijkstraNativeScript <$> decodeMemoized decCBOR
+
+-- Dijkstra exists from protocol version 12 onwards, so no pre-12 paths.
+instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (DijkstraTxWitsRaw era) where
+  decCBOR = decodeSparseKeyed TypeName [] emptyDijkstraTxWitsRaw decoderByKey
+    where
+      witsSetDecoder :: (Ord a, DecCBOR a) => Decoder s (Set a)
+      witsSetDecoder =
+        decodeNonEmptySetLikeEnforceNoDuplicates Set.insert (\s -> (Set.size s, s)) decCBOR
+      {-# INLINE witsSetDecoder #-}
+
+      nativeScriptsDecoder :: Decoder s (Map.Map ScriptHash (Script era))
+      nativeScriptsDecoder =
+        decodeNonEmptySetLikeEnforceNoDuplicates
+          (\x m -> let (k, v) = asHashedScriptPair @era (fromNativeScript x) in Map.insert k v m)
+          (\m -> (Map.size m, m))
+          decCBOR
+      {-# INLINE nativeScriptsDecoder #-}
+
+      decoderByKey :: DijkstraTxWitsRaw era -> Word -> Maybe (Decoder s (DijkstraTxWitsRaw era))
+      decoderByKey acc = \case
+        0 -> Just $ do
+          x <- witsSetDecoder
+          pure acc {dtwrAddrTxWits = x}
+        1 -> Just $ do
+          x <- nativeScriptsDecoder
+          pure $ addScriptsDijkstraTxWitsRaw x acc
+        2 -> Just $ do
+          x <- witsSetDecoder
+          pure acc {dtwrBootAddrTxWits = x}
+        3 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV1
+          pure $ addScriptsDijkstraTxWitsRaw x acc
+        4 -> Just $ do
+          x <- decCBOR
+          pure acc {dtwrDatsTxWits = x}
+        5 -> Just $ do
+          x <- decCBOR
+          pure acc {dtwrRdmrsTxWits = x}
+        6 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV2
+          pure $ addScriptsDijkstraTxWitsRaw x acc
+        7 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV3
+          pure $ addScriptsDijkstraTxWitsRaw x acc
+        9 -> Just $ do
+          x <- decCBOR
+          pure acc {dtwrPoolVoteTxWits = x}
+        _ -> Nothing
+      {-# INLINE decoderByKey #-}
+
+deriving newtype instance
+  (AlonzoEraScript era, DecCBOR (NativeScript era)) =>
+  DecCBOR (DijkstraTxWits era)
 
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =

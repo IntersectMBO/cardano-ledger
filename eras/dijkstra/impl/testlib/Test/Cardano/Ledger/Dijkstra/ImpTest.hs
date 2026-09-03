@@ -43,6 +43,8 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
   pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraEraTxCert)
+import Cardano.Ledger.Dijkstra.TxWits (DijkstraEraTxWits)
 import Cardano.Ledger.Dijkstra.UTxO
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.API (mkStAnnTx)
@@ -108,6 +110,8 @@ instance ConwayEraImp DijkstraEra
 class
   ( ConwayEraImp era
   , DijkstraEraTest era
+  , DijkstraEraTxCert era
+  , DijkstraEraTxWits era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
   , InjectRuleFailure "LEDGER" SubEntitiesPredFailure era
