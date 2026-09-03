@@ -25,6 +25,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
+  maxKeyAgeEpochs,
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
@@ -42,6 +43,7 @@ import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Default (Default, def)
 import qualified Data.Map.Strict as Map
@@ -166,7 +168,11 @@ newEpochTransition = do
       es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', eNo)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
-      let pd' = ssStakeMarkPoolDistr (esSnapshots es)
+      maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
+      let snapshots = esSnapshots es
+          -- Voting keys are frozen into the snapshot when it is taken, but their age is
+          -- judged against the epoch the distribution becomes active for (CIP-0164).
+          pd' = expireBlsKeys eNo maxKeyAge (ssStakeMark snapshots) (ssStakeMarkPoolDistr snapshots)
       -- The spec sets pd' with:
       -- pd' = calculatePoolDistr (ssStakeSet $ esSnapshots es'''),
       --

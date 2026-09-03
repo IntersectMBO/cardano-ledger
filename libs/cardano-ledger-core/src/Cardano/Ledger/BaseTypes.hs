@@ -83,6 +83,7 @@ module Cardano.Ledger.BaseTypes (
   -- * STS Base
   Globals (..),
   epochInfoPure,
+  maxKeyAgeEpochs,
   ShelleyBase,
   Relation (..),
   Mismatch (..),
@@ -142,7 +143,7 @@ import Cardano.Ledger.Hashes (HashAnnotated, SafeHash, SafeToHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
-import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
+import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSize, hoistEpochInfo)
 import Cardano.Slotting.Slot as Slotting (
   EpochInterval (..),
   EpochNo (..),
@@ -176,7 +177,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity, runIdentity)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
@@ -807,6 +808,19 @@ type ShelleyBase = ReaderT Globals Identity
 -- used here should never be applied to user-supplied input.
 epochInfoPure :: Globals -> EpochInfo Identity
 epochInfoPure = hoistEpochInfo (either (throw . EpochErr) pure) . epochInfo
+
+-- | Maximum age of a registered Leios voting key (CIP-0164): the KES key
+-- lifetime rounded up to whole epochs, plus two epochs of activation delay —
+-- a registered key enters the mark snapshot at the next epoch boundary and
+-- the active committee at the one after. Deriving the bound from the KES
+-- setup keeps voting key rotation in step with the operational key rotation
+-- pools do anyway, instead of governing a second cadence through a parameter.
+maxKeyAgeEpochs :: Globals -> EpochNo -> EpochInterval
+maxKeyAgeEpochs globals e =
+  EpochInterval . fromIntegral $
+    (maxKESEvo globals * slotsPerKESPeriod globals + slotsPerEpoch - 1) `div` slotsPerEpoch + 2
+  where
+    EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
 
 newtype EpochErr = EpochErr Text
 

@@ -27,6 +27,7 @@ module Cardano.Ledger.State.SnapShots (
   maxPool,
   maxPool',
   calculatePoolDistr,
+  expireBlsKeys,
   calculatePoolDistr',
   calculatePoolStake,
   ssStakeMarkL,
@@ -41,12 +42,15 @@ module Cardano.Ledger.State.SnapShots (
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
+  EpochInterval (..),
+  EpochNo (..),
   KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
   UnitInterval,
+  addEpochInterval,
   knownNonZeroBounded,
   nonZeroOr,
   recipNonZero,
@@ -80,9 +84,9 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
-import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..), poolDistrDistrL)
 import Cardano.Ledger.State.Stake
-import Cardano.Ledger.State.StakePool (BlsKey, StakePoolState (..))
+import Cardano.Ledger.State.StakePool (BlsKeyState (..), StakePoolState (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -99,7 +103,7 @@ import Data.VMap (VB, VMap)
 import qualified Data.VMap as VMap
 import Data.Word (Word16)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (&), (^.), _1)
+import Lens.Micro (Lens', lens, (%~), (&), (^.), _1)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | Compute amount of stake each pool has. Any registered stake pool that has no stake will not be
@@ -173,7 +177,7 @@ data StakePoolSnapShot = StakePoolSnapShot
   -- `spssSelfDelegatedOwners`
   , spssVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ Corresponding field in the `StakePoolState` is `spsVrf`.
-  , spssBlsKey :: !(StrictMaybe BlsKey)
+  , spssBlsKey :: !(StrictMaybe BlsKeyState)
   -- ^ Corresponding field in the `StakePoolState` is `spsBlsKey`.
   , spssPledge :: !Coin
   -- ^ Corresponding field in the `StakePoolState` is `spsPledge`.
@@ -468,6 +472,21 @@ calculatePoolStake includeHash (ActiveStake m) = VMap.foldlWithKey accum Map.emp
 calculatePoolDistr :: SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
+-- | Blank the voting key of every pool whose registered key has aged out, judged against
+-- the epoch the distribution is becoming active for rather than the epoch its snapshot was
+-- taken in. A pool with an expired key keeps its stake and its committee seat; the seat is
+-- simply keyless until the pool registers a fresh key (CIP-0164).
+expireBlsKeys :: EpochNo -> EpochInterval -> SnapShot -> PoolDistr -> PoolDistr
+expireBlsKeys epochNo maxKeyAge snapShot =
+  poolDistrDistrL %~ Map.mapWithKey expirePool
+  where
+    expirePool poolId ips = ips {individualPoolStakeBls = honouredBlsKey poolId}
+    honouredBlsKey poolId =
+      case spssBlsKey <$> VMap.lookup poolId (ssStakePoolsSnapShot snapShot) of
+        Just (SJust bks)
+          | epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge -> SJust (bksKey bks)
+        _ -> SNothing
+
 calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
 calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
   let toIndividualPoolStake poolId spss = do
@@ -478,7 +497,7 @@ calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
             { individualPoolStake = spssStakeRatio spss
             , individualTotalPoolStake = spssStake spss
             , individualPoolStakeVrf = spssVrf spss
-            , individualPoolStakeBls = spssBlsKey spss
+            , individualPoolStakeBls = bksKey <$> spssBlsKey spss
             }
       poolDistr =
         PoolDistr

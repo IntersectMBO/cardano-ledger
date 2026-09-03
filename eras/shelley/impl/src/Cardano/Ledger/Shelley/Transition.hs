@@ -537,7 +537,7 @@ injectStakePools network fs source nes = do
     foldInjectionData
       fs
       source
-      (\ !acc (poolId, poolParams) -> Map.insert poolId (mkStakePoolState deposit mempty poolParams) acc)
+      (\ !acc (poolId, poolParams) -> Map.insert poolId (mkStakePoolState (nes ^. nesELL) deposit mempty poolParams) acc)
       -- Note: we start from empty map so this drops any pre-existing pools in the state
       Map.empty
   pure $ nes & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ poolsMap
@@ -552,7 +552,7 @@ registerInitialStakePools ::
 registerInitialStakePools ShelleyGenesisStaking {sgsPools} nes =
   nes
     & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
-      .~ ListMap.toMap (mkStakePoolState deposit mempty <$> sgsPools)
+      .~ ListMap.toMap (mkStakePoolState (nes ^. nesELL) deposit mempty <$> sgsPools)
   where
     deposit = nes ^. nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
 {-# DEPRECATED registerInitialStakePools "Use `injectStakePools` instead" #-}

@@ -38,6 +38,8 @@
 * Add `FromJSON` instance for `PoolCert`
 * Add `ppMinPoolMarginG` to `EraPParams` with default returning `minBound` for pre-Dijkstra eras (CIP-0023)
 * Add `ToPlutusData` instance for `OrdExUnits`
+* Add `maxKeyAgeEpochs`, the maximum age of a registered Leios voting key (CIP-164), derived
+  from the KES setup as `ceil(maxKESEvo * slotsPerKESPeriod / epochLength) + 2`
 * Add `Milliseconds32`, a duration in whole milliseconds bounded by `Word32`
 * Add `ToPlutusData` instance for `Milliseconds32`
 
