@@ -13,27 +13,92 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraUtxoPredFailure (..),
   EntitiesPredFailure (..),
   SubEntitiesPredFailure (..),
  )
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBalanceIntervals (..))
-import Cardano.Ledger.Plutus
 import Cardano.Ledger.Val (Val (..))
-import qualified Data.Map.NonEmpty as NE
-import qualified Data.Map.Strict as Map
+import qualified Data.Map.NonEmpty as NEM
 import Data.Maybe (fromJust)
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
-import Lens.Micro ((&), (.~))
+import Lens.Micro
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
+  it "Batch with successful withdrawals and direct deposits" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    (acc1, reward1, kh1) <- setupAccountAddress
+    (acc2, reward2, kh2) <- setupAccountAddress
+    (acc3, reward3, kh3) <- setupAccountAddress
+
+    let depositAmount = Coin 50
+        partialWithdrawal = reward3 <-> Coin 10
+        subDeposit =
+          mkBasicTx $
+            mkBasicTxBody
+              & directDepositsTxBodyL .~ DirectDeposits [(acc1, depositAmount)]
+        subWithdraw =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(acc2, reward2)]
+        topTx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(acc3, partialWithdrawal)]
+              & subTransactionsTxBodyL .~ [subDeposit, subWithdraw]
+    submitTx_ topTx
+
+    finalBalance1 <- getBalance (KeyHashObj kh1)
+    finalBalance2 <- getBalance (KeyHashObj kh2)
+    finalBalanceD <- getBalance (KeyHashObj kh3)
+
+    finalBalance1 `shouldBe` reward1 <+> depositAmount
+    finalBalance2 `shouldBe` mempty
+    finalBalanceD `shouldBe` (reward3 <-> partialWithdrawal)
+
+  it "Partial withdrawals" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+
+    (account1, reward1, kh1) <- setupAccountAddress
+    (account2, reward2, kh2) <- setupAccountAddress
+    lessThanReward1 <- Coin <$> choose (1, unCoin reward1 - 1)
+    atMostReward2 <- Coin <$> choose (1, unCoin reward2)
+    let tx =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account1, lessThanReward1)])
+            [Withdrawals [(account2, atMostReward2)]]
+    submitTx_ tx
+    getBalance (KeyHashObj kh1) `shouldReturn` (reward1 <-> lessThanReward1)
+    getBalance (KeyHashObj kh2) `shouldReturn` (reward2 <-> atMostReward2)
+
+    -- restore balances, to test legacy mode
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & directDepositsTxBodyL .~ DirectDeposits [(account1, lessThanReward1), (account2, atMostReward2)]
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx
+      legacyTx
+      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account1 $
+            Mismatch lessThanReward1 reward1
+      ]
+
+    -- drain top withdrawal
+    submitTx_
+      =<< switchTxToLegacyMode
+        ( mkTxWithBatchWithdrawals
+            (Withdrawals [(account1, reward1)])
+            [Withdrawals [(account2, atMostReward2)]]
+        )
+    getBalance (KeyHashObj kh1) `shouldReturn` zero
+    getBalance (KeyHashObj kh2) `shouldReturn` (reward2 <-> atMostReward2)
+
   it "Withdrawals from an unregistered staking address" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
@@ -47,11 +112,9 @@ spec = describe "ENTITIES" $ do
           & withdrawalsTxBodyL .~ Withdrawals [(account1, amountX), (account2, zero)]
     submitFailingTx
       (mkBasicTx txBody)
-      [ injectFailure $
-          WithdrawalsExceedAccountBalance @era $
-            NE.singleton account1 $
-              Mismatch amountX mempty
-      , injectFailure . MissingAccountsInWithdrawals @era $
+      [ injectFailure . WithdrawalAccountsMissing @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
@@ -63,23 +126,17 @@ spec = describe "ENTITIES" $ do
               & withdrawalsTxBodyL .~ Withdrawals [(account3, amountY)]
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
-      [ injectFailure $
-          WithdrawalsExceedAccountBalance @era $
-            fromJust $
-              NE.fromMap $
-                Map.fromList
-                  [ (account1, Mismatch (amountX <> amountX) mempty)
-                  , (account3, Mismatch amountY mempty)
-                  ]
-      , injectFailure . MissingAccountsInWithdrawals @era $
+      [ injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . SubMissingAccountsInWithdrawals @era $
+      , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . SubMissingOriginalAccountsInWithdrawals @era $
+      , injectFailure . SubWithdrawalAccountsMissing @era $
+          Withdrawals [(account1, amountX), (account2, zero)]
+      , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account3, amountY)]
-      , injectFailure . SubMissingAccountsInWithdrawals @era $
+      , injectFailure . SubWithdrawalAccountsMissing @era $
           Withdrawals [(account3, amountY)]
       ]
 
@@ -92,7 +149,7 @@ spec = describe "ENTITIES" $ do
       txBody = mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountX)]
     submitFailingTx
       (mkBasicTx txBody)
-      [ injectFailure . MissingAccountsInDirectDeposits @era $
+      [ injectFailure . DirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountX)]
       ]
 
@@ -105,89 +162,216 @@ spec = describe "ENTITIES" $ do
             mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyDirectDeposit])
-      [ injectFailure . MissingAccountsInDirectDeposits @era $
+      [ injectFailure . DirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountX)]
-      , injectFailure . SubMissingAccountsInDirectDeposits @era $
+      , injectFailure . SubDirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountX)]
-      , injectFailure . SubMissingAccountsInDirectDeposits @era $
+      , injectFailure . SubDirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountY), (account2, amountZ)]
       ]
-
-  it "Withdrawals of the wrong amount" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-
-    (accountAddress1, reward1, stakeKey1) <- setupAccountAddress
-    (accountAddress2, reward2, stakeKey2) <- setupAccountAddress
-    void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
-    void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
-    submitFailingTx
-      ( mkBasicTx $
-          mkBasicTxBody
-            & withdrawalsTxBodyL
-              .~ Withdrawals
-                [ (accountAddress1, reward1 <+> Coin 1)
-                , (accountAddress2, reward2)
-                ]
-      )
-      [ injectFailure $
-          WithdrawalsExceedAccountBalance @era $
-            NE.singleton accountAddress1 $
-              Mismatch (reward1 <+> Coin 1) reward1
-      , injectFailure $
-          ExceededBalancesInWithdrawals @era $
-            NE.singleton accountAddress1 $
-              Mismatch (reward1 <+> Coin 1) reward1
-      ]
-
-    -- in legacy mode, we produce `IncompleteWithdrawals` failure
-    txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2
-    submitFailingTx
-      ( mkBasicTx $
-          mkBasicTxBody
-            & withdrawalsTxBodyL
-              .~ Withdrawals
-                [(accountAddress1, zero)]
-            & inputsTxBodyL .~ [txIn]
-      )
-      [ injectFailure . IncompleteWithdrawals @era $
-          NE.singleton accountAddress1 $
-            Mismatch zero reward1
-      ]
-
-    submitTx_ $
-      mkBasicTx $
-        mkBasicTxBody
-          & withdrawalsTxBodyL
-            .~ Withdrawals
-              [(accountAddress1, zero)]
 
   it "Withdrawals and direct deposits with wrong network id" $ do
     stakeKey <- freshKeyHash
     accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
     let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
+    let dd = DirectDeposits [(wrongNetworkAccount, Coin 50)]
     let txBody :: forall l. Typeable l => TxBody l era
         txBody =
           mkBasicTxBody
             & withdrawalsTxBodyL
               .~ Withdrawals [(wrongNetworkAccount, mempty)]
-            & directDepositsTxBodyL
-              .~ DirectDeposits [(wrongNetworkAccount, Coin 50)]
+            & directDepositsTxBodyL .~ dd
 
     submitFailingTx
       (mkBasicTx txBody)
-      [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      [ injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
+      , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
-      [ injectFailure . WrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . WrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . MissingAccountsInWithdrawals @era $ Withdrawals [(wrongNetworkAccount, mempty)]
-      , injectFailure . SubWrongNetworkInWithdrawals @era Testnet $ NES.singleton wrongNetworkAccount
-      , injectFailure . SubWrongNetworkInDirectDeposits @era Testnet $ NES.singleton wrongNetworkAccount
+      [ injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
+      , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
+      , injectFailure . WithdrawalAccountsMissing @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . DirectDepositAccountsMissing @era $ dd
+      , injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
+      , injectFailure . SubDirectDepositAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
+      , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubWithdrawalAccountsMissing @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubDirectDepositAccountsMissing @era $ dd
       ]
+  it "Aggregate of top and sub withdrawals exceeds account balance" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    (account, reward, _) <- setupAccountAddress
+    (topAmount, subAmount) <- genCoinPairExceeding reward
+    let tx =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account, topAmount)])
+            [Withdrawals [(account, subAmount)]]
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch (topAmount <+> subAmount) reward)]
+      ]
+    -- legacy mode
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx
+      legacyTx
+      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account $
+            Mismatch topAmount (reward <-> subAmount)
+      ]
+
+  it "Aggregate of sub withdrawals exceeds account balance" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    (account, reward, _) <- setupAccountAddress
+    (subAmount1, subAmount2) <- genCoinPairExceeding reward
+    (subAmount1 <+> subAmount2) `shouldSatisfy` (> reward)
+
+    let tx =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account, zero)])
+            [Withdrawals [(account, subAmount1)], Withdrawals [(account, subAmount2)]]
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) reward)]
+      ]
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx
+      legacyTx
+      [ injectFailure . WithdrawalAmountsExceedingOriginalBalance @era $
+          NEM.singleton account $
+            Mismatch (subAmount1 <+> subAmount2) reward
+      ]
+
+  it "Individual withdrawal exceeds account balance" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    (account, reward, _) <- setupAccountAddress
+    atMostReward <- Coin <$> choose (1, unCoin reward)
+    moreThanReward <- (reward <+>) . Coin . getPositive <$> arbitrary
+
+    -- A sub-transaction overdraws
+    let subTxOverdraws =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account, atMostReward)])
+            [Withdrawals [(account, moreThanReward)]]
+    submitFailingTx
+      subTxOverdraws
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch (atMostReward <+> moreThanReward) reward)]
+      ]
+    legacySubTxOverdraws <- switchTxToLegacyMode subTxOverdraws
+    submitFailingTx
+      legacySubTxOverdraws
+      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account $
+            Mismatch atMostReward zero
+      , injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch moreThanReward reward)]
+      ]
+
+    -- The top transaction overdraws
+    let topTxOverdraws =
+          mkTxWithBatchWithdrawals
+            (Withdrawals [(account, moreThanReward)])
+            [Withdrawals [(account, atMostReward)]]
+    submitFailingTx
+      topTxOverdraws
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap
+                [(account, Mismatch (atMostReward <+> moreThanReward) reward)]
+      ]
+    legacyTopTxOverdraws <- switchTxToLegacyMode topTxOverdraws
+    submitFailingTx
+      legacyTopTxOverdraws
+      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account $
+            Mismatch moreThanReward (reward <-> atMostReward)
+      ]
+  it "Direct deposits cannot fund withdrawals in subsequent sub-transactions" $ do
+    account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+    depositAmount <- Coin . getPositive <$> arbitrary
+    let subDeposit =
+          mkBasicTx $
+            mkBasicTxBody
+              & directDepositsTxBodyL
+                .~ DirectDeposits [(account, depositAmount)]
+        subWithdraw =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL
+                .~ Withdrawals [(account, depositAmount)]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & subTransactionsTxBodyL .~ [subDeposit, subWithdraw]
+
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch depositAmount zero)]
+      ]
+
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx
+      legacyTx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch depositAmount zero)]
+      ]
+
+  it "Top transaction can drain an account funded by a sub-transaction direct deposit, in legacy mode" $ do
+    account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+    depositAmount <- Coin . getPositive <$> arbitrary
+    let subDeposit =
+          mkBasicTx $
+            mkBasicTxBody
+              & directDepositsTxBodyL .~ DirectDeposits [(account, depositAmount)]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(account, depositAmount)]
+              & subTransactionsTxBodyL .~ [subDeposit]
+
+    submitFailingTx
+      tx
+      [ injectFailure $
+          WithdrawalAmountsExceedingOriginalBalance @era $
+            fromJust $
+              NEM.fromMap [(account, Mismatch depositAmount zero)]
+      ]
+
+    legacyTx <- switchTxToLegacyMode tx
+    submitTx_ legacyTx
+    getBalance (account ^. accountAddressCredentialL) `shouldReturn` zero
 
   describe "Account balance intervals" $ do
     it "Account balance intervals for the top-level transaction" $
@@ -240,10 +424,10 @@ spec = describe "ENTITIES" $ do
         [ injectFailure $
             WrongNetworkInAccountBalanceIntervals @era Testnet (NES.singleton onWrongNetwork)
         , injectFailure $
-            MissingAccountsInAccountBalanceIntervals @era (NE.singleton unregistered violated)
+            MissingAccountsInAccountBalanceIntervals @era (NEM.singleton unregistered violated)
         , injectFailure $
             BalancesOutsideAccountBalanceIntervals @era
-              (NE.singleton accountAddr (balance, violated))
+              (NEM.singleton accountAddr (balance, violated))
         ]
 
     it
@@ -263,7 +447,7 @@ spec = describe "ENTITIES" $ do
                 (txWith modifyBody interval)
                 [ injectFailure $
                     BalancesOutsideAccountBalanceIntervals @era
-                      (NE.singleton accountAddr (balance, interval))
+                      (NEM.singleton accountAddr (balance, interval))
                 ]
         expectOutside drains (AccountBalanceExact zero)
         expectOutside deposits (AccountBalanceExact (balance <+> deposit))
@@ -280,7 +464,7 @@ spec = describe "ENTITIES" $ do
           )
           [ injectFailure $
               SubBalancesOutsideAccountBalanceIntervals @era
-                (NE.singleton accountAddr (balance, AccountBalanceExact zero))
+                (NEM.singleton accountAddr (balance, AccountBalanceExact zero))
           ]
         submitTx_ $ txWith drains (AccountBalanceExact balance)
 
@@ -296,7 +480,7 @@ spec = describe "ENTITIES" $ do
               (withInterval interval)
               [ injectFailure $
                   BalancesOutsideAccountBalanceIntervals @era
-                    (NE.singleton accountAddr (balance, interval))
+                    (NEM.singleton accountAddr (balance, interval))
               ]
       intervalHolds $ AccountBalanceExact balance
       intervalViolated $ AccountBalanceExact (balance <+> Coin 1)
@@ -328,10 +512,10 @@ spec = describe "ENTITIES" $ do
         submitFailingTx
           (txWithIntervals drained original)
           [ injectFailure $
-              BalancesOutsideAccountBalanceIntervals @era (NE.singleton accountAddr (zero, original))
+              BalancesOutsideAccountBalanceIntervals @era (NEM.singleton accountAddr (zero, original))
           , injectFailure $
               BalancesOutsideStartingAccountBalanceIntervals @era
-                (NE.singleton accountAddr (balance, drained))
+                (NEM.singleton accountAddr (balance, drained))
           ]
         submitTx_ $ txWithIntervals original drained
   where
@@ -343,7 +527,19 @@ spec = describe "ENTITIES" $ do
       submitAndExpireProposalToMakeReward cred
       b <- getBalance cred
       pure (ra, b, kh)
-
+    mkTxWithBatchWithdrawals :: Withdrawals -> [Withdrawals] -> Tx TopTx era
+    mkTxWithBatchWithdrawals topWdrls subs =
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL .~ topWdrls
+          & subTransactionsTxBodyL .~ OMap.fromFoldable (fmap mkSubTx subs)
+      where
+        mkSubTx :: Withdrawals -> Tx SubTx era
+        mkSubTx w = mkBasicTx (mkBasicTxBody & withdrawalsTxBodyL .~ w)
+    genCoinPairExceeding (Coin maxSum) = do
+      a <- choose (1, maxSum)
+      b <- choose (maxSum - a + 1, maxSum)
+      pure (Coin a, Coin b)
     unregisteredAccount :: ImpTestM era AccountAddress
     unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
 
@@ -358,8 +554,8 @@ spec = describe "ENTITIES" $ do
     accountBalanceIntervalCases ::
       (AccountBalanceIntervals era -> t era -> ImpTestM era ()) ->
       (Network -> NES.NonEmptySet AccountAddress -> t era) ->
-      (NE.NonEmptyMap AccountAddress (AccountBalanceInterval era) -> t era) ->
-      (NE.NonEmptyMap AccountAddress (Coin, AccountBalanceInterval era) -> t era) ->
+      (NEM.NonEmptyMap AccountAddress (AccountBalanceInterval era) -> t era) ->
+      (NEM.NonEmptyMap AccountAddress (Coin, AccountBalanceInterval era) -> t era) ->
       ImpTestM era ()
     accountBalanceIntervalCases submitFailing mkWrongNetwork mkMissingAccounts mkBalancesOutside = do
       (accountAddr, balance, _) <- setupAccountAddress
@@ -371,7 +567,7 @@ spec = describe "ENTITIES" $ do
       unregistered <- unregisteredAccount
       submitFailing
         (AccountBalanceIntervals [(unregistered, violated)])
-        (mkMissingAccounts (NE.singleton unregistered violated))
+        (mkMissingAccounts (NEM.singleton unregistered violated))
       submitFailing
         (AccountBalanceIntervals [(accountAddr, violated)])
-        (mkBalancesOutside (NE.singleton accountAddr (balance, violated)))
+        (mkBalancesOutside (NEM.singleton accountAddr (balance, violated)))

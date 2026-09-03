@@ -32,6 +32,7 @@ module Cardano.Ledger.State.Account (
   directDepositsMissingAccounts,
   withdrawalsMissingAccounts,
   removeStakePoolDelegations,
+  updateAccountBalances,
 ) where
 
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -330,43 +331,40 @@ updateAccountBalances updateBalance balanceMap =
       balanceMap
 {-# INLINE updateAccountBalances #-}
 
--- | Returns `Nothing` iff every credential targeted by the supplied
--- `DirectDeposits` is a registered account. Otherwise it returns the subset of
--- direct deposits whose target credential is not registered.
+-- | Returns `Nothing` iff every direct-deposit address is on the supplied
+-- network and its credential is registered. Otherwise returns the subset of
+-- direct deposits whose address does not resolve — either because the network
+-- id does not match, or because the credential is not registered.
 directDepositsMissingAccounts ::
   EraAccounts era =>
   DirectDeposits ->
+  Network ->
   Accounts era ->
   Maybe DirectDeposits
-directDepositsMissingAccounts (DirectDeposits dds) accounts =
-  DirectDeposits <$> missingAccounts dds accounts
+directDepositsMissingAccounts (DirectDeposits dds) network accounts
+  | Map.foldrWithKey' checkResolves True dds = Nothing
+  | otherwise = Just $ DirectDeposits $ Map.foldrWithKey' collectMissing Map.empty dds
+  where
+    isAccountAddressRegistered (AccountAddress aaNet (AccountId cred))
+      | aaNet == network = isAccountRegistered cred accounts
+      | otherwise = False
+    checkResolves addr _ acc = acc && isAccountAddressRegistered addr
+    collectMissing addr amount acc
+      | isAccountAddressRegistered addr = acc
+      | otherwise = Map.insert addr amount acc
 
--- | Returns `Nothing` iff every credential targeted by the supplied
--- `Withdrawals` is a registered account. Otherwise it returns the subset of
--- withdrawals whose target credential is not registered.
+-- | Returns `Nothing` iff every withdrawal address resolves to a registered
+-- account on the supplied network. Otherwise returns the subset of withdrawals
+-- whose address does not resolve — either because the network id does not
+-- match, or because the credential is not registered.
 withdrawalsMissingAccounts ::
   EraAccounts era =>
   Withdrawals ->
+  Network ->
   Accounts era ->
   Maybe Withdrawals
-withdrawalsMissingAccounts (Withdrawals wdrls) accounts =
-  Withdrawals <$> missingAccounts wdrls accounts
-
-missingAccounts ::
-  EraAccounts era =>
-  Map AccountAddress a ->
-  Accounts era ->
-  Maybe (Map AccountAddress a)
-missingAccounts accountAddresses accounts
-  | Map.foldrWithKey' checkRegistered True accountAddresses = Nothing
-  | otherwise = Just $ Map.foldrWithKey' collectMissing Map.empty accountAddresses
-  where
-    isRegistered (AccountAddress _ (AccountId cred)) =
-      isAccountRegistered cred accounts
-    checkRegistered addr _ acc = acc && isRegistered addr
-    collectMissing addr amount acc
-      | isRegistered addr = acc
-      | otherwise = Map.insert addr amount acc
+withdrawalsMissingAccounts withdrawals network accounts =
+  fst <$> categorizeWithdrawals (\_ _ -> True) withdrawals network accounts
 
 -- | Remove delegations of supplied credentials
 removeStakePoolDelegations ::

@@ -2,6 +2,21 @@
 
 ## 0.4.0.0
 
+* Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
+* Add `WithdrawalAccountsMissingPreBatch` constructor to `EntitiesPredFailure`
+* Rename `EntitiesPredFailure` constructors:
+  - `MissingAccountsInWithdrawals` to `WithdrawalAccountsMissing`
+  - `IncompleteWithdrawals` to `WithdrawalAmountsInexactInLegacyMode`
+  - `ExceededBalancesInWithdrawals` to `WithdrawalAmountsExceedingOriginalBalance`
+  - `WrongNetworkInWithdrawals` to `WithdrawalAddressesWithWrongNetwork`
+  - `MissingAccountsInDirectDeposits` to `DirectDepositAccountsMissing`
+  - `WrongNetworkInDirectDeposits` to `DirectDepositAddressesWithWrongNetwork`
+* Rename `SubEntitiesPredFailure` constructors:
+  - `SubMissingAccountsInWithdrawals` to `SubWithdrawalAccountsMissing`
+  - `SubMissingOriginalAccountsInWithdrawals` to `SubWithdrawalAccountsMissingPreBatch`
+  - `SubWrongNetworkInWithdrawals` to `SubWithdrawalAddressesWithWrongNetwork`
+  - `SubMissingAccountsInDirectDeposits` to `SubDirectDepositAccountsMissing`
+  - `SubWrongNetworkInDirectDeposits` to `SubDirectDepositAddressesWithWrongNetwork`
 * Enforce `accountBalanceIntervals` in `ENTITIES` and `SUBENTITIES`, and `startingAccountBalanceIntervals` in `ENTITIES`:
   - Add `validateAccountBalanceIntervals` and `validateStartingAccountBalanceIntervals`
   - Add `WrongNetworkInAccountBalanceIntervals`, `MissingAccountsInAccountBalanceIntervals`, and `BalancesOutsideAccountBalanceIntervals` to `EntitiesPredFailure`
@@ -44,7 +59,7 @@
   - Add `ppMaxPledgeLeverageL` and `ppuMaxPledgeLeverageL`
 * Add `validateMissingAccountsInDirectDeposits`
 * Remove `SubExceededBalancesInWithdrawals` constructor from `SubEntitiesPredFailure`
-* Add `SubMissingOriginalAccountsInWithdrawals` constructor to `SubEntitiesPredFailure`
+* Add `SubWithdrawalAccountsMissingPreBatch` constructor to `SubEntitiesPredFailure`
 * Add `SubEntitiesEnv` and use it as `Environment` in the `SUBENTITIES` `STS` instance
 * Change the `STS` `Signal` of `SUBENTITIES` to `Tx SubTx era`
 * Add `sleOriginalAccounts` to `SubLedgerEnv`
@@ -57,21 +72,12 @@
   - Add `hkdMinPoolMarginL` to `DijkstraEraPParams`
   - Add `ppMinPoolMarginL` and `ppuMinPoolMarginL`
   - Override `ppMinPoolMarginG` in `EraPParams` instance
-* Add the nine Leios protocol parameters of CIP-164:
-  - Add `dppLeiosAnnouncementPeriodLength`, `dppLeiosVotePeriodLength`,
-    `dppLeiosDiffusionPeriodLength`, `dppLeiosCommitteeSize`, `dppLeiosQuorumStakeThreshold`,
-    `dppMaxEndorserBlockReferencesSize`, `dppMaxEndorserBlockTxsSize`,
-    `dppMaxEndorserBlockExUnits`, `dppMaxRefScriptSizePerEndorserBlock` to `DijkstraPParams`
-  - Add corresponding fields to `UpgradeDijkstraPParams`
-  - Add corresponding HKD lenses, pp/ppu lenses to `DijkstraEraPParams`
 
 ### `cddl`
 
-* Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
 * Add `HuddleRule "vrf_cert"` instance
-* Add Leios protocol parameter entries (tags 40-48) in `protocol_param_update`
 * Add `max_pledge_leverage` rule and its entry in `protocol_param_update`
 
 ### `testlib`
