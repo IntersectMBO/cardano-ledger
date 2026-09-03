@@ -14,6 +14,8 @@ module Cardano.Ledger.Dijkstra.UTxO (
   dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
+  getDijkstraWitsVKeyNeeded,
+  voterWitnessesExcept,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
   localProducedValue,
@@ -33,6 +35,7 @@ import Cardano.Ledger.Babbage.UTxO (
  )
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.Governance (Voter (..), unVotingProcedures)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   getConwayMinFeeTxUtxo,
@@ -40,15 +43,17 @@ import Cardano.Ledger.Conway.UTxO (
   getConwayWitsVKeyNeeded,
   txNonDistinctRefScriptsSize,
  )
-import Cardano.Ledger.Credential (Credential, credScriptHash)
+import Cardano.Ledger.Credential (Credential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..))
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
+import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -56,6 +61,7 @@ import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro (SimpleGetter, to, (^.))
 import Lens.Micro.Extras (view)
 
@@ -160,6 +166,39 @@ instance EraUTxO DijkstraEra where
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+
+-- | Like 'getConwayWitsVKeyNeeded', except that SPO votes covered by a
+-- pool-vote witness contribute no cold-key hash: they are authorized by the
+-- pool's registered voting key instead, checked in the UTXOW rule. The waiver
+-- is applied at the vote's contribution and never by subtraction, so a pool
+-- cold key that is also needed for other reasons stays required.
+getDijkstraWitsVKeyNeeded ::
+  (EraTx era, ConwayEraTxBody era) =>
+  Set (KeyHash StakePool) ->
+  UTxO era ->
+  TxBody l era ->
+  Set (KeyHash Witness)
+getDijkstraWitsVKeyNeeded blsCovered utxo txBody =
+  getShelleyWitsVKeyNeededNoGov utxo txBody
+    `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
+    `Set.union` voterWitnessesExcept blsCovered txBody
+
+voterWitnessesExcept ::
+  ConwayEraTxBody era =>
+  Set (KeyHash StakePool) ->
+  TxBody l era ->
+  Set (KeyHash Witness)
+voterWitnessesExcept blsCovered txb =
+  Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
+  where
+    accum voter _ khs =
+      maybe khs (`Set.insert` khs) $
+        case voter of
+          CommitteeVoter cred -> credKeyHashWitness cred
+          DRepVoter cred -> credKeyHashWitness cred
+          StakePoolVoter poolId
+            | poolId `Set.member` blsCovered -> Nothing
+            | otherwise -> Just $ asWitness poolId
 
 -- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
 -- scripts from all subtransactions.

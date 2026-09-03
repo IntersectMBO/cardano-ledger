@@ -103,6 +103,7 @@ import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
+import Cardano.Ledger.Dijkstra.TxWits (DijkstraTxWits (..))
 import Cardano.Ledger.Internal.Era (EraHasName (..))
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
@@ -648,12 +649,13 @@ instance EraApi DijkstraEra where
             }
 
   upgradeTxWits atw =
-    AlonzoTxWits
-      { txwitsVKey = txwitsVKey atw
-      , txwitsBoot = txwitsBoot atw
-      , txscripts = upgradeScript <$> txscripts atw
-      , txdats = upgradeTxDats (txdats atw)
-      , txrdmrs = upgradeRedeemers (txrdmrs atw)
+    DijkstraTxWits
+      { dtwVKeyWits = txwitsVKey atw
+      , dtwBootWits = txwitsBoot atw
+      , dtwScriptWits = upgradeScript <$> txscripts atw
+      , dtwDats = upgradeTxDats (txdats atw)
+      , dtwRdmrs = upgradeRedeemers (txrdmrs atw)
+      , dtwPoolVoteWits = mempty
       }
 
   upgradeTxAuxData = translateAlonzoTxAuxData

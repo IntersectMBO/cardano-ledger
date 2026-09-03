@@ -859,7 +859,20 @@ transaction_witness_set =
   , ? 5 : redeemers
   , ? 6 : nonempty_set<plutus_v2_script>
   , ? 7 : nonempty_set<plutus_v3_script>
+  ; 8 is left unallocated for plutus_v4_script
+  , ? 9 : pool_vote_witnesses
   }
+
+; Pool-vote witnesses authorize SPO governance votes with the pool's
+; registered Leios voting key instead of the pool cold key (CIP-0175
+; stop-gap), keyed by the voting pool.
+pool_vote_witnesses = {+ pool_keyhash => pool_vote_witness}
+
+; Tagged by authorization scheme: 0 is a BLS signature by the pool's
+; registered voting key over the transaction body hash.
+pool_vote_witness = [0, bls_signature]
+
+bls_signature = bytes .size 48
 
 vkeywitness = [vkey, signature]
 

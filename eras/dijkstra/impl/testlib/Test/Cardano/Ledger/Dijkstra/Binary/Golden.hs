@@ -221,7 +221,7 @@ goldenDuplicatePlutusScriptsDisallowed version slang =
       version
       (witsDuplicatePlutus @era slang)
       ( DecoderErrorDeserialiseFailure
-          "Annotator (MemoBytes (AlonzoTxWitsRaw DijkstraEra))"
+          "Annotator (MemoBytes (DijkstraTxWitsRaw DijkstraEra))"
           ( DeserialiseFailure
               22
               "Final number of elements: 1 does not match the total count that was decoded: 2"

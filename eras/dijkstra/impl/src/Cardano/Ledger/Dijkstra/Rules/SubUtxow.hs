@@ -52,20 +52,25 @@ import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
   validateGuardDatums,
+  validatePoolVoteWits,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
+import Cardano.Ledger.Dijkstra.TxWits (DijkstraEraTxWits (..))
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), getDijkstraWitsVKeyNeeded)
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.Slot (epochInfoEpoch)
+import Cardano.Ledger.State (EraCertState, EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -114,6 +119,14 @@ data DijkstraSubUtxowPredFailure era
       (StrictMaybe ByteString)
   | -- | Guard credentials with incorrect datum presence in requiredTopLevelGuards
     SubMalformedGuardDatums (NonEmptySet (Credential Guard))
+  | -- | Pool-vote witnesses for pools that cast no SPO vote in this transaction
+    SubExtraneousPoolVoteWitness (NonEmptySet (KeyHash StakePool))
+  | -- | Pool-vote witnesses for pools without a registered voting key
+    SubPoolVoteKeyNotRegistered (NonEmptySet (KeyHash StakePool))
+  | -- | Pool-vote witnesses whose registered voting key has aged out
+    SubPoolVoteKeyExpired (NonEmptySet (KeyHash StakePool))
+  | -- | Pool-vote witnesses whose signature does not verify
+    SubInvalidPoolVoteWitness (NonEmptySet (KeyHash StakePool))
   deriving (Generic)
 
 deriving stock instance
@@ -190,6 +203,8 @@ instance
   , ConwayEraGov era
   , ConwayEraTxBody era
   , DijkstraEraTxBody era
+  , DijkstraEraTxWits era
+  , EraCertState era
   , EraPlutusContext era
   , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
@@ -216,7 +231,11 @@ dijkstraSubUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
+  , ConwayEraGov era
   , DijkstraEraTxBody era
+  , DijkstraEraTxWits era
+  , EraCertState era
+  , EraPlutusContext era
   , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
   , EraRule "SUBUTXOW" era ~ SUBUTXOW era
@@ -229,7 +248,7 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(SubUtxoEnv _ pp certState originalUtxo _), utxoState, stAnnTx) <-
+  TRC (env@(SubUtxoEnv slot pp certState originalUtxo _), utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -245,8 +264,21 @@ dijkstraSubUtxowTransition = do
   {- ∀[ s ∈ p1ScriptsNeeded ] validP1Script vKeyHashesProvided txVldt s -}
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
-  {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
+  {- vKeyHashesNeeded ⊆ vKeyHashesProvided, with votes covered by a
+     pool-vote witness contributing no cold-key requirement -}
+  let blsCovered = Map.keysSet (tx ^. witsTxL . poolVoteTxWitsL)
+      witsVKeyNeeded = getDijkstraWitsVKeyNeeded blsCovered originalUtxo txBody
+  runTest $
+    failureOnNonEmptySet (witsVKeyNeeded `Set.difference` witsKeyHashes) MissingVKeyWitnessesUTXOW
+
+  -- Pool-vote witnesses authorize the covered SPO votes with the pool's
+  -- registered voting key (CIP-0175 stop-gap).
+  (curEpoch, maxKeyAge) <- liftSTS $ do
+    ei <- asks epochInfoPure
+    let e = epochInfoEpoch ei slot
+    age <- asks (`maxKeyAgeEpochs` e)
+    pure (e, age)
+  runTest $ validatePoolVoteWits curEpoch maxKeyAge certState tx
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx
@@ -306,6 +338,10 @@ instance
       SubMalformedReferenceScripts x -> Sum SubMalformedReferenceScripts 15 !> To x
       SubScriptIntegrityHashMismatch x y -> Sum SubScriptIntegrityHashMismatch 16 !> To x !> To y
       SubMalformedGuardDatums x -> Sum SubMalformedGuardDatums 17 !> To x
+      SubExtraneousPoolVoteWitness x -> Sum SubExtraneousPoolVoteWitness 18 !> To x
+      SubPoolVoteKeyNotRegistered x -> Sum SubPoolVoteKeyNotRegistered 19 !> To x
+      SubPoolVoteKeyExpired x -> Sum SubPoolVoteKeyExpired 20 !> To x
+      SubInvalidPoolVoteWitness x -> Sum SubInvalidPoolVoteWitness 21 !> To x
 
 instance
   ( ConwayEraScript era
@@ -332,6 +368,10 @@ instance
     15 -> SumD SubMalformedReferenceScripts <! From
     16 -> SumD SubScriptIntegrityHashMismatch <! From <! From
     17 -> SumD SubMalformedGuardDatums <! From
+    18 -> SumD SubExtraneousPoolVoteWitness <! From
+    19 -> SumD SubPoolVoteKeyNotRegistered <! From
+    20 -> SumD SubPoolVoteKeyExpired <! From
+    21 -> SumD SubInvalidPoolVoteWitness <! From
     n -> Invalid n
 
 dijkstraUtxowToDijkstraSubUtxowPredFailure ::
@@ -362,3 +402,7 @@ dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
   ScriptIntegrityHashMismatch mm f -> SubScriptIntegrityHashMismatch mm f
   MissingRequiredGuards _ -> error "Impossible: `MissingRequiredGuards` for SUBUTXOW"
   MalformedGuardDatums x -> SubMalformedGuardDatums x
+  ExtraneousPoolVoteWitness x -> SubExtraneousPoolVoteWitness x
+  PoolVoteKeyNotRegistered x -> SubPoolVoteKeyNotRegistered x
+  PoolVoteKeyExpired x -> SubPoolVoteKeyExpired x
+  InvalidPoolVoteWitness x -> SubInvalidPoolVoteWitness x

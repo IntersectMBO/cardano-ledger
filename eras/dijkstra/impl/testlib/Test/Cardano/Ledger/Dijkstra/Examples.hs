@@ -73,7 +73,6 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuMaxEndorserBlockExUnitsL,
   ppuMaxEndorserBlockReferencesSizeL,
   ppuMaxEndorserBlockTxsSizeL,
-  ppuMaxKeyAgeEpochsL,
   ppuMaxRefScriptSizePerBlockL,
   ppuMaxRefScriptSizePerEndorserBlockL,
   ppuMaxRefScriptSizePerTxL,

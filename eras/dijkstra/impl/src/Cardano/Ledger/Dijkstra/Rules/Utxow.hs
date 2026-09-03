@@ -26,9 +26,11 @@ module Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
   validateGuardDatums,
+  validatePoolVoteWits,
 ) where
 
-import Cardano.Crypto.Hash (ByteString)
+import Cardano.Crypto.DSIGN (verifyDSIGN)
+import Cardano.Crypto.Hash (ByteString, hashToBytes)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -40,10 +42,15 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (
+  EpochInterval,
   Mismatch (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
+  addEpochInterval,
+  epochInfoPure,
+  maxKeyAgeEpochs,
+  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -55,19 +62,27 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (Voter (..), unVotingProcedures)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
+import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
+import Cardano.Ledger.Dijkstra.TxWits (
+  DijkstraEraTxWits (..),
+  PoolVoteWitness (..),
+  poolVoteSignContext,
+ )
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), getDijkstraWitsVKeyNeeded)
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.Slot (EpochNo, epochInfoEpoch)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -75,8 +90,11 @@ import Control.State.Transition.Extended (
   TransitionRule,
   failureOnNonEmptySet,
   judgmentContext,
+  liftSTS,
   trans,
  )
+import Data.Either (isRight)
+import Data.Foldable (sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -140,6 +158,14 @@ data DijkstraUtxowPredFailure era
     MissingRequiredGuards (NonEmptySet (Credential Guard))
   | -- | Guard credentials with incorrect datum presence in requiredTopLevelGuards
     MalformedGuardDatums (NonEmptySet (Credential Guard))
+  | -- | Pool-vote witnesses for pools that cast no SPO vote in this transaction
+    ExtraneousPoolVoteWitness (NonEmptySet (KeyHash StakePool))
+  | -- | Pool-vote witnesses for pools without a registered voting key
+    PoolVoteKeyNotRegistered (NonEmptySet (KeyHash StakePool))
+  | -- | Pool-vote witnesses whose registered voting key has aged out
+    PoolVoteKeyExpired (NonEmptySet (KeyHash StakePool))
+  | -- | Pool-vote witnesses whose signature does not verify
+    InvalidPoolVoteWitness (NonEmptySet (KeyHash StakePool))
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" DijkstraEra = DijkstraUtxowPredFailure DijkstraEra
@@ -218,12 +244,17 @@ dijkstraUtxowTransition ::
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
   , DijkstraEraTxBody era
+  , DijkstraEraTxWits era
+  , EraCertState era
+  , Eq (PredicateFailure (EraRule "UTXOS" era))
+  , Show (PredicateFailure (EraRule "UTXOS" era))
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "UTXOW" era ~ UTXOW era
   , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Alonzo.AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" Babbage.BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" Conway.ConwayUtxowPredFailure era
   , InjectRuleFailure "UTXOW" DijkstraUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (UTXOW era)
@@ -289,8 +320,21 @@ dijkstraUtxowTransition = do
   {- ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
-  {- witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes originalCertState originalUtxo txBody
+  {- witsVKeyNeeded utxo tx ⊆ witsKeyHashes, with votes covered by a
+     pool-vote witness contributing no cold-key requirement -}
+  let blsCovered = Map.keysSet (tx ^. witsTxL . poolVoteTxWitsL)
+      witsVKeyNeeded = getDijkstraWitsVKeyNeeded blsCovered originalUtxo txBody
+  runTest $
+    failureOnNonEmptySet (witsVKeyNeeded `Set.difference` witsKeyHashes) MissingVKeyWitnessesUTXOW
+
+  -- Pool-vote witnesses authorize the covered SPO votes with the pool's
+  -- registered voting key (CIP-0175 stop-gap).
+  (curEpoch, maxKeyAge) <- liftSTS $ do
+    ei <- asks epochInfoPure
+    let e = epochInfoEpoch ei slot
+    age <- asks (`maxKeyAgeEpochs` e)
+    pure (e, age)
+  runTest $ validatePoolVoteWits curEpoch maxKeyAge originalCertState tx
 
   -- check metadata hash
   {- ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad) -}
@@ -325,6 +369,8 @@ instance
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
   , DijkstraEraTxBody era
+  , DijkstraEraTxWits era
+  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "UTXOW" era ~ UTXOW era
@@ -395,6 +441,10 @@ instance
       ScriptIntegrityHashMismatch x y -> Sum ScriptIntegrityHashMismatch 18 !> To x !> To y
       MissingRequiredGuards x -> Sum MissingRequiredGuards 19 !> To x
       MalformedGuardDatums x -> Sum MalformedGuardDatums 20 !> To x
+      ExtraneousPoolVoteWitness x -> Sum ExtraneousPoolVoteWitness 21 !> To x
+      PoolVoteKeyNotRegistered x -> Sum PoolVoteKeyNotRegistered 22 !> To x
+      PoolVoteKeyExpired x -> Sum PoolVoteKeyExpired 23 !> To x
+      InvalidPoolVoteWitness x -> Sum InvalidPoolVoteWitness 24 !> To x
 
 instance
   ( ConwayEraScript era
@@ -424,6 +474,10 @@ instance
     18 -> SumD ScriptIntegrityHashMismatch <! From <! From
     19 -> SumD MissingRequiredGuards <! From
     20 -> SumD MalformedGuardDatums <! From
+    21 -> SumD ExtraneousPoolVoteWitness <! From
+    22 -> SumD PoolVoteKeyNotRegistered <! From
+    23 -> SumD PoolVoteKeyExpired <! From
+    24 -> SumD InvalidPoolVoteWitness <! From
     n -> Invalid n
 
 -- =====================================================
@@ -489,3 +543,49 @@ validateGuardDatums (ScriptsProvided scripts) txBody =
                     SJust _ -> acc
                     SNothing -> Set.insert cred acc
             Nothing -> acc
+
+-- | Check the pool-vote witnesses (CIP-0175 stop-gap): every entry must cover
+-- an SPO vote of this transaction and carry a valid signature by the pool's
+-- registered, unexpired voting key over the transaction body hash under
+-- 'poolVoteSignContext'. Shared with the sub-transaction SUBUTXOW rule.
+validatePoolVoteWits ::
+  forall era l.
+  ( EraTx era
+  , ConwayEraTxBody era
+  , DijkstraEraTxWits era
+  , EraCertState era
+  ) =>
+  EpochNo ->
+  EpochInterval ->
+  CertState era ->
+  Tx l era ->
+  Test (DijkstraUtxowPredFailure era)
+validatePoolVoteWits curEpoch maxKeyAge certState tx =
+  sequenceA_
+    [ failureOnNonEmptySet extraneous ExtraneousPoolVoteWitness
+    , failureOnNonEmptySet notRegistered PoolVoteKeyNotRegistered
+    , failureOnNonEmptySet expired PoolVoteKeyExpired
+    , failureOnNonEmptySet invalid InvalidPoolVoteWitness
+    ]
+  where
+    txBody = tx ^. bodyTxL
+    poolVoteWits = tx ^. witsTxL . poolVoteTxWitsL
+    spoVoters =
+      Set.fromList
+        [ poolId
+        | StakePoolVoter poolId <-
+            Map.keys (unVotingProcedures (txBody ^. votingProceduresTxBodyL))
+        ]
+    extraneous = Map.keysSet poolVoteWits `Set.difference` spoVoters
+    txBodyHash :: ByteString
+    txBodyHash = hashToBytes $ extractHash $ hashAnnotated @_ @EraIndependentTxBody txBody
+    pools = certState ^. certPStateL . psStakePoolsL
+    (notRegistered, expired, invalid) =
+      Map.foldrWithKey classify (mempty, mempty, mempty) poolVoteWits
+    classify poolId (BlsPoolVoteWitness sig) acc@(nr, ex, inv) =
+      case Map.lookup poolId pools >>= strictMaybeToMaybe . spsBlsKey of
+        Nothing -> (Set.insert poolId nr, ex, inv)
+        Just (BlsKeyState key registeredIn)
+          | curEpoch >= addEpochInterval registeredIn maxKeyAge -> (nr, Set.insert poolId ex, inv)
+          | isRight (verifyDSIGN poolVoteSignContext (blsPubKey key) txBodyHash sig) -> acc
+          | otherwise -> (nr, ex, Set.insert poolId inv)

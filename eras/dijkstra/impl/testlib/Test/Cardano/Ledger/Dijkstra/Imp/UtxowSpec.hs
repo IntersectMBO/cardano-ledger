@@ -3,16 +3,33 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 
+import Cardano.Crypto.DSIGN (
+  DSIGNAggregatable (createPossessionProofDSIGN),
+  deriveVerKeyDSIGN,
+  signDSIGN,
+ )
+import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
+import Cardano.Crypto.Hash (hashToBytes)
+import Cardano.Crypto.Leios (LeiosSigningKey)
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals (..), Inject (..), StrictMaybe (..))
+import Cardano.Ledger.Conway.Governance (
+  GovAction (..),
+  GovActionState (..),
+  Vote (..),
+  Voter (..),
+  VotingProcedure (..),
+  VotingProcedures (..),
+ )
 import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
@@ -20,7 +37,14 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.Scripts
+import Cardano.Ledger.Dijkstra.TxCert (pattern RegBlsKeyTxCert)
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
+import Cardano.Ledger.Dijkstra.TxWits (
+  DijkstraEraTxWits (..),
+  PoolVoteWitness (..),
+  poolVoteSignContext,
+ )
+import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
   Data,
   ExUnits (..),
@@ -30,10 +54,15 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.State (BlsKey (..))
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
+import Lens.Micro.Mtl ((%=))
+import Test.Cardano.Crypto.Leios.Gen (genLeiosSigningKey)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -45,6 +74,88 @@ spec ::
   DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
+  describe "Pool-vote witnesses" $ do
+    let voteTx spoKh gaId =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . votingProceduresTxBodyL
+              .~ VotingProcedures
+                ( Map.singleton
+                    (StakePoolVoter spoKh)
+                    (Map.singleton gaId (VotingProcedure VoteYes SNothing))
+                )
+        -- The BLS signature covers the final body hash, so it is attached (and
+        -- the auto-signed cold-key witness dropped) after fixup.
+        withPoolVoteWitness spoKh blsSk =
+          withPostFixup $ \tx -> do
+            let msg = hashToBytes . extractHash . hashAnnotated @_ @EraIndependentTxBody $ tx ^. bodyTxL
+                wit = BlsPoolVoteWitness $ signDSIGN poolVoteSignContext msg blsSk
+            pure $
+              tx
+                & witsTxL . poolVoteTxWitsL %~ Map.insert spoKh wit
+                & witsTxL . addrTxWitsL %~ Set.filter ((/= asWitness spoKh) . witVKeyHash)
+        setupPoolWithVotingKey = do
+          spoKh <- freshKeyHash
+          registerPool spoKh
+          blsSk :: LeiosSigningKey <- liftGen genLeiosSigningKey
+          let blsKey =
+                BlsKey (deriveVerKeyDSIGN blsSk) (createPossessionProofDSIGN minSigPoPDST blsSk)
+          submitTx_ $
+            mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [RegBlsKeyTxCert spoKh blsKey])
+          pure (spoKh, blsSk)
+
+    it "BLS witness authorizes an SPO vote without the cold key" $ do
+      (spoKh, blsSk) <- setupPoolWithVotingKey
+      gaId <- mkProposal InfoAction >>= submitProposal
+      withPoolVoteWitness spoKh blsSk $ submitTx_ $ voteTx spoKh gaId
+      gas <- getGovActionState gaId
+      gasStakePoolVotes gas `shouldBe` Map.singleton spoKh VoteYes
+
+    it "A pool-vote witness with an invalid signature is rejected" $ do
+      (spoKh, blsSk) <- setupPoolWithVotingKey
+      gaId <- mkProposal InfoAction >>= submitProposal
+      let badWit =
+            BlsPoolVoteWitness $
+              signDSIGN poolVoteSignContext ("not-the-body-hash" :: BS.ByteString) blsSk
+      withPostFixup
+        ( \tx ->
+            pure $
+              tx
+                & witsTxL . poolVoteTxWitsL %~ Map.insert spoKh badWit
+                & witsTxL . addrTxWitsL %~ Set.filter ((/= asWitness spoKh) . witVKeyHash)
+        )
+        $ submitFailingTx
+          (voteTx spoKh gaId)
+          [injectFailure $ InvalidPoolVoteWitness $ NES.singleton spoKh]
+
+    it "A pool-vote witness without a matching vote is rejected" $ do
+      (spoKh, blsSk) <- setupPoolWithVotingKey
+      withPoolVoteWitness spoKh blsSk $
+        submitFailingTx
+          (mkBasicTx mkBasicTxBody)
+          [injectFailure $ ExtraneousPoolVoteWitness $ NES.singleton spoKh]
+
+    it "A pool-vote witness without a registered voting key is rejected" $ do
+      spoKh <- freshKeyHash
+      registerPool spoKh
+      blsSk :: LeiosSigningKey <- liftGen genLeiosSigningKey
+      gaId <- mkProposal InfoAction >>= submitProposal
+      withPoolVoteWitness spoKh blsSk $
+        submitFailingTx
+          (voteTx spoKh gaId)
+          [injectFailure $ PoolVoteKeyNotRegistered $ NES.singleton spoKh]
+
+    it "A pool-vote witness whose voting key aged out is rejected" $ do
+      -- Shrink the KES setup so `maxKeyAgeEpochs` derives to 4 epochs
+      -- instead of the mainnet-like 1862 of the Imp genesis.
+      impGlobalsL %= \g -> g {maxKESEvo = 2, slotsPerKESPeriod = 4320}
+      (spoKh, blsSk) <- setupPoolWithVotingKey
+      passNEpochs 4
+      gaId <- mkProposal InfoAction >>= submitProposal
+      withPoolVoteWitness spoKh blsSk $
+        submitFailingTx
+          (voteTx spoKh gaId)
+          [injectFailure $ PoolVoteKeyExpired $ NES.singleton spoKh]
+
   describe "RequireGuard native scripts" $ do
     it "Spending inputs locked by script requiring a keyhash guard" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash
