@@ -346,7 +346,7 @@ instance
           <> T.intercalate ", " (map txInToText (Set.toList txIns))
 
 instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
-  toPlutusTxCert _ _ = pure . Alonzo.transTxCert
+  toPlutusTxCert _ _ = Alonzo.transTxCert
 
   toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
@@ -388,7 +388,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
   toPlutusTxInInfo _ = transTxInInfoV1
 
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
-  toPlutusTxCert _ _ = pure . Alonzo.transTxCert
+  toPlutusTxCert _ _ = Alonzo.transTxCert
 
   toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 

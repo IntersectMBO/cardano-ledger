@@ -40,7 +40,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
@@ -273,10 +272,10 @@ instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
 
 instance Inject (Babbage.BabbageContextError era) (DijkstraContextError era) where
-  inject = ConwayContextError . inject
+  inject = ConwayContextError . Conway.BabbageContextError
 
 instance Inject (Alonzo.AlonzoContextError era) (DijkstraContextError era) where
-  inject = ConwayContextError . inject
+  inject = ConwayContextError . Conway.BabbageContextError . Babbage.AlonzoContextError
 
 instance EraPlutusContext DijkstraEra where
   type ContextError DijkstraEra = DijkstraContextError DijkstraEra
@@ -315,7 +314,7 @@ instance EraPlutusContext DijkstraEra where
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV1V2 proxy (ltiProtVer lti)
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
@@ -354,7 +353,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
-  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   ) =>
   TxCert era ->
   Either (ContextError era) PV1.DCert
@@ -372,12 +371,12 @@ transTxCertV1V2 = \case
         (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
-  txCert -> Left $ inject $ CertificateNotSupported txCert
+  txCert -> Left $ inject $ Alonzo.CertificateNotSupported txCert
 
 instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV1V2 proxy (ltiProtVer lti)
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
@@ -649,7 +648,7 @@ transTxOutV4 ::
   Either (ContextError era) PV4.TxOut
 transTxOutV4 txOutSource txOut = do
   let
-    val = transValue $ txOut ^. valueTxOutL
+    val = Alonzo.transValue $ txOut ^. valueTxOutL
     referenceScript = Babbage.transReferenceScript $ txOut ^. referenceScriptTxOutL
     datum =
       case txOut ^. datumTxOutF of
@@ -836,7 +835,7 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
   case plutusPurpose of
     SpendingPurpose (AsIxItem _ (TxIn txId (TxIx ix))) ->
       pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
-    MintingPurpose (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
+    MintingPurpose (AsIxItem _ pId) -> pure . PV4.Minting sh $ Alonzo.transPolicyID pId
     CertifyingPurpose (AsIxItem ix cert) ->
       PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
     WithdrawingPurpose (AsIxItem _ (AccountAddress _ (AccountId c))) ->

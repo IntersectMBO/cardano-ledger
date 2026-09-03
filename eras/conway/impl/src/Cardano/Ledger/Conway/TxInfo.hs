@@ -38,7 +38,6 @@ module Cardano.Ledger.Conway.TxInfo (
   transVoter,
   toPlutusV3Args,
   transTxCertV1V2,
-  transPlutusPurposeV1V2,
   transPlutusPurposeV3,
   guardConwayFeaturesForPlutusV1V2,
   transTxInInfoV3,
@@ -51,14 +50,13 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
-  PlutusTxCert,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
   lookupTxInfoResultImpossible,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -178,6 +176,7 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
 
+-- TODO: Remove `CertificateNotSupported` and `PlutusPurposeNotSupported` once in Dijkstra era
 data ConwayContextError era
   = BabbageContextError (Babbage.BabbageContextError era)
   | CertificateNotSupported (TxCert era)
@@ -220,7 +219,10 @@ instance Inject (Babbage.BabbageContextError era) (ConwayContextError era) where
   inject = BabbageContextError
 
 instance Inject (Alonzo.AlonzoContextError era) (ConwayContextError era) where
-  inject = BabbageContextError . inject
+  inject = \case
+    Alonzo.CertificateNotSupported txCert -> CertificateNotSupported txCert
+    Alonzo.PlutusPurposeNotSupported purpose -> PlutusPurposeNotSupported purpose
+    alonzoContextError -> BabbageContextError $ inject alonzoContextError
 
 instance
   ( EraPParams era
@@ -239,7 +241,7 @@ instance
   EncCBOR (ConwayContextError era)
   where
   encCBOR = \case
-    -- We start at tag 8, just in case to avoid clashes with previous eras.
+    -- We start at tag 8, to disambiguate with previous eras, but it is not necessary.
     BabbageContextError babbageContextError ->
       encode $ Sum BabbageContextError 8 !> To babbageContextError
     CertificateNotSupported txCert ->
@@ -395,7 +397,7 @@ guardConwayFeaturesForPlutusV1V2 tx = do
 transTxCertV1V2 ::
   ( ShelleyEraTxCert era
   , ConwayEraTxCert era
-  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   ) =>
   TxCert era ->
   Either (ContextError era) PV1.DCert
@@ -404,14 +406,12 @@ transTxCertV1V2 = \case
     Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
   UnRegDepositTxCert stakeCred _refund ->
     Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
-  txCert
-    | Just dCert <- Alonzo.transTxCertCommon txCert -> Right dCert
-    | otherwise -> Left $ inject $ CertificateNotSupported txCert
+  txCert -> Alonzo.transTxCertCommon txCert
 
 instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy lti = transPlutusPurposeV1V2 proxy (ltiProtVer lti)
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -451,7 +451,7 @@ instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
 instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy lti = transPlutusPurposeV1V2 proxy (ltiProtVer lti)
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -639,7 +639,7 @@ transDRep = \case
 transPlutusPurposeV3 ::
   forall era proxy.
   ( ConwayEraPlutusTxInfo 'PlutusV3 era
-  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV3 ->
   ProtVer ->
@@ -654,7 +654,8 @@ transPlutusPurposeV3 proxy pv = \case
   VotingPurpose (AsIxItem _ voter) -> pure $ PV3.Voting (transVoter voter)
   ProposingPurpose (AsIxItem ix proposal) ->
     pure $ PV3.Proposing (toInteger ix) (transProposal proxy proposal)
-  purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
+  purpose ->
+    Left $ inject $ Alonzo.PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
 
 transVoter :: Voter -> PV3.Voter
 transVoter = \case
@@ -732,23 +733,6 @@ transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAc
     , PV3.ppReturnAddr = transAccountAddress pProcReturnAddr
     , PV3.ppGovernanceAction = transGovAction proxy pProcGovAction
     }
-
-transPlutusPurposeV1V2 ::
-  forall l era proxy.
-  ( PlutusTxCert l ~ PV2.DCert
-  , EraPlutusTxInfo l era
-  , Inject (ConwayContextError era) (ContextError era)
-  ) =>
-  proxy l ->
-  ProtVer ->
-  PlutusPurpose AsIxItem era ->
-  Either (ContextError era) PV2.ScriptPurpose
-transPlutusPurposeV1V2 proxy pv = \case
-  SpendingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending asIxItem
-  MintingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting asIxItem
-  CertifyingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying asIxItem
-  WithdrawingPurpose asIxItem -> Alonzo.transPlutusPurpose proxy pv $ AlonzoWithdrawing asIxItem
-  purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =

@@ -52,7 +52,6 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoPlutusPurpose (..),
   PlutusScript (..),
   toAsItem,
   toAsPurpose,
@@ -136,7 +135,7 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
           }
 
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
-  toPlutusTxCert _ _ = pure . transTxCert
+  toPlutusTxCert _ _ = transTxCert
 
   toPlutusScriptPurpose proxy lti = transPlutusPurpose proxy (ltiProtVer lti)
 
@@ -410,43 +409,53 @@ transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
 
-transTxCert :: (ShelleyEraTxCert era, AtMostEra "Babbage" era) => TxCert era -> PV1.DCert
-transTxCert txCert =
-  case transTxCertCommon txCert of
-    Just cert -> cert
-    Nothing ->
-      case txCert of
-        GenesisDelegTxCert {} -> PV1.DCertGenesis
-        MirTxCert {} -> PV1.DCertMir
-        _ -> error "Impossible: All certificates should have been accounted for"
+transTxCert ::
+  ( ShelleyEraTxCert era
+  , AtMostEra "Babbage" era
+  , Inject (AlonzoContextError era) (ContextError era)
+  ) =>
+  TxCert era -> Either (ContextError era) PV1.DCert
+transTxCert = \case
+  GenesisDelegTxCert {} -> Right PV1.DCertGenesis
+  MirTxCert {} -> Right PV1.DCertMir
+  txCert -> transTxCertCommon txCert
 
 -- | Just like `transTxCert`, but do not translate certificates that were deprecated in Conway
-transTxCertCommon :: ShelleyEraTxCert era => TxCert era -> Maybe PV1.DCert
+transTxCertCommon ::
+  ( ShelleyEraTxCert era
+  , Inject (AlonzoContextError era) (ContextError era)
+  ) =>
+  TxCert era -> Either (ContextError era) PV1.DCert
 transTxCertCommon = \case
   RegTxCert stakeCred ->
-    Just $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+    Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
   UnRegTxCert stakeCred ->
-    Just $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+    Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegStakeTxCert stakeCred keyHash ->
-    Just $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
+    Right $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
   RegPoolTxCert (StakePoolParams {sppId, sppVrf}) ->
-    Just $
+    Right $
       PV1.DCertPoolRegister
         (transKeyHash sppId)
         (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
-    Just $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
-  _ -> Nothing
+    Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
+  txCert -> Left $ inject $ CertificateNotSupported txCert
 
 transPlutusPurpose ::
-  (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
+  forall l era proxy.
+  ( PlutusTxCert l ~ PV1.DCert
+  , EraPlutusTxInfo l era
+  , Inject (AlonzoContextError era) (ContextError era)
+  ) =>
   proxy l ->
   ProtVer ->
-  AlonzoPlutusPurpose AsIxItem era ->
+  PlutusPurpose AsIxItem era ->
   Either (ContextError era) PV1.ScriptPurpose
 transPlutusPurpose proxy pv = \case
-  AlonzoSpending (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
-  AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
-  AlonzoCertifying (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
-  AlonzoWithdrawing (AsIxItem _ accountAddress) ->
+  SpendingPurpose (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
+  MintingPurpose (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
+  CertifyingPurpose (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
+  WithdrawingPurpose (AsIxItem _ accountAddress) ->
     pure $ PV1.Rewarding (PV1.StakingHash (transAccountAddress accountAddress))
+  purpose -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem purpose
