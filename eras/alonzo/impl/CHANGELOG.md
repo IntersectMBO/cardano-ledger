@@ -15,6 +15,7 @@
 
 ### `testlib`
 
+* Add `Serialise` instance for `PV4.POSIXTimeRange`
 * Add `Serialise` instances for `PlutusLedgerApi.V4` script context types
 * Change `TxInfoPV4` constructor of `VersionedTxInfo` to contain `PV4.TxInfo` instead of `PV3.TxInfo`
 * Add `DecCBOR` instance for `Block`
