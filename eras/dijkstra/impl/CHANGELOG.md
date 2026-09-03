@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `era` parameter to `PoolCert`s
 * Enforce `accountBalanceIntervals` in `ENTITIES` and `SUBENTITIES`, and `startingAccountBalanceIntervals` in `ENTITIES`:
   - Add `validateAccountBalanceIntervals` and `validateStartingAccountBalanceIntervals`
   - Add `WrongNetworkInAccountBalanceIntervals`, `MissingAccountsInAccountBalanceIntervals`, and `BalancesOutsideAccountBalanceIntervals` to `EntitiesPredFailure`

@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
 * Add `EncCBOR`, `ToCBOR` for `Block`
@@ -11,6 +12,7 @@
 
 ### `testlib`
 
+* Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Add `submitFailingSubsetTx{,M}`
 * Make `fixupTxOuts` parametric on level
 * Add `DecCBOR` instance for `Block`
