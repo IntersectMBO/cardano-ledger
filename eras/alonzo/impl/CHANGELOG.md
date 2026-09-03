@@ -2,6 +2,11 @@
 
 ## 1.17.0.0
 
+* Add `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors to `AlonzoContextError`
+* Stop re-exporting `TxOutSource` from `Cardano.Ledger.Alonzo.Plutus.TxInfo` (it remains available from `Cardano.Ledger.Plutus.TxInfo`)
+* Change `transTxCert` to return `Either (ContextError era) PV1.DCert` instead of `PV1.DCert` and add an `Inject (AlonzoContextError era) (ContextError era)` constraint; unsupported certificates now produce `CertificateNotSupported` instead of a partial `error`
+* Change `transTxCertCommon` to return `Either (ContextError era) PV1.DCert` instead of `Maybe PV1.DCert`
+* Change `transPlutusPurpose` to accept `PlutusPurpose AsIxItem era` instead of `AlonzoPlutusPurpose AsIxItem era`; unsupported purposes now produce `PlutusPurposeNotSupported`
 * Add `AlonzoEraTransition` class with a `tcAlonzoGenesisL` lens
 * Change `alonzoInjectCostModels` to accept the `TransitionConfig` of the current era instead of `TransitionConfig AlonzoEra`
 * Switch `toPlutusScriptPurpose` to accept `LedgerTxInfo` instead of `ProtVer`
@@ -17,6 +22,7 @@
 
 ### `testlib`
 
+* Add `Inject (AlonzoContextError era) (ContextError era)` superclass constraint to the `AlonzoEraTest` type class
 * Add `mkTestLedgerTxInfo` helper
 * Add `Serialise` instance for `PV4.POSIXTimeRange`
 * Add `Serialise` instances for `PlutusLedgerApi.V4` script context types

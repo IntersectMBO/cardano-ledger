@@ -32,7 +32,12 @@ import Test.Cardano.Ledger.Alonzo.TreeDiff
 instance ToExpr (PlutusScript BabbageEra)
 
 -- PlutusContext
-instance ToExpr (PlutusPurpose AsIx era) => ToExpr (BabbageContextError era)
+instance
+  ( ToExpr (TxCert era)
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  ) =>
+  ToExpr (BabbageContextError era)
 
 -- PParams
 instance ToExpr (BabbagePParams StrictMaybe era)

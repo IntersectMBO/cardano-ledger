@@ -2,6 +2,8 @@
 
 ## 1.24.0.0
 
+* Remove `transPlutusPurposeV1V2`, superseded by `Alonzo.transPlutusPurpose`
+* No longer export the `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors of `ConwayContextError`, in favor of the same cases defined in Alonzo.
 * Add `conwayInjectIntoTestState`
 * Add `AlonzoEraTransition` as a superclass of `ConwayEraTransition`
 * Add `AlonzoEraTransition` instance for `ConwayEra`
