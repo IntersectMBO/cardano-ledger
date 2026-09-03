@@ -42,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxWits (DijkstraTxWits (..), PoolVoteWitness (..))
 import Cardano.Ledger.Plutus (Language (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
@@ -52,10 +53,12 @@ import qualified Data.Sequence.Strict as SSeq
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Lens.Micro ((&), (.~))
+import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genScripts, genValidCostModel)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genericShrinkMemo)
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
@@ -407,3 +410,23 @@ genNonEmptyAccountBalanceIntervals = AccountBalanceIntervals . Map.fromList . ge
 instance Arbitrary (AccountBalanceInterval era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+instance Arbitrary PoolVoteWitness where
+  arbitrary = BlsPoolVoteWitness <$> genLeiosSignature
+
+instance
+  ( Arbitrary (Script era)
+  , AlonzoEraScript era
+  , Arbitrary (PlutusPurpose AsIx era)
+  ) =>
+  Arbitrary (DijkstraTxWits era)
+  where
+  arbitrary =
+    DijkstraTxWits
+      <$> arbitrary
+      <*> arbitrary
+      <*> genScripts
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+  shrink = genericShrinkMemo

@@ -327,7 +327,6 @@ instance SpecTranslate DijkstraEra (DijkstraPParams Identity DijkstraEra) where
       ppLeiosMaxEBSize = toInteger $ unTHKD dppMaxEndorserBlockSize
       ppLeiosMaxEBTxsSize = toInteger $ unTHKD dppMaxEndorserBlockTxsSize
       ppLeiosMaxRefScriptSizePerEB = toInteger $ unTHKD dppMaxRefScriptSizePerEndorserBlock
-      ppMaxKeyAgeEpochs = toInteger . unEpochInterval $ unTHKD dppMaxKeyAgeEpochs
 
     pure Agda.MkPParams {..}
 
@@ -562,8 +561,6 @@ instance SpecTranslate DijkstraEra (DijkstraPParams StrictMaybe DijkstraEra) whe
       ppuLeiosMaxEBTxsSize = fmap toInteger . strictMaybeToMaybe $ unTHKD dppMaxEndorserBlockTxsSize
       ppuLeiosMaxRefScriptSizePerEB =
         fmap toInteger . strictMaybeToMaybe $ unTHKD dppMaxRefScriptSizePerEndorserBlock
-      ppuMaxKeyAgeEpochs =
-        fmap (toInteger . unEpochInterval) . strictMaybeToMaybe $ unTHKD dppMaxKeyAgeEpochs
 
     pure Agda.MkPParamsUpdate {..}
 
