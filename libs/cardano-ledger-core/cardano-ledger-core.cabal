@@ -101,6 +101,7 @@ library
     Cardano.Ledger.State.CertState
     Cardano.Ledger.State.ChainAccount
     Cardano.Ledger.State.Governance
+    Cardano.Ledger.State.LeiosCommittee
     Cardano.Ledger.State.PoolDistr
     Cardano.Ledger.State.SnapShots
     Cardano.Ledger.State.Stake
@@ -120,6 +121,7 @@ library
     cardano-base >=0.1.6,
     cardano-crypto,
     cardano-crypto-class >=2.4 && <2.7,
+    cardano-crypto-leios,
     cardano-crypto-wrapper,
     cardano-data >=1.3,
     cardano-ledger-binary ^>=1.10,
@@ -153,6 +155,7 @@ library
     transformers,
     utf8-string,
     validation-selective,
+    vector,
     vector-map >=1.1,
 
   if flag(asserts)
@@ -348,6 +351,7 @@ test-suite tests
     quickcheck-instances,
     scientific,
     testlib,
+    vector-map,
 
 benchmark addr
   import: warnings, rtsopts

@@ -292,6 +292,14 @@ instance ToExpr (Datum era) where
   toExpr (Datum bd) = App "Datum" [toExpr bd]
 
 -- EpochBoundary
+instance ToExpr LeiosSeat where
+  toExpr (LeiosSeat w vk) =
+    Rec "LeiosSeat" $
+      OMap.fromList [("seatWeight", toExpr w), ("seatVKey", toExpr vk)]
+
+instance ToExpr LeiosCommittee where
+  toExpr = App "LeiosCommittee" . map toExpr . foldr (:) [] . leiosCommitteeSeats
+
 instance ToExpr (SnapShots era)
 
 instance ToExpr SnapShot
