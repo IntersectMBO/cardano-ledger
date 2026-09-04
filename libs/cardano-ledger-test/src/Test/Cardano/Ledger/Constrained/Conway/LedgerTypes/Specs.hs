@@ -527,7 +527,7 @@ snapShotsSpec marksnap =
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
 getMarkSnapShot ls =
-  resetStakePoolsSnapShot markStakePoolState $ mkSnapShot markActiveStake VMap.empty
+  resetStakePoolsSnapShot 0 markStakePoolState $ mkSnapShot 0 markActiveStake VMap.empty
   where
     markActiveStake :: ActiveStake
     markActiveStake =

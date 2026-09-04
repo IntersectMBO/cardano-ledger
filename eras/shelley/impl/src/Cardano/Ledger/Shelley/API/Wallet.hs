@@ -260,7 +260,7 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
 -- ledger state.
 currentSnapshot :: (EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
 currentSnapshot nes =
-  snapShotFromInstantStake instantStake dstate pstate
+  snapShotFromInstantStake 0 instantStake dstate pstate
   where
     ledgerState = esLState $ nesEs nes
     instantStake = ledgerState ^. instantStakeG
