@@ -506,10 +506,11 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] ->
+    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] [var|committee|] ->
       [ assert $ activeStake ==. lit (ActiveStake VMap.empty)
       , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
       , assert $ pools ==. lit VMap.empty
+      , assert $ committee ==. lit emptyLeiosCommittee
       ]
 
 snapShotsSpec ::
