@@ -20,6 +20,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusTxInfo,
   SupportedLanguage (..),
   toPlutusTxInfoForPurpose,
@@ -93,7 +94,7 @@ genTranslationInstance = do
           , ltiSystemStart = systemStart
           , ltiUTxO = utxo
           , ltiTx = tx
-          , ltiLevelInfo = mkTopTxInfo @era
+          , ltiLevelInfo = TopTxInfo mempty
           }
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of

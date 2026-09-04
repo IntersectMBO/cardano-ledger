@@ -13,6 +13,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
  )
@@ -32,7 +33,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
  )
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
-import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..), DijkstraLevelTxInfo (..))
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (
   Language (..),
   SLanguage (..),
@@ -73,7 +74,6 @@ spec ::
   , EraTx era
   , Arbitrary (Value era)
   , AlonzoEraTxWits era
-  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   ) =>
   Spec
 spec = describe "TxInfo" $ do
@@ -104,7 +104,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = utxo
             , ltiTx = tx
-            , ltiLevelInfo = mkTopTxInfo @era
+            , ltiLevelInfo = TopTxInfo mempty
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -133,7 +133,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiLevelInfo = mkTopTxInfo @era
+            , ltiLevelInfo = TopTxInfo mempty
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -162,7 +162,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiLevelInfo = mkTopTxInfo @era
+            , ltiLevelInfo = TopTxInfo mempty
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -190,7 +190,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiLevelInfo = mkTopTxInfo @era
+            , ltiLevelInfo = TopTxInfo mempty
             }
       pure $
         (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
@@ -219,7 +219,7 @@ spec = describe "TxInfo" $ do
             , ltiSystemStart = systemStart testGlobals
             , ltiUTxO = mempty
             , ltiTx = tx
-            , ltiLevelInfo = mkTopTxInfo @era
+            , ltiLevelInfo = TopTxInfo mempty
             }
       pure $
         case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
@@ -267,7 +267,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiProtVer = protVer
               , ltiEpochInfo = epochInfo testGlobals
-              , ltiLevelInfo = mkTopTxInfo @era
+              , ltiLevelInfo = TopTxInfo mempty
               }
           purpose = SpendingPurpose @era $ AsIxItem 0 txIn
           TxIn (TxId txIdHash) (TxIx txIx) = txIn
@@ -343,7 +343,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiLevelInfo = DijkstraSubTxInfo subTxIx
+              , ltiLevelInfo = SubTxInfo subTxIx
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -366,7 +366,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiLevelInfo = mkTopTxInfo @era
+              , ltiLevelInfo = TopTxInfo mempty
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -386,7 +386,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiLevelInfo = mkTopTxInfo @era
+              , ltiLevelInfo = TopTxInfo mempty
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -407,7 +407,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiLevelInfo = mkTopTxInfo @era
+              , ltiLevelInfo = TopTxInfo mempty
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
@@ -426,7 +426,7 @@ spec = describe "TxInfo" $ do
               , ltiSystemStart = systemStart testGlobals
               , ltiUTxO = mempty
               , ltiTx = tx
-              , ltiLevelInfo = mkTopTxInfo @era
+              , ltiLevelInfo = TopTxInfo mempty
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)

@@ -20,6 +20,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo,
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   toPlutusArgs,
   toPlutusTxInfoForPurpose,
  )
@@ -121,7 +122,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
         , ltiSystemStart = testSystemStart
         , ltiUTxO = initUTxO
         , ltiTx = validatingTx
-        , ltiLevelInfo = mkTopTxInfo @AlonzoEra
+        , ltiLevelInfo = TopTxInfo mempty
         }
 
 -- ============================== DATA ===============================

@@ -14,8 +14,8 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
@@ -91,7 +91,7 @@ spec = describe "UTXOS" $ do
               , ltiSystemStart = ss
               , ltiUTxO = utxo
               , ltiTx = tx
-              , ltiLevelInfo = mkTopTxInfo @era
+              , ltiLevelInfo = TopTxInfo mempty
               }
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e

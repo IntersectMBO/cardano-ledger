@@ -21,6 +21,7 @@ module Cardano.Ledger.Dijkstra (
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   SupportedPlutusRunnable (..),
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
@@ -53,7 +54,7 @@ import Cardano.Ledger.Dijkstra.Transition ()
 import Cardano.Ledger.Dijkstra.Translation ()
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody ()
-import Cardano.Ledger.Dijkstra.TxInfo (DijkstraLevelTxInfo (..))
+import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Plutus (Language (..), plutusLanguage)
@@ -107,8 +108,6 @@ mkDijkstraStAnnTopTx ::
   , DijkstraEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
-  , LevelTxInfo TopTx era ~ DijkstraLevelTxInfo TopTx era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -140,7 +139,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiUTxO = utxo
         , ltiTx = tx
         , ltiLevelInfo =
-            DijkstraTopTxInfo
+            TopTxInfo
               ( Map.fromList
                   [ (txIdTx dsastTx, dsastTxInfoResult)
                   | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
@@ -167,7 +166,6 @@ mkDijkstraStAnnSubTx ::
   , AlonzoEraTx era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -191,7 +189,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx s
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiLevelInfo = DijkstraSubTxInfo subTxIx
+        , ltiLevelInfo = SubTxInfo subTxIx
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
    in

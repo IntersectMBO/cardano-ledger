@@ -157,7 +157,6 @@ import qualified PlutusLedgerApi.V3.MintValue as PV3
 
 instance EraPlutusContext ConwayEra where
   type ContextError ConwayEra = ConwayContextError ConwayEra
-  type LevelTxInfo level ConwayEra = ()
 
   data TxInfoResult ConwayEra
     = ConwayTxInfoResult -- Fields must be kept lazy
@@ -186,8 +185,6 @@ instance EraPlutusContext ConwayEra where
   lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
-
-  mkTopTxInfo = ()
 
 data ConwayContextError era
   = BabbageContextError (BabbageContextError era)

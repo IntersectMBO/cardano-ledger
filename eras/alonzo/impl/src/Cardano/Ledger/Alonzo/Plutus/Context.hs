@@ -3,16 +3,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 -- Recursive definition constraints of `EraPlutusContext` and `EraPlutusTxInfo` lead to a wrongful
@@ -29,6 +32,7 @@
 module Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
   mkPlutusTxInfoFromResult,
@@ -64,7 +68,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   PlutusPurpose,
   PlutusScript (..),
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
+import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -83,7 +87,7 @@ import Cardano.Ledger.Plutus (
   plutusLanguage,
  )
 import Cardano.Ledger.State (UTxO (..))
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..))
@@ -93,6 +97,7 @@ import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import GHC.Generics
 import GHC.Stack
@@ -100,6 +105,25 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
+
+data LevelTxInfo (level :: TxLevel) era where
+  TopTxInfo ::
+    -- | This is a tricky field that is only used starting with Dijkstra era and only by top level
+    -- transactions. It is always safe to leave it as `mempty` upon construction
+    Map.Map TxId (TxInfoResult era) ->
+    LevelTxInfo TopTx era
+  SubTxInfo ::
+    !TxIx -> LevelTxInfo SubTx era
+
+instance
+  ( EraTxLevel era
+  , STxLevel TopTx era ~ STxBothLevels TopTx era
+  , STxLevel SubTx era ~ STxBothLevels SubTx era
+  ) =>
+  HasEraTxLevel LevelTxInfo era
+  where
+  toSTxLevel TopTxInfo {} = STopTx
+  toSTxLevel SubTxInfo {} = SSubTx
 
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era where
@@ -223,8 +247,6 @@ class
   where
   type ContextError era = (r :: Type) | r -> era
 
-  type LevelTxInfo (level :: TxLevel) era :: Type
-
   -- | This data type family is used to memoize the results of `toPlutusTxInfo`, so the outcome can
   -- be shared between execution of different scripts with the same language version.
   data TxInfoResult era :: Type
@@ -246,8 +268,6 @@ class
     SLanguage l ->
     TxInfoResult era ->
     PlutusTxInfoResult l era
-
-  mkTopTxInfo :: LevelTxInfo TopTx era
 
 -- | Helper function to use when implementing `lookupTxInfoResult` for plutus languages that are not
 -- supported by the era.

@@ -27,7 +27,6 @@
 
 module Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
-  DijkstraLevelTxInfo (..),
   guardDijkstraFeaturesForPlutusV1toV3,
   transFailUnsupportedScriptInSubTx,
   transRedeemerPointerV4,
@@ -38,6 +37,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusPurposeScriptHashArg,
   PlutusRedeemerPointer,
   PlutusScriptPurpose,
@@ -292,23 +292,8 @@ instance Inject (Babbage.BabbageContextError era) (DijkstraContextError era) whe
 instance Inject (Alonzo.AlonzoContextError era) (DijkstraContextError era) where
   inject = ConwayContextError . inject
 
-data DijkstraLevelTxInfo (level :: TxLevel) era where
-  DijkstraTopTxInfo ::
-    -- | This is a tricky field that is only used starting with Dijkstra era and only by top level
-    -- transactions. It is always safe to leave it as `mempty` upon construction
-    Map.Map TxId (TxInfoResult era) ->
-    DijkstraLevelTxInfo TopTx era
-  DijkstraSubTxInfo ::
-    !TxIx -> DijkstraLevelTxInfo SubTx era
-
-instance HasEraTxLevel DijkstraLevelTxInfo DijkstraEra where
-  toSTxLevel DijkstraTopTxInfo {} = STopTx
-  toSTxLevel DijkstraSubTxInfo {} = SSubTx
-
 instance EraPlutusContext DijkstraEra where
   type ContextError DijkstraEra = DijkstraContextError DijkstraEra
-
-  type LevelTxInfo level DijkstraEra = DijkstraLevelTxInfo level DijkstraEra
 
   data TxInfoResult DijkstraEra
     = DijkstraTxInfoResult -- Fields must be kept lazy
@@ -340,8 +325,6 @@ instance EraPlutusContext DijkstraEra where
   lookupTxInfoResult SPlutusV2 (DijkstraTxInfoResult _ tirPlutusV2 _ _) = tirPlutusV2
   lookupTxInfoResult SPlutusV3 (DijkstraTxInfoResult _ _ tirPlutusV3 _) = tirPlutusV3
   lookupTxInfoResult SPlutusV4 (DijkstraTxInfoResult _ _ _ tirPlutusV4) = tirPlutusV4
-
-  mkTopTxInfo = DijkstraTopTxInfo mempty
 
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
@@ -691,7 +674,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
                 withBothTxLevels
                   ltiLevelInfo
                   (const Nothing)
-                  (\case DijkstraSubTxInfo (TxIx i) -> Just $ toInteger i)
+                  (\case SubTxInfo (TxIx i) -> Just $ toInteger i)
             , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
             , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
             , PV4.txInfoAccountBalanceIntervals =
@@ -898,7 +881,6 @@ transTopTxInfo ::
   forall era proxy.
   ( EraUTxO era
   , DijkstraEraTxBody era
-  , LevelTxInfo SubTx era ~ DijkstraLevelTxInfo SubTx era
   , Inject (DijkstraContextError era) (ContextError era)
   , ConwayEraPlutusTxInfo PlutusV4 era
   ) =>
@@ -922,7 +904,7 @@ transTopTxInfo proxy pv utxo systemStart epochInfo _plutusTxInfo plutusPurpose s
         , ltiTx = subTx
         , ltiSystemStart = systemStart
         , ltiProtVer = pv
-        , ltiLevelInfo = DijkstraSubTxInfo txIx
+        , ltiLevelInfo = SubTxInfo txIx
         , ltiEpochInfo = epochInfo
         }
   let

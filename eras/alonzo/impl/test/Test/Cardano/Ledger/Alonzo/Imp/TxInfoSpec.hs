@@ -8,6 +8,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusTxInfoResult (..),
  )
 import Cardano.Ledger.BaseTypes
@@ -48,7 +49,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiSystemStart = systemStart
             , ltiUTxO = utxo
             , ltiTx = tx
-            , ltiLevelInfo = ()
+            , ltiLevelInfo = TopTxInfo mempty
             }
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
@@ -76,6 +77,6 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             , ltiSystemStart = systemStart
             , ltiUTxO = utxo
             , ltiTx = tx
-            , ltiLevelInfo = ()
+            , ltiLevelInfo = TopTxInfo mempty
             }
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti

@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
   PlutusTxOut,
@@ -212,7 +213,7 @@ successfulTranslation slang tx f =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiLevelInfo = mkTopTxInfo @era
+          , ltiLevelInfo = TopTxInfo mempty
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
@@ -236,7 +237,7 @@ expectTranslationError slang tx expected =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiLevelInfo = mkTopTxInfo @era
+          , ltiLevelInfo = TopTxInfo mempty
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->

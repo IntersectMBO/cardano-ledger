@@ -226,7 +226,6 @@ toLegacyPlutusArgs proxy pv sh mkScriptContext scriptPurpose maybeSpendingData r
 
 instance EraPlutusContext AlonzoEra where
   type ContextError AlonzoEra = AlonzoContextError AlonzoEra
-  type LevelTxInfo level AlonzoEra = ()
   newtype TxInfoResult AlonzoEra
     = AlonzoTxInfoResult (PlutusTxInfoResult 'PlutusV1 AlonzoEra)
 
@@ -241,8 +240,6 @@ instance EraPlutusContext AlonzoEra where
 
   lookupTxInfoResult SPlutusV1 (AlonzoTxInfoResult tirPlutusV1) = tirPlutusV1
   lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
-
-  mkTopTxInfo = ()
 
 data AlonzoContextError era
   = TranslationLogicMissingInput TxIn

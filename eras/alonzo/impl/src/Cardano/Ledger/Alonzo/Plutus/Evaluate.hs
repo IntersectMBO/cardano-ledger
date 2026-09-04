@@ -38,6 +38,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusContext (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   SupportedPlutusRunnable (..),
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (mkPlutusWithContext)
@@ -106,7 +107,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiLevelInfo = mkTopTxInfo @era
+        , ltiLevelInfo = TopTxInfo mempty
         }
     (_, neededPlutusScripts) =
       resolveNeededPlutusScriptsWithPurpose
@@ -343,7 +344,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiSystemStart = systemStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiLevelInfo = mkTopTxInfo @era
+        , ltiLevelInfo = TopTxInfo mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
