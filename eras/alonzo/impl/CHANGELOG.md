@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `FromJSON` instance for `AlonzoTxOut era`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families

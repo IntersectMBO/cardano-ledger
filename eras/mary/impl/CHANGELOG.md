@@ -2,6 +2,8 @@
 
 ## 1.11.1.0
 
+* Add `FromJSON` instance for `MaryValue`
+* Add `FromJSON` and `FromJSONKey` instances for `AssetName` (hex-decoding from `ToJSON` format)
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
