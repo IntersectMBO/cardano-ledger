@@ -1,11 +1,11 @@
 [
     {
         "pdTotalActiveStake": 1,
-        "unPoolDistr": {}
+        "pdIndividualStakeDistr": {}
     },
     {
         "pdTotalActiveStake": 1,
-        "unPoolDistr": {
+        "pdIndividualStakeDistr": {
             "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": {
                 "individualPoolStake": {
                     "denominator": 1,
@@ -18,7 +18,7 @@
     },
     {
         "pdTotalActiveStake": 6000000000,
-        "unPoolDistr": {
+        "pdIndividualStakeDistr": {
             "a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": {
                 "individualPoolStake": {
                     "denominator": 8,

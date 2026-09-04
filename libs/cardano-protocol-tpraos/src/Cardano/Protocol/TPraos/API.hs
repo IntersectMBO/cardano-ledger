@@ -633,7 +633,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
        in not (isOverlaySlot a (pp ^. ppDG) slotNo)
             && checkLeaderValue (VRF.certifiedOutput y) stake f
     stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-    poolDistr = unPoolDistr $ nesPd ss
+    poolDistr = pdIndividualStakeDistr $ nesPd ss
     STS.Tickn.TicknState epochNonce _ = csTickn cds
     currentEpoch = nesEL ss
     ei = epochInfoPure globals

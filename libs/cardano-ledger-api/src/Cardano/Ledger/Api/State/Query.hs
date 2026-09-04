@@ -727,7 +727,7 @@ queryStakePoolRelays ::
   NewEpochState era ->
   Map (KeyHash StakePool) (Rational, StrictSeq StakePoolRelay)
 queryStakePoolRelays nes =
-  Map.mapMaybeWithKey getRelays (unPoolDistr (nesPd nes))
+  Map.mapMaybeWithKey getRelays (pdIndividualStakeDistr (nesPd nes))
   where
     pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
     pools = psStakePools pstate
@@ -767,7 +767,7 @@ toQueryResultIndividualPoolStake ips =
 toQueryResultPoolDistr :: PoolDistr -> QueryResultPoolDistr
 toQueryResultPoolDistr pd =
   QueryResultPoolDistr
-    (Map.map toQueryResultIndividualPoolStake (unPoolDistr pd))
+    (Map.map toQueryResultIndividualPoolStake (pdIndividualStakeDistr pd))
     (pdTotalActiveStake pd)
 
 instance ToKeyValuePairs QueryResultIndividualPoolStake where
@@ -780,7 +780,7 @@ instance ToKeyValuePairs QueryResultIndividualPoolStake where
 
 instance ToKeyValuePairs QueryResultPoolDistr where
   toKeyValuePairs (QueryResultPoolDistr distr total) =
-    [ "unPoolDistr" .= distr
+    [ "pdIndividualStakeDistr" .= distr
     , "pdTotalActiveStake" .= total
     ]
 
@@ -830,4 +830,5 @@ querySetSnapshotStakePoolDistr nes poolIds
   | Set.null poolIds = toQueryResultPoolDistr (nesPd nes)
   | otherwise =
       let pd = nesPd nes
-       in toQueryResultPoolDistr (pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds})
+       in toQueryResultPoolDistr
+            (pd {pdIndividualStakeDistr = Map.restrictKeys (pdIndividualStakeDistr pd) poolIds})

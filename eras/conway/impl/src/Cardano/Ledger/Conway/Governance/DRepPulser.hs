@@ -388,7 +388,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
       dpProposals
       finalDRepDistr
       dpDRepState
-      (Map.map individualTotalPoolStake $ unPoolDistr finalStakePoolDistr)
+      (Map.map individualTotalPoolStake $ pdIndividualStakeDistr finalStakePoolDistr)
   , ratifyState'
   )
   where

@@ -258,7 +258,7 @@ selectNextSlotWithLeader
         where
           chainSt = tickChainState slotNo origChainState
           epochNonce = chainEpochNonce chainSt
-          poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
+          poolDistr = pdIndividualStakeDistr . nesPd . chainNes $ chainSt
           dpstate = (lsCertState . esLState . nesEs . chainNes) chainSt
           (GenDelegs cores) = dpstate ^. certDStateL . dsGenDelegsL
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
