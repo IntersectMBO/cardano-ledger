@@ -19,10 +19,8 @@
 -- <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>.
 module Cardano.Ledger.State.PoolDistr (
   IndividualPoolStake (..),
-  PoolDistr (..),
-  poolDistrDistrL,
-  poolDistrTotalL,
   individualTotalPoolStakeL,
+  PoolDistr (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -121,21 +119,13 @@ instance ToKeyValuePairs IndividualPoolStake where
 data PoolDistr = PoolDistr
   { unPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
   , pdTotalActiveStake :: !(NonZero Coin)
-  -- ^ Total stake delegated to registered stake pools. In addition to
-  -- the stake considered for the `individualPoolStake` Rational, we add
-  -- proposal-deposits to this field.
+  -- ^ Total stake delegated to registered stake pools
   }
   deriving stock (Show, Eq, Generic)
   deriving (NFData, NoThunks, ToJSON)
 
 instance Default PoolDistr where
   def = PoolDistr mempty (knownNonZeroCoin @1)
-
-poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash StakePool) IndividualPoolStake)
-poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
-
-poolDistrTotalL :: Lens' PoolDistr (NonZero Coin)
-poolDistrTotalL = lens pdTotalActiveStake $ \x y -> x {pdTotalActiveStake = y}
 
 instance EncCBOR PoolDistr where
   encCBOR (PoolDistr distr total) =

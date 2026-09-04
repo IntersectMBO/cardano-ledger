@@ -53,6 +53,7 @@ import Cardano.Ledger.Conway.Core (
   VRFVerKeyHash,
   fromVRFVerKeyHash,
  )
+import Cardano.Ledger.Conway.Governance (VotingStakePoolDistr, vspdIndividualStakeL)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (VKey (..))
@@ -64,6 +65,7 @@ import Data.Functor.Identity (Identity (..))
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import GHC.Natural (naturalToInteger)
+import Lens.Micro.Extras (view)
 import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.Utils
@@ -227,6 +229,11 @@ instance SpecTranslate era PoolDistr where
   type SpecRep era PoolDistr = Agda.HSMap (SpecRep era (KeyHash StakePool)) Agda.Coin
 
   toSpecRep (PoolDistr ps _) = toSpecRepMap ps
+
+instance SpecTranslate era VotingStakePoolDistr where
+  type SpecRep era VotingStakePoolDistr = Agda.HSMap (SpecRep era (KeyHash StakePool)) Agda.Coin
+
+  toSpecRep = toSpecRepMap . view vspdIndividualStakeL
 
 instance SpecTranslate era BlocksMade where
   type SpecRep era BlocksMade = Agda.HSMap Integer Integer

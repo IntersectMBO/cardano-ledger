@@ -63,6 +63,8 @@ import Cardano.Ledger.Conway.Governance (
   votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
+  vspdIndividualStakeL,
+  vspdTotalVotingStakeL,
   withGovActionParent,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
@@ -196,7 +198,7 @@ spoAcceptedRatio ::
   ConwayEraAccounts era => RatifyEnv era -> GovActionState era -> ProtVer -> Rational
 spoAcceptedRatio
   RatifyEnv
-    { reStakePoolDistr = PoolDistr individualPoolStake totalActiveStake
+    { reVotingStakePoolDistr
     , reAccounts
     , reStakePools
     }
@@ -205,25 +207,24 @@ spoAcceptedRatio
     , gasProposalProcedure = ProposalProcedure {pProcGovAction}
     }
   pv =
-    toInteger yesStake %? (unCoin (unNonZero totalActiveStake) - toInteger abstainStake)
+    toInteger yesStake %? (totalStake - toInteger abstainStake)
     where
-      accumStake (!yes, !abstain) poolId distr =
-        let CompactCoin stake = individualTotalPoolStake distr
-            vote = Map.lookup poolId gasStakePoolVotes
-         in case vote of
-              Nothing
-                | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
-                | hardforkConwayBootstrapPhase pv -> (yes, abstain + stake)
-                | otherwise -> case defaultStakePoolVote poolId reStakePools reAccounts of
-                    DefaultNoConfidence
-                      | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)
-                    DefaultAbstain -> (yes, abstain + stake)
-                    _ -> (yes, abstain) -- Default is No, unless overridden by one of the above cases
-              Just Abstain -> (yes, abstain + stake)
-              Just VoteNo -> (yes, abstain)
-              Just VoteYes -> (yes + stake, abstain)
+      totalStake = unCoin . unNonZero $ reVotingStakePoolDistr ^. vspdTotalVotingStakeL
       (yesStake, abstainStake) =
-        Map.foldlWithKey' accumStake (0, 0) individualPoolStake
+        Map.foldlWithKey' accumStake (0, 0) $ reVotingStakePoolDistr ^. vspdIndividualStakeL
+      accumStake (!yes, !abstain) poolId (CompactCoin stake) =
+        case Map.lookup poolId gasStakePoolVotes of
+          Nothing
+            | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
+            | hardforkConwayBootstrapPhase pv -> (yes, abstain + stake)
+            | otherwise -> case defaultStakePoolVote poolId reStakePools reAccounts of
+                DefaultNoConfidence
+                  | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)
+                DefaultAbstain -> (yes, abstain + stake)
+                _ -> (yes, abstain) -- Default is No, unless overridden by one of the above cases
+          Just Abstain -> (yes, abstain + stake)
+          Just VoteNo -> (yes, abstain)
+          Just VoteYes -> (yes + stake, abstain)
 
 dRepAccepted ::
   ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
