@@ -169,7 +169,7 @@ benchInstantStake ::
   SnapShot
 benchInstantStake (dstate, pstate, utxo) =
   let instantStake = addInstantStake utxo mempty
-   in snapShotFromInstantStake instantStake dstate pstate
+   in snapShotFromInstantStake 0 instantStake dstate pstate
 
 -- =================================================================
 

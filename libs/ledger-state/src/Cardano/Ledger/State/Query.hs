@@ -353,7 +353,7 @@ getSnapShotNoSharing epochStateId snapShotType = do
               (\c -> State.StakeWithDelegation (unsafeNonZero c))
               stake
               delegations
-  pure $ State.mkSnapShot activeStake stakePoolSnapShot
+  pure $ State.mkSnapShot 0 activeStake stakePoolSnapShot
 {-# INLINEABLE getSnapShotNoSharing #-}
 
 getSnapShotsNoSharing ::
@@ -433,7 +433,7 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
               (\c -> State.StakeWithDelegation (unsafeNonZero c))
               stake
               delegations
-  pure $ State.mkSnapShot activeStake stakePoolSnapShot
+  pure $ State.mkSnapShot 0 activeStake stakePoolSnapShot
 {-# INLINEABLE getSnapShotWithSharing #-}
 
 getSnapShotsWithSharing ::
