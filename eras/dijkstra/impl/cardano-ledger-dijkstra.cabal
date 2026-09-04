@@ -201,6 +201,7 @@ library testlib
     cardano-ledger-dijkstra,
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-slotting,
     cardano-strict-containers,
     containers,
     generic-random,

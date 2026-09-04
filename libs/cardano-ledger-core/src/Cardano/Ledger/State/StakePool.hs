@@ -45,6 +45,9 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Conversions
   mkStakePoolState,
+  BlsKeyState (..),
+  bksKeyL,
+  bksRegisteredInL,
   stakePoolStateToStakePoolParams,
 
   -- * Pool Parameters and Related Types
@@ -86,6 +89,7 @@ import Cardano.Crypto.DSIGN (
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
+  EpochNo,
   Network,
   Port,
   StrictMaybe (..),
@@ -158,7 +162,7 @@ import NoThunks.Class (NoThunks (..))
 data StakePoolState = StakePoolState
   { spsVrf :: !(VRFVerKeyHash StakePoolVRF)
   -- ^ VRF verification key hash for leader election
-  , spsBlsKey :: !(StrictMaybe BlsKey)
+  , spsBlsKey :: !(StrictMaybe BlsKeyState)
   , spsPledge :: !Coin
   -- ^ Pledge amount committed by the pool operator
   , spsCost :: !Coin
@@ -183,7 +187,7 @@ data StakePoolState = StakePoolState
 spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
 
-spsBlsKeyL :: Lens' StakePoolState (StrictMaybe BlsKey)
+spsBlsKeyL :: Lens' StakePoolState (StrictMaybe BlsKeyState)
 spsBlsKeyL = lens spsBlsKey $ \sps blsKey -> sps {spsBlsKey = blsKey}
 
 spsPledgeL :: Lens' StakePoolState Coin
@@ -280,13 +284,15 @@ instance Default StakePoolState where
 
 -- | Convert 'StakePoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
--- or update parameters.
+-- or update parameters. The epoch is the one the parameters take effect in:
+-- a voting key carried by the parameters is stamped with it, so registering
+-- again renews the key.
 mkStakePoolState ::
-  CompactForm Coin -> Set (Credential Staking) -> StakePoolParams era -> StakePoolState
-mkStakePoolState deposit delegators spp =
+  EpochNo -> CompactForm Coin -> Set (Credential Staking) -> StakePoolParams era -> StakePoolState
+mkStakePoolState epochNo deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
-    , spsBlsKey = sppBlsKey spp
+    , spsBlsKey = (`BlsKeyState` epochNo) <$> sppBlsKey spp
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
@@ -307,7 +313,7 @@ stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
-    , sppBlsKey = spsBlsKey sps
+    , sppBlsKey = bksKey <$> spsBlsKey sps
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
@@ -519,6 +525,35 @@ instance DecCBOR BlsKey where
     blsPubKey <- decodeFixedSized
     blsPossessionProof <- decodeFixedSized
     pure BlsKey {blsPubKey, blsPossessionProof}
+
+-- | A registered voting key, together with the epoch its registration took
+-- effect in. The key stops being honoured @maxKeyAgeEpochs@ epochs later, at
+-- which point the pool's committee seat is keyless until it registers again.
+data BlsKeyState = BlsKeyState
+  { bksKey :: !BlsKey
+  , bksRegisteredIn :: !EpochNo
+  }
+  deriving (Show, Generic, Eq, Ord, NoThunks, NFData, ToJSON, FromJSON)
+
+bksKeyL :: Lens' BlsKeyState BlsKey
+bksKeyL = lens bksKey $ \bks k -> bks {bksKey = k}
+
+bksRegisteredInL :: Lens' BlsKeyState EpochNo
+bksRegisteredInL = lens bksRegisteredIn $ \bks e -> bks {bksRegisteredIn = e}
+
+instance EncCBOR BlsKeyState where
+  encCBOR bks =
+    encode $
+      Rec BlsKeyState
+        !> To (bksKey bks)
+        !> To (bksRegisteredIn bks)
+
+instance DecCBOR BlsKeyState where
+  decCBOR =
+    decode $
+      RecD BlsKeyState
+        <! From
+        <! From
 
 sppVrfL :: Lens' (StakePoolParams era) (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})

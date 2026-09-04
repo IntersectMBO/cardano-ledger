@@ -16,7 +16,7 @@ module Cardano.Ledger.State.LeiosCommittee (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (EpochInterval, StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -28,7 +28,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
-import Cardano.Ledger.State.StakePool (BlsKey (..))
+import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.State.StakePool (BlsKey (..), BlsKeyState (..))
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Function ((&))
 import Data.Ord (Down (..))
@@ -52,19 +53,22 @@ data LeiosCandidate = LeiosCandidate
   -- ^ Ranking key: pools are seated in descending stake.
   , lcWeight :: !Weight
   -- ^ The seat's voting weight: the pool's share of the active stake.
-  , lcKey :: !(StrictMaybe BlsKey)
-  -- ^ The registered voting key, if the pool has one.
+  , lcKey :: !(StrictMaybe BlsKeyState)
+  -- ^ The registered voting key with its registration epoch, if the pool has one.
   }
   deriving (Show, Eq)
 
 -- | Seat the @committeeSize@ pools with the most stake, largest first, ties
--- broken by ascending pool id. A pool with no registered key, or one whose
--- proof of possession does not verify, is seated keyless (CIP-0164). A size of
--- zero yields the empty committee without inspecting the candidates, so
--- pre-Dijkstra snapshots carry it for free even when forced.
-selectLeiosCommittee :: Word16 -> Vector LeiosCandidate -> LeiosCommittee
-selectLeiosCommittee 0 _ = emptyLeiosCommittee
-selectLeiosCommittee committeeSize candidates =
+-- broken by ascending pool id. A pool with no registered key, one whose key has
+-- aged out (CIP-0164: honoured for @maxKeyAge@ epochs after its registration,
+-- judged against the epoch this committee is selected for), or one whose proof
+-- of possession does not verify, is seated keyless. A size of zero yields the
+-- empty committee without inspecting the candidates, so pre-Dijkstra snapshots
+-- carry it for free even when forced.
+selectLeiosCommittee ::
+  EpochNo -> EpochInterval -> Word16 -> Vector LeiosCandidate -> LeiosCommittee
+selectLeiosCommittee _ _ 0 _ = emptyLeiosCommittee
+selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
   candidates
     & sortByStake
     & V.take size
@@ -81,7 +85,15 @@ selectLeiosCommittee committeeSize candidates =
     higherStake a b =
       compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
-    toSeat c = (toTuple <$> lcKey c, lcWeight c)
+    toSeat c = (toTuple <$> honoured c, lcWeight c)
+
+    -- The key is offered to the committee only while it is still honoured; an
+    -- aged-out key leaves the pool seated but keyless.
+    honoured c = do
+      bks <- lcKey c
+      if epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge
+        then SJust (bksKey bks)
+        else SNothing
 
     toTuple (BlsKey vk pop) = (vk, pop)
 
