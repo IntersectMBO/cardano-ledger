@@ -81,7 +81,7 @@ snapTransition = do
       instantStake = ls ^. instantStakeG
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap =
-        snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+        snapShotFromInstantStake 0 instantStake (certState ^. certDStateL) (certState ^. certPStateL)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
