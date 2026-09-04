@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest (spec) where
 
-import Cardano.Ledger.BaseTypes (unNonZero)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), unNonZero)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (CompactForm, fromCompact)
 import Cardano.Ledger.Core
@@ -43,7 +43,7 @@ instantStakeIncludesRewards = do
     poolId1 = pool1 ^. sppIdL
     poolId2 = pool2 ^. sppIdL
     poolParamsMap = Map.fromList [(poolId1, pool1), (poolId2, pool2)]
-  pState <- arbitraryLens psStakePoolsL $ mkStakePoolState mempty mempty <$> poolParamsMap
+  pState <- arbitraryLens psStakePoolsL $ mkStakePoolState (EpochNo 0) mempty mempty <$> poolParamsMap
   let
     initCertState :: CertState era
     initCertState = def & certPStateL .~ pState
@@ -97,7 +97,13 @@ instantStakeIncludesRewards = do
         )
     instantStake = addInstantStake utxo1 mempty
   let snapShot =
-        snapShotFromInstantStake 0 instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+        snapShotFromInstantStake
+          (EpochNo 0)
+          (EpochInterval 0)
+          0
+          instantStake
+          (certState ^. certDStateL)
+          (certState ^. certPStateL)
       computedStakeDistr = Map.map (unNonZero . swdStake) $ VMap.toMap $ unActiveStake $ ssActiveStake snapShot
 
       expectedStakeDistr :: Map (Credential Staking) (CompactForm Coin)

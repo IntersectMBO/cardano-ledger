@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   aggregateUtxoCoinByCredential,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, unNonZero)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), Globals, unNonZero)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -178,7 +178,7 @@ checkIncrementalStake es =
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate
-    snapShot = snapShotFromInstantStake 0 instantStake dstate pstate
+    snapShot = snapShotFromInstantStake (EpochNo 0) (EpochInterval 0) 0 instantStake dstate pstate
     _pp = es ^. curPParamsEpochStateL
    in
     counterexample
@@ -206,8 +206,8 @@ stakeDistr ::
   PState era ->
   SnapShot
 stakeDistr u ds PState {psStakePools} =
-  resetStakePoolsSnapShot 0 (VMap.fromMap psStakePools) $
-    mkSnapShot 0 activeStake' VMap.empty
+  resetStakePoolsSnapShot (EpochNo 0) (EpochInterval 0) 0 (VMap.fromMap psStakePools) $
+    mkSnapShot (EpochNo 0) (EpochInterval 0) 0 activeStake' VMap.empty
   where
     activeStake' = mkActiveStake (Map.map fromCompact stakeRelation) activeDelegs
     accountsMap = ds ^. accountsL . accountsMapL

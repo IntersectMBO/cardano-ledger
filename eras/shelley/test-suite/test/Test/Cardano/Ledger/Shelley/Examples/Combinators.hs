@@ -90,7 +90,7 @@ import Cardano.Protocol.TPraos.BlockHeader (
   lastAppliedHash,
   prevHashToNonce,
  )
-import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
+import Cardano.Slotting.Slot (EpochNo (..), WithOrigin (..))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -269,7 +269,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psStakePools =
                 Map.insert
                   (sppId pool)
-                  (mkStakePoolState poolDeposit mempty pool)
+                  (mkStakePoolState (EpochNo 0) poolDeposit mempty pool)
                   (psStakePools ps)
             }
         Just _ ->
@@ -311,7 +311,7 @@ updatePoolParams network pool cs = cs {chainNes = nes'}
         { psStakePools =
             Map.insert
               (sppId pool)
-              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
+              (mkStakePoolState (EpochNo 0) (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
               (psStakePools ps)
         , psFutureStakePoolParams =
             Map.mapMaybeWithKey

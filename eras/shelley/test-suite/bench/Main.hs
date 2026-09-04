@@ -15,6 +15,7 @@ import BenchValidation (
   updateChain,
   validateInput,
  )
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen (
@@ -169,7 +170,7 @@ benchInstantStake ::
   SnapShot
 benchInstantStake (dstate, pstate, utxo) =
   let instantStake = addInstantStake utxo mempty
-   in snapShotFromInstantStake 0 instantStake dstate pstate
+   in snapShotFromInstantStake (EpochNo 0) (EpochInterval 0) 0 instantStake dstate pstate
 
 -- =================================================================
 

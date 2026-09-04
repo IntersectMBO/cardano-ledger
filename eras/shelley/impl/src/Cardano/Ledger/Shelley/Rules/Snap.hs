@@ -15,7 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   SnapEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, unNonZero)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), ShelleyBase, unNonZero)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -81,7 +81,13 @@ snapTransition = do
       instantStake = ls ^. instantStakeG
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap =
-        snapShotFromInstantStake 0 instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+        snapShotFromInstantStake
+          (EpochNo 0)
+          (EpochInterval 0)
+          0
+          instantStake
+          (certState ^. certDStateL)
+          (certState ^. certPStateL)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
