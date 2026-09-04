@@ -46,6 +46,7 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.State (
   BlsKey,
+  BlsKeyState,
   PoolMetadata,
   StakePoolParams (..),
   StakePoolRelay,
@@ -159,7 +160,7 @@ data CanonicalStakePoolState = CanonicalStakePoolState
   , cspsMetadata :: !(StrictMaybe PoolMetadata)
   , cspsDeposit :: !CanonicalCoin
   , cspsDelegators :: !(Set (Credential Staking))
-  , cspsBlsKey :: !(StrictMaybe BlsKey)
+  , cspsBlsKey :: !(StrictMaybe BlsKeyState)
   }
   deriving (Show, Eq, Generic)
 

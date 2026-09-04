@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochInterval (..), EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets)
@@ -192,7 +192,7 @@ snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
     pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
     snap = stakeDistr u dstate pstate
-    mark = MarkSnapShot snap (EpochNo 0) 0
+    mark = MarkSnapShot snap (EpochNo 0) 0 (EpochInterval 0)
     set = mkSetSnapShot (calculatePoolDistr snap) mark
 
 -- ==============================================================================

@@ -17,7 +17,7 @@
 module Cardano.Ledger.State.Schema where
 
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut)
-import Cardano.Ledger.BaseTypes (EpochNo (..), TxIx (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), TxIx (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (PParams)
@@ -78,8 +78,9 @@ EpochState
 SnapShot
   type SnapShotType
   epochStateId EpochStateId
-  leiosEpochNo EpochNo Maybe
+  epochNo EpochNo Maybe
   leiosCommitteeSize Word16 Maybe
+  maxKeyAge EpochInterval Maybe
   -- UniqueSnapShot type epochStateId
 SnapShotStake
   snapShotId SnapShotId
