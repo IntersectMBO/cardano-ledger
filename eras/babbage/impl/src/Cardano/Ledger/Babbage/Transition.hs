@@ -27,9 +27,11 @@ instance EraTransition BabbageEra where
     shelleyRegisterInitialFundsThenStaking
       hasFS
       cfg
-      (alonzoInjectCostModels (cfg ^. tcPreviousEraConfigL) newEpochState)
+      (alonzoInjectCostModels cfg newEpochState)
 
   tcPreviousEraConfigL =
     lens btcAlonzoTransitionConfig (\btc pc -> btc {btcAlonzoTransitionConfig = pc})
 
   tcTranslationContextL = lens (const NoGenesis) const
+
+instance AlonzoEraTransition BabbageEra

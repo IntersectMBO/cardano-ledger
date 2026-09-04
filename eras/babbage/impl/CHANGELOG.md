@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `AlonzoEraTransition` instance for `BabbageEra`
 * Change `transTxRedeemers` to accept a `UTxO era` argument
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
 * Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`
