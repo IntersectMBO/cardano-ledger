@@ -59,8 +59,11 @@ data LeiosCandidate = LeiosCandidate
 
 -- | Seat the @committeeSize@ pools with the most stake, largest first, ties
 -- broken by ascending pool id. A pool with no registered key, or one whose
--- proof of possession does not verify, is seated keyless (CIP-0164).
+-- proof of possession does not verify, is seated keyless (CIP-0164). A size of
+-- zero yields the empty committee without inspecting the candidates, so
+-- pre-Dijkstra snapshots carry it for free even when forced.
 selectLeiosCommittee :: Word16 -> Vector LeiosCandidate -> LeiosCommittee
+selectLeiosCommittee 0 _ = emptyLeiosCommittee
 selectLeiosCommittee committeeSize candidates =
   candidates
     & sortByStake

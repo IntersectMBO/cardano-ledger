@@ -178,7 +178,7 @@ checkIncrementalStake es =
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate
-    snapShot = snapShotFromInstantStake instantStake dstate pstate
+    snapShot = snapShotFromInstantStake 0 instantStake dstate pstate
     _pp = es ^. curPParamsEpochStateL
    in
     counterexample
@@ -206,8 +206,8 @@ stakeDistr ::
   PState era ->
   SnapShot
 stakeDistr u ds PState {psStakePools} =
-  resetStakePoolsSnapShot (VMap.fromMap psStakePools) $
-    mkSnapShot activeStake' VMap.empty
+  resetStakePoolsSnapShot 0 (VMap.fromMap psStakePools) $
+    mkSnapShot 0 activeStake' VMap.empty
   where
     activeStake' = mkActiveStake (Map.map fromCompact stakeRelation) activeDelegs
     accountsMap = ds ^. accountsL . accountsMapL
