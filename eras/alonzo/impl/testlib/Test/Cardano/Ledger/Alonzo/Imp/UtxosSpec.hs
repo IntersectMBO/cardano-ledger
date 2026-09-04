@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusTxInfoForPurpose)
+import Cardano.Ledger.Alonzo.Plutus.Context (toPlutusTxInfoForPurpose)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -52,6 +52,7 @@ import Lens.Micro (set, to, (%~), (&), (.~), (<>~), (^.), _2)
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (
@@ -80,15 +81,7 @@ spec = describe "UTXOS" $ do
           expectedUpperBound = (startPOSIX + fromIntegral (currentSlot + txValidity)) * 1000
           tx :: Tx TopTx era
           tx = mkBasicTx mkBasicTxBody & bodyTxL . vldtTxBodyL .~ interval
-          lti =
-            LedgerTxInfo
-              { ltiProtVer = protVer
-              , ltiEpochInfo = ei
-              , ltiSystemStart = ss
-              , ltiUTxO = utxo
-              , ltiTx = tx
-              , ltiMemoizedSubTransactions = mempty
-              }
+          lti = mkTestLedgerTxInfo protVer ei ss utxo tx
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
         Right txInfo ->

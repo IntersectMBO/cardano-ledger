@@ -41,7 +41,6 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transTxBodyWithdrawals,
   transTxBodyReqSignerHashes,
   transTxWitsDatums,
-  transRedeemerPointerV1,
 
   -- * LegacyPlutusArgs helpers
   toPlutusV1Args,
@@ -119,7 +118,6 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
         toPlutusArgs
           slang
           lti
-          (plutusRunnableScriptHash plutusRunnable)
           txInfo
           plutusPurpose
           redeemerData
@@ -135,7 +133,7 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
 
-  toPlutusScriptPurpose = transPlutusPurpose
+  toPlutusScriptPurpose proxy lti = transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -169,36 +167,21 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
     txOut <- transLookupTxOut utxo txIn
     pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
 
-  toPlutusRedeemerPointer = transRedeemerPointerV1
-
-  toPlutusTxOut _ _ = pure . transTxOut
-
-transRedeemerPointerV1 ::
-  proxy 'PlutusV1 ->
-  ProtVer ->
-  TxBody t era ->
-  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
-  (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
-  Either (ContextError era) (PlutusRedeemerPointer 'PlutusV1)
-transRedeemerPointerV1 _ _ _ _ _ = Right ()
-
 toPlutusV1Args ::
   ( AlonzoEraUTxO era
   , EraPlutusTxInfo 'PlutusV1 era
   ) =>
   proxy 'PlutusV1 ->
   LedgerTxInfo era ->
-  ScriptHash ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy LedgerTxInfo {..} _ txInfo plutusPurpose redeemerData =
+toPlutusV1Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs
       proxy
-      ltiProtVer
-      ()
+      lti
       (PV1.ScriptContext txInfo)
       plutusPurpose
       maybeSpendingDatum
@@ -210,15 +193,14 @@ toPlutusV1Args proxy LedgerTxInfo {..} _ txInfo plutusPurpose redeemerData =
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
-  ProtVer ->
-  PlutusPurposeScriptHashArg l ->
+  LedgerTxInfo era ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (LegacyPlutusArgs l)
-toLegacyPlutusArgs proxy pv sh mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
-  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy pv sh scriptPurpose
+toLegacyPlutusArgs proxy lti mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
+  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy lti scriptPurpose
   let redeemer = getPlutusData redeemerData
   pure $ case maybeSpendingData of
     Nothing -> LegacyPlutusArgs2 redeemer scriptContext
@@ -413,10 +395,9 @@ transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
   ProtVer ->
-  PlutusPurposeScriptHashArg l ->
   AlonzoPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV1.ScriptPurpose
-transPlutusPurpose proxy pv _ = \case
+transPlutusPurpose proxy pv = \case
   AlonzoSpending (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
   AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
   AlonzoCertifying (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert

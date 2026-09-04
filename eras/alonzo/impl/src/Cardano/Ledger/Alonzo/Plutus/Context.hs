@@ -28,6 +28,7 @@
 module Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   LedgerTxInfo (..),
+  toScriptHashByPurpose,
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
   mkPlutusTxInfoFromResult,
@@ -47,9 +48,6 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusScriptPurpose,
   PlutusScriptContext,
   PlutusTxInInfo,
-  PlutusPurposeScriptHashArg,
-  PlutusRedeemerPointer,
-  PlutusTxOut,
 ) where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -59,9 +57,10 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIx,
   AsIxItem (..),
   AsPurpose,
-  ExUnits,
   PlutusPurpose,
   PlutusScript (..),
+  hoistPlutusPurpose,
+  toAsIx,
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -77,7 +76,6 @@ import Cardano.Ledger.Plutus (
   PlutusRunnable (..),
   PlutusScriptContext,
   SLanguage (..),
-  TxOutSource,
   asSLanguage,
   plutusLanguage,
  )
@@ -92,6 +90,7 @@ import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import GHC.Generics
 import GHC.Stack
@@ -108,11 +107,24 @@ data LedgerTxInfo era where
     , ltiSystemStart :: !SystemStart
     , ltiUTxO :: !(UTxO era)
     , ltiTx :: !(Tx level era)
+    , ltiScriptsUsed :: [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
+    , ltiScriptHashesUsed :: Map.Map (PlutusPurpose AsIx era) ScriptHash
+    -- ^ Map that will be used for looking up `ScriptHash`. Currently unused until Dijkstra era, hence is lazy.
     , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
     -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
     -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
     } ->
     LedgerTxInfo era
+
+toScriptHashByPurpose ::
+  Ord (PlutusPurpose AsIx era) =>
+  [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)] ->
+  Map (PlutusPurpose AsIx era) ScriptHash
+toScriptHashByPurpose scriptsUsed =
+  Map.fromList
+    [ (hoistPlutusPurpose toAsIx sp, plutusRunnableScriptHash sr)
+    | (sp, SupportedPlutusRunnable sr) <- scriptsUsed
+    ]
 
 class
   ( PlutusLanguage l
@@ -131,8 +143,7 @@ class
 
   toPlutusScriptPurpose ::
     proxy l ->
-    ProtVer ->
-    PlutusPurposeScriptHashArg l ->
+    LedgerTxInfo era ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
@@ -144,7 +155,6 @@ class
   toPlutusArgs ::
     proxy l ->
     LedgerTxInfo era ->
-    ScriptHash ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Data era ->
@@ -155,20 +165,6 @@ class
     UTxO era ->
     TxIn ->
     Either (ContextError era) (PlutusTxInInfo era l)
-
-  toPlutusRedeemerPointer ::
-    proxy l ->
-    ProtVer ->
-    TxBody t era ->
-    Map (PlutusPurpose AsIx era) ScriptHash ->
-    (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
-    Either (ContextError era) (PlutusRedeemerPointer l)
-
-  toPlutusTxOut ::
-    proxy l ->
-    TxOutSource ->
-    TxOut era ->
-    Either (ContextError era) (PlutusTxOut l)
 
 -- | This is the helper type that captures translation of `Tx` to `PlutusTxInfo`.
 --
@@ -282,26 +278,6 @@ type family PlutusTxInInfo era (l :: Language) where
   PlutusTxInInfo _ 'PlutusV2 = PV2.TxInInfo
   PlutusTxInInfo _ 'PlutusV3 = PV3.TxInInfo
   PlutusTxInInfo _ 'PlutusV4 = PV4.TxInInfo
-
-type family PlutusPurposeScriptHashArg (l :: Language) where
-  PlutusPurposeScriptHashArg 'PlutusV1 = ()
-  PlutusPurposeScriptHashArg 'PlutusV2 = ()
-  PlutusPurposeScriptHashArg 'PlutusV3 = ()
-  PlutusPurposeScriptHashArg 'PlutusV4 = ScriptHash
-
-type family PlutusRedeemerPointer (l :: Language) where
-  PlutusRedeemerPointer 'PlutusV1 = ()
-  PlutusRedeemerPointer 'PlutusV2 = (PlutusScriptPurpose 'PlutusV2, PV2.Redeemer)
-  PlutusRedeemerPointer 'PlutusV3 = (PlutusScriptPurpose 'PlutusV3, PV3.Redeemer)
-  PlutusRedeemerPointer 'PlutusV4 = (PlutusScriptPurpose 'PlutusV4, PV4.Redeemer)
-
-type family PlutusTxOut (l :: Language) where
-  -- This special case is here because Alonzo does not have a ContextError
-  -- for the case where it encounters a Byron address in a TxIn
-  PlutusTxOut 'PlutusV1 = Maybe PV1.TxOut
-  PlutusTxOut 'PlutusV2 = PV2.TxOut
-  PlutusTxOut 'PlutusV3 = PV3.TxOut
-  PlutusTxOut 'PlutusV4 = PV4.TxOut
 
 -- | This is just like `mkPlutusScript`, except it is guaranteed to be total through the enforcement
 -- of support by the type system and `EraPlutusTxInfo` type class instances for supported plutus

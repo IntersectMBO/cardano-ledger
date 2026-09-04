@@ -183,6 +183,7 @@ library testlib
     ghc-options:
       -Wno-pattern-namespace-specifier
   build-depends:
+    FailT,
     base,
     bytestring,
     cardano-base,

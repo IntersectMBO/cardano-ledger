@@ -33,8 +33,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
-  PlutusPurposeScriptHashArg,
-  PlutusRedeemerPointer,
   PlutusScriptPurpose,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -46,17 +44,16 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   toLegacyPlutusArgs,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..), getSpendingDatum)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, getSpendingDatum)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.BaseTypes (
   Inject (..),
-  ProtVer,
   StrictMaybe (..),
   isSJust,
   kindObjectValue,
@@ -88,13 +85,12 @@ import Cardano.Ledger.Plutus.TxInfo (
   transTxIn,
   txOutSourceToText,
  )
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
-import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -196,47 +192,40 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPointerV2V3 ::
-  forall proxy l era t.
-  ( EraPlutusTxInfo l era
+  forall proxy l era.
+  ( EraTx era
   , AlonzoEraTxBody era
+  , EraPlutusTxInfo l era
   , Inject (BabbageContextError era) (ContextError era)
-  , PlutusPurposeScriptHashArg l ~ ()
   ) =>
   proxy l ->
-  ProtVer ->
-  TxBody t era ->
-  Map.Map (PlutusPurpose AsIx era) ScriptHash ->
+  LedgerTxInfo era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
-transRedeemerPointerV2V3 proxy pv txBody _ (ptr, (d, _)) =
-  case redeemerPointerInverse txBody ptr of
+transRedeemerPointerV2V3 proxy lti@LedgerTxInfo {ltiTx} (ptr, (d, _)) =
+  case redeemerPointerInverse (ltiTx ^. bodyTxL) ptr of
     SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
-      plutusScriptPurpose <- toPlutusScriptPurpose proxy pv () sp
+      plutusScriptPurpose <- toPlutusScriptPurpose proxy lti sp
       Right (plutusScriptPurpose, transRedeemer d)
 
 -- | Translate all `Redeemers` from within a `Tx` into a Map from a `PlutusScriptPurpose`
 -- to a `PV2.Redeemer`
 transTxRedeemers ::
   ( EraPlutusTxInfo l era
-  , EraUTxO era
+  , AlonzoEraTxBody era
+  , EraTx era
   , AlonzoEraTxWits era
-  , PlutusRedeemerPointer l ~ (PlutusScriptPurpose l, PV2.Redeemer)
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  ProtVer ->
-  Tx t era ->
-  UTxO era ->
+  LedgerTxInfo era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
-transTxRedeemers proxy pv tx utxo =
+transTxRedeemers proxy lti@LedgerTxInfo {ltiTx} =
   PV2.unsafeFromList
     <$> mapM
-      (toPlutusRedeemerPointer proxy pv (tx ^. bodyTxL) scriptHashes)
-      (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
-  where
-    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo $ tx ^. bodyTxL
-    scriptHashes = Map.fromList $ first (hoistPlutusPurpose toAsIx) <$> scriptsNeeded
+      (transRedeemerPointerV2V3 proxy lti)
+      (Map.toList $ ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
@@ -336,7 +325,7 @@ instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) whe
 instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
@@ -375,16 +364,12 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
 
   toPlutusTxInInfo _ = transTxInInfoV1
 
-  toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
-
-  toPlutusTxOut _ src txOut = Just <$> transTxOutV1 src txOut
-
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     PlutusTxInfoResult $ withTopTxLevelOnly ltiTx $ \tx -> do
       let txBody = tx ^. bodyTxL
       timeRange <-
@@ -397,7 +382,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- transTxRedeemers proxy ltiProtVer tx ltiUTxO
+      plutusRedeemers <- transTxRedeemers proxy lti
       -- It is important for memoization for `txInfo` to be a let binding
       let
         txInfo =
@@ -421,27 +406,21 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
 
   toPlutusTxInInfo _ = transTxInInfoV2
 
-  toPlutusRedeemerPointer = transRedeemerPointerV2V3
-
-  toPlutusTxOut _ = transTxOutV2
-
 toPlutusV2Args ::
   ( AlonzoEraUTxO era
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>
   proxy 'PlutusV2 ->
   LedgerTxInfo era ->
-  ScriptHash ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toPlutusV2Args proxy LedgerTxInfo {..} _ txInfo scriptPurpose redeemerData =
+toPlutusV2Args proxy lti@LedgerTxInfo {..} txInfo scriptPurpose redeemerData =
   PlutusV2Args
     <$> toLegacyPlutusArgs
       proxy
-      ltiProtVer
-      ()
+      lti
       (PV2.ScriptContext txInfo)
       scriptPurpose
       maybeSpendingDatum

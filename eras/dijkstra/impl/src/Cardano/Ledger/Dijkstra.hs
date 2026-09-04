@@ -22,6 +22,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (mkTxInfoResult),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
+  toScriptHashByPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   scriptsWithContextFromLedgerTxInfo,
@@ -137,6 +138,8 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = plutusScriptsUsed
+        , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
         , ltiMemoizedSubTransactions =
             Map.fromList
               [ (txIdTx dsastTx, dsastTxInfoResult)
@@ -154,7 +157,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
       , dsattPlutusRunnableCache = newStAnnTxCache
       , dsattPlutusLanguagesUsed = languagesUsed
       , dsattPlutusScriptsWithContext =
-          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
+          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
       , dsattSubTransactions = stAnnSubTxs
       }
 
@@ -185,6 +188,8 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
+        , ltiScriptsUsed = plutusScriptsUsed
+        , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
         , ltiMemoizedSubTransactions = mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
@@ -203,5 +208,4 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
             ledgerTxInfo
             txInfoResult
             (pp ^. ppCostModelsL)
-            plutusScriptsUsed
       }

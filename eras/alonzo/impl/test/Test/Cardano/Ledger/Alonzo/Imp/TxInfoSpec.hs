@@ -7,7 +7,6 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
-  LedgerTxInfo (..),
   PlutusTxInfoResult (..),
  )
 import Cardano.Ledger.BaseTypes
@@ -17,6 +16,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Lens.Micro.Mtl (use)
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -41,15 +41,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             & bodyTxL
               . outputsTxBodyL
               .~ SSeq.singleton byronTxOut
-        lti =
-          LedgerTxInfo
-            { ltiProtVer = pv
-            , ltiEpochInfo = epochInfo
-            , ltiSystemStart = systemStart
-            , ltiUTxO = utxo
-            , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            }
+        lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
       pv <- getProtVer
@@ -69,13 +61,5 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
             & bodyTxL
               . outputsTxBodyL
               .~ SSeq.singleton shelleyTxOut
-        lti =
-          LedgerTxInfo
-            { ltiProtVer = pv
-            , ltiEpochInfo = epochInfo
-            , ltiSystemStart = systemStart
-            , ltiUTxO = utxo
-            , ltiTx = tx
-            , ltiMemoizedSubTransactions = mempty
-            }
+        lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
