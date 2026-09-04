@@ -92,6 +92,13 @@ package cardano-ledger-mary
 package cardano-ledger-conway
   flags: +asserts
 
+-- Workaround for GHC #27342 (speculative-evaluation correctness bug,
+-- GHC 9.10+): without this, applying the Conway CERTS STS rule to a
+-- constrained-generators-produced signal segfaults under GHC 9.12.4.
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+package constrained-generators
+  ghc-options: -fno-spec-eval
+
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always
 -- Always build tests and benchmarks.
