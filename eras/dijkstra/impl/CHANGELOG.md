@@ -24,6 +24,7 @@
   - Remove `alignedValidFlags`
 * Add a Dijkstra `EPOCH` rule
   - Take the stake snapshot at the end of the transition after stake pool and governance-action refunds and treasury withdrawals are applied, so that stake pool voting stake is consistent with DRep voting stake (#5014)
+* Add a Dijkstra `SNAP` rule that runs Shelley's snapshot rotation and then seats the Leios voting committee (CIP-0164) on the fresh mark snapshot: the top `leiosCommitteeSize` pools by stake, carrying their registered BLS keys
 * Add `localProducedValue` helper in `UTxO` module
 * Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
 * Rename:
