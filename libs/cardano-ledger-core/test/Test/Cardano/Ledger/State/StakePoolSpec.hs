@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
+import Cardano.Ledger.BaseTypes (EpochNo)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -21,9 +22,10 @@ spec = do
       \( stakePoolParams :: StakePoolParams era
          , deposit :: CompactForm Coin
          , delegs :: Set (Credential Staking)
+         , epochNo :: EpochNo
          ) ->
           let poolId = sppId stakePoolParams
               network = aaNetworkId $ sppAccountAddress stakePoolParams
-              stakePoolState = mkStakePoolState deposit delegs stakePoolParams
+              stakePoolState = mkStakePoolState epochNo deposit delegs stakePoolParams
               stakePoolParams' = stakePoolStateToStakePoolParams network poolId stakePoolState
            in stakePoolParams === stakePoolParams'

@@ -59,7 +59,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..))
 import qualified Cardano.Ledger.Hashes as H
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), ExUnits' (..))
-import Cardano.Ledger.State (BlsKey, PoolMetadata, StakePoolRelay)
+import Cardano.Ledger.State (BlsKey, BlsKeyState, PoolMetadata, StakePoolRelay)
 import Cardano.SCLS.CBOR.Canonical (CanonicalDecoder)
 import Cardano.SCLS.CBOR.Canonical.Decoder (
   FromCanonicalCBOR (..),
@@ -309,6 +309,16 @@ deriving via
   LedgerCBOR v BlsKey
   instance
     (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v BlsKey
+
+deriving via
+  LedgerCBOR v BlsKeyState
+  instance
+    (Era era, NamespaceEra v ~ era) => ToCanonicalCBOR v BlsKeyState
+
+deriving via
+  LedgerCBOR v BlsKeyState
+  instance
+    (Era era, NamespaceEra v ~ era) => FromCanonicalCBOR v BlsKeyState
 
 deriving via
   LedgerCBOR v AccountId

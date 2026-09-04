@@ -517,7 +517,7 @@ snapShotSpec =
 setSnapShotSpec :: Specification SetSnapShot
 setSnapShotSpec =
   constrained $ \ [var|set|] ->
-    match set $ \ [var|snap|] _pooldistr _epochNo _size _committee ->
+    match set $ \ [var|snap|] _pooldistr _epochNo _size _maxKeyAge _committee ->
       satisfies snap snapShotSpec
 
 goSnapShotSpec :: Specification GoSnapShot
@@ -531,7 +531,7 @@ snapShotsSpec ::
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|_go|] _fee ->
-      [ match mark $ \ [var|marksnap'|] _epochNo _size ->
+      [ match mark $ \ [var|marksnap'|] _epochNo _size _maxKeyAge ->
           assert $ marksnap' ==. marksnap
       , satisfies set setSnapShotSpec
       , satisfies _go goSnapShotSpec
