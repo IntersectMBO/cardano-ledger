@@ -26,6 +26,7 @@ import Cardano.Ledger.State (
   EraStake,
   SnapShots (..),
   emptySnapShots,
+  leiosCandidates,
   selectLeiosCommittee,
   ssLeiosCommitteeL,
   ssStakeMarkL,
@@ -67,7 +68,7 @@ snapTransition = do
   let committee =
         selectLeiosCommittee
           (pp ^. ppLeiosCommitteeSizeL)
-          (snaps ^. ssStakeMarkL & ssStakePoolsSnapShot)
+          (leiosCandidates (snaps ^. ssStakeMarkL & ssStakePoolsSnapShot))
   pure $ snaps & ssStakeMarkL . ssLeiosCommitteeL .~ committee
 
 instance
