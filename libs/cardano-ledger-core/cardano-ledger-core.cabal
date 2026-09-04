@@ -156,6 +156,7 @@ library
     utf8-string,
     validation-selective,
     vector,
+    vector-algorithms,
     vector-map >=1.1,
 
   if flag(asserts)

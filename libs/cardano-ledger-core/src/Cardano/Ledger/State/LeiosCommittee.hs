@@ -30,10 +30,11 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.Ledger.State.StakePool (BlsKey (..))
 import Data.Aeson (ToJSON (..), object, (.=))
-import Data.List (sortOn)
+import Data.Function ((&))
 import Data.Ord (Down (..))
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+import qualified Data.Vector.Algorithms.Intro as Intro
 import qualified Data.Vector.Strict as VS
 import Data.Word (Word16)
 
@@ -58,18 +59,28 @@ data LeiosCandidate = LeiosCandidate
 
 -- | Seat the @committeeSize@ pools with the most stake, largest first, ties
 -- broken by ascending pool id. A pool with no registered key, or one whose
--- proof of possession does not verify, is seated keyless (CIP-0164). A size of
--- zero yields the empty committee, so pre-Dijkstra eras do no work.
+-- proof of possession does not verify, is seated keyless (CIP-0164).
 selectLeiosCommittee :: Word16 -> Vector LeiosCandidate -> LeiosCommittee
-selectLeiosCommittee 0 _ = emptyLeiosCommittee
 selectLeiosCommittee committeeSize candidates =
-  mkLeiosCommittee . VS.fromList $
-    [ (keyWithProof <$> lcKey c, lcWeight c)
-    | c <- take (fromIntegral committeeSize) ordered
-    ]
+  candidates
+    & sortByStake
+    & V.take size
+    & V.map toSeat
+    & V.convert
+    & mkLeiosCommittee
   where
-    ordered = sortOn (\c -> (Down (lcStake c), lcPoolId c)) (V.toList candidates)
-    keyWithProof (BlsKey vk pop) = (vk, pop)
+    -- Only the top @size@ need to be in order, so partial-sort them in place
+    -- and leave the rest untouched instead of ordering the whole vector.
+    sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
+
+    size = min (fromIntegral committeeSize) (V.length candidates)
+
+    higherStake a b =
+      compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
+
+    toSeat c = (toTuple <$> lcKey c, lcWeight c)
+
+    toTuple (BlsKey vk pop) = (vk, pop)
 
 -- Orphans: the committee is part of the ledger state, but its type belongs to
 -- cardano-base, which has no reason to know how we serialize it.
