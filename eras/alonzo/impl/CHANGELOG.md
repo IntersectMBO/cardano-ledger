@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Add `AlonzoEraTransition` class with a `tcAlonzoGenesisL` lens
+* Change `alonzoInjectCostModels` to accept the `TransitionConfig` of the current era instead of `TransitionConfig AlonzoEra`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families
