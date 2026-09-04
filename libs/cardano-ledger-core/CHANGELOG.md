@@ -56,6 +56,9 @@
 * Add `ToJSON (Tx TopTx era)` and `FromJSON (Tx TopTx era)` as `EraTx` superclass constraints
 * Add `ToJSON` and `FromJSON` instances for `Withdrawals`
 * Add `FromJSON` instance for `ScriptHash` and `TxAuxDataHash`
+* Add `Cardano.Ledger.State.LeiosCommittee` module: re-exports cardano-base's `LeiosCommittee` and `LeiosSeat`, and adds `emptyLeiosCommittee`, `LeiosCandidate`, and `selectLeiosCommittee` for choosing the per-epoch Leios voting committee (CIP-0164)
+* Add `ssLeiosCommittee` field and `ssLeiosCommitteeL` to `SnapShot`. It is encoded and decoded only from protocol version 12 (Dijkstra) onwards, leaving `SnapShot` serialisation unchanged in earlier eras
+* Add `leiosCandidates` to `SnapShots`, projecting a stake pool snapshot to the `LeiosCandidate`s that `selectLeiosCommittee` ranks
 
 ### `testlib`
 
