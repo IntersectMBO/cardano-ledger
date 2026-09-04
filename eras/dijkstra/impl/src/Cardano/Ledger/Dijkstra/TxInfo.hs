@@ -862,7 +862,7 @@ transAccountBalanceInterval = \case
 transAccountBalanceIntervals :: AccountBalanceIntervals era -> PV4.AccountBalanceIntervals
 transAccountBalanceIntervals (AccountBalanceIntervals balanceIntervals) =
   PV4.AccountBalanceIntervals $
-    transMap transAccountAddressToAccountId transAccountBalanceInterval balanceIntervals
+    transMap (transCredToAccountId . unAccountId . aaId) transAccountBalanceInterval balanceIntervals
 
 transTxBodyGuards :: DijkstraEraTxBody era => TxBody l era -> [PV4.Credential]
 transTxBodyGuards txb = fmap transCred . F.toList $ txb ^. guardsTxBodyL
