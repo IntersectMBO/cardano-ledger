@@ -4,7 +4,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -20,7 +19,7 @@ module Cardano.Ledger.State.SnapShots (
   mkStakePoolSnapShot,
   SnapShot (..),
   mkSnapShot,
-  selectLeiosCommittee,
+  leiosCandidates,
   ssLeiosCommitteeL,
   SnapShots (..),
   emptySnapShot,
@@ -42,7 +41,6 @@ module Cardano.Ledger.State.SnapShots (
   ssActiveStakeL,
 ) where
 
-import Cardano.Crypto.Leios (mkLeiosCommittee)
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   KeyValuePairs (..),
@@ -87,10 +85,14 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
-import Cardano.Ledger.State.LeiosCommittee (LeiosCommittee (..), emptyLeiosCommittee)
+import Cardano.Ledger.State.LeiosCommittee (
+  LeiosCandidate (..),
+  LeiosCommittee (..),
+  emptyLeiosCommittee,
+ )
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.State.Stake
-import Cardano.Ledger.State.StakePool (BlsKey (..), StakePoolState (..))
+import Cardano.Ledger.State.StakePool (BlsKey, StakePoolState (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -98,16 +100,15 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
-import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Ord (Down (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.VMap (VB, VMap)
+import Data.VMap (VB, VMap (..))
 import qualified Data.VMap as VMap
-import qualified Data.Vector.Strict as V
+import qualified Data.Vector as V
+import qualified Data.Vector.Generic as VG
 import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (&), (^.), _1)
@@ -466,22 +467,14 @@ mkSnapShot ssActiveStake ssStakePoolsSnapShot =
 ssLeiosCommitteeL :: Lens' SnapShot LeiosCommittee
 ssLeiosCommitteeL = lens ssLeiosCommittee (\ss u -> ss {ssLeiosCommittee = u})
 
--- | Seat the @committeeSize@ pools with the most stake, largest first, ties
--- broken by ascending pool id. A pool with no registered key, or one whose
--- proof of possession does not verify, is seated keyless (CIP-0164). A size of
--- zero yields the empty committee, so pre-Dijkstra eras do no work.
-selectLeiosCommittee ::
-  Word16 -> VMap VB VB (KeyHash StakePool) StakePoolSnapShot -> LeiosCommittee
-selectLeiosCommittee 0 _ = emptyLeiosCommittee
-selectLeiosCommittee committeeSize pools =
-  mkLeiosCommittee . V.fromList $
-    [ (keyWithProof <$> spssBlsKey spss, spssStakeRatio spss)
-    | (_poolId, spss) <- take (fromIntegral committeeSize) ordered
-    ]
+-- | Project each stake pool in a snapshot to its standing for Leios committee
+-- selection (CIP-0164). 'selectLeiosCommittee' ranks and seats these.
+leiosCandidates ::
+  VMap VB VB (KeyHash StakePool) StakePoolSnapShot -> V.Vector LeiosCandidate
+leiosCandidates = V.map (uncurry toCandidate) . VG.convert . unVMap
   where
-    ordered =
-      sortOn (\(poolId, spss) -> (Down (spssStake spss), poolId)) (VMap.toList pools)
-    keyWithProof (BlsKey vk pop) = (vk, pop)
+    toCandidate poolId spss =
+      LeiosCandidate poolId (spssStake spss) (spssStakeRatio spss) (spssBlsKey spss)
 
 -- | Given stake pools state and SnapShot completely overwrite the StakePoolsSnapShot
 resetStakePoolsSnapShot ::
