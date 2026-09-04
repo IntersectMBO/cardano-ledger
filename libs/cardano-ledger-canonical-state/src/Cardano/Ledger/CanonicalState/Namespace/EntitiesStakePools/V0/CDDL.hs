@@ -79,4 +79,4 @@ stake_pool_params =
       ]
 
 bls_key_rule :: Rule
-bls_key_rule = "bls_key" =:= arr [a VBytes, a VBytes]
+bls_key_rule = "bls_key" =:= arr [a VBytes, a VBytes, a epoch_no]

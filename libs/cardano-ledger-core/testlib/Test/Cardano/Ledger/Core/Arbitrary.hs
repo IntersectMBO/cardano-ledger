@@ -501,6 +501,9 @@ instance Arbitrary PoolMetadata where
 instance Arbitrary BlsKey where
   arbitrary = BlsKey <$> arbitrary <*> arbitrary
 
+instance Arbitrary BlsKeyState where
+  arbitrary = BlsKeyState <$> arbitrary <*> arbitrary
+
 instance Arbitrary (PossessionProofDSIGN BLS12381MinSigDSIGN) where
   arbitrary = genBlsPossessionProof
 
@@ -758,7 +761,7 @@ mkSnapShotFromStakePoolParams ::
   SnapShot
 mkSnapShotFromStakePoolParams activeStake poolParams =
   resetStakePoolSnapShotFromPoolParams poolParams $
-    mkSnapShot 0 activeStake VMap.empty
+    mkSnapShot (BaseTypes.EpochNo 0) (BaseTypes.EpochInterval 0) 0 activeStake VMap.empty
 
 -- | Given a snapshot and stake pool params fully override the stake pools snapshot.
 resetStakePoolSnapShotFromPoolParams ::
@@ -778,7 +781,7 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
     snapShotFromStakePoolParams stakePoolParams =
       let delegations = Map.findWithDefault mempty (sppId stakePoolParams) delegatorsPerStakePool
        in mkStakePoolSnapShot ssActiveStake ssTotalActiveStake $
-            mkStakePoolState mempty delegations stakePoolParams
+            mkStakePoolState (BaseTypes.EpochNo 0) mempty delegations stakePoolParams
     delegatorsPerStakePool =
       VMap.foldlWithKey
         (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)

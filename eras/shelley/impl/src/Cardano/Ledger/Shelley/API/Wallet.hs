@@ -41,6 +41,8 @@ module Cardano.Ledger.Shelley.API.Wallet (
 
 import Cardano.Ledger.Address (compactAddr)
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
   Globals (..),
   NonNegativeInterval,
   UnitInterval,
@@ -260,7 +262,7 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
 -- ledger state.
 currentSnapshot :: (EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
 currentSnapshot nes =
-  snapShotFromInstantStake 0 instantStake dstate pstate
+  snapShotFromInstantStake (EpochNo 0) (EpochInterval 0) 0 instantStake dstate pstate
   where
     ledgerState = esLState $ nesEs nes
     instantStake = ledgerState ^. instantStakeG
