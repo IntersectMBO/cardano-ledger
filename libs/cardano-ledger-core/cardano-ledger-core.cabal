@@ -324,6 +324,7 @@ test-suite tests
     Test.Cardano.Ledger.BinarySpec
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
+    Test.Cardano.Ledger.State.LeiosCommitteeSpec
     Test.Cardano.Ledger.State.PoolDistrSpec
     Test.Cardano.Ledger.State.SnapShotsSpec
     Test.Cardano.Ledger.State.StakePoolSpec
@@ -351,7 +352,7 @@ test-suite tests
     quickcheck-instances,
     scientific,
     testlib,
-    vector-map,
+    vector,
 
 benchmark addr
   import: warnings, rtsopts
