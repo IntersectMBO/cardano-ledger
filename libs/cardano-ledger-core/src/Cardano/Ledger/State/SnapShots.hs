@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,6 +20,8 @@ module Cardano.Ledger.State.SnapShots (
   mkStakePoolSnapShot,
   SnapShot (..),
   mkSnapShot,
+  selectLeiosCommittee,
+  ssLeiosCommitteeL,
   SnapShots (..),
   emptySnapShot,
   emptySnapShots,
@@ -39,6 +42,7 @@ module Cardano.Ledger.State.SnapShots (
   ssActiveStakeL,
 ) where
 
+import Cardano.Crypto.Leios (mkLeiosCommittee)
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   KeyValuePairs (..),
@@ -67,6 +71,9 @@ import Cardano.Ledger.Binary (
   decodeRecordNamedT,
   decodeVMap,
   encodeListLen,
+  getDecoderVersion,
+  ifEncodingVersionAtLeast,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Decoding (interns)
 import Cardano.Ledger.Coin (
@@ -80,9 +87,10 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
+import Cardano.Ledger.State.LeiosCommittee (LeiosCommittee (..), emptyLeiosCommittee)
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.State.Stake
-import Cardano.Ledger.State.StakePool (BlsKey, StakePoolState (..))
+import Cardano.Ledger.State.StakePool (BlsKey (..), StakePoolState (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -90,13 +98,16 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
+import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Ord (Down (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.VMap (VB, VMap)
 import qualified Data.VMap as VMap
+import qualified Data.Vector.Strict as V
 import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (&), (^.), _1)
@@ -301,25 +312,39 @@ data SnapShot = SnapShot
   -- assumption for a system that relies on non-zero active stake to produce blocks.
   , ssStakePoolsSnapShot :: !(VMap VB VB (KeyHash StakePool) StakePoolSnapShot)
   -- ^ Snapshot of stake pools' information that is relevant only for the reward calculation logic.
+  , ssLeiosCommittee :: LeiosCommittee
+  -- ^ The Leios voting committee for the epoch this snapshot governs
+  -- (CIP-0164), selected from 'ssStakePoolsSnapShot'. Empty before Dijkstra.
+  -- Lazy on purpose, so that pre-Dijkstra eras never do the work, since it
+  -- depends only on the pool snapshot.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SnapShot
 
 instance NFData SnapShot
 
-instance NoThunks SnapShot
+deriving via AllowThunksIn '["ssLeiosCommittee"] SnapShot instance NoThunks SnapShot
 
 instance EncCBOR SnapShot where
-  encCBOR ss@(SnapShot _ _ _) =
+  encCBOR ss@(SnapShot _ _ _ _) =
     let SnapShot {..} = ss
-     in encodeListLen 2
-          <> encCBOR ssActiveStake
-          -- `ssTotalActiveStake` is ommitted on purpose
-          <> encCBOR ssStakePoolsSnapShot
+     in ifEncodingVersionAtLeast
+          (natVersion @12)
+          ( encodeListLen 3
+              <> encCBOR ssActiveStake
+              -- `ssTotalActiveStake` is ommitted on purpose
+              <> encCBOR ssStakePoolsSnapShot
+              <> encCBOR ssLeiosCommittee
+          )
+          ( encodeListLen 2
+              <> encCBOR ssActiveStake
+              <> encCBOR ssStakePoolsSnapShot
+          )
 
 instance DecShareCBOR SnapShot where
   type Share SnapShot = (Interns (Credential Staking), Interns (KeyHash StakePool))
   decSharePlusCBOR = do
+    dijkstraOnwards <- lift $ (>= natVersion @12) <$> getDecoderVersion
     n <- lift decodeListLen
     case n of
       2 -> do
@@ -329,6 +354,14 @@ instance DecShareCBOR SnapShot where
         stakePoolsSnapShot <-
           lift $ decodeVMap (interns stakePoolIdInterns <$> decCBOR) (decShareCBOR stakeCredInterns)
         pure $ mkSnapShot activeStake stakePoolsSnapShot
+      3 | dijkstraOnwards -> do
+        -- Dijkstra format: [ActiveStake, StakePoolsSnapShot, LeiosCommittee]
+        activeStake <- decSharePlusLensCBOR _1
+        (stakeCredInterns, stakePoolIdInterns) <- get
+        stakePoolsSnapShot <-
+          lift $ decodeVMap (interns stakePoolIdInterns <$> decCBOR) (decShareCBOR stakeCredInterns)
+        ssLeiosCommittee <- lift decCBOR
+        pure (mkSnapShot activeStake stakePoolsSnapShot) {ssLeiosCommittee}
       3 -> do
         -- Old format: [Stake, Delegations, StakePoolsSnapShot]
         oldStake <- decSharePlusLensCBOR _1
@@ -348,7 +381,7 @@ instance DecShareCBOR SnapShot where
       _ -> lift $ fail $ "Expected 2 or 3 fields for SnapShot, got " <> show n
 
 instance ToKeyValuePairs SnapShot where
-  toKeyValuePairs ss@(SnapShot _ _ _) =
+  toKeyValuePairs ss@(SnapShot _ _ _ _) =
     let SnapShot {..} = ss
      in [ "activeStake" .= ssActiveStake
         , "stakePoolsSnapShot" .= ssStakePoolsSnapShot
@@ -410,7 +443,7 @@ instance ToKeyValuePairs (SnapShots era) where
         ]
 
 emptySnapShot :: SnapShot
-emptySnapShot = SnapShot (ActiveStake VMap.empty) (knownNonZeroCoin @1) mempty
+emptySnapShot = SnapShot (ActiveStake VMap.empty) (knownNonZeroCoin @1) mempty emptyLeiosCommittee
 
 emptySnapShots :: SnapShots era
 emptySnapShots =
@@ -422,8 +455,33 @@ mkSnapShot ::
   SnapShot
 mkSnapShot ssActiveStake ssStakePoolsSnapShot =
   let ssTotalActiveStake = sumAllActiveStake ssActiveStake
-   in SnapShot {ssActiveStake, ssTotalActiveStake, ssStakePoolsSnapShot}
+   in SnapShot
+        { ssActiveStake
+        , ssTotalActiveStake
+        , ssStakePoolsSnapShot
+        , ssLeiosCommittee = emptyLeiosCommittee
+        }
 {-# INLINE mkSnapShot #-}
+
+ssLeiosCommitteeL :: Lens' SnapShot LeiosCommittee
+ssLeiosCommitteeL = lens ssLeiosCommittee (\ss u -> ss {ssLeiosCommittee = u})
+
+-- | Seat the @committeeSize@ pools with the most stake, largest first, ties
+-- broken by ascending pool id. A pool with no registered key, or one whose
+-- proof of possession does not verify, is seated keyless (CIP-0164). A size of
+-- zero yields the empty committee, so pre-Dijkstra eras do no work.
+selectLeiosCommittee ::
+  Word16 -> VMap VB VB (KeyHash StakePool) StakePoolSnapShot -> LeiosCommittee
+selectLeiosCommittee 0 _ = emptyLeiosCommittee
+selectLeiosCommittee committeeSize pools =
+  mkLeiosCommittee . V.fromList $
+    [ (keyWithProof <$> spssBlsKey spss, spssStakeRatio spss)
+    | (_poolId, spss) <- take (fromIntegral committeeSize) ordered
+    ]
+  where
+    ordered =
+      sortOn (\(poolId, spss) -> (Down (spssStake spss), poolId)) (VMap.toList pools)
+    keyWithProof (BlsKey vk pop) = (vk, pop)
 
 -- | Given stake pools state and SnapShot completely overwrite the StakePoolsSnapShot
 resetStakePoolsSnapShot ::
@@ -469,7 +527,7 @@ calculatePoolDistr :: SnapShot -> PoolDistr
 calculatePoolDistr = calculatePoolDistr' (const True)
 
 calculatePoolDistr' :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
+calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot _) =
   let toIndividualPoolStake poolId spss = do
         guard (includeHash poolId)
         guard (spssNumDelegators spss > 0)

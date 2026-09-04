@@ -51,7 +51,9 @@ import Cardano.Ledger.Conway.Rules (
   updateNumDormantEpochs,
  )
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Dijkstra.Era (EPOCH)
+import Cardano.Ledger.Dijkstra.Era (EPOCH, SNAP)
+import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
+import Cardano.Ledger.Dijkstra.Rules.Snap ()
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -254,9 +256,10 @@ instance
   ( EraTxOut era
   , EraStake era
   , EraCertState era
+  , DijkstraEraPParams era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
   ) =>
-  Embed (Shelley.SNAP era) (EPOCH era)
+  Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = SnapEvent
