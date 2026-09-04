@@ -5,7 +5,11 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec (spec) where
 
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), EpochSize (..), Globals (..))
+import Cardano.Ledger.Dijkstra.Rules (maxKeyAgeEpochs)
 import Cardano.Ledger.Val ((<->))
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad (forM)
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec (
   getActiveProposalDeposits,
@@ -20,6 +24,7 @@ import Test.Cardano.Ledger.Conway.Imp.SnapSpec (
   setupRetiredPoolInLeaderDistr,
   setupWithdrawalScenario,
  )
+import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -28,6 +33,16 @@ spec ::
   DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SNAP" $ do
+  it "maxKeyAgeEpochs is 21 epochs for mainnet parameters" $ \_ -> do
+    let mainnetGlobals =
+          testGlobals
+            { maxKESEvo = 62
+            , slotsPerKESPeriod = 129_600
+            , epochInfo = fixedEpochInfo (EpochSize 432_000) (mkSlotLength 1)
+            }
+    -- 62 * 129600 / 432000 = 18.6, rounded up to 19, plus 2 epochs of activation delay.
+    maxKeyAgeEpochs mainnetGlobals (EpochNo 0) `shouldBe` EpochInterval 21 :: IO ()
+
   it "SPO voting stake no longer lags DRep voting stake by the refunded deposit" $ do
     (pool, drep, _) <- setupExpiredRefundScenario
     drepVotingStake <- getDRepVotingStake drep

@@ -11,7 +11,7 @@ module Cardano.Ledger.State.Orphans where
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Babbage.TxBody
-import Cardano.Ledger.BaseTypes (EpochNo (..), TxIx (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), TxIx (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance
@@ -74,6 +74,10 @@ deriving instance PersistFieldSql TxIx
 deriving newtype instance PersistField EpochNo
 
 deriving newtype instance PersistFieldSql EpochNo
+
+deriving newtype instance PersistField EpochInterval
+
+deriving newtype instance PersistFieldSql EpochInterval
 
 instance PersistField Coin where
   toPersistValue = PersistInt64 . fromIntegral . unCoin

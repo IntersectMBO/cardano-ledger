@@ -712,6 +712,17 @@ instance HasSpec BlsKey where
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
+instance HasSpec BlsKeyState where
+  type TypeSpec BlsKeyState = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
 instance Era era => HasSimpleRep (StakePoolParams era)
 
 instance Era era => HasSpec (StakePoolParams era)
