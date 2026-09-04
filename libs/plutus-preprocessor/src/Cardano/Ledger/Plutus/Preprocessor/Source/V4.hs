@@ -152,9 +152,9 @@ purposeIsWellformedNoDatumQ =
                 case mDatum of
                   Just _ -> False
                   Nothing ->
-                    PLD.null $ PLD.filter ((txOutRef P.==) . PV4D.txInInfoOutRef) infoInputs
+                    not $ PLD.null $ PLD.filter ((txOutRef P.==) . PV4D.txInInfoOutRef) infoInputs
               PV4D.CertifyingScript _idx txCert ->
-                PLD.null $ PLD.filter (txCert P.==) infoTxCerts
+                not $ PLD.null $ PLD.filter (txCert P.==) infoTxCerts
               PV4D.VotingScript voter ->
                 PAMD.member voter infoVotes
               PV4D.ProposingScript _idx _propProc -> True
@@ -163,7 +163,7 @@ purposeIsWellformedNoDatumQ =
               -- this later:
               --
               -- null $ P.filter (propProc P.==) $ PV4.txInfoProposalProcedures txInfo
-              PV4D.WithdrawingScript account -> PAMD.member account infoWithdrawals
+              PV4D.WithdrawingScript (PV4D.AccountId account) -> PAMD.member account infoWithdrawals
               PV4D.GuardingScript ix topTxInfo ->
                 (PV4D.ScriptCredential sh P.== infoGuards PLD.!! ix)
                   P.&& (P.isJust infoSubTxIx P.== P.isNothing topTxInfo)

@@ -91,7 +91,7 @@ import Cardano.Ledger.Dijkstra.TxBody (
   accountBalanceIntervalsTxBodyL,
   directDepositsTxBodyL,
   guardsTxBodyL,
-  requiredTopLevelGuardsL,
+  requiredTopLevelGuardsTxBodyL,
   subTransactionsTxBodyL,
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -245,7 +245,7 @@ addDijkstraBasedSubTxFeatures ::
   Tx SubTx era
 addDijkstraBasedSubTxFeatures tx =
   tx
-    & bodyTxL . requiredTopLevelGuardsL
+    & bodyTxL . requiredTopLevelGuardsTxBodyL
       <>~ Map.fromList
         [ (KeyHashObj $ mkKeyHash 212, SNothing)
         , (ScriptHashObj $ mkScriptHash 213, SJust $ exampleDatum @era)

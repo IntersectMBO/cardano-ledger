@@ -17,9 +17,10 @@
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
+  EraPlutusContext (..),
   EraPlutusTxInfo,
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   toPlutusArgs,
   toPlutusTxInfoForPurpose,
  )
@@ -121,7 +122,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
         , ltiSystemStart = testSystemStart
         , ltiUTxO = initUTxO
         , ltiTx = validatingTx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = TopTxInfo mempty
         }
 
 -- ============================== DATA ===============================

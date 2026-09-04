@@ -32,8 +32,9 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
+  EraPlutusContext (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   SupportedPlutusRunnable (..),
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
@@ -146,7 +147,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiSystemStart = sysStart
         , ltiUTxO = utxo
         , ltiTx = tx
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelInfo = TopTxInfo mempty
         }
    in
     AlonzoStAnnTx

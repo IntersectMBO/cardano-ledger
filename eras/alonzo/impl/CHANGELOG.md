@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Remove `ltiMemoizedSubTransactions` field from `LedgerTxInfo`, add `ltiLevelInfo`
+* Add `LevelTxInfo`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families

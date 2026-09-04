@@ -17,9 +17,10 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
+  EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusTxInfo,
   SupportedLanguage (..),
   toPlutusTxInfoForPurpose,
@@ -93,7 +94,7 @@ genTranslationInstance = do
           , ltiSystemStart = systemStart
           , ltiUTxO = utxo
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = TopTxInfo mempty
           }
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of

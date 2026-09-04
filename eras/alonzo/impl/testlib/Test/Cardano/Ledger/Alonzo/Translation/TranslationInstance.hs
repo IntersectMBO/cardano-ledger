@@ -183,6 +183,8 @@ instance Cborg.Serialise PV4.TxOut
 
 instance Cborg.Serialise PV4.TxInInfo
 
+instance Cborg.Serialise PV4.POSIXTimeRange
+
 instance Cborg.Serialise PV4.TxInfo
 
 instance Cborg.Serialise VersionedTxInfo

@@ -129,7 +129,8 @@ library
     mempack,
     microlens,
     nothunks,
-    plutus-ledger-api,
+    plutus-ledger-api >=1.68,
+    plutus-tx,
     small-steps >=1.2,
     text,
     transformers,
@@ -157,6 +158,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.UtxosSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
     Test.Cardano.Ledger.Dijkstra.TreeDiff

@@ -12,8 +12,10 @@ module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
+  EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
+  LevelTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
   PlutusTxOut,
@@ -185,7 +187,7 @@ expectOneInput ::
   Expectation
 expectOneInput l i txInfo = plutusTxInInfoInputs @era l txInfo `shouldBe` [i]
 
-expectOneOutput :: PlutusTxOut l -> SLanguage l -> PlutusTxInfo l -> Expectation
+expectOneOutput :: PlutusTxOut era l -> SLanguage l -> PlutusTxInfo l -> Expectation
 expectOneOutput o slang txInfo =
   case slang of
     SPlutusV1 -> expectationFailure "PlutusV1 not supported"
@@ -211,7 +213,7 @@ successfulTranslation slang tx f =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = TopTxInfo mempty
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
@@ -235,7 +237,7 @@ expectTranslationError slang tx expected =
           , ltiSystemStart = ss
           , ltiUTxO = exampleUTxO @l
           , ltiTx = tx
-          , ltiMemoizedSubTransactions = mempty
+          , ltiLevelInfo = TopTxInfo mempty
           }
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->
@@ -257,7 +259,7 @@ translatedOutputEx1 ::
   , Value era ~ MaryValue
   , EraPlutusTxInfo l era
   ) =>
-  PlutusTxOut l
+  PlutusTxOut era l
 translatedOutputEx1 =
   errorTranslate @era "translatedOutputEx1" $
     toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) inlineDatumOutput
@@ -268,7 +270,7 @@ translatedOutputEx2 ::
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo l era
   ) =>
-  PlutusTxOut l
+  PlutusTxOut era l
 translatedOutputEx2 =
   errorTranslate @era "translatedOutputEx2" $
     toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) (refScriptOutput @l)
@@ -359,7 +361,7 @@ txInfoSpec lang =
       successfulTranslation @era
         lang
         (txBare shelleyInput inlineDatumOutput)
-        (expectOneOutput (translatedOutputEx1 @era @l))
+        (expectOneOutput @era (translatedOutputEx1 @era @l))
     it "use reference script in input" $
       successfulTranslation @era
         lang
@@ -372,7 +374,7 @@ txInfoSpec lang =
       successfulTranslation @era
         lang
         (txBare shelleyInput $ refScriptOutput @l)
-        (expectOneOutput (translatedOutputEx2 @l @era))
+        (expectOneOutput @era (translatedOutputEx2 @l @era))
 
 spec ::
   forall era.
