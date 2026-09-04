@@ -281,7 +281,7 @@ spec = describe "TxInfo" $ do
               `shouldBeRight` PV4.TxInfo
                 { PV4.txInfoWithdrawals = PV4.unsafeFromList []
                 , PV4.txInfoVotes = PV4.unsafeFromList []
-                , PV4.txInfoValidRange = PV4.always
+                , PV4.txInfoValidRange = PV4.POSIXTimeRange Nothing Nothing
                 , PV4.txInfoTxCerts = []
                 , PV4.txInfoTreasuryDonation = PV4.Lovelace 0
                 , PV4.txInfoSubTxIx = Nothing
@@ -315,7 +315,6 @@ spec = describe "TxInfo" $ do
                     ]
                 , PV4.txInfoId = PV4.TxId $ transSafeHash txBodyHash
                 , PV4.txInfoGuards = []
-                , PV4.txInfoFee = PV4.Lovelace 0
                 , PV4.txInfoDirectDeposits = PV4.unsafeFromList []
                 , PV4.txInfoData = PV4.unsafeFromList []
                 , PV4.txInfoCurrentTreasuryAmount = Nothing

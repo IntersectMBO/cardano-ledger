@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -29,6 +28,7 @@ module Cardano.Ledger.Dijkstra.TxInfo (
   guardDijkstraFeaturesForPlutusV1toV3,
   transFailUnsupportedScriptInSubTx,
   transRedeemerPointerV4,
+  transValidityInterval,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -74,6 +74,7 @@ import Cardano.Ledger.Conway.TxInfo (
   transHotCommitteeCred,
   transMap,
   transProposal,
+  transSlotToPOSIXTime,
   transTxInInfoV1,
   transTxInInfoV3,
   transVoter,
@@ -117,6 +118,8 @@ import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..), UTxO)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn (..))
+import Cardano.Slotting.EpochInfo (EpochInfo)
+import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
@@ -132,6 +135,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import qualified Data.Set.NonEmpty as NES
+import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1
@@ -610,11 +614,12 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxInfo proxy LedgerTxInfo {..} =
     PlutusTxInfoResult $ do
       let
+        era = Proxy @DijkstraEra
         txBody = ltiTx ^. bodyTxL
         txInputs = txBody ^. inputsTxBodyL
         refInputs = txBody ^. referenceInputsTxBodyL
       timeRange <-
-        Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+        transValidityInterval era ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList txInputs)
       refInputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList refInputs)
       Conway.checkReferenceInputsNotDisjointFromInputs txBody
@@ -649,8 +654,6 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             { PV4.txInfoInputs = inputsInfo
             , PV4.txInfoOutputs = outputs
             , PV4.txInfoReferenceInputs = refInputsInfo
-            , PV4.txInfoFee =
-                withBothTxLevels txBody (\topTxBody -> transCoinToLovelace (topTxBody ^. feeTxBodyL)) (const 0)
             , PV4.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
             , PV4.txInfoTxCerts = txCerts
             , PV4.txInfoValidRange = timeRange
@@ -742,8 +745,8 @@ transTxOutV4 txOutSource txOut = do
       }
 
 transTxBodyWithdrawals ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.AccountId PV4.Lovelace
-transTxBodyWithdrawals txb = transMap transAccountAddressToAccountId transCoinToLovelace withdrawals
+  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
+transTxBodyWithdrawals txb = transMap transAccountAddressToCredential transCoinToLovelace withdrawals
   where
     Withdrawals withdrawals = txb ^. withdrawalsTxBodyL
 
@@ -790,11 +793,28 @@ transTxBodyRequiredTopLevelGuards txb = transMap transCred (fmap transDatum . st
 transAccountAddressToAccountId :: AccountAddress -> PV4.AccountId
 transAccountAddressToAccountId (AccountAddress _ (AccountId c)) = PV4.AccountId $ transCred c
 
+transAccountAddressToCredential :: AccountAddress -> PV4.Credential
+transAccountAddressToCredential (AccountAddress _ (AccountId c)) = transCred c
+
 transTxBodyDirectDeposits ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.AccountId PV4.Lovelace
-transTxBodyDirectDeposits txb = transMap transAccountAddressToAccountId transCoinToLovelace deposits
+  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
+transTxBodyDirectDeposits txb = transMap transAccountAddressToCredential transCoinToLovelace deposits
   where
     DirectDeposits deposits = txb ^. directDepositsTxBodyL
+
+-- | Translate a validity interval to PV4.POSIXTimeRange
+transValidityInterval ::
+  Inject (Alonzo.AlonzoContextError era) (ContextError era) =>
+  Proxy era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  ValidityInterval ->
+  Either (ContextError era) PV4.POSIXTimeRange
+transValidityInterval era epochInfo systemStart (ValidityInterval from to) = do
+  let transSlot = transSlotToPOSIXTime era epochInfo systemStart
+  pFrom <- traverse transSlot from
+  pTo <- traverse transSlot to
+  pure $ PV4.POSIXTimeRange (strictMaybeToMaybe pFrom) (strictMaybeToMaybe pTo)
 
 transAccountBalanceInterval :: AccountBalanceInterval era -> PV4.AccountBalanceInterval
 transAccountBalanceInterval = \case

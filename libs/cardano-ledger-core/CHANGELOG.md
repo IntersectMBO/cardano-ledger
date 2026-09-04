@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Bump `plutus-ledger-api` lower bound to `>=1.68`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
