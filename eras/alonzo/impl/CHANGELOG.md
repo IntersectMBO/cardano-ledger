@@ -10,7 +10,6 @@
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Change `toPlutusArgs` and `toPlutusV1Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
 * Change the `PlutusV4` instances of the `PlutusTxCert`, `PlutusScriptPurpose`, `PlutusTxInfo` and `PlutusTxInInfo` type families to point to `PlutusLedgerApi.V4` types instead of `PlutusLedgerApi.V3`
-* Add `transRedeemerPointerV1`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

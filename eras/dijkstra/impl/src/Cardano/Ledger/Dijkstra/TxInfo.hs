@@ -566,7 +566,7 @@ instance ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
-  toPlutusTxCert proxy _pv cert = pure $ transTxCertV4 proxy cert
+  toPlutusTxCert _proxy _pv = pure . transTxCertV4
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
@@ -708,8 +708,8 @@ transTxBodyWithdrawals txb = transMap transAccountAddressToCredential transCoinT
 transCredToAccountId :: Credential r -> PV4.AccountId
 transCredToAccountId = PV4.AccountId . transCred
 
-transTxCertV4 :: ConwayEraTxCert era => proxy 'PlutusV4 -> TxCert era -> PV4.TxCert
-transTxCertV4 _proxy = \case
+transTxCertV4 :: ConwayEraTxCert era => TxCert era -> PV4.TxCert
+transTxCertV4 = \case
   RegPoolTxCert StakePoolParams {sppId, sppVrf} ->
     PV4.TxCertPoolRegister
       (transKeyHash sppId)
