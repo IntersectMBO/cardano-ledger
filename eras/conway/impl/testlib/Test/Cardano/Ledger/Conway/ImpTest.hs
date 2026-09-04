@@ -1036,7 +1036,7 @@ getRatifyEnv = do
   poolPs <- getsNES $ nesEsL . epochStateStakePoolsL
   pure
     RatifyEnv
-      { reStakePoolDistr = poolDistr
+      { reVotingPoolDistr = toVotingPoolDistr poolDistr
       , reInstantStake = instantStake
       , reDRepState = drepState
       , reDRepDistr = drepDistr

@@ -66,7 +66,7 @@ acceptedRatioProp = do
               actual =
                 spoAcceptedRatio @era
                   re
-                    { reStakePoolDistr = distr
+                    { reVotingPoolDistr = distr
                     , reAccounts = accountsFromDelegatees delegatees
                     , reStakePools = stakePools
                     }
@@ -99,7 +99,7 @@ noStakeProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
     "If there is no stake, accept iff threshold is zero"
     ( \(re, rs, gas) ->
-        let re' = re {reStakePoolDistr = PoolDistr Map.empty (knownNonZeroCoin @100)}
+        let re' = re {reVotingPoolDistr = VotingPoolDistr Map.empty (knownNonZeroCoin @100)}
          in spoAccepted @era re' rs gas
               `shouldBe` (votingStakePoolThreshold @era rs (gasAction gas) == SJust minBound)
     )
@@ -116,7 +116,7 @@ allAbstainProp =
         spoAcceptedRatio
           @era
           re
-            { reStakePoolDistr = distr
+            { reVotingPoolDistr = distr
             , reAccounts = accountsFromDelegatees delegatees
             , reStakePools = stakePools
             }
@@ -135,7 +135,7 @@ noVotesProp =
       $ \TestData {..} ->
         spoAcceptedRatio
           @era
-          re {reStakePoolDistr = distr}
+          re {reVotingPoolDistr = distr}
           gas {gasStakePoolVotes = votes}
           (rs ^. rsEnactStateL . ensProtVerL)
           `shouldBe` 0
@@ -153,7 +153,7 @@ allYesProp =
             let acceptedRatio =
                   spoAcceptedRatio
                     @era
-                    re {reStakePoolDistr = distr}
+                    re {reVotingPoolDistr = distr}
                     gas {gasStakePoolVotes = votes}
                     (rs ^. rsEnactStateL . ensProtVerL)
              in acceptedRatio `shouldBe` 1
@@ -170,13 +170,13 @@ noConfidenceProp =
       $ \TestData {..} ->
         spoAcceptedRatio
           @era
-          re {reStakePoolDistr = distr}
+          re {reVotingPoolDistr = distr}
           gas {gasStakePoolVotes = votes}
           (rs ^. rsEnactStateL . ensProtVerL)
           `shouldBe` 0
 
 data TestData era = TestData
-  { distr :: PoolDistr
+  { distr :: VotingPoolDistr
   , votes :: Map (KeyHash StakePool) Vote
   , totalStake :: NonZero Coin
   , stakeYes :: Coin
@@ -212,19 +212,17 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
       splitByPct yes no abstain alwaysAbstain noConfidence pools
   distr <- do
-    vrf <- arbitrary
-    bls <- arbitrary
     let
-      indivStake = IndividualPoolStake (1 % unCoin (unNonZero totalStake)) (CompactCoin 1) vrf bls
+      stakeAmount = CompactCoin 1
       distr =
         unionAllFromLists
-          [ (poolsYes, indivStake)
-          , (poolsNo, indivStake)
-          , (poolsAbstain, indivStake)
-          , (poolsAlwaysAbstain, indivStake)
-          , (poolsNoConfidence, indivStake)
+          [ (poolsYes, stakeAmount)
+          , (poolsNo, stakeAmount)
+          , (poolsAbstain, stakeAmount)
+          , (poolsAlwaysAbstain, stakeAmount)
+          , (poolsNoConfidence, stakeAmount)
           ]
-    pure $ PoolDistr distr totalStake
+    pure $ VotingPoolDistr distr totalStake
 
   poolStateAA <- genPoolState poolsAlwaysAbstain
   poolStateNC <- genPoolState poolsNoConfidence
@@ -237,7 +235,7 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     TestData
       { distr
       , votes
-      , totalStake = pdTotalActiveStake distr
+      , totalStake = distr ^. vpoolDistrTotalL
       , stakeYes = Coin . fromIntegral $ length poolsYes
       , stakeNo = Coin . fromIntegral $ length poolsNo
       , stakeAbstain = Coin . fromIntegral $ length poolsAbstain
