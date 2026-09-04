@@ -15,6 +15,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -308,7 +309,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                     Alonzo.CollectErrors
                       [ BadTranslation $
                           inject $
-                            CertificateNotSupported badCert
+                            Alonzo.CertificateNotSupported badCert
                       ]
                 )
         describe "DelegTxCert" $ do

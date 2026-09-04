@@ -17,7 +17,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxInfo (
-  ConwayContextError (..),
+  ConwayContextError (
+    BabbageContextError,
+    CurrentTreasuryFieldNotSupported,
+    VotingProceduresFieldNotSupported,
+    ProposalProceduresFieldNotSupported,
+    TreasuryDonationFieldNotSupported,
+    ReferenceInputsNotDisjointFromInputs
+  ),
   ConwayEraPlutusTxInfo (..),
   transTxBodyWithdrawals,
   transTxCert,

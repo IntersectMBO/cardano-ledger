@@ -276,10 +276,18 @@ instance
     PlutusPurposeNotSupported purpose ->
       encode $ Sum PlutusPurposeNotSupported 10 !> To purpose
 
-instance Era era => DecCBOR (AlonzoContextError era) where
+instance
+  ( Era era
+  , DecCBOR (TxCert era)
+  , DecCBOR (PlutusPurpose AsItem era)
+  ) =>
+  DecCBOR (AlonzoContextError era)
+  where
   decCBOR = decode $ Summands "ContextError" $ \case
     1 -> SumD (TranslationLogicMissingInput @era) <! From
     7 -> SumD (TimeTranslationPastHorizon @era) <! From
+    9 -> SumD (CertificateNotSupported @era) <! From
+    10 -> SumD (PlutusPurposeNotSupported @era) <! From
     n -> Invalid n
 
 instance

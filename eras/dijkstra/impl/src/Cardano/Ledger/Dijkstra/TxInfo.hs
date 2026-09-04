@@ -817,7 +817,7 @@ transPlutusPurposeV4 ::
   forall era proxy.
   ( DijkstraEraScript era
   , ConwayEraPlutusTxInfo PlutusV4 era
-  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV4 ->
@@ -844,4 +844,4 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
     ProposingPurpose (AsIxItem ix proc) ->
       pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
     GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
-    _ -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose
+    _ -> Left $ inject $ Alonzo.PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose

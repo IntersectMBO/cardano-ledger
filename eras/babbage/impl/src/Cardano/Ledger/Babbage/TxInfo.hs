@@ -311,7 +311,14 @@ instance
     AlonzoContextError alonzoError ->
       encode $ Sum AlonzoContextError 8 !> To alonzoError
 
-instance (Era era, DecCBOR (PlutusPurpose AsIx era)) => DecCBOR (BabbageContextError era) where
+instance
+  ( Era era
+  , DecCBOR (TxCert era)
+  , DecCBOR (PlutusPurpose AsIx era)
+  , DecCBOR (PlutusPurpose AsItem era)
+  ) =>
+  DecCBOR (BabbageContextError era)
+  where
   decCBOR = decode $ Summands "ContextError" $ \case
     0 -> SumD ByronTxOutInContext <! From
     1 -> SumD (AlonzoContextError . TranslationLogicMissingInput) <! From
