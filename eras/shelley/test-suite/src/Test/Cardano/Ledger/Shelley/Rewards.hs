@@ -559,7 +559,7 @@ createRUpdOld_ ::
   ShelleyBase RewardUpdateOld
 createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
   asc <- asks activeSlotCoeff
-  let SnapShot activeStake' _ stakePoolsSnapShot = ssStakeGo ss
+  let SnapShot activeStake' _ stakePoolsSnapShot _ = ssStakeGo ss
       stake' = Stake $ VMap.fromMap $ Map.map (unNonZero . swdStake) $ VMap.toMap $ unActiveStake activeStake'
       delegs' = VMap.fromMap $ Map.map swdDelegation $ VMap.toMap $ unActiveStake activeStake'
       -- reserves and rewards change

@@ -40,6 +40,7 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Data.Functor.Identity
 import qualified Data.TreeDiff.OMap as OMap
+import qualified Data.Vector.Strict as V
 import GHC.TypeLits
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Binary.TreeDiff
@@ -93,6 +94,11 @@ instance ToExpr (VRFVerKeyHash keyrole) where
 instance ToExpr PoolDistr
 
 instance ToExpr IndividualPoolStake
+
+instance ToExpr LeiosCommittee where
+  toExpr = toExpr . V.toList . leiosCommitteeSeats
+
+instance ToExpr LeiosSeat
 
 -- SafeHash
 instance ToExpr (SafeHash i) where

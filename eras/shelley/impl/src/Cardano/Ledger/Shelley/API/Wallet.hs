@@ -235,7 +235,7 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
     es = nesEs ss
     pp = es ^. curPParamsEpochStateL
     NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
-    EB.SnapShot activeStake _ stakePoolsSnapShot = currentSnapshot ss
+    EB.SnapShot activeStake _ stakePoolsSnapShot _ = currentSnapshot ss
     calcNMMRewards t poolId spss
       | spssPledge <= spssSelfDelegatedOwnersStake =
           calcNonMyopicMemberReward pp rPot poolId spssCost spssMargin s sigma t topPools hitRateEst
@@ -260,7 +260,7 @@ getNonMyopicMemberRewards globals ss = Map.fromSet nmmRewards
 -- ledger state.
 currentSnapshot :: (EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
 currentSnapshot nes =
-  snapShotFromInstantStake instantStake dstate pstate
+  snapShotFromInstantStake 0 instantStake dstate pstate
   where
     ledgerState = esLState $ nesEs nes
     instantStake = ledgerState ^. instantStakeG

@@ -747,7 +747,7 @@ mkSnapShotFromStakePoolParams ::
   SnapShot
 mkSnapShotFromStakePoolParams activeStake poolParams =
   resetStakePoolSnapShotFromPoolParams poolParams $
-    mkSnapShot activeStake VMap.empty
+    mkSnapShot 0 activeStake VMap.empty
 
 -- | Given a snapshot and stake pool params fully override the stake pools snapshot.
 resetStakePoolSnapShotFromPoolParams ::

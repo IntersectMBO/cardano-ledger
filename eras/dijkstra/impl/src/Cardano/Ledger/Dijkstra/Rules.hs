@@ -38,6 +38,7 @@ import Cardano.Ledger.Dijkstra.Rules.Ledger
 import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
 import Cardano.Ledger.Dijkstra.Rules.Mempool
 import Cardano.Ledger.Dijkstra.Rules.Pool ()
+import Cardano.Ledger.Dijkstra.Rules.Snap ()
 import Cardano.Ledger.Dijkstra.Rules.SubCert
 import Cardano.Ledger.Dijkstra.Rules.SubCerts
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg
