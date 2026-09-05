@@ -40,7 +40,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
@@ -117,7 +116,6 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
-import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
@@ -127,8 +125,6 @@ import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
-import Data.Set.NonEmpty (NonEmptySet)
-import qualified Data.Set.NonEmpty as NES
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -142,7 +138,7 @@ data DijkstraContextError era
   | -- | Failure translating sub-transactions for Guarding purpose at the top level
     SubTxContextError TxId (ContextError era)
   | -- | From Dijkstra onwards, attempt to use a script when there are stake ref pointers present in any outputs will result in this failure
-    PointerPresentInOutput (NonEmptySet TxOutSource)
+    PointerPresentInOutput TxOutSource
   | -- | Attempt to use PlutusV1-V3 in a sub-transaction will result in this failure
     UnsupportedScriptInSubTx Language TxId
   | -- | Attempt to use PlutusV1-V3 with non-empty direct deposits will result in this failure
@@ -276,10 +272,10 @@ instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
 
 instance Inject (Babbage.BabbageContextError era) (DijkstraContextError era) where
-  inject = ConwayContextError . inject
+  inject = ConwayContextError . Conway.BabbageContextError
 
 instance Inject (Alonzo.AlonzoContextError era) (DijkstraContextError era) where
-  inject = ConwayContextError . inject
+  inject = ConwayContextError . Conway.BabbageContextError . Babbage.AlonzoContextError
 
 instance EraPlutusContext DijkstraEra where
   type ContextError DijkstraEra = DijkstraContextError DijkstraEra
@@ -318,7 +314,7 @@ instance EraPlutusContext DijkstraEra where
 instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV1V2 proxy (ltiProtVer lti)
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
@@ -357,7 +353,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
-  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   ) =>
   TxCert era ->
   Either (ContextError era) PV1.DCert
@@ -375,12 +371,12 @@ transTxCertV1V2 = \case
         (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash sppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     Right $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
-  txCert -> Left $ inject $ CertificateNotSupported txCert
+  txCert -> Left $ inject $ Alonzo.CertificateNotSupported txCert
 
 instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy lti = Conway.transPlutusPurposeV1V2 proxy (ltiProtVer lti)
+  toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
   toPlutusTxInfo proxy lti@LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
     flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
@@ -582,29 +578,11 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
       inputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList txInputs)
       refInputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList refInputs)
       Conway.checkReferenceInputsNotDisjointFromInputs txBody
-      let
-        accErrors acc (ix, txOut) =
-          let res = transTxOutV4 (TxOutFromOutput ix) txOut
-           in case acc of
-                Right l -> case res of
-                  Right x -> Right $ x : l
-                  Left e -> Left e
-                Left (PointerPresentInOutput errs)
-                  -- If the accumulator contains a PointerPresentInOutput, then
-                  -- continue translating to collect all the other PointerPresentInOutput
-                  -- failures
-                  | Left (PointerPresentInOutput err) <- res ->
-                      Left . PointerPresentInOutput $ err <> errs
-                Left e -> Left e
       outputs <-
-        reverse
-          <$>
-          -- Use foldl here to collect errors from left to right (leftmost failure
-          -- takes precedence)
-          foldl'
-            accErrors
-            (Right mempty)
-            ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
+        zipWithM
+          (transTxOutV4 . TxOutFromOutput)
+          [minBound ..]
+          (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- Babbage.transTxRedeemers proxy lti
       let
@@ -646,6 +624,7 @@ transTxInInfoV4 ::
   forall era.
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   , Inject (Babbage.BabbageContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
@@ -653,7 +632,7 @@ transTxInInfoV4 ::
   TxIn ->
   Either (ContextError era) PV4.TxInInfo
 transTxInInfoV4 utxo txIn = do
-  txOut <- first (inject . Babbage.AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  txOut <- Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV4 (TxOutFromInput txIn) txOut
   Right (PV4.TxInInfo (transTxInV4 txIn) plutusTxOut)
 
@@ -669,7 +648,7 @@ transTxOutV4 ::
   Either (ContextError era) PV4.TxOut
 transTxOutV4 txOutSource txOut = do
   let
-    val = transValue $ txOut ^. valueTxOutL
+    val = Alonzo.transValue $ txOut ^. valueTxOutL
     referenceScript = Babbage.transReferenceScript $ txOut ^. referenceScriptTxOutL
     datum =
       case txOut ^. datumTxOutF of
@@ -689,7 +668,7 @@ transTxOutV4 txOutSource txOut = do
         PV4.Address (transCred pCred) <$> case stakeRef of
           StakeRefBase sCred -> Right . Just $ transCredToAccountId sCred
           StakeRefNull -> Right Nothing
-          StakeRefPtr _ -> Left . inject . PointerPresentInOutput @era $ NES.singleton txOutSource
+          StakeRefPtr _ -> Left . inject $ PointerPresentInOutput @era txOutSource
       AddrBootstrap _ -> Left . inject $ Babbage.ByronTxOutInContext @era txOutSource
   pure $
     PV4.TxOut
@@ -838,7 +817,7 @@ transPlutusPurposeV4 ::
   forall era proxy.
   ( DijkstraEraScript era
   , ConwayEraPlutusTxInfo PlutusV4 era
-  , Inject (ConwayContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV4 ->
@@ -856,7 +835,7 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
   case plutusPurpose of
     SpendingPurpose (AsIxItem _ (TxIn txId (TxIx ix))) ->
       pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
-    MintingPurpose (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
+    MintingPurpose (AsIxItem _ pId) -> pure . PV4.Minting sh $ Alonzo.transPolicyID pId
     CertifyingPurpose (AsIxItem ix cert) ->
       PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
     WithdrawingPurpose (AsIxItem _ (AccountAddress _ (AccountId c))) ->
@@ -865,4 +844,4 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
     ProposingPurpose (AsIxItem ix proc) ->
       pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
     GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
-    _ -> Left $ inject $ PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose
+    _ -> Left $ inject $ Alonzo.PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose

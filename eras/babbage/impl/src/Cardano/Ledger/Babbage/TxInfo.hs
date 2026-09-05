@@ -87,7 +87,6 @@ import Cardano.Ledger.Plutus.TxInfo (
  )
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
-import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
@@ -161,7 +160,8 @@ transTxOutV2 txOutSource txOut = do
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 transTxInInfoV1 ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
+  ( Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
@@ -169,14 +169,15 @@ transTxInInfoV1 ::
   TxIn ->
   Either (ContextError era) PV1.TxInInfo
 transTxInInfoV1 utxo txIn = do
-  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  txOut <- Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV1 (TxOutFromInput txIn) txOut
   Right (PV1.TxInInfo (transTxIn txIn) plutusTxOut)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V2 context
 transTxInInfoV2 ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
+  ( Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
@@ -184,7 +185,7 @@ transTxInInfoV2 ::
   TxIn ->
   Either (ContextError era) PV2.TxInInfo
 transTxInInfoV2 utxo txIn = do
-  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  txOut <- Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV2 (TxOutFromInput txIn) txOut
   Right (PV2.TxInInfo (transTxIn txIn) plutusTxOut)
 
@@ -273,12 +274,25 @@ deriving instance
   (Show (AlonzoContextError era), Show (PlutusPurpose AsIx era)) =>
   Show (BabbageContextError era)
 
-instance (Era era, NFData (PlutusPurpose AsIx era)) => NFData (BabbageContextError era)
+instance
+  ( Era era
+  , NFData (TxCert era)
+  , NFData (PlutusPurpose AsIx era)
+  , NFData (PlutusPurpose AsItem era)
+  ) =>
+  NFData (BabbageContextError era)
 
 instance Inject (AlonzoContextError era) (BabbageContextError era) where
   inject = AlonzoContextError
 
-instance (Era era, EncCBOR (PlutusPurpose AsIx era)) => EncCBOR (BabbageContextError era) where
+instance
+  ( Era era
+  , EncCBOR (TxCert era)
+  , EncCBOR (PlutusPurpose AsIx era)
+  , EncCBOR (PlutusPurpose AsItem era)
+  ) =>
+  EncCBOR (BabbageContextError era)
+  where
   encCBOR = \case
     ByronTxOutInContext txOutSource ->
       encode $ Sum (ByronTxOutInContext @era) 0 !> To txOutSource
@@ -294,8 +308,17 @@ instance (Era era, EncCBOR (PlutusPurpose AsIx era)) => EncCBOR (BabbageContextE
       encode $ Sum (ReferenceInputsNotSupported @era) 6 !> To txIns
     AlonzoContextError (TimeTranslationPastHorizon err) ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
+    AlonzoContextError alonzoError ->
+      encode $ Sum AlonzoContextError 8 !> To alonzoError
 
-instance (Era era, DecCBOR (PlutusPurpose AsIx era)) => DecCBOR (BabbageContextError era) where
+instance
+  ( Era era
+  , DecCBOR (TxCert era)
+  , DecCBOR (PlutusPurpose AsIx era)
+  , DecCBOR (PlutusPurpose AsItem era)
+  ) =>
+  DecCBOR (BabbageContextError era)
+  where
   decCBOR = decode $ Summands "ContextError" $ \case
     0 -> SumD ByronTxOutInContext <! From
     1 -> SumD (AlonzoContextError . TranslationLogicMissingInput) <! From
@@ -304,9 +327,16 @@ instance (Era era, DecCBOR (PlutusPurpose AsIx era)) => DecCBOR (BabbageContextE
     5 -> SumD ReferenceScriptsNotSupported <! From
     6 -> SumD ReferenceInputsNotSupported <! From
     7 -> SumD (AlonzoContextError . TimeTranslationPastHorizon) <! From
+    8 -> SumD AlonzoContextError <! From
     n -> Invalid n
 
-instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) where
+instance
+  ( ToJSON (TxCert era)
+  , ToJSON (PlutusPurpose AsIx era)
+  , ToJSON (PlutusPurpose AsItem era)
+  ) =>
+  ToJSON (BabbageContextError era)
+  where
   toJSON = \case
     AlonzoContextError err -> toJSON err
     ByronTxOutInContext txOutSource ->
@@ -323,7 +353,7 @@ instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) whe
           <> T.intercalate ", " (map txInToText (Set.toList txIns))
 
 instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
-  toPlutusTxCert _ _ = pure . Alonzo.transTxCert
+  toPlutusTxCert _ _ = Alonzo.transTxCert
 
   toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
@@ -365,7 +395,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
   toPlutusTxInInfo _ = transTxInInfoV1
 
 instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
-  toPlutusTxCert _ _ = pure . Alonzo.transTxCert
+  toPlutusTxCert _ _ = Alonzo.transTxCert
 
   toPlutusScriptPurpose proxy lti = Alonzo.transPlutusPurpose proxy (ltiProtVer lti)
 
