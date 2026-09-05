@@ -92,6 +92,13 @@ package cardano-ledger-mary
 package cardano-ledger-conway
   flags: +asserts
 
+-- Workaround for GHC #27342 (speculative-evaluation correctness bug,
+-- GHC 9.10+): without this, applying the Conway CERTS STS rule to a
+-- constrained-generators-produced signal segfaults under GHC 9.12.4.
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
+package constrained-generators
+  ghc-options: -fno-spec-eval
+
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always
 -- Always build tests and benchmarks.
@@ -108,9 +115,15 @@ if impl(ghc >=9.12)
 source-repository-package
   type: git
   location: https://github.com/tweag/cardano-cls.git
-  subdir: merkle-tree-incremental mempack-scls scls-cbor scls-format scls-core
-  --sha256: sha256-xngnA6A3YNjtPXYLk1vIt/aauvibzuAhngT2sPqJp0g=
-  tag: c0f41e7d3fe8e32316cb8fb8a34d7adddbe0ae0c
+  tag: b2ec4ce8c03093077782b9cf1144dc77e916a50a
+  --sha256: sha256-O2dsoHZ1ket0Wn1QcGp7MuoSvmrleUBC9jDIcVou3qQ=
+  subdir:
+    merkle-tree-incremental
+    mempack-scls
+    scls-cbor
+    scls-cardano
+    scls-format
+    scls-core
 
 constraints:
   -- Happy version 2.2.1 fails to compile haskell-src-exts
