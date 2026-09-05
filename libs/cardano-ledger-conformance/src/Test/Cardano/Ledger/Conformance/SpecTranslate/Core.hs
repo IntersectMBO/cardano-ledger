@@ -228,6 +228,11 @@ instance SpecTranslate era PoolDistr where
 
   toSpecRep (PoolDistr ps _) = toSpecRepMap ps
 
+instance SpecTranslate era VotingPoolDistr where
+  type SpecRep era VotingPoolDistr = Agda.HSMap (SpecRep era (KeyHash StakePool)) Agda.Coin
+
+  toSpecRep (VotingPoolDistr ps _) = toSpecRepMap ps
+
 instance SpecTranslate era BlocksMade where
   type SpecRep era BlocksMade = Agda.HSMap Integer Integer
 

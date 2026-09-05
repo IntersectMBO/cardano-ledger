@@ -56,11 +56,11 @@ testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   ( checkTrace @(CHAIN ShelleyEra) runShelleyBase () $
       ( pure initSt .- block
           <&> chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
-          <&> chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
+          <&> chainStateNesL . nesPdL . poolDistrIndividualStakeL %~ (<&> individualTotalPoolStakeL .~ mempty)
       )
         .->> ( expectedSt
                  & chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
-                 & chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
+                 & chainStateNesL . nesPdL . poolDistrIndividualStakeL %~ (<&> individualTotalPoolStakeL .~ mempty)
              )
     )
     >> expectExprEqual (totalAda expectedSt) maxLLSupply

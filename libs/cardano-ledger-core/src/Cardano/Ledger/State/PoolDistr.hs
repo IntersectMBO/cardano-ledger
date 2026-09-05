@@ -19,10 +19,14 @@
 -- <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>.
 module Cardano.Ledger.State.PoolDistr (
   IndividualPoolStake (..),
-  PoolDistr (..),
-  poolDistrDistrL,
-  poolDistrTotalL,
   individualTotalPoolStakeL,
+  PoolDistr (..),
+  poolDistrIndividualStakeL,
+  poolDistrTotalL,
+  VotingPoolDistr (..),
+  vpoolDistrAmountsL,
+  vpoolDistrTotalL,
+  toVotingPoolDistr,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -119,11 +123,9 @@ instance ToKeyValuePairs IndividualPoolStake where
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values
 -- necessary for the calculations in the `computeDRepDistr`.
 data PoolDistr = PoolDistr
-  { unPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
+  { pdIndividualStakeDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
   , pdTotalActiveStake :: !(NonZero Coin)
-  -- ^ Total stake delegated to registered stake pools. In addition to
-  -- the stake considered for the `individualPoolStake` Rational, we add
-  -- proposal-deposits to this field.
+  -- ^ Total stake delegated to registered stake pools
   }
   deriving stock (Show, Eq, Generic)
   deriving (NFData, NoThunks, ToJSON)
@@ -131,8 +133,8 @@ data PoolDistr = PoolDistr
 instance Default PoolDistr where
   def = PoolDistr mempty (knownNonZeroCoin @1)
 
-poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash StakePool) IndividualPoolStake)
-poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
+poolDistrIndividualStakeL :: Lens' PoolDistr (Map (KeyHash StakePool) IndividualPoolStake)
+poolDistrIndividualStakeL = lens pdIndividualStakeDistr $ \x y -> x {pdIndividualStakeDistr = y}
 
 poolDistrTotalL :: Lens' PoolDistr (NonZero Coin)
 poolDistrTotalL = lens pdTotalActiveStake $ \x y -> x {pdTotalActiveStake = y}
@@ -150,3 +152,44 @@ instance DecCBOR PoolDistr where
       RecD PoolDistr
         <! From
         <! From
+
+-- | A map of stake pool IDs (the hash of the stake pool operator's
+-- verification key) to the absolute amount of stake delegated.
+data VotingPoolDistr = VotingPoolDistr
+  { vpdPoolAmounts :: !(Map (KeyHash StakePool) (CompactForm Coin))
+  , vpdTotalVotingAmount :: !(NonZero Coin)
+  -- ^ Total value stake delegated to registered stake pools plus
+  -- proposal-deposits.
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving (NFData, NoThunks, ToJSON)
+
+instance Default VotingPoolDistr where
+  def = VotingPoolDistr mempty (knownNonZeroCoin @1)
+
+instance EncCBOR VotingPoolDistr where
+  encCBOR (VotingPoolDistr amounts total) =
+    encode $
+      Rec VotingPoolDistr
+        !> To amounts
+        !> To total
+
+instance DecCBOR VotingPoolDistr where
+  decCBOR =
+    decode $
+      RecD VotingPoolDistr
+        <! From
+        <! From
+
+vpoolDistrAmountsL :: Lens' VotingPoolDistr (Map (KeyHash StakePool) (CompactForm Coin))
+vpoolDistrAmountsL = lens vpdPoolAmounts $ \x y -> x {vpdPoolAmounts = y}
+
+vpoolDistrTotalL :: Lens' VotingPoolDistr (NonZero Coin)
+vpoolDistrTotalL = lens vpdTotalVotingAmount $ \x y -> x {vpdTotalVotingAmount = y}
+
+toVotingPoolDistr :: PoolDistr -> VotingPoolDistr
+toVotingPoolDistr PoolDistr {..} =
+  VotingPoolDistr
+    { vpdPoolAmounts = individualTotalPoolStake <$> pdIndividualStakeDistr
+    , vpdTotalVotingAmount = pdTotalActiveStake
+    }

@@ -65,7 +65,6 @@ import Cardano.Ledger.State (
   CommitteeState (..),
   DRep (..),
   EraCertState (..),
-  IndividualPoolStake (..),
  )
 import Constrained.API
 import Control.State.Transition.Extended (STS (..))
@@ -289,7 +288,7 @@ ratifyEnvSpec govActionMap =
         [ assert $
             reify
               individualStakesCompact
-              (fmap (\IndividualPoolStake {individualTotalPoolStake = CompactCoin c} -> c) . Map.elems)
+              (fmap (\(CompactCoin c) -> c) . Map.elems)
               ( \ [var| stakes |] ->
                   [ reify
                       (sum_ stakes)

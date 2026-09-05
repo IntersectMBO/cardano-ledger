@@ -93,6 +93,8 @@ instance ToExpr PoolDistr
 
 instance ToExpr IndividualPoolStake
 
+instance ToExpr VotingPoolDistr
+
 -- SafeHash
 instance ToExpr (SafeHash i) where
   toExpr x = App "SafeHash" [toExpr (extractHash x)]

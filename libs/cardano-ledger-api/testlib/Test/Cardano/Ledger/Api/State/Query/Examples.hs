@@ -246,7 +246,7 @@ querySetSnapshotStakePoolDistrExamples =
     [ def
     , examplePoolDistr
     , PoolDistr
-        { unPoolDistr =
+        { pdIndividualStakeDistr =
             Map.fromList
               [
                 ( mkKeyHash 1

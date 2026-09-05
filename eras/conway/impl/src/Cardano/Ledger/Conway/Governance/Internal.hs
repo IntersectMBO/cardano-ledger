@@ -49,7 +49,7 @@ module Cardano.Ledger.Conway.Governance.Internal (
   epochStateStakeDistrL,
   epochStateRegDrepL,
   ratifySignalL,
-  reStakePoolDistrL,
+  reVotingPoolDistrL,
   reDRepDistrL,
   reDRepStateL,
   reCurrentEpochL,
@@ -553,7 +553,7 @@ instance EraPParams era => NFData (RatifySignal era)
 
 data RatifyEnv era = RatifyEnv
   { reInstantStake :: InstantStake era
-  , reStakePoolDistr :: PoolDistr
+  , reVotingPoolDistr :: VotingPoolDistr
   , reDRepDistr :: Map DRep (CompactForm Coin)
   , reDRepState :: Map (Credential DRepRole) DRepState
   , reCurrentEpoch :: EpochNo
@@ -568,8 +568,8 @@ instance CanGetInstantStake RatifyEnv
 instance CanSetInstantStake RatifyEnv where
   instantStakeL = lens reInstantStake (\x y -> x {reInstantStake = y})
 
-reStakePoolDistrL :: Lens' (RatifyEnv era) PoolDistr
-reStakePoolDistrL = lens reStakePoolDistr (\x y -> x {reStakePoolDistr = y})
+reVotingPoolDistrL :: Lens' (RatifyEnv era) VotingPoolDistr
+reVotingPoolDistrL = lens reVotingPoolDistr (\x y -> x {reVotingPoolDistr = y})
 
 reDRepDistrL :: Lens' (RatifyEnv era) (Map DRep (CompactForm Coin))
 reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})
@@ -637,7 +637,7 @@ instance
      in encode $
           Rec (RatifyEnv @era)
             !> To reInstantStake
-            !> To reStakePoolDistr
+            !> To reVotingPoolDistr
             !> To reDRepDistr
             !> To reDRepState
             !> To reCurrentEpoch

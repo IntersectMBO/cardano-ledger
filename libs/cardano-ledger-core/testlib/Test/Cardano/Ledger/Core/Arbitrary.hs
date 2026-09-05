@@ -547,6 +547,9 @@ instance Arbitrary IndividualPoolStake where
       -- era encodes the key (#5962, #5963); `PoolDistrSpec` covers both branches meanwhile.
       <*> pure SNothing -- BlsKey is only supported from version 12 (Dijkstra)
 
+instance Arbitrary VotingPoolDistr where
+  arbitrary = VotingPoolDistr <$> arbitrary <*> arbitrary
+
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRepState --------------------------------------------------------------
 ------------------------------------------------------------------------------------------

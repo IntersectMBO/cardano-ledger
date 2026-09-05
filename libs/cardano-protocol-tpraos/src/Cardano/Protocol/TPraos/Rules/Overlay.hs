@@ -275,7 +275,7 @@ overlayTransition =
 
         let oce =
               OCertEnv
-                { ocertEnvStPools = Map.keysSet $ unPoolDistr pd
+                { ocertEnvStPools = Map.keysSet $ pdIndividualStakeDistr pd
                 , ocertEnvGenDelegs = Set.map genDelegKeyHash $ Set.fromList $ Map.elems genDelegs
                 }
 

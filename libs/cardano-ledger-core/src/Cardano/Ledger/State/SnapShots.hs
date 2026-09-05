@@ -482,7 +482,7 @@ calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
             }
       poolDistr =
         PoolDistr
-          { unPoolDistr = VMap.toMap $ VMap.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
+          { pdIndividualStakeDistr = VMap.toMap $ VMap.mapMaybeWithKey toIndividualPoolStake stakePoolSnapShot
           , pdTotalActiveStake = activeStake
           }
    in poolDistr

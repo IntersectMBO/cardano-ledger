@@ -196,18 +196,19 @@ instance EraPParams era => DecCBOR (PulsingSnapshot era) where
 --   (c) is the size of the DRepDistr, insertWith
 --   (d) is the size of the dpProposalDeposits, lookup
 --   (e) is the size of the registered DReps, lookup
---   (f) is the size of the PoolDistr, insert
+--   (f) is the size of the VotingPoolDistr, insert
 computeDRepDistr ::
+  forall era.
   (EraStake era, ConwayEraAccounts era) =>
   InstantStake era ->
   Map (Credential DRepRole) DRepState ->
   Map (Credential Staking) (CompactForm Coin) ->
-  PoolDistr ->
+  VotingPoolDistr ->
   Map DRep (CompactForm Coin) ->
   Map (Credential Staking) (AccountState era) ->
-  (Map DRep (CompactForm Coin), PoolDistr)
-computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
-  Map.foldlWithKey' go (dRepDistr, poolDistr)
+  (Map DRep (CompactForm Coin), VotingPoolDistr)
+computeDRepDistr instantStake regDReps proposalDeposits vpDistr dRepDistr =
+  Map.foldlWithKey' go (dRepDistr, vpDistr)
   where
     go (!drepAccum, !poolAccum) stakeCred accountState =
       let instantStakeCredentials = instantStake ^. instantStakeCredentialsL
@@ -220,11 +221,11 @@ computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
     addToPoolDistr accountState mProposalDeposit distr = fromMaybe distr $ do
       stakePool <- accountState ^. stakePoolDelegationAccountStateL
       proposalDeposit <- mProposalDeposit
-      ips <- Map.lookup stakePool $ distr ^. poolDistrDistrL
+      ips <- Map.lookup stakePool $ distr ^. vpoolDistrAmountsL
       pure $
         distr
-          & poolDistrDistrL %~ Map.insert stakePool (ips & individualTotalPoolStakeL <>~ proposalDeposit)
-          & poolDistrTotalL %~ \t -> unsafeNonZero (unNonZero t <> fromCompact proposalDeposit)
+          & vpoolDistrAmountsL %~ Map.insert stakePool (ips <> proposalDeposit)
+          & vpoolDistrTotalL %~ \t -> unsafeNonZero (unNonZero t <> fromCompact proposalDeposit)
     addToDRepDistr accountState stakeAndDeposits distr = fromMaybe distr $ do
       dRep <- accountState ^. dRepDelegationAccountStateL
       let
@@ -258,7 +259,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- ^ The index of the iterator over `dpAccounts`. Grows with each pulse.
     , dpInstantStake :: !(InstantStake era)
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
-    , dpStakePoolDistr :: PoolDistr
+    , dpVotingPoolDistr :: VotingPoolDistr
     -- ^ Snapshot of the pool distr. Lazy on purpose: See `ssStakeMarkPoolDistr` and ADR-7
     -- for explanation.
     , dpDRepDistr :: !(Map DRep (CompactForm Coin))
@@ -298,12 +299,12 @@ instance (EraStake era, ConwayEraAccounts era) => Pulsable (DRepPulser era) wher
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex (dpAccounts ^. accountsMapL)
             (dRepDistr, poolDistr) =
-              computeDRepDistr dpInstantStake dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr chunk
+              computeDRepDistr dpInstantStake dpDRepState dpProposalDeposits dpVotingPoolDistr dpDRepDistr chunk
          in pure $
               pulser
                 { dpIndex = dpIndex + dpPulseSize
                 , dpDRepDistr = dRepDistr
-                , dpStakePoolDistr = poolDistr
+                , dpVotingPoolDistr = poolDistr
                 }
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
@@ -323,7 +324,7 @@ instance
       , noThunks ctxt (dpAccounts drp)
       , noThunks ctxt (dpIndex drp)
       , noThunks ctxt (dpInstantStake drp)
-      , -- dpStakePoolDistr is allowed to have thunks
+      , -- dpVotingPoolDistr is allowed to have thunks
         noThunks ctxt (dpDRepDistr drp)
       , noThunks ctxt (dpDRepState drp)
       , noThunks ctxt (dpCurrentEpoch drp)
@@ -388,17 +389,23 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
       dpProposals
       finalDRepDistr
       dpDRepState
-      (Map.map individualTotalPoolStake $ unPoolDistr finalStakePoolDistr)
+      (finalVotingPoolDistr ^. vpoolDistrAmountsL)
   , ratifyState'
   )
   where
     !leftOver = Map.drop dpIndex (dpAccounts ^. accountsMapL)
-    (finalDRepDistr, finalStakePoolDistr) =
-      computeDRepDistr dpInstantStake dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr leftOver
+    (finalDRepDistr, finalVotingPoolDistr) =
+      computeDRepDistr
+        dpInstantStake
+        dpDRepState
+        dpProposalDeposits
+        dpVotingPoolDistr
+        dpDRepDistr
+        leftOver
     !ratifyEnv =
       RatifyEnv
         { reInstantStake = dpInstantStake
-        , reStakePoolDistr = finalStakePoolDistr
+        , reVotingPoolDistr = finalVotingPoolDistr
         , reDRepDistr = finalDRepDistr
         , reDRepState = dpDRepState
         , reCurrentEpoch = dpCurrentEpoch
