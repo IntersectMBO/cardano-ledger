@@ -51,6 +51,7 @@ certificate =
   // drep_registration_cert
   // drep_unregistration_cert
   // drep_update_cert
+  // bls_key_registration_cert
   ]
 
 header = [header_body, body_signature : kes_signature]
@@ -464,22 +465,18 @@ pool_registration_cert = (3, pool_params)
 
 ; Pool parameters for stake pool registration
 pool_params =
-  (   operator       : pool_keyhash
-  ,   vrf_keyhash    : vrf_keyhash
-  , ? bls_key        : bls_key/ nil
-  ,   pledge         : coin
-  ,   cost           : coin
-  ,   margin         : unit_interval
-  ,   reward_account : reward_account
-  ,   pool_owners    : set<addr_keyhash>
-  ,   relays         : [* relay]
-  ,   pool_metadata  : pool_metadata/ nil
+  ( operator       : pool_keyhash
+  , vrf_keyhash    : vrf_keyhash
+  , pledge         : coin
+  , cost           : coin
+  , margin         : unit_interval
+  , reward_account : reward_account
+  , pool_owners    : set<addr_keyhash>
+  , relays         : [* relay]
+  , pool_metadata  : pool_metadata/ nil
   )
 
 vrf_keyhash = hash32
-
-; BLS key
-bls_key = [bls_pubkey : bytes .size 96, bls_possession_proof : bytes .size 48]
 
 ; A unit interval is a number in the range between 0 and 1, which
 ; means there are two extra constraints:
@@ -557,6 +554,15 @@ drep_credential = credential
 drep_unregistration_cert = (17, drep_credential, coin)
 
 drep_update_cert = (18, drep_credential, anchor/ nil)
+
+; Register or rotate a stake pool's Leios voting key
+bls_key_registration_cert = (19, pool_keyhash, bls_pubkey, bls_possession_proof)
+
+; BLS verification key
+bls_pubkey = bytes .size 96
+
+; BLS proof of possession
+bls_possession_proof = bytes .size 48
 
 withdrawals = {+ reward_account => coin}
 

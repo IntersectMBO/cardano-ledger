@@ -176,6 +176,7 @@ instance Era era => Arbitrary (DijkstraTxCert era) where
       [ DijkstraTxCertDeleg <$> arbitrary
       , DijkstraTxCertPool <$> arbitrary
       , DijkstraTxCertGov <$> arbitrary
+      , DijkstraTxCertRegBlsKey <$> arbitrary <*> arbitrary
       ]
 
 instance Arbitrary DijkstraDelegCert where

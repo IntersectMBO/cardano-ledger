@@ -267,7 +267,6 @@ exampleShelleyGenesis =
                 { L.pmUrl = fromJust $ textToUrl 64 "best.pool.com"
                 , L.pmHash = byteArrayFromShortByteString "100ab{}100ab{}"
                 }
-        , L.sppBlsKey = L.SNothing
         }
     staking =
       ShelleyGenesisStaking
