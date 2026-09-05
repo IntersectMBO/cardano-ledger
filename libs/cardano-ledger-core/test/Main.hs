@@ -6,6 +6,7 @@ import qualified Test.Cardano.Ledger.BinarySpec as BinarySpec
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.JsonSpec as JsonSpec
 import qualified Test.Cardano.Ledger.PlutusSpec as PlutusSpec
+import qualified Test.Cardano.Ledger.State.LeiosCommitteeSpec as LeiosCommitteeSpec
 import qualified Test.Cardano.Ledger.State.StakePoolSpec as StakePoolSpec
 import qualified Test.Cardano.Ledger.StorableSpec as StorableSpec
 import qualified Test.Cardano.Ledger.ToolsSpec as ToolsSpec
@@ -19,6 +20,7 @@ main =
       BinarySpec.spec
       JsonSpec.spec
       PlutusSpec.spec
+      LeiosCommitteeSpec.spec
       StakePoolSpec.spec
       StorableSpec.spec
       ToolsSpec.spec
