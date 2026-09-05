@@ -1,32 +1,43 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Rules.Snap (
-  SNAP,
-  SnapEvent (..),
-  SnapEnv (..),
-) where
+-- | Dijkstra's SNAP rule. Like Shelley's, but as it builds the fresh mark
+-- snapshot it seats the Leios voting committee (CIP-0164) on it, sized by the
+-- @leiosCommitteeSize@ protocol parameter. The committee travels with the
+-- snapshot so consensus can read it two epochs later, when the snapshot becomes
+-- the active stake distribution.
+module Cardano.Ledger.Dijkstra.Rules.Snap () where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, unNonZero)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.Era (SNAP)
-import Cardano.Ledger.Shelley.LedgerState (
-  LedgerState (..),
-  UTxOState (..),
+import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Era (SNAP)
+import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams, ppLeiosCommitteeSizeL)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (SnapEnv (..), SnapEvent (..))
+import Cardano.Ledger.State (
+  EraCertState,
+  EraStake,
+  SnapShot (..),
+  SnapShots (..),
+  calculatePoolDistr,
+  certDStateL,
+  certPStateL,
+  emptySnapShots,
+  instantStakeG,
+  snapShotFromInstantStake,
+  swdDelegation,
+  swdStake,
+  unActiveStake,
  )
-import Cardano.Ledger.State
-import Control.DeepSeq (NFData)
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -38,23 +49,12 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Data.Void (Void)
-import GHC.Generics (Generic)
-import Lens.Micro
+import Lens.Micro ((^.))
 
--- ======================================================
-
-newtype SnapEvent era
-  = StakeDistEvent
-      (Map (Credential Staking) (Coin, KeyHash StakePool))
-  deriving (Generic)
-
-deriving instance Eq (SnapEvent era)
-
-instance NFData (SnapEvent era)
-
-data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
-
-instance (EraTxOut era, EraStake era, EraCertState era) => STS (SNAP era) where
+instance
+  (EraTxOut era, EraStake era, EraCertState era, DijkstraEraPParams era) =>
+  STS (SNAP era)
+  where
   type State (SNAP era) = SnapShots era
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = SnapEnv era
@@ -64,24 +64,22 @@ instance (EraTxOut era, EraStake era, EraCertState era) => STS (SNAP era) where
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
--- | The stake distribution was previously computed as in the spec:
---
--- @
---  stakeDistr @era utxo dstate pstate
--- @
---
--- but is now computed incrementally. We leave the comment as a historical note about
--- where important changes were made to the source code.
 snapTransition ::
-  (EraStake era, EraCertState era) => TransitionRule (SNAP era)
+  (EraStake era, EraCertState era, DijkstraEraPParams era) =>
+  TransitionRule (SNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) _pp = snapEnv
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
       instantStake = ls ^. instantStakeG
-      -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
+      -- The committee is seated here, on the fresh mark snapshot, sized by the
+      -- Leios committee-size parameter (CIP-0164).
       istakeSnap =
-        snapShotFromInstantStake 0 instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+        snapShotFromInstantStake
+          (pp ^. ppLeiosCommitteeSizeL)
+          instantStake
+          (certState ^. certDStateL)
+          (certState ^. certPStateL)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
