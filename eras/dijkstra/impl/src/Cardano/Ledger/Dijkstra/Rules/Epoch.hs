@@ -99,7 +99,7 @@ instance
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots era
-  , Signal (EraRule "SNAP" era) ~ ()
+  , Signal (EraRule "SNAP" era) ~ EpochNo
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapState era
@@ -131,7 +131,7 @@ epochTransition ::
   , EraTxOut era
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots era
-  , Signal (EraRule "SNAP" era) ~ ()
+  , Signal (EraRule "SNAP" era) ~ EpochNo
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
@@ -235,7 +235,7 @@ epochTransition = do
       TRC
         ( Shelley.SnapEnv (epochState2 ^. esLStateL) (epochState2 ^. curPParamsEpochStateL)
         , snapshots0
-        , ()
+        , eNo
         )
   let
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
