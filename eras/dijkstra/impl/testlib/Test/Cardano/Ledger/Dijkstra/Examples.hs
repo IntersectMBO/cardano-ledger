@@ -28,7 +28,6 @@ import Cardano.Crypto.DSIGN (
   DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGNWithContext),
   seedSizeDSIGN,
  )
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
@@ -377,7 +376,7 @@ exampleBlsKey :: BlsKey
 exampleBlsKey =
   BlsKey
     { blsPubKey = vk
-    , blsPossessionProof = createPossessionProofDSIGN minSigPoPDST sk
+    , blsPossessionProof = createPossessionProofDSIGN sk
     }
   where
     seed = mkSeedFromBytes $ Strict.replicate (fromIntegral $ seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN)) 42
