@@ -1,5 +1,6 @@
 [
     {
+        "leiosCommittee": [],
         "pools": {},
         "total": {
             "stakeGo": 1,
@@ -8,6 +9,47 @@
         }
     },
     {
+        "leiosCommittee": [
+            {
+                "key": {
+                    "bksKey": {
+                        "blsPossessionProof": "8114c1b1ef41b6b826f612f6383989ccefc82fb4df4a49dbd828b8fd94db9d0e86a55e22861b585edf411a48374aa42a",
+                        "blsPubKey": "a57565542eaa01ef2b910bf0eaba4d98a1e5b8b79cc425db08f8780732d0ea9bc85fc6175f272b2344bb27bc572ebf14022e52689dcedfccf44a00e5bd1aa59db44517217d6b0f21b372169ee761938c28914ddcb9663de54db288e760a8e14f"
+                    },
+                    "bksRegisteredIn": 191
+                },
+                "poolId": "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541",
+                "voting": true,
+                "weight": {
+                    "denominator": 3,
+                    "numerator": 2
+                }
+            },
+            {
+                "key": {
+                    "bksKey": {
+                        "blsPossessionProof": "8114c1b1ef41b6b826f612f6383989ccefc82fb4df4a49dbd828b8fd94db9d0e86a55e22861b585edf411a48374aa42a",
+                        "blsPubKey": "a57565542eaa01ef2b910bf0eaba4d98a1e5b8b79cc425db08f8780732d0ea9bc85fc6175f272b2344bb27bc572ebf14022e52689dcedfccf44a00e5bd1aa59db44517217d6b0f21b372169ee761938c28914ddcb9663de54db288e760a8e14f"
+                    },
+                    "bksRegisteredIn": 12
+                },
+                "poolId": "a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a",
+                "voting": false,
+                "weight": {
+                    "denominator": 3,
+                    "numerator": 1
+                }
+            },
+            {
+                "key": null,
+                "poolId": "b16b56f5ec064be6ac3cab6035efae86b366cc3dc4a0d571603d70e5",
+                "voting": false,
+                "weight": {
+                    "denominator": 1,
+                    "numerator": 0
+                }
+            }
+        ],
         "pools": {
             "a646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a": {
                 "stakeGo": 250000000,

@@ -10,9 +10,11 @@
 module Cardano.Ledger.State.LeiosCommittee (
   LeiosCommittee (..),
   LeiosSeat (..),
+  Weight,
   emptyLeiosCommittee,
   LeiosCandidate (..),
   selectLeiosCommittee,
+  seatedLeiosCandidates,
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
@@ -69,22 +71,11 @@ selectLeiosCommittee ::
   EpochNo -> EpochInterval -> Word16 -> Vector LeiosCandidate -> LeiosCommittee
 selectLeiosCommittee _ _ 0 _ = emptyLeiosCommittee
 selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
-  candidates
-    & sortByStake
-    & V.take size
+  seatedLeiosCandidates committeeSize candidates
     & V.map toSeat
     & V.convert
     & mkLeiosCommittee
   where
-    -- Only the top @size@ need to be in order, so partial-sort them in place
-    -- and leave the rest untouched instead of ordering the whole vector.
-    sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
-
-    size = min (fromIntegral committeeSize) (V.length candidates)
-
-    higherStake a b =
-      compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
-
     toSeat c = (toTuple <$> honoured c, lcWeight c)
 
     -- The key is offered to the committee only while it is still honoured; an
@@ -96,6 +87,27 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
         else SNothing
 
     toTuple (BlsKey vk pop) = (vk, pop)
+
+-- | The candidates that get a seat, in seat order.
+--
+-- Shared with the pool-state queries so that a seat can be attributed back to
+-- its pool without a second implementation of the ranking: a query that sorted
+-- for itself would silently disagree with the committee the moment this rule
+-- changed.
+seatedLeiosCandidates :: Word16 -> Vector LeiosCandidate -> Vector LeiosCandidate
+seatedLeiosCandidates committeeSize candidates =
+  candidates
+    & sortByStake
+    & V.take size
+  where
+    -- Only the top @size@ need to be in order, so partial-sort them in place
+    -- and leave the rest untouched instead of ordering the whole vector.
+    sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
+
+    size = min (fromIntegral committeeSize) (V.length candidates)
+
+    higherStake a b =
+      compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
 -- Orphans: the committee is part of the ledger state, but its type belongs to
 -- cardano-base, which has no reason to know how we serialize it.

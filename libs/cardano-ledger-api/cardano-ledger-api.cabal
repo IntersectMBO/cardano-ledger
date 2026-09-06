@@ -85,6 +85,7 @@ library
     deepseq,
     microlens,
     transformers,
+    vector,
     vector-map >=1.2,
 
 library testlib
@@ -121,6 +122,7 @@ library testlib
     data-default,
     generic-random,
     prettyprinter,
+    vector,
 
 test-suite cardano-ledger-api-test
   type: exitcode-stdio-1.0

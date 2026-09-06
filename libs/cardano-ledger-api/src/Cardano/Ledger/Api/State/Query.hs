@@ -86,6 +86,7 @@ module Cardano.Ledger.Api.State.Query (
   queryStakeSnapshots,
   StakeSnapshot (..),
   StakeSnapshots (..),
+  QueryLeiosSeat (..),
 
   -- * @GetLedgerPeerSnapshot@
   queryStakePoolRelays,
@@ -140,7 +141,7 @@ import Control.DeepSeq
 import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
-import Data.Foldable (fold, foldMap')
+import Data.Foldable (fold, foldMap', toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -150,6 +151,9 @@ import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
+import Data.Vector (Vector)
+import qualified Data.Vector as Vector
+import qualified Data.Vector.Strict as VS
 import GHC.Generics
 import Lens.Micro
 
@@ -573,11 +577,44 @@ stakeSnapshotToPair
     , "stakeGo" .= ssGoPool
     ]
 
+-- | One seat of the Leios voting committee (CIP-0164), attributed to the pool
+-- that holds it.
+--
+-- A seat on its own says only what weight it carries and whether it can vote;
+-- 'ssLeiosCommittee' puts them back in the order the committee was seated in,
+-- so a seat's position in that vector is the index votes reference.
+--
+-- The two key fields answer different questions, and the interesting case is
+-- when they disagree: 'qlsKey' is what the pool has registered, and
+-- 'qlsVoting' is whether the committee is honouring it. A seat with a key but
+-- @qlsVoting = False@ is one whose key has aged out (CIP-0164) -- seated, but
+-- unable to vote, and holding weight nobody else can use. That state is
+-- otherwise invisible: the committee itself stores a keyless seat, which is
+-- indistinguishable from a pool that never registered at all.
+data QueryLeiosSeat = QueryLeiosSeat
+  { qlsPoolId :: !(KeyHash StakePool)
+  , qlsWeight :: !Weight
+  -- ^ The seat's share of the vote, as the committee counts it.
+  , qlsKey :: !(StrictMaybe BlsKeyState)
+  -- ^ The pool's registered voting key and the epoch it registered in, as of
+  -- this snapshot. 'SNothing' if it never registered one.
+  , qlsVoting :: !Bool
+  -- ^ Whether the seat actually carries the key, i.e. the key is still
+  -- honoured.
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData QueryLeiosSeat
+
 data StakeSnapshots = StakeSnapshots
   { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
   , ssMarkTotal :: !(NonZero Coin)
   , ssSetTotal :: !(NonZero Coin)
   , ssGoTotal :: !(NonZero Coin)
+  , ssLeiosCommittee :: !(Vector QueryLeiosSeat)
+  -- ^ The committee seated on the @set@ snapshot, which is the one governing
+  -- the current epoch -- the committee consensus is voting with right now.
+  -- Reported in seat order. Empty before Dijkstra.
   }
   deriving (Eq, Show, Generic)
 
@@ -590,21 +627,45 @@ instance EncCBOR StakeSnapshots where
       , ssMarkTotal
       , ssSetTotal
       , ssGoTotal
+      , ssLeiosCommittee
       } =
-      encodeListLen 4
+      encodeListLen 5
         <> encCBOR ssStakeSnapshots
         <> encCBOR ssMarkTotal
         <> encCBOR ssSetTotal
         <> encCBOR ssGoTotal
+        <> encCBOR (toList ssLeiosCommittee)
 
 instance DecCBOR StakeSnapshots where
   decCBOR = do
-    enforceSize "StakeSnapshots" 4
+    enforceSize "StakeSnapshots" 5
     StakeSnapshots
       <$> decCBOR
       <*> decCBOR
       <*> decCBOR
       <*> decCBOR
+      <*> (Vector.fromList <$> decCBOR)
+
+instance EncCBOR QueryLeiosSeat where
+  encCBOR (QueryLeiosSeat a b c d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+
+instance DecCBOR QueryLeiosSeat where
+  decCBOR = decodeRecordNamed "QueryLeiosSeat" (const 4) $ do
+    qlsPoolId <- decCBOR
+    qlsWeight <- decCBOR
+    qlsKey <- decCBOR
+    qlsVoting <- decCBOR
+    pure QueryLeiosSeat {qlsPoolId, qlsWeight, qlsKey, qlsVoting}
+
+instance ToJSON QueryLeiosSeat where
+  toJSON QueryLeiosSeat {qlsPoolId, qlsWeight, qlsKey, qlsVoting} =
+    object
+      [ "poolId" .= qlsPoolId
+      , "weight" .= qlsWeight
+      , "key" .= qlsKey
+      , "voting" .= qlsVoting
+      ]
 
 instance ToJSON StakeSnapshots where
   toJSON = object . stakeSnapshotsToPair
@@ -618,8 +679,10 @@ stakeSnapshotsToPair
     , ssMarkTotal
     , ssSetTotal
     , ssGoTotal
+    , ssLeiosCommittee
     } =
-    [ "pools" .= ssStakeSnapshots
+    [ "leiosCommittee" .= toList ssLeiosCommittee
+    , "pools" .= ssStakeSnapshots
     , "total"
         .= object
           [ "stakeMark" .= ssMarkTotal
@@ -696,6 +759,38 @@ queryStakeSnapshots nes mPoolIds =
         , ssMarkTotal = ssTotalActiveStake ssStakeMark
         , ssSetTotal = ssTotalActiveStake ssStakeSet
         , ssGoTotal = ssTotalActiveStake ssStakeGo
+        , -- Deliberately not filtered by 'poolIds': a committee is only
+          -- meaningful whole, since a seat's weight is a share of it, and its
+          -- position is the index votes reference.
+          ssLeiosCommittee = leiosCommitteeOf ssStakeSet
+        }
+
+-- | Attribute the seats of a snapshot's Leios committee back to the pools
+-- holding them.
+--
+-- The seats themselves are authoritative -- they are what consensus votes with
+-- -- so weight and whether the seat can vote are read from them. What they do
+-- not record is which pool a seat belongs to, or when that pool's key was
+-- registered, so those come from the candidates the committee was seated from,
+-- re-ranked with the very function that seated it. Re-ranking rather than
+-- storing the association keeps this from being a second, drifting copy of the
+-- selection rule; zipping keeps the answer honest even if it ever did drift,
+-- since the seat still supplies the vote-affecting fields.
+leiosCommitteeOf :: SnapShot -> Vector QueryLeiosSeat
+leiosCommitteeOf snap =
+  Vector.zipWith toSeat (Vector.convert seats) candidates
+  where
+    seats = leiosCommitteeSeats (snap ^. ssLeiosCommitteeL)
+    candidates =
+      seatedLeiosCandidates
+        (fromIntegral (VS.length seats))
+        (leiosCandidates (ssStakePoolsSnapShot snap))
+    toSeat seat candidate =
+      QueryLeiosSeat
+        { qlsPoolId = lcPoolId candidate
+        , qlsWeight = seatWeight seat
+        , qlsKey = lcKey candidate
+        , qlsVoting = isJust (strictMaybeToMaybe (seatVKey seat))
         }
 
 -- | Query the current epoch number.

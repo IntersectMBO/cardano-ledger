@@ -53,6 +53,7 @@ import Cardano.Ledger.Api.State.Query (
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+  QueryLeiosSeat (..),
   QueryPoolStateResult (..),
   QueryResultPoolDistr,
   StakeSnapshot (..),
@@ -77,6 +78,7 @@ import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.State (
   BlsKey,
+  BlsKeyState (..),
   ChainAccountState (..),
   FuturePParams (..),
   IndividualPoolStake (..),
@@ -97,6 +99,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Vector as Vector
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -640,6 +643,7 @@ queryStakeSnapshotsExamples =
       , ssMarkTotal = knownNonZeroCoin @1
       , ssSetTotal = knownNonZeroCoin @1
       , ssGoTotal = knownNonZeroCoin @1
+      , ssLeiosCommittee = Vector.empty
       }
   , StakeSnapshots
       { ssStakeSnapshots =
@@ -660,6 +664,29 @@ queryStakeSnapshotsExamples =
                   , ssGoPool = Coin 250_000_000
                   }
               )
+            ]
+      , -- The three states a seat can be in: voting, seated with a key the
+        -- committee no longer honours, and seated having never registered one.
+        ssLeiosCommittee =
+          Vector.fromList
+            [ QueryLeiosSeat
+                { qlsPoolId = mkKeyHash 1
+                , qlsWeight = 2 % 3
+                , qlsKey = SJust (BlsKeyState exampleBlsKey (EpochNo 191))
+                , qlsVoting = True
+                }
+            , QueryLeiosSeat
+                { qlsPoolId = mkKeyHash 2
+                , qlsWeight = 1 % 3
+                , qlsKey = SJust (BlsKeyState exampleBlsKey (EpochNo 12))
+                , qlsVoting = False
+                }
+            , QueryLeiosSeat
+                { qlsPoolId = mkKeyHash 3
+                , qlsWeight = 0
+                , qlsKey = SNothing
+                , qlsVoting = False
+                }
             ]
       , ssMarkTotal = knownNonZeroCoin @5_000_000_000
       , ssSetTotal = knownNonZeroCoin @4_500_000_000

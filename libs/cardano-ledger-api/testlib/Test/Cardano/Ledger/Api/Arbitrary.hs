@@ -17,6 +17,10 @@ instance Arbitrary StakeSnapshot where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+instance Arbitrary QueryLeiosSeat where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 instance Arbitrary StakeSnapshots where
   arbitrary = genericArbitraryU
   shrink = genericShrink
