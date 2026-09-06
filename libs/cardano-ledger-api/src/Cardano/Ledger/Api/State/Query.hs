@@ -454,68 +454,62 @@ queryStakePoolDefaultVote nes poolId =
   defaultStakePoolVote poolId (nes ^. nesEsL . epochStateStakePoolsL) $
     nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
 
--- | Used only for the `queryPoolState` query. This resembles the older way of
--- representing StakePoolState in Ledger.
+-- | Used only for the `queryPoolState` query.
+--
+-- Registered pools are reported as `StakePoolState`, so a pool's voting key
+-- carries the epoch it was registered in and its delegators are visible. The
+-- deposit lives on `StakePoolState` too, which is why there is no separate
+-- deposits map. Future parameters are staged changes rather than state, so those
+-- stay `StakePoolParams`.
 data QueryPoolStateResult era = QueryPoolStateResult
-  { qpsrStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
+  { qpsrStakePools :: !(Map (KeyHash StakePool) StakePoolState)
   , qpsrFutureStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
   , qpsrRetiring :: !(Map (KeyHash StakePool) EpochNo)
-  , qpsrDeposits :: !(Map (KeyHash StakePool) Coin)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (QueryPoolStateResult era)
 
 instance EncCBOR (QueryPoolStateResult era) where
-  encCBOR (QueryPoolStateResult a b c d) =
-    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+  encCBOR (QueryPoolStateResult a b c) =
+    encodeListLen 3 <> encCBOR a <> encCBOR b <> encCBOR c
 
 instance Era era => DecCBOR (QueryPoolStateResult era) where
-  decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 4) $ do
-    qpsrStakePoolParams <- decCBOR
+  decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 3) $ do
+    qpsrStakePools <- decCBOR
     qpsrFutureStakePoolParams <- decCBOR
     qpsrRetiring <- decCBOR
-    qpsrDeposits <- decCBOR
-    pure
-      QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
+    pure QueryPoolStateResult {qpsrStakePools, qpsrFutureStakePoolParams, qpsrRetiring}
 
 instance ToKeyValuePairs (QueryPoolStateResult era) where
-  toKeyValuePairs qpsr@(QueryPoolStateResult _ _ _ _) =
+  toKeyValuePairs qpsr@(QueryPoolStateResult _ _ _) =
     let QueryPoolStateResult {..} = qpsr
-     in [ "stakePoolParams" .= qpsrStakePoolParams
+     in [ "stakePools" .= qpsrStakePools
         , "futureStakePoolParams" .= qpsrFutureStakePoolParams
         , "retiring" .= qpsrRetiring
-        , "deposits" .= qpsrDeposits
         ]
 
 mkQueryPoolStateResult ::
   (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
   PState era ->
-  Network ->
   QueryPoolStateResult era
-mkQueryPoolStateResult f ps network =
+mkQueryPoolStateResult f ps =
   QueryPoolStateResult
-    { qpsrStakePoolParams =
-        Map.mapWithKey (stakePoolStateToStakePoolParams network) restrictedStakePools
+    { qpsrStakePools = f $ psStakePools ps
     , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
     , qpsrRetiring = f $ psRetiring ps
-    , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
     }
-  where
-    restrictedStakePools = f $ psStakePools ps
 
--- | Query the QueryPoolStateResult. This is slightly different from the internal
--- representation used by Ledger and is intended to resemble how the internal
--- representation used to be.
+-- | Query the QueryPoolStateResult, optionally restricted to a set of pools.
 queryPoolState ::
   EraCertState era =>
-  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> Network -> QueryPoolStateResult era
-queryPoolState nes mPoolKeys network =
+  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> QueryPoolStateResult era
+queryPoolState nes mPoolKeys =
   let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
       f :: forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x
       f = case mPoolKeys of
         Nothing -> id
         Just keys -> (`Map.restrictKeys` keys)
-   in mkQueryPoolStateResult f pstate network
+   in mkQueryPoolStateResult f pstate
 
 -- | Query the current StakePoolParams.
 queryPoolParameters ::

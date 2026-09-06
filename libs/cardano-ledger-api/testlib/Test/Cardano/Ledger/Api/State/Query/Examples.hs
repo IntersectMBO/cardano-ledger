@@ -83,6 +83,7 @@ import Cardano.Ledger.State (
   PoolDistr (..),
   StakePoolParams (..),
   StakePoolRelay (..),
+  mkStakePoolState,
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Data.Default (def)
@@ -488,29 +489,36 @@ queryPoolParametersExamples =
 queryPoolStateExamples :: [QueryPoolStateResult era]
 queryPoolStateExamples =
   [ QueryPoolStateResult
-      { qpsrStakePoolParams = Map.empty
+      { qpsrStakePools = Map.empty
       , qpsrFutureStakePoolParams = Map.empty
       , qpsrRetiring = Map.empty
-      , qpsrDeposits = Map.empty
       }
   , QueryPoolStateResult
-      { qpsrStakePoolParams =
+      { qpsrStakePools =
           Map.fromList
-            [ (sppId exampleStakePoolParams, exampleStakePoolParams)
-            , (mkKeyHash 99, exampleStakePoolParams {sppId = mkKeyHash 99})
+            [ (sppId exampleStakePoolParams, exampleStakePoolStateWithBlsKey)
+            , (mkKeyHash 99, exampleStakePoolState)
             ]
       , qpsrFutureStakePoolParams =
           Map.singleton
             (mkKeyHash 100)
             (exampleStakePoolParams {sppId = mkKeyHash 100})
       , qpsrRetiring = Map.singleton (mkKeyHash 99) (EpochNo 250)
-      , qpsrDeposits =
-          Map.fromList
-            [ (mkKeyHash 1, Coin 500_000_000)
-            , (mkKeyHash 99, Coin 500_000_000)
-            ]
       }
   ]
+  where
+    exampleStakePoolState =
+      mkStakePoolState (EpochNo 191) (CompactCoin 500_000_000) delegators exampleStakePoolParams
+    -- A pool that registered a voting key: the epoch it registered in rides
+    -- along on the key, which is the whole reason this query reports
+    -- StakePoolState.
+    exampleStakePoolStateWithBlsKey =
+      mkStakePoolState
+        (EpochNo 191)
+        (CompactCoin 500_000_000)
+        delegators
+        exampleStakePoolParams {sppBlsKey = SJust exampleBlsKey}
+    delegators = Set.fromList [KeyHashObj (mkKeyHash 7), KeyHashObj (mkKeyHash 8)]
 
 queryFuturePParamsExamples :: EraTest era => [Maybe (PParams era)]
 queryFuturePParamsExamples = [Nothing, Just def, Just examplePParams]

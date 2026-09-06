@@ -1,15 +1,10 @@
 [
     {
-        "deposits": {},
         "futureStakePoolParams": {},
         "retiring": {},
-        "stakePoolParams": {}
+        "stakePools": {}
     },
     {
-        "deposits": {
-            "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": 500000000,
-            "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541": 500000000
-        },
         "futureStakePoolParams": {
             "c7b31a062855f437a05caf5060582ea40e840ebe4b431ffdf84780db": {
                 "accountAddress": {
@@ -56,27 +51,38 @@
         "retiring": {
             "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": 250
         },
-        "stakePoolParams": {
+        "stakePools": {
             "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06": {
-                "accountAddress": {
-                    "credential": {
-                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
-                    },
-                    "network": "Testnet"
+                "spsAccountId": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
                 },
-                "blsKey": null,
-                "cost": 5,
-                "margin": 0.1,
-                "metadata": {
+                "spsBlsKey": {
+                    "bksKey": {
+                        "blsPossessionProof": "8114c1b1ef41b6b826f612f6383989ccefc82fb4df4a49dbd828b8fd94db9d0e86a55e22861b585edf411a48374aa42a",
+                        "blsPubKey": "a57565542eaa01ef2b910bf0eaba4d98a1e5b8b79cc425db08f8780732d0ea9bc85fc6175f272b2344bb27bc572ebf14022e52689dcedfccf44a00e5bd1aa59db44517217d6b0f21b372169ee761938c28914ddcb9663de54db288e760a8e14f"
+                    },
+                    "bksRegisteredIn": 191
+                },
+                "spsCost": 5,
+                "spsDelegators": [
+                    {
+                        "keyHash": "23f44e7e83a1cd7624805a7d6d16c5fca5317aaa1da99fc05e8cdf26"
+                    },
+                    {
+                        "keyHash": "4b279a388de46bb4d33c4df64da357640be900b04625a43651b7b059"
+                    }
+                ],
+                "spsDeposit": 500000000,
+                "spsMargin": 0.1,
+                "spsMetadata": {
                     "hash": "7b7d",
                     "url": "consensus.pool"
                 },
-                "owners": [
+                "spsOwners": [
                     "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
                 ],
-                "pledge": 1,
-                "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
-                "relays": [
+                "spsPledge": 1,
+                "spsRelays": [
                     {
                         "single host address": {
                             "IPv4": "127.0.0.1",
@@ -96,28 +102,33 @@
                         }
                     }
                 ],
-                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+                "spsVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
             },
             "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": {
-                "accountAddress": {
-                    "credential": {
-                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
-                    },
-                    "network": "Testnet"
+                "spsAccountId": {
+                    "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
                 },
-                "blsKey": null,
-                "cost": 5,
-                "margin": 0.1,
-                "metadata": {
+                "spsBlsKey": null,
+                "spsCost": 5,
+                "spsDelegators": [
+                    {
+                        "keyHash": "23f44e7e83a1cd7624805a7d6d16c5fca5317aaa1da99fc05e8cdf26"
+                    },
+                    {
+                        "keyHash": "4b279a388de46bb4d33c4df64da357640be900b04625a43651b7b059"
+                    }
+                ],
+                "spsDeposit": 500000000,
+                "spsMargin": 0.1,
+                "spsMetadata": {
                     "hash": "7b7d",
                     "url": "consensus.pool"
                 },
-                "owners": [
+                "spsOwners": [
                     "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
                 ],
-                "pledge": 1,
-                "poolId": "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00",
-                "relays": [
+                "spsPledge": 1,
+                "spsRelays": [
                     {
                         "single host address": {
                             "IPv4": "127.0.0.1",
@@ -137,7 +148,7 @@
                         }
                     }
                 ],
-                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+                "spsVrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
             }
         }
     }
