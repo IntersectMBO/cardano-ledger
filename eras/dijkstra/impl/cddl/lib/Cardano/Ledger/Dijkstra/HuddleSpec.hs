@@ -447,6 +447,7 @@ dijkstraCertificateRule ::
   ( HuddleGroup "delegation_to_stake_pool_cert" era
   , HuddleGroup "pool_registration_cert" era
   , HuddleGroup "pool_retirement_cert" era
+  , HuddleGroup "bls_key_registration_cert" era
   , HuddleGroup "account_registration_deposit_cert" era
   , HuddleGroup "account_unregistration_deposit_cert" era
   , HuddleGroup "delegation_to_drep_cert" era
@@ -480,6 +481,7 @@ dijkstraCertificateRule pname p =
     / arr [a $ huddleGroup @"drep_registration_cert" p]
     / arr [a $ huddleGroup @"drep_unregistration_cert" p]
     / arr [a $ huddleGroup @"drep_update_cert" p]
+    / arr [a $ huddleGroup @"bls_key_registration_cert" p]
 
 instance HuddleRule "bounded_bytes" DijkstraEra where
   huddleRuleNamed pname _ = boundedBytesRule pname
@@ -605,25 +607,39 @@ instance HuddleRule "relay" DijkstraEra where
 instance HuddleRule "pool_metadata" DijkstraEra where
   huddleRuleNamed = poolMetadataRule
 
-instance HuddleRule "bls_key" DijkstraEra where
+instance HuddleRule "bls_pubkey" DijkstraEra where
   huddleRuleNamed pname _p =
-    withCBORGen blsKeyGen $
-      ( pname
-          =.= arr
-            [ "bls_pubkey" ==> VBytes `sized` (96 :: Word64)
-            , "bls_possession_proof" ==> VBytes `sized` (48 :: Word64)
-            ]
-      )
-        //- "BLS key"
+    withCBORGen blsPubKeyGen $
+      (pname =.= VBytes `sized` (96 :: Word64))
+        //- "BLS verification key"
     where
-      blsKeyGen = do
+      -- Generated from a real key: random bytes of the right length are not valid
+      -- BLS12-381 group elements and would fail to decode.
+      blsPubKeyGen = do
         lk <- liftGen Gen.arbitrary
-        pure $
-          SingleTerm $
-            TList
-              [ TBytes (rawEncodeFixedSized $ blsPubKey lk)
-              , TBytes (rawEncodeFixedSized $ blsPossessionProof lk)
-              ]
+        pure $ SingleTerm $ TBytes (rawEncodeFixedSized $ blsPubKey lk)
+
+instance HuddleRule "bls_possession_proof" DijkstraEra where
+  huddleRuleNamed pname _p =
+    withCBORGen blsPoPGen $
+      (pname =.= VBytes `sized` (48 :: Word64))
+        //- "BLS proof of possession"
+    where
+      blsPoPGen = do
+        lk <- liftGen Gen.arbitrary
+        pure $ SingleTerm $ TBytes (rawEncodeFixedSized $ blsPossessionProof lk)
+
+instance HuddleGroup "bls_key_registration_cert" DijkstraEra where
+  huddleGroupNamed pname p =
+    ( pname
+        =.~ grp
+          [ 19
+          , a $ huddleRule @"pool_keyhash" p
+          , a $ huddleRule @"bls_pubkey" p
+          , a $ huddleRule @"bls_possession_proof" p
+          ]
+    )
+      //- "Register or rotate a stake pool's Leios voting key"
 
 instance HuddleGroup "pool_params" DijkstraEra where
   huddleGroupNamed pname p =
@@ -631,7 +647,6 @@ instance HuddleGroup "pool_params" DijkstraEra where
         =.~ grp
           [ "operator" ==> huddleRule @"pool_keyhash" p
           , "vrf_keyhash" ==> huddleRule @"vrf_keyhash" p
-          , opt ("bls_key" ==> huddleRule @"bls_key" p / VNil)
           , "pledge" ==> huddleRule @"coin" p
           , "cost" ==> huddleRule @"coin" p
           , "margin" ==> huddleRule @"unit_interval" p

@@ -73,6 +73,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuMaxEndorserBlockExUnitsL,
   ppuMaxEndorserBlockReferencesSizeL,
   ppuMaxEndorserBlockTxsSizeL,
+  ppuMaxKeyAgeEpochsL,
   ppuMaxRefScriptSizePerBlockL,
   ppuMaxRefScriptSizePerEndorserBlockL,
   ppuMaxRefScriptSizePerTxL,
@@ -94,6 +95,7 @@ import Cardano.Ledger.Dijkstra.TxBody (
   requiredTopLevelGuardsL,
   subTransactionsTxBodyL,
  )
+import Cardano.Ledger.Dijkstra.TxCert (DijkstraEraTxCert, pattern RegBlsKeyTxCert)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (OrdExUnits (..))
 import Cardano.Ledger.Plutus.Data (
@@ -192,6 +194,7 @@ exampleDijkstraBasedTopTx ::
   , DijkstraEraTxBody era
   , Value era ~ MaryValue
   , DijkstraEraScript era
+  , DijkstraEraTxCert era
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
@@ -209,6 +212,7 @@ exampleDijkstraBasedSubTx ::
   , DijkstraEraTxBody era
   , Value era ~ MaryValue
   , DijkstraEraScript era
+  , DijkstraEraTxCert era
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
@@ -225,6 +229,7 @@ addDijkstraBasedTopTxFeatures ::
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
   , DijkstraEraScript era
+  , DijkstraEraTxCert era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era
@@ -257,6 +262,7 @@ addDijkstraBasedTxFeatures ::
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
   , DijkstraEraScript era
+  , DijkstraEraTxCert era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV4 era
   , Value era ~ MaryValue
@@ -299,13 +305,10 @@ addDijkstraBasedTxFeatures tx =
     & bodyTxL . accountBalanceIntervalsTxBodyL .~ exampleAccountBalanceIntervals
     & bodyTxL . certsTxBodyL
       <>~ StrictSeq.fromList
-        [ RegPoolTxCert exampleStakePoolParamsWithBlsKey
+        [ RegPoolTxCert exampleStakePoolParams
+        , RegBlsKeyTxCert (sppId exampleStakePoolParams) exampleBlsKey
         ]
   where
-    exampleStakePoolParamsWithBlsKey =
-      exampleStakePoolParams
-        { sppBlsKey = SJust exampleBlsKey
-        }
     redeemers =
       Redeemers $
         Map.fromList
