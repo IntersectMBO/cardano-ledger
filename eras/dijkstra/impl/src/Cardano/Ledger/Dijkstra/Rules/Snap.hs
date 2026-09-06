@@ -90,11 +90,17 @@ snapTransition = do
 
   let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
       instantStake = ls ^. instantStakeG
-      -- The fresh mark snapshot becomes the active stake distribution two epoch
-      -- boundaries from now; its committee is judged for that epoch, so a voting
-      -- key is honoured against the epoch it will actually vote in (CIP-0164).
-      activeEpoch = addEpochInterval eNo (EpochInterval 2)
-  maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` activeEpoch)
+      -- The fresh mark snapshot becomes the active stake distribution at the
+      -- next epoch boundary -- NEWEPOCH sets @nesPd@ from the previous mark,
+      -- which is what this snapshot rotates into as @ssStakeSet@ -- so its
+      -- committee is judged for @eNo + 1@, the epoch it will actually vote in
+      -- (CIP-0164).
+      activeEpoch = addEpochInterval eNo (EpochInterval 1)
+  -- Measured against the epoch we are entering, not the one the committee will
+  -- vote in: all this needs is an epoch /length/ to turn the KES lifetime into a
+  -- count of epochs, and a future epoch's length is past the forecast horizon
+  -- whenever the stability window is shorter than an epoch.
+  maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
 
   let
     -- The committee is seated here, on the fresh mark snapshot, sized by the
@@ -133,11 +139,15 @@ snapTransition = do
 -- active committee at the one after. Deriving the bound from the KES setup keeps
 -- voting key rotation in step with the operational key rotation pools do anyway,
 -- instead of governing a second cadence through a parameter.
+-- The epoch argument only fixes the epoch /length/ used for the conversion, so
+-- pass one that is already known -- asking for a future epoch's size can fall
+-- past the hard-fork forecast horizon and throw.
 maxKeyAgeEpochs :: Globals -> EpochNo -> EpochInterval
 maxKeyAgeEpochs globals e =
   EpochInterval $
     ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2
   where
+    -- XXX: Avoid using epochInfoPure or determine epochLength differently
     EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
 
     Globals {maxKESEvo, slotsPerKESPeriod} = globals
