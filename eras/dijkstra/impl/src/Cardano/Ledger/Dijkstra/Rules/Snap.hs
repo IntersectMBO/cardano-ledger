@@ -22,7 +22,6 @@ import Cardano.Ledger.BaseTypes (
   EpochSize (..),
   Globals (..),
   ShelleyBase,
-  addEpochInterval,
   epochInfoPure,
   unNonZero,
  )
@@ -97,14 +96,14 @@ snapTransition = do
           instantStake
           (certState ^. certDStateL)
           (certState ^. certPStateL)
-      -- The fresh mark snapshot becomes the active stake distribution two epoch
-      -- boundaries from now; its committee is judged for that epoch, so a voting
-      -- key is honoured against the epoch it will actually vote in (CIP-0164).
-      activeEpoch = addEpochInterval eNo (EpochInterval 2)
   -- 'maxKeyAge' is derived from 'Globals', which the pure snapshot rotation
-  -- cannot read, so compute it here and record it on the mark. The committee
-  -- itself is seated when the mark rotates into the set position.
-  maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` activeEpoch)
+  -- cannot read, so compute it here and record it on the mark. The committee is
+  -- seated, and keys judged for @eNo + 1@, when the mark rotates into the set
+  -- position. Measure against @eNo@ (the epoch we are entering), not that later
+  -- epoch: this only needs an epoch /length/ to turn the KES lifetime into a
+  -- count of epochs, and a future epoch's length is past the forecast horizon
+  -- whenever the stability window is shorter than an epoch.
+  maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
@@ -133,11 +132,15 @@ snapTransition = do
 -- active committee at the one after. Deriving the bound from the KES setup keeps
 -- voting key rotation in step with the operational key rotation pools do anyway,
 -- instead of governing a second cadence through a parameter.
+-- The epoch argument only fixes the epoch /length/ used for the conversion, so
+-- pass one that is already known -- asking for a future epoch's size can fall
+-- past the hard-fork forecast horizon and throw.
 maxKeyAgeEpochs :: Globals -> EpochNo -> EpochInterval
 maxKeyAgeEpochs globals e =
   EpochInterval $
     ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2
   where
+    -- XXX: Avoid using epochInfoPure or determine epochLength differently
     EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
 
     Globals {maxKESEvo, slotsPerKESPeriod} = globals

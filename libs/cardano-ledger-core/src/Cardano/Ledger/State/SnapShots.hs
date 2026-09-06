@@ -538,10 +538,11 @@ mkSetSnapShot poolDistr MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSiz
     , ssMaxKeyAge = msMaxKeyAge
     , ssLeiosCommittee =
         selectLeiosCommittee
-          -- The mark records the epoch it was created in; the committee it
-          -- rotates into the set position is active two epoch boundaries later,
-          -- which is the epoch a voting key is honoured against (CIP-0164).
-          (addEpochInterval msEpochNo (EpochInterval 2))
+          -- The mark records the epoch it was created in; when it rotates into
+          -- the set position it is the leader-election stake distribution for
+          -- the next epoch, which is the epoch a voting key is honoured against
+          -- (CIP-0164).
+          (addEpochInterval msEpochNo (EpochInterval 1))
           msMaxKeyAge
           msLeiosCommitteeSize
           (leiosCandidates (ssStakePoolsSnapShot msSnapShot))
