@@ -34,7 +34,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  TokenType (..),
+  decodeBreakOr,
+  decodeListLenOrIndef,
   encodeListLen,
+  peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
@@ -85,22 +89,40 @@ individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individua
 -- fourth field exactly at the era boundary that introduces it.
 instance EncCBOR IndividualPoolStake where
   encCBOR (IndividualPoolStake stake stakeCoin vrf blsKey) =
-    mconcat
-      [ encodeListLen 4
+    mconcat $
+      [ encodeListLen $ case blsKey of
+          SJust _ -> 4
+          SNothing -> 3
       , encCBOR stake
       , encCBOR stakeCoin
       , encCBOR vrf
-      , encCBOR blsKey
       ]
+        <> [ encCBOR bk
+           | SJust bk <- [blsKey]
+           ]
 
 instance DecCBOR IndividualPoolStake where
-  decCBOR =
+  decCBOR = do
+    mLen <- decodeListLenOrIndef
     decodeRecordNamed "IndividualPoolStake" (const 4) $
       IndividualPoolStake
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
-        <*> decCBOR
+        <*> case mLen of
+          Just 3 -> pure SNothing
+          Just 4 -> SJust <$> decCBOR
+          Just _ -> fail "Invalid length"
+          Nothing -> do
+            brk <- decodeBreakOr
+            if brk
+              then pure SNothing
+              else do
+                res <- decCBOR
+                nextToken <- peekTokenType
+                case nextToken of
+                  TypeBreak -> pure $ SJust res
+                  _ -> error "Expected break"
 
 instance ToKeyValuePairs IndividualPoolStake where
   toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
