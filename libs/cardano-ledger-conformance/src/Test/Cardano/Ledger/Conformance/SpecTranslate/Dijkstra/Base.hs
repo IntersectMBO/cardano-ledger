@@ -720,8 +720,6 @@ instance SpecNormalize Agda.GovAction
 
 instance SpecNormalize Agda.GovActionState
 
-instance SpecNormalize Agda.StakeDistrs
-
 instance SpecNormalize Agda.PoolThresholds
 
 instance SpecNormalize Agda.DrepThresholds
