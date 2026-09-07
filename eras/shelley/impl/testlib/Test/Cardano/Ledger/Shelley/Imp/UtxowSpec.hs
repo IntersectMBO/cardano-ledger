@@ -38,14 +38,14 @@ spec = describe "UTXOW" $ do
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "Valid Witnesses" $ do
-      aliceBootAddr <- freshBootstapAddress
+      aliceBootAddr <- freshBootstrapAddress
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
       let txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]
       submitTx_ (mkBasicTx txBody)
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "InvalidWitnessesUTXOW" $ do
-      aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstapAddress
+      aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstrapAddress
       aliceByronKeyPair <- getByronKeyPair aliceBootAddr
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
       let (aliceVKey, _) = unpackByronVKey (bkpVerificationKey aliceByronKeyPair)

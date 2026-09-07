@@ -27,7 +27,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
       pv <- getProtVer
       Globals {epochInfo, systemStart} <- use impGlobalsL
       (_, shelleyAddr) <- freshKeyAddr
-      byronAddr <- AddrBootstrap <$> freshBootstapAddress
+      byronAddr <- AddrBootstrap <$> freshBootstrapAddress
       shelleyTxIn <- sendCoinTo shelleyAddr mempty
       utxo <- getUTxO
       let
@@ -47,7 +47,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
       pv <- getProtVer
       Globals {epochInfo, systemStart} <- use impGlobalsL
       (_, shelleyAddr) <- freshKeyAddr
-      byronAddr <- AddrBootstrap <$> freshBootstapAddress
+      byronAddr <- AddrBootstrap <$> freshBootstrapAddress
       byronTxIn <- sendCoinTo byronAddr mempty
       utxo <- getUTxO
       let
