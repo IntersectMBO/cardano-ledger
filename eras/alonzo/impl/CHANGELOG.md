@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Add `AlonzoEraTransition` class with a `tcAlonzoGenesisL` lens
+* Change `alonzoInjectCostModels` to accept the `TransitionConfig` of the current era instead of `TransitionConfig AlonzoEra`
 * Switch `toPlutusScriptPurpose` to accept `LedgerTxInfo` instead of `ProtVer`
 * Add `ltiScriptsUsed` and `ltiScriptHashesUsed` to `LedgerTxInfo`
 * Add `toScriptHashByPurpose` helper

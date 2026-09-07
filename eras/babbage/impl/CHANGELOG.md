@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `AlonzoEraTransition` instance for `BabbageEra`
 * Add `FromJSON` instance for `BabbageTxOut era`
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` argument instead of `ProtVer` and `Maybe (Data era)`
 * Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`

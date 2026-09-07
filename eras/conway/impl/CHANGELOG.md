@@ -2,6 +2,9 @@
 
 ## 1.24.0.0
 
+* Add `conwayInjectIntoTestState`
+* Add `AlonzoEraTransition` as a superclass of `ConwayEraTransition`
+* Add `AlonzoEraTransition` instance for `ConwayEra`
 * Add `era` parameter to `PoolCert`s
 * Remove `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule`
 * Remove `WithdrawalsNotInRewardsCERTS` from `ConwayCertsPredFailure`
