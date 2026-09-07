@@ -78,6 +78,7 @@
 
 ### `testlib`
 
+* Add `txWithSubTxs` and `submitFailingSubTx`
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubTransactions`
