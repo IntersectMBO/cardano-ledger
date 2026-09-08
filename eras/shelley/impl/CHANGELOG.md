@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`

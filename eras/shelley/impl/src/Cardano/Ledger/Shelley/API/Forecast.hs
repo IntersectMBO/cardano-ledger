@@ -22,6 +22,9 @@ module Cardano.Ledger.Shelley.API.Forecast (
   -- * TPraos-era extension (Shelley through Alonzo)
   ShelleyEraForecast (..),
 
+  -- * Leios-era extension (Dijkstra onwards)
+  DijkstraEraForecast (..),
+
   -- * Main functions
   currentForecast,
   futureForecast,
@@ -32,6 +35,7 @@ module Cardano.Ledger.Shelley.API.Forecast (
 
 import Cardano.Ledger.BaseTypes (
   Globals,
+  Milliseconds32,
   Nonce,
   ProtVer,
   ShelleyBase,
@@ -41,8 +45,9 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Chain (ChainChecksPParams (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs)
+import Cardano.Ledger.Plutus.ExUnits (OrdExUnits)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
-import Cardano.Ledger.State (EraCertState, EraGov, PoolDistr)
+import Cardano.Ledger.State (EraCertState, EraGov, LeiosCommittee, PoolDistr)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import qualified Data.List.NonEmpty as NE (head)
@@ -108,3 +113,16 @@ forecastChainChecks f =
     , ccMaxBBSize = f ^. maxBlockBodySizeForecastL @era @t
     , ccProtocolVersion = f ^. protocolVersionForecastL @era @t
     }
+
+-- | Additional forecast fields available only in Leios eras.
+class (EraForecast era, AtLeastEra "Dijkstra" era) => DijkstraEraForecast era where
+  leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
+  leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
+  leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
+  leiosAnnouncementPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosVotePeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosDiffusionPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  maxEndorserBlockReferencesSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
+  maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32
