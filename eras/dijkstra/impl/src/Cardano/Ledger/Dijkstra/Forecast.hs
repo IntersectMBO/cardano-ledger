@@ -2,25 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Forecast (
   DijkstraForecast (..),
-  mkDijkstraForecast,
-  dfPoolDistrL,
-  dfMaxBlockHeaderSizeL,
-  dfMaxBlockBodySizeL,
-  dfProtocolVersionL,
-  dfLeiosCommitteeL,
-  dfLeiosCommitteeSizeL,
-  dfLeiosQuorumStakeThresholdL,
-  dfLeiosAnnouncementPeriodLengthL,
-  dfLeiosVotePeriodLengthL,
-  dfLeiosDiffusionPeriodLengthL,
-  dfMaxEndorserBlockReferencesSizeL,
-  dfMaxEndorserBlockTxsSizeL,
-  dfMaxEndorserBlockExUnitsL,
-  dfMaxRefScriptSizePerEndorserBlockL,
+  DijkstraEraForecast (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Milliseconds32, ProtVer, UnitInterval)
@@ -69,12 +56,9 @@ import NoThunks.Class (NoThunks (..))
 -- | Forecast data for Leios eras: the Praos fields, plus the epoch's voting
 -- committee and the Leios protocol parameters.
 --
--- The Leios fields are fixed at an epoch boundary -- the committee is seated on
--- the stake snapshot by the SNAP rule, the rest are protocol parameters -- so
--- they are forecastable for the same reason the Praos fields are. That is what
--- lets a node verify a certificate against the committee and quorum in force at
--- the slot of the block that announced the endorser block, without having
--- applied that block.
+-- The Leios fields are fixed at an epoch boundary. The committee is seated on
+-- the stake snapshot by the SNAP rule, the rest are protocol parameters. So
+-- they are forecastable for the same reason the Praos fields are.
 --
 -- Leios field names follow CIP-164 where it names the same quantity.
 data DijkstraForecast (t :: Timeline) era = DijkstraForecast
@@ -110,6 +94,19 @@ type role DijkstraForecast phantom phantom
 instance NFData (DijkstraForecast t era)
 
 instance NoThunks (DijkstraForecast t era)
+
+-- | Additional forecast fields available only in Leios eras.
+class EraForecast era => DijkstraEraForecast era where
+  leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
+  leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
+  leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
+  leiosAnnouncementPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosVotePeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosDiffusionPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  maxEndorserBlockReferencesSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
+  maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32
 
 mkDijkstraForecast ::
   (DijkstraEraPParams era, EraGov era) =>
@@ -192,3 +189,15 @@ instance EraForecast DijkstraEra where
   maxBlockHeaderSizeForecastL = dfMaxBlockHeaderSizeL
   maxBlockBodySizeForecastL = dfMaxBlockBodySizeL
   protocolVersionForecastL = dfProtocolVersionL
+
+instance DijkstraEraForecast DijkstraEra where
+  leiosCommitteeForecastL = dfLeiosCommitteeL
+  leiosCommitteeSizeForecastL = dfLeiosCommitteeSizeL
+  leiosQuorumStakeThresholdForecastL = dfLeiosQuorumStakeThresholdL
+  leiosAnnouncementPeriodLengthForecastL = dfLeiosAnnouncementPeriodLengthL
+  leiosVotePeriodLengthForecastL = dfLeiosVotePeriodLengthL
+  leiosDiffusionPeriodLengthForecastL = dfLeiosDiffusionPeriodLengthL
+  maxEndorserBlockReferencesSizeForecastL = dfMaxEndorserBlockReferencesSizeL
+  maxEndorserBlockTxsSizeForecastL = dfMaxEndorserBlockTxsSizeL
+  maxEndorserBlockExUnitsForecastL = dfMaxEndorserBlockExUnitsL
+  maxRefScriptSizePerEndorserBlockForecastL = dfMaxRefScriptSizePerEndorserBlockL
