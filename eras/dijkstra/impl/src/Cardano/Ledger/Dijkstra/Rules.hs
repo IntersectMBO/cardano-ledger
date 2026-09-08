@@ -11,6 +11,7 @@ module Cardano.Ledger.Dijkstra.Rules (
   module Cardano.Ledger.Dijkstra.Rules.GovCert,
   module Cardano.Ledger.Dijkstra.Rules.Ledger,
   module Cardano.Ledger.Dijkstra.Rules.Mempool,
+  module Cardano.Ledger.Dijkstra.Rules.Pool,
   module Cardano.Ledger.Dijkstra.Rules.SubCert,
   module Cardano.Ledger.Dijkstra.Rules.SubCerts,
   module Cardano.Ledger.Dijkstra.Rules.SubDeleg,
@@ -41,7 +42,7 @@ import Cardano.Ledger.Dijkstra.Rules.GovCert
 import Cardano.Ledger.Dijkstra.Rules.Ledger
 import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
 import Cardano.Ledger.Dijkstra.Rules.Mempool
-import Cardano.Ledger.Dijkstra.Rules.Pool ()
+import Cardano.Ledger.Dijkstra.Rules.Pool
 import Cardano.Ledger.Dijkstra.Rules.SubCert
 import Cardano.Ledger.Dijkstra.Rules.SubCerts
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg

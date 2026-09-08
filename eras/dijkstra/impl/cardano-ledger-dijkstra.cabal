@@ -130,6 +130,7 @@ library
     microlens,
     nothunks,
     plutus-ledger-api,
+    primitive,
     small-steps >=1.2,
     text,
     transformers,
