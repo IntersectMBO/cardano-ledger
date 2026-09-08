@@ -2,25 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Forecast (
   DijkstraForecast (..),
-  mkDijkstraForecast,
-  dfPoolDistrL,
-  dfMaxBlockHeaderSizeL,
-  dfMaxBlockBodySizeL,
-  dfProtocolVersionL,
-  dfLeiosCommitteeL,
-  dfLeiosCommitteeSizeL,
-  dfLeiosQuorumStakeThresholdL,
-  dfLeiosAnnouncementPeriodLengthL,
-  dfLeiosVotePeriodLengthL,
-  dfLeiosDiffusionPeriodLengthL,
-  dfMaxEndorserBlockReferencesSizeL,
-  dfMaxEndorserBlockTxsSizeL,
-  dfMaxEndorserBlockExUnitsL,
-  dfMaxRefScriptSizePerEndorserBlockL,
+  DijkstraEraForecast (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Milliseconds32, ProtVer, UnitInterval)
@@ -71,12 +58,21 @@ import NoThunks.Class (NoThunks (..))
 --
 -- The Leios fields are fixed at an epoch boundary -- the committee is seated on
 -- the stake snapshot by the SNAP rule, the rest are protocol parameters -- so
--- they are forecastable for the same reason the Praos fields are. That is what
--- lets a node verify a certificate against the committee and quorum in force at
--- the slot of the block that announced the endorser block, without having
--- applied that block.
---
--- Leios field names follow CIP-164 where it names the same quantity.
+-- they are forecastable for the same reason the Praos fields are.
+
+-- | Additional forecast fields available only in Leios eras.
+class EraForecast era => DijkstraEraForecast era where
+  leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
+  leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
+  leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
+  leiosAnnouncementPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosVotePeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosDiffusionPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  maxEndorserBlockReferencesSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
+  maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32
+
 data DijkstraForecast (t :: Timeline) era = DijkstraForecast
   { dfPoolDistr :: !PoolDistr
   , dfMaxBlockHeaderSize :: !Word16
@@ -84,24 +80,14 @@ data DijkstraForecast (t :: Timeline) era = DijkstraForecast
   , dfProtocolVersion :: !ProtVer
   , dfLeiosCommittee :: !LeiosCommittee
   , dfLeiosCommitteeSize :: !Word16
-  -- ^ @N_c@. Redundant against 'dfLeiosCommittee' once seated, but it is the
-  -- parameter that governs seating, and a zero means Leios is not enabled.
   , dfLeiosQuorumStakeThreshold :: !UnitInterval
-  -- ^ @tau@: the fraction of active stake a certificate's votes must carry.
   , dfLeiosAnnouncementPeriodLength :: !Milliseconds32
-  -- ^ @L_hdr@
   , dfLeiosVotePeriodLength :: !Milliseconds32
-  -- ^ @L_vote@
   , dfLeiosDiffusionPeriodLength :: !Milliseconds32
-  -- ^ @L_diff@
   , dfMaxEndorserBlockReferencesSize :: !Word32
-  -- ^ Cap on the endorsement itself: all transaction references and sizes.
   , dfMaxEndorserBlockTxsSize :: !Word32
-  -- ^ Cap on the total size of an endorser block's endorsed transactions.
   , dfMaxEndorserBlockExUnits :: !OrdExUnits
-  -- ^ Cap on an endorser block's total script execution units.
   , dfMaxRefScriptSizePerEndorserBlock :: !Word32
-  -- ^ Cap on the combined reference-script bytes across an endorser block.
   }
   deriving (Eq, Show, Generic)
 
@@ -192,3 +178,15 @@ instance EraForecast DijkstraEra where
   maxBlockHeaderSizeForecastL = dfMaxBlockHeaderSizeL
   maxBlockBodySizeForecastL = dfMaxBlockBodySizeL
   protocolVersionForecastL = dfProtocolVersionL
+
+instance DijkstraEraForecast DijkstraEra where
+  leiosCommitteeForecastL = dfLeiosCommitteeL
+  leiosCommitteeSizeForecastL = dfLeiosCommitteeSizeL
+  leiosQuorumStakeThresholdForecastL = dfLeiosQuorumStakeThresholdL
+  leiosAnnouncementPeriodLengthForecastL = dfLeiosAnnouncementPeriodLengthL
+  leiosVotePeriodLengthForecastL = dfLeiosVotePeriodLengthL
+  leiosDiffusionPeriodLengthForecastL = dfLeiosDiffusionPeriodLengthL
+  maxEndorserBlockReferencesSizeForecastL = dfMaxEndorserBlockReferencesSizeL
+  maxEndorserBlockTxsSizeForecastL = dfMaxEndorserBlockTxsSizeL
+  maxEndorserBlockExUnitsForecastL = dfMaxEndorserBlockExUnitsL
+  maxRefScriptSizePerEndorserBlockForecastL = dfMaxRefScriptSizePerEndorserBlockL
