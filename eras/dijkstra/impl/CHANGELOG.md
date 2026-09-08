@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
 * Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
