@@ -34,18 +34,16 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  TokenType (..),
   decodeBreakOr,
   decodeListLenOrIndef,
   encodeListLen,
-  peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.State.StakePool (BlsKey (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (unless)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default
 import Data.Map.Strict (Map)
@@ -85,8 +83,8 @@ data IndividualPoolStake = IndividualPoolStake
 individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
 
--- BlsKey is only supported from version 12 (Dijkstra), so the record grows a
--- fourth field exactly at the era boundary that introduces it.
+-- BlsKey is only supported from version 12 (Dijkstra), but for backwards 
+-- compatibility the fourth field is left optional.
 instance EncCBOR IndividualPoolStake where
   encCBOR (IndividualPoolStake stake stakeCoin vrf blsKey) =
     mconcat $
@@ -104,25 +102,23 @@ instance EncCBOR IndividualPoolStake where
 instance DecCBOR IndividualPoolStake where
   decCBOR = do
     mLen <- decodeListLenOrIndef
-    decodeRecordNamed "IndividualPoolStake" (const 4) $
-      IndividualPoolStake
-        <$> decCBOR
-        <*> decCBOR
-        <*> decCBOR
-        <*> case mLen of
-          Just 3 -> pure SNothing
-          Just 4 -> SJust <$> decCBOR
-          Just _ -> fail "Invalid length"
-          Nothing -> do
-            brk <- decodeBreakOr
-            if brk
-              then pure SNothing
-              else do
-                res <- decCBOR
-                nextToken <- peekTokenType
-                case nextToken of
-                  TypeBreak -> pure $ SJust res
-                  _ -> error "Expected break"
+    IndividualPoolStake
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> case mLen of
+        Just 3 -> pure SNothing
+        Just 4 -> SJust <$> decCBOR
+        Just _ -> fail "Invalid length"
+        Nothing -> do
+          brk <- decodeBreakOr
+          if brk
+            then pure SNothing
+            else do
+              res <- decCBOR
+              brk2 <- decodeBreakOr
+              unless brk2 $ fail "Expected break"
+              pure $ SJust res
 
 instance ToKeyValuePairs IndividualPoolStake where
   toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
