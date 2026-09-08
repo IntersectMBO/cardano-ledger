@@ -283,7 +283,8 @@ dijkstraEntitiesTransition = do
   runTest $ validateAccountBalanceIntervals network accounts (tx ^. bodyTxL)
   runTest $ validateStartingAccountBalanceIntervals network originalAccounts (tx ^. bodyTxL)
 
-  runTest $ validateWithdrawals stAnnTx network accounts originalAccounts
+  runTest $ validateWithdrawalsAgainstOriginalAccounts stAnnTx network originalAccounts
+  runTest $ validateWithdrawalsAgainstCurrentAccounts stAnnTx network accounts
 
   let certStateBeforeCerts =
         certState
@@ -325,7 +326,7 @@ validateMissingAccountsInDirectDeposits dds network accounts =
     (directDepositsMissingAccounts dds network accounts)
     DirectDepositAccountsMissing
 
-validateWithdrawals ::
+validateWithdrawalsAgainstOriginalAccounts ::
   ( EraAccounts era
   , DijkstraEraUTxO era
   , DijkstraEraTxBody era
@@ -333,32 +334,22 @@ validateWithdrawals ::
   StAnnTx TopTx era ->
   Network ->
   Accounts era ->
-  Accounts era ->
   Test (EntitiesPredFailure era)
-validateWithdrawals stAnnTx network accounts originalAccounts =
+validateWithdrawalsAgainstOriginalAccounts stAnnTx network originalAccounts = do
   let
     tx = stAnnTx ^. txStAnnTxG
     legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
     topTxWithdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-    subTxWithdrawals =
+    sumOfSubTxWithdrawals =
       foldMap'
         (\subTx -> subTx ^. bodyTxL . withdrawalsTxBodyL)
         (tx ^. bodyTxL . subTransactionsTxBodyL)
-    batchWithdrawals = topTxWithdrawals <> subTxWithdrawals
-
-    -- Top-tx withdrawals must exist in current Accounts.
-    -- In legacy mode, they must drain the account.
-    checkTopAgainstCurrent =
-      for_ (withdrawalsThatDoNotDrainAccounts topTxWithdrawals network accounts) $
-        \(Withdrawals missingAccounts, inexact) ->
-          failWithdrawalsMap missingAccounts WithdrawalAccountsMissing
-            *> when legacyMode (failureOnNonEmptyMap inexact WithdrawalAmountsInexactInLegacyMode)
-
+    sumOfAllWithdrawals = topTxWithdrawals <> sumOfSubTxWithdrawals
     -- In normal mode, all withdrawals in the batch must not exceed the pre-batch balance,
     -- and all top tx-withdrawals must exist in the pre-batch Accounts
-    checkNonLegacyAgainstOriginal =
+    checkNonLegacy =
       unless legacyMode $
-        for_ (withdrawalsThatExceedAccountBalance batchWithdrawals network originalAccounts) $
+        for_ (withdrawalsThatExceedAccountBalance sumOfAllWithdrawals network originalAccounts) $
           \(Withdrawals missingAccounts, exceedingBalances) ->
             -- we only check the accounts in the top transactions here, because the subtransactions are checked in SUBENTITES
             let topMissingAccounts =
@@ -367,16 +358,36 @@ validateWithdrawals stAnnTx network accounts originalAccounts =
                   *> failureOnNonEmptyMap exceedingBalances WithdrawalAmountsExceedingOriginalBalance
 
     -- In legacy mode, all withdrawals from subtransactions must not exceed the pre-batch balance.
-    checkLegacySubsAgainstOriginal =
+    checkLegacy =
       when legacyMode $
-        for_ (withdrawalsThatExceedAccountBalance subTxWithdrawals network originalAccounts) $
+        for_ (withdrawalsThatExceedAccountBalance sumOfSubTxWithdrawals network originalAccounts) $
           -- missing accounts are discarded, because they are checked in SUBENTITIES
           \(_, exceedingBalances) ->
             failureOnNonEmptyMap exceedingBalances WithdrawalAmountsExceedingOriginalBalance
-   in
-    checkTopAgainstCurrent
-      *> checkNonLegacyAgainstOriginal
-      *> checkLegacySubsAgainstOriginal
+
+  checkNonLegacy *> checkLegacy
+  where
+    failWithdrawalsMap m mkFailure = failureOnNonEmptyMap m (mkFailure . Withdrawals . NEM.toMap)
+
+validateWithdrawalsAgainstCurrentAccounts ::
+  ( EraAccounts era
+  , DijkstraEraUTxO era
+  ) =>
+  StAnnTx TopTx era ->
+  Network ->
+  Accounts era ->
+  Test (EntitiesPredFailure era)
+validateWithdrawalsAgainstCurrentAccounts stAnnTx network accounts = do
+  let
+    tx = stAnnTx ^. txStAnnTxG
+    legacyMode = stAnnTx ^. plutusLegacyModeStAnnTxG
+    topTxWithdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+  -- Top-tx withdrawals must exist in current Accounts.
+  -- In legacy mode, they must drain the account.
+  for_ (withdrawalsThatDoNotDrainAccounts topTxWithdrawals network accounts) $
+    \(Withdrawals missingAccounts, inexact) ->
+      failWithdrawalsMap missingAccounts WithdrawalAccountsMissing
+        *> when legacyMode (failureOnNonEmptyMap inexact WithdrawalAmountsInexactInLegacyMode)
   where
     failWithdrawalsMap m mkFailure = failureOnNonEmptyMap m (mkFailure . Withdrawals . NEM.toMap)
 

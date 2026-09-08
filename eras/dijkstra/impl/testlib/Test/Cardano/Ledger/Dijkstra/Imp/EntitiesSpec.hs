@@ -75,9 +75,9 @@ spec = describe "ENTITIES" $ do
           & withdrawalsTxBodyL .~ Withdrawals [(account1, amountX), (account2, zero)]
     submitFailingTx
       (mkBasicTx txBody)
-      [ injectFailure . WithdrawalAccountsMissing @era $
+      [ injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+      , injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
@@ -89,9 +89,9 @@ spec = describe "ENTITIES" $ do
               & withdrawalsTxBodyL .~ Withdrawals [(account3, amountY)]
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
-      [ injectFailure . WithdrawalAccountsMissing @era $
+      [ injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+      , injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . SubWithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(account1, amountX), (account2, zero)]
@@ -150,9 +150,9 @@ spec = describe "ENTITIES" $ do
       [ injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
-      , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . WithdrawalAccountsMissingPreBatch @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
@@ -162,9 +162,9 @@ spec = describe "ENTITIES" $ do
           NES.singleton wrongNetworkAccount
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
-      , injectFailure . WithdrawalAccountsMissing @era $
-          Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . WithdrawalAccountsMissingPreBatch @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . DirectDepositAccountsMissing @era $ dd
       , injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
@@ -223,13 +223,13 @@ spec = describe "ENTITIES" $ do
           Coin . toInteger $ (fromInteger (unCoin reward) :: Word64) - fromInteger (unCoin moreThanReward)
     submitFailingTx
       legacyTx
-      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
-          NEM.singleton account $
-            Mismatch reward underflowedBalance
-      , injectFailure $
+      [ injectFailure $
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
               NEM.fromMap [(account, Mismatch moreThanReward reward)]
+      , injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+          NEM.singleton account $
+            Mismatch reward underflowedBalance
       ]
 
   describe "Account balance intervals" $ do
