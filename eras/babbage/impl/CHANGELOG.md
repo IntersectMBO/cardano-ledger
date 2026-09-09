@@ -2,6 +2,8 @@
 
 ## 1.15.0.0
 
+* Encode a wrapped `AlonzoContextError` under tag 8 in `BabbageContextError`, and add `TxCert era` and `PlutusPurpose AsItem era` constraints to its `NFData` and `EncCBOR` instances
+* Add `DecCBOR (TxCert era)` and `DecCBOR (PlutusPurpose AsItem era)` constraints to the `DecCBOR (BabbageContextError era)` instance
 * Add `AlonzoEraTransition` instance for `BabbageEra`
 * Add `FromJSON` instance for `BabbageTxOut era`
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` argument instead of `ProtVer` and `Maybe (Data era)`

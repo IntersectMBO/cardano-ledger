@@ -168,7 +168,7 @@ instance ToExpr (SupportedPlutusRunnable era) where
   toExpr (SupportedPlutusRunnable spr) = toExpr spr
 
 -- Plutus/TxInfo
-instance ToExpr (AlonzoContextError era)
+instance (ToExpr (TxCert era), ToExpr (PlutusPurpose AsItem era)) => ToExpr (AlonzoContextError era)
 
 instance
   ( ToExpr (ContextError era)
