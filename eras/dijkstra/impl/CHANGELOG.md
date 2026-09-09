@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `InjectRuleFailure` instances that inject `DijkstraSubPoolPredFailure` into the `SUBCERTS`, `SUBENTITIES`, `SUBLEDGER`, `SUBLEDGERS` and `LEDGER` rules
 * Add `SafeToHash` instance for `DijkstraBlockBody`
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
@@ -40,6 +41,10 @@
 
 ### `testlib`
 
+* Add `InjectRuleFailure "LEDGER" DijkstraSubPoolPredFailure era` and
+  `InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure era` as superclasses of `DijkstraEraImp`
+* Add `InjectRuleFailure` instances that inject `DijkstraSubGovCertPredFailure` into the `SUBCERTS`, `SUBENTITIES`, `SUBLEDGER`, `SUBLEDGERS` and `LEDGER` rules
+* Add `registerDRepSubTx`
 * Re-export `goldenMapRedeemers` from `Test.Cardano.Ledger.Conway.Binary.Golden`
 * Add `ToExpr` instances for `DijkstraTopTx DijkstraEra` and `DijkstraTopTxRaw DijkstraEra`
 * Add the `SafeToHash (Tx TopTx era)` constraint to `genSmallDijkstraTxsBlockBody`, and replace the `AlonzoEraTx era` constraint with it on `genSmallDijkstraCertBlockBody`
