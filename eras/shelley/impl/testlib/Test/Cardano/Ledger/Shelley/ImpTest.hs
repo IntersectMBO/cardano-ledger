@@ -1297,7 +1297,7 @@ trySubmitTx ::
     (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
-  logToExpr txFixed
+  -- logToExpr txFixed
 
   st <- gets impNES
   lEnv <- impLedgerEnv st

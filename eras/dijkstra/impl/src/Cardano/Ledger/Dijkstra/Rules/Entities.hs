@@ -284,7 +284,9 @@ dijkstraEntitiesTransition = do
   runTest $ validateStartingAccountBalanceIntervals network originalAccounts (tx ^. bodyTxL)
 
   runTest $ validateWithdrawalsAgainstOriginalAccounts stAnnTx network originalAccounts
-  runTest $ validateWithdrawalsAgainstCurrentAccounts stAnnTx network accounts
+  whenFailureFree $
+    runTest $
+      validateWithdrawalsAgainstCurrentAccounts stAnnTx network accounts
 
   let certStateBeforeCerts =
         certState
