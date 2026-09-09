@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Augment the `TICKF` rule to also rotate the stake snapshots, set := mark and go := set (mark is left as-is, since it's unused by forecasts)
 * Change the type of `computeDRepDistr` to take and return a `VotingStakePoolDistr` instead of a `PoolDistr`
 * Rename `reStakePoolDistrL` to `reVotingStakePoolDistrL` and change its type to use `VotingStakePoolDistr`
 * Rename `DRepPulser {dpStakePoolDistr}` to `dpVotingStakePoolDistr` and change the type to `VotingStakePoolDistr`
