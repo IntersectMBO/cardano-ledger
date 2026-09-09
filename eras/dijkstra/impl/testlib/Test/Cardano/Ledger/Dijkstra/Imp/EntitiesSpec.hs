@@ -24,7 +24,6 @@ import qualified Data.Map.NonEmpty as NEM
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
-import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -115,8 +114,6 @@ spec = describe "ENTITIES" $ do
       (mkBasicTx txBody)
       [ injectFailure . WithdrawalAccountsMissingFromOriginal @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . WithdrawalAccountsMissing @era $
-          Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
     account3 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
@@ -128,8 +125,6 @@ spec = describe "ENTITIES" $ do
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
       [ injectFailure . WithdrawalAccountsMissingFromOriginal @era $
-          Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
           Withdrawals [(account1, amountX), (account2, zero)]
@@ -188,7 +183,6 @@ spec = describe "ENTITIES" $ do
           NES.singleton wrongNetworkAccount
       , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
-      , injectFailure . WithdrawalAccountsMissing @era $ Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
@@ -199,8 +193,6 @@ spec = describe "ENTITIES" $ do
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
       , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
-          Withdrawals [(wrongNetworkAccount, mempty)]
-      , injectFailure . WithdrawalAccountsMissing @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . DirectDepositAccountsMissing @era $ dd
       , injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
@@ -262,9 +254,6 @@ spec = describe "ENTITIES" $ do
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
               NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) balance)]
-      , injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
-          NEM.singleton account $
-            Mismatch zero (computeUnderflowedBalance balance (subAmount1 <+> subAmount2))
       ]
 
   it "Individual withdrawal exceeds account balance" $ do
@@ -294,9 +283,6 @@ spec = describe "ENTITIES" $ do
           WithdrawalAmountsExceedingOriginalBalance @era $
             fromJust $
               NEM.fromMap [(account, Mismatch moreThanBalance balance)]
-      , injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
-          NEM.singleton account $
-            Mismatch atMostBalance (computeUnderflowedBalance balance moreThanBalance)
       ]
 
     -- The top transaction overdraws
@@ -549,9 +535,6 @@ spec = describe "ENTITIES" $ do
       a <- choose (1, maxSum)
       b <- choose (maxSum - a + 1, maxSum)
       pure (Coin a, Coin b)
-
-    computeUnderflowedBalance balance amount =
-      Coin . toInteger $ (fromInteger (unCoin balance) :: Word64) - fromInteger (unCoin amount)
 
     unregisteredAccount :: ImpTestM era AccountAddress
     unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj

@@ -284,7 +284,15 @@ dijkstraEntitiesTransition = do
   runTest $ validateStartingAccountBalanceIntervals network originalAccounts (tx ^. bodyTxL)
 
   runTest $ validateWithdrawalsAgainstOriginalAccounts stAnnTx network originalAccounts
-  runTest $ validateWithdrawalsAgainstCurrentAccounts stAnnTx network accounts
+  -- Skip the current-account checks when a prior check has failed:
+  -- if aggregate withdrawal validation failed, the current accounts state
+  -- may contain underflowed balances (if the withdrawals in sub-transactions exceeded the balance),
+  -- and any failure derived from it would report garbage.
+  -- Conversely, any underflow in the threaded state implies aggregate withdrawals exceeded the original balance,
+  -- so whenever the state is corrupted the aggregate check is guaranteed to have failed.
+  whenFailureFree $
+    runTest $
+      validateWithdrawalsAgainstCurrentAccounts stAnnTx network accounts
 
   let certStateBeforeCerts =
         certState
