@@ -10,10 +10,11 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
+import Cardano.Ledger.Allegra.State (DRepState (drepAnchor))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (Vote (..), Voter (..))
+import Cardano.Ledger.Conway.Governance (GovAction (..), Vote (..), Voter (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..), ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
@@ -58,6 +59,14 @@ spec = describe "GOVCERT" $ do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
+    it "updating a DRep" $ do
+      drepCred <- KeyHashObj <$> registerDRep
+      newAnchor <- arbitrary
+      submitAnyTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ SSeq.singleton (UpdateDRepTxCert drepCred newAnchor)
+      fmap drepAnchor <$> lookupDRepState drepCred `shouldReturn` Just newAnchor
     it "resigning a non-CC key" $ do
       someCred <- KeyHashObj <$> freshKeyHash
       submitFailingTx
@@ -134,6 +143,24 @@ spec = describe "GOVCERT" $ do
       submitFailingTx
         regTx
         (pure . injectFailure $ ConwayDRepAlreadyRegistered drepCred)
+    it "DRep already registered with an incorrect deposit" $ do
+      modifyPParams $ ppDRepDepositL .~ Coin 100
+      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+      drepCred <- KeyHashObj <$> registerDRep
+      let incorrectDeposit = drepDeposit <+> Coin 10
+      submitFailingTx
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.singleton (RegDRepTxCert drepCred incorrectDeposit SNothing)
+        )
+        [ injectFailure $ ConwayDRepAlreadyRegistered drepCred
+        , injectFailure $
+            ConwayDRepIncorrectDeposit
+              Mismatch
+                { mismatchSupplied = incorrectDeposit
+                , mismatchExpected = drepDeposit
+                }
+        ]
     it "unregistering a nonexistent DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -142,6 +169,15 @@ spec = describe "GOVCERT" $ do
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
+        )
+        (pure . injectFailure $ ConwayDRepNotRegistered drepCred)
+    it "updating a nonexistent DRep" $ do
+      drepCred <- KeyHashObj <$> freshKeyHash
+      anchor <- arbitrary
+      submitFailingTx
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.singleton (UpdateDRepTxCert drepCred anchor)
         )
         (pure . injectFailure $ ConwayDRepNotRegistered drepCred)
     it "registering a resigned CC member hotkey" $ do
@@ -163,6 +199,19 @@ spec = describe "GOVCERT" $ do
         submitFailingTx
           registerHotKeyTx
           (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)
+    it "resigning an already resigned CC member" $ do
+      initialCommittee <- getCommitteeMembers
+      forM_ initialCommittee $ \ccCred -> do
+        let
+          resignTx :: forall l. Typeable l => Tx l era
+          resignTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
+        submitAnyTx_ resignTx
+        submitFailingTx
+          resignTx
+          (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)
     it "resigning a nonexistent CC member hotkey" $ do
       void registerInitialCommittee
       nonExistentColdKey <- KeyHashObj <$> freshKeyHash
@@ -174,6 +223,24 @@ spec = describe "GOVCERT" $ do
         failingTx
         [ injectFailure $ ConwayCommitteeIsUnknown nonExistentColdKey
         ]
+    it "authorizing a hot key after a no-confidence action dissolved the committee" $
+      whenPostBootstrap $ do
+        initialCommittee <- getCommitteeMembers
+        (drepCred, _, _) <- setupSingleDRep 1_000_000
+        (spoKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        gaid <- submitGovAction $ NoConfidence SNothing
+        submitYesVote_ (DRepVoter drepCred) gaid
+        submitYesVote_ (StakePoolVoter spoKH) gaid
+        passNEpochs 2
+        impAnn "There should not be a committee" $ getCommittee `shouldReturn` SNothing
+        forM_ initialCommittee $ \ccCred -> do
+          ccHotCred <- KeyHashObj <$> freshKeyHash
+          submitFailingTx
+            ( mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ SSeq.singleton (AuthCommitteeHotKeyTxCert ccCred ccHotCred)
+            )
+            [injectFailure $ ConwayCommitteeIsUnknown ccCred]
   describe "Potential future committee members" $ do
     let
       setupGovEnv = do
@@ -211,6 +278,17 @@ spec = describe "GOVCERT" $ do
           [injectFailure $ ConwayCommitteeIsUnknown unknownColdCred]
         void $ submitUpdateCommittee Nothing mempty [(unknownColdCred, EpochInterval 20)] (1 %! 2)
         submitAnyTx_ tx
+    it "a pending no-confidence action does not make a cold credential a potential member" $
+      whenPostBootstrap $ do
+        void . submitGovAction $ NoConfidence SNothing
+        unknownColdCred <- KeyHashObj <$> freshKeyHash
+        unknownHotCred <- KeyHashObj <$> freshKeyHash
+        submitFailingTx
+          ( mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (AuthCommitteeHotKeyTxCert unknownColdCred unknownHotCred)
+          )
+          [injectFailure $ ConwayCommitteeIsUnknown unknownColdCred]
     it "at protocol version 10, the vote is counted once the committee update is enacted" $
       whenMajorVersion @10 $ do
         (drep, spo) <- setupGovEnv

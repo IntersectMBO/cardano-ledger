@@ -73,6 +73,7 @@ import Cardano.Ledger.Dijkstra.Rules.Pool (DijkstraPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubEntities (SubEntitiesPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
+import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Dijkstra.TxBody
@@ -203,6 +204,9 @@ instance InjectRuleFailure "LEDGER" SubEntitiesPredFailure DijkstraEra where
     injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
       . SubLedgerFailure
       . SubEntitiesFailure
+
+instance InjectRuleFailure "LEDGER" DijkstraSubPoolPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
 
 deriving instance
   ( Era era
