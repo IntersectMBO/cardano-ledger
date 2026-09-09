@@ -720,8 +720,6 @@ instance SpecNormalize Agda.GovAction
 
 instance SpecNormalize Agda.GovActionState
 
-instance SpecNormalize Agda.StakeDistrs
-
 instance SpecNormalize Agda.PoolThresholds
 
 instance SpecNormalize Agda.DrepThresholds
@@ -740,7 +738,7 @@ instance SpecNormalize Agda.Snapshots
 
 instance SpecNormalize Agda.Snapshot where
   specNormalize (Agda.MkSnapshot s d p) =
-    Agda.MkSnapshot (specNormalize s') (specNormalize d') p
+    Agda.MkSnapshot (specNormalize s') (specNormalize d') (specNormalize p)
     where
       s' = removeZero s
       -- Only keep delegations for credentials that have non-zero stake,

@@ -50,7 +50,7 @@ spec = do
     withImpInit @(LedgerSpec DijkstraEra) $
       modifyImpInitProtVer @DijkstraEra (natVersion @12) $
         modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
-          disableImpInitPostEpochBoundaryHook $ do
+          modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
             ConwayBBODY.spec
 
             CERT.spec
