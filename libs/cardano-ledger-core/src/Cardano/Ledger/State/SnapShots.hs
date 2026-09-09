@@ -25,6 +25,7 @@ module Cardano.Ledger.State.SnapShots (
   GoSnapShot (..),
   mkSetSnapShot,
   mkGoSnapShot,
+  maxKeyAgeEpochs,
   SnapShots (..),
   emptySnapShot,
   emptySnapShots,
@@ -53,6 +54,8 @@ import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),
   EpochNo (..),
+  EpochSize (..),
+  Globals (..),
   KeyValuePairs (..),
   NonNegativeInterval,
   NonZero (..),
@@ -60,6 +63,7 @@ import Cardano.Ledger.BaseTypes (
   ToKeyValuePairs (..),
   UnitInterval,
   addEpochInterval,
+  epochInfoPure,
   knownNonZeroBounded,
   nonZeroOr,
   recipNonZero,
@@ -103,15 +107,18 @@ import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.State.Stake
 import Cardano.Ledger.State.StakePool (BlsKeyState (..), StakePoolState (..))
 import Cardano.Ledger.Val ((<+>))
+import Cardano.Slotting.EpochInfo (epochInfoSize)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (get)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default, def)
+import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.VMap (VB, VMap (..))
@@ -713,3 +720,24 @@ ssStake = ssActiveStake
 ssStakeL :: Lens' SnapShot ActiveStake
 ssStakeL = lens ssActiveStake (\ds u -> ds {ssActiveStake = u})
 {-# DEPRECATED ssStakeL "In favor of `ssActiveStakeL`" #-}
+
+-- | Maximum age of a registered Leios voting key (CIP-0164): the KES key
+-- lifetime rounded up to whole epochs, plus two epochs of activation delay — a
+-- registered key enters the mark snapshot at the next epoch boundary and the
+-- active committee at the one after. Deriving the bound from the KES setup keeps
+-- voting key rotation in step with the operational key rotation pools do anyway,
+-- instead of governing a second cadence through a parameter.
+-- The epoch argument only fixes the epoch /length/ used for the conversion, so
+-- pass one that is already known -- asking for a future epoch's size can fall
+-- past the hard-fork forecast horizon and throw.
+maxKeyAgeEpochs :: Globals -> EpochNo -> EpochInterval
+maxKeyAgeEpochs globals e =
+  EpochInterval $
+    ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2
+  where
+    -- Safe against the forecast horizon as long as @e@ is an already-known
+    -- epoch (see the note above); 'epochInfoPure' is the only handle on the
+    -- epoch length 'Globals' offers.
+    EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
+
+    Globals {maxKESEvo, slotsPerKESPeriod} = globals
