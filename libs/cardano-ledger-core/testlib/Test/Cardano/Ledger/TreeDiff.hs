@@ -36,6 +36,7 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
+import Cardano.Slotting.Slot (SlotInterval (..))
 import Data.Functor.Identity
 import qualified Data.TreeDiff.OMap as OMap
 import GHC.TypeLits
@@ -207,6 +208,8 @@ instance (Typeable r, ToExpr a) => ToExpr (Mismatch r a) where
         ]
 
 instance ToExpr Milliseconds32
+
+instance ToExpr SlotInterval
 
 instance ToExpr EpochInterval
 

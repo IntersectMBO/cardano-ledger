@@ -2,6 +2,12 @@
 
 ## 0.4.0.0
 
+* Add the Peras protocol parameters:
+  - `perasMinCandidateBlockAge`
+  - `perasCertBoost`
+  - `perasTargetCommitteeSize`
+  - `perasBootstrapRound`
+  - `perasHealingFactor`
 * Add `POOL` rule type and add `poolTransition` to `Cardano.Ledger.Dijkstra.Rules.Pool`
 * Add `AlonzoEraTransition` instance for `DijkstraEra`
 * Re-export `GuardingPurpose` from `Cardano.Ledger.Dijkstra.Core` for consistency with prior eras.
@@ -71,6 +77,7 @@
 
 ### `cddl`
 
+* Add Peras protocol parameter entries (tags 49-53) in `protocol_param_update`
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`

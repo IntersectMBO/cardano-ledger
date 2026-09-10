@@ -76,6 +76,11 @@
        "steps":0
     },
     "maxRefScriptSizePerEndorserBlock":0,
+    "perasMinCandidateBlockAge":90,
+    "perasHealingFactor":0.5,
+    "perasCertBoost":15,
+    "perasTargetCommitteeSize":800,
+    "perasBootstrapRound":0,
     "protocolVersion":{
        "major":4,
        "minor":1
