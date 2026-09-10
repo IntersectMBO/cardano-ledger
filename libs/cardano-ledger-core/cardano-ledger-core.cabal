@@ -141,6 +141,7 @@ library
     partial-order,
     plutus-core,
     plutus-ledger-api >=1.68,
+    plutus-tx,
     prettyprinter,
     primitive,
     quiet,
