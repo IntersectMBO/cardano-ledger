@@ -122,6 +122,7 @@ class
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -214,6 +215,21 @@ submitFailingSubTx ::
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingSubTx subTx = submitFailingTx $ mkTopTxWithSubTxs [subTx]
+
+instance InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
