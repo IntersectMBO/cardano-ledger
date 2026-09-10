@@ -768,21 +768,20 @@ transTxBodyGuards txb = fmap transCred . F.toList $ txb ^. guardsTxBodyL
 scriptPurposeToScriptInfo ::
   PV4.ScriptPurpose ->
   Maybe PV4.Datum ->
-  Maybe PV4.TopTxInfo ->
-  PV4.ScriptInfo
-scriptPurposeToScriptInfo sp datum topInfo = case sp of
-  PV4.Spending _ ref -> PV4.SpendingScript ref datum
-  PV4.Minting _ sym -> PV4.MintingScript sym
-  PV4.Withdrawing _ c -> PV4.WithdrawingScript $ PV4.AccountId c
-  PV4.Certifying _ ix cert -> PV4.CertifyingScript ix cert
-  PV4.Voting _ v -> PV4.VotingScript v
-  PV4.Proposing _ ix proc -> PV4.ProposingScript ix proc
-  PV4.Guarding _ ix -> PV4.GuardingScript ix topInfo
+  LedgerTxInfo era ->
+  Either (ContextError era) (PV2.ScriptHash, PV4.ScriptInfo)
+scriptPurposeToScriptInfo sp datum _lti = case sp of
+  PV4.Spending sh ref -> pure (sh, PV4.SpendingScript ref datum)
+  PV4.Minting sh currencySymbol -> pure (sh, PV4.MintingScript currencySymbol)
+  PV4.Withdrawing sh credential -> pure (sh, PV4.WithdrawingScript $ PV4.AccountId credential)
+  PV4.Certifying sh ix cert -> pure (sh, PV4.CertifyingScript ix cert)
+  PV4.Voting sh vote -> pure (sh, PV4.VotingScript vote)
+  PV4.Proposing sh ix proposal -> pure (sh, PV4.ProposingScript ix proposal)
+  PV4.Guarding sh ix -> pure (sh, PV4.GuardingScript ix Nothing)
 
 toPlutusV4Args ::
   ( AlonzoEraUTxO era
   , EraPlutusTxInfo PlutusV4 era
-  , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV4 ->
   LedgerTxInfo era ->
@@ -794,13 +793,7 @@ toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = d
   scriptPurpose <- toPlutusScriptPurpose proxy lti plutusPurpose
   let
     maybeSpendingData = getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
-    -- TODO TopTxInfo should be set if this is a top-level transaction
-    scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
-    ixPurpose = hoistPlutusPurpose toAsIx plutusPurpose
-  sh <-
-    case Map.lookup ixPurpose ltiScriptHashesUsed of
-      Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPurpose
-      Just scriptHash -> Right $ transScriptHash scriptHash
+  (sh, scriptInfo) <- scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) lti
   pure $
     PlutusV4Args $
       PV4.ScriptContext
