@@ -32,6 +32,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBPOOL,
  )
+import Cardano.Ledger.Dijkstra.Rules.Pool (poolTransition)
 import Cardano.Ledger.Dijkstra.State
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
@@ -84,4 +85,4 @@ instance
   type PredicateFailure (SUBPOOL era) = DijkstraSubPoolPredFailure era
   type Event (SUBPOOL era) = DijkstraSubPoolEvent era
 
-  transitionRules = [Shelley.poolTransition]
+  transitionRules = [poolTransition]
