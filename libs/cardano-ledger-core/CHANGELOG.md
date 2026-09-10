@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `assocMapToList`, `assocMapKeys` and `assocMapElems`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
 * Move `protVerBlockHeaderL` from `EraBlockHeader` to `PraosEraBlockHeader`
 * Add `TPraosEraBlockHeader`, `PraosEraBlockHeader` and `LeiosEraBlockHeader`
