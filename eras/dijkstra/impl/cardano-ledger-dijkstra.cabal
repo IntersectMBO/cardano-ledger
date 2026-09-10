@@ -162,6 +162,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -209,6 +210,7 @@ library testlib
     cardano-strict-containers,
     containers,
     generic-random,
+    fs-sim,
     microlens,
     microlens-mtl,
     mtl,
