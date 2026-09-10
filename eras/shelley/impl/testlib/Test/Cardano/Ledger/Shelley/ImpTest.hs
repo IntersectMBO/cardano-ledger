@@ -120,7 +120,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectTreasury,
   disableTreasuryExpansion,
   updateAddrTxWits,
-  resetAddrTxWits,
+  rederiveAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
   fixupTxOuts,
@@ -1105,7 +1105,7 @@ addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
 -- fixup step: a test can supply a witness of its own and it will be
 -- retained. But a witness signed over a transaction body that has since
 -- changed is left in place, since its key hash is already covered. If
--- we want to reset all use `resetAddrTxWits`.
+-- we want to reset all use `rederiveAddrTxWits`.
 updateAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
@@ -1149,13 +1149,13 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
 -- Required when transaction body is modified after witnesses have been
 -- added, because `updateAddrTxWits` leaves witnesses signed over the
 -- previous body in place.
-resetAddrTxWits ::
+rederiveAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
   Tx l era ->
   ImpTestM era (Tx l era)
-resetAddrTxWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
+rederiveAddrTxWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
 
 -- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::

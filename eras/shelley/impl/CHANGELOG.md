@@ -14,7 +14,7 @@
 
 ### `testlib`
 
-* Add `resetAddrTxWits`, which re-derives key witnesses for a modified transaction body
+* Add `rederiveAddrTxWits`, which re-derives key witnesses for a modified transaction body
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Add `submitFailingSubsetTx{,M}`
 * Make `fixupTxOuts` parametric on level

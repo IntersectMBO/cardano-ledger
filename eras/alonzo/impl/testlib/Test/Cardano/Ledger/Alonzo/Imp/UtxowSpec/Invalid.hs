@@ -62,7 +62,7 @@ spec = describe "Invalid transactions" $ do
       tx
       [injectFailure $ Shelley.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
-  let fixupResetAddrWits = fixupPPHash >=> resetAddrTxWits
+  let fixupResetAddrWits = fixupPPHash >=> rederiveAddrTxWits
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -111,7 +111,7 @@ spec = describe "Invalid transactions" $ do
               txIn <- produceScript redeemerSameAsDatumHash
               goodHashTx <- fixupTx $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
               badHashTx <-
-                resetAddrTxWits $ goodHashTx & bodyTxL . scriptIntegrityHashTxBodyL .~ badHash
+                rederiveAddrTxWits $ goodHashTx & bodyTxL . scriptIntegrityHashTxBodyL .~ badHash
               let goodHash = goodHashTx ^. bodyTxL . scriptIntegrityHashTxBodyL
               withNoFixup $
                 submitFailingTx
@@ -161,7 +161,7 @@ spec = describe "Invalid transactions" $ do
                   . (witsTxL . datsTxWitsL .~ mempty)
                   . (witsTxL . rdmrsTxWitsL .~ mempty)
               resetScriptHash = pure . (bodyTxL . scriptIntegrityHashTxBodyL .~ SNothing)
-          withPostFixup (dropScriptWitnesses >=> resetScriptHash >=> resetAddrTxWits) $
+          withPostFixup (dropScriptWitnesses >=> resetScriptHash >=> rederiveAddrTxWits) $
             submitFailingTx tx [injectFailure $ Shelley.MissingScriptWitnessesUTXOW $ NES.singleton scriptHash]
 
         it "Redeemer with incorrect purpose" $ do
@@ -175,7 +175,7 @@ spec = describe "Invalid transactions" $ do
               isSpender = isJust . toSpendingPurpose @era @AsIx
               removeSpenders = Map.filterWithKey (const . not . isSpender)
               dropSpendingRedeemers = pure . (witsTxL . rdmrsTxWitsL . unRedeemersL %~ removeSpenders)
-          withPostFixup (dropSpendingRedeemers >=> fixupPPHash >=> resetAddrTxWits) $
+          withPostFixup (dropSpendingRedeemers >=> fixupPPHash >=> rederiveAddrTxWits) $
             submitFailingTx
               tx
               [ injectFailure $
