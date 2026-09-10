@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (hardforkConwayDELEGIncorrectDepositsAndRefunds)
 import Cardano.Ledger.Conway.Governance (GovAction (..), GovPurposeId (..), Vote (..), Voter (..))
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Transition (injectStakeCredentials)
@@ -21,6 +20,7 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (drepDelegsL)
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Rules (DijkstraSubDelegPredFailure (..))
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Genesis (InjectionData (..))
@@ -62,7 +62,10 @@ import Test.Cardano.Ledger.Imp.Common (
  )
 import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
 
-spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  DijkstraEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SUBDELEG" $ do
   describe "Register stake credential" $ do
     it "With correct deposit" $ do
@@ -84,7 +87,6 @@ spec = describe "SUBDELEG" $ do
         expectStakeCredRegistered (KeyHashObj kh)
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
       Positive n <- arbitrary
       let wrongDeposit = expectedDeposit <+> Coin n
@@ -95,28 +97,25 @@ spec = describe "SUBDELEG" $ do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . certsTxBodyL .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
           )
-          [ injectFailure $
-              if hardforkConwayDELEGIncorrectDepositsAndRefunds pv
-                then
-                  DepositIncorrectDELEG
-                    Mismatch
-                      { mismatchSupplied = wrongDeposit
-                      , mismatchExpected = expectedDeposit
-                      }
-                else IncorrectDepositDELEG wrongDeposit
+          [ injectFailure . DijkstraSubDelegPredFailure $
+              DepositIncorrectDELEG
+                Mismatch
+                  { mismatchSupplied = wrongDeposit
+                  , mismatchExpected = expectedDeposit
+                  }
           ]
         expectStakeCredNotRegistered (KeyHashObj kh)
 
   describe "Unregister stake credentials" $ do
     it "With incorrect refund" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
       let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
 
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
+      impAnn "Register stake credential" $
+        submitTx_ . txWithSubTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
 
       Positive n <- arbitrary
       let wrongDeposit = expectedDeposit <+> Coin n
@@ -128,15 +127,12 @@ spec = describe "SUBDELEG" $ do
                 . certsTxBodyL
                 .~ [UnRegDepositTxCert cred wrongDeposit]
         )
-        [ injectFailure $
-            if hardforkConwayDELEGIncorrectDepositsAndRefunds pv
-              then
-                RefundIncorrectDELEG
-                  Mismatch
-                    { mismatchSupplied = wrongDeposit
-                    , mismatchExpected = expectedDeposit
-                    }
-              else IncorrectDepositDELEG wrongDeposit
+        [ injectFailure . DijkstraSubDelegPredFailure $
+            RefundIncorrectDELEG
+              Mismatch
+                { mismatchSupplied = wrongDeposit
+                , mismatchExpected = expectedDeposit
+                }
         ]
 
       expectStakeCredRegistered cred
@@ -202,7 +198,7 @@ spec = describe "SUBDELEG" $ do
                 . certsTxBodyL
                 .~ [DelegTxCert cred (DelegStake poolKh)]
         )
-        [injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
+        [injectFailure . DijkstraSubDelegPredFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
       expectNotDelegatedToAnyPool cred
 
   describe "Delegate vote" $ do
@@ -314,7 +310,9 @@ spec = describe "SUBDELEG" $ do
               expectNotDelegatedVote cred
 
           outOfBootstrap = do
-            submitFailingTx tx [injectFailure $ DelegateeDRepNotRegisteredDELEG drepCred]
+            submitFailingTx
+              tx
+              [injectFailure . DijkstraSubDelegPredFailure $ DelegateeDRepNotRegisteredDELEG drepCred]
             expectNotDelegatedVote cred
       ifBootstrap inBootstrap outOfBootstrap
 
@@ -326,7 +324,7 @@ spec = describe "SUBDELEG" $ do
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
         )
-        [injectFailure $ StakeKeyNotRegisteredDELEG cred]
+        [injectFailure . DijkstraSubDelegPredFailure $ StakeKeyNotRegisteredDELEG cred]
 
       expectStakeCredNotRegistered cred
 
@@ -422,14 +420,8 @@ spec = describe "SUBDELEG" $ do
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1249
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "Delegate vote and unregister after hardfork" $ do
-      let
-        setProtVer pv = modifyNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ pv
       initialProtVer <- getProtVer
-      (_, ccCred, _) <- impAnn "Set up a committee" $ do
-        -- Temporarily set protver to 10 to elect a committee
-        res <- electBasicCommittee
-        setProtVer initialProtVer
-        pure res
+      (_, ccCred, _) <- impAnn "Set up a committee" electBasicCommittee
       (khSPO, _, _) <- setupPoolWithStake $ Coin 10_000_000
       -- Using a lazy pattern match here to prevent evaluation of tuple
       -- unless we actually need a value from it

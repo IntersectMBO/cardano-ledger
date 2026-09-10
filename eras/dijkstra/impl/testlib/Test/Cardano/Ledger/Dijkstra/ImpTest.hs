@@ -301,6 +301,21 @@ declareTreasurySubTx :: DijkstraEraImp era => Coin -> Tx SubTx era
 declareTreasurySubTx declaredTreasury =
   mkBasicTx $ mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
 
+instance InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
+
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
   , NativeScript era ~ DijkstraNativeScript era
