@@ -73,26 +73,62 @@ spec = describe "SUBUTXOW" $ do
         (mkTopTxWithSubTxs [subTx])
         [injectFailure . SubInvalidWitnessesUTXOW @era $ pure (vKey keyPair)]
 
-  describe "SubMissingVKeyWitnessesUTXOW" $
+  describe "SubMissingVKeyWitnessesUTXOW" $ do
+    let withheldWitnessFails mkSubTx = do
+          (subTx, keyHash) <- mkSubTx
+          let dropWitness =
+                pure
+                  . (witsTxL . addrTxWitsL %~ Set.filter ((/= keyHash) . witVKeyHash))
+                  . (witsTxL . bootAddrTxWitsL .~ mempty)
+          withPostFixupSubTxs dropWitness $
+            submitFailingTx
+              (mkTopTxWithSubTxs [subTx])
+              [injectFailure . SubMissingVKeyWitnessesUTXOW @era $ NES.singleton keyHash]
+
     forM_ (missingVKeyWitnessSources @era) $ \(sourceName, mkSubTx) ->
-      it sourceName $ do
-        (subTx, keyHash) <- mkSubTx
-        let dropWitness =
-              pure
-                . (witsTxL . addrTxWitsL %~ Set.filter ((/= keyHash) . witVKeyHash))
-                . (witsTxL . bootAddrTxWitsL .~ mempty)
-        withPostFixupSubTxs dropWitness $
+      it sourceName $ withheldWitnessFails mkSubTx
+
+    -- The conformance translation has no representation for bootstrap addresses.
+    disableInConformanceIt "spending a bootstrap address input" $
+      withheldWitnessFails $ do
+        bootAddr <- freshBootstapAddress
+        txIn <- sendCoinTo (AddrBootstrap bootAddr) mempty
+        pure
+          ( mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
+          , asWitness $ bootstrapKeyHash bootAddr
+          )
+
+    -- The spec accepts a pool registration whose owner witness is missing.
+    disableInConformanceIt "registering a stake pool with an owner" $
+      withheldWitnessFails $ do
+        poolKeyHash <- freshKeyHash
+        ownerKeyHash <- freshKeyHash
+        accountAddress <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+        poolParams <- freshPoolParams poolKeyHash accountAddress
+        pure
+          ( mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [RegPoolTxCert poolParams {sppOwners = Set.singleton ownerKeyHash}]
+          , asWitness ownerKeyHash
+          )
+
+  describe "SubScriptWitnessNotValidatingUTXOW" $ do
+    let failingScriptFails mkSubTx = do
+          (subTx, scriptHash) <- mkSubTx
           submitFailingTx
             (mkTopTxWithSubTxs [subTx])
-            [injectFailure . SubMissingVKeyWitnessesUTXOW @era $ NES.singleton keyHash]
+            [injectFailure . SubScriptWitnessNotValidatingUTXOW @era $ NES.singleton scriptHash]
 
-  describe "SubScriptWitnessNotValidatingUTXOW" $
     forM_ (failingNativeScriptPurposes @era) $ \(purposeName, mkSubTx) ->
-      it purposeName $ do
-        (subTx, scriptHash) <- mkSubTx
-        submitFailingTx
-          (mkTopTxWithSubTxs [subTx])
-          [injectFailure . SubScriptWitnessNotValidatingUTXOW @era $ NES.singleton scriptHash]
+      it purposeName $ failingScriptFails mkSubTx
+
+    -- The spec attributes a failing minting script to UTXOW, not SUBUTXOW.
+    disableInConformanceIt "minting" $
+      failingScriptFails $ do
+        scriptHash <- unsatisfiableTimeLock
+        subTx <- mkTokenMintingTx scriptHash
+        pure (subTx, scriptHash)
 
   it "SubMissingTxMetadata" $ do
     auxData <- arbitrary @(TxAuxData era)
@@ -311,7 +347,7 @@ spec = describe "SUBUTXOW" $ do
           it "the supplied hash is wrong" $ testHashMismatch . SJust =<< arbitrary
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
-        disableInConformanceIt "SubMalformedScriptWitnesses" $ do
+        it "SubMalformedScriptWitnesses" $ do
           let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
           txIn <- produceScript scriptHash
           submitFailingTx
@@ -333,7 +369,7 @@ spec = describe "SUBUTXOW" $ do
                 hashScript script
             ]
 
-        it "SubInvalidMetadata" $ do
+        disableInConformanceIt "SubInvalidMetadata" $ do
           let auxData :: TxAuxData era
               auxData =
                 mkBasicTxAuxData
@@ -391,31 +427,6 @@ missingVKeyWitnessSources =
         pure
           ( mkBasicTx $ mkBasicTxBody & guardsTxBodyL .~ [KeyHashObj keyHash]
           , asWitness keyHash
-          )
-    )
-  ,
-    ( "spending a bootstrap address input"
-    , do
-        bootAddr <- freshBootstapAddress
-        txIn <- sendCoinTo (AddrBootstrap bootAddr) mempty
-        pure
-          ( mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
-          , asWitness $ bootstrapKeyHash bootAddr
-          )
-    )
-  ,
-    ( "registering a stake pool with an owner"
-    , do
-        poolKeyHash <- freshKeyHash
-        ownerKeyHash <- freshKeyHash
-        accountAddress <- registerStakeCredential . KeyHashObj =<< freshKeyHash
-        poolParams <- freshPoolParams poolKeyHash accountAddress
-        pure
-          ( mkBasicTx $
-              mkBasicTxBody
-                & certsTxBodyL
-                  .~ [RegPoolTxCert poolParams {sppOwners = Set.singleton ownerKeyHash}]
-          , asWitness ownerKeyHash
           )
     )
   ,
@@ -490,13 +501,6 @@ failingNativeScriptPurposes =
           ( mkBasicTx $ mkBasicTxBody & guardsTxBodyL .~ [ScriptHashObj scriptHash]
           , scriptHash
           )
-    )
-  ,
-    ( "minting"
-    , do
-        scriptHash <- unsatisfiableTimeLock
-        subTx <- mkTokenMintingTx scriptHash
-        pure (subTx, scriptHash)
     )
   ,
     ( "withdrawing"
