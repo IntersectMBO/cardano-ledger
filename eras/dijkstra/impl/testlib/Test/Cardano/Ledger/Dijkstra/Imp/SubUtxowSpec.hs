@@ -269,7 +269,7 @@ spec = describe "SUBUTXOW" $ do
                   SubMissingRedeemers @era [(missingRedeemer, redeemerSameAsDatumHash)]
               ]
 
-        it "SubExtraRedeemers" $ do
+        it "SubExtraRedeemers, alongside a needed redeemer" $ do
           txIn <- produceScript redeemerSameAsDatumHash
           redeemerData <- arbitrary
           let extraPurpose = mkMintingPurpose $ AsIx 2

@@ -259,7 +259,7 @@ dijkstraFixupTx ::
   ImpTestM era (Tx TopTx era)
 dijkstraFixupTx tx = do
   -- add top-level Plutus script witnesses so legacy detection sees them
-  fixedUp <- fixupScriptWits =<< addSubTxCollateralInput =<< fixupSubTransactions tx
+  fixedUp <- fixupScriptWits =<< addCollateralInputForSubTxs =<< fixupSubTransactions tx
   isLegacy <- detectLegacyMode fixedUp
   balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
   babbageFixupTx balancedInLegacy
@@ -275,25 +275,27 @@ detectLegacyMode tx = do
   let stAnnTx = mkStAnnTx epochInfo systemStart pp utxo mempty tx
   pure $ stAnnTx ^. plutusLegacyModeStAnnTxG
 
--- | Add a collateral input when a sub-transaction needs a Plutus
--- script.
+-- | Add a collateral input to the top-level transaction when a
+-- sub-transaction needs a Plutus script.
 --
--- `addCollateralInput` only inspects the top level transaction, so it
--- does not account for scripts that are needed by a sub-transaction,
--- even though collateral is validated for the whole batch of
--- transactions.
-addSubTxCollateralInput ::
+-- Collateral is validated across the whole batch but the inherited
+-- `addCollateralInput` step only inspects the top-level transaction's
+-- own script needs. This step covers the sub-transactions. Both skip
+-- when a collateral input is already present, so at most one collateral
+-- input is added for the whole batch, and neither step overrides
+-- collateral that a test set itself.
+addCollateralInputForSubTxs ::
   DijkstraEraImp era =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
-addSubTxCollateralInput tx
+addCollateralInputForSubTxs tx
   | not (null (tx ^. bodyTxL . collateralInputsTxBodyL)) = pure tx
   | otherwise = do
       subTxContexts <-
         traverse impGetPlutusContexts . OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
       if all null subTxContexts
         then pure tx
-        else impAnn "addSubTxCollateralInput" $ do
+        else impAnn "addCollateralInputForSubTxs" $ do
           collateralInput <- makeCollateralInput
           pure $ tx & bodyTxL . collateralInputsTxBodyL %~ Set.insert collateralInput
 
