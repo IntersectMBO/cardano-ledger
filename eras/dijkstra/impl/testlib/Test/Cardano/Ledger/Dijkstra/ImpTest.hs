@@ -194,7 +194,7 @@ withPostFixupSubTxs f = withPostFixup $ \tx -> do
   let modifiedSubTxs = OMap.fromFoldable subTxs
   unless (OMap.size modifiedSubTxs == length subTxs) $
     assertFailure "Modifying the sub-transactions resulted in collision of transaction id"
-  resetAddrTxWits $ tx & bodyTxL . subTransactionsTxBodyL .~ modifiedSubTxs
+  rederiveAddrTxWits $ tx & bodyTxL . subTransactionsTxBodyL .~ modifiedSubTxs
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

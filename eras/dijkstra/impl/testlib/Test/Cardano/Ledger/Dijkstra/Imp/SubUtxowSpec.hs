@@ -123,7 +123,7 @@ spec = describe "SUBUTXOW" $ do
     let subTx :: Tx SubTx era
         subTx = mkBasicTx mkBasicTxBody & auxDataTxL .~ SJust auxData
         dropAuxDataHash =
-          resetAddrTxWits . (bodyTxL . auxDataHashTxBodyL .~ SNothing)
+          rederiveAddrTxWits . (bodyTxL . auxDataHashTxBodyL .~ SNothing)
     withPostFixupSubTxs dropAuxDataHash $
       submitFailingSubTx
         subTx
@@ -143,7 +143,7 @@ spec = describe "SUBUTXOW" $ do
               & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
               & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
           addExtraRedeemer =
-            (fixupPPHash >=> resetAddrTxWits)
+            (fixupPPHash >=> rederiveAddrTxWits)
               . ( witsTxL . rdmrsTxWitsL . unRedeemersL
                     %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0)
                 )
@@ -163,7 +163,7 @@ spec = describe "SUBUTXOW" $ do
               & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
               & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
           addExtraRedeemer =
-            (fixupPPHash >=> resetAddrTxWits)
+            (fixupPPHash >=> rederiveAddrTxWits)
               . ( witsTxL . rdmrsTxWitsL . unRedeemersL
                     %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0)
                 )
@@ -180,7 +180,7 @@ spec = describe "SUBUTXOW" $ do
       let subTx :: Tx SubTx era
           subTx = mkBasicTx mkBasicTxBody
           supplyIntegrityHash =
-            resetAddrTxWits . (bodyTxL . scriptIntegrityHashTxBodyL .~ SJust badHash)
+            rederiveAddrTxWits . (bodyTxL . scriptIntegrityHashTxBodyL .~ SJust badHash)
       withPostFixupSubTxs supplyIntegrityHash $
         submitFailingSubTx
           subTx
@@ -224,7 +224,7 @@ spec = describe "SUBUTXOW" $ do
                            _ -> error "Expected non-empty outputs"
                        )
             txInAt 0
-              <$> withPostFixup (resetAddrTxWits . resetTxOutDataHash) (submitTx tx)
+              <$> withPostFixup (rederiveAddrTxWits . resetTxOutDataHash) (submitTx tx)
           submitFailingSubTx
             (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
             [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
@@ -233,7 +233,7 @@ spec = describe "SUBUTXOW" $ do
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
         let redeemerSameAsDatumHash = hashPlutusScript $ redeemerSameAsDatum slang
-            fixupResetAddrWits = fixupPPHash >=> resetAddrTxWits
+            fixupResetAddrWits = fixupPPHash >=> rederiveAddrTxWits
             scriptSpendingSubTx txIn = mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
         it "SubMissingRequiredDatums" $ do
@@ -299,10 +299,10 @@ spec = describe "SUBUTXOW" $ do
                 let goodHash = fixedUpSubTx ^. bodyTxL . scriptIntegrityHashTxBodyL
                 expectedIntegrity <- impComputeScriptIntegrity fixedUpSubTx
                 badSubTx <-
-                  resetAddrTxWits $
+                  rederiveAddrTxWits $
                     fixedUpSubTx & bodyTxL . scriptIntegrityHashTxBodyL .~ badHash
                 badTopTx <-
-                  resetAddrTxWits $
+                  rederiveAddrTxWits $
                     fixedUpTx & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton badSubTx
                 withNoFixup $
                   submitFailingTx

@@ -125,7 +125,7 @@ spec = describe "UTXOS" $ do
                   Map.preserveMissing -- Don't touch purposes not being updated
                   (Map.zipWithMatched $ \_ -> set _2) -- Replace the units, keep the datum
             txIn <- produceScript alwaysSucceedsWithDatumHash
-            withPostFixup (overrideExUnits >=> fixupPPHash >=> resetAddrTxWits) $
+            withPostFixup (overrideExUnits >=> fixupPPHash >=> rederiveAddrTxWits) $
               submitTx_ $
                 mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
