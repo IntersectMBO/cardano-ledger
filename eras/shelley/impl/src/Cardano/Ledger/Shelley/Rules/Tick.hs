@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
-  esSnapshotsL,
   lsCertStateL,
   newEpochStateGovStateL,
  )
@@ -54,10 +53,7 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
  )
 import Cardano.Ledger.Shelley.Rules.Upec (UPEC, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
-import Cardano.Ledger.State (
-  EraCertState (..),
-  SnapShots (ssStakeGo, ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet),
- )
+import Cardano.Ledger.State (EraCertState (..), SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Control.DeepSeq (NFData)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -221,28 +217,7 @@ validatingTickTransitionFORECAST nes0 slot = do
   if curEpochNo /= succ (nesEL nes)
     then pure $ nes {nesEs = adoptGenesisDelegs es slot}
     else do
-      -- We can skip most of 'SNAP'. Its cheap half is the snapshot rotation,
-      -- which 'ss'' below does; all that is then left out is its expensive
-      -- half, constructing a new mark snapshot by aggregating the whole
-      -- instant stake. A forecast never reads that new mark snapshot, since it
-      -- governs the epoch after the one being forecast into.
-      --
-      -- Historically the rotation was left out too, and 'nesPd' was patched by
-      -- hand from the cached 'ssStakeMarkPoolDistr' instead. That sufficed
-      -- because no forecast projection read the snapshots at all: through
-      -- Conway they read only 'nesPd', the current protocol parameters and
-      -- (Shelley) the genesis delegates. So the stale snapshots were not
-      -- merely unnoticed, they were unreachable.
-      --
-      -- Dijkstra's forecast is the first to read one: it takes the Leios
-      -- voting committee from 'ssStakeSet'. Without the rotation, a forecast
-      -- across an epoch boundary would report the anchor epoch's committee
-      -- rather than the target epoch's.
-      --
-      -- Note that forecasting the committee across an epoch boundary does not
-      -- necessarily mean a Leios certificate is certifying a Leios announcement
-      -- from the previous epoch. It merely means the commitee is being acquired
-      -- from an earlier ledger state than that of the announcing block.
+      -- We can skip 'SNAP'; we already have the equivalent pd'.
 
       -- We can skip 'MIR' and 'POOLREAP';
       -- we don't need to do the checks:
@@ -256,11 +231,9 @@ validatingTickTransitionFORECAST nes0 slot = do
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
           TRC (ls, UpecState pp updates, ())
-      let ss' = ss {ssStakeSet = ssStakeMark ss, ssStakeGo = ssStakeSet ss}
-          es' =
+      let es' =
             adoptGenesisDelegs es slot
               & curPParamsEpochStateL .~ pp'
-              & esSnapshotsL .~ ss'
 
       pure $!
         nes
