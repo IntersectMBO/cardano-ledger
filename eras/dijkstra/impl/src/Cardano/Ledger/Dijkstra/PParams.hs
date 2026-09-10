@@ -3,7 +3,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -31,6 +30,12 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppLeiosDiffusionPeriodLengthL,
   ppLeiosCommitteeSizeL,
   ppLeiosQuorumStakeThresholdL,
+  ppPerasMinCandidateBlockAgeL,
+  ppPerasHealingFactorL,
+  ppPerasCertBoostL,
+  ppPerasTargetCommitteeSizeL,
+  ppPerasBootstrapRoundL,
+  ppPerasQuorumThresholdSafetyMarginL,
   ppMaxEndorserBlockReferencesSizeL,
   ppMaxEndorserBlockTxsSizeL,
   ppMaxEndorserBlockExUnitsL,
@@ -46,6 +51,12 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppuLeiosDiffusionPeriodLengthL,
   ppuLeiosCommitteeSizeL,
   ppuLeiosQuorumStakeThresholdL,
+  ppuPerasMinCandidateBlockAgeL,
+  ppuPerasHealingFactorL,
+  ppuPerasCertBoostL,
+  ppuPerasTargetCommitteeSizeL,
+  ppuPerasBootstrapRoundL,
+  ppuPerasQuorumThresholdSafetyMarginL,
   ppuMaxEndorserBlockReferencesSizeL,
   ppuMaxEndorserBlockTxsSizeL,
   ppuMaxEndorserBlockExUnitsL,
@@ -74,6 +85,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeNullStrictMaybe,
+  encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
@@ -104,6 +117,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
+import Cardano.Slotting.Slot (SlotInterval (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON (..), withObject, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -232,6 +246,25 @@ data DijkstraPParams f era = DijkstraPParams
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Limit on the total number of bytes of all reference scripts combined from
   -- all transactions within an endorser block.
+  , dppPerasMinCandidateBlockAge ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f SlotInterval)
+  -- ^ Minimum age for a block to be eligible for voting in a Peras round.
+  , dppPerasHealingFactor ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f PositiveInterval)
+  -- ^ Healing time coefficient used to derive the length of a cooldown period.
+  , dppPerasCertBoost ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
+  -- ^ Extra chain weight that a Peras Certificate gives to a boosted block.
+  , dppPerasTargetCommitteeSize ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
+  -- ^ Target size of the voting committee.
+  , dppPerasBootstrapRound ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f (StrictMaybe Word32))
+  -- ^ Round number used to manually bootstrap voting at a specific time.
+  , dppPerasQuorumThresholdSafetyMargin ::
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f UnitInterval)
+  -- ^ Extra safety margin added on top of the 75% quorum threshold baseline.
+  -- Must be between 0 and 0.25, inclusive.
   }
   deriving (Generic)
 
@@ -306,6 +339,12 @@ dijkstraApplyPPUpdates pp ppu = do
     , dppMaxEndorserBlockTxsSize = ppApplyUpdate dppMaxEndorserBlockTxsSize
     , dppMaxEndorserBlockExUnits = ppApplyUpdate dppMaxEndorserBlockExUnits
     , dppMaxRefScriptSizePerEndorserBlock = ppApplyUpdate dppMaxRefScriptSizePerEndorserBlock
+    , dppPerasMinCandidateBlockAge = ppApplyUpdate dppPerasMinCandidateBlockAge
+    , dppPerasHealingFactor = ppApplyUpdate dppPerasHealingFactor
+    , dppPerasCertBoost = ppApplyUpdate dppPerasCertBoost
+    , dppPerasTargetCommitteeSize = ppApplyUpdate dppPerasTargetCommitteeSize
+    , dppPerasBootstrapRound = ppApplyUpdate dppPerasBootstrapRound
+    , dppPerasQuorumThresholdSafetyMargin = ppApplyUpdate dppPerasQuorumThresholdSafetyMargin
     }
   where
     ppApplyUpdate :: (forall f. DijkstraPParams f era -> THKD g f a) -> THKD g Identity a
@@ -351,6 +390,12 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppMaxEndorserBlockTxsSize :: !(HKD f Word32)
   , udppMaxEndorserBlockExUnits :: !(HKD f OrdExUnits)
   , udppMaxRefScriptSizePerEndorserBlock :: !(HKD f Word32)
+  , udppPerasMinCandidateBlockAge :: !(HKD f SlotInterval)
+  , udppPerasHealingFactor :: !(HKD f PositiveInterval)
+  , udppPerasCertBoost :: !(HKD f Word16)
+  , udppPerasTargetCommitteeSize :: !(HKD f Word16)
+  , udppPerasBootstrapRound :: !(HKD f (StrictMaybe Word32))
+  , udppPerasQuorumThresholdSafetyMargin :: !(HKD f UnitInterval)
   }
   deriving (Generic)
 
@@ -376,6 +421,12 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppMaxEndorserBlockTxsSize <- o .: "maxEndorserBlockTxsSize"
     udppMaxEndorserBlockExUnits <- o .: "maxEndorserBlockExecutionUnits"
     udppMaxRefScriptSizePerEndorserBlock <- o .: "maxRefScriptSizePerEndorserBlock"
+    udppPerasMinCandidateBlockAge <- o .: "perasMinCandidateBlockAge"
+    udppPerasHealingFactor <- o .: "perasHealingFactor"
+    udppPerasCertBoost <- o .: "perasCertBoost"
+    udppPerasTargetCommitteeSize <- o .: "perasTargetCommitteeSize"
+    udppPerasBootstrapRound <- o .: "perasBootstrapRound"
+    udppPerasQuorumThresholdSafetyMargin <- o .: "perasQuorumThresholdSafetyMargin"
     pure UpgradeDijkstraPParams {..}
 
 instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
@@ -396,6 +447,12 @@ instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
     , "maxEndorserBlockTxsSize" .= udppMaxEndorserBlockTxsSize udpp
     , "maxEndorserBlockExecutionUnits" .= udppMaxEndorserBlockExUnits udpp
     , "maxRefScriptSizePerEndorserBlock" .= udppMaxRefScriptSizePerEndorserBlock udpp
+    , "perasMinCandidateBlockAge" .= udppPerasMinCandidateBlockAge udpp
+    , "perasHealingFactor" .= udppPerasHealingFactor udpp
+    , "perasCertBoost" .= udppPerasCertBoost udpp
+    , "perasTargetCommitteeSize" .= udppPerasTargetCommitteeSize udpp
+    , "perasBootstrapRound" .= udppPerasBootstrapRound udpp
+    , "perasQuorumThresholdSafetyMargin" .= udppPerasQuorumThresholdSafetyMargin udpp
     ]
 
 deriving via
@@ -410,7 +467,7 @@ instance NoThunks (UpgradeDijkstraPParams Identity era)
 instance Era era => DecCBOR (UpgradeDijkstraPParams Identity era) where
   decCBOR =
     decode $
-      RecD UpgradeDijkstraPParams
+      RecD (UpgradeDijkstraPParams @Identity)
         <! From
         <! From
         <! From
@@ -418,6 +475,12 @@ instance Era era => DecCBOR (UpgradeDijkstraPParams Identity era) where
         <! From
         <! From
         <! D (decodeCostModel PlutusV4)
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
         <! From
         <! From
         <! From
@@ -448,10 +511,22 @@ instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
         !> To udppMaxEndorserBlockTxsSize
         !> To udppMaxEndorserBlockExUnits
         !> To udppMaxRefScriptSizePerEndorserBlock
+        !> To udppPerasMinCandidateBlockAge
+        !> To udppPerasHealingFactor
+        !> To udppPerasCertBoost
+        !> To udppPerasTargetCommitteeSize
+        !> To udppPerasBootstrapRound
+        !> To udppPerasQuorumThresholdSafetyMargin
 
 emptyDijkstraUpgradePParamsUpdate :: UpgradeDijkstraPParams StrictMaybe era
 emptyDijkstraUpgradePParamsUpdate =
   UpgradeDijkstraPParams
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
+    SNothing
     SNothing
     SNothing
     SNothing
@@ -533,6 +608,12 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
     , dppMaxEndorserBlockTxsSize = THKD udppMaxEndorserBlockTxsSize
     , dppMaxEndorserBlockExUnits = THKD udppMaxEndorserBlockExUnits
     , dppMaxRefScriptSizePerEndorserBlock = THKD udppMaxRefScriptSizePerEndorserBlock
+    , dppPerasMinCandidateBlockAge = THKD udppPerasMinCandidateBlockAge
+    , dppPerasHealingFactor = THKD udppPerasHealingFactor
+    , dppPerasCertBoost = THKD udppPerasCertBoost
+    , dppPerasTargetCommitteeSize = THKD udppPerasTargetCommitteeSize
+    , dppPerasBootstrapRound = THKD udppPerasBootstrapRound
+    , dppPerasQuorumThresholdSafetyMargin = THKD udppPerasQuorumThresholdSafetyMargin
     }
 
 downgradeDijkstraPParams :: DijkstraPParams f DijkstraEra -> ConwayPParams f ConwayEra
@@ -656,6 +737,12 @@ instance EraPParams DijkstraEra where
     , ppMaxEndorserBlockTxsSize
     , ppMaxEndorserBlockExUnits
     , ppMaxRefScriptSizePerEndorserBlock
+    , ppPerasMinCandidateBlockAge
+    , ppPerasHealingFactor
+    , ppPerasCertBoost
+    , ppPerasTargetCommitteeSize
+    , ppPerasBootstrapRound
+    , ppPerasQuorumThresholdSafetyMargin
     ]
 
 ppMaxRefScriptSizePerBlock :: PParam DijkstraEra
@@ -868,6 +955,95 @@ ppMaxRefScriptSizePerEndorserBlock =
             }
     }
 
+ppPerasMinCandidateBlockAge :: PParam DijkstraEra
+ppPerasMinCandidateBlockAge =
+  PParam
+    { ppName = "perasMinCandidateBlockAge"
+    , ppLens = ppPerasMinCandidateBlockAgeL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 49
+            , ppuLens = ppuPerasMinCandidateBlockAgeL
+            , ppuEraCodec = Nothing
+            }
+    }
+
+ppPerasHealingFactor :: PParam DijkstraEra
+ppPerasHealingFactor =
+  PParam
+    { ppName = "perasHealingFactor"
+    , ppLens = ppPerasHealingFactorL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 50
+            , ppuLens = ppuPerasHealingFactorL
+            , ppuEraCodec = Nothing
+            }
+    }
+
+ppPerasCertBoost :: PParam DijkstraEra
+ppPerasCertBoost =
+  PParam
+    { ppName = "perasCertBoost"
+    , ppLens = ppPerasCertBoostL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 51
+            , ppuLens = ppuPerasCertBoostL
+            , ppuEraCodec = Nothing
+            }
+    }
+
+ppPerasTargetCommitteeSize :: PParam DijkstraEra
+ppPerasTargetCommitteeSize =
+  PParam
+    { ppName = "perasTargetCommitteeSize"
+    , ppLens = ppPerasTargetCommitteeSizeL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 52
+            , ppuLens = ppuPerasTargetCommitteeSizeL
+            , ppuEraCodec = Nothing
+            }
+    }
+
+ppPerasBootstrapRound :: PParam DijkstraEra
+ppPerasBootstrapRound =
+  PParam
+    { ppName = "perasBootstrapRound"
+    , ppLens = ppPerasBootstrapRoundL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 53
+            , ppuLens = ppuPerasBootstrapRoundL
+            , ppuEraCodec =
+                Just $
+                  EraCodec
+                    { eraCodecEncoder = encodeNullStrictMaybe encCBOR
+                    , eraCodecDecoder = decodeNullStrictMaybe decCBOR
+                    }
+            }
+    }
+
+ppPerasQuorumThresholdSafetyMargin :: PParam DijkstraEra
+ppPerasQuorumThresholdSafetyMargin =
+  PParam
+    { ppName = "perasQuorumThresholdSafetyMargin"
+    , ppLens = ppPerasQuorumThresholdSafetyMarginL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 54
+            , ppuLens = ppuPerasQuorumThresholdSafetyMarginL
+            , ppuEraCodec = Nothing
+            }
+    }
+
 instance AlonzoEraPParams DijkstraEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens (unTHKD . dppCostModels) $ \pp x -> pp {dppCostModels = THKD x}
@@ -992,6 +1168,12 @@ emptyDijkstraPParams =
     , dppMaxEndorserBlockTxsSize = THKD 0
     , dppMaxEndorserBlockExUnits = THKD (OrdExUnits $ ExUnits 0 0)
     , dppMaxRefScriptSizePerEndorserBlock = THKD 0
+    , dppPerasMinCandidateBlockAge = THKD (SlotInterval 0)
+    , dppPerasHealingFactor = THKD minBound
+    , dppPerasCertBoost = THKD minBound
+    , dppPerasTargetCommitteeSize = THKD minBound
+    , dppPerasBootstrapRound = THKD SNothing
+    , dppPerasQuorumThresholdSafetyMargin = THKD minBound
     }
 
 emptyDijkstraPParamsUpdate :: DijkstraPParams StrictMaybe era
@@ -1043,6 +1225,12 @@ emptyDijkstraPParamsUpdate =
     , dppMaxEndorserBlockTxsSize = THKD SNothing
     , dppMaxEndorserBlockExUnits = THKD SNothing
     , dppMaxRefScriptSizePerEndorserBlock = THKD SNothing
+    , dppPerasMinCandidateBlockAge = THKD SNothing
+    , dppPerasHealingFactor = THKD SNothing
+    , dppPerasCertBoost = THKD SNothing
+    , dppPerasTargetCommitteeSize = THKD SNothing
+    , dppPerasBootstrapRound = THKD SNothing
+    , dppPerasQuorumThresholdSafetyMargin = THKD SNothing
     }
 
 class ConwayEraPParams era => DijkstraEraPParams era where
@@ -1061,6 +1249,12 @@ class ConwayEraPParams era => DijkstraEraPParams era where
   hkdMaxEndorserBlockTxsSizeL :: Lens' (PParamsHKD f era) (HKD f Word32)
   hkdMaxEndorserBlockExUnitsL :: Lens' (PParamsHKD f era) (HKD f OrdExUnits)
   hkdMaxRefScriptSizePerEndorserBlockL :: Lens' (PParamsHKD f era) (HKD f Word32)
+  hkdPerasMinCandidateBlockAgeL :: Lens' (PParamsHKD f era) (HKD f SlotInterval)
+  hkdPerasHealingFactorL :: Lens' (PParamsHKD f era) (HKD f PositiveInterval)
+  hkdPerasCertBoostL :: Lens' (PParamsHKD f era) (HKD f Word16)
+  hkdPerasTargetCommitteeSizeL :: Lens' (PParamsHKD f era) (HKD f Word16)
+  hkdPerasBootstrapRoundL :: Lens' (PParamsHKD f era) (HKD f (StrictMaybe Word32))
+  hkdPerasQuorumThresholdSafetyMarginL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
 
 instance DijkstraEraPParams DijkstraEra where
   hkdMaxRefScriptSizePerBlockL = lens (unTHKD . dppMaxRefScriptSizePerBlock) $ \pp x -> pp {dppMaxRefScriptSizePerBlock = THKD x}
@@ -1078,6 +1272,12 @@ instance DijkstraEraPParams DijkstraEra where
   hkdMaxEndorserBlockTxsSizeL = lens (unTHKD . dppMaxEndorserBlockTxsSize) $ \pp x -> pp {dppMaxEndorserBlockTxsSize = THKD x}
   hkdMaxEndorserBlockExUnitsL = lens (unTHKD . dppMaxEndorserBlockExUnits) $ \pp x -> pp {dppMaxEndorserBlockExUnits = THKD x}
   hkdMaxRefScriptSizePerEndorserBlockL = lens (unTHKD . dppMaxRefScriptSizePerEndorserBlock) $ \pp x -> pp {dppMaxRefScriptSizePerEndorserBlock = THKD x}
+  hkdPerasMinCandidateBlockAgeL = lens (unTHKD . dppPerasMinCandidateBlockAge) $ \pp x -> pp {dppPerasMinCandidateBlockAge = THKD x}
+  hkdPerasHealingFactorL = lens (unTHKD . dppPerasHealingFactor) $ \pp x -> pp {dppPerasHealingFactor = THKD x}
+  hkdPerasCertBoostL = lens (unTHKD . dppPerasCertBoost) $ \pp x -> pp {dppPerasCertBoost = THKD x}
+  hkdPerasTargetCommitteeSizeL = lens (unTHKD . dppPerasTargetCommitteeSize) $ \pp x -> pp {dppPerasTargetCommitteeSize = THKD x}
+  hkdPerasBootstrapRoundL = lens (unTHKD . dppPerasBootstrapRound) $ \pp x -> pp {dppPerasBootstrapRound = THKD x}
+  hkdPerasQuorumThresholdSafetyMarginL = lens (unTHKD . dppPerasQuorumThresholdSafetyMargin) $ \pp x -> pp {dppPerasQuorumThresholdSafetyMargin = THKD x}
 
 ppMaxRefScriptSizePerBlockL :: DijkstraEraPParams era => Lens' (PParams era) Word32
 ppMaxRefScriptSizePerBlockL = ppLensHKD . hkdMaxRefScriptSizePerBlockL @_ @Identity
@@ -1185,3 +1385,44 @@ ppuMaxEndorserBlockExUnitsL = ppuLensHKD . hkdMaxEndorserBlockExUnitsL @_ @Stric
 ppuMaxRefScriptSizePerEndorserBlockL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
 ppuMaxRefScriptSizePerEndorserBlockL = ppuLensHKD . hkdMaxRefScriptSizePerEndorserBlockL @_ @StrictMaybe
+
+ppPerasMinCandidateBlockAgeL :: DijkstraEraPParams era => Lens' (PParams era) SlotInterval
+ppPerasMinCandidateBlockAgeL = ppLensHKD . hkdPerasMinCandidateBlockAgeL @_ @Identity
+
+ppPerasHealingFactorL :: DijkstraEraPParams era => Lens' (PParams era) PositiveInterval
+ppPerasHealingFactorL = ppLensHKD . hkdPerasHealingFactorL @_ @Identity
+
+ppPerasCertBoostL :: DijkstraEraPParams era => Lens' (PParams era) Word16
+ppPerasCertBoostL = ppLensHKD . hkdPerasCertBoostL @_ @Identity
+
+ppPerasTargetCommitteeSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word16
+ppPerasTargetCommitteeSizeL = ppLensHKD . hkdPerasTargetCommitteeSizeL @_ @Identity
+
+ppPerasBootstrapRoundL :: DijkstraEraPParams era => Lens' (PParams era) (StrictMaybe Word32)
+ppPerasBootstrapRoundL = ppLensHKD . hkdPerasBootstrapRoundL @_ @Identity
+
+ppPerasQuorumThresholdSafetyMarginL :: DijkstraEraPParams era => Lens' (PParams era) UnitInterval
+ppPerasQuorumThresholdSafetyMarginL = ppLensHKD . hkdPerasQuorumThresholdSafetyMarginL @_ @Identity
+
+ppuPerasMinCandidateBlockAgeL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe SlotInterval)
+ppuPerasMinCandidateBlockAgeL = ppuLensHKD . hkdPerasMinCandidateBlockAgeL @_ @StrictMaybe
+
+ppuPerasHealingFactorL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PositiveInterval)
+ppuPerasHealingFactorL = ppuLensHKD . hkdPerasHealingFactorL @_ @StrictMaybe
+
+ppuPerasCertBoostL :: DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
+ppuPerasCertBoostL = ppuLensHKD . hkdPerasCertBoostL @_ @StrictMaybe
+
+ppuPerasTargetCommitteeSizeL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
+ppuPerasTargetCommitteeSizeL = ppuLensHKD . hkdPerasTargetCommitteeSizeL @_ @StrictMaybe
+
+ppuPerasBootstrapRoundL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (StrictMaybe Word32))
+ppuPerasBootstrapRoundL = ppuLensHKD . hkdPerasBootstrapRoundL @_ @StrictMaybe
+
+ppuPerasQuorumThresholdSafetyMarginL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
+ppuPerasQuorumThresholdSafetyMarginL = ppuLensHKD . hkdPerasQuorumThresholdSafetyMarginL @_ @StrictMaybe

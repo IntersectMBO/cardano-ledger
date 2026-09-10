@@ -31,6 +31,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModelsLenient,
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), OrdExUnits (..), Prices (..))
+import Cardano.Slotting.Slot (SlotInterval (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word
@@ -145,6 +146,8 @@ instance ToPlutusData Word8 where
   fromPlutusData _ = Nothing
 
 deriving instance ToPlutusData Milliseconds32
+
+deriving instance ToPlutusData SlotInterval
 
 deriving instance ToPlutusData OrdExUnits
 
