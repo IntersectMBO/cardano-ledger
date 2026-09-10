@@ -32,7 +32,6 @@ module Cardano.Ledger.Shelley.API.Forecast (
 
 import Cardano.Ledger.BaseTypes (
   Globals,
-  Milliseconds32,
   Nonce,
   ProtVer,
   ShelleyBase,
@@ -42,9 +41,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Chain (ChainChecksPParams (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs)
-import Cardano.Ledger.Plutus.ExUnits (OrdExUnits)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
-import Cardano.Ledger.State (EraCertState, EraGov, LeiosCommittee, PoolDistr)
+import Cardano.Ledger.State (EraCertState, EraGov, PoolDistr)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import qualified Data.List.NonEmpty as NE (head)
@@ -110,4 +108,3 @@ forecastChainChecks f =
     , ccMaxBBSize = f ^. maxBlockBodySizeForecastL @era @t
     , ccProtocolVersion = f ^. protocolVersionForecastL @era @t
     }
-
