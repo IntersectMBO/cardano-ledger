@@ -4,6 +4,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.GenesisSpec (spec) where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
@@ -20,6 +21,11 @@ spec :: Spec
 spec = do
   describe "DijkstraGenesis" $ do
     prop "Upgrades" propDijkstraPParamsUpgrade
+    it "clears the Peras bootstrap round with a nested update" $ do
+      let pp = (emptyPParams & ppPerasBootstrapRoundL .~ SJust 42) :: PParams DijkstraEra
+          ppu = (emptyPParamsUpdate & ppuPerasBootstrapRoundL .~ SJust SNothing) :: PParamsUpdate DijkstraEra
+          pp' = applyPPUpdates pp ppu
+      pp' ^. ppPerasBootstrapRoundL `shouldBe` SNothing
 
 propDijkstraPParamsUpgrade ::
   UpgradeDijkstraPParams Identity DijkstraEra -> PParams ConwayEra -> Property
@@ -33,6 +39,11 @@ propDijkstraPParamsUpgrade ppu pp = property $ do
   pp' ^. ppRefScriptCostMultiplierL `shouldBe` udppRefScriptCostMultiplier ppu
   pp' ^. ppMaxPledgeLeverageL `shouldBe` udppMaxPledgeLeverage ppu
   pp' ^. ppMinPoolMarginL `shouldBe` udppMinPoolMargin ppu
+  pp' ^. ppPerasMinCandidateBlockAgeL `shouldBe` udppPerasMinCandidateBlockAge ppu
+  pp' ^. ppPerasHealingFactorL `shouldBe` udppPerasHealingFactor ppu
+  pp' ^. ppPerasCertBoostL `shouldBe` udppPerasCertBoost ppu
+  pp' ^. ppPerasTargetCommitteeSizeL `shouldBe` udppPerasTargetCommitteeSize ppu
+  pp' ^. ppPerasBootstrapRoundL `shouldBe` udppPerasBootstrapRound ppu
   -- The PlutusV4 CostModel from DijkstraGenesis must win over any pre-existing entry
   Map.lookup PlutusV4 newCostModels `shouldBe` Just (udppPlutusV4CostModel ppu)
   -- All other cost models must carry over from Conway unchanged
