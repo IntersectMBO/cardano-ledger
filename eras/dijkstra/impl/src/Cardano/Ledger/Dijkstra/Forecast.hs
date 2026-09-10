@@ -56,23 +56,9 @@ import NoThunks.Class (NoThunks (..))
 -- | Forecast data for Leios eras: the Praos fields, plus the epoch's voting
 -- committee and the Leios protocol parameters.
 --
--- The Leios fields are fixed at an epoch boundary -- the committee is seated on
--- the stake snapshot by the SNAP rule, the rest are protocol parameters -- so
+-- The Leios fields are fixed at an epoch boundary. The committee is seated on
+-- the stake snapshot by the SNAP rule, the rest are protocol parameters. So
 -- they are forecastable for the same reason the Praos fields are.
-
--- | Additional forecast fields available only in Leios eras.
-class EraForecast era => DijkstraEraForecast era where
-  leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
-  leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
-  leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
-  leiosAnnouncementPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
-  leiosVotePeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
-  leiosDiffusionPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
-  maxEndorserBlockReferencesSizeForecastL :: Lens' (Forecast t era) Word32
-  maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
-  maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
-  maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32
-
 data DijkstraForecast (t :: Timeline) era = DijkstraForecast
   { dfPoolDistr :: !PoolDistr
   , dfMaxBlockHeaderSize :: !Word16
@@ -96,6 +82,19 @@ type role DijkstraForecast phantom phantom
 instance NFData (DijkstraForecast t era)
 
 instance NoThunks (DijkstraForecast t era)
+
+-- | Additional forecast fields available only in Leios eras.
+class EraForecast era => DijkstraEraForecast era where
+  leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
+  leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
+  leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
+  leiosAnnouncementPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosVotePeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  leiosDiffusionPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
+  maxEndorserBlockReferencesSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
+  maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
+  maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32
 
 mkDijkstraForecast ::
   (DijkstraEraPParams era, EraGov era) =>
