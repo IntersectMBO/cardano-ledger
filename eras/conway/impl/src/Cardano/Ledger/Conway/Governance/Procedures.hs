@@ -434,6 +434,14 @@ newtype VotingProcedures era = VotingProcedures
   deriving stock (Generic, Eq, Ord, Show)
   deriving newtype (NoThunks, EncCBOR, ToJSON, FromJSON)
 
+-- | Replace earlier votes with latter ones, i.e. use a right biased union on votes for the same `GovActionId`
+instance Semigroup (VotingProcedures era) where
+  VotingProcedures vp1 <> VotingProcedures vp2 =
+    VotingProcedures $ Map.unionWith (flip Map.union) vp1 vp2
+
+instance Monoid (VotingProcedures era) where
+  mempty = VotingProcedures mempty
+
 deriving newtype instance Era era => NFData (VotingProcedures era)
 
 instance Era era => DecCBOR (VotingProcedures era) where
