@@ -41,6 +41,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transTxBodyWithdrawals,
   transTxBodyReqSignerHashes,
   transTxWitsDatums,
+  transDatums,
 
   -- * LegacyPlutusArgs helpers
   toPlutusV1Args,
@@ -56,7 +57,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   toAsItem,
   toAsPurpose,
  )
-import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
+import Cardano.Ledger.Alonzo.TxWits (TxDats, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
 import Cardano.Ledger.BaseTypes (
   ProtVer (..),
@@ -382,7 +383,10 @@ transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSi
 
 -- | Translate all `TxDats`s from within `TxWits`
 transTxWitsDatums :: AlonzoEraTxWits era => TxWits era -> [(PV1.DatumHash, PV1.Datum)]
-transTxWitsDatums txWits = transDataPair <$> Map.toList (txWits ^. datsTxWitsL . unTxDatsL)
+transTxWitsDatums txWits = transDatums (txWits ^. datsTxWitsL)
+
+transDatums :: TxDats era -> [(PV1.DatumHash, PV1.Datum)]
+transDatums = fmap transDataPair . Map.toList . unTxDats
 
 -- ==================================
 -- translate Values
