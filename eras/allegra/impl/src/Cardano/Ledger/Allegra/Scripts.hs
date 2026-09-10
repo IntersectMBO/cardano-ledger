@@ -133,6 +133,15 @@ data ValidityInterval = ValidityInterval
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
 
+instance Semigroup ValidityInterval where
+  ValidityInterval b1 h1 <> ValidityInterval b2 h2 =
+    ValidityInterval
+      ((max <$> b1 <*> b2) <|> b1 <|> b2)
+      ((min <$> h1 <*> h2) <|> h1 <|> h2)
+
+instance Monoid ValidityInterval where
+  mempty = ValidityInterval SNothing SNothing
+
 -- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
 invalidBeforeL :: Lens' ValidityInterval (StrictMaybe SlotNo)
 invalidBeforeL = lens invalidBefore (\vi before -> vi {invalidBefore = before})
