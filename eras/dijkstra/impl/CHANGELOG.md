@@ -2,6 +2,13 @@
 
 ## 0.4.0.0
 
+* Add the Peras protocol parameters:
+  - `perasMinCandidateBlockAge`
+  - `perasCertBoost`
+  - `perasTargetCommitteeSize`
+  - `perasBootstrapRound`
+  - `perasHealingFactor`
+  - `perasQuorumThresholdSafetyMargin`
 * Add `HeaderProtVerTooLow` constructor to `DijkstraBbodyPredFailure`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
@@ -97,6 +104,7 @@
 
 ### `cddl`
 
+* Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
 * Add `header_version_info` rule and use it in `header_body` in place of `protocol_version`
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`

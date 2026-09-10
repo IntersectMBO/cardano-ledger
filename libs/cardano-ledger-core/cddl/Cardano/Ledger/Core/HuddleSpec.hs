@@ -115,6 +115,9 @@ instance Era era => HuddleRule "epoch_interval" era where
 instance Era era => HuddleRule "slot" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
+instance Era era => HuddleRule "slot_interval" era where
+  huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (4 :: Word64)
+
 instance Era era => HuddleRule "block_number" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 

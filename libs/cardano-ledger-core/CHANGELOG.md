@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `ToPlutusData` instances for `Word64` and `SlotInterval`
 * Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
 * Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
@@ -73,6 +74,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` and `ToExpr` instances for `SlotInterval`
 * Replace the `tbhProtVer` field of `TestBlockHeader` with `tbhVersionInfo :: BlockHeaderVersionInfo`
 * Add `Arbitrary` and `ToExpr` instances for `BlockHeaderVersionInfo`
 * Remove `tbhPrevNonce` from `TestBlockHeader`

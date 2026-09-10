@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `EncCBOR` instance to `SlotInterval`
 * Change `CertifiedVRF` decoder to accept indefinite-length encodings starting with PV12
 * Move `decodeIPv4` and `decodeIPv6` into `Cardano.Ledger.Binary.Decoding.DecCBOR`
 * Add `decodeStringIndefLen`, `decodeStringDefOrIndef`, `decodeBytesIndefLen`, `decodeBytesDefOrIndef`, `decodeByteArrayIndefLen` and `decodeByteArrayDefOrIndef`
