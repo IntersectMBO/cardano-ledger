@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec as SUBDELEGS
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec as SUBGOV
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec as SUBLEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec as SUBUTXO
@@ -50,3 +51,4 @@ spec era = do
     UTXO.spec
     SUBUTXO.spec
     SUBUTXOW.spec
+    SUBDELEGS.spec
