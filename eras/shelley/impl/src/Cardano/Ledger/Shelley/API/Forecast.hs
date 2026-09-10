@@ -22,9 +22,6 @@ module Cardano.Ledger.Shelley.API.Forecast (
   -- * TPraos-era extension (Shelley through Alonzo)
   ShelleyEraForecast (..),
 
-  -- * Leios-era extension (Dijkstra onwards)
-  DijkstraEraForecast (..),
-
   -- * Main functions
   currentForecast,
   futureForecast,
@@ -114,15 +111,3 @@ forecastChainChecks f =
     , ccProtocolVersion = f ^. protocolVersionForecastL @era @t
     }
 
--- | Additional forecast fields available only in Leios eras.
-class (EraForecast era, AtLeastEra "Dijkstra" era) => DijkstraEraForecast era where
-  leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
-  leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
-  leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
-  leiosAnnouncementPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
-  leiosVotePeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
-  leiosDiffusionPeriodLengthForecastL :: Lens' (Forecast t era) Milliseconds32
-  maxEndorserBlockReferencesSizeForecastL :: Lens' (Forecast t era) Word32
-  maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
-  maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
-  maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32

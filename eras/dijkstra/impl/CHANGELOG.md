@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
 * Add `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
 * Re-export `GuardingPurpose` from `Cardano.Ledger.Dijkstra.Core` for consistency with prior eras.
 * Adapt to `plutus-ledger-api` v1.38: remove `txInfoFee` from PV4 `TxInfo`, convert `txInfoValidRange` via `transPOSIXTimeRange`, use `Credential` instead of `AccountId` for withdrawals and direct deposits

@@ -19,21 +19,7 @@ module Cardano.Ledger.Dijkstra (
 
   -- * Forecast
   DijkstraForecast (..),
-  mkDijkstraForecast,
-  dfPoolDistrL,
-  dfMaxBlockHeaderSizeL,
-  dfMaxBlockBodySizeL,
-  dfProtocolVersionL,
-  dfLeiosCommitteeL,
-  dfLeiosCommitteeSizeL,
-  dfLeiosQuorumStakeThresholdL,
-  dfLeiosAnnouncementPeriodLengthL,
-  dfLeiosVotePeriodLengthL,
-  dfLeiosDiffusionPeriodLengthL,
-  dfMaxEndorserBlockReferencesSizeL,
-  dfMaxEndorserBlockTxsSizeL,
-  dfMaxEndorserBlockExUnitsL,
-  dfMaxRefScriptSizePerEndorserBlockL,
+  DijkstraEraForecast (..),
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -60,22 +46,8 @@ import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Forecast (
+  DijkstraEraForecast (..),
   DijkstraForecast (..),
-  dfLeiosAnnouncementPeriodLengthL,
-  dfLeiosCommitteeL,
-  dfLeiosCommitteeSizeL,
-  dfLeiosDiffusionPeriodLengthL,
-  dfLeiosQuorumStakeThresholdL,
-  dfLeiosVotePeriodLengthL,
-  dfMaxBlockBodySizeL,
-  dfMaxBlockHeaderSizeL,
-  dfMaxEndorserBlockExUnitsL,
-  dfMaxEndorserBlockReferencesSizeL,
-  dfMaxEndorserBlockTxsSizeL,
-  dfMaxRefScriptSizePerEndorserBlockL,
-  dfPoolDistrL,
-  dfProtocolVersionL,
-  mkDijkstraForecast,
  )
 import Cardano.Ledger.Dijkstra.Genesis ()
 import Cardano.Ledger.Dijkstra.Governance ()
