@@ -1269,8 +1269,7 @@ ppPoolVotingThresholds =
   PParam
     { ppName = "poolVotingThresholds"
     , ppLens = ppPoolVotingThresholdsL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 25 ppuPoolVotingThresholdsL
+    , ppUpdate = Just $ PParamUpdate 25 ppuPoolVotingThresholdsL Nothing
     }
 
 ppDRepVotingThresholds :: ConwayEraPParams era => PParam era
@@ -1278,8 +1277,7 @@ ppDRepVotingThresholds =
   PParam
     { ppName = "dRepVotingThresholds"
     , ppLens = ppDRepVotingThresholdsL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 26 ppuDRepVotingThresholdsL
+    , ppUpdate = Just $ PParamUpdate 26 ppuDRepVotingThresholdsL Nothing
     }
 
 ppCommitteeMinSize :: ConwayEraPParams era => PParam era
@@ -1287,8 +1285,7 @@ ppCommitteeMinSize =
   PParam
     { ppName = "committeeMinSize"
     , ppLens = ppCommitteeMinSizeL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 27 ppuCommitteeMinSizeL
+    , ppUpdate = Just $ PParamUpdate 27 ppuCommitteeMinSizeL Nothing
     }
 
 ppCommitteeMaxTermLength :: ConwayEraPParams era => PParam era
@@ -1296,8 +1293,7 @@ ppCommitteeMaxTermLength =
   PParam
     { ppName = "committeeMaxTermLength"
     , ppLens = ppCommitteeMaxTermLengthL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 28 ppuCommitteeMaxTermLengthL
+    , ppUpdate = Just $ PParamUpdate 28 ppuCommitteeMaxTermLengthL Nothing
     }
 
 ppGovActionLifetime :: ConwayEraPParams era => PParam era
@@ -1305,8 +1301,7 @@ ppGovActionLifetime =
   PParam
     { ppName = "govActionLifetime"
     , ppLens = ppGovActionLifetimeL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 29 ppuGovActionLifetimeL
+    , ppUpdate = Just $ PParamUpdate 29 ppuGovActionLifetimeL Nothing
     }
 
 ppGovActionDeposit :: ConwayEraPParams era => PParam era
@@ -1314,8 +1309,7 @@ ppGovActionDeposit =
   PParam
     { ppName = "govActionDeposit"
     , ppLens = ppGovActionDepositCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 30 ppuGovActionDepositCompactL Nothing
     }
 
 ppDRepDeposit :: ConwayEraPParams era => PParam era
@@ -1323,8 +1317,7 @@ ppDRepDeposit =
   PParam
     { ppName = "dRepDeposit"
     , ppLens = ppDRepDepositCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 31 ppuDRepDepositCompactL Nothing
     }
 
 ppDRepActivity :: ConwayEraPParams era => PParam era
@@ -1332,8 +1325,7 @@ ppDRepActivity =
   PParam
     { ppName = "dRepActivity"
     , ppLens = ppDRepActivityL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 32 ppuDRepActivityL
+    , ppUpdate = Just $ PParamUpdate 32 ppuDRepActivityL Nothing
     }
 
 ppMinFeeRefScriptCostPerByte :: ConwayEraPParams era => PParam era
@@ -1341,8 +1333,7 @@ ppMinFeeRefScriptCostPerByte =
   PParam
     { ppName = "minFeeRefScriptCostPerByte"
     , ppLens = ppMinFeeRefScriptCostPerByteL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 33 ppuMinFeeRefScriptCostPerByteL
+    , ppUpdate = Just $ PParamUpdate 33 ppuMinFeeRefScriptCostPerByteL Nothing
     }
 
 ppGovProtocolVersion :: ConwayEraPParams era => PParam era
@@ -1350,6 +1341,5 @@ ppGovProtocolVersion =
   PParam
     { ppName = "protocolVersion"
     , ppLens = ppProtocolVersionL
-    , ppEraDecoder = Nothing
     , ppUpdate = Nothing
     }

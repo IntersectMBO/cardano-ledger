@@ -25,7 +25,7 @@ module Cardano.Ledger.Core.PParams (
   PParams (..),
   PParam (..),
   PParamUpdate (..),
-  EraDecoder (..),
+  EraCodec (..),
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
@@ -114,6 +114,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
+  Encoding,
   FromCBOR (..),
   ToCBOR (..),
   decodeNullStrictMaybe,
@@ -251,8 +252,9 @@ instance EraPParams era => EncCBOR (PParamsUpdate era) where
     where
       !(!count, !enc) = countAndConcat (eraPParams @era)
       encodeField PParam {ppUpdate} = do
-        PParamUpdate {ppuTag, ppuLens} <- maybeToStrictMaybe ppUpdate
-        (encodeWord ppuTag <>) . encCBOR <$> pp ^. ppuLens
+        PParamUpdate {ppuTag, ppuLens, ppuEraCodec} <- maybeToStrictMaybe ppUpdate
+        let encode = maybe encCBOR eraCodecEncoder ppuEraCodec
+        (encodeWord ppuTag <>) . encode <$> pp ^. ppuLens
       countAndConcat = F.foldl' accum (0, mempty)
         where
           accum (!n, !acc) x = case encodeField x of
@@ -283,19 +285,19 @@ instance EraPParams era => DecCBOR (PParamsUpdate era) where
       updateFieldMap :: IntMap (Field (PParamsUpdate era))
       updateFieldMap =
         IntMap.fromList
-          [ (fromIntegral ppuTag, mkField ppEraDecoder ppuLens)
-          | PParam {ppEraDecoder, ppUpdate = Just PParamUpdate {ppuTag, ppuLens}} <- eraPParams @era
+          [ (fromIntegral ppuTag, mkField ppuEraCodec ppuLens)
+          | PParam {ppUpdate = Just PParamUpdate {ppuTag, ppuLens, ppuEraCodec}} <- eraPParams @era
           ]
       mkField ::
         forall t.
         DecCBOR t =>
-        Maybe (EraDecoder t) ->
+        Maybe (EraCodec era t) ->
         Lens' (PParamsUpdate era) (StrictMaybe t) ->
         Field (PParamsUpdate era)
       mkField Nothing ppuLens =
         Field (set ppuLens . SJust) $
           ifDecoderVersionAtLeast (natVersion @12) decCBOR (decode From)
-      mkField (Just (EraDecoder d)) ppuLens = Field (set ppuLens . SJust) d
+      mkField (Just (EraCodec _ d)) ppuLens = Field (set ppuLens . SJust) d
 
 instance EraPParams era => ToCBOR (PParamsUpdate era) where
   toCBOR = toEraCBOR @era
@@ -812,10 +814,15 @@ downgradePParamsUpdate ::
 downgradePParamsUpdate args (PParamsUpdate pphkd) =
   PParamsUpdate (downgradePParamsHKD @_ @StrictMaybe args pphkd)
 
--- | A CBOR decoder with universally quantified state type, suitable for
--- storage inside a GADT. Used when a protocol parameter needs an era-aware
--- decoder instead of the default 'decCBOR'.
-newtype EraDecoder t = EraDecoder (forall s. Decoder s t)
+-- | A CBOR en/decoder with universally quantified state type, suitable for storage inside a
+-- GADT. Used when a protocol parameter needs a custom or an era-aware en/decoder instead of the
+-- default 'encCBOR'/'decCBOR'.
+data EraCodec era t where
+  EraCodec ::
+    { eraCodecEncoder :: t -> Encoding
+    , eraCodecDecoder :: forall s. Decoder s t
+    } ->
+    EraCodec era t
 
 -- | Represents a single protocol parameter and the data required to serialize it.
 data PParam era where
@@ -824,9 +831,6 @@ data PParam era where
     { ppName :: Text
     -- ^ Used as JSON key
     , ppLens :: Lens' (PParams era) t
-    , ppEraDecoder :: Maybe (EraDecoder t)
-    -- ^ When present, this decoder will be used instead of 'decCBOR', which is
-    -- helpful when a decoder needs access to the @era@ parameter, like 'ProtVer'.
     , ppUpdate :: Maybe (PParamUpdate era t)
     -- ^ Not all protocol parameters have an update functionality in all eras
     } ->
@@ -836,4 +840,9 @@ data PParamUpdate era t = PParamUpdate
   { ppuTag :: Word
   -- ^ Used in CBOR and Plutus Data encoding of
   , ppuLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+  , ppuEraCodec :: Maybe (EraCodec era t)
+  -- ^ When present, this decoder will be used instead of 'encCBOR`/'decCBOR', which is helpful when:
+  --
+  -- * a decoder needs access to the @era@ parameter, like 'ProtVer'
+  -- * a custom encoding is desired that differs from 'EncCBOR'/'DecCBOR'
   }
