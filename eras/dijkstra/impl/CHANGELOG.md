@@ -2,6 +2,21 @@
 
 ## 0.4.0.0
 
+* Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
+* Add `WithdrawalAccountsMissingFromOriginal` constructor to `EntitiesPredFailure`
+* Rename `EntitiesPredFailure` constructors:
+  - `MissingAccountsInWithdrawals` to `WithdrawalAccountsMissing`
+  - `IncompleteWithdrawals` to `WithdrawalAmountsInexactInLegacyMode`
+  - `ExceededBalancesInWithdrawals` to `WithdrawalAmountsExceedingOriginalBalance`
+  - `WrongNetworkInWithdrawals` to `WithdrawalAddressesWithWrongNetwork`
+  - `MissingAccountsInDirectDeposits` to `DirectDepositAccountsMissing`
+  - `WrongNetworkInDirectDeposits` to `DirectDepositAddressesWithWrongNetwork`
+* Rename `SubEntitiesPredFailure` constructors:
+  - `SubMissingAccountsInWithdrawals` to `SubWithdrawalAccountsMissing`
+  - `SubMissingOriginalAccountsInWithdrawals` to `SubWithdrawalAccountsMissingFromOriginal`
+  - `SubWrongNetworkInWithdrawals` to `SubWithdrawalAddressesWithWrongNetwork`
+  - `SubMissingAccountsInDirectDeposits` to `SubDirectDepositAccountsMissing`
+  - `SubWrongNetworkInDirectDeposits` to `SubDirectDepositAddressesWithWrongNetwork`
 * Add `POOL` rule type and add `poolTransition` to `Cardano.Ledger.Dijkstra.Rules.Pool`
 * Add `AlonzoEraTransition` instance for `DijkstraEra`
 * Re-export `GuardingPurpose` from `Cardano.Ledger.Dijkstra.Core` for consistency with prior eras.
