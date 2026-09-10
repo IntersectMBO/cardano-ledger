@@ -69,8 +69,8 @@ spec = describe "SUBUTXOW" $ do
         plantStaleWitness =
           pure . (witsTxL . addrTxWitsL .~ mkWitnessesVKey staleBodyHash [keyPair])
     withPostFixupSubTxs plantStaleWitness $
-      submitFailingSubTx
-        subTx
+      submitFailingTx
+        (mkTopTxWithSubTxs [subTx])
         [injectFailure . SubInvalidWitnessesUTXOW @era $ pure (vKey keyPair)]
 
   describe "SubMissingVKeyWitnessesUTXOW" $
@@ -82,16 +82,16 @@ spec = describe "SUBUTXOW" $ do
                 . (witsTxL . addrTxWitsL %~ Set.filter ((/= keyHash) . witVKeyHash))
                 . (witsTxL . bootAddrTxWitsL .~ mempty)
         withPostFixupSubTxs dropWitness $
-          submitFailingSubTx
-            subTx
+          submitFailingTx
+            (mkTopTxWithSubTxs [subTx])
             [injectFailure . SubMissingVKeyWitnessesUTXOW @era $ NES.singleton keyHash]
 
   describe "SubScriptWitnessNotValidatingUTXOW" $
     forM_ (failingNativeScriptPurposes @era) $ \(purposeName, mkSubTx) ->
       it purposeName $ do
         (subTx, scriptHash) <- mkSubTx
-        submitFailingSubTx
-          subTx
+        submitFailingTx
+          (mkTopTxWithSubTxs [subTx])
           [injectFailure . SubScriptWitnessNotValidatingUTXOW @era $ NES.singleton scriptHash]
 
   it "SubMissingTxMetadata" $ do
@@ -99,7 +99,9 @@ spec = describe "SUBUTXOW" $ do
     let auxDataHash = hashTxAuxData auxData
         subTx :: Tx SubTx era
         subTx = mkBasicTx $ mkBasicTxBody & auxDataHashTxBodyL .~ SJust auxDataHash
-    submitFailingSubTx subTx [injectFailure $ SubMissingTxMetadata @era auxDataHash]
+    submitFailingTx
+      (mkTopTxWithSubTxs [subTx])
+      [injectFailure $ SubMissingTxMetadata @era auxDataHash]
 
   it "SubConflictingMetadataHash" $ do
     auxData <- arbitrary @(TxAuxData era)
@@ -109,8 +111,8 @@ spec = describe "SUBUTXOW" $ do
           mkBasicTx mkBasicTxBody
             & bodyTxL . auxDataHashTxBodyL .~ SJust wrongAuxDataHash
             & auxDataTxL .~ SJust auxData
-    submitFailingSubTx
-      subTx
+    submitFailingTx
+      (mkTopTxWithSubTxs [subTx])
       [ injectFailure . SubConflictingMetadataHash @era $
           Mismatch
             { mismatchSupplied = wrongAuxDataHash
@@ -125,8 +127,8 @@ spec = describe "SUBUTXOW" $ do
         dropAuxDataHash =
           rederiveAddrTxWits . (bodyTxL . auxDataHashTxBodyL .~ SNothing)
     withPostFixupSubTxs dropAuxDataHash $
-      submitFailingSubTx
-        subTx
+      submitFailingTx
+        (mkTopTxWithSubTxs [subTx])
         [injectFailure . SubMissingTxBodyMetadataHash @era $ hashTxAuxData auxData]
 
   describe "SubExtraRedeemers" $ do
@@ -139,9 +141,8 @@ spec = describe "SUBUTXOW" $ do
           subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
           topTx =
-            mkBasicTx mkBasicTxBody
+            mkTopTxWithSubTxs [subTx]
               & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
-              & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
           addExtraRedeemer =
             (fixupPPHash >=> rederiveAddrTxWits)
               . ( witsTxL . rdmrsTxWitsL . unRedeemersL
@@ -159,9 +160,8 @@ spec = describe "SUBUTXOW" $ do
           subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
           topTx =
-            mkBasicTx mkBasicTxBody
+            mkTopTxWithSubTxs [subTx]
               & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
-              & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
           addExtraRedeemer =
             (fixupPPHash >=> rederiveAddrTxWits)
               . ( witsTxL . rdmrsTxWitsL . unRedeemersL
@@ -182,8 +182,8 @@ spec = describe "SUBUTXOW" $ do
           supplyIntegrityHash =
             rederiveAddrTxWits . (bodyTxL . scriptIntegrityHashTxBodyL .~ SJust badHash)
       withPostFixupSubTxs supplyIntegrityHash $
-        submitFailingSubTx
-          subTx
+        submitFailingTx
+          (mkTopTxWithSubTxs [subTx])
           [ injectFailure $
               SubScriptIntegrityHashMismatch @era
                 Mismatch {mismatchSupplied = SJust badHash, mismatchExpected = SNothing}
@@ -197,9 +197,8 @@ spec = describe "SUBUTXOW" $ do
         let subTx :: Tx SubTx era
             subTx = mkBasicTx $ mkBasicTxBody & requiredTopLevelGuardsL .~ requiredGuards
             topTx =
-              mkBasicTx mkBasicTxBody
+              mkTopTxWithSubTxs [subTx]
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
-                & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
         submitFailingTx
           topTx
           [injectFailure . SubMalformedGuardDatums @era $ NES.singleton guardCred]
@@ -225,8 +224,8 @@ spec = describe "SUBUTXOW" $ do
                        )
             txInAt 0
               <$> withPostFixup (rederiveAddrTxWits . resetTxOutDataHash) (submitTx tx)
-          submitFailingSubTx
-            (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
+          submitFailingTx
+            (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])
             [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
 
   forM_ (eraLanguages @era) $ \lang ->
@@ -240,8 +239,8 @@ spec = describe "SUBUTXOW" $ do
           txIn <- produceScript redeemerSameAsDatumHash
           let missingDatum = hashData @era (Data (P.I 3))
           withPostFixupSubTxs (fixupResetAddrWits . (witsTxL . datsTxWitsL .~ mempty)) $
-            submitFailingSubTx
-              (scriptSpendingSubTx txIn)
+            submitFailingTx
+              (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
               [injectFailure $ SubMissingRequiredDatums @era (NES.singleton missingDatum) []]
 
         it "SubNotAllowedSupplementalDatums" $ do
@@ -254,8 +253,8 @@ spec = describe "SUBUTXOW" $ do
                         %~ Map.insert extraDatumHash extraDatum
                     )
           withPostFixupSubTxs addExtraDatum $
-            submitFailingSubTx
-              (scriptSpendingSubTx txIn)
+            submitFailingTx
+              (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
               [ injectFailure $
                   SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) []
               ]
@@ -264,8 +263,8 @@ spec = describe "SUBUTXOW" $ do
           txIn <- produceScript redeemerSameAsDatumHash
           let missingRedeemer = mkSpendingPurpose $ AsItem txIn
           withPostFixupSubTxs (fixupResetAddrWits . (witsTxL . rdmrsTxWitsL .~ mempty)) $
-            submitFailingSubTx
-              (scriptSpendingSubTx txIn)
+            submitFailingTx
+              (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
               [ injectFailure $
                   SubMissingRedeemers @era [(missingRedeemer, redeemerSameAsDatumHash)]
               ]
@@ -280,17 +279,14 @@ spec = describe "SUBUTXOW" $ do
                         %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0)
                     )
           withPostFixupSubTxs addExtraRedeemer $
-            submitFailingSubTx
-              (scriptSpendingSubTx txIn)
+            submitFailingTx
+              (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
               [injectFailure $ SubExtraRedeemers @era [extraPurpose]]
 
         describe "SubScriptIntegrityHashMismatch" $ do
           let testHashMismatch badHash = do
                 txIn <- produceScript redeemerSameAsDatumHash
-                let topTx =
-                      mkBasicTx mkBasicTxBody
-                        & bodyTxL . subTransactionsTxBodyL
-                          .~ OMap.singleton (scriptSpendingSubTx txIn)
+                let topTx = mkTopTxWithSubTxs [scriptSpendingSubTx txIn]
                 fixedUpTx <- fixupTx topTx
                 let fixedUpSubTxs = OMap.elems $ fixedUpTx ^. bodyTxL . subTransactionsTxBodyL
                 fixedUpSubTx <- case fixedUpSubTxs of
@@ -318,8 +314,8 @@ spec = describe "SUBUTXOW" $ do
         disableInConformanceIt "SubMalformedScriptWitnesses" $ do
           let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
           txIn <- produceScript scriptHash
-          submitFailingSubTx
-            (scriptSpendingSubTx txIn)
+          submitFailingTx
+            (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
             [injectFailure . SubMalformedScriptWitnesses @era $ NES.singleton scriptHash]
 
         disableInConformanceIt "SubMalformedReferenceScripts" $ do
@@ -331,8 +327,8 @@ spec = describe "SUBUTXOW" $ do
                   mkBasicTxBody
                     & outputsTxBodyL
                       .~ [mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust script]
-          submitFailingSubTx
-            subTx
+          submitFailingTx
+            (mkTopTxWithSubTxs [subTx])
             [ injectFailure . SubMalformedReferenceScripts @era . NES.singleton $
                 hashScript script
             ]
@@ -345,7 +341,9 @@ spec = describe "SUBUTXOW" $ do
                     .~ Map.singleton lang (pure . plutusBinary $ asSLanguage slang malformedPlutus)
               subTx :: Tx SubTx era
               subTx = mkBasicTx mkBasicTxBody & auxDataTxL .~ SJust auxData
-          submitFailingSubTx subTx [injectFailure $ SubInvalidMetadata @era]
+          submitFailingTx
+            (mkTopTxWithSubTxs [subTx])
+            [injectFailure $ SubInvalidMetadata @era]
 
 -- | Every distinct reason a sub-transaction requires a key witness,
 -- paired with a sub-transaction that requires it and the key hash whose

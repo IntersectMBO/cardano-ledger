@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   fixupSubTransactions,
   balanceSubTransactions,
   switchTxToLegacyMode,
-  submitFailingSubTx,
+  mkTopTxWithSubTxs,
   withPostFixupSubTxs,
 ) where
 
@@ -157,19 +157,11 @@ instance InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure DijkstraEra wher
       . SubLedgerFailure
       . SubUtxowFailure
 
--- | Submit a sub-transaction, nested in an otherwise empty top level
--- transaction, that is expected to be rejected with exactly the given
--- predicate failures.
-submitFailingSubTx ::
-  ( HasCallStack
-  , DijkstraEraImp era
-  ) =>
-  Tx SubTx era ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
-  ImpTestM era ()
-submitFailingSubTx subTx =
-  submitFailingTx $
-    mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
+-- | A top level transaction that nests the given sub-transactions and
+-- is otherwise empty.
+mkTopTxWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
+mkTopTxWithSubTxs subTxs =
+  mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
 
 -- | Apply a modification to every sub-transaction, after the given
 -- fixup `f` has run, in order to provoke a failure that `f` otherwise
