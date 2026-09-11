@@ -255,7 +255,7 @@ library testlib
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.5,
     cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core,
-    cardano-slotting:{cardano-slotting, testlib} ^>= 0.2.2,
+    cardano-slotting:{cardano-slotting, testlib} ^>=0.2.2,
     cardano-strict-containers:testlib,
     containers,
     deepseq,
