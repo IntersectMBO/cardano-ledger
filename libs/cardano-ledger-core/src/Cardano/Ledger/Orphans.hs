@@ -13,9 +13,6 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Ledger.Binary.Decoding (DecCBOR)
-import Cardano.Ledger.Binary.Encoding (EncCBOR)
-import Cardano.Slotting.Slot (SlotInterval (..))
 import Data.Array.Byte (ByteArray)
 import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
@@ -46,10 +43,6 @@ instance SignableRepresentation (Hash.Hash a b) where
 -- | TODO: We should upstream instance
 -- HasResolution p => NoThunks (Fixed p) into the nothunks package.
 deriving newtype instance NoThunks (Fixed p)
-
-deriving newtype instance DecCBOR SlotInterval
-
-deriving newtype instance EncCBOR SlotInterval
 
 -- ===============================================
 -- Blank instance needed to compute Provenance
