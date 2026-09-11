@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusScriptPurpose,
+  PlutusTxInfo,
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
@@ -85,7 +86,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
  )
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert)
 import Cardano.Ledger.Dijkstra.UTxO ()
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue, filterMultiAsset)
 import Cardano.Ledger.Plutus (
   Datum (..),
   Language (..),
@@ -93,10 +94,12 @@ import Cardano.Ledger.Plutus (
   PlutusLanguage,
   SLanguage (..),
   TxOutSource (..),
+  assocMapKeys,
   binaryDataToData,
   decodePlutusRunnable,
   getPlutusData,
   plutusLanguage,
+  plutusSLanguage,
   transCoinToLovelace,
   transCoinToValue,
   transCred,
@@ -113,8 +116,9 @@ import Cardano.Ledger.State (StakePoolParams (..), UTxO)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (unless, zipWithM)
+import Control.Monad (forM, unless, zipWithM)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -123,6 +127,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
+import qualified Data.OMap.Strict as OMap
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -604,8 +609,8 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
             , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
-            , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
-            , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
+            , PV4.txInfoWithdrawals = transWithdrawals (txBody ^. withdrawalsTxBodyL)
+            , PV4.txInfoDirectDeposits = transDirectDeposits (txBody ^. directDepositsTxBodyL)
             , PV4.txInfoAccountBalanceIntervals =
                 transAccountBalanceIntervals $ txBody ^. accountBalanceIntervalsTxBodyL
             , PV4.txInfoGuards = transTxBodyGuards txBody
@@ -613,7 +618,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             }
       Right $ \_ -> Right txInfo
 
-  toPlutusArgs = toPlutusV4Args
+  toPlutusArgs proxy lti@LedgerTxInfo {ltiTx} = toPlutusV4Args proxy ltiTx lti
 
   toPlutusTxInInfo _ = transTxInInfoV4
 
@@ -678,11 +683,11 @@ transTxOutV4 txOutSource txOut = do
       , txOutAddress = addr
       }
 
-transTxBodyWithdrawals ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
-transTxBodyWithdrawals txb = transMap transAccountAddressToCredential transCoinToLovelace withdrawals
-  where
-    Withdrawals withdrawals = txb ^. withdrawalsTxBodyL
+transWithdrawals :: Withdrawals -> PV4.Map PV4.Credential PV4.Lovelace
+transWithdrawals (Withdrawals withdrawals) = transMap transAccountAddressToCredential transCoinToLovelace withdrawals
+
+transDirectDeposits :: DirectDeposits -> PV4.Map PV4.Credential PV4.Lovelace
+transDirectDeposits (DirectDeposits deposits) = transMap transAccountAddressToCredential transCoinToLovelace deposits
 
 transCredToAccountId :: Credential r -> PV4.AccountId
 transCredToAccountId = PV4.AccountId . transCred
@@ -730,16 +735,10 @@ transAccountAddressToAccountId (AccountAddress _ (AccountId c)) = PV4.AccountId 
 transAccountAddressToCredential :: AccountAddress -> PV4.Credential
 transAccountAddressToCredential (AccountAddress _ (AccountId c)) = transCred c
 
-transTxBodyDirectDeposits ::
-  DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential PV4.Lovelace
-transTxBodyDirectDeposits txb = transMap transAccountAddressToCredential transCoinToLovelace deposits
-  where
-    DirectDeposits deposits = txb ^. directDepositsTxBodyL
-
 -- | Translate a validity interval to PV4.POSIXTimeRange
 transValidityInterval ::
   Inject (Alonzo.AlonzoContextError era) (ContextError era) =>
-  Proxy era ->
+  proxy era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
@@ -766,41 +765,136 @@ transTxBodyGuards :: DijkstraEraTxBody era => TxBody l era -> [PV4.Credential]
 transTxBodyGuards txb = fmap transCred . F.toList $ txb ^. guardsTxBodyL
 
 scriptPurposeToScriptInfo ::
-  PV4.ScriptPurpose ->
+  forall proxy (l :: Language) level era.
+  ( EraTx era
+  , AlonzoEraTxWits era
+  , DijkstraEraTxBody era
+  , EraPlutusTxInfo l era
+  , PlutusTxInfo l ~ PV4.TxInfo
+  , STxLevel level era ~ STxBothLevels level era
+  , Inject (DijkstraContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  ) =>
+  proxy l ->
   Maybe PV4.Datum ->
-  Maybe PV4.TopTxInfo ->
-  PV4.ScriptInfo
-scriptPurposeToScriptInfo sp datum topInfo = case sp of
-  PV4.Spending _ ref -> PV4.SpendingScript ref datum
-  PV4.Minting _ sym -> PV4.MintingScript sym
-  PV4.Withdrawing _ c -> PV4.WithdrawingScript $ PV4.AccountId c
-  PV4.Certifying _ ix cert -> PV4.CertifyingScript ix cert
-  PV4.Voting _ v -> PV4.VotingScript v
-  PV4.Proposing _ ix proc -> PV4.ProposingScript ix proc
-  PV4.Guarding _ ix -> PV4.GuardingScript ix topInfo
+  Tx level era ->
+  LedgerTxInfo era ->
+  PV4.TxInfo ->
+  PV4.ScriptPurpose ->
+  Either (ContextError era) (PV2.ScriptHash, PV4.ScriptInfo)
+scriptPurposeToScriptInfo proxy datum tx lti txInfo = \case
+  PV4.Spending sh ref -> pure (sh, PV4.SpendingScript ref datum)
+  PV4.Minting sh currencySymbol -> pure (sh, PV4.MintingScript currencySymbol)
+  PV4.Withdrawing sh credential -> pure (sh, PV4.WithdrawingScript $ PV4.AccountId credential)
+  PV4.Certifying sh ix cert -> pure (sh, PV4.CertifyingScript ix cert)
+  PV4.Voting sh vote -> pure (sh, PV4.VotingScript vote)
+  PV4.Proposing sh ix proposal -> pure (sh, PV4.ProposingScript ix proposal)
+  PV4.Guarding sh ix -> do
+    let mkTopTxInfo topTx = do
+          subTransactions <- forM (OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
+            let txId = txIdTx subTx
+            mkTxInfo <- unPlutusTxInfoResult $
+              case Map.lookup txId (ltiMemoizedSubTransactions lti) of
+                Nothing ->
+                  toPlutusTxInfo proxy $
+                    lti
+                      { ltiTx = subTx
+                      , ltiMemoizedSubTransactions = mempty
+                      }
+                Just txInfoResults ->
+                  lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
+            left (inject . SubTxContextError txId) $
+              mkTxInfo (error "Unevaluated. TODO: Remove purpose argument")
+          let
+            addLovelace (PV1.Lovelace x) (PV1.Lovelace y) = PV1.Lovelace (x + y)
+            txInfoDatums = undefined
+            startingAccountBalanceIntervals =
+              transAccountBalanceIntervals $ topTx ^. bodyTxL . startingAccountBalanceIntervalsTxBodyL
+            batchTxInfo = subTransactions ++ [txInfo]
+            subTxs = topTx ^. bodyTxL . subTransactionsTxBodyL
+            batchWithdrawals =
+              foldMap (^. bodyTxL . withdrawalsTxBodyL) subTxs
+                <> topTx ^. bodyTxL . withdrawalsTxBodyL
+            batchDirectDeposits =
+              foldMap (^. bodyTxL . directDepositsTxBodyL) subTxs
+                <> topTx ^. bodyTxL . directDepositsTxBodyL
+            batchValidityIntervals =
+              foldMap (^. bodyTxL . vldtTxBodyL) subTxs
+                <> topTx ^. bodyTxL . vldtTxBodyL
+            batchVotes =
+              foldMap (^. bodyTxL . votingProceduresTxBodyL) subTxs
+                <> topTx ^. bodyTxL . votingProceduresTxBodyL
+            batchDatums =
+              foldMap (^. witsTxL . datsTxWitsL) subTxs
+                <> topTx ^. witsTxL . datsTxWitsL
+            filterBatchMintsWith f =
+              foldMap (filterMultiAsset (\_ _ -> f) . (^. bodyTxL . mintTxBodyL)) subTxs
+                <> filterMultiAsset (\_ _ -> f) (topTx ^. bodyTxL . mintTxBodyL)
+            batchMints = filterBatchMintsWith (> 0)
+            batchBurns = filterBatchMintsWith (< 0)
+
+          batchTimeRange <-
+            transValidityInterval topTx (ltiEpochInfo lti) (ltiSystemStart lti) batchValidityIntervals
+
+          let
+            topTxInfoSimplified =
+              PV4.TopTxInfoSimplified
+                { ttisIds = map PV4.txInfoId batchTxInfo
+                , ttisInputs = foldMap PV4.txInfoInputs batchTxInfo
+                , ttisReferenceInputs = foldMap PV4.txInfoReferenceInputs batchTxInfo
+                , ttisOutputs = foldMap PV4.txInfoOutputs batchTxInfo
+                , ttisMints = Conway.transMintValue batchMints
+                , ttisBurns = Conway.transMintValue batchBurns
+                , ttisTxCerts = foldMap PV4.txInfoTxCerts batchTxInfo
+                , ttisWithdrawals = transWithdrawals batchWithdrawals
+                , ttisDirectDeposits = transDirectDeposits batchDirectDeposits
+                , ttisValidRange = batchTimeRange
+                , ttisGuards = foldMap PV4.txInfoGuards batchTxInfo
+                , ttisRequiredTopLevelGuards =
+                    foldMap (assocMapKeys . PV4.txInfoRequiredTopLevelGuards) batchTxInfo
+                , ttisScriptPurposes = foldMap (assocMapKeys . PV4.txInfoRedeemers) batchTxInfo
+                , ttisData = PV4.unsafeFromList $ Alonzo.transDatums batchDatums
+                , ttisVotes = Conway.transVotingProcedures batchVotes
+                , ttisProposalProcedures = foldMap PV4.txInfoProposalProcedures batchTxInfo
+                , -- For all treasury amounts, if present, they are guaranteed by the ledger rules to
+                  -- have the same value, so we can just pick the first one, if available.
+                  ttisCurrentTreasuryAmount = F.asum $ map PV4.txInfoCurrentTreasuryAmount batchTxInfo
+                , ttisTreasuryDonations =
+                    F.foldl' (\acc ti -> addLovelace acc (PV4.txInfoTreasuryDonation ti)) (PV1.Lovelace 0) batchTxInfo
+                }
+          pure $
+            Just $
+              PV4.TopTxInfo
+                { topTxInfoSubTransactions = subTransactions
+                , topTxInfoDatums = txInfoDatums
+                , topTxInfoStartingAccountBalanceIntervals = startingAccountBalanceIntervals
+                , topTxInfoSimplified = topTxInfoSimplified
+                }
+    topTxInfo <- withBothTxLevels tx mkTopTxInfo (\_ -> pure Nothing)
+    pure (sh, PV4.GuardingScript ix topTxInfo)
 
 toPlutusV4Args ::
   ( AlonzoEraUTxO era
+  , AlonzoEraTxWits era
+  , DijkstraEraTxBody era
   , EraPlutusTxInfo PlutusV4 era
+  , STxLevel level era ~ STxBothLevels level era
   , Inject (DijkstraContextError era) (ContextError era)
+  , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV4 ->
+  Tx level era ->
   LedgerTxInfo era ->
   PV4.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV4)
-toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
+toPlutusV4Args proxy tx lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = do
   scriptPurpose <- toPlutusScriptPurpose proxy lti plutusPurpose
   let
-    maybeSpendingData = getSpendingDatum ltiUTxO ltiTx $ hoistPlutusPurpose toAsItem plutusPurpose
-    -- TODO TopTxInfo should be set if this is a top-level transaction
-    scriptInfo = scriptPurposeToScriptInfo scriptPurpose (transDatum <$> maybeSpendingData) Nothing
-    ixPurpose = hoistPlutusPurpose toAsIx plutusPurpose
-  sh <-
-    case Map.lookup ixPurpose ltiScriptHashesUsed of
-      Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPurpose
-      Just scriptHash -> Right $ transScriptHash scriptHash
+    maybeSpendingData = getSpendingDatum ltiUTxO tx $ hoistPlutusPurpose toAsItem plutusPurpose
+  (sh, scriptInfo) <-
+    scriptPurposeToScriptInfo proxy (transDatum <$> maybeSpendingData) tx lti txInfo scriptPurpose
   pure $
     PlutusV4Args $
       PV4.ScriptContext
