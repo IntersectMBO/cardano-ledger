@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | The Leios voting committee: the pools entitled to vote on endorser blocks
@@ -16,16 +17,7 @@ module Cardano.Ledger.State.LeiosCommittee (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  decodeFixedSized,
-  decodeStrictMaybe,
-  encodeFixedSized,
-  encodeStrictMaybe,
- )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.Ledger.State.StakePool (BlsKey (..))
@@ -76,7 +68,7 @@ selectLeiosCommittee committeeSize candidates =
     -- and leave the rest untouched instead of ordering the whole vector.
     sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
 
-    size = min (fromIntegral committeeSize) (V.length candidates)
+    size = min (fromIntegral @Word16 @Int committeeSize) (V.length candidates)
 
     higherStake a b =
       compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
@@ -85,39 +77,15 @@ selectLeiosCommittee committeeSize candidates =
 
     toTuple (BlsKey vk pop) = (vk, pop)
 
--- Orphans: the committee is part of the ledger state, but its type belongs to
--- cardano-base, which has no reason to know how we serialize it.
-
-instance EncCBOR LeiosSeat where
-  encCBOR (LeiosSeat weight vkey) =
-    encode $
-      Rec LeiosSeat
-        !> To weight
-        !> E (encodeStrictMaybe encodeFixedSized) vkey
-
-instance DecCBOR LeiosSeat where
-  decCBOR =
-    decode $
-      RecD LeiosSeat
-        <! From
-        <! D (decodeStrictMaybe decodeFixedSized)
-
--- | Decoding goes straight to the constructor rather than through
--- 'mkLeiosCommittee': that takes proofs of possession, which a seated committee
--- no longer carries — they were verified when it was selected.
-instance EncCBOR LeiosCommittee where
-  encCBOR = encCBOR . VS.toList . leiosCommitteeSeats
-
-instance DecCBOR LeiosCommittee where
-  decCBOR = UnsafeLeiosCommittee . VS.fromList <$> decCBOR
+-- Orphan JSON: the committee is part of the ledger state, but its type belongs
+-- to cardano-base, which has no reason to know how we render it. The CBOR
+-- instances live in cardano-ledger-binary, next to the classes.
 
 instance ToJSON LeiosSeat where
   toJSON (LeiosSeat weight vkey) =
     object
       [ "seatWeight" .= weight
-      , "seatVKey" .= case vkey of
-          SNothing -> Nothing
-          SJust vk -> Just (show vk)
+      , "seatVKey" .= show (strictMaybeToMaybe vkey)
       ]
 
 instance ToJSON LeiosCommittee where
