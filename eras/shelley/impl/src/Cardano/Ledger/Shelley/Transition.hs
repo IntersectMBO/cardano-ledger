@@ -598,7 +598,7 @@ resetStakeDistribution ::
   NewEpochState era
 resetStakeDistribution nes =
   nes
-    & nesEsL . esSnapshotsL . ssStakeMarkL .~ initSnapShot
+    & nesEsL . esSnapshotsL . ssStakeMarkL . msSnapShotL .~ initSnapShot
     & nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL .~ poolDistr
     & nesPdL .~ poolDistr
   where
@@ -610,7 +610,7 @@ resetStakeDistribution nes =
     -- establish an initial stake distribution.
     initSnapShot :: SnapShot
     initSnapShot =
-      snapShotFromInstantStake 0 (addInstantStake (nes ^. utxoL) mempty) dState pState
+      snapShotFromInstantStake (addInstantStake (nes ^. utxoL) mempty) dState pState
 
 -- | Register the initial funds in the 'NewEpochState'.
 --

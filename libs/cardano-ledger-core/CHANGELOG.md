@@ -48,10 +48,12 @@
 * Add `FromJSON (TxOut era)` as `EraTxOut` superclass constraint
 * Add `FromJSON t` as `Val t` superclass constraint
 * Add `ToJSON` and `FromJSON` instances for `Datum era`
-* Add `Cardano.Ledger.State.LeiosCommittee` module: re-exports cardano-base's `LeiosCommittee` and `LeiosSeat`, and adds `emptyLeiosCommittee`, `LeiosCandidate`, and `selectLeiosCommittee` for choosing the per-epoch Leios voting committee (CIP-0164)
-* Add `ssLeiosCommittee` field and `ssLeiosCommitteeL` to `SnapShot`. It is encoded and decoded only from protocol version 12 (Dijkstra) onwards, leaving `SnapShot` serialisation unchanged in earlier eras
-* Add `leiosCandidates` to `SnapShots`, projecting a stake pool snapshot to the `LeiosCandidate`s that `selectLeiosCommittee` ranks
-* Add a Leios committee-size argument to `mkSnapShot`, `resetStakePoolsSnapShot`, and `snapShotFromInstantStake`; they now seat `ssLeiosCommittee` from the pool snapshot (CIP-0164). Pre-Dijkstra callers pass `0`, leaving the committee empty
+* Differentiate stake snapshots by phase:
+  * Add `MarkSnapShot`, `SetSnapShot` and `GoSnapShot`, with `SnapShots` now holding one of each.
+  * Seat Leios voting committee (CIP-0164) on the `SetSnapShot` when the mark rotates into the set position.
+  * Add `mkSetSnapShot`, `mkGoSnapShot`, `leiosCandidates`, and the `msSnapShotL`, `ssSnapShotL`, `ssLeiosCommitteeL`, `gsSnapShotL` lenses
+  * The on-disk ledger state format changes and requires replay
+* Add `selectLeiosCommittee`, `LeiosCandidate` and `emptyLeiosCommittee` for Leios committee selection (CIP-0164). The `LeiosSeat`/`LeiosCommittee` CBOR instances live in `cardano-ledger-binary`; only their JSON instances are here
 
 ### `testlib`
 

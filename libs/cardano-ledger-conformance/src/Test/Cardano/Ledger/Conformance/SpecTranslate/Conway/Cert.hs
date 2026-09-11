@@ -150,9 +150,9 @@ instance SpecTranslate ConwayEra (SnapShots ConwayEra) where
 
   toSpecRep (SnapShots {..}) =
     Agda.MkSnapshots
-      <$> toSpecRep ssStakeMark
-      <*> toSpecRep ssStakeSet
-      <*> toSpecRep ssStakeGo
+      <$> toSpecRep (msSnapShot ssStakeMark)
+      <*> toSpecRep (ssSnapShot ssStakeSet)
+      <*> toSpecRep (gsSnapShot ssStakeGo)
       <*> toSpecRep ssFee
 
 instance SpecTranslate ConwayEra SnapShot where

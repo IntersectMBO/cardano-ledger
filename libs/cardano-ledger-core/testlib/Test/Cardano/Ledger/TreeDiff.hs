@@ -304,6 +304,12 @@ instance ToExpr (SnapShots era)
 
 instance ToExpr SnapShot
 
+instance ToExpr MarkSnapShot
+
+instance ToExpr SetSnapShot
+
+instance ToExpr GoSnapShot
+
 instance ToExpr StakePoolSnapShot
 
 deriving newtype instance ToExpr Stake

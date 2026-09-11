@@ -7,14 +7,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- | Dijkstra's SNAP rule. Like Shelley's, but as it builds the fresh mark
--- snapshot it seats the Leios voting committee (CIP-0164) on it, sized by the
--- @leiosCommitteeSize@ protocol parameter. The committee travels with the
--- snapshot so consensus can read it two epochs later, when the snapshot becomes
--- the active stake distribution.
+-- | Dijkstra's SNAP rule. Like Shelley's, but the fresh mark snapshot records
+-- the epoch and @leiosCommitteeSize@ protocol parameter, from which the Leios
+-- voting committee (CIP-0164) is seated when the snapshot rotates into the set
+-- position.
 module Cardano.Ledger.Dijkstra.Rules.Snap () where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, unNonZero)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, unNonZero)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential)
@@ -26,6 +25,7 @@ import Cardano.Ledger.Shelley.Rules (SnapEnv (..), SnapEvent (..))
 import Cardano.Ledger.State (
   EraCertState,
   EraStake,
+  MarkSnapShot (..),
   SnapShot (..),
   SnapShots (..),
   calculatePoolDistr,
@@ -33,6 +33,8 @@ import Cardano.Ledger.State (
   certPStateL,
   emptySnapShots,
   instantStakeG,
+  mkGoSnapShot,
+  mkSetSnapShot,
   snapShotFromInstantStake,
   swdDelegation,
   swdStake,
@@ -56,7 +58,7 @@ instance
   STS (SNAP era)
   where
   type State (SNAP era) = SnapShots era
-  type Signal (SNAP era) = ()
+  type Signal (SNAP era) = EpochNo
   type Environment (SNAP era) = SnapEnv era
   type BaseM (SNAP era) = ShelleyBase
   type PredicateFailure (SNAP era) = Void
@@ -68,15 +70,12 @@ snapTransition ::
   (EraStake era, EraCertState era, DijkstraEraPParams era) =>
   TransitionRule (SNAP era)
 snapTransition = do
-  TRC (snapEnv, s, _) <- judgmentContext
+  TRC (snapEnv, s, eNo) <- judgmentContext
 
   let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
       instantStake = ls ^. instantStakeG
-      -- The committee is seated here, on the fresh mark snapshot, sized by the
-      -- Leios committee-size parameter (CIP-0164).
       istakeSnap =
         snapShotFromInstantStake
-          (pp ^. ppLeiosCommitteeSizeL)
           instantStake
           (certState ^. certDStateL)
           (certState ^. certPStateL)
@@ -91,10 +90,12 @@ snapTransition = do
 
   pure $
     SnapShots
-      { ssStakeMark = istakeSnap
+      { -- The mark records the committee size; the Leios committee is seated
+        -- from it when this snapshot rotates into the set position (CIP-0164).
+        ssStakeMark = MarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL)
       , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet = ssStakeMark s
-      , ssStakeGo = ssStakeSet s
+        ssStakeSet = mkSetSnapShot (ssStakeMarkPoolDistr s) (ssStakeMark s)
+      , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }

@@ -43,7 +43,7 @@ calcPoolDistOldEqualsNew =
 
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: (KeyHash StakePool -> Bool) -> SnapShot -> PoolDistr
-oldCalculatePoolDistr includeHash (SnapShot activeStake _ stakePoolsSnapShot _) =
+oldCalculatePoolDistr includeHash (SnapShot activeStake _ stakePoolsSnapShot) =
   let nonZeroTotalActiveStake = sumAllActiveStake activeStake
       activeStakeMap = VMap.toMap $ unActiveStake activeStake
       sd =

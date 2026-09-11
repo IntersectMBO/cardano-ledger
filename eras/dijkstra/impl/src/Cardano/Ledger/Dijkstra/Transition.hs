@@ -28,10 +28,8 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Transition
 import Cardano.Ledger.State (
-  mkSnapShot,
-  ssActiveStake,
+  MarkSnapShot (..),
   ssStakeMarkL,
-  ssStakePoolsSnapShot,
  )
 import GHC.Generics
 import Lens.Micro
@@ -57,30 +55,23 @@ instance EraTransition DijkstraEra where
 
 instance AlonzoEraTransition DijkstraEra
 
--- | Seat the Leios voting committee (CIP-0164) on the initial stake snapshot.
+-- | Record the Leios committee inputs (CIP-0164) on the initial mark snapshot.
 --
--- Genesis never runs SNAP, and the snapshot it produces comes from era-generic
--- code that has no way to reach @leiosCommitteeSize@ -- so a network booting
--- straight into Dijkstra would carry an unseated committee until the snapshot
--- pipeline has turned over. Consensus fills @set@\/@go@ from @mark@ for such
--- networks, so seating @mark@ here is enough for all three.
---
--- Genesis pools are registered in the state's own epoch, so judging the seats
--- against that epoch with a one-epoch allowance honours every key genesis
--- carries; SNAP reseats them at the first epoch boundary regardless. The age
--- derived from the KES setup is not reachable here -- this runs outside
--- 'Cardano.Ledger.BaseTypes.ShelleyBase', so there are no @Globals@ to read.
+-- Genesis never runs SNAP, and the mark it produces comes from era-generic
+-- code that has no way to reach @leiosCommitteeSize@, so it carries a zero
+-- size. Stamp the real epoch and committee size here; the committee itself is
+-- seated when the mark rotates into the set position. Consensus fills
+-- @set@\/@go@ from @mark@ for a network booting straight into Dijkstra, so
+-- stamping @mark@ is enough for all three.
 seatInitialLeiosCommittee :: NewEpochState DijkstraEra -> NewEpochState DijkstraEra
 seatInitialLeiosCommittee nes =
-  nes & nesEsL . esSnapshotsL . ssStakeMarkL %~ reseat
+  nes & nesEsL . esSnapshotsL . ssStakeMarkL %~ stampInputs
   where
-    reseat snap =
-      mkSnapShot
-        (nes ^. nesELL)
-        (EpochInterval 1)
-        (nes ^. nesEsL . curPParamsEpochStateL . ppLeiosCommitteeSizeL)
-        (ssActiveStake snap)
-        (ssStakePoolsSnapShot snap)
+    stampInputs mark =
+      mark
+        { msEpochNo = nes ^. nesELL
+        , msLeiosCommitteeSize = nes ^. nesEsL . curPParamsEpochStateL . ppLeiosCommitteeSizeL
+        }
 
 instance ConwayEraTransition DijkstraEra
 

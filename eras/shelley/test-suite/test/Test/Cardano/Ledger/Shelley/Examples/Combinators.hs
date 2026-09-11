@@ -526,10 +526,10 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
       } = esSnapshots es
     snaps =
       SnapShots
-        { ssStakeMark = snap
+        { ssStakeMark = MarkSnapShot snap (nesEL nes) 0
         , ssStakeMarkPoolDistr = calculatePoolDistr snap
-        , ssStakeSet = ssMark
-        , ssStakeGo = ssSet
+        , ssStakeSet = mkSetSnapShot (calculatePoolDistr (msSnapShot ssMark)) ssMark
+        , ssStakeGo = mkGoSnapShot ssSet
         , ssFee = fee
         }
     es' = es {esSnapshots = snaps}

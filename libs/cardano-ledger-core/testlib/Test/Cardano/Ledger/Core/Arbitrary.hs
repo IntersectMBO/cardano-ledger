@@ -758,7 +758,7 @@ mkSnapShotFromStakePoolParams ::
   SnapShot
 mkSnapShotFromStakePoolParams activeStake poolParams =
   resetStakePoolSnapShotFromPoolParams poolParams $
-    mkSnapShot 0 activeStake VMap.empty
+    mkSnapShot activeStake VMap.empty
 
 -- | Given a snapshot and stake pool params fully override the stake pools snapshot.
 resetStakePoolSnapShotFromPoolParams ::
@@ -785,13 +785,26 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
         mempty
         (unActiveStake ssActiveStake)
 
+instance Arbitrary MarkSnapShot where
+  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary
+
+-- | Builds a consistent set snapshot: its pool distribution and committee are
+-- derived from the mark it rotates, never generated independently.
+instance Arbitrary SetSnapShot where
+  arbitrary = do
+    mark <- arbitrary
+    pure $ mkSetSnapShot (calculatePoolDistr (msSnapShot mark)) mark
+
+instance Arbitrary GoSnapShot where
+  arbitrary = mkGoSnapShot <$> arbitrary
+
 instance Arbitrary (SnapShots era) where
   arbitrary = do
     ssStakeMark <- arbitrary
     ssStakeSet <- arbitrary
     ssStakeGo <- arbitrary
     ssFee <- arbitrary
-    let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
+    let ssStakeMarkPoolDistr = calculatePoolDistr (msSnapShot ssStakeMark)
     pure $ SnapShots {..}
 
 -- | In the system, Stake never contains more than the sum of all Ada (which is constant).

@@ -506,28 +506,42 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] [var|committee|] ->
+    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] ->
       [ assert $ activeStake ==. lit (ActiveStake VMap.empty)
       , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
       , assert $ pools ==. lit VMap.empty
-      , assert $ committee ==. lit emptyLeiosCommittee
       ]
+
+-- | The set/go snapshots wrap an empty base snapshot; their derived fields
+-- (pool distribution, committee) are left unconstrained.
+setSnapShotSpec :: Specification SetSnapShot
+setSnapShotSpec =
+  constrained $ \ [var|set|] ->
+    match set $ \ [var|snap|] _pooldistr _epochNo _size _committee ->
+      satisfies snap snapShotSpec
+
+goSnapShotSpec :: Specification GoSnapShot
+goSnapShotSpec =
+  constrained $ \ [var|go|] ->
+    match go $ \ [var|snap|] _pooldistr ->
+      satisfies snap snapShotSpec
 
 snapShotsSpec ::
   Era era => Term SnapShot -> Specification (SnapShots era)
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|_go|] _fee ->
-      [ assert $ mark ==. marksnap
-      , satisfies set snapShotSpec
-      , satisfies _go snapShotSpec
+      [ match mark $ \ [var|marksnap'|] _epochNo _size ->
+          assert $ marksnap' ==. marksnap
+      , satisfies set setSnapShotSpec
+      , satisfies _go goSnapShotSpec
       , reify marksnap calculatePoolDistr $ \ [var|pd|] -> pooldistr ==. pd
       ]
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
 getMarkSnapShot ls =
-  resetStakePoolsSnapShot 0 markStakePoolState $ mkSnapShot 0 markActiveStake VMap.empty
+  resetStakePoolsSnapShot markStakePoolState $ mkSnapShot markActiveStake VMap.empty
   where
     markActiveStake :: ActiveStake
     markActiveStake =
