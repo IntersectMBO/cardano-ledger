@@ -22,6 +22,9 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   fixupSubTransactions,
   balanceSubTransactions,
   switchTxToLegacyMode,
+  mkTopTxWithSubTxs,
+  traverseSubTxs,
+  withPostFixupSubTxs,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -116,6 +119,7 @@ class
   , InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -141,12 +145,61 @@ instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure DijkstraEra w
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = Conway.StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"
 
+instance InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubUtxowPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
 instance InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
-  injectFailure =
-    injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
-      . SubLedgerFailure
-      . SubUtxowFailure
-      . SubUtxoFailure
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubUtxoPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
+  injectFailure = SubUtxowFailure . injectFailure @"SUBUTXOW"
+
+-- | A top level transaction that nests the given sub-transactions and
+-- is otherwise empty.
+mkTopTxWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
+mkTopTxWithSubTxs subTxs =
+  mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
+
+-- | Apply an effectful modification to every sub-transaction of a top
+-- level transaction.
+--
+-- Sub-transactions are keyed by their transaction id, so a modification
+-- that makes two of them equal keeps only the first.
+traverseSubTxs ::
+  ( Applicative m
+  , EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  (Tx SubTx era -> m (Tx SubTx era)) ->
+  Tx TopTx era ->
+  m (Tx TopTx era)
+traverseSubTxs f tx =
+  replaceSubTxs <$> traverse f (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
+  where
+    replaceSubTxs subTxs =
+      tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
+
+-- | Apply a modification to every sub-transaction, after the given
+-- fixup `f` has run, in order to provoke a failure that `f` otherwise
+-- repairs.
+--
+-- The top level transaction is signed again afterwards, since
+-- sub-transactions are part of its body and modifying one invalidates
+-- its witnesses.
+withPostFixupSubTxs ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  (Tx SubTx era -> ImpTestM era (Tx SubTx era)) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withPostFixupSubTxs f = withPostFixup $ traverseSubTxs f >=> rederiveAddrTxWits
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
@@ -219,7 +272,7 @@ dijkstraFixupTx ::
   ImpTestM era (Tx TopTx era)
 dijkstraFixupTx tx = do
   -- add top-level Plutus script witnesses so legacy detection sees them
-  fixedUp <- fixupScriptWits =<< fixupSubTransactions tx
+  fixedUp <- fixupScriptWits =<< addCollateralInputForSubTxs =<< fixupSubTransactions tx
   isLegacy <- detectLegacyMode fixedUp
   balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
   babbageFixupTx balancedInLegacy
@@ -234,6 +287,30 @@ detectLegacyMode tx = do
   utxo <- getUTxO
   let stAnnTx = mkStAnnTx epochInfo systemStart pp utxo mempty tx
   pure $ stAnnTx ^. plutusLegacyModeStAnnTxG
+
+-- | Add a collateral input to the top-level transaction when a
+-- sub-transaction needs a Plutus script.
+--
+-- Collateral is validated across the whole batch but the inherited
+-- `addCollateralInput` step only inspects the top-level transaction's
+-- own script needs. This step covers the sub-transactions. Both skip
+-- when a collateral input is already present, so at most one collateral
+-- input is added for the whole batch, and neither step overrides
+-- collateral that a test set itself.
+addCollateralInputForSubTxs ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+addCollateralInputForSubTxs tx
+  | not (null (tx ^. bodyTxL . collateralInputsTxBodyL)) = pure tx
+  | otherwise = do
+      subTxContexts <-
+        traverse impGetPlutusContexts . OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
+      if all null subTxContexts
+        then pure tx
+        else impAnn "addCollateralInputForSubTxs" $ do
+          collateralInput <- makeCollateralInput
+          pure $ tx & bodyTxL . collateralInputsTxBodyL %~ Set.insert collateralInput
 
 fixupSubTransactions ::
   ( HasCallStack
@@ -252,7 +329,12 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
       addSubTxIn
         >=> addNativeScriptTxWits
         >=> fixupAuxDataHash
+        >=> fixupScriptWits
+        >=> fixupOutputDatums
+        >=> fixupDatums
         >=> fixupTxOuts
+        >=> txWithMaxRedeemers
+        >=> fixupPPHash
         >=> updateAddrTxWits
     addSubTxIn subTx
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
