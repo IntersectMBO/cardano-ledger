@@ -79,7 +79,7 @@ import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6)
 import qualified Cardano.Binary as Plain (Encoding, ToCBOR (..))
-import Cardano.Crypto.Leios (BitField (..), LeiosCert (..))
+import Cardano.Crypto.Leios (BitField (..), LeiosCert (..), LeiosCommittee (..), LeiosSeat (..))
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -98,6 +98,7 @@ import qualified Data.VMap as VMap
 import qualified Data.Vector as V
 import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Storable as VS
+import qualified Data.Vector.Strict as VStrict
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -479,3 +480,14 @@ instance EncCBOR LeiosCert where
     encodeListLen 2
       <> encCBOR bf
       <> encCBOR sig
+
+instance EncCBOR LeiosSeat where
+  encCBOR (LeiosSeat weight vkey) =
+    encodeListLen 2
+      <> encCBOR weight
+      <> encCBOR vkey
+
+-- | The seats only: a seated committee no longer carries proofs of possession,
+-- they were verified when it was selected.
+instance EncCBOR LeiosCommittee where
+  encCBOR = encCBOR . VStrict.toList . leiosCommitteeSeats
