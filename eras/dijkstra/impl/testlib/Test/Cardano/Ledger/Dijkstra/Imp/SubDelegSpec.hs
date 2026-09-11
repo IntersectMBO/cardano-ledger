@@ -71,19 +71,23 @@ spec = describe "SUBDELEG" $ do
     it "With correct deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       freshKeyHash >>= \kh -> do
-        submitTx_ . txWithSubTx $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [RegDepositTxCert (KeyHashObj kh) expectedDeposit]
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [RegDepositTxCert (KeyHashObj kh) expectedDeposit]
+            ]
         expectStakeCredRegistered (KeyHashObj kh)
 
     it "Twice the same certificate in the same transaction" $ do
       -- This is expected behavior because `certsTxBodyL` removes duplicates
       freshKeyHash >>= \kh -> do
         regTxCert <- genRegTxCert (KeyHashObj kh)
-        submitTx_ . txWithSubTx $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [regTxCert, regTxCert]
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [regTxCert, regTxCert]
+            ]
         expectStakeCredRegistered (KeyHashObj kh)
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -93,9 +97,10 @@ spec = describe "SUBDELEG" $ do
 
       freshKeyHash >>= \kh -> do
         submitFailingTx
-          ( txWithSubTx $
-              mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
+          ( mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
+              ]
           )
           [ injectFailure . DijkstraSubDelegPredFailure $
               DepositIncorrectDELEG
@@ -113,19 +118,22 @@ spec = describe "SUBDELEG" $ do
       let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
 
       impAnn "Register stake credential" $
-        submitTx_ . txWithSubTx $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
+            ]
 
       Positive n <- arbitrary
       let wrongDeposit = expectedDeposit <+> Coin n
 
       submitFailingTx
-        ( txWithSubTx $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL
-                . certsTxBodyL
-                .~ [UnRegDepositTxCert cred wrongDeposit]
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL
+                  . certsTxBodyL
+                  .~ [UnRegDepositTxCert cred wrongDeposit]
+            ]
         )
         [ injectFailure . DijkstraSubDelegPredFailure $
             RefundIncorrectDELEG
@@ -154,29 +162,34 @@ spec = describe "SUBDELEG" $ do
       otherAccountAddress <- getAccountAddressFor otherStakeCred
       khStakePool <- freshKeyHash
       registerPool khStakePool
-      submitTx_ . txWithSubTx . mkBasicTx $
-        mkBasicTxBody
-          & certsTxBodyL
-            .~ SSeq.fromList
-              [ RegDepositDelegTxCert stakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
-              , RegDepositDelegTxCert otherStakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
-              ]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ SSeq.fromList
+                    [ RegDepositDelegTxCert stakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
+                    , RegDepositDelegTxCert otherStakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
+                    ]
+          ]
       expectRegisteredAccountAddress accountAddress
       expectRegisteredAccountAddress otherAccountAddress
       submitAndExpireProposalToMakeReward otherStakeCred
       getBalance otherStakeCred `shouldReturn` govActionDeposit
       unRegTxCert <- genUnRegTxCert stakeCred
-      submitTx_ . txWithSubTx . mkBasicTx $
-        mkBasicTxBody
-          & certsTxBodyL
-            .~ SSeq.fromList [unRegTxCert]
-          & withdrawalsTxBodyL
-            .~ Withdrawals
-              ( Map.fromList
-                  [ (accountAddress, Coin 0)
-                  , (otherAccountAddress, govActionDeposit)
-                  ]
-              )
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL .~ SSeq.fromList [unRegTxCert]
+                & withdrawalsTxBodyL
+                  .~ Withdrawals
+                    ( Map.fromList
+                        [ (accountAddress, Coin 0)
+                        , (otherAccountAddress, govActionDeposit)
+                        ]
+                    )
+          ]
       getBalance otherStakeCred `shouldReturn` Coin 0
       expectNotRegisteredRewardAddress accountAddress
 
@@ -184,19 +197,22 @@ spec = describe "SUBDELEG" $ do
     it "Delegate to unregistered pool" $ do
       cred <- KeyHashObj <$> freshKeyHash
       regTxCert <- genRegTxCert cred
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [regTxCert]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [regTxCert]
+          ]
 
       poolKh <- freshKeyHash
       submitFailingTx
-        ( txWithSubTx $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL
-                . certsTxBodyL
-                .~ [DelegTxCert cred (DelegStake poolKh)]
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL
+                  . certsTxBodyL
+                  .~ [DelegTxCert cred (DelegStake poolKh)]
+            ]
         )
         [injectFailure . DijkstraSubDelegPredFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
       expectNotDelegatedToAnyPool cred
@@ -206,18 +222,22 @@ spec = describe "SUBDELEG" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       cred <- KeyHashObj <$> freshKeyHash
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [RegDepositTxCert cred expectedDeposit]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [RegDepositTxCert cred expectedDeposit]
+          ]
 
       (drepCred, _, _) <- setupSingleDRep 1_000_000
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+          ]
 
       expectDelegatedVote cred (DRepCredential drepCred)
       expectNotDelegatedToAnyPool cred
@@ -252,14 +272,16 @@ spec = describe "SUBDELEG" $ do
           account <- registerAccountAddress
           void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
           getAccountBalance account `shouldReturn` Coin 1_000
-        submitTx_ . txWithSubTx $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL
-              . certsTxBodyL
-              .~ SSeq.fromList
-                [ UnRegDRepTxCert drep deposit
-                , RegDRepTxCert drep deposit SNothing
-                ]
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL
+                  . certsTxBodyL
+                  .~ SSeq.fromList
+                    [ UnRegDRepTxCert drep deposit
+                    , RegDRepTxCert drep deposit SNothing
+                    ]
+            ]
         impAnn "Withdrawal is no longer ratified, since the only DRep has no stake" $ do
           account <- registerAccountAddress
           void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
@@ -271,18 +293,22 @@ spec = describe "SUBDELEG" $ do
       cred <- KeyHashObj <$> freshKeyHash
       drepCred <- KeyHashObj <$> registerDRep
 
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+          ]
       expectDelegatedVote cred (DRepCredential drepCred)
 
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+          ]
 
       expectDelegatedVote cred (DRepCredential drepCred)
 
@@ -290,11 +316,12 @@ spec = describe "SUBDELEG" $ do
       AccountAddress _ (AccountId cred) <- registerAccountAddress
       drepCred <- KeyHashObj <$> freshKeyHash
       let tx =
-            txWithSubTx $
-              mkBasicTx mkBasicTxBody
-                & bodyTxL
-                  . certsTxBodyL
-                  .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+            mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL
+                    . certsTxBodyL
+                    .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+              ]
           inBootstrap = do
             submitTx_ tx
             expectDelegatedVote cred (DRepCredential drepCred)
@@ -320,9 +347,10 @@ spec = describe "SUBDELEG" $ do
       cred <- KeyHashObj <$> freshKeyHash
       drepCred <- KeyHashObj <$> registerDRep
       submitFailingTx
-        ( txWithSubTx $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+            ]
         )
         [injectFailure . DijkstraSubDelegPredFailure $ StakeKeyNotRegisteredDELEG cred]
 
@@ -334,19 +362,20 @@ spec = describe "SUBDELEG" $ do
       cred <- KeyHashObj <$> freshKeyHash
       drepCred <- KeyHashObj <$> registerDRep
 
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+          ]
       expectDelegatedVote cred (DRepCredential drepCred)
 
       drepCred2 <- KeyHashObj <$> registerDRep
-      submitTx_ . txWithSubTx $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
-            .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred2))]
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred2))]
+          ]
 
       expectDelegatedVote cred (DRepCredential drepCred2)
 
@@ -375,8 +404,7 @@ spec = describe "SUBDELEG" $ do
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
-          & bodyTxL
-            . certsTxBodyL
+          & bodyTxL . certsTxBodyL
             .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
       expectDelegatedVote cred (DRepCredential drepCred)
       expecteReverseDRepDelegation cred drepCred True
