@@ -501,6 +501,9 @@ instance Arbitrary PoolMetadata where
 instance Arbitrary BlsKey where
   arbitrary = BlsKey <$> arbitrary <*> arbitrary
 
+instance Arbitrary BlsKeyState where
+  arbitrary = BlsKeyState <$> arbitrary <*> arbitrary
+
 instance Arbitrary (PossessionProofDSIGN BLS12381MinSigDSIGN) where
   arbitrary = genBlsPossessionProof
 
@@ -778,7 +781,7 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
     snapShotFromStakePoolParams stakePoolParams =
       let delegations = Map.findWithDefault mempty (sppId stakePoolParams) delegatorsPerStakePool
        in mkStakePoolSnapShot ssActiveStake ssTotalActiveStake $
-            mkStakePoolState mempty delegations stakePoolParams
+            mkStakePoolState (BaseTypes.EpochNo 0) mempty delegations stakePoolParams
     delegatorsPerStakePool =
       VMap.foldlWithKey
         (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)
@@ -786,7 +789,7 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
         (unActiveStake ssActiveStake)
 
 instance Arbitrary MarkSnapShot where
-  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 -- | Builds a consistent set snapshot: its pool distribution and committee are
 -- derived from the mark it rotates, never generated independently.

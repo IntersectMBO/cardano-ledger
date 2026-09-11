@@ -272,6 +272,8 @@ instance ToExpr (StakePoolParams era)
 
 instance ToExpr BlsKey
 
+instance ToExpr BlsKeyState
+
 instance ToExpr StakePoolState
 
 instance ToExpr StakePoolRelay

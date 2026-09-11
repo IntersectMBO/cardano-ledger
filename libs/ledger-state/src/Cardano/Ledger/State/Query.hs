@@ -10,7 +10,7 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
-import Cardano.Ledger.BaseTypes (EpochNo (..), unNonZero, unsafeNonZero)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), unNonZero, unsafeNonZero)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
@@ -365,15 +365,15 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   set <- getSnapShotNoSharing epochStateId SnapShotSet
   go <- getSnapShotNoSharing epochStateId SnapShotGo
   pure $
-    let markSnap = State.MarkSnapShot mark (EpochNo 0) 0
+    let markSnap = State.MarkSnapShot mark (EpochNo 0) 0 (EpochInterval 0)
      in State.SnapShots
           { ssStakeMark = markSnap
           , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
           , ssStakeSet =
-              State.mkSetSnapShot (State.calculatePoolDistr set) (State.MarkSnapShot set (EpochNo 0) 0)
+              State.mkSetSnapShot (State.calculatePoolDistr set) (State.MarkSnapShot set (EpochNo 0) 0 (EpochInterval 0))
           , ssStakeGo =
               State.mkGoSnapShot
-                (State.mkSetSnapShot (State.calculatePoolDistr go) (State.MarkSnapShot go (EpochNo 0) 0))
+                (State.mkSetSnapShot (State.calculatePoolDistr go) (State.MarkSnapShot go (EpochNo 0) 0 (EpochInterval 0)))
           , ssFee = epochStateSnapShotsFee
           }
 {-# INLINEABLE getSnapShotsNoSharing #-}
@@ -449,15 +449,15 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   set <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
   go <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
   pure $
-    let markSnap = State.MarkSnapShot mark (EpochNo 0) 0
+    let markSnap = State.MarkSnapShot mark (EpochNo 0) 0 (EpochInterval 0)
      in State.SnapShots
           { ssStakeMark = markSnap
           , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
           , ssStakeSet =
-              State.mkSetSnapShot (State.calculatePoolDistr set) (State.MarkSnapShot set (EpochNo 0) 0)
+              State.mkSetSnapShot (State.calculatePoolDistr set) (State.MarkSnapShot set (EpochNo 0) 0 (EpochInterval 0))
           , ssStakeGo =
               State.mkGoSnapShot
-                (State.mkSetSnapShot (State.calculatePoolDistr go) (State.MarkSnapShot go (EpochNo 0) 0))
+                (State.mkSetSnapShot (State.calculatePoolDistr go) (State.MarkSnapShot go (EpochNo 0) 0 (EpochInterval 0)))
           , ssFee = epochStateSnapShotsFee
           }
 {-# INLINEABLE getSnapShotsWithSharing #-}
