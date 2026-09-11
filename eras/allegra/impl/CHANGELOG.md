@@ -2,6 +2,7 @@
 
 ## 1.10.1.0
 
+* Fix `shelleyToAllegraUtxoPredFailure` converting `OutputBootAddrAttrsTooBig` into `OutputTooBigUTxO`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

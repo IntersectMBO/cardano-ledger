@@ -589,7 +589,7 @@ mkTxWithPlutusAndBootstrapAddress ::
   SLanguage l ->
   ImpTestM era (Tx TopTx era)
 mkTxWithPlutusAndBootstrapAddress slang = do
-  ba <- freshBootstapAddress
+  ba <- freshBootstrapAddress
   datum <- arbitrary
   let scriptHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
       datumHash = hashData datum

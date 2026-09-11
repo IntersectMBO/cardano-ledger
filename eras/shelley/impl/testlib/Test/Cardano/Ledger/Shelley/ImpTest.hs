@@ -53,7 +53,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshKeyPair,
   getKeyPair,
   freshByronKeyHash,
-  freshBootstapAddress,
+  freshBootstrapAddress,
+  freshBootstrapAddressWithPayloadSize,
+  freshBootstrapAddressOversizedPayload,
+  largestBootstrapAddressAttrsSize,
   getByronKeyPair,
   freshSafeHash,
   freshKeyHashVRF,
@@ -120,6 +123,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectTreasury,
   disableTreasuryExpansion,
   updateAddrTxWits,
+  resetAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
   fixupTxOuts,
@@ -1097,7 +1101,14 @@ addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
     tx
       & witsTxL . scriptTxWitsL <>~ fmap fromNativeScript scriptsToAdd
 
--- | Adds @TxWits@ that will satisfy all of the required key witnesses
+-- | Add the @TxWits@ that are needed to satisfy the required key
+-- witnesses and are not already present.
+--
+-- Witnesses that are already present are retained, and this acts as a
+-- fixup step: a test can supply a witness of its own and it will be
+-- retained. But a witness signed over a transaction body that has since
+-- changed is left in place, since its key hash is already covered. If
+-- we want to reset all use `resetAddrTxWits`.
 updateAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
@@ -1134,6 +1145,20 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
     tx
       & witsTxL . addrTxWitsL <>~ extraAddrVKeyWits <> extraNativeScriptVKeyWits
       & witsTxL . bootAddrTxWitsL <>~ Set.fromList extraBootAddrWits
+
+-- | Discard Shelley-based address witnesses and derive them afresh for
+-- the current transaction body. Leave bootstrap witnesses untouched.
+--
+-- Required when transaction body is modified after witnesses have been
+-- added, because `updateAddrTxWits` leaves witnesses signed over the
+-- previous body in place.
+resetAddrTxWits ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Tx l era ->
+  ImpTestM era (Tx l era)
+resetAddrTxWits = updateAddrTxWits . (witsTxL . addrTxWitsL .~ mempty)
 
 -- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::
@@ -1916,23 +1941,45 @@ getByronKeyPair bootAddr = do
 freshByronKeyHash ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r)
-freshByronKeyHash = coerceKeyRole . bootstrapKeyHash <$> freshBootstapAddress
+freshByronKeyHash = coerceKeyRole . bootstrapKeyHash <$> freshBootstrapAddress
 
-freshBootstapAddress ::
+-- | The largest attribute size that the UTxO rules accept.
+largestBootstrapAddressAttrsSize :: Int
+largestBootstrapAddressAttrsSize = 64
+
+-- | Generate a fresh bootstrap address. `Nothing` produces a plain Byron
+-- address. `Just n` produces with HD payload of @n@ bytes.
+freshBootstrapAddressWithPayloadSize ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  Maybe Int ->
   m BootstrapAddress
-freshBootstapAddress = do
+freshBootstrapAddressWithPayloadSize payloadSize = do
   keyPair@(ByronKeyPair verificationKey _) <- uniformM
-  hasPayload <- uniformM
-  payload <-
-    if hasPayload
-      then Just . Byron.HDAddressPayload <$> (uniformByteStringM =<< uniformRM (0, 63))
-      else pure Nothing
+  payload <- forM payloadSize $ fmap Byron.HDAddressPayload . uniformByteStringM
   let asd = Byron.VerKeyASD verificationKey
       attrs = Byron.AddrAttributes payload (Byron.NetworkTestnet 0)
       bootAddr = BootstrapAddress $ Byron.makeAddress asd attrs
   modify $ keyPairsByronL %~ Map.insert bootAddr keyPair
   pure bootAddr
+
+freshBootstrapAddress ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  m BootstrapAddress
+freshBootstrapAddress = do
+  hasPayload <- uniformM
+  payloadSize <-
+    if hasPayload
+      then Just <$> uniformRM (0, largestBootstrapAddressAttrsSize)
+      else pure Nothing
+  freshBootstrapAddressWithPayloadSize payloadSize
+
+-- | Generate a fresh bootstrap address whose attributes exceed the size that
+-- the UTxO rules accept.
+freshBootstrapAddressOversizedPayload ::
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
+  m BootstrapAddress
+freshBootstrapAddressOversizedPayload =
+  freshBootstrapAddressWithPayloadSize . Just $ largestBootstrapAddressAttrsSize + 1
 
 sendCoinTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Coin -> ImpTestM era TxIn
 sendCoinTo addr = sendValueTo addr . inject

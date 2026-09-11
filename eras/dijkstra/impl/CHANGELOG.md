@@ -95,6 +95,8 @@
 
 ### `testlib`
 
+* Add `txWithSubTxs` and `submitFailingSubTx`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubTransactions`

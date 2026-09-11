@@ -391,4 +391,4 @@ shelleyToAllegraUtxoPredFailure = \case
   Shelley.WrongNetworkWithdrawal n as -> WrongNetworkWithdrawal n as
   Shelley.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Shelley.UpdateFailure x -> UpdateFailure x
-  Shelley.OutputBootAddrAttrsTooBig outs -> OutputTooBigUTxO outs
+  Shelley.OutputBootAddrAttrsTooBig outs -> OutputBootAddrAttrsTooBig outs
