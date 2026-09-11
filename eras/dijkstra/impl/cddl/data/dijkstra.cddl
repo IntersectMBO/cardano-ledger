@@ -728,7 +728,7 @@ protocol_param_update =
   , ? 50 : positive_interval      ; peras healing factor
   , ? 51 : uint .size 2           ; peras certificate boost
   , ? 52 : uint .size 2           ; peras target committee size
-  , ? 53 : [] / [uint .size 8]    ; peras bootstrap round
+  , ? 53 : nil / uint .size 8     ; peras bootstrap round
   }
 
 epoch_interval = uint .size 4
