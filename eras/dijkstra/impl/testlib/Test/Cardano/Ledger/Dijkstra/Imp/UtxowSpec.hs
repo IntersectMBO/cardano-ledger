@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,7 +13,8 @@ module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), StrictMaybe (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
@@ -25,6 +27,8 @@ import Cardano.Ledger.Plutus (
   Data,
   ExUnits (..),
   Language (..),
+  OrdExUnits (..),
+  Plutus,
   SLanguage (..),
   hashPlutusScript,
  )
@@ -38,7 +42,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, alwaysSucceedsNoDatum)
 
 spec ::
   forall era.
@@ -213,3 +217,61 @@ spec = describe "UTXOW" $ do
               ]
         ]
       submitTx_ tx
+
+  describe "Sub-transaction Plutus evaluation" $ do
+    it "Evaluates every sub-transaction script during phase 2" $ do
+      passingSubTx <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum SPlutusV4
+      failingSubTx <- mkPlutusSpendingTx $ alwaysFailsNoDatum SPlutusV4
+      submitPhase2Invalid_ =<< withSubTransactions [passingSubTx, failingSubTx]
+
+    -- See: https://github.com/IntersectMBO/formal-ledger-specifications/issues/723
+    disableInConformanceIt "Enforces the transaction budget across sub-transactions" $ do
+      subA <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum SPlutusV4
+      subB <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum SPlutusV4
+      tx <- withSubTransactions [subA, subB]
+      let limit = ExUnits 1_500_000 200_000_000
+      modifyPParams $ ppMaxTxExUnitsL .~ limit
+      submitFailingTx
+        tx
+        [ injectFailure $
+            Alonzo.ExUnitsTooBigUTxO $
+              Mismatch
+                { mismatchSupplied = OrdExUnits $ ExUnits 2_000_000 200_000_000
+                , mismatchExpected = OrdExUnits limit
+                }
+        ]
+
+-- Reference scripts avoid the unfinished PlutusV4 witness serialization.
+mkPlutusSpendingTx ::
+  forall era.
+  DijkstraEraImp era =>
+  Plutus 'PlutusV4 ->
+  ImpTestM era (Tx SubTx era)
+mkPlutusSpendingTx plutus = do
+  script <- fromPlutusScript <$> mkPlutusScript plutus
+  txIn <- produceScript $ hashPlutusScript plutus
+  refAddr <- freshKeyAddrNoPtr_
+  refTx <-
+    submitTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL
+          .~ [mkBasicTxOut refAddr mempty & referenceScriptTxOutL .~ SJust script]
+  redeemer <- arbitrary @(Data era)
+  fixupPPHash $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . inputsTxBodyL .~ [txIn]
+      & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 refTx]
+      & witsTxL . rdmrsTxWitsL . unRedeemersL
+        .~ Map.singleton (mkSpendingPurpose $ AsIx 0) (redeemer, ExUnits 1_000_000 100_000_000)
+
+withSubTransactions ::
+  DijkstraEraImp era =>
+  [Tx SubTx era] ->
+  ImpTestM era (Tx TopTx era)
+withSubTransactions subTxs = do
+  collateralAddr <- freshKeyAddrNoPtr_
+  collateral <- sendCoinTo collateralAddr $ Coin 30_000_000
+  pure $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
+      & bodyTxL . collateralInputsTxBodyL .~ [collateral]

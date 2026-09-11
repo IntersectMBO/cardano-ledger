@@ -277,6 +277,11 @@ class
   isValidTxL :: Lens' (Tx TopTx era) IsPhase2Valid
   isValidTxL = isPhase2ValidTxL
 
+  -- | Total declared execution units, including sub-transactions when supported.
+  -- Earlier eras only have the transaction's own redeemers.
+  getTotalExUnits :: Tx l era -> ExUnits
+  getTotalExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+
 {-# DEPRECATED isValidTxL "In favor of `isPhase2ValidTxL`" #-}
 
 instance Typeable l => DecCBOR (Annotator (Tx l AlonzoEra)) where
@@ -443,10 +448,7 @@ toCBORForSizeComputation AlonzoTx {atBody, atWits, atAuxData} =
     <> encodeNullStrictMaybe encCBOR atAuxData
 
 alonzoMinFeeTx ::
-  ( EraTx era
-  , AlonzoEraTxWits era
-  , AlonzoEraPParams era
-  ) =>
+  AlonzoEraTx era =>
   PParams era ->
   Tx l era ->
   Coin
@@ -455,13 +457,14 @@ alonzoMinFeeTx pp tx =
     <+> (pp ^. ppTxFeeFixedL)
     <+> txscriptfee (pp ^. ppPricesL) allExunits
   where
-    allExunits = totExUnits tx
+    allExunits = getTotalExUnits tx
 
 totExUnits ::
-  (EraTx era, AlonzoEraTxWits era) =>
+  AlonzoEraTx era =>
   Tx l era ->
   ExUnits
-totExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+totExUnits = getTotalExUnits
+{-# DEPRECATED totExUnits "In favor of `getTotalExUnits`" #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

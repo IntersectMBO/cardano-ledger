@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Require `AlonzoEraTx` in `getConwayMinFeeTx` so script fees use the era's total execution units.
 * Remove `transPlutusPurposeV1V2`, superseded by `Alonzo.transPlutusPurpose`
 * No longer export the `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors of `ConwayContextError`, in favor of the same cases defined in Alonzo.
 * Add `conwayInjectIntoTestState`

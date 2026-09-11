@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Require `AlonzoEraTx` in `babbageUtxoValidation` so execution limits use the era's total execution units.
 * Encode a wrapped `AlonzoContextError` under tag 8 in `BabbageContextError`, and add `TxCert era` and `PlutusPurpose AsItem era` constraints to its `NFData` and `EncCBOR` instances
 * Add `DecCBOR (TxCert era)` and `DecCBOR (PlutusPurpose AsItem era)` constraints to the `DecCBOR (BabbageContextError era)` instance
 * Add `AlonzoEraTransition` instance for `BabbageEra`
