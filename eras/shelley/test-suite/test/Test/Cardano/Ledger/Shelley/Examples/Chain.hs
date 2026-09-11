@@ -10,13 +10,13 @@ module Test.Cardano.Ledger.Shelley.Examples.Chain (
 ) where
 
 import Cardano.Ledger.Block (Block)
-import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, nesPdL)
 import Cardano.Ledger.State
 import Cardano.Protocol.TPraos.BlockHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
+import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack
 import Lens.Micro
@@ -53,15 +53,11 @@ deriving instance
 --   and checks that trace ends with expected state or expected error.
 testCHAINExample :: HasCallStack => CHAINExample ShelleyEra -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
-  ( checkTrace @(CHAIN ShelleyEra) runShelleyBase () $
-      ( pure initSt .- block
-          <&> chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
-          <&> chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
-      )
-        .->> ( expectedSt
-                 & chainStateNesL . nesPdL . poolDistrTotalL .~ knownNonZeroCoin @1
-                 & chainStateNesL . nesPdL . poolDistrDistrL %~ (<&> individualTotalPoolStakeL .~ mempty)
-             )
+  checkTrace @(CHAIN ShelleyEra)
+    runShelleyBase
+    ()
+    ( (pure initSt .- block <&> chainStateNesL . nesPdL .~ def)
+        .->> (expectedSt & chainStateNesL . nesPdL .~ def)
     )
     >> expectExprEqual (totalAda expectedSt) maxLLSupply
 testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
