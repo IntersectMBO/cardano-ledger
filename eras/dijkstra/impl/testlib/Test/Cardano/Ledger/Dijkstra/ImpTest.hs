@@ -427,8 +427,3 @@ mkBalancerSubTx consumed produced = do
               & bodyTxL . inputsTxBodyL .~ [newTxIn]
               & bodyTxL . outputsTxBodyL .~ [changeOut]
       Just <$> updateAddrTxWits subTx
-
-txWithSubTx :: (DijkstraEraTxBody era, EraTx era) => Tx SubTx era -> Tx TopTx era
-txWithSubTx subTx =
-  mkBasicTx mkBasicTxBody
-    & bodyTxL . subTransactionsTxBodyL .~ [subTx]
