@@ -17,7 +17,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests, defaultPParams) where
 
-import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx, hashData)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, alonzoMinFeeTx, hashData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), TxDats (..), unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
@@ -81,8 +81,7 @@ tests =
 testEstimateMinFee ::
   forall era.
   ( Reflect era
-  , AlonzoEraTxWits era
-  , AlonzoEraTxBody era
+  , AlonzoEraTx era
   , EraModel era
   ) =>
   Expectation
