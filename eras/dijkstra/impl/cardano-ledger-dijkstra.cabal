@@ -157,6 +157,8 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -202,6 +204,7 @@ library testlib
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,
     containers,
+    fs-sim,
     generic-random,
     microlens,
     mtl,

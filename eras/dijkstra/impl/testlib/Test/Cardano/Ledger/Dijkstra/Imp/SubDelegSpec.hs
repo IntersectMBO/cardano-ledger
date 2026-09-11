@@ -1,0 +1,722 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+
+module Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec (spec) where
+
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (GovAction (..), GovPurposeId (..), Vote (..), Voter (..))
+import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
+import Cardano.Ledger.Conway.Transition (injectStakeCredentials)
+import Cardano.Ledger.Conway.TxCert (Delegatee (..))
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (drepDelegsL)
+import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Rules (DijkstraSubDelegPredFailure (..))
+import Cardano.Ledger.Dijkstra.State
+import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Shelley.Genesis (InjectionData (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  curPParamsEpochStateL,
+  esLStateL,
+  lsCertStateL,
+  nesELL,
+  nesEsL,
+ )
+import Cardano.Ledger.Val (Val (..))
+import Control.Monad.IO.Class (MonadIO (..))
+import qualified Data.ListMap as LM
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
+import Lens.Micro ((%~), (&), (.~), (<&>), (^.))
+import qualified System.FS.Sim.MockFS as MockFS
+import System.FS.Sim.STM (simHasFS')
+import Test.Cardano.Ledger.Common (
+  HasCallStack,
+  Positive (..),
+  SpecWith,
+  describe,
+  it,
+ )
+import Test.Cardano.Ledger.Dijkstra.ImpTest
+import Test.Cardano.Ledger.Imp.Common (
+  arbitrary,
+  assertBool,
+  assertFailure,
+  expectJust,
+  expectNothingExpr,
+  forM_,
+  oneof,
+  shouldBe,
+  shouldReturn,
+  void,
+ )
+import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
+
+spec ::
+  forall era.
+  DijkstraEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era))
+spec = describe "SUBDELEG" $ do
+  describe "Register stake credential" $ do
+    it "With correct deposit" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      freshKeyHash >>= \kh -> do
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [RegDepositTxCert (KeyHashObj kh) expectedDeposit]
+            ]
+        expectStakeCredRegistered (KeyHashObj kh)
+
+    it "Twice the same certificate in the same transaction" $ do
+      -- This is expected behavior because `certsTxBodyL` removes duplicates
+      freshKeyHash >>= \kh -> do
+        regTxCert <- genRegTxCert (KeyHashObj kh)
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [regTxCert, regTxCert]
+            ]
+        expectStakeCredRegistered (KeyHashObj kh)
+    it "With incorrect deposit" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      Positive n <- arbitrary
+      let wrongDeposit = expectedDeposit <+> Coin n
+
+      freshKeyHash >>= \kh -> do
+        submitFailingTx
+          ( mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
+              ]
+          )
+          [ injectFailure . DijkstraSubDelegPredFailure $
+              DepositIncorrectDELEG
+                Mismatch
+                  { mismatchSupplied = wrongDeposit
+                  , mismatchExpected = expectedDeposit
+                  }
+          ]
+        expectStakeCredNotRegistered (KeyHashObj kh)
+
+  describe "Unregister stake credentials" $ do
+    it "With incorrect refund" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
+
+      impAnn "Register stake credential" $
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
+            ]
+
+      Positive n <- arbitrary
+      let wrongDeposit = expectedDeposit <+> Coin n
+
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL
+                  . certsTxBodyL
+                  .~ [UnRegDepositTxCert cred wrongDeposit]
+            ]
+        )
+        [ injectFailure . DijkstraSubDelegPredFailure $
+            RefundIncorrectDELEG
+              Mismatch
+                { mismatchSupplied = wrongDeposit
+                , mismatchExpected = expectedDeposit
+                }
+        ]
+
+      expectStakeCredRegistered cred
+
+    it "Deregistering returns the deposit" $ do
+      let
+        keyDeposit = Coin 2
+        -- This is paid out as the reward
+        govActionDeposit = Coin 3
+      modifyPParams $ \pp ->
+        pp
+          & ppKeyDepositL
+            .~ keyDeposit
+          & ppGovActionDepositL
+            .~ govActionDeposit
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      accountAddress <- getAccountAddressFor stakeCred
+      otherStakeCred <- KeyHashObj <$> freshKeyHash
+      otherAccountAddress <- getAccountAddressFor otherStakeCred
+      khStakePool <- freshKeyHash
+      registerPool khStakePool
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ SSeq.fromList
+                    [ RegDepositDelegTxCert stakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
+                    , RegDepositDelegTxCert otherStakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
+                    ]
+          ]
+      expectRegisteredAccountAddress accountAddress
+      expectRegisteredAccountAddress otherAccountAddress
+      submitAndExpireProposalToMakeReward otherStakeCred
+      getBalance otherStakeCred `shouldReturn` govActionDeposit
+      unRegTxCert <- genUnRegTxCert stakeCred
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL .~ SSeq.fromList [unRegTxCert]
+                & withdrawalsTxBodyL
+                  .~ Withdrawals
+                    ( Map.fromList
+                        [ (accountAddress, Coin 0)
+                        , (otherAccountAddress, govActionDeposit)
+                        ]
+                    )
+          ]
+      getBalance otherStakeCred `shouldReturn` Coin 0
+      expectNotRegisteredRewardAddress accountAddress
+
+  describe "Delegate stake" $ do
+    it "Delegate to unregistered pool" $ do
+      cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [regTxCert]
+          ]
+
+      poolKh <- freshKeyHash
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL
+                  . certsTxBodyL
+                  .~ [DelegTxCert cred (DelegStake poolKh)]
+            ]
+        )
+        [injectFailure . DijkstraSubDelegPredFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
+      expectNotDelegatedToAnyPool cred
+
+  describe "Delegate vote" $ do
+    it "Delegate vote of registered stake credentials to registered drep" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [RegDepositTxCert cred expectedDeposit]
+          ]
+
+      (drepCred, _, _) <- setupSingleDRep 1_000_000
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+          ]
+
+      expectDelegatedVote cred (DRepCredential drepCred)
+      expectNotDelegatedToAnyPool cred
+      whenBootstrap $ do
+        impAnn "Ensure DRep delegation is populated after bootstrap" $ do
+          -- Clear out delegation, in order to check its repopulation from accounts.
+          let deleteDelegation =
+                Map.adjust (drepDelegsL %~ Set.delete cred) drepCred
+          --  Drep delegation for both version 9 and 10 are populating both umap and
+          --  `drepDelegs`, so manually modifying the umap in the state is the only way to
+          --  test the correct repopulation of `drepDelegs`
+          modifyNES $ nesEsL . epochStateRegDrepL %~ deleteDelegation
+          hotCreds <- registerInitialCommittee
+          (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
+          protVer <- getProtVer
+          gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+          submitYesVoteCCs_ hotCreds gai
+          submitYesVote_ (StakePoolVoter spo) gai
+          passNEpochs 2
+          getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+          expectDelegatedVote cred (DRepCredential drepCred)
+
+    it
+      "Delegate stake to a DRep that is unregistered and reregistered in the same transaction"
+      $ whenPostBootstrap
+      $ do
+        committee <- registerInitialCommittee
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+        donateToTreasury $ Coin 5_000_000
+        impAnn "Withdrawal is ratified by the vote of the DRep with delegated stake" $ do
+          account <- registerAccountAddress
+          void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
+          getAccountBalance account `shouldReturn` Coin 1_000
+        submitTx_ $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL
+                  . certsTxBodyL
+                  .~ SSeq.fromList
+                    [ UnRegDRepTxCert drep deposit
+                    , RegDRepTxCert drep deposit SNothing
+                    ]
+            ]
+        impAnn "Withdrawal is no longer ratified, since the only DRep has no stake" $ do
+          account <- registerAccountAddress
+          void $ enactTreasuryWithdrawals [(account, Coin 1_000)] drep committee
+          getAccountBalance account `shouldReturn` Coin 0
+
+    it "Redelegate vote to the same DRep" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+          ]
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL
+                . certsTxBodyL
+                .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+          ]
+
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+    it "Delegate vote of registered stake credentials to unregistered drep" $ do
+      AccountAddress _ (AccountId cred) <- registerAccountAddress
+      drepCred <- KeyHashObj <$> freshKeyHash
+      let tx =
+            mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL
+                    . certsTxBodyL
+                    .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+              ]
+          inBootstrap = do
+            submitTx_ tx
+            expectDelegatedVote cred (DRepCredential drepCred)
+            impAnn "Ensure delegation is cleaned up on the transition out of bootstrap" $ do
+              hotCreds <- registerInitialCommittee
+              (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
+              protVer <- getProtVer
+              gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+              submitYesVoteCCs_ hotCreds gai
+              submitYesVote_ (StakePoolVoter spo) gai
+              passNEpochs 2
+              getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+              expectNotDelegatedVote cred
+
+          outOfBootstrap = do
+            submitFailingTx
+              tx
+              [injectFailure . DijkstraSubDelegPredFailure $ DelegateeDRepNotRegisteredDELEG drepCred]
+            expectNotDelegatedVote cred
+      ifBootstrap inBootstrap outOfBootstrap
+
+    it "Delegate vote of unregistered stake credentials" $ do
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+            ]
+        )
+        [injectFailure . DijkstraSubDelegPredFailure $ StakeKeyNotRegisteredDELEG cred]
+
+      expectStakeCredNotRegistered cred
+
+    it "Redelegate vote" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+          ]
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      drepCred2 <- KeyHashObj <$> registerDRep
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred2))]
+          ]
+
+      expectDelegatedVote cred (DRepCredential drepCred2)
+
+      impAnn "Check that in bootstrap phase the previous reverse delegation is maintained" $ do
+        expecteReverseDRepDelegation cred drepCred2 True
+        ifBootstrap
+          (expecteReverseDRepDelegation cred drepCred True)
+          (expecteReverseDRepDelegation cred drepCred False)
+
+      impAnn "Check that unregistration of previous delegation does not affect current delegation" $ do
+        unRegisterDRep drepCred
+        -- we need to preserve the buggy behavior until the boostrap phase is over.
+        ifBootstrap
+          ( do
+              -- we cannot `expectNotDelegatedVote` because the delegation is still in the DRepState of the other drep
+              accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+              expectNothingExpr (lookupDRepDelegation cred accounts)
+              expecteReverseDRepDelegation cred drepCred2 True
+          )
+          (expectDelegatedVote cred (DRepCredential drepCred2))
+
+    it "Redelegate vote to a predefined DRep" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+      expectDelegatedVote cred (DRepCredential drepCred)
+      expecteReverseDRepDelegation cred drepCred True
+
+      -- redelegate to a predefined DRep
+      predefinedDRep <- oneof [pure DRepAlwaysAbstain, pure DRepAlwaysNoConfidence]
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [DelegTxCert cred (DelegVote predefinedDRep)]
+      expectDelegatedVote cred predefinedDRep
+
+      -- unlike for credential dreps, the cleanup of reverse delegations is correct both in bootstrap and post-bootstrap
+      expecteReverseDRepDelegation cred drepCred False
+
+      -- unregister original drep
+      unRegisterDRep drepCred
+
+      -- vote is still delegated to predefined DRep
+      expectDelegatedVote cred predefinedDRep
+
+    it "Delegate vote and unregister stake credentials" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [UnRegDepositTxCert cred expectedDeposit]
+      expectStakeCredNotRegistered cred
+      expectNotDelegatedVote cred
+      expectNotDelegatedToAnyPool cred
+
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1249
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableInConformanceIt "Delegate vote and unregister after hardfork" $ do
+      initialProtVer <- getProtVer
+      (_, ccCred, _) <- impAnn "Set up a committee" electBasicCommittee
+      (khSPO, _, _) <- setupPoolWithStake $ Coin 10_000_000
+      -- Using a lazy pattern match here to prevent evaluation of tuple
+      -- unless we actually need a value from it
+      ~(drepCred, _, _) <- setupSingleDRep 100_000_000
+      passNEpochs 3
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
+      registerAndRetirePoolToMakeReward cred
+      expectStakeCredRegistered cred
+      expectDelegatedVote cred DRepAlwaysAbstain
+      impAnn "Version should be unchanged" $
+        getProtVer `shouldReturn` initialProtVer
+      let nextVer = majorFollow initialProtVer
+      hfGaid <- submitGovAction $ HardForkInitiation SNothing nextVer
+      submitVote_ VoteYes (StakePoolVoter khSPO) hfGaid
+      submitVote_ VoteYes (CommitteeVoter ccCred) hfGaid
+      submitVote_ VoteYes (DRepVoter drepCred) hfGaid
+      passNEpochs 3
+      logRatificationChecks hfGaid
+      impAnn "Version should be bumped" $
+        getProtVer `shouldReturn` nextVer
+      withdrawalAmount <- getsPParams ppPoolDepositL
+      accountAddress <- getAccountAddressFor cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [UnRegDepositTxCert cred expectedDeposit]
+          & bodyTxL
+            . withdrawalsTxBodyL
+            .~ Withdrawals (Map.singleton accountAddress withdrawalAmount)
+      expectStakeCredNotRegistered cred
+      expectNotDelegatedVote cred
+    it "Delegate vote and undelegate after delegating to some stake pools" $ do
+      (khSPO, _, _) <- setupPoolWithStake $ Coin 1_000_000
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
+      registerAndRetirePoolToMakeReward cred
+      expectStakeCredRegistered cred
+      expectDelegatedVote cred DRepAlwaysAbstain
+      forM_ @[] [1 .. 3 :: Int] $ \_ -> do
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL
+              . certsTxBodyL
+              .~ [DelegTxCert cred (DelegStake khSPO)]
+      passNEpochs 3
+      withdrawalAmount <- getsPParams ppPoolDepositL
+      accountAddress <- getAccountAddressFor cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [UnRegDepositTxCert cred expectedDeposit]
+          & bodyTxL
+            . withdrawalsTxBodyL
+            .~ Withdrawals (Map.singleton accountAddress withdrawalAmount)
+      expectStakeCredNotRegistered cred
+      expectNotDelegatedVote cred
+
+    it "Delegate, retire and re-register pool" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      poolKh <- freshKeyHash
+      accountAddress <- registerAccountAddress
+      registerPool poolKh
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [ RegDepositDelegTxCert
+                   cred
+                   (DelegStakeVote poolKh (DRepCredential drepCred))
+                   expectedDeposit
+               ]
+      expectDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      let poolLifetime = 2
+      let poolExpiry = getsNES nesELL <&> \n -> addEpochInterval n $ EpochInterval poolLifetime
+
+      poolExpiry >>= \pe ->
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL
+              . certsTxBodyL
+              .~ [RetirePoolTxCert poolKh pe]
+
+      -- when pool is re-registered after its expiration, all delegations are cleared
+      passNEpochs $ fromIntegral poolLifetime
+      expectNotDelegatedToAnyPool cred
+      registerPoolWithAccountAddress poolKh accountAddress
+      expectNotDelegatedToAnyPool cred
+      -- the vote delegation is kept
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      -- re-delegate
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [ DelegTxCert
+                   cred
+                   (DelegStake poolKh)
+               ]
+      expectDelegatedToPool cred poolKh
+
+      -- when pool is re-registered before its expiration, delegations are kept
+      poolExpiry >>= \pe ->
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL
+              . certsTxBodyL
+              .~ [RetirePoolTxCert poolKh pe]
+      -- re-register the pool before the expiration time
+      passNEpochs $ fromIntegral poolLifetime - 1
+      registerPoolWithAccountAddress poolKh accountAddress
+      expectDelegatedToPool cred poolKh
+      passNEpochs 2
+      expectDelegatedToPool cred poolKh
+
+      -- when pool is retired and re-registered in the same transaction, delegations are kept
+      pps <- freshPoolParams poolKh accountAddress
+      poolExpiry >>= \pe ->
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL
+              . certsTxBodyL
+              .~ [RetirePoolTxCert poolKh pe, RegPoolTxCert pps]
+
+      expectDelegatedToPool cred poolKh
+      passNEpochs $ fromIntegral poolLifetime
+      expectDelegatedToPool cred poolKh
+  describe "Delegate both stake and vote" $ do
+    it "Delegate and unregister credentials" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      poolKh <- freshKeyHash
+      registerPool poolKh
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [ RegDepositDelegTxCert
+                   cred
+                   (DelegStakeVote poolKh (DRepCredential drepCred))
+                   expectedDeposit
+               ]
+      expectDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [UnRegDepositTxCert cred expectedDeposit]
+      expectStakeCredNotRegistered cred
+
+    it "Delegate to DRep and SPO and change delegation to a different SPO" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      poolKh <- freshKeyHash
+      registerPool poolKh
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [ RegDepositDelegTxCert
+                   cred
+                   (DelegStakeVote poolKh (DRepCredential drepCred))
+                   expectedDeposit
+               ]
+      expectDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      poolKh' <- freshKeyHash
+      registerPool poolKh'
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL
+            . certsTxBodyL
+            .~ [DelegTxCert cred (DelegStake poolKh')]
+      expectDelegatedToPool cred poolKh'
+      expectNotDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+  it "Transition creates the delegations correctly" $ do
+    pool1 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool2 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    deleg1 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg2 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg3 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    nes <- getsNES id
+    let stake = LM.ListMap [(deleg1, pool1), (deleg2, pool1), (deleg3, pool2)]
+    updatedNES <- liftIO $ do
+      fs <- simHasFS' MockFS.empty
+      injectStakeCredentials Testnet fs (EmbeddedInjection stake) nes
+    delegateStake (KeyHashObj deleg1) pool1
+    delegateStake (KeyHashObj deleg2) pool1
+    delegateStake (KeyHashObj deleg3) pool2
+    getPoolsState <$> getsNES id `shouldReturn` getPoolsState updatedNES
+    getDelegs deleg1 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg2 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg3 updatedNES `shouldReturn` Just pool2
+  where
+    expectDelegatedVote :: HasCallStack => Credential Staking -> DRep -> ImpTestM era ()
+    expectDelegatedVote cred drep = do
+      accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
+      impAnn (show cred <> " expected to have delegated to " <> show drep) $ do
+        accountState <- expectJust $ lookupAccountState cred accounts
+        accountState ^. dRepDelegationAccountStateL `shouldBe` Just drep
+        case drep of
+          DRepCredential drepCred ->
+            case Map.lookup drepCred dreps of
+              Nothing ->
+                whenPostBootstrap $
+                  assertFailure $
+                    "Expected DRep: " <> show drepCred <> " to be registered"
+              Just drepState ->
+                assertBool
+                  "Expected DRep delegations to contain the stake credential"
+                  (cred `Set.member` drepDelegs drepState)
+          _ -> pure ()
+
+    expectNotDelegatedVote :: Credential Staking -> ImpTestM era ()
+    expectNotDelegatedVote cred = do
+      accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
+      impAnn (show cred <> " expected to not have their vote delegated") $ do
+        expectNothingExpr (lookupDRepDelegation cred accounts)
+        assertBool
+          ("Expected no drep state delegation to contain the stake credential: " <> show cred)
+          (all (Set.notMember cred . drepDelegs) dreps)
+
+    expecteReverseDRepDelegation ::
+      HasCallStack => Credential Staking -> Credential DRepRole -> Bool -> ImpTestM era ()
+    expecteReverseDRepDelegation cred drepCred expected = do
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
+      case Map.lookup drepCred dreps of
+        Just drepState -> do
+          let member = cred `Set.member` drepDelegs drepState
+          assertBool msg (member == expected)
+        Nothing -> do
+          assertBool msg (expected == False)
+      where
+        msg = "Reverse delegation mismatch. Expected " <> show expected
+
+    getDelegs kh nes = do
+      let accounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      pure $ Map.lookup (KeyHashObj kh) accounts >>= (^. stakePoolDelegationAccountStateL)
+    getPoolsState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
