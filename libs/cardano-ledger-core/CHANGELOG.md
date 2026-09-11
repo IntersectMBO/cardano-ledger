@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `ToPlutusData` instances for `Word64` and `SlotInterval`
 * Remove `EraDecoder` and add `EraCodec` to be used in its place
 * Remove `ppEraDecoder` from `PParam` and add `ppuEraCodec` to `PParamUpdate`
 * Bump `plutus-ledger-api` lower bound to `>=1.68`
@@ -51,6 +52,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` and `ToExpr` instances for `SlotInterval`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
