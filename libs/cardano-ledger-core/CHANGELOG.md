@@ -48,6 +48,12 @@
 * Add `FromJSON (TxOut era)` as `EraTxOut` superclass constraint
 * Add `FromJSON t` as `Val t` superclass constraint
 * Add `ToJSON` and `FromJSON` instances for `Datum era`
+* Differentiate stake snapshots by phase:
+  * Add `MarkSnapShot`, `SetSnapShot` and `GoSnapShot`, with `SnapShots` now holding one of each.
+  * Seat Leios voting committee (CIP-0164) on the `SetSnapShot` when the mark rotates into the set position.
+  * Add `mkSetSnapShot`, `mkGoSnapShot`, `leiosCandidates`, and the `msSnapShotL`, `ssSnapShotL`, `ssLeiosCommitteeL`, `gsSnapShotL` lenses
+  * The on-disk ledger state format changes and requires replay
+* Add `selectLeiosCommittee`, `LeiosCandidate` and `emptyLeiosCommittee` for Leios committee selection (CIP-0164). The `LeiosSeat`/`LeiosCommittee` CBOR instances live in `cardano-ledger-binary`; only their JSON instances are here
 
 ### `testlib`
 

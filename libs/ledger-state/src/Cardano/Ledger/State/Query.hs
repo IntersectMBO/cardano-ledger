@@ -10,7 +10,7 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
-import Cardano.Ledger.BaseTypes (unNonZero, unsafeNonZero)
+import Cardano.Ledger.BaseTypes (EpochNo (..), unNonZero, unsafeNonZero)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
@@ -159,9 +159,9 @@ insertSnapShots ::
 insertSnapShots epochStateKey State.SnapShots {..} = do
   mapM_
     (uncurry (insertSnapShot epochStateKey))
-    [ (SnapShotMark, ssStakeMark)
-    , (SnapShotSet, ssStakeSet)
-    , (SnapShotGo, ssStakeGo)
+    [ (SnapShotMark, State.msSnapShot ssStakeMark)
+    , (SnapShotSet, State.ssSnapShot ssStakeSet)
+    , (SnapShotGo, State.gsSnapShot ssStakeGo)
     ]
 
 insertEpochState ::
@@ -365,13 +365,17 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
   set <- getSnapShotNoSharing epochStateId SnapShotSet
   go <- getSnapShotNoSharing epochStateId SnapShotGo
   pure $
-    State.SnapShots
-      { ssStakeMark = mark
-      , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
-      , ssStakeSet = set
-      , ssStakeGo = go
-      , ssFee = epochStateSnapShotsFee
-      }
+    let markSnap = State.MarkSnapShot mark (EpochNo 0) 0
+     in State.SnapShots
+          { ssStakeMark = markSnap
+          , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
+          , ssStakeSet =
+              State.mkSetSnapShot (State.calculatePoolDistr set) (State.MarkSnapShot set (EpochNo 0) 0)
+          , ssStakeGo =
+              State.mkGoSnapShot
+                (State.mkSetSnapShot (State.calculatePoolDistr go) (State.MarkSnapShot go (EpochNo 0) 0))
+          , ssFee = epochStateSnapShotsFee
+          }
 {-# INLINEABLE getSnapShotsNoSharing #-}
 
 getSnapShotsNoSharingM ::
@@ -445,13 +449,17 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
   set <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
   go <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
   pure $
-    State.SnapShots
-      { ssStakeMark = mark
-      , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
-      , ssStakeSet = set
-      , ssStakeGo = go
-      , ssFee = epochStateSnapShotsFee
-      }
+    let markSnap = State.MarkSnapShot mark (EpochNo 0) 0
+     in State.SnapShots
+          { ssStakeMark = markSnap
+          , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
+          , ssStakeSet =
+              State.mkSetSnapShot (State.calculatePoolDistr set) (State.MarkSnapShot set (EpochNo 0) 0)
+          , ssStakeGo =
+              State.mkGoSnapShot
+                (State.mkSetSnapShot (State.calculatePoolDistr go) (State.MarkSnapShot go (EpochNo 0) 0))
+          , ssFee = epochStateSnapShotsFee
+          }
 {-# INLINEABLE getSnapShotsWithSharing #-}
 
 sourceUTxO ::

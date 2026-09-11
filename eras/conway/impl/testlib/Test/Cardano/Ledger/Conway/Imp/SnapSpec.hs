@@ -143,7 +143,8 @@ isPoolInLeaderDistr pool = Map.member pool . unPoolDistr <$> getsNES nesPdL
 
 isPoolInRewardSnapshot :: KeyHash StakePool -> ImpTestM era Bool
 isPoolInRewardSnapshot pool =
-  Map.member pool . unPoolDistr . calculatePoolDistr <$> getsNES (nesEsL . esSnapshotsL . ssStakeGoL)
+  Map.member pool . unPoolDistr . calculatePoolDistr . gsSnapShot
+    <$> getsNES (nesEsL . esSnapshotsL . ssStakeGoL)
 
 setupRetiredPoolInLeaderDistr :: ConwayEraImp era => ImpTestM era (KeyHash StakePool)
 setupRetiredPoolInLeaderDistr = do

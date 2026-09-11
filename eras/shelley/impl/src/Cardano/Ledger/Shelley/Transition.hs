@@ -598,7 +598,7 @@ resetStakeDistribution ::
   NewEpochState era
 resetStakeDistribution nes =
   nes
-    & nesEsL . esSnapshotsL . ssStakeMarkL .~ initSnapShot
+    & nesEsL . esSnapshotsL . ssStakeMarkL . msSnapShotL .~ initSnapShot
     & nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL .~ poolDistr
     & nesPdL .~ poolDistr
   where
