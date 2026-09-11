@@ -408,6 +408,5 @@ ppCoinsPerUTxOByte =
   PParam
     { ppName = "utxoCostPerByte"
     , ppLens = ppCoinsPerUTxOByteL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOByteL
+    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOByteL Nothing
     }
