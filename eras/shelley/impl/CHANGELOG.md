@@ -20,6 +20,7 @@
   - `TxBody TopTx ShelleyEra`
   - `Tx TopTx ShelleyEra`
   - `Update era`
+* Re-export the `msSnapShotL`, `ssSnapShotL`, `gsSnapShotL` lenses from `Cardano.Ledger.Shelley.LedgerState`
 
 ### `testlib`
 

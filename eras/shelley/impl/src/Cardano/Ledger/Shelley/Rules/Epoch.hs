@@ -99,7 +99,7 @@ instance
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots era
-  , Signal (EraRule "SNAP" era) ~ ()
+  , Signal (EraRule "SNAP" era) ~ EpochNo
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
@@ -125,7 +125,7 @@ epochTransition ::
   ( Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots era
-  , Signal (EraRule "SNAP" era) ~ ()
+  , Signal (EraRule "SNAP" era) ~ EpochNo
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
@@ -155,7 +155,7 @@ epochTransition = do
       utxoSt = lsUTxOState ls
       certState = ls ^. lsCertStateL
   ss' <-
-    trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
+    trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, e)
 
   PoolreapState utxoSt' chainAccountState' adjustedCertState <-
     trans @(EraRule "POOLREAP" era) $

@@ -659,7 +659,7 @@ epochStateStakePoolsL = esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 epochStateStakeDistrL ::
   Lens' (EpochState era) ActiveStake
-epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssActiveStakeL
+epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . msSnapShotL . ssActiveStakeL
 
 potEqualsObligation ::
   (EraGov era, EraCertState era) =>

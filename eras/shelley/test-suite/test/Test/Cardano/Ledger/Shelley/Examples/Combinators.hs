@@ -526,10 +526,13 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
       } = esSnapshots es
     snaps =
       SnapShots
-        { ssStakeMark = snap
+        { -- 'newSnapshot' is applied before 'newEpoch', so the epoch being
+          -- entered -- the one the SNAP rule stamps on the fresh mark -- is the
+          -- successor of the state's current epoch.
+          ssStakeMark = MarkSnapShot snap (succ (nesEL nes)) 0
         , ssStakeMarkPoolDistr = calculatePoolDistr snap
-        , ssStakeSet = ssMark
-        , ssStakeGo = ssSet
+        , ssStakeSet = mkSetSnapShot (calculatePoolDistr (msSnapShot ssMark)) ssMark
+        , ssStakeGo = mkGoSnapShot ssSet
         , ssFee = fee
         }
     es' = es {esSnapshots = snaps}
