@@ -85,6 +85,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeNullStrictMaybe,
+  encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
@@ -941,12 +943,12 @@ ppPerasMinCandidateBlockAge =
   PParam
     { ppName = "perasMinCandidateBlockAge"
     , ppLens = ppPerasMinCandidateBlockAgeL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 49
             , ppuLens = ppuPerasMinCandidateBlockAgeL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -955,12 +957,12 @@ ppPerasHealingFactor =
   PParam
     { ppName = "perasHealingFactor"
     , ppLens = ppPerasHealingFactorL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 50
             , ppuLens = ppuPerasHealingFactorL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -969,12 +971,12 @@ ppPerasCertBoost =
   PParam
     { ppName = "perasCertBoost"
     , ppLens = ppPerasCertBoostL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 51
             , ppuLens = ppuPerasCertBoostL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -983,12 +985,12 @@ ppPerasTargetCommitteeSize =
   PParam
     { ppName = "perasTargetCommitteeSize"
     , ppLens = ppPerasTargetCommitteeSizeL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 52
             , ppuLens = ppuPerasTargetCommitteeSizeL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -997,12 +999,17 @@ ppPerasBootstrapRound =
   PParam
     { ppName = "perasBootstrapRound"
     , ppLens = ppPerasBootstrapRoundL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 53
             , ppuLens = ppuPerasBootstrapRoundL
+            , ppuEraCodec =
+                Just $
+                  EraCodec
+                    { eraCodecEncoder = encodeNullStrictMaybe encCBOR
+                    , eraCodecDecoder = decodeNullStrictMaybe decCBOR
+                    }
             }
     }
 
