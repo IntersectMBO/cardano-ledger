@@ -109,6 +109,7 @@ instance SpecTranslate DijkstraEra (TxBody TopTx DijkstraEra) where
         <*> (Agda.MkHSSet <$> toSpecRep (txb ^. guardsTxBodyL))
         <*> toSpecRep (txb ^. directDepositsTxBodyL)
         <*> toSpecRep (txb ^. accountBalanceIntervalsTxBodyL)
+        <*> toSpecRep (txb ^. startingAccountBalanceIntervalsTxBodyL)
 
 instance SpecTranslate DijkstraEra (TxBody SubTx DijkstraEra) where
   type SpecRep DijkstraEra (TxBody SubTx DijkstraEra) = Agda.TxBodySub
