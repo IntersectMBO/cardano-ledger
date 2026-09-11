@@ -1457,6 +1457,18 @@ instance HasSimpleRep SnapShot
 
 instance HasSpec SnapShot
 
+instance HasSimpleRep MarkSnapShot
+
+instance HasSpec MarkSnapShot
+
+instance HasSimpleRep SetSnapShot
+
+instance HasSpec SetSnapShot
+
+instance HasSimpleRep GoSnapShot
+
+instance HasSpec GoSnapShot
+
 instance HasSimpleRep Stake
 
 instance HasSpec Stake

@@ -15,7 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   SnapEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, unNonZero)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, unNonZero)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -56,7 +56,7 @@ data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
 instance (EraTxOut era, EraStake era, EraCertState era) => STS (SNAP era) where
   type State (SNAP era) = SnapShots era
-  type Signal (SNAP era) = ()
+  type Signal (SNAP era) = EpochNo
   type Environment (SNAP era) = SnapEnv era
   type BaseM (SNAP era) = ShelleyBase
   type PredicateFailure (SNAP era) = Void
@@ -75,13 +75,13 @@ instance (EraTxOut era, EraStake era, EraCertState era) => STS (SNAP era) where
 snapTransition ::
   (EraStake era, EraCertState era) => TransitionRule (SNAP era)
 snapTransition = do
-  TRC (snapEnv, s, _) <- judgmentContext
+  TRC (snapEnv, s, eNo) <- judgmentContext
 
   let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) _pp = snapEnv
       instantStake = ls ^. instantStakeG
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap =
-        snapShotFromInstantStake 0 instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+        snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
@@ -93,10 +93,11 @@ snapTransition = do
 
   pure $
     SnapShots
-      { ssStakeMark = istakeSnap
+      { -- Pre-Dijkstra eras have no Leios committee, so its size is zero.
+        ssStakeMark = MarkSnapShot istakeSnap eNo 0
       , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet = ssStakeMark s
-      , ssStakeGo = ssStakeSet s
+        ssStakeSet = mkSetSnapShot (ssStakeMarkPoolDistr s) (ssStakeMark s)
+      , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }

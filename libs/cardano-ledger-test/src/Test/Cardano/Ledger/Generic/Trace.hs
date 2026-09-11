@@ -187,11 +187,13 @@ makeEpochState gstate ledgerstate =
 snaps ::
   (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots era
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
-  SnapShots snap (calculatePoolDistr snap) snap snap f
+  SnapShots mark (calculatePoolDistr snap) set (mkGoSnapShot set) f
   where
     pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
     snap = stakeDistr u dstate pstate
+    mark = MarkSnapShot snap (EpochNo 0) 0
+    set = mkSetSnapShot (calculatePoolDistr snap) mark
 
 -- ==============================================================================
 
