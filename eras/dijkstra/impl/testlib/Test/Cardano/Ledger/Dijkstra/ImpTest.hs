@@ -23,6 +23,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   balanceSubTransactions,
   switchTxToLegacyMode,
   mkTopTxWithSubTxs,
+  traverseSubTxs,
   withPostFixupSubTxs,
 ) where
 
@@ -144,24 +145,45 @@ instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure DijkstraEra w
   injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = Conway.StakeKeyHasNonZeroAccountBalanceDELEG c
   injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into DijkstraEra"
 
-instance InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
-  injectFailure =
-    injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
-      . SubLedgerFailure
-      . SubUtxowFailure
-      . SubUtxoFailure
-
 instance InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure DijkstraEra where
-  injectFailure =
-    injectFailure @"LEDGER" @DijkstraSubLedgersPredFailure
-      . SubLedgerFailure
-      . SubUtxowFailure
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubUtxowPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubUtxoPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
+  injectFailure = SubUtxowFailure . injectFailure @"SUBUTXOW"
 
 -- | A top level transaction that nests the given sub-transactions and
 -- is otherwise empty.
 mkTopTxWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
 mkTopTxWithSubTxs subTxs =
   mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
+
+-- | Apply an effectful modification to every sub-transaction of a top
+-- level transaction.
+--
+-- Sub-transactions are keyed by their transaction id, so a modification
+-- that makes two of them equal keeps only the first.
+traverseSubTxs ::
+  ( Applicative m
+  , EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  (Tx SubTx era -> m (Tx SubTx era)) ->
+  Tx TopTx era ->
+  m (Tx TopTx era)
+traverseSubTxs f tx =
+  replaceSubTxs <$> traverse f (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
+  where
+    replaceSubTxs subTxs =
+      tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
 
 -- | Apply a modification to every sub-transaction, after the given
 -- fixup `f` has run, in order to provoke a failure that `f` otherwise
@@ -170,10 +192,6 @@ mkTopTxWithSubTxs subTxs =
 -- The top level transaction is signed again afterwards, since
 -- sub-transactions are part of its body and modifying one invalidates
 -- its witnesses.
---
--- Sub-transactions are keyed by transaction id, so a modification that
--- makes two of them equal would silently drop one. Report this as a
--- test failure.
 withPostFixupSubTxs ::
   ( HasCallStack
   , DijkstraEraImp era
@@ -181,12 +199,7 @@ withPostFixupSubTxs ::
   (Tx SubTx era -> ImpTestM era (Tx SubTx era)) ->
   ImpTestM era a ->
   ImpTestM era a
-withPostFixupSubTxs f = withPostFixup $ \tx -> do
-  subTxs <- traverse f . OMap.elems $ tx ^. bodyTxL . subTransactionsTxBodyL
-  let modifiedSubTxs = OMap.fromFoldable subTxs
-  unless (OMap.size modifiedSubTxs == length subTxs) $
-    assertFailure "Modifying the sub-transactions resulted in collision of transaction id"
-  rederiveAddrTxWits $ tx & bodyTxL . subTransactionsTxBodyL .~ modifiedSubTxs
+withPostFixupSubTxs f = withPostFixup $ traverseSubTxs f >=> rederiveAddrTxWits
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

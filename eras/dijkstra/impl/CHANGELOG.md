@@ -96,7 +96,7 @@
 ### `testlib`
 
 * Add `InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era` as a superclass of `DijkstraEraImp`
-* Add `mkTopTxWithSubTxs` and `withPostFixupSubTxs`
+* Add `mkTopTxWithSubTxs`, `traverseSubTxs` and `withPostFixupSubTxs`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec`
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
