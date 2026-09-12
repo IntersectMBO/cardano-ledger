@@ -16,6 +16,10 @@ module Cardano.Ledger.Dijkstra (
   DijkstraEra,
   ApplyTxError (..),
   mkDijkstraStAnnTopTx,
+
+  -- * Forecast
+  DijkstraForecast (..),
+  DijkstraEraForecast (..),
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -41,7 +45,10 @@ import Cardano.Ledger.Dijkstra.Block ()
 import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
-import Cardano.Ledger.Dijkstra.Forecast ()
+import Cardano.Ledger.Dijkstra.Forecast (
+  DijkstraEraForecast (..),
+  DijkstraForecast (..),
+ )
 import Cardano.Ledger.Dijkstra.Genesis ()
 import Cardano.Ledger.Dijkstra.Governance ()
 import Cardano.Ledger.Dijkstra.Rules (
