@@ -2,6 +2,8 @@
 
 ## 0.1.1.0
 
+* Add `LeiosEraBlockHeader` typeclass
+* Add `bodyHeaderL`, `sigHeaderL`
 * Rename `EbAnnouncement` to `EbReferencesAnnouncement`
 * Export `HeaderConstr` from `Cardano.Protocol.Praos.BlockHeader` and `Cardano.Protocol.Leios.BlockHeader`
 
