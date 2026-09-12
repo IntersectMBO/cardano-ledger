@@ -1712,6 +1712,7 @@ tryTxsInBlock modifyBlock txs finalState blockIssuer = do
         , tbhBHash = hashBlockBody blockBody
         , tbhSlot = slotNo
         , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 curMajor) curMinor
+        , tbhEbRefsAnn = SNothing
         }
     block = modifyBlock Block {blockHeader, blockBody}
 

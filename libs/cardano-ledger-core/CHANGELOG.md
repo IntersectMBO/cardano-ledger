@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`
 * Rename `EraIndependentEb` to `EraIndependentEbReferences`
 * Add `EbReferencesAnnouncement` (moved and renamed from `EbAnnouncement` in `cardano-protocol`)
 * Add `blockHeaderL`, `blockBodyL`, `bhviProtVerL`
@@ -76,6 +77,7 @@
 
 ### `testlib`
 
+* Add `tbhEbRefsAnn` to `TestBlockHeader`
 * Regenerate the compiled scripts in `Test.Cardano.Ledger.Plutus.Examples` with `plutus-tx-1.70`.
   All `PlutusV3` and `PlutusV4` script hashes change, and the `PlutusV4` scripts now expect the
   list-encoded `ScriptContext` introduced in `plutus-ledger-api-1.69`
@@ -116,7 +118,7 @@
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`
-* Remove `consumed ` from `EraUTxO`
+* Remove `consumed` from `EraUTxO`
 * Remove no longer needed `(Credential DRepRole -> Maybe Coin)` argument from:
   - `getTotalRefundsTxCerts`
   - `getTotalRefundsTxBody`

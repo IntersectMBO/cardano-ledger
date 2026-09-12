@@ -117,6 +117,10 @@ data HeaderBody crypto = HeaderBody
 hbVersionInfoL :: Lens' (HeaderBody crypto) BlockHeaderVersionInfo
 hbVersionInfoL = lens hbVersionInfo (\hb vi -> hb {hbVersionInfo = vi})
 
+hbEbReferencesAnnouncementL :: Lens' (HeaderBody crypto) (StrictMaybe EbReferencesAnnouncement)
+hbEbReferencesAnnouncementL =
+  lens hbEbReferencesAnnouncement (\hb ma -> hb {hbEbReferencesAnnouncement = ma})
+
 headerBodyEncodingVersion :: HeaderBody crypto -> Version
 headerBodyEncodingVersion =
   fromMaybe maxBound . mkVersion32 . bhviHighestSupportedMajorVersion . hbVersionInfo
@@ -269,3 +273,5 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
 instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
   versionInfoBlockHeaderL =
     blockHeaderL . headerBodyL . hbVersionInfoL
+  ebReferencesAnnouncementBlockHeaderL =
+    blockHeaderL . headerBodyL . hbEbReferencesAnnouncementL

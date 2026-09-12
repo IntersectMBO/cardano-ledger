@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.BlockHeader where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo, getVersion32, mkVersion32)
+import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo, StrictMaybe (..), getVersion32, mkVersion32)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Control.DeepSeq (NFData)
@@ -24,6 +24,7 @@ data TestBlockHeader
   , tbhBHash :: Hash HASH EraIndependentBlockBody
   , tbhSlot :: SlotNo
   , tbhVersionInfo :: BlockHeaderVersionInfo
+  , tbhEbRefsAnn :: StrictMaybe EbReferencesAnnouncement
   }
   deriving (Generic)
 
@@ -50,6 +51,8 @@ instance Era era => PraosEraBlockHeader TestBlockHeader era where
 
 instance Era era => LeiosEraBlockHeader TestBlockHeader era where
   versionInfoBlockHeaderL = blockHeaderL . lens tbhVersionInfo (\bh vi -> bh {tbhVersionInfo = vi})
+  ebReferencesAnnouncementBlockHeaderL =
+    blockHeaderL . lens tbhEbRefsAnn (\hb ma -> hb {tbhEbRefsAnn = ma})
 
 mkTestBlockHeaderNoNonce ::
   forall era h.
@@ -62,4 +65,5 @@ mkTestBlockHeaderNoNonce block =
     , tbhBHash = block ^. blockBodyHashBlockHeaderL
     , tbhSlot = block ^. slotNoBlockHeaderL
     , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 (eraProtVerLow @era)) 0
+    , tbhEbRefsAnn = SNothing
     }
