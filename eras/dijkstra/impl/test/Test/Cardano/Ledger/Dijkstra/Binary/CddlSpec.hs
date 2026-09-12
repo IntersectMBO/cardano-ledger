@@ -111,4 +111,4 @@ spec = do
         genLeiosBlock
         v
         "block"
-      fullCddlSpec @Leios.EbAnnouncement v "eb_announcement"
+      fullCddlSpec @Leios.EbReferencesAnnouncement v "eb_references_announcement"

@@ -20,7 +20,7 @@
 module Cardano.Protocol.Leios.BlockHeader (
   Header (HeaderConstr, Header, headerBody, headerSig),
   HeaderBody (..),
-  EbAnnouncement (..),
+  EbReferencesAnnouncement (..),
   headerHash,
   headerSize,
 ) where
@@ -51,7 +51,7 @@ import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
-  EraIndependentEb,
+  EraIndependentEbReferences,
   HASH,
   HashAnnotated (..),
   SafeHash,
@@ -83,24 +83,25 @@ import Lens.Micro (lens, to)
 import NoThunks.Class (NoThunks (..))
 
 -- | Announcement of an Endorser Block (EB).
-data EbAnnouncement = EbAnnouncement
-  { ebAnnouncementHash :: !(SafeHash EraIndependentEb)
-  , ebAnnouncementSize :: !Word32
-  -- ^ Size of the EB block closure
+data EbReferencesAnnouncement = EbReferencesAnnouncement
+  { ebReferencesAnnouncementHash :: !(SafeHash EraIndependentEbReferences)
+  -- ^ Hash of the announced Endorsement Block References
+  , ebReferencesAnnouncementSize :: !Word32
+  -- ^ Size of the announced Endorsement Block References
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData)
 
-instance EncCBOR EbAnnouncement where
-  encCBOR (EbAnnouncement h s) =
+instance EncCBOR EbReferencesAnnouncement where
+  encCBOR (EbReferencesAnnouncement h s) =
     encodeListLen 2
       <> encCBOR h
       <> encCBOR s
 
-instance DecCBOR EbAnnouncement where
+instance DecCBOR EbReferencesAnnouncement where
   decCBOR =
-    decodeRecordNamed "EbAnnouncement" (const 2) $
-      EbAnnouncement
+    decodeRecordNamed "EbReferencesAnnouncement" (const 2) $
+      EbReferencesAnnouncement
         <$> decCBOR
         <*> decCBOR
 
@@ -127,7 +128,7 @@ data HeaderBody crypto = HeaderBody
   -- ^ protocol version
   , hbBlockBodyContainsLeiosCert :: !Bool
   -- ^ whether the block body contains a Leios certificate
-  , hbEbAnnouncement :: !(StrictMaybe EbAnnouncement)
+  , hbEbReferencesAnnouncement :: !(StrictMaybe EbReferencesAnnouncement)
   -- ^ Announcement of Endorser Block (EB)
   }
   deriving (Generic)
@@ -210,7 +211,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
       , hbOCert
       , hbProtVer
       , hbBlockBodyContainsLeiosCert
-      , hbEbAnnouncement
+      , hbEbReferencesAnnouncement
       } =
       encodeListLen 12
         <> encCBOR hbBlockNo
@@ -224,7 +225,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
         <> encCBOR hbOCert
         <> encCBOR hbProtVer
         <> encCBOR hbBlockBodyContainsLeiosCert
-        <> encodeNullStrictMaybe encCBOR hbEbAnnouncement
+        <> encodeNullStrictMaybe encCBOR hbEbReferencesAnnouncement
 
 instance Crypto crypto => DecCBOR (HeaderBody crypto) where
   decCBOR =
