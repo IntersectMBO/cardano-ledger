@@ -34,7 +34,7 @@ module Cardano.Ledger.Block (
   EbReferencesAnnouncement (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..))
+import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..), StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -141,6 +141,8 @@ class Era era => LeiosEraBlockHeader h era where
   prevNonceBlockHeaderL = lens (const NeutralNonce) (\b _ -> b)
 
   versionInfoBlockHeaderL :: Lens' (Block h era) BlockHeaderVersionInfo
+
+  ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)
 
 -- | Version information reported by the block producer in the block header.
 --
