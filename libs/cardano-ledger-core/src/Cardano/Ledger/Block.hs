@@ -12,7 +12,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -27,9 +26,10 @@ module Cardano.Ledger.Block (
   BbodySignal (..),
   EraBlockHeader (..),
   EbReferencesAnnouncement (..),
+  LeiosEraBlockHeader (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (..),
@@ -140,3 +140,6 @@ instance DecCBOR EbReferencesAnnouncement where
       EbReferencesAnnouncement
         <$> decCBOR
         <*> decCBOR
+
+class EraBlockHeader h era => LeiosEraBlockHeader h era where
+  ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)

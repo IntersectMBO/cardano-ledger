@@ -50,6 +50,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (
   EbReferencesAnnouncement,
   EraBlockHeader (..),
+  LeiosEraBlockHeader (..),
   headerBlockL,
  )
 import Cardano.Ledger.Core (Era)
@@ -261,3 +262,9 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
     headerBlockL . bodyHeaderL . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
   protVerBlockHeaderL =
     headerBlockL . bodyHeaderL . lens hbProtVer (\hb pv -> hb {hbProtVer = pv})
+
+instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
+  ebReferencesAnnouncementBlockHeaderL =
+    headerBlockL
+      . bodyHeaderL
+      . lens hbEbReferencesAnnouncement (\hb ma -> hb {hbEbReferencesAnnouncement = ma})
