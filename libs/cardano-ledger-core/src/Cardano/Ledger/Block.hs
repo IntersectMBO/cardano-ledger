@@ -19,6 +19,8 @@
 
 module Cardano.Ledger.Block (
   Block (..),
+  headerBlockL,
+  bodyBlockL,
   bheader,
   bbody,
   BbodySignal (..),
@@ -36,7 +38,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, (^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era = Block
@@ -61,6 +63,12 @@ deriving anyclass instance
   NoThunks (Block h era)
 
 instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
+
+headerBlockL :: Lens' (Block h era) h
+headerBlockL = lens blockHeader (\b h -> b {blockHeader = h})
+
+bodyBlockL :: Lens' (Block h era) (BlockBody era)
+bodyBlockL = lens blockBody (\b h -> b {blockBody = h})
 
 bheader ::
   Block h era ->
