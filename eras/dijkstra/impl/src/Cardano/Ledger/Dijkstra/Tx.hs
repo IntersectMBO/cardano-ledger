@@ -39,6 +39,7 @@ import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   IsPhase2Valid (..),
  )
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unRedeemersL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
@@ -336,6 +337,13 @@ dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})
 instance AlonzoEraTx DijkstraEra where
   isPhase2ValidTxL = dijkstraTxL . isPhase2ValidDijkstraTxL
   {-# INLINE isPhase2ValidTxL #-}
+
+  getTotalExUnits tx =
+    foldMap snd (tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+      <> withBothTxLevels
+        tx
+        (\topTx -> foldMap getTotalExUnits (topTx ^. bodyTxL . subTransactionsTxBodyL))
+        (const mempty)
 
 instance Typeable l => DecCBOR (Annotator (Tx l DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR

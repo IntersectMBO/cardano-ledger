@@ -98,8 +98,7 @@ conwayTxL :: Lens' (Tx l ConwayEra) (AlonzoTx l ConwayEra)
 conwayTxL = lens unConwayTx (\x y -> x {unConwayTx = y})
 
 getConwayMinFeeTx ::
-  ( EraTx era
-  , AlonzoEraTxWits era
+  ( AlonzoEraTx era
   , ConwayEraPParams era
   ) =>
   PParams era ->

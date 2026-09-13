@@ -333,9 +333,13 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
         >=> fixupOutputDatums
         >=> fixupDatums
         >=> fixupTxOuts
-        >=> txWithMaxRedeemers
+        >=> addMissingRedeemers
         >=> fixupPPHash
         >=> updateAddrTxWits
+    addMissingRedeemers subTx = do
+      let originalRedeemers = subTx ^. witsTxL . rdmrsTxWitsL
+      withMaxRedeemers <- txWithMaxRedeemers subTx
+      pure $ withMaxRedeemers & witsTxL . rdmrsTxWitsL %~ (originalRedeemers <>)
     addSubTxIn subTx
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
       | otherwise = do

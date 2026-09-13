@@ -53,7 +53,6 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
-  collectPlutusScriptsWithContext,
   evalPlutusScriptsWithLogs,
   evalTxExUnits,
  )
@@ -73,7 +72,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity, hashScriptIntegrity, mkScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), plutusScriptsWithContextStAnnTx)
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -93,6 +92,7 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   plutusLanguage,
  )
+import Cardano.Ledger.Shelley.API.Mempool (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   nesEsL,
@@ -483,7 +483,8 @@ impPlutusWithContexts tx = do
   globals <- use impGlobalsL
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
-  case collectPlutusScriptsWithContext (epochInfo globals) (systemStart globals) pp tx utxo of
+  let stAnnTx = mkStAnnTx (epochInfo globals) (systemStart globals) pp utxo mempty tx
+  case plutusScriptsWithContextStAnnTx stAnnTx of
     Left errs ->
       assertFailure $
         "Did not expect to get context translation failures: " ++ unlines (map show $ NonEmpty.toList errs)

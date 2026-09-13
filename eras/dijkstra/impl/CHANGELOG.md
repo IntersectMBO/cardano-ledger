@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
+* Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
 * Add `WithdrawalAccountsMissingFromOriginal` constructor to `EntitiesPredFailure`
 * Rename `EntitiesPredFailure` constructors:
@@ -95,6 +97,7 @@
 
 ### `testlib`
 
+* Preserve explicitly supplied redeemers when fixing up subtransactions.
 * Add `InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era` as a superclass of `DijkstraEraImp`
 * Add `mkTopTxWithSubTxs`, `traverseSubTxs` and `withPostFixupSubTxs`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec`
