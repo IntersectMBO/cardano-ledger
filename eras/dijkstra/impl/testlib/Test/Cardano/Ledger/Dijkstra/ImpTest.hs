@@ -123,6 +123,7 @@ class
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>

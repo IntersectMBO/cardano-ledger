@@ -93,6 +93,9 @@ instance InjectRuleFailure "SUBLEDGERS" DijkstraSubLedgersPredFailure DijkstraEr
 instance InjectRuleFailure "SUBLEDGERS" DijkstraSubLedgerPredFailure DijkstraEra where
   injectFailure = SubLedgerFailure
 
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubPoolPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
 instance InjectRuleEvent "SUBLEDGERS" DijkstraSubLedgersEvent DijkstraEra
 
 newtype DijkstraSubLedgersEvent era
