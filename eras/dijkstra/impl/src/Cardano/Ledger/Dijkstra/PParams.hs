@@ -663,12 +663,12 @@ ppMaxRefScriptSizePerBlock =
   PParam
     { ppName = "maxRefScriptSizePerBlock"
     , ppLens = ppMaxRefScriptSizePerBlockL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 34
             , ppuLens = ppuMaxRefScriptSizePerBlockL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -677,12 +677,12 @@ ppMaxRefScriptSizePerTx =
   PParam
     { ppName = "maxRefScriptSizePerTx"
     , ppLens = ppMaxRefScriptSizePerTxL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 35
             , ppuLens = ppuMaxRefScriptSizePerTxL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -691,12 +691,12 @@ ppRefScriptCostStride =
   PParam
     { ppName = "refScriptCostStride"
     , ppLens = ppRefScriptCostStrideL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 36
             , ppuLens = ppuRefScriptCostStrideL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -705,12 +705,12 @@ ppRefScriptCostMultiplier =
   PParam
     { ppName = "refScriptCostMultiplier"
     , ppLens = ppRefScriptCostMultiplierL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 37
             , ppuLens = ppuRefScriptCostMultiplierL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -719,12 +719,12 @@ ppMaxPledgeLeverage =
   PParam
     { ppName = "maxPledgeLeverage"
     , ppLens = ppMaxPledgeLeverageL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 38
             , ppuLens = ppuMaxPledgeLeverageL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -733,12 +733,12 @@ ppMinPoolMargin =
   PParam
     { ppName = "minPoolMargin"
     , ppLens = ppMinPoolMarginL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 39
             , ppuLens = ppuMinPoolMarginL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -747,12 +747,12 @@ ppLeiosAnnouncementPeriodLength =
   PParam
     { ppName = "leiosAnnouncementPeriodLength"
     , ppLens = ppLeiosAnnouncementPeriodLengthL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 40
             , ppuLens = ppuLeiosAnnouncementPeriodLengthL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -761,12 +761,12 @@ ppLeiosVotePeriodLength =
   PParam
     { ppName = "leiosVotePeriodLength"
     , ppLens = ppLeiosVotePeriodLengthL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 41
             , ppuLens = ppuLeiosVotePeriodLengthL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -775,12 +775,12 @@ ppLeiosDiffusionPeriodLength =
   PParam
     { ppName = "leiosDiffusionPeriodLength"
     , ppLens = ppLeiosDiffusionPeriodLengthL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 42
             , ppuLens = ppuLeiosDiffusionPeriodLengthL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -789,12 +789,12 @@ ppLeiosCommitteeSize =
   PParam
     { ppName = "leiosCommitteeSize"
     , ppLens = ppLeiosCommitteeSizeL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 43
             , ppuLens = ppuLeiosCommitteeSizeL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -803,12 +803,12 @@ ppLeiosQuorumStakeThreshold =
   PParam
     { ppName = "leiosQuorumStakeThreshold"
     , ppLens = ppLeiosQuorumStakeThresholdL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 44
             , ppuLens = ppuLeiosQuorumStakeThresholdL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -817,12 +817,12 @@ ppMaxEndorserBlockReferencesSize =
   PParam
     { ppName = "maxEndorserBlockReferencesSize"
     , ppLens = ppMaxEndorserBlockReferencesSizeL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 45
             , ppuLens = ppuMaxEndorserBlockReferencesSizeL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -831,12 +831,12 @@ ppMaxEndorserBlockTxsSize =
   PParam
     { ppName = "maxEndorserBlockTxsSize"
     , ppLens = ppMaxEndorserBlockTxsSizeL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 46
             , ppuLens = ppuMaxEndorserBlockTxsSizeL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -845,12 +845,12 @@ ppMaxEndorserBlockExUnits =
   PParam
     { ppName = "maxEndorserBlockExecutionUnits"
     , ppLens = ppMaxEndorserBlockExUnitsL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 47
             , ppuLens = ppuMaxEndorserBlockExUnitsL
+            , ppuEraCodec = Nothing
             }
     }
 
@@ -859,12 +859,12 @@ ppMaxRefScriptSizePerEndorserBlock =
   PParam
     { ppName = "maxRefScriptSizePerEndorserBlock"
     , ppLens = ppMaxRefScriptSizePerEndorserBlockL
-    , ppEraDecoder = Nothing
     , ppUpdate =
         Just
           PParamUpdate
             { ppuTag = 48
             , ppuLens = ppuMaxRefScriptSizePerEndorserBlockL
+            , ppuEraCodec = Nothing
             }
     }
 

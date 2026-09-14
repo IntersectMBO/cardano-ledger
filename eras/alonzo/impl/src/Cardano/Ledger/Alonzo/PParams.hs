@@ -649,8 +649,7 @@ ppCoinsPerUTxOWord =
   PParam
     { ppName = "utxoCostPerByte"
     , ppLens = ppCoinsPerUTxOWordL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOWordL
+    , ppUpdate = Just $ PParamUpdate 17 ppuCoinsPerUTxOWordL Nothing
     }
 
 ppCostModels :: AlonzoEraPParams era => PParam era
@@ -658,8 +657,7 @@ ppCostModels =
   PParam
     { ppName = "costModels"
     , ppLens = ppCostModelsL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 18 ppuCostModelsL
+    , ppUpdate = Just $ PParamUpdate 18 ppuCostModelsL Nothing
     }
 
 ppPrices :: AlonzoEraPParams era => PParam era
@@ -667,8 +665,7 @@ ppPrices =
   PParam
     { ppName = "executionUnitPrices"
     , ppLens = ppPricesL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 19 ppuPricesL
+    , ppUpdate = Just $ PParamUpdate 19 ppuPricesL Nothing
     }
 
 ppMaxTxExUnits :: AlonzoEraPParams era => PParam era
@@ -676,8 +673,7 @@ ppMaxTxExUnits =
   PParam
     { ppName = "maxTxExecutionUnits"
     , ppLens = ppMaxTxExUnitsL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 20 ppuMaxTxExUnitsL
+    , ppUpdate = Just $ PParamUpdate 20 ppuMaxTxExUnitsL Nothing
     }
 
 ppMaxBlockExUnits :: AlonzoEraPParams era => PParam era
@@ -685,8 +681,7 @@ ppMaxBlockExUnits =
   PParam
     { ppName = "maxBlockExecutionUnits"
     , ppLens = ppMaxBlockExUnitsL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 21 ppuMaxBlockExUnitsL
+    , ppUpdate = Just $ PParamUpdate 21 ppuMaxBlockExUnitsL Nothing
     }
 
 ppMaxValSize :: AlonzoEraPParams era => PParam era
@@ -694,8 +689,7 @@ ppMaxValSize =
   PParam
     { ppName = "maxValueSize"
     , ppLens = ppMaxValSizeL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 22 ppuMaxValSizeL
+    , ppUpdate = Just $ PParamUpdate 22 ppuMaxValSizeL Nothing
     }
 
 ppCollateralPercentage :: AlonzoEraPParams era => PParam era
@@ -703,8 +697,7 @@ ppCollateralPercentage =
   PParam
     { ppName = "collateralPercentage"
     , ppLens = ppCollateralPercentageL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 23 ppuCollateralPercentageL
+    , ppUpdate = Just $ PParamUpdate 23 ppuCollateralPercentageL Nothing
     }
 
 ppMaxCollateralInputs :: AlonzoEraPParams era => PParam era
@@ -712,6 +705,5 @@ ppMaxCollateralInputs =
   PParam
     { ppName = "maxCollateralInputs"
     , ppLens = ppMaxCollateralInputsL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 24 ppuMaxCollateralInputsL
+    , ppUpdate = Just $ PParamUpdate 24 ppuMaxCollateralInputsL Nothing
     }
