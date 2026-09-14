@@ -6,7 +6,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), unsafeNonZero)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
@@ -119,48 +119,48 @@ spec = describe "POOL" $ do
       submitTx_ tx
       expectPool kh (Just vrf)
       expectFuturePool kh (Just vrfNew)
-      expectVRFs [vrf, vrfNew]
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
       passEpoch
       expectPool kh (Just vrfNew)
       expectFuturePool kh Nothing
-      expectVRFs [vrfNew]
+      expectVRFs [(vrfNew, 1)]
 
     it "keep tracking the active VRF after re-registering with it and then with a fresh one" $ do
       (kh, vrf) <- registerNewPool
       -- re-register with the pool's own active VRF ...
       registerPoolTx <$> poolParams kh vrf >>= submitTx_
       expectFuturePool kh (Just vrf)
-      expectVRFs [vrf]
+      expectVRFs [(vrf, 1)]
       -- ... and then with a fresh one
       vrfNew <- freshKeyHashVRF
       registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
       -- the pool keeps producing blocks with the original VRF until the
       -- epoch boundary, so it must still be tracked
       expectPool kh (Just vrf)
-      expectVRFs [vrf, vrfNew]
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
       khNew <- freshKeyHash
       registerPoolTx <$> poolParams khNew vrf >>= \tx ->
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf)
       passEpoch
       expectPool kh (Just vrfNew)
-      expectVRFs [vrfNew]
+      expectVRFs [(vrfNew, 1)]
       -- after the epoch boundary the original VRF can be taken over
       registerPoolTx <$> poolParams khNew vrf >>= submitTx_
-      expectVRFs [vrf, vrfNew]
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
 
     it "re-registering with the active VRF releases the pending future VRF" $ do
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
       registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
-      expectVRFs [vrf, vrfNew]
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
       -- going back to the active VRF frees the previously requested one
       registerPoolTx <$> poolParams kh vrf >>= submitTx_
       expectFuturePool kh (Just vrf)
-      expectVRFs [vrf]
+      expectVRFs [(vrf, 1)]
       khNew <- freshKeyHash
       registerPoolTx <$> poolParams khNew vrfNew >>= submitTx_
       expectPool khNew (Just vrfNew)
-      expectVRFs [vrf, vrfNew]
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
 
   describe "maxPledgeLeverage" $ do
     -- The pledge influence factor also rewards a pool for pledging more, which would
@@ -203,7 +203,9 @@ spec = describe "POOL" $ do
       fps <- psFutureStakePoolParams <$> getPState
       sppVrf <$> Map.lookup poolKh fps `shouldBe` mbVrf
     expectVRFs vrfs =
-      Map.keysSet . psVRFKeyHashes <$> getPState `shouldReturn` Set.fromList vrfs
+      psVRFKeyHashes
+        <$> getPState
+          `shouldReturn` Map.fromList [(vrf, unsafeNonZero n) | (vrf, n) <- vrfs]
     poolParams ::
       KeyHash StakePool ->
       VRFVerKeyHash StakePoolVRF ->
