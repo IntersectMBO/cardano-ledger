@@ -20,12 +20,9 @@ import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Mismatch (..),
-  NonZero,
   ProtVer,
   ShelleyBase,
   addEpochInterval,
-  knownNonZeroBounded,
-  mapNonZero,
   natVersion,
   networkId,
   pvMajor,
@@ -52,7 +49,6 @@ import Control.State.Transition (
   (?!),
  )
 import qualified Data.Map as Map
-import Data.Maybe (fromMaybe)
 import Data.Primitive.ByteArray (sizeofByteArray)
 import Data.Word (Word64)
 import Lens.Micro
@@ -102,24 +98,6 @@ instance
 -- the pool's active one is not counted separately, which is exactly the
 -- accounting that POOLREAP maintains at the epoch boundary when future
 -- parameters are adopted.
-
-addVRFKeyHashOccurrence ::
-  VRFVerKeyHash StakePoolVRF ->
-  Map.Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
-  Map.Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-addVRFKeyHashOccurrence vrfKeyHash =
-  Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
-  where
-    -- Saturates at maxBound: if (+1) would overflow to 0, keep the existing value
-    combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
-
--- | Removes the key from the map if the count drops to 0
-removeVRFKeyHashOccurrence ::
-  VRFVerKeyHash StakePoolVRF ->
-  Map.Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
-  Map.Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-removeVRFKeyHashOccurrence = Map.update (mapNonZero (subtract 1))
-
 poolTransition ::
   forall rule era.
   ( EraPParams era
