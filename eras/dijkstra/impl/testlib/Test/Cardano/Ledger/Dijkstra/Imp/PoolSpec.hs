@@ -19,7 +19,7 @@ import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -161,6 +161,32 @@ spec = describe "POOL" $ do
       registerPoolTx <$> poolParams khNew vrfNew >>= submitTx_
       expectPool khNew (Just vrfNew)
       expectVRFs [(vrf, 1), (vrfNew, 1)]
+
+    it "re-register a pool whose VRF is shared with another pool" $ do
+      -- Two pools can only share a VRF if both registered it before VRFs had
+      -- to be unique, in which case the hard fork to protocol version 11
+      -- recorded the VRF with a count of two.
+      (kh1, vrf) <- registerNewPool
+      (kh2, vrf2) <- registerNewPool
+      modifyNES $
+        nesEsL . esLStateL . lsCertStateL . certPStateL %~ \ps ->
+          ps
+            & psStakePoolsL %~ Map.adjust (spsVrfL .~ vrf) kh2
+            & psVRFKeyHashesL %~ Map.insert vrf (unsafeNonZero 2) . Map.delete vrf2
+      expectPool kh2 (Just vrf)
+      expectVRFs [(vrf, 2)]
+      -- neither pool may keep the shared VRF when re-registering ...
+      registerPoolTx <$> poolParams kh1 vrf >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf)
+      -- ... but either may switch to a fresh one
+      vrfNew <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh1 vrfNew >>= submitTx_
+      expectFuturePool kh1 (Just vrfNew)
+      expectVRFs [(vrf, 2), (vrfNew, 1)]
+      -- and the shared VRF stays taken while any pool still uses it
+      kh3 <- freshKeyHash
+      registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
 
   describe "maxPledgeLeverage" $ do
     -- The pledge influence factor also rewards a pool for pledging more, which would
