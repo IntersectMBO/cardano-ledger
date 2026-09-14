@@ -195,6 +195,51 @@ spec = describe "SUBPOOL" $ do
           [ injectFailure . DijkstraSubPoolPredFailure $
               VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
           ]
+    it "Fails when re-registering an existing pool with an invalid network ID" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      submitTxAnn_ "Registering the pool for the first time" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert stakePoolParams
+                   ]
+          ]
+      impAnn "Reregistering the pool" $
+        submitFailingTx
+          ( mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL
+                    .~ [ RegPoolTxCert $
+                           stakePoolParams
+                             & sppAccountAddressL . accountAddressNetworkIdL .~ Mainnet
+                       ]
+              ]
+          )
+          [ injectFailure . DijkstraSubPoolPredFailure $
+              WrongNetworkPOOL (Mismatch Mainnet Testnet) (stakePoolParams ^. sppIdL)
+          ]
+    it "Fails when the declared cost is too low" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      expectedCost <- getsPParams ppMinPoolCostL
+      declaredCost <- Coin <$> choose (0, pred $ unCoin expectedCost)
+      submitTxAnn_ "Registering the pool for the first time" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert stakePoolParams
+                   ]
+          ]
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $ stakePoolParams & sppCostL .~ declaredCost
+                     ]
+            ]
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
+            Mismatch declaredCost expectedCost
+        ]
   describe "Pool retirement" $ do
     it "Can retire a pool" $ do
       spKH <- freshKeyHash
@@ -222,7 +267,21 @@ spec = describe "SUBPOOL" $ do
       passNEpochsChecking (numEpochsUntilRetired - 1) $ expectStakePoolParams spKH $ Just stakePoolParams
       passEpoch
       expectStakePoolParams spKH Nothing
-    it "Fails when trying to retire a pool in the current or previous epoch" $ do
+    it "Fails when pool is not registered" $ do
+      spKH <- freshKeyHash
+      currentEpoch <- getsNES nesELL
+      EpochNo maxEpoch <- addEpochInterval currentEpoch <$> getsPParams ppEMaxL
+      retireEpoch <- EpochNo <$> choose (succ $ unEpochNo currentEpoch, maxEpoch)
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert spKH retireEpoch]
+            ]
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure $
+            StakePoolNotRegisteredOnKeyPOOL spKH
+        ]
+    it "Fails when retirement epoch is outside valid range" $ do
       spKH <- freshKeyHash
       stakePoolParams <- genValidStakePoolParams spKH
       submitTxAnn_ "Registering a stake pool" $
