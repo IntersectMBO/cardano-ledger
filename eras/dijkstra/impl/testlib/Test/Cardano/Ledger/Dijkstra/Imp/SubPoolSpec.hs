@@ -57,7 +57,7 @@ expectStakePoolParams kh expected = impAnn "expectStakePoolParams" $ do
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SUBPOOL" $ do
-  describe "Positive" $ do
+  describe "Pool registration" $ do
     it "Can register a pool" $ do
       spKH <- freshKeyHash
       stakePoolParams <- genValidStakePoolParams spKH
@@ -69,48 +69,133 @@ spec = describe "SUBPOOL" $ do
                    ]
           ]
       expectStakePoolParams spKH $ Just stakePoolParams
-    describe "Can re-register a pool" $ do
-      it "With completely new parameters" $ do
-        spKH <- freshKeyHash
-        oldStakePoolParams <- genValidStakePoolParams spKH
-        submitTxAnn_ "Register pool" $
-          mkTopTxWithSubTxs
+    it "Fails when registering a new pool with the same VRF" $ do
+      stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
+      let
+        vrfKey = stakePoolParams1 ^. sppVrfL
+      stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
+      submitTxAnn_ "Registering the first pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert stakePoolParams1
+                   ]
+          ]
+      submitFailingTx
+        ( mkTopTxWithSubTxs
             [ mkBasicTx mkBasicTxBody
                 & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                  .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
                      ]
             ]
-        newStakePoolParams <- genValidStakePoolParams spKH
-        submitTxAnn_ "Register pool" $
-          mkTopTxWithSubTxs
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure $
+            VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
+        ]
+    it "Fails when registering a pool with an invalid network ID" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      submitFailingTx
+        ( mkTopTxWithSubTxs
             [ mkBasicTx mkBasicTxBody
                 & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $ newStakePoolParams & sppIdL .~ spKH
+                  .~ [ RegPoolTxCert $
+                         stakePoolParams & sppAccountAddressL . accountAddressNetworkIdL .~ Mainnet
                      ]
             ]
-        expectStakePoolParams spKH $ Just oldStakePoolParams
-        passEpoch
-        expectStakePoolParams spKH $ Just newStakePoolParams
-      it "With the same parameters" $ do
-        spKH <- freshKeyHash
-        oldStakePoolParams <- genValidStakePoolParams spKH
-        submitTxAnn_ "Register pool" $
-          mkTopTxWithSubTxs
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure $
+            WrongNetworkPOOL (Mismatch Mainnet Testnet) (stakePoolParams ^. sppIdL)
+        ]
+
+    it "Fails when the declared cost is too low" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      expectedCost <- getsPParams ppMinPoolCostL
+      declaredCost <- Coin <$> choose (0, pred $ unCoin expectedCost)
+      submitFailingTx
+        ( mkTopTxWithSubTxs
             [ mkBasicTx mkBasicTxBody
                 & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                  .~ [ RegPoolTxCert $ stakePoolParams & sppCostL .~ declaredCost
                      ]
             ]
-        submitTxAnn_ "Register pool" $
-          mkTopTxWithSubTxs
-            [ mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
-                     ]
-            ]
-        expectStakePoolParams spKH $ Just oldStakePoolParams
-        passEpoch
-        expectStakePoolParams spKH $ Just oldStakePoolParams
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
+            Mismatch declaredCost expectedCost
+        ]
+  describe "Pool re-registration" $ do
+    it "With completely new parameters" $ do
+      spKH <- freshKeyHash
+      oldStakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                   ]
+          ]
+      newStakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert $ newStakePoolParams & sppIdL .~ spKH
+                   ]
+          ]
+      expectStakePoolParams spKH $ Just oldStakePoolParams
+      passEpoch
+      expectStakePoolParams spKH $ Just newStakePoolParams
+    it "With the same parameters" $ do
+      spKH <- freshKeyHash
+      oldStakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                   ]
+          ]
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                   ]
+          ]
+      expectStakePoolParams spKH $ Just oldStakePoolParams
+      passEpoch
+      expectStakePoolParams spKH $ Just oldStakePoolParams
+    it "Fails when re-registering an existing pool with the same VRF as another one" $ do
+      stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
+      let
+        vrfKey = stakePoolParams1 ^. sppVrfL
+      stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
+      submitTxAnn_ "Registering the first pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert stakePoolParams1
+                   ]
+          ]
+      submitTxAnn_ "Registering the second pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert stakePoolParams2
+                   ]
+          ]
+      impAnn "Reregistering the second pool" $
+        submitFailingTx
+          ( mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL
+                    .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
+                       ]
+              ]
+          )
+          [ injectFailure . DijkstraSubPoolPredFailure $
+              VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
+          ]
+  describe "Pool retirement" $ do
     it "Can retire a pool" $ do
       spKH <- freshKeyHash
       stakePoolParams <- genValidStakePoolParams spKH
@@ -137,119 +222,32 @@ spec = describe "SUBPOOL" $ do
       passNEpochsChecking (numEpochsUntilRetired - 1) $ expectStakePoolParams spKH $ Just stakePoolParams
       passEpoch
       expectStakePoolParams spKH Nothing
-  describe "Negative" $ do
-    describe "Reusing VRF key" $ do
-      it "Fails when registering a new pool with the same VRF" $ do
-        stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
-        let
-          vrfKey = stakePoolParams1 ^. sppVrfL
-        stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
-        submitTxAnn_ "Registering the first pool" $
-          mkTopTxWithSubTxs
-            [ mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert stakePoolParams1
-                     ]
-            ]
-        submitFailingTx
-          ( mkTopTxWithSubTxs
-              [ mkBasicTx mkBasicTxBody
-                  & bodyTxL . certsTxBodyL
-                    .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
-                       ]
-              ]
-          )
-          [ injectFailure . DijkstraSubPoolPredFailure $
-              VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
+    it "Fails when trying to retire a pool in the current or previous epoch" $ do
+      spKH <- freshKeyHash
+      stakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Registering a stake pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
           ]
-      it "Fails when re-registering an existing pool with the same VRF as another one" $ do
-        stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
-        let
-          vrfKey = stakePoolParams1 ^. sppVrfL
-        stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
-        submitTxAnn_ "Registering the first pool" $
-          mkTopTxWithSubTxs
-            [ mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert stakePoolParams1
-                     ]
-            ]
-        submitTxAnn_ "Registering the second pool" $
-          mkTopTxWithSubTxs
-            [ mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert stakePoolParams2
-                     ]
-            ]
-        impAnn "Reregistering the second pool" $
-          submitFailingTx
-            ( mkTopTxWithSubTxs
-                [ mkBasicTx mkBasicTxBody
-                    & bodyTxL . certsTxBodyL
-                      .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
-                         ]
-                ]
-            )
-            [ injectFailure . DijkstraSubPoolPredFailure $
-                VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
-            ]
-  describe "Fails when registering a pool with an invalid network ID" $ do
-    it "When registering a fresh pool" $ do
-      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      expectStakePoolParams spKH $ Just stakePoolParams
+      currentEpoch <- getsNES nesELL
+      maxEpoch <- addEpochInterval currentEpoch <$> getsPParams ppEMaxL
+      retireEpoch <-
+        frequency
+          [ (1, pure currentEpoch)
+          , (49, EpochNo <$> choose (0, unEpochNo currentEpoch))
+          , (49, EpochNo <$> choose (unEpochNo maxEpoch, maxBound))
+          , (1, pure maxEpoch)
+          ]
       submitFailingTx
         ( mkTopTxWithSubTxs
             [ mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $
-                         stakePoolParams & sppAccountAddressL . accountAddressNetworkIdL .~ Mainnet
-                     ]
+                & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert spKH retireEpoch]
             ]
         )
         [ injectFailure . DijkstraSubPoolPredFailure $
-            WrongNetworkPOOL (Mismatch Mainnet Testnet) (stakePoolParams ^. sppIdL)
+            StakePoolRetirementWrongEpochPOOL
+              (Mismatch retireEpoch currentEpoch)
+              (Mismatch retireEpoch maxEpoch)
         ]
-  describe "Fails when the declared cost is too low" $ do
-    it "When registering a fresh pool" $ do
-      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
-      expectedCost <- getsPParams ppMinPoolCostL
-      declaredCost <- Coin <$> choose (0, pred $ unCoin expectedCost)
-      submitFailingTx
-        ( mkTopTxWithSubTxs
-            [ mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $ stakePoolParams & sppCostL .~ declaredCost
-                     ]
-            ]
-        )
-        [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
-            Mismatch declaredCost expectedCost
-        ]
-  it "Fails when trying to retire a pool in the current or previous epoch" $ do
-    spKH <- freshKeyHash
-    stakePoolParams <- genValidStakePoolParams spKH
-    submitTxAnn_ "Registering a stake pool" $
-      mkTopTxWithSubTxs
-        [ mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
-        ]
-    expectStakePoolParams spKH $ Just stakePoolParams
-    currentEpoch <- getsNES nesELL
-    maxEpoch <- addEpochInterval currentEpoch <$> getsPParams ppEMaxL
-    retireEpoch <-
-      frequency
-        [ (1, pure currentEpoch)
-        , (49, EpochNo <$> choose (0, unEpochNo currentEpoch))
-        , (49, EpochNo <$> choose (unEpochNo maxEpoch, maxBound))
-        , (1, pure maxEpoch)
-        ]
-    submitFailingTx
-      ( mkTopTxWithSubTxs
-          [ mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert spKH retireEpoch]
-          ]
-      )
-      [ injectFailure . DijkstraSubPoolPredFailure $
-          StakePoolRetirementWrongEpochPOOL
-            (Mismatch retireEpoch currentEpoch)
-            (Mismatch retireEpoch maxEpoch)
-      ]
