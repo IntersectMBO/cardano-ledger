@@ -163,6 +163,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
