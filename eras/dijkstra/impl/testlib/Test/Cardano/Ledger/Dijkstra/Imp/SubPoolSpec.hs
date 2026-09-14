@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec (spec) where
 
 import Cardano.Ledger.Address (accountAddressIdL, accountAddressNetworkIdL)
-import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Dijkstra.State
@@ -68,27 +68,48 @@ spec = describe "SUBPOOL" $ do
                    ]
           ]
       expectStakePoolParams spKH $ Just stakePoolParams
-    it "Can re-register a pool" $ do
-      spKH <- freshKeyHash
-      oldStakePoolParams <- genValidStakePoolParams spKH
-      submitTxAnn_ "Register pool" $
-        mkTopTxWithSubTxs
-          [ mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
-                   ]
-          ]
-      newStakePoolParams <- genValidStakePoolParams spKH
-      submitTxAnn_ "Register pool" $
-        mkTopTxWithSubTxs
-          [ mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ [ RegPoolTxCert $ newStakePoolParams & sppIdL .~ spKH
-                   ]
-          ]
-      expectStakePoolParams spKH $ Just oldStakePoolParams
-      passEpoch
-      expectStakePoolParams spKH $ Just newStakePoolParams
+    describe "Can re-register a pool" $ do
+      it "With completely new parameters" $ do
+        spKH <- freshKeyHash
+        oldStakePoolParams <- genValidStakePoolParams spKH
+        submitTxAnn_ "Register pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                     ]
+            ]
+        newStakePoolParams <- genValidStakePoolParams spKH
+        submitTxAnn_ "Register pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $ newStakePoolParams & sppIdL .~ spKH
+                     ]
+            ]
+        expectStakePoolParams spKH $ Just oldStakePoolParams
+        passEpoch
+        expectStakePoolParams spKH $ Just newStakePoolParams
+      it "With the same parameters" $ do
+        spKH <- freshKeyHash
+        oldStakePoolParams <- genValidStakePoolParams spKH
+        submitTxAnn_ "Register pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                     ]
+            ]
+        submitTxAnn_ "Register pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $ oldStakePoolParams & sppIdL .~ spKH
+                     ]
+            ]
+        expectStakePoolParams spKH $ Just oldStakePoolParams
+        passEpoch
+        expectStakePoolParams spKH $ Just oldStakePoolParams
     it "Can retire a pool" $ do
       spKH <- freshKeyHash
       stakePoolParams <- genValidStakePoolParams spKH
@@ -111,26 +132,73 @@ spec = describe "SUBPOOL" $ do
       passEpoch
       expectStakePoolParams spKH Nothing
   describe "Negative" $ do
-    it "Fails when the VRF key is already in use" $ do
-      stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
-      let
-        vrfKey = stakePoolParams1 ^. sppVrfL
-      stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
-      submitTxAnn_ "Registering the first pool" $
-        mkTopTxWithSubTxs
-          [ mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ [ RegPoolTxCert stakePoolParams1
-                   ]
+    describe "Reusing VRF key" $ do
+      it "Fails when registering a new pool with the same VRF" $ do
+        stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
+        let
+          vrfKey = stakePoolParams1 ^. sppVrfL
+        stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
+        submitTxAnn_ "Registering the first pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert stakePoolParams1
+                     ]
+            ]
+        submitFailingTx
+          ( mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL
+                    .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
+                       ]
+              ]
+          )
+          [ injectFailure . DijkstraSubPoolPredFailure $
+              VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
           ]
+      it "Fails when re-registering an existing pool with the same VRF as another one" $ do
+        stakePoolParams1 <- genValidStakePoolParams =<< freshKeyHash
+        let
+          vrfKey = stakePoolParams1 ^. sppVrfL
+        stakePoolParams2 <- genValidStakePoolParams =<< freshKeyHash
+        submitTxAnn_ "Registering the first pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert stakePoolParams1
+                     ]
+            ]
+        submitTxAnn_ "Registering the second pool" $
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert stakePoolParams2
+                     ]
+            ]
+        impAnn "Reregistering the second pool" $
+          submitFailingTx
+            ( mkTopTxWithSubTxs
+                [ mkBasicTx mkBasicTxBody
+                    & bodyTxL . certsTxBodyL
+                      .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
+                         ]
+                ]
+            )
+            [ injectFailure . DijkstraSubPoolPredFailure $
+                VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
+            ]
+  describe "Invalid network ID" $ do
+    it "When registering a pool" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
       submitFailingTx
         ( mkTopTxWithSubTxs
             [ mkBasicTx mkBasicTxBody
                 & bodyTxL . certsTxBodyL
-                  .~ [ RegPoolTxCert $ stakePoolParams2 & sppVrfL .~ vrfKey
+                  .~ [ RegPoolTxCert $
+                         stakePoolParams & sppAccountAddressL . accountAddressNetworkIdL .~ Mainnet
                      ]
             ]
         )
         [ injectFailure . DijkstraSubPoolPredFailure $
-            VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
+            WrongNetworkPOOL (Mismatch Mainnet Testnet) (stakePoolParams ^. sppIdL)
         ]
