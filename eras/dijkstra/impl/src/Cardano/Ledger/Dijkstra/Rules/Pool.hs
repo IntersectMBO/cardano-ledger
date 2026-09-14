@@ -23,10 +23,10 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   ShelleyBase,
   addEpochInterval,
+  knownNonZeroBounded,
   natVersion,
   networkId,
   pvMajor,
-  unNonZero,
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
@@ -50,7 +50,6 @@ import Control.State.Transition (
  )
 import qualified Data.Map as Map
 import Data.Primitive.ByteArray (sizeofByteArray)
-import Data.Word (Word64)
 import Lens.Micro
 
 -- Private copies of the protocol-version gates from the hidden
@@ -171,15 +170,13 @@ poolTransition = do
           let activeVrf = stakePoolState ^. spsVrfL
               mbFutureVrf = (^. sppVrfL) <$> Map.lookup sppId psFutureStakePoolParams
           when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            -- A pool may only re-register with a VRF key hash to which every
-            -- recorded reference is its own, held through its active and/or
-            -- its future parameters.
-            let ownOccurrences :: Word64
-                ownOccurrences =
-                  (if sppVrf == activeVrf then 1 else 0)
-                    + (if mbFutureVrf == Just sppVrf && sppVrf /= activeVrf then 1 else 0)
-            maybe 0 unNonZero (Map.lookup sppVrf psVRFKeyHashes)
-              == ownOccurrences
+            -- The only reference to this VRF key hash, if any, must be the
+            -- pool's own, held through its active or its future parameters.
+            let expectedOccurrences
+                  | sppVrf == activeVrf || mbFutureVrf == Just sppVrf = Just (knownNonZeroBounded @1)
+                  | otherwise = Nothing
+            Map.lookup sppVrf psVRFKeyHashes
+              == expectedOccurrences
                 ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           let updateFutureVRFKeyHash
                 | hardforkConwayDisallowDuplicatedVRFKeys pv
