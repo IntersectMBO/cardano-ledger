@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec (spec) where
 
 import Cardano.Ledger.Address (accountAddressIdL, accountAddressNetworkIdL)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraSubPoolPredFailure (..))
 import Cardano.Ledger.Dijkstra.State
@@ -187,8 +188,8 @@ spec = describe "SUBPOOL" $ do
             [ injectFailure . DijkstraSubPoolPredFailure $
                 VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
             ]
-  describe "Invalid network ID" $ do
-    it "When registering a pool" $ do
+  describe "Fails when registering a pool with an invalid network ID" $ do
+    it "When registering a fresh pool" $ do
       stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
       submitFailingTx
         ( mkTopTxWithSubTxs
@@ -201,4 +202,20 @@ spec = describe "SUBPOOL" $ do
         )
         [ injectFailure . DijkstraSubPoolPredFailure $
             WrongNetworkPOOL (Mismatch Mainnet Testnet) (stakePoolParams ^. sppIdL)
+        ]
+  describe "Fails when the declared cost is too low" $ do
+    it "When registering a fresh pool" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      expectedCost <- getsPParams ppMinPoolCostL
+      declaredCost <- Coin <$> choose (0, pred $ unCoin expectedCost)
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $ stakePoolParams & sppCostL .~ declaredCost
+                     ]
+            ]
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
+            Mismatch declaredCost expectedCost
         ]
