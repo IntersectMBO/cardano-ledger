@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `addVRFKeyHashOccurrence` and `removeVRFKeyHashOccurrence` to `Cardano.Ledger.State.CertState`
 * Remove `EraDecoder` and add `EraCodec` to be used in its place
 * Remove `ppEraDecoder` from `PParam` and add `ppuEraCodec` to `PParamUpdate`
 * Change `directDepositsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
