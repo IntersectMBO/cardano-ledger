@@ -231,6 +231,9 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+instance Arbitrary VotingStakePoolDistr where
+  arbitrary = VotingStakePoolDistr <$> arbitrary <*> arbitrary
+
 instance
   (Era era, Arbitrary (PParams era)) =>
   Arbitrary (EnactState era)
