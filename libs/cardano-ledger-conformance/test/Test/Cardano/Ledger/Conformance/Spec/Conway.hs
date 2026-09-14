@@ -14,7 +14,6 @@ import Data.Map.Strict qualified as Map
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayCertExecContext (..))
 import Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify qualified as Ratify
 import Test.Cardano.Ledger.Conformance.Spec.Core
-import Test.Cardano.Ledger.Constrained.Conway (genUtxoExecContext)
 import Test.Cardano.Ledger.Constrained.Conway.MiniTrace (
   ConwayCertGenContext (..),
   constrainedCert,
@@ -55,7 +54,7 @@ spec = do
                 , ccecWithdrawals = ccccWithdrawals
                 }
       prop "GOV" $ conformsToImplConstrained_ constrainedGov
-      prop "UTXO" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
-      prop "UTXOW" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
-      prop "LEDGER" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
-      prop "LEDGERS" $ conformsToImplConstrained constrainedUtxo $ \_ _ _ _ -> genUtxoExecContext
+      prop "UTXO" $ conformsToImplConstrained constrainedUtxo $ \ctx _ _ _ -> pure ctx
+      prop "UTXOW" $ conformsToImplConstrained constrainedUtxo $ \ctx _ _ _ -> pure ctx
+      prop "LEDGER" $ conformsToImplConstrained constrainedUtxo $ \ctx _ _ _ -> pure ctx
+      prop "LEDGERS" $ conformsToImplConstrained constrainedUtxo $ \ctx _ _ _ -> pure ctx
