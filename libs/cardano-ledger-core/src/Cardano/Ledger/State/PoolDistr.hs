@@ -95,8 +95,8 @@ instance EncCBOR IndividualPoolStake where
       , encCBOR stakeCoin
       , encCBOR vrf
       ]
-        <> [ encCBOR bk
-           | SJust bk <- [blsKey]
+        <> [ encCBOR blsKey
+           | SJust _ <- [blsKey]
            ]
 
 instance DecCBOR IndividualPoolStake where
@@ -108,7 +108,7 @@ instance DecCBOR IndividualPoolStake where
       <*> decCBOR
       <*> case mLen of
         Just 3 -> pure SNothing
-        Just 4 -> SJust <$> decCBOR
+        Just 4 -> decCBOR
         Just _ -> fail "Invalid length"
         Nothing -> do
           brk <- decodeBreakOr
@@ -118,7 +118,7 @@ instance DecCBOR IndividualPoolStake where
               res <- decCBOR
               brk2 <- decodeBreakOr
               unless brk2 $ fail "Expected break"
-              pure $ SJust res
+              pure res
 
 instance ToKeyValuePairs IndividualPoolStake where
   toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
