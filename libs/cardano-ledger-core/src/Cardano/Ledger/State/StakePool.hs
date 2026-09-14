@@ -75,6 +75,13 @@ module Cardano.Ledger.State.StakePool (
   sppCostL,
   sppMetadataL,
   sppVrfL,
+  sppIdL,
+  sppAccountAddressL,
+  sppBlsKeyL,
+  sppPledgeL,
+  sppMarginL,
+  sppOwnersL,
+  sppRelaysL,
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6)
@@ -520,6 +527,9 @@ instance DecCBOR BlsKey where
     blsPossessionProof <- decodeFixedSized
     pure BlsKey {blsPubKey, blsPossessionProof}
 
+sppIdL :: Lens' (StakePoolParams era) (KeyHash StakePool)
+sppIdL = lens sppId (\x y -> x {sppId = y})
+
 sppVrfL :: Lens' (StakePoolParams era) (VRFVerKeyHash StakePoolVRF)
 sppVrfL = lens sppVrf (\spp u -> spp {sppVrf = u})
 
@@ -528,6 +538,24 @@ sppCostL = lens sppCost (\spp u -> spp {sppCost = u})
 
 sppMetadataL :: Lens' (StakePoolParams era) (StrictMaybe PoolMetadata)
 sppMetadataL = lens sppMetadata (\spp u -> spp {sppMetadata = u})
+
+sppAccountAddressL :: Lens' (StakePoolParams era) AccountAddress
+sppAccountAddressL = lens sppAccountAddress (\spp u -> spp {sppAccountAddress = u})
+
+sppBlsKeyL :: Lens' (StakePoolParams era) (StrictMaybe BlsKey)
+sppBlsKeyL = lens sppBlsKey (\spp u -> spp {sppBlsKey = u})
+
+sppPledgeL :: Lens' (StakePoolParams era) Coin
+sppPledgeL = lens sppPledge (\spp u -> spp {sppPledge = u})
+
+sppMarginL :: Lens' (StakePoolParams era) UnitInterval
+sppMarginL = lens sppMargin (\spp u -> spp {sppMargin = u})
+
+sppOwnersL :: Lens' (StakePoolParams era) (Set (KeyHash Staking))
+sppOwnersL = lens sppOwners (\spp u -> spp {sppOwners = u})
+
+sppRelaysL :: Lens' (StakePoolParams era) (StrictSeq StakePoolRelay)
+sppRelaysL = lens sppRelays (\spp u -> spp {sppRelays = u})
 
 instance Default (StakePoolParams era) where
   def = StakePoolParams def def def (Coin 0) (Coin 0) def def def def def
