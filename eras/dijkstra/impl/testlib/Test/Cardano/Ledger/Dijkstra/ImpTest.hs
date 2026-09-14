@@ -25,7 +25,6 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   mkTopTxWithSubTxs,
   traverseSubTxs,
   withPostFixupSubTxs,
-  txWithSubTxs,
   submitFailingSubTx,
 ) where
 
@@ -203,12 +202,6 @@ withPostFixupSubTxs ::
   ImpTestM era a
 withPostFixupSubTxs f = withPostFixup $ traverseSubTxs f >=> rederiveAddrTxWits
 
--- | An otherwise empty top level transaction carrying the given
--- sub-transactions.
-txWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
-txWithSubTxs subTxs =
-  mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
-
 -- | Submit a sub-transaction, nested in an otherwise empty top level
 -- transaction, that is expected to be rejected with exactly the given
 -- predicate failures.
@@ -219,7 +212,7 @@ submitFailingSubTx ::
   Tx SubTx era ->
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
-submitFailingSubTx subTx = submitFailingTx $ txWithSubTxs [subTx]
+submitFailingSubTx subTx = submitFailingTx $ mkTopTxWithSubTxs [subTx]
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

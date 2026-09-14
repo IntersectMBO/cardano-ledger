@@ -98,7 +98,7 @@
 ### `testlib`
 
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
-* Add `txWithSubTxs` and `submitFailingSubTx`
+* Add `submitFailingSubTx`
 * Preserve explicitly supplied redeemers when fixing up subtransactions.
 * Add `InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era` as a superclass of `DijkstraEraImp`
 * Add `mkTopTxWithSubTxs`, `traverseSubTxs` and `withPostFixupSubTxs`

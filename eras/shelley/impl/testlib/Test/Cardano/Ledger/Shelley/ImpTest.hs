@@ -47,10 +47,13 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passTick,
   freshKeyAddr,
   freshKeyAddr_,
+  freshMainnetKeyAddr_,
+  freshTxOutWithCoin,
   freshKeyAddrNoPtr,
   freshKeyAddrNoPtr_,
   freshKeyHash,
   freshKeyPair,
+  freshFundedTxIn,
   getKeyPair,
   freshByronKeyHash,
   freshBootstrapAddress,
@@ -1887,6 +1890,16 @@ freshKeyAddr_ ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) => m Addr
 freshKeyAddr_ = snd <$> freshKeyAddr
 
+freshTxOutWithCoin :: EraTxOut era => Coin -> ImpTestM era (TxOut era)
+freshTxOutWithCoin c = do
+  addr <- freshKeyAddr_
+  pure . mkBasicTxOut addr $ inject c
+
+freshMainnetKeyAddr_ :: (HasKeyPairs s, MonadState s m, HasStatefulGen g m) => m Addr
+freshMainnetKeyAddr_ = do
+  keyHash <- freshKeyHash @Payment
+  pure $ Addr Mainnet (KeyHashObj keyHash) StakeRefNull
+
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddrPtr ::
@@ -1918,6 +1931,12 @@ freshKeyAddrNoPtr_ ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
   m Addr
 freshKeyAddrNoPtr_ = snd <$> freshKeyAddrNoPtr
+
+freshFundedTxIn :: (ShelleyEraImp era, HasCallStack) => ImpTestM era TxIn
+freshFundedTxIn = do
+  addr <- freshKeyAddr_
+  amount <- uniformRM (Coin 1_000_000, Coin 3_000_000)
+  sendCoinTo addr amount
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
 -- must be created with `freshBootstrapAddess` for this to work.

@@ -9,7 +9,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec (spec) where
 
-import Cardano.Ledger.Address (BootstrapAddress)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network (..),
@@ -20,7 +19,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
   DijkstraSubUtxoPredFailure (..),
@@ -35,11 +33,14 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
+import Cardano.Ledger.Tools (setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Control.Monad.State (gets)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (isNothing)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
@@ -72,37 +73,42 @@ spec = describe "SUBUTXO" $ do
       restrictMaxValSizeToAdaOnly
       pp <- getsPParams id
       (multiAsset, txOut) <- freshAssetOutput
-      submitFailingSubTx
-        ( mkBasicTx $
-            mkBasicTxBody
-              & mintTxBodyL .~ multiAsset
-              & outputsTxBodyL .~ [txOut]
-        )
-        [injectFailure $ SubOutputTooBigUTxO @era [outputTooBigEntry pp txOut]]
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & mintTxBodyL .~ multiAsset
+                & outputsTxBodyL .~ [txOut]
+      submitFailingTxM (mkTopTxWithSubTxs [subTx]) $ \fixedUpTx -> do
+        txOuts <- subTxOutputs fixedUpTx
+        pure [injectFailure . SubOutputTooBigUTxO @era $ outputTooBigEntry pp <$> txOuts]
 
     it "several such outputs, reported in the reverse of their order in the body" $ do
       restrictMaxValSizeToAdaOnly
       pp <- getsPParams id
       (firstAsset, firstTxOut) <- freshAssetOutput
       (secondAsset, secondTxOut) <- freshAssetOutput
-      submitFailingSubTx
-        ( mkBasicTx $
-            mkBasicTxBody
-              & mintTxBodyL .~ firstAsset <> secondAsset
-              & outputsTxBodyL .~ [firstTxOut, secondTxOut]
-        )
-        [ injectFailure $
-            SubOutputTooBigUTxO @era
-              [outputTooBigEntry pp secondTxOut, outputTooBigEntry pp firstTxOut]
-        ]
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & mintTxBodyL .~ firstAsset <> secondAsset
+                & outputsTxBodyL .~ [firstTxOut, secondTxOut]
+      submitFailingTxM (mkTopTxWithSubTxs [subTx]) $ \fixedUpTx -> do
+        txOuts <- subTxOutputs fixedUpTx
+        pure
+          [ injectFailure . SubOutputTooBigUTxO @era . NE.reverse $
+              outputTooBigEntry pp <$> txOuts
+          ]
 
   describe "SubInputSetEmptyUTxO" $
     it "a sub-transaction with no inputs" $ do
       txIn <- freshFundedTxIn
-      withPostFixup (moveSubTxInputsToTopLevel txIn) $
-        submitFailingSubTx
-          (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
-          [injectFailure $ SubInputSetEmptyUTxO @era]
+      withPostFixup (pure . (bodyTxL . inputsTxBodyL <>~ [txIn])) $
+        withPostFixupSubTxs (rederiveAddrTxWits . (bodyTxL . inputsTxBodyL .~ mempty)) $
+          submitFailingSubTx
+            (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
+            [injectFailure $ SubInputSetEmptyUTxO @era]
 
   describe "SubBadInputsUTxO" $ do
     it "a reference input in no UTxO fails only the check against the original UTxO" $ do
@@ -114,7 +120,7 @@ spec = describe "SUBUTXO" $ do
     it "an input spent by an earlier sub-transaction fails only the check against the threaded UTxO" $ do
       (sharedTxIn, subTxs) <- subTxsSpendingOneInput
       submitFailingTx
-        (txWithSubTxs subTxs)
+        (mkTopTxWithSubTxs subTxs)
         [injectFailure . SubBadInputsUTxO @era $ NES.singleton sharedTxIn]
 
     it "an input in no UTxO fails both checks" $ do
@@ -142,30 +148,30 @@ spec = describe "SUBUTXO" $ do
           ]
 
   describe "Inputs produced or spent within the batch" $ do
-    it "spending an earlier sibling's output fails only the check against the original UTxO" $ do
+    it "spending an output from an earlier sub-tx fails" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       submitFailingTx
-        ( txWithSubTxs
+        ( mkTopTxWithSubTxs
             [ producingSubTx
             , mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [producedTxIn]
             ]
         )
         [injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn]
 
-    it "referencing an earlier sibling's output fails only the check against the original UTxO" $ do
+    it "referencing an output from an earlier sub-tx fails" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       submitFailingTx
-        ( txWithSubTxs
+        ( mkTopTxWithSubTxs
             [ producingSubTx
             , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [producedTxIn]
             ]
         )
         [injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn]
 
-    it "spending a later sibling's output fails both checks" $ do
+    it "same input in different sub-transactions" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       submitFailingTx
-        ( txWithSubTxs
+        ( mkTopTxWithSubTxs
             [ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [producedTxIn]
             , producingSubTx
             ]
@@ -174,10 +180,10 @@ spec = describe "SUBUTXO" $ do
         , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
         ]
 
-    it "referencing an input that an earlier sibling spends is accepted, and that input is consumed" $ do
+    it "referencing an out that another sub-tx spends is accepted" $ do
       txIn <- freshFundedTxIn
       submitTx_ $
-        txWithSubTxs
+        mkTopTxWithSubTxs
           [ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
           , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [txIn]
           ]
@@ -185,17 +191,25 @@ spec = describe "SUBUTXO" $ do
 
   describe "SubOutputBootAddrAttrsTooBig" $ do
     disableInConformanceIt "an output to a bootstrap address whose attributes exceed the limit" $ do
-      txOut <- bootstrapOutput =<< freshBootstrapAddressOversizedPayload
-      submitFailingSubTx
-        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut])
-        [injectFailure $ SubOutputBootAddrAttrsTooBig @era [txOut]]
+      bootAddr <- freshBootstrapAddressOversizedPayload
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody & outputsTxBodyL .~ [mkBasicTxOut (AddrBootstrap bootAddr) mempty]
+      submitFailingTxM (mkTopTxWithSubTxs [subTx]) $ \fixedUpTx -> do
+        txOuts <- subTxOutputs fixedUpTx
+        pure [injectFailure $ SubOutputBootAddrAttrsTooBig @era txOuts]
 
     disableInConformanceIt "several such outputs, reported in their order in the body" $ do
-      firstTxOut <- bootstrapOutput =<< freshBootstrapAddressOversizedPayload
-      secondTxOut <- bootstrapOutput =<< freshBootstrapAddressOversizedPayload
-      submitFailingSubTx
-        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [firstTxOut, secondTxOut])
-        [injectFailure $ SubOutputBootAddrAttrsTooBig @era [firstTxOut, secondTxOut]]
+      firstBootAddr <- freshBootstrapAddressOversizedPayload
+      secondBootAddr <- freshBootstrapAddressOversizedPayload
+      let firstTxOut = mkBasicTxOut (AddrBootstrap firstBootAddr) mempty
+          secondTxOut = mkBasicTxOut (AddrBootstrap secondBootAddr) mempty
+          subTx :: Tx SubTx era
+          subTx = mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [firstTxOut, secondTxOut]
+      submitFailingTxM (mkTopTxWithSubTxs [subTx]) $ \fixedUpTx -> do
+        txOuts <- subTxOutputs fixedUpTx
+        pure [injectFailure $ SubOutputBootAddrAttrsTooBig @era txOuts]
 
   describe "SubBabbageOutputTooSmallUTxO" $ do
     it "an output that holds less than the minimum coin" $ do
@@ -220,21 +234,19 @@ spec = describe "SUBUTXO" $ do
 
   describe "SubWrongNetwork" $ do
     it "an output to a mainnet address" $ do
-      pp <- getsPParams id
-      addr <- freshMainnetAddr
-      let txOut = ensureMinCoinTxOut pp $ mkBasicTxOut addr mempty
+      addr <- freshMainnetKeyAddr_
       submitFailingSubTx
-        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut])
+        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [mkBasicTxOut addr mempty])
         [injectFailure . SubWrongNetwork @era Testnet $ NES.singleton addr]
 
     it "several outputs to mainnet addresses" $ do
-      pp <- getsPParams id
-      firstAddr <- freshMainnetAddr
-      secondAddr <- freshMainnetAddr
-      let firstTxOut = ensureMinCoinTxOut pp $ mkBasicTxOut firstAddr mempty
-          secondTxOut = ensureMinCoinTxOut pp $ mkBasicTxOut secondAddr mempty
+      firstAddr <- freshMainnetKeyAddr_
+      secondAddr <- freshMainnetKeyAddr_
       submitFailingSubTx
-        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [firstTxOut, secondTxOut])
+        ( mkBasicTx $
+            mkBasicTxBody
+              & outputsTxBodyL .~ [mkBasicTxOut firstAddr mempty, mkBasicTxOut secondAddr mempty]
+        )
         [ injectFailure . SubWrongNetwork @era Testnet $
             NES.singleton firstAddr <> NES.singleton secondAddr
         ]
@@ -255,7 +267,7 @@ spec = describe "SUBUTXO" $ do
         subTx = mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ SSeq.fromList (replicate 20 txOut)
         maxTxSize = subTx ^. sizeTxF - 1
     modifyPParams $ ppMaxTxSizeL .~ maxTxSize
-    submitFailingTxM (txWithSubTxs [subTx]) $ \fixedUpTx ->
+    submitFailingTxM (mkTopTxWithSubTxs [subTx]) $ \fixedUpTx ->
       pure
         [ injectFailure . MaxTxSizeUTxO @era $
             Mismatch {mismatchSupplied = fixedUpTx ^. sizeTxF, mismatchExpected = maxTxSize}
@@ -263,7 +275,7 @@ spec = describe "SUBUTXO" $ do
 
   it "one input listed as both a spend and a reference input is accepted, and consumed" $ do
     txIn <- freshFundedTxIn
-    submitTx_ . txWithSubTxs . pure . mkBasicTx $
+    submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
       mkBasicTxBody
         & inputsTxBodyL .~ [txIn]
         & referenceInputsTxBodyL .~ [txIn]
@@ -276,11 +288,13 @@ spec = describe "SUBUTXO" $ do
         restrictMaxValSizeToAdaOnly
         pp <- getsPParams id
         currentSlot <- gets (^. impCurSlotNoG)
-        (multiAsset, tooBigTxOut) <- freshAssetOutput
-        bootstrapTxOut <- bootstrapOutput =<< freshBootstrapAddressOversizedPayload
-        mainnetAddr <- freshMainnetAddr
+        (multiAsset, assetTxOut) <- freshAssetOutput
+        bootAddr <- freshBootstrapAddressOversizedPayload
+        mainnetAddr <- freshMainnetKeyAddr_
         let badReferenceInput = neverSubmittedTxIn @era 0
             validityInterval = ValidityInterval (SJust (currentSlot + 1)) SNothing
+            tooBigTxOut = setMinCoinTxOut pp assetTxOut
+            bootstrapAttrsTxOut = setMinCoinTxOut pp $ mkBasicTxOut (AddrBootstrap bootAddr) mempty
             tooSmallTxOut = mkBasicTxOut mainnetAddr . inject $ Coin 1
         submitFailingSubTx
           ( mkBasicTx $
@@ -288,7 +302,7 @@ spec = describe "SUBUTXO" $ do
                 & vldtTxBodyL .~ validityInterval
                 & mintTxBodyL .~ multiAsset
                 & referenceInputsTxBodyL .~ [badReferenceInput]
-                & outputsTxBodyL .~ [tooBigTxOut, bootstrapTxOut, tooSmallTxOut]
+                & outputsTxBodyL .~ [tooBigTxOut, bootstrapAttrsTxOut, tooSmallTxOut]
                 & networkIdTxBodyL .~ SJust Mainnet
           )
           [ injectFailure . SubWrongNetworkInTxBody @era $
@@ -297,7 +311,7 @@ spec = describe "SUBUTXO" $ do
           , injectFailure $
               SubBabbageOutputTooSmallUTxO @era
                 [(tooSmallTxOut, getMinCoinTxOut pp tooSmallTxOut)]
-          , injectFailure $ SubOutputBootAddrAttrsTooBig @era [bootstrapTxOut]
+          , injectFailure $ SubOutputBootAddrAttrsTooBig @era [bootstrapAttrsTxOut]
           , injectFailure . SubBadInputsUTxO @era $ NES.singleton badReferenceInput
           , injectFailure $ SubOutputTooBigUTxO @era [outputTooBigEntry pp tooBigTxOut]
           , injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
@@ -309,7 +323,7 @@ spec = describe "SUBUTXO" $ do
           wrongNetworkSubTx = mkBasicTx $ mkBasicTxBody & networkIdTxBodyL .~ SJust Mainnet
           outsideValiditySubTx = mkBasicTx $ mkBasicTxBody & vldtTxBodyL .~ validityInterval
       submitFailingTx
-        (txWithSubTxs [wrongNetworkSubTx, outsideValiditySubTx])
+        (mkTopTxWithSubTxs [wrongNetworkSubTx, outsideValiditySubTx])
         [ injectFailure . SubWrongNetworkInTxBody @era $
             Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
         , injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
@@ -318,21 +332,20 @@ spec = describe "SUBUTXO" $ do
   describe "Accepted at the boundary" $ do
     it "a validity interval that starts at the current slot and ends at the next one" $ do
       currentSlot <- gets (^. impCurSlotNoG)
-      submitTx_ . txWithSubTxs . pure . mkBasicTx $
+      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody
           & vldtTxBodyL .~ ValidityInterval (SJust currentSlot) (SJust (currentSlot + 1))
 
     it "an output that holds exactly the minimum coin" $ do
       pp <- getsPParams id
       addr <- freshKeyAddr_
-      submitTx_ . txWithSubTxs . pure . mkBasicTx $
+      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [setMinCoinTxOut pp $ mkBasicTxOut addr mempty]
 
     disableInConformanceIt "an output to a bootstrap address whose payload is the largest allowed size" $ do
-      txOut <-
-        bootstrapOutput
-          =<< freshBootstrapAddressWithPayloadSize (Just largestBootstrapAddressAttrsSize)
-      submitTx_ . txWithSubTxs . pure . mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut]
+      bootAddr <- freshBootstrapAddressWithPayloadSize $ Just largestBootstrapAddressAttrsSize
+      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
+        mkBasicTxBody & outputsTxBodyL .~ [mkBasicTxOut (AddrBootstrap bootAddr) mempty]
 
   describe "A phase-2 invalid top level transaction" $ do
     it "still rejects a sub-transaction with the wrong network id in its body" $ do
@@ -352,7 +365,7 @@ spec = describe "SUBUTXO" $ do
       withNoFixup $ submitTx_ topTx
       void $ impGetUTxO sharedTxIn
 
-    it "applies no sub-transaction output, so spending an earlier sibling's output fails twice" $ do
+    it "spending an output from an earlier sub-tx fails twice" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       topTx <-
         phase2InvalidTxWithSubTxs
@@ -365,26 +378,6 @@ spec = describe "SUBUTXO" $ do
           [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
           , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
           ]
-
--- | Empty the input set of every sub-transaction and spend the given input at
--- the top level instead, leaving the value consumed by the batch unchanged.
-moveSubTxInputsToTopLevel ::
-  (HasCallStack, DijkstraEraImp era) =>
-  TxIn ->
-  Tx TopTx era ->
-  ImpTestM era (Tx TopTx era)
-moveSubTxInputsToTopLevel txIn tx = do
-  subTxs <-
-    traverse (resetAddrTxWits . (bodyTxL . inputsTxBodyL .~ mempty))
-      . OMap.elems
-      $ tx ^. bodyTxL . subTransactionsTxBodyL
-  resetAddrTxWits $
-    tx
-      & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
-      & bodyTxL . inputsTxBodyL <>~ [txIn]
-
-freshFundedTxIn :: DijkstraEraImp era => ImpTestM era TxIn
-freshFundedTxIn = freshKeyAddr_ >>= (`sendCoinTo` Coin 3_000_000)
 
 freshSubTxProducingOutput ::
   (HasCallStack, DijkstraEraImp era) =>
@@ -400,29 +393,18 @@ freshSubTxProducingOutput = do
             & outputsTxBodyL .~ [setMinCoinTxOut pp $ mkBasicTxOut producedAddr mempty]
   pure (subTx, mkTxInPartial (txIdTx subTx) 0)
 
-freshTxOutWithCoin :: DijkstraEraImp era => Coin -> ImpTestM era (TxOut era)
-freshTxOutWithCoin coin = do
-  addr <- freshKeyAddr_
-  pure . mkBasicTxOut addr $ inject coin
-
-freshMainnetAddr :: DijkstraEraImp era => ImpTestM era Addr
-freshMainnetAddr = do
-  keyHash <- freshKeyHash @Payment
-  pure $ Addr Mainnet (KeyHashObj keyHash) StakeRefNull
-
-bootstrapOutput :: DijkstraEraImp era => BootstrapAddress -> ImpTestM era (TxOut era)
-bootstrapOutput bootAddr = do
-  pp <- getsPParams id
-  pure . ensureMinCoinTxOut pp . mkBasicTxOut (AddrBootstrap bootAddr) $ mempty
+subTxOutputs :: DijkstraEraImp era => Tx TopTx era -> ImpTestM era (NonEmpty (TxOut era))
+subTxOutputs topTx =
+  expectJust . NE.nonEmpty . foldMap (toList . (^. bodyTxL . outputsTxBodyL)) . OMap.elems $
+    topTx ^. bodyTxL . subTransactionsTxBodyL
 
 freshAssetOutput :: DijkstraEraImp era => ImpTestM era (MultiAsset, TxOut era)
 freshAssetOutput = do
-  pp <- getsPParams id
   policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
   assetName <- arbitrary @AssetName
   addr <- freshKeyAddr_
   let multiAsset = multiAssetFromList [(policyId, assetName, 1)]
-  pure (multiAsset, ensureMinCoinTxOut pp . mkBasicTxOut addr $ MaryValue mempty multiAsset)
+  pure (multiAsset, mkBasicTxOut addr $ MaryValue mempty multiAsset)
 
 subTxsSpendingOneInput :: DijkstraEraImp era => ImpTestM era (TxIn, [Tx SubTx era])
 subTxsSpendingOneInput = do
@@ -462,5 +444,5 @@ phase2InvalidTxWithSubTxs ::
   ImpTestM era (Tx TopTx era)
 phase2InvalidTxWithSubTxs subTxs = do
   failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
-  fixedUpTx <- fixupTx $ txWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
+  fixedUpTx <- fixupTx $ mkTopTxWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
   pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
