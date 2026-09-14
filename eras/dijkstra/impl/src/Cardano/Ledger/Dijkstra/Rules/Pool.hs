@@ -20,13 +20,10 @@ import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Mismatch (..),
-  ProtVer,
   ShelleyBase,
   addEpochInterval,
   knownNonZeroBounded,
-  natVersion,
   networkId,
-  pvMajor,
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
@@ -35,9 +32,8 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent (..),
   ShelleyPoolPredFailure (..),
  )
-import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.State
-import Control.Monad (forM_, when)
+import Control.Monad (forM_)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -51,15 +47,6 @@ import Control.State.Transition (
 import qualified Data.Map as Map
 import Data.Primitive.ByteArray (sizeofByteArray)
 import Lens.Micro
-
--- Private copies of the protocol-version gates from the hidden
--- `Cardano.Ledger.Shelley.Era` module, kept so that this rule remains a verbatim
--- copy of the Shelley POOL rule. Both are always `True` in this era.
-hardforkAlonzoValidatePoolAccountAddressNetID :: ProtVer -> Bool
-hardforkAlonzoValidatePoolAccountAddressNetID pv = pvMajor pv > natVersion @4
-
-hardforkConwayDisallowDuplicatedVRFKeys :: ProtVer -> Bool
-hardforkConwayDisallowDuplicatedVRFKeys pv = pvMajor pv > natVersion @10
 
 type instance EraRuleFailure "POOL" DijkstraEra = ShelleyPoolPredFailure DijkstraEra
 
@@ -122,27 +109,24 @@ poolTransition = do
     judgmentContext
   case poolCert of
     RegPool stakePoolParams@StakePoolParams {sppId, sppVrf, sppAccountAddress, sppMetadata, sppCost} -> do
-      let pv = pp ^. ppProtocolVersionL
-      when (hardforkAlonzoValidatePoolAccountAddressNetID pv) $ do
-        actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = aaNetworkId sppAccountAddress
-        actualNetID
-          == suppliedNetID
-            ?! injectFailure
-              ( WrongNetworkPOOL
-                  Mismatch
-                    { mismatchSupplied = suppliedNetID
-                    , mismatchExpected = actualNetID
-                    }
-                  sppId
-              )
+      actualNetID <- liftSTS $ asks networkId
+      let suppliedNetID = aaNetworkId sppAccountAddress
+      actualNetID
+        == suppliedNetID
+          ?! injectFailure
+            ( WrongNetworkPOOL
+                Mismatch
+                  { mismatchSupplied = suppliedNetID
+                  , mismatchExpected = actualNetID
+                  }
+                sppId
+            )
 
-      when (SoftForks.restrictPoolMetadataHash pv) $
-        forM_ sppMetadata $ \pmd ->
-          let s = sizeofByteArray $ pmHash pmd
-           in s
-                <= fromIntegral (hashSize ([] @HASH))
-                  ?! injectFailure (PoolMedataHashTooBig sppId s)
+      forM_ sppMetadata $ \pmd ->
+        let s = sizeofByteArray $ pmHash pmd
+         in s
+              <= fromIntegral (hashSize ([] @HASH))
+                ?! injectFailure (PoolMedataHashTooBig sppId s)
 
       let minPoolCost = pp ^. ppMinPoolCostL
       sppCost
@@ -157,34 +141,28 @@ poolTransition = do
       case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
         Nothing -> do
-          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            Map.notMember sppVrf psVRFKeyHashes
-              ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
-          let updateVRFKeyHash
-                | hardforkConwayDisallowDuplicatedVRFKeys pv = addVRFKeyHashOccurrence sppVrf
-                | otherwise = id
+          Map.notMember sppVrf psVRFKeyHashes
+            ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           tellEvent $ injectEvent $ RegisterPool sppId
           pure $
             ps
               & psStakePoolsL
                 %~ Map.insert sppId (mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
-              & psVRFKeyHashesL %~ updateVRFKeyHash
+              & psVRFKeyHashesL %~ addVRFKeyHashOccurrence sppVrf
         -- re-register Pool
         Just stakePoolState -> do
           let activeVrf = stakePoolState ^. spsVrfL
               mbFutureVrf = (^. sppVrfL) <$> Map.lookup sppId psFutureStakePoolParams
-          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            -- The only reference to this VRF key hash, if any, must be the
-            -- pool's own, held through its active or its future parameters.
-            let expectedOccurrences
-                  | sppVrf == activeVrf || mbFutureVrf == Just sppVrf = Just (knownNonZeroBounded @1)
-                  | otherwise = Nothing
-            Map.lookup sppVrf psVRFKeyHashes
-              == expectedOccurrences
-                ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
+              -- The only reference to this VRF key hash, if any, must be the
+              -- pool's own, held through its active or its future parameters.
+              expectedOccurrences
+                | sppVrf == activeVrf || mbFutureVrf == Just sppVrf = Just (knownNonZeroBounded @1)
+                | otherwise = Nothing
+          Map.lookup sppVrf psVRFKeyHashes
+            == expectedOccurrences
+              ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           let updateFutureVRFKeyHash
-                | hardforkConwayDisallowDuplicatedVRFKeys pv
-                , mbFutureVrf /= Just sppVrf =
+                | mbFutureVrf /= Just sppVrf =
                     -- The reference held by the future parameters moves from
                     -- `mbFutureVrf` to `sppVrf`. References that coincide with
                     -- the active VRF key hash are not counted separately, per
