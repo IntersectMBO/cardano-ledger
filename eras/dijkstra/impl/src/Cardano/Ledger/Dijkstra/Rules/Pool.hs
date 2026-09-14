@@ -94,9 +94,13 @@ instance
 -- through its active parameters (`psStakePools`) and one more through its
 -- future parameters (`psFutureStakePoolParams`) whenever the future VRF key
 -- hash differs from the active one. A future VRF key hash that coincides with
--- the pool's active one is not counted separately, which is exactly the
--- accounting that POOLREAP maintains at the epoch boundary when future
--- parameters are adopted.
+-- the pool's active one is not counted separately.
+--
+-- POOLREAP follows the same accounting at the epoch boundary when it adopts
+-- future parameters and retires pools, except that it drops a superseded
+-- active VRF key hash entirely instead of decrementing its count. The two only
+-- differ for VRF key hashes that several pools have shared since before their
+-- uniqueness was enforced.
 poolTransition ::
   forall rule era.
   ( EraPParams era
