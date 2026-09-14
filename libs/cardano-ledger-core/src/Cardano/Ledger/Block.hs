@@ -19,14 +19,24 @@
 
 module Cardano.Ledger.Block (
   Block (..),
+  headerBlockL,
+  bodyBlockL,
   bheader,
   bbody,
+  neededTxInsForBlock,
   BbodySignal (..),
   EraBlockHeader (..),
-  neededTxInsForBlock,
+  EbReferencesAnnouncement (..),
+  LeiosEraBlockHeader (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe)
+import Cardano.Ledger.Binary (
+  DecCBOR (decCBOR),
+  EncCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
@@ -36,7 +46,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, (^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era = Block
@@ -61,6 +71,12 @@ deriving anyclass instance
   NoThunks (Block h era)
 
 instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
+
+headerBlockL :: Lens' (Block h era) h
+headerBlockL = lens blockHeader (\b h -> b {blockHeader = h})
+
+bodyBlockL :: Lens' (Block h era) (BlockBody era)
+bodyBlockL = lens blockBody (\b h -> b {blockBody = h})
 
 bheader ::
   Block h era ->
@@ -102,3 +118,29 @@ class Era era => EraBlockHeader h era where
   blockBodyHashBlockHeaderL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
   slotNoBlockHeaderL :: Lens' (Block h era) SlotNo
   protVerBlockHeaderL :: Lens' (Block h era) ProtVer
+
+-- | Announcement of an Endorser Block (EB).
+data EbReferencesAnnouncement = EbReferencesAnnouncement
+  { ebReferencesAnnouncementHash :: !(SafeHash EraIndependentEbReferences)
+  -- ^ Hash of the announced Endorsement Block References
+  , ebReferencesAnnouncementSize :: !Word32
+  -- ^ Size of the announced Endorsement Block References
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData)
+
+instance EncCBOR EbReferencesAnnouncement where
+  encCBOR (EbReferencesAnnouncement h s) =
+    encodeListLen 2
+      <> encCBOR h
+      <> encCBOR s
+
+instance DecCBOR EbReferencesAnnouncement where
+  decCBOR =
+    decodeRecordNamed "EbReferencesAnnouncement" (const 2) $
+      EbReferencesAnnouncement
+        <$> decCBOR
+        <*> decCBOR
+
+class EraBlockHeader h era => LeiosEraBlockHeader h era where
+  ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)

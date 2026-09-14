@@ -67,7 +67,7 @@ header_body =
   , operational_cert
   , protocol_version
   , block_body_contains_leios_cert : bool
-  , eb_announcement                : eb_announcement/ nil
+  , eb_references_announcement     : eb_references_announcement/ nil
   ]
 
 block_number = uint .size 8
@@ -101,7 +101,7 @@ protocol_version = [major_protocol_version, uint .size 4]
 
 major_protocol_version = 0 .. 13
 
-eb_announcement =
+eb_references_announcement =
   [ eb_hash : hash32
   , eb_size : uint .size 4 ; size of the EB block closure
   ]

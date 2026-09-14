@@ -70,6 +70,7 @@
 
 ### `cddl`
 
+* Rename the `eb_announcement` rule to `eb_references_announcement`
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`

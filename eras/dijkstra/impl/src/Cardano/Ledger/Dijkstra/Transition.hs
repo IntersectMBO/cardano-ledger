@@ -70,14 +70,14 @@ instance EraTransition DijkstraEra where
 seatInitialLeiosCommittee :: NewEpochState DijkstraEra -> NewEpochState DijkstraEra
 seatInitialLeiosCommittee nes =
   nes & nesEsL . esSnapshotsL . ssStakeMarkL %~ reseat
- where
-  reseat snap =
-    mkSnapShot
-      (nes ^. nesELL)
-      (EpochInterval 1)
-      (nes ^. nesEsL . curPParamsEpochStateL . ppLeiosCommitteeSizeL)
-      (ssActiveStake snap)
-      (ssStakePoolsSnapShot snap)
+  where
+    reseat snap =
+      mkSnapShot
+        (nes ^. nesELL)
+        (EpochInterval 1)
+        (nes ^. nesEsL . curPParamsEpochStateL . ppLeiosCommitteeSizeL)
+        (ssActiveStake snap)
+        (ssStakePoolsSnapShot snap)
 
 instance ConwayEraTransition DijkstraEra
 
