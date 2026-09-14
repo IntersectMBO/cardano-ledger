@@ -162,6 +162,9 @@ instance InjectRuleFailure "SUBLEDGER" DijkstraSubCertsPredFailure DijkstraEra w
 instance InjectRuleFailure "SUBLEDGER" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraSubLedgerPredFailure
 
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubPoolPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
 data DijkstraSubLedgerEvent era
   = SubEntitiesEvent (Event (EraRule "SUBENTITIES" era))
   | SubGovEvent (Event (EraRule "SUBGOV" era))

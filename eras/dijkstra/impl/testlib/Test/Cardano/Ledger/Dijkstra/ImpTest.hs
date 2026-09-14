@@ -142,6 +142,7 @@ class
   , InjectRuleFailure "LEDGER" DijkstraGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
