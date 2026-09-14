@@ -94,7 +94,7 @@ spec = describe "SUBUTXOW" $ do
     -- The conformance translation has no representation for bootstrap addresses.
     disableInConformanceIt "spending a bootstrap address input" $
       withheldWitnessFails $ do
-        bootAddr <- freshBootstapAddress
+        bootAddr <- freshBootstrapAddress
         txIn <- sendCoinTo (AddrBootstrap bootAddr) mempty
         pure
           ( mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
