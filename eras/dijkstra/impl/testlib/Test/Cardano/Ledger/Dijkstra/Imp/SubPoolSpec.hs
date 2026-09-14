@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec (spec) where
 
 import Cardano.Ledger.Address (accountAddressIdL, accountAddressNetworkIdL)
-import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), Mismatch (..), Network (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraSubPoolPredFailure (..))
@@ -114,7 +114,9 @@ spec = describe "SUBPOOL" $ do
     it "Can retire a pool" $ do
       spKH <- freshKeyHash
       stakePoolParams <- genValidStakePoolParams spKH
-      epochNo <- getsNES nesELL
+      currentEpoch <- getsNES nesELL
+      EpochNo maxEpoch <- addEpochInterval currentEpoch <$> getsPParams ppEMaxL
+      retireEpoch <- EpochNo <$> choose (succ $ unEpochNo currentEpoch, maxEpoch)
       submitTxAnn_ "Register pool" $
         mkTopTxWithSubTxs
           [ mkBasicTx mkBasicTxBody
@@ -126,10 +128,13 @@ spec = describe "SUBPOOL" $ do
         mkTopTxWithSubTxs
           [ mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
-                .~ [ RetirePoolTxCert spKH $ succ epochNo
+                .~ [ RetirePoolTxCert spKH retireEpoch
                    ]
           ]
+      let
+        numEpochsUntilRetired = fromIntegral $ unEpochNo retireEpoch - unEpochNo currentEpoch
       expectStakePoolParams spKH $ Just stakePoolParams
+      passNEpochsChecking (numEpochsUntilRetired - 1) $ expectStakePoolParams spKH $ Just stakePoolParams
       passEpoch
       expectStakePoolParams spKH Nothing
   describe "Negative" $ do
@@ -219,3 +224,32 @@ spec = describe "SUBPOOL" $ do
         [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
             Mismatch declaredCost expectedCost
         ]
+  it "Fails when trying to retire a pool in the current or previous epoch" $ do
+    spKH <- freshKeyHash
+    stakePoolParams <- genValidStakePoolParams spKH
+    submitTxAnn_ "Registering a stake pool" $
+      mkTopTxWithSubTxs
+        [ mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
+        ]
+    expectStakePoolParams spKH $ Just stakePoolParams
+    currentEpoch <- getsNES nesELL
+    maxEpoch <- addEpochInterval currentEpoch <$> getsPParams ppEMaxL
+    retireEpoch <-
+      frequency
+        [ (1, pure currentEpoch)
+        , (49, EpochNo <$> choose (0, unEpochNo currentEpoch))
+        , (49, EpochNo <$> choose (unEpochNo maxEpoch, maxBound))
+        , (1, pure maxEpoch)
+        ]
+    submitFailingTx
+      ( mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert spKH retireEpoch]
+          ]
+      )
+      [ injectFailure . DijkstraSubPoolPredFailure $
+          StakePoolRetirementWrongEpochPOOL
+            (Mismatch retireEpoch currentEpoch)
+            (Mismatch retireEpoch maxEpoch)
+      ]
