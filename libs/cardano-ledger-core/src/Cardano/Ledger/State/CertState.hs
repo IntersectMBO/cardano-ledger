@@ -47,6 +47,9 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psVRFKeyHashesL,
+  -- Helpers for `psVRFKeyHashes`
+  addVRFKeyHashOccurrence,
+  removeVRFKeyHashOccurrence,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -56,6 +59,8 @@ import Cardano.Ledger.BaseTypes (
   NonZero,
   StrictMaybe,
   ToKeyValuePairs (..),
+  knownNonZeroBounded,
+  mapNonZero,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -492,3 +497,22 @@ psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
 psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})
+
+-- | Record one more reference to a VRF key hash in 'psVRFKeyHashes'. The count
+-- saturates at 'maxBound' instead of overflowing.
+addVRFKeyHashOccurrence ::
+  VRFVerKeyHash StakePoolVRF ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
+addVRFKeyHashOccurrence vrfKeyHash = Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
+  where
+    -- Saturates at maxBound: if (+1) would overflow to 0, keep the existing value
+    combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
+
+-- | Drop one reference to a VRF key hash from 'psVRFKeyHashes'. The key is
+-- removed once no references remain.
+removeVRFKeyHashOccurrence ::
+  VRFVerKeyHash StakePoolVRF ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
+removeVRFKeyHashOccurrence = Map.update (mapNonZero (subtract 1))

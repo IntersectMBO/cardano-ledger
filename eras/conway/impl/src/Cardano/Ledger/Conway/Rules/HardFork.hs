@@ -39,7 +39,6 @@ import Control.State.Transition (
  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Void (Void)
 import Data.Word (Word64)
@@ -118,8 +117,3 @@ populateVRFKeyHashes pState =
       Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
     accumulateVRFKeyHashes spMap getVrf acc =
       Map.foldr' (addVRFKeyHashOccurrence . getVrf) acc spMap
-    addVRFKeyHashOccurrence vrfKeyHash =
-      Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
-      where
-        -- Saturates at maxBound: if (+1) would overflow to 0, keep existing value
-        combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
