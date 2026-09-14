@@ -27,8 +27,10 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   Language (..),
+  asSLanguage,
   hashData,
   hashPlutusScript,
+  plutusBinary,
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (epochStateStakePoolsL, nesEsL)
@@ -104,6 +106,20 @@ spec = describe "Invalid transactions" $ do
           submitFailingTx
             tx
             [injectFailure $ NotAllowedSupplementalDatums (NES.singleton extraDatumHash) []]
+
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1323
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "InvalidMetadata" $ do
+          let auxData =
+                mkBasicTxAuxData
+                  & plutusScriptsTxAuxDataL
+                    .~ Map.singleton lang (pure . plutusBinary $ asSLanguage slang malformedPlutus)
+              tx =
+                mkBasicTx mkBasicTxBody
+                  & auxDataTxL .~ SJust auxData
+          submitFailingTx
+            tx
+            [injectFailure $ Shelley.InvalidMetadata]
 
         describe "PPViewHashesDontMatch" $ do
           let
