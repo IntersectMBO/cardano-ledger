@@ -22,7 +22,6 @@ module Cardano.Protocol.Leios.BlockHeader (
   bodyHeaderL,
   sigHeaderL,
   HeaderBody (..),
-  EbReferencesAnnouncement (..),
   headerHash,
   headerSize,
   LeiosEraBlockHeader (..),
@@ -49,15 +48,18 @@ import Cardano.Ledger.Binary (
   unCBORGroup,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), headerBlockL)
+import Cardano.Ledger.Block (
+  EbReferencesAnnouncement (..),
+  EraBlockHeader (..),
+  LeiosEraBlockHeader (..),
+  headerBlockL,
+ )
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
-  EraIndependentEbReferences,
   HASH,
   HashAnnotated (..),
-  SafeHash,
   SafeToHash,
   extractHash,
   originalBytesSize,
@@ -78,35 +80,11 @@ import Cardano.Protocol.TPraos.BlockHeader (PrevHash)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
-import Control.DeepSeq (NFData)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks (..))
-
--- | Announcement of an Endorser Block (EB).
-data EbReferencesAnnouncement = EbReferencesAnnouncement
-  { ebReferencesAnnouncementHash :: !(SafeHash EraIndependentEbReferences)
-  -- ^ Hash of the announced Endorsement Block References
-  , ebReferencesAnnouncementSize :: !Word32
-  -- ^ Size of the announced Endorsement Block References
-  }
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (NoThunks, NFData)
-
-instance EncCBOR EbReferencesAnnouncement where
-  encCBOR (EbReferencesAnnouncement h s) =
-    encodeListLen 2
-      <> encCBOR h
-      <> encCBOR s
-
-instance DecCBOR EbReferencesAnnouncement where
-  decCBOR =
-    decodeRecordNamed "EbReferencesAnnouncement" (const 2) $
-      EbReferencesAnnouncement
-        <$> decCBOR
-        <*> decCBOR
 
 data HeaderBody crypto = HeaderBody
   { hbBlockNo :: !BlockNo
@@ -285,9 +263,6 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
     headerBlockL . bodyHeaderL . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
   protVerBlockHeaderL =
     headerBlockL . bodyHeaderL . lens hbProtVer (\hb pv -> hb {hbProtVer = pv})
-
-class EraBlockHeader h era => LeiosEraBlockHeader h era where
-  ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)
 
 instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
   ebReferencesAnnouncementBlockHeaderL =

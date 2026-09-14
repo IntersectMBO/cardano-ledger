@@ -14,11 +14,13 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (DecCBOR)
-import Cardano.Ledger.Block (Block (Block))
+import Cardano.Ledger.Block (
+  Block (Block),
+  EbReferencesAnnouncement (EbReferencesAnnouncement),
+ )
 import Cardano.Ledger.Core (BlockBody, EraBlockBody)
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Leios.BlockHeader (
-  EbReferencesAnnouncement (EbReferencesAnnouncement),
   Header (Header, HeaderConstr),
   HeaderBody (HeaderBody),
  )

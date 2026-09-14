@@ -23,12 +23,20 @@ module Cardano.Ledger.Block (
   bodyBlockL,
   bheader,
   bbody,
+  neededTxInsForBlock,
   BbodySignal (..),
   EraBlockHeader (..),
-  neededTxInsForBlock,
+  EbReferencesAnnouncement (..),
+  LeiosEraBlockHeader (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe)
+import Cardano.Ledger.Binary (
+  DecCBOR (decCBOR),
+  EncCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
@@ -110,3 +118,29 @@ class Era era => EraBlockHeader h era where
   blockBodyHashBlockHeaderL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
   slotNoBlockHeaderL :: Lens' (Block h era) SlotNo
   protVerBlockHeaderL :: Lens' (Block h era) ProtVer
+
+-- | Announcement of an Endorser Block (EB).
+data EbReferencesAnnouncement = EbReferencesAnnouncement
+  { ebReferencesAnnouncementHash :: !(SafeHash EraIndependentEbReferences)
+  -- ^ Hash of the announced Endorsement Block References
+  , ebReferencesAnnouncementSize :: !Word32
+  -- ^ Size of the announced Endorsement Block References
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData)
+
+instance EncCBOR EbReferencesAnnouncement where
+  encCBOR (EbReferencesAnnouncement h s) =
+    encodeListLen 2
+      <> encCBOR h
+      <> encCBOR s
+
+instance DecCBOR EbReferencesAnnouncement where
+  decCBOR =
+    decodeRecordNamed "EbReferencesAnnouncement" (const 2) $
+      EbReferencesAnnouncement
+        <$> decCBOR
+        <*> decCBOR
+
+class EraBlockHeader h era => LeiosEraBlockHeader h era where
+  ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)
