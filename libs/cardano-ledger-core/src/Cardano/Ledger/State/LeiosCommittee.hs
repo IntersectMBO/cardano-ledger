@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | The Leios voting committee: the pools entitled to vote on endorser blocks
 -- for one epoch (CIP-0164). The committee type itself is cardano-base's
@@ -14,6 +13,7 @@ module Cardano.Ledger.State.LeiosCommittee (
   emptyLeiosCommittee,
   LeiosCandidate (..),
   selectLeiosCommittee,
+  leiosCommitteeToJSON,
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
@@ -21,7 +21,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.Ledger.State.StakePool (BlsKey (..))
-import Data.Aeson (ToJSON (..), object, (.=))
+import Data.Aeson (Value, object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Ord (Down (..))
 import Data.Vector (Vector)
@@ -77,16 +77,13 @@ selectLeiosCommittee committeeSize candidates =
 
     toTuple (BlsKey vk pop) = (vk, pop)
 
--- Orphan JSON: the committee is part of the ledger state, but its type belongs
--- to cardano-base, which has no reason to know how we render it. The CBOR
--- instances live in cardano-ledger-binary, next to the classes.
-
-instance ToJSON LeiosSeat where
-  toJSON (LeiosSeat weight vkey) =
-    object
-      [ "seatWeight" .= weight
-      , "seatVKey" .= show (strictMaybeToMaybe vkey)
-      ]
-
-instance ToJSON LeiosCommittee where
-  toJSON = toJSON . VS.toList . leiosCommitteeSeats
+-- | Render a 'LeiosCommittee' as JSON for ledger purposes.
+leiosCommitteeToJSON :: LeiosCommittee -> Value
+leiosCommitteeToJSON =
+  toJSON . map leiosSeatToJSON . VS.toList . leiosCommitteeSeats
+  where
+    leiosSeatToJSON (LeiosSeat weight vkey) =
+      object
+        [ "seatWeight" .= weight
+        , "seatVKey" .= show (strictMaybeToMaybe vkey)
+        ]

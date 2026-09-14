@@ -94,6 +94,7 @@ import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.LeiosCommittee (
   LeiosCandidate (..),
   LeiosCommittee (..),
+  leiosCommitteeToJSON,
   selectLeiosCommittee,
  )
 import Cardano.Ledger.State.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
@@ -472,7 +473,7 @@ instance ToKeyValuePairs SetSnapShot where
      in [ "snapShot" .= ssSnapShot
         , "epochNo" .= ssEpochNo
         , "leiosCommitteeSize" .= ssLeiosCommitteeSize
-        , "leiosCommittee" .= ssLeiosCommittee
+        , "leiosCommittee" .= leiosCommitteeToJSON ssLeiosCommittee
         ]
 
 -- | The oldest snapshot, consumed by the reward calculation.
