@@ -171,6 +171,8 @@ instance (ToExpr (InstantStake era), ToExpr (Accounts era)) => ToExpr (RatifyEnv
       , toExpr poolps
       ]
 
+instance ToExpr VotingStakePoolDistr
+
 -- Rules/Gov
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (ConwayGovPredFailure era)
 

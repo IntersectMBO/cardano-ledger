@@ -163,6 +163,10 @@ module Cardano.Ledger.Conway.Governance (
   reDRepStateL,
   reCurrentEpochL,
   reCommitteeStateL,
+  VotingStakePoolDistr (..),
+  vspdIndividualStakeL,
+  vspdTotalVotingStakeL,
+  toVotingStakePoolDistr,
   DefaultVote (..),
   defaultStakePoolVote,
   translateProposals,
@@ -499,7 +503,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                     , dpAccounts = dState ^. accountsL
                     , dpIndex = 0 -- used as the index of the remaining UMap
                     , dpInstantStake = instantStake -- used as part of the snapshot
-                    , dpStakePoolDistr = stakePoolDistr
+                    , dpVotingStakePoolDistr = toVotingStakePoolDistr stakePoolDistr
                     , dpDRepDistr = Map.empty -- The partial result starts as the empty map
                     , dpDRepState = vsDReps vState
                     , dpCurrentEpoch = epochNo
