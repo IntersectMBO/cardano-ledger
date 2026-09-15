@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `EbAnnouncement` (moved from `cardano-protocol`)
 * Add `headerBlockL`, `bodyBlockL`
 * Add `addVRFKeyHashOccurrence`, `removeVRFKeyHashOccurrence` and `populateVRFKeyHashes` to `Cardano.Ledger.State.CertState`
 * Remove `poolDistrDistrL`, `poolDistrTotalL`
