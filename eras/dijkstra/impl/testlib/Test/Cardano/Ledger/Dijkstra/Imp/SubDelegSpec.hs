@@ -170,7 +170,7 @@ spec = describe "SUBDELEG" $ do
     it "With incorrect refund" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
-      let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
+      let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV4
 
       impAnn "Register stake credential" $
         submitTx_ $
