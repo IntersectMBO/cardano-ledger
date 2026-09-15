@@ -6,8 +6,16 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec (spec) where
 
+import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.Address (accountAddressIdL, accountAddressNetworkIdL)
-import Cardano.Ledger.BaseTypes (EpochNo (..), Mismatch (..), Network (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
+  Mismatch (..),
+  Network (..),
+  StrictMaybe (..),
+  addEpochInterval,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraSubPoolPredFailure (..))
@@ -15,8 +23,10 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Shelley.LedgerState (esLStateL, lsCertStateL, nesELL, nesEpochStateL)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
+import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -121,6 +131,27 @@ spec = describe "SUBPOOL" $ do
         )
         [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
             Mismatch declaredCost expectedCost
+        ]
+
+    -- Disabled in conformance for the same reason as the corresponding top-level POOL
+    -- test: https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
+    disableInConformanceIt "Fails when the metadata hash is too big" $ do
+      stakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      let maxMetadataHashSize = fromIntegral $ hashSize (Proxy :: Proxy HASH)
+      tooBigSize <- choose (maxMetadataHashSize + 1, maxMetadataHashSize + 50)
+      metadataHash <- liftGen $ genByteArray tooBigSize
+      url <- arbitrary
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [ RegPoolTxCert $
+                         stakePoolParams & sppMetadataL .~ SJust (PoolMetadata url metadataHash)
+                     ]
+            ]
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure $
+            PoolMedataHashTooBig (stakePoolParams ^. sppIdL) tooBigSize
         ]
   describe "Pool re-registration" $ do
     it "With completely new parameters" $ do
@@ -239,6 +270,96 @@ spec = describe "SUBPOOL" $ do
         )
         [ injectFailure . DijkstraSubPoolPredFailure . StakePoolCostTooLowPOOL $
             Mismatch declaredCost expectedCost
+        ]
+    it "Cancels a pending retirement" $ do
+      spKH <- freshKeyHash
+      stakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
+          ]
+      currentEpoch <- getsNES nesELL
+      let retireEpoch = addEpochInterval currentEpoch $ EpochInterval 1
+      submitTxAnn_ "Retire pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert spKH retireEpoch]
+          ]
+      newStakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Re-register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert newStakePoolParams]
+          ]
+      passNEpochs 2
+      expectStakePoolParams spKH $ Just newStakePoolParams
+    it "Fails to register a new pool with a VRF claimed by a re-registration" $ do
+      spKH <- freshKeyHash
+      stakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
+          ]
+      newStakePoolParams <- genValidStakePoolParams spKH
+      let newVrf = newStakePoolParams ^. sppVrfL
+      submitTxAnn_ "Re-register pool with a fresh VRF" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert newStakePoolParams]
+          ]
+      otherStakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [RegPoolTxCert $ otherStakePoolParams & sppVrfL .~ newVrf]
+            ]
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure $
+            VRFKeyHashAlreadyRegistered (otherStakePoolParams ^. sppIdL) newVrf
+        ]
+    it "Re-registering again with a fresh VRF releases the previously claimed one" $ do
+      spKH <- freshKeyHash
+      stakePoolParams <- genValidStakePoolParams spKH
+      submitTxAnn_ "Register pool" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert stakePoolParams]
+          ]
+      reRegStakePoolParams1 <- genValidStakePoolParams spKH
+      submitTxAnn_ "Re-register pool with a fresh VRF" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert reRegStakePoolParams1]
+          ]
+      reRegStakePoolParams2 <- genValidStakePoolParams spKH
+      submitTxAnn_ "Re-register pool with another fresh VRF" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RegPoolTxCert reRegStakePoolParams2]
+          ]
+      otherStakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      submitTxAnn_ "Register a new pool with the released VRF" $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [ RegPoolTxCert $
+                       otherStakePoolParams & sppVrfL .~ (reRegStakePoolParams1 ^. sppVrfL)
+                   ]
+          ]
+      anotherStakePoolParams <- genValidStakePoolParams =<< freshKeyHash
+      let claimedVrf = reRegStakePoolParams2 ^. sppVrfL
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ [RegPoolTxCert $ anotherStakePoolParams & sppVrfL .~ claimedVrf]
+            ]
+        )
+        [ injectFailure . DijkstraSubPoolPredFailure $
+            VRFKeyHashAlreadyRegistered (anotherStakePoolParams ^. sppIdL) claimedVrf
         ]
   describe "Pool retirement" $ do
     it "Can retire a pool" $ do

@@ -200,6 +200,7 @@ library testlib
     base,
     bytestring,
     cardano-base,
+    cardano-base:testlib,
     cardano-crypto-class,
     cardano-crypto-leios,
     cardano-data,
