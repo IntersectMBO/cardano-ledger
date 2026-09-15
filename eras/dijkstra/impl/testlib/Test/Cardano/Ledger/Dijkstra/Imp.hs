@@ -17,7 +17,6 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec as SUBDELEG
-import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec as SUBDELEGS
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubGovCertSpec as SUBGOVCERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec as SUBPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec as SUBUTXO
