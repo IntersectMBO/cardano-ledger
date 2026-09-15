@@ -26,7 +26,6 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   traverseSubTxs,
   withPostFixupSubTxs,
   submitFailingSubTx,
-  txWithSubTx,
   registerDRepSubTx,
 ) where
 
