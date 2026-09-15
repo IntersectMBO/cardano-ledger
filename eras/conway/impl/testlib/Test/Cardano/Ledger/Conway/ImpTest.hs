@@ -113,6 +113,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   isDRepExpired,
   expectDRepExpiry,
   expectActualDRepExpiry,
+  lookupDRepState,
+  expectDRepRegistered,
   expectDRepNotRegistered,
   expectCurrentProposals,
   expectNoCurrentProposals,
@@ -1592,13 +1594,26 @@ submitConstitution prevGovId = do
   (proposal, _) <- mkConstitutionProposal prevGovId
   submitProposal proposal
 
+lookupDRepState :: ConwayEraCertState era => Credential DRepRole -> ImpTestM era (Maybe DRepState)
+lookupDRepState cred = do
+  dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
+  pure $ Map.lookup cred dsMap
+
 expectDRepNotRegistered ::
   (HasCallStack, ConwayEraCertState era) =>
   Credential DRepRole ->
   ImpTestM era ()
-expectDRepNotRegistered drep = do
+expectDRepNotRegistered drep = lookupDRepState drep `shouldReturn` Nothing
+
+expectDRepRegistered ::
+  (HasCallStack, ConwayEraCertState era) =>
+  Credential DRepRole ->
+  ImpTestM era ()
+expectDRepRegistered drep = do
   dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
-  Map.lookup drep dsMap `shouldBe` Nothing
+  case Map.lookup drep dsMap of
+    Nothing -> expectationFailure "DRep is not registered"
+    Just _ -> pure ()
 
 isDRepExpired ::
   (HasCallStack, ConwayEraCertState era) =>

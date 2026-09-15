@@ -161,6 +161,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubGovCertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec
