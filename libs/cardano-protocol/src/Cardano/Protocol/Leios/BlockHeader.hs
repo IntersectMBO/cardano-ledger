@@ -20,7 +20,6 @@
 module Cardano.Protocol.Leios.BlockHeader (
   Header (HeaderConstr, Header, headerBody, headerSig),
   HeaderBody (..),
-  EbAnnouncement (..),
   headerHash,
   headerSize,
 ) where
@@ -49,6 +48,7 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (
   BlockHeaderVersionInfo (..),
+  EbAnnouncement,
   EraBlockHeader (..),
   LeiosEraBlockHeader (..),
   blockHeaderL,
@@ -57,10 +57,8 @@ import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
-  EraIndependentEb,
   HASH,
   HashAnnotated (..),
-  SafeHash,
   SafeToHash,
   extractHash,
   originalBytesSize,
@@ -81,35 +79,12 @@ import Cardano.Protocol.TPraos.BlockHeader (PrevHash)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
-import Control.DeepSeq (NFData)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks (..))
-
--- | Announcement of an Endorser Block (EB).
-data EbAnnouncement = EbAnnouncement
-  { ebAnnouncementHash :: !(SafeHash EraIndependentEb)
-  , ebAnnouncementSize :: !Word32
-  -- ^ Size of the EB block closure
-  }
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (NoThunks, NFData)
-
-instance EncCBOR EbAnnouncement where
-  encCBOR (EbAnnouncement h s) =
-    encodeListLen 2
-      <> encCBOR h
-      <> encCBOR s
-
-instance DecCBOR EbAnnouncement where
-  decCBOR =
-    decodeRecordNamed "EbAnnouncement" (const 2) $
-      EbAnnouncement
-        <$> decCBOR
-        <*> decCBOR
 
 data HeaderBody crypto = HeaderBody
   { hbBlockNo :: !BlockNo
