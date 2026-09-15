@@ -12,7 +12,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -32,6 +31,7 @@ module Cardano.Ledger.Block (
   LeiosEraBlockHeader (..),
   BlockHeaderVersionInfo (..),
   neededTxInsForBlock,
+  EbAnnouncement (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..))
@@ -162,3 +162,26 @@ instance DecCBOR BlockHeaderVersionInfo where
   decCBOR =
     decodeRecordNamed "BlockHeaderVersionInfo" (const 2) $
       BlockHeaderVersionInfo <$> decCBOR <*> decCBOR
+
+-- | Announcement of an Endorser Block (EB).
+data EbAnnouncement = EbAnnouncement
+  { ebAnnouncementHash :: !(SafeHash EraIndependentEb)
+  -- ^ Hash of the announced Endorsement Block References
+  , ebAnnouncementSize :: !Word32
+  -- ^ Size of the announced Endorsement Block References
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData)
+
+instance EncCBOR EbAnnouncement where
+  encCBOR (EbAnnouncement h s) =
+    encodeListLen 2
+      <> encCBOR h
+      <> encCBOR s
+
+instance DecCBOR EbAnnouncement where
+  decCBOR =
+    decodeRecordNamed "EbAnnouncement" (const 2) $
+      EbAnnouncement
+        <$> decCBOR
+        <*> decCBOR

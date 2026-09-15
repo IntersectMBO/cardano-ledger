@@ -350,3 +350,5 @@ instance ToExpr PositiveInterval where
 instance (ToExpr h, ToExpr (BlockBody era)) => ToExpr (Block h era)
 
 instance ToExpr TestBlockHeader
+
+instance ToExpr EbAnnouncement
