@@ -27,9 +27,6 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-sppIdL :: Lens' (StakePoolParams era) (KeyHash StakePool)
-sppIdL = lens sppId (\x y -> x {sppId = y})
-
 -- | Generate an arbitrary value and overwrite the specified value using the supplied lens.
 arbitraryLens :: Arbitrary a => Lens' a b -> b -> Gen a
 arbitraryLens l b = (l .~ b) <$> arbitrary

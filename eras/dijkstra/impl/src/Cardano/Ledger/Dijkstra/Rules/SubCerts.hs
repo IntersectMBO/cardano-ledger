@@ -44,7 +44,8 @@ import Cardano.Ledger.Dijkstra.Era (
   SUBCERTS,
  )
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
-import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertEvent, DijkstraSubCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.SubCert (DijkstraSubCertEvent, DijkstraSubCertPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
@@ -92,6 +93,9 @@ instance InjectRuleFailure "SUBCERTS" Conway.ConwayCertsPredFailure DijkstraEra 
   injectFailure = conwayToDijkstraSubCertsPredFailure @DijkstraEra
 
 instance InjectRuleEvent "SUBCERTS" DijkstraSubCertsEvent DijkstraEra
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubPoolPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
 
 newtype DijkstraSubCertsEvent era = SubCertEvent (Event (EraRule "SUBCERT" era))
   deriving (Generic)

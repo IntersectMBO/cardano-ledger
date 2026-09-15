@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   traverseSubTxs,
   withPostFixupSubTxs,
   submitFailingSubTx,
+  registerDRepSubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -121,6 +122,10 @@ class
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubPoolPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraGovPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -213,6 +218,36 @@ submitFailingSubTx ::
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingSubTx subTx = submitFailingTx $ mkTopTxWithSubTxs [subTx]
+
+instance InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
@@ -410,3 +445,16 @@ mkBalancerSubTx consumed produced = do
               & bodyTxL . inputsTxBodyL .~ [newTxIn]
               & bodyTxL . outputsTxBodyL .~ [changeOut]
       Just <$> updateAddrTxWits subTx
+
+registerDRepSubTx :: DijkstraEraImp era => ImpTestM era (Credential DRepRole)
+registerDRepSubTx = do
+  drepCred <- KeyHashObj <$> freshKeyHash
+  drepDeposit <- getsPParams ppDRepDepositL
+  anchor <- arbitrary
+  submitTxAnn_ "Registering the DRep" $
+    mkTopTxWithSubTxs
+      [ mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [RegDRepTxCert drepCred drepDeposit anchor]
+      ]
+  expectDRepRegistered drepCred
+  pure drepCred
