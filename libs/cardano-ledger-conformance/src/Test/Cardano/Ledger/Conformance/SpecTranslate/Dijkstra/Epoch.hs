@@ -58,9 +58,9 @@ instance SpecTranslate DijkstraEra (SnapShots DijkstraEra) where
 
   toSpecRep (SnapShots {..}) =
     Agda.MkSnapshots
-      <$> toSpecRep ssStakeMark
-      <*> toSpecRep ssStakeSet
-      <*> toSpecRep ssStakeGo
+      <$> toSpecRep (msSnapShot ssStakeMark)
+      <*> toSpecRep (ssSnapShot ssStakeSet)
+      <*> toSpecRep (gsSnapShot ssStakeGo)
       <*> toSpecRep ssFee
 
 instance SpecTranslate DijkstraEra SnapShot where

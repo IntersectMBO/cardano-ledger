@@ -512,14 +512,29 @@ snapShotSpec =
       , assert $ pools ==. lit VMap.empty
       ]
 
+-- | The set/go snapshots wrap an empty base snapshot; their derived fields
+-- (pool distribution, committee) are left unconstrained.
+setSnapShotSpec :: Specification SetSnapShot
+setSnapShotSpec =
+  constrained $ \ [var|set|] ->
+    match set $ \ [var|snap|] _pooldistr _epochNo _size _committee ->
+      satisfies snap snapShotSpec
+
+goSnapShotSpec :: Specification GoSnapShot
+goSnapShotSpec =
+  constrained $ \ [var|go|] ->
+    match go $ \ [var|snap|] _pooldistr ->
+      satisfies snap snapShotSpec
+
 snapShotsSpec ::
   Era era => Term SnapShot -> Specification (SnapShots era)
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|_go|] _fee ->
-      [ assert $ mark ==. marksnap
-      , satisfies set snapShotSpec
-      , satisfies _go snapShotSpec
+      [ match mark $ \ [var|marksnap'|] _epochNo _size ->
+          assert $ marksnap' ==. marksnap
+      , satisfies set setSnapShotSpec
+      , satisfies _go goSnapShotSpec
       , reify marksnap calculatePoolDistr $ \ [var|pd|] -> pooldistr ==. pd
       ]
 

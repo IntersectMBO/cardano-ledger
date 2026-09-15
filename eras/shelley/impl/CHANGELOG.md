@@ -11,6 +11,7 @@
 * Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the
   maximum pledge leverage is set in the protocol parameters
 * Add `FromJSON` instance for `ShelleyTxOut era`
+* Re-export the `msSnapShotL`, `ssSnapShotL`, `gsSnapShotL` lenses from `Cardano.Ledger.Shelley.LedgerState`
 
 ### `testlib`
 

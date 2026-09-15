@@ -153,7 +153,7 @@ instance
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots era
-  , Signal (EraRule "SNAP" era) ~ ()
+  , Signal (EraRule "SNAP" era) ~ EpochNo
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapState era
@@ -252,7 +252,7 @@ epochTransition ::
   , EraTxOut era
   , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots era
-  , Signal (EraRule "SNAP" era) ~ ()
+  , Signal (EraRule "SNAP" era) ~ EpochNo
   , Embed (EraRule "SNAP" era) (EPOCH era)
   , Embed (EraRule "POOLREAP" era) (EPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ()
@@ -287,7 +287,7 @@ epochTransition = do
       certState0 = ledgerState0 ^. lsCertStateL
       vState = certState0 ^. certVStateL
   snapshots1 <-
-    trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ledgerState0 curPParams, snapshots0, ())
+    trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ledgerState0 curPParams, snapshots0, eNo)
 
   Shelley.PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $

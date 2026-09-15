@@ -552,6 +552,10 @@ queryStakeSnapshotsSpec =
       let
         nes = (def :: NewEpochState era) & nesEsL . esSnapshotsL .~ ss
         result = queryStakeSnapshots nes Nothing
+        -- The per-stage base snapshots; the query reads through the split.
+        markSnap = ss ^. ssStakeMarkL . msSnapShotL
+        setSnap = ss ^. ssStakeSetL . ssSnapShotL
+        goSnap = ss ^. ssStakeGoL . gsSnapShotL
         getPoolIdsWithNonZeroDelegators =
           Map.filter ((> 0) . spssNumDelegators) . VMap.toMap . ssStakePoolsSnapShot
         getPoolIdsWithNonZeroStake =
@@ -559,7 +563,7 @@ queryStakeSnapshotsSpec =
         allPoolIdsFiltered with =
           foldMap
             (Map.keysSet . with)
-            [ssStakeMark ss, ssStakeSet ss, ssStakeGo ss]
+            [markSnap, setSnap, goSnap]
         version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
         allPoolIds
           | version >= natVersion @11 = allPoolIdsFiltered getPoolIdsWithNonZeroStake
@@ -580,8 +584,8 @@ queryStakeSnapshotsSpec =
           , counterexample "SubTotal Mark" $ nonZeroSubTotal ssMarkPool === ssMarkTotal result
           , counterexample "SubTotal Set" $ nonZeroSubTotal ssSetPool === ssSetTotal result
           , counterexample "SubTotal Go" $ nonZeroSubTotal ssGoPool === ssGoTotal result
-          , counterexample "Total Mark" $ ssMarkTotal result === nonZeroTotal (ssStakeMark ss)
-          , counterexample "Total Set" $ ssSetTotal result === nonZeroTotal (ssStakeSet ss)
-          , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal (ssStakeGo ss)
+          , counterexample "Total Mark" $ ssMarkTotal result === nonZeroTotal markSnap
+          , counterexample "Total Set" $ ssSetTotal result === nonZeroTotal setSnap
+          , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal goSnap
           , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
           ]
