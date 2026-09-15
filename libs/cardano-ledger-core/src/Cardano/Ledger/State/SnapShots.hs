@@ -538,7 +538,7 @@ mkGoSnapShot SetSnapShot {ssSnapShot, ssPoolDistr} =
 -- when we know that they are stable (so that we do not compute them if we do not have to).
 -- See more info in the [Optimize TICKF ADR](https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
 data SnapShots era = SnapShots
-  { ssStakeMark :: MarkSnapShot -- Lazy on purpose
+  { ssStakeMark :: !MarkSnapShot
   , ssStakeMarkPoolDistr :: PoolDistr -- Lazy on purpose
   , ssStakeSet :: !SetSnapShot
   , ssStakeGo :: !GoSnapShot
