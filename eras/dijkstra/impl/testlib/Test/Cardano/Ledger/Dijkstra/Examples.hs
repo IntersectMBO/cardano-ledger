@@ -172,7 +172,8 @@ exampleDijkstraGenesis =
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
           , udppPlutusV4CostModel = testingCostModel PlutusV4
-          , -- Feasible values of CIP-164 Table 7
+          , -- Maximum feasible values of CIP-164 Table 7
+            -- TODO: Update these to the actual, initial PV12 parameters
             udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
           , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
           , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff

@@ -57,7 +57,7 @@ stake_pool_state =
       , "relays" ==> arr [0 <+ a relay]
       , "deposit" ==> coin
       , "metadata" ==> pool_metadata / VNil
-      , "bls_key" ==> bls_key_rule / VNil
+      , "bls_key" ==> bls_key_state_rule / VNil
       , "account_id" ==> account_id
       , "delegators" ==> set credential
       ]
@@ -78,5 +78,12 @@ stake_pool_params =
       , "account_address" ==> address
       ]
 
+-- | A registered voting key: the BLS public key and its proof of possession.
 bls_key_rule :: Rule
 bls_key_rule = "bls_key" =:= arr [a VBytes, a VBytes]
+
+-- | A voting key together with the epoch its registration took effect in
+-- (CIP-0164). Kept on the stake pool /state/; the stake pool /params/ carry the
+-- bare 'bls_key' before registration fixes the epoch.
+bls_key_state_rule :: Rule
+bls_key_state_rule = "bls_key_state" =:= arr [a bls_key_rule, a epoch_no]
