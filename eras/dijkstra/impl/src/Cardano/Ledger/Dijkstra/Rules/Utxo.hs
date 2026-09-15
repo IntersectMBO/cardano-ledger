@@ -72,7 +72,6 @@ import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
@@ -89,9 +88,11 @@ import Control.State.Transition.Extended (
   validate,
  )
 import Data.Bifunctor
+import qualified Data.Foldable as F (toList)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
@@ -101,7 +102,6 @@ import Validation (failureUnless)
 data UtxoEnv era = UtxoEnv
   { ueSlot :: SlotNo
   , uePParams :: PParams era
-  , uePState :: PState era
   , ueOriginalCertState :: CertState era
   , ueOriginalUtxo :: UTxO era
   }
@@ -285,10 +285,10 @@ validateValueNotConservedUTxO ::
   EraUTxO era =>
   PParams era ->
   UTxO era ->
-  PState era ->
+  (KeyHash StakePool -> Bool) ->
   TxBody TopTx era ->
   Test (Mismatch RelEQ (Value era))
-validateValueNotConservedUTxO pp utxo pState txBody =
+validateValueNotConservedUTxO pp utxo isRegPoolId txBody =
   failureUnless (consumedValue == producedValue) $
     Mismatch
       { mismatchSupplied = consumedValue
@@ -296,7 +296,7 @@ validateValueNotConservedUTxO pp utxo pState txBody =
       }
   where
     consumedValue = dijkstraConsumed pp utxo txBody
-    producedValue = produced pp pState txBody
+    producedValue = getProducedValue pp isRegPoolId txBody
 
 dijkstraUtxoTransition ::
   forall era.
@@ -324,7 +324,7 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (UtxoEnv slot pp postSubsPState originalCertState originalUtxo, utxos, stAnnTx) <-
+  TRC (UtxoEnv slot pp originalCertState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   let originalPState = originalCertState ^. certPStateL
@@ -363,21 +363,21 @@ dijkstraUtxoTransition = do
       validateValueNotConservedUTxO
         pp
         originalUtxo
-        originalPState
+        (`Map.member` (originalPState ^. psStakePoolsL))
         txBody
 
   {- legacyMode ≡ true → consumedLegacy ≡ producedLegacy -}
-  -- The `PState` has to be the one with all the sub-transactions already applied,
-  -- because if a sub-transaction registered a pool, then the top-transaction
-  -- must not add to the `produced` value if it registers the same pool,
-  -- since it will count as a re-registration.
-  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $ do
+    -- we derive the set of already registered pools directly from the original `PState` and the sub-transactions,
+    -- because if the transaction is phase2-invalid, the pools registered by sub-transactions never reach the updated `PState`.
+    -- We would then wrongly charge a deposit for a top-level re-registration
+    -- and the transaction would fail conservation of value
     runTest $
       first (fmap ValueNotConservedInLegacyMode) $
         validateValueNotConservedUTxO
           pp
           originalUtxo
-          postSubsPState
+          (`Set.member` poolsRegisteredBeforeTopTx originalPState txBody)
           (txBody & subTransactionsTxBodyL .~ mempty)
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
@@ -579,3 +579,18 @@ conwayToDijkstraUtxoPredFailure = \case
   Conway.IncorrectTotalCollateralField dc c -> IncorrectTotalCollateralField dc c
   Conway.BabbageOutputTooSmallUTxO x -> BabbageOutputTooSmallUTxO x
   Conway.BabbageNonDisjointRefInputs txin -> BabbageNonDisjointRefInputs txin
+
+poolsRegisteredBeforeTopTx ::
+  (EraTx era, DijkstraEraTxBody era) =>
+  PState era ->
+  TxBody TopTx era ->
+  Set.Set (KeyHash StakePool)
+poolsRegisteredBeforeTopTx pState topTxBody =
+  Map.keysSet (pState ^. psStakePoolsL) <> subTxPools
+  where
+    subTxPools =
+      Set.fromList
+        [ sppId spp
+        | subTx <- F.toList (topTxBody ^. subTransactionsTxBodyL)
+        , RegPoolTxCert spp <- F.toList (subTx ^. bodyTxL . certsTxBodyL)
+        ]

@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Remove `uePState` field from `UtxoEnv`
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
 * Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
@@ -97,6 +98,7 @@
 
 ### `testlib`
 
+* Add `switchTxToPhase2InvalidLegacyMode`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
 * Add `submitFailingSubTx`
 * Preserve explicitly supplied redeemers when fixing up subtransactions.
