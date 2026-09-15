@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   withPostFixupSubTxs,
   submitFailingSubTx,
   txWithSubTx,
+  registerDRepSubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -124,6 +125,8 @@ class
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubPoolPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraGovPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -230,6 +233,21 @@ instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra
   injectFailure = SubCertsFailure . injectFailure
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubGovCertPredFailure DijkstraEra where
   injectFailure = SubCertFailure . injectFailure
 
 impDijkstraSatisfyNativeScript ::
@@ -428,3 +446,16 @@ mkBalancerSubTx consumed produced = do
               & bodyTxL . inputsTxBodyL .~ [newTxIn]
               & bodyTxL . outputsTxBodyL .~ [changeOut]
       Just <$> updateAddrTxWits subTx
+
+registerDRepSubTx :: DijkstraEraImp era => ImpTestM era (Credential DRepRole)
+registerDRepSubTx = do
+  drepCred <- KeyHashObj <$> freshKeyHash
+  drepDeposit <- getsPParams ppDRepDepositL
+  anchor <- arbitrary
+  submitTxAnn_ "Registering the DRep" $
+    mkTopTxWithSubTxs
+      [ mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [RegDRepTxCert drepCred drepDeposit anchor]
+      ]
+  expectDRepRegistered drepCred
+  pure drepCred
