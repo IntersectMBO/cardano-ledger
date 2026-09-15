@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEsL,
  )
+import Cardano.Ledger.Shelley.Rules (AccountAlreadyRegistered (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import qualified Data.ListMap as LM
@@ -111,7 +112,61 @@ spec = describe "SUBDELEG" $ do
           ]
         expectStakeCredNotRegistered (KeyHashObj kh)
 
+    it "Fails when the credential is already registered" $ do
+      cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [regTxCert]
+          ]
+      expectStakeCredRegistered cred
+      regTxCert2 <- genRegTxCert cred
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [regTxCert2]
+            ]
+        )
+        [ injectFailure . DijkstraSubDelegPredFailure . DelegAccountAlreadyRegistered $
+            AccountAlreadyRegistered cred
+        ]
+
   describe "Unregister stake credentials" $ do
+    it "Fails when the credential is not registered" $ do
+      cred <- KeyHashObj <$> freshKeyHash
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred expectedDeposit]
+            ]
+        )
+        [injectFailure . DijkstraSubDelegPredFailure $ StakeKeyNotRegisteredDELEG cred]
+
+    it "Fails when the account has a non-zero balance" $ do
+      modifyPParams $ ppGovActionDepositL .~ Coin 3
+      cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [regTxCert]
+          ]
+      submitAndExpireProposalToMakeReward cred
+      balance <- getBalance cred
+      unRegTxCert <- genUnRegTxCert cred
+      submitFailingTx
+        ( mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ [unRegTxCert]
+            ]
+        )
+        [ injectFailure . DijkstraSubDelegPredFailure $
+            StakeKeyHasNonZeroAccountBalanceDELEG balance
+        ]
+      expectStakeCredRegistered cred
+
     it "With incorrect refund" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
@@ -596,6 +651,34 @@ spec = describe "SUBDELEG" $ do
       passNEpochs $ fromIntegral poolLifetime
       expectDelegatedToPool cred poolKh
   describe "Delegate both stake and vote" $ do
+    it "Fails to delegate to unregistered delegatees" $ do
+      cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [regTxCert]
+          ]
+      poolKh <- freshKeyHash
+      drepCred <- KeyHashObj <$> freshKeyHash
+      let tx =
+            mkTopTxWithSubTxs
+              [ mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL
+                    .~ [DelegTxCert cred (DelegStakeVote poolKh (DRepCredential drepCred))]
+              ]
+          poolFailure =
+            injectFailure . DijkstraSubDelegPredFailure $
+              DelegateeStakePoolNotRegisteredDELEG poolKh
+          drepFailure =
+            injectFailure . DijkstraSubDelegPredFailure $
+              DelegateeDRepNotRegisteredDELEG drepCred
+      -- The DRep registration check is only performed after the bootstrap phase
+      ifBootstrap
+        (submitFailingTx tx [poolFailure])
+        (submitFailingTx tx [drepFailure, poolFailure])
+      expectNotDelegatedToAnyPool cred
+
     it "Delegate and unregister credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
