@@ -143,6 +143,7 @@ library testlib
     Test.Cardano.Ledger.Allegra.Era
     Test.Cardano.Ledger.Allegra.Examples
     Test.Cardano.Ledger.Allegra.Imp
+    Test.Cardano.Ledger.Allegra.Imp.UtxoSpec
     Test.Cardano.Ledger.Allegra.ImpTest
     Test.Cardano.Ledger.Allegra.TreeDiff
 
