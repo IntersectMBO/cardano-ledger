@@ -256,8 +256,14 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
 -- =================================================================
 
 newtype Timelock era = MkTimelock (MemoBytes (TimelockRaw era))
-  deriving (Eq, Generic)
+  deriving (Generic)
   deriving newtype (ToCBOR, NFData, SafeToHash)
+
+instance Eq (Timelock era) where
+  MkTimelock (MemoBytes _ _ h1) == MkTimelock (MemoBytes _ _ h2) = h1 == h2
+
+instance Ord (Timelock era) where
+  compare (MkTimelock (MemoBytes _ _ h1)) (MkTimelock (MemoBytes _ _ h2)) = compare h1 h2
 
 instance Era era => MemPack (Timelock era) where
   packedByteCount (MkTimelock mb) = byteCountMemoBytes mb
