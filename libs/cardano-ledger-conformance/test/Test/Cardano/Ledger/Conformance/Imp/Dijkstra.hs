@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Conformance.Imp.Dijkstra (spec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
+import Test.Cardano.Ledger.Allegra.Imp.UtxoSpec qualified as AllegraUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
 import Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec qualified as AlonzoUTXOW
@@ -85,6 +86,7 @@ spec = do
             ConwaySNAP.spec
 
             ShelleyUTXO.spec
+            AllegraUTXO.spec
             MaryUTXO.spec
             AlonzoUTXO.spec
             BabbageUTXO.spec
