@@ -455,6 +455,8 @@ instance ShelleyEraImp AlonzoEra where
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
 
+instance AllegraEraImp AlonzoEra
+
 instance MaryEraImp AlonzoEra
 
 instance AlonzoEraImp AlonzoEra where
