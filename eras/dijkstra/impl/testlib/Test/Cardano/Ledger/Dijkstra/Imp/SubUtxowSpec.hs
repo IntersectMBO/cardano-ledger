@@ -131,7 +131,7 @@ spec = describe "SUBUTXOW" $ do
     disableInConformanceIt "minting" $
       failingScriptFails $ do
         scriptHash <- unsatisfiableTimeLock
-        subTx <- mkTokenMintingTx scriptHash
+        AnyLevelTx subTx <- mkTokenMintingTx scriptHash
         pure (subTx, scriptHash)
 
   it "SubMissingTxMetadata" $ do

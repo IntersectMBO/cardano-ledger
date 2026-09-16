@@ -103,12 +103,14 @@ spec = describe "Valid transactions" $ do
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
         -- TODO: Re-enable after issues are resolved, by removing this override
         disableInConformanceIt "Validating MINT script" $ do
-          submitTopTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
+          AnyLevelTx tx <- mkTokenMintingTx alwaysSucceedsNoDatumHash
+          submitTx_ tx
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
         -- TODO: Re-enable after issues are resolved, by removing this override
         disableInConformanceIt "Not validating MINT script" $ do
-          submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
+          AnyLevelTx tx <- mkTokenMintingTx alwaysFailsNoDatumHash
+          submitPhase2Invalid_ tx
 
         it "Acceptable supplementary datum" $ do
           inputAddr <- freshKeyHash @Payment

@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -300,8 +299,8 @@ dijkstraGenUnRegTxCert stakingCredential = do
 
 switchTxToLegacyMode ::
   DijkstraEraImp era =>
-  Tx TopTx era ->
-  ImpTestM era (Tx TopTx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 switchTxToLegacyMode tx = do
   txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
   pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]

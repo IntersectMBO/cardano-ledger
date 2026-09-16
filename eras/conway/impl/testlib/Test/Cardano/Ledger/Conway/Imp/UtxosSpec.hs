@@ -73,7 +73,9 @@ spec = describe "UTXOS" $ do
         txIn <- sendCoinTo addr amount
         let
           tx :: forall l. Typeable l => Tx l era
-          tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txIn]
         if lang >= PlutusV3
           then submitTx_ tx
           else
@@ -554,7 +556,7 @@ costModelsSpec =
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
 
-      mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
+      AnyLevelTx mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
         submitFailingTx mintingTokenTx [injectFailure $ Alonzo.CollectErrors [NoCostModel PlutusV3]]
@@ -575,7 +577,7 @@ costModelsSpec =
           committeeMembers'
 
       impAnn "Minting token succeeds" $ do
-        submitTopTx_ mintingTokenTx
+        submitTx_ mintingTokenTx
 
       impAnn "Updating CostModels succeeds" $ do
         void $

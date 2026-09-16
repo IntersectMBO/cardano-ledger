@@ -463,11 +463,12 @@ spec = describe "ENTITIES" $ do
 
     it "Interval bounds are checked at their boundaries" $ do
       (accountAddr, balance, _) <- setupAccountAddress
-      let withInterval interval =
+      let withInterval :: Typeable l => AccountBalanceInterval era -> Tx l era
+          withInterval interval =
             mkBasicTx $
               mkBasicTxBody
                 & accountBalanceIntervalsTxBodyL .~ AccountBalanceIntervals [(accountAddr, interval)]
-          intervalHolds = submitTopTx_ . withInterval
+          intervalHolds interval = submitTx_ $ withInterval interval
           intervalViolated interval =
             submitFailingTx
               (withInterval interval)
