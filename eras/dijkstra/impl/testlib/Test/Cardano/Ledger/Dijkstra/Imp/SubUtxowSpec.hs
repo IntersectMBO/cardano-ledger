@@ -264,7 +264,7 @@ spec = describe "SUBUTXOW" $ do
                            _ -> error "Expected non-empty outputs"
                        )
             txInAt 0
-              <$> withPostFixup (rederiveAddrTxWits . resetTxOutDataHash) (submitTx tx)
+              <$> withPostFixup (rederiveAddrTxWits . resetTxOutDataHash) (submitTopTx tx)
           submitFailingLegacySubTx
             lang
             (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])

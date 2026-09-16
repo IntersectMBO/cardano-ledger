@@ -49,7 +49,7 @@ spec = describe "Invalid" $ do
           mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
             & datumTxOutL .~ mkInlineDatum (PV1.I 0)
     tx <-
-      submitTx $
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOut]
     let txIn = txInAt 0 tx
@@ -119,7 +119,7 @@ spec = describe "Invalid" $ do
               txOut =
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ mkInlineDatum (PV1.I 1)
-          tx <- submitTx $ mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
+          tx <- submitTopTx $ mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
           let txIn = txInAt 0 tx
           submitPhase2Invalid_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
@@ -134,7 +134,7 @@ spec = describe "Invalid" $ do
                   & datumTxOutL .~ DatumHash datumHash
           ProtVer pv _ <- getProtVer
           tx <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOut]
           let txIn = txInAt 0 tx
@@ -166,7 +166,7 @@ spec = describe "Invalid" $ do
                 mkBasicTxOut addr mempty
                   & referenceScriptTxOutL .~ SJust script
           tx <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOutDatum, txOutScript]
           let txInDatum = txInAt 0 tx
@@ -188,7 +188,7 @@ spec = describe "Invalid" $ do
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ mkInlineDatum (PV1.B "abcde")
           tx <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOut]
           let txIn = txInAt 0 tx
@@ -219,7 +219,7 @@ spec = describe "Invalid" $ do
                   & datumTxOutL .~ DatumHash datumHash
 
           tx <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOutInline, txOutHash]
           let txInInline = txInAt 0 tx

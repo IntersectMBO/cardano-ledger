@@ -197,7 +197,7 @@ spec = describe "UTXOW" $ do
             -- TODO replace with `submitFailingTx` once we have fixup support for plutus scripts
             hasMalformed :: (forall l. Typeable l => Tx l era) -> ImpTestM era Bool
             hasMalformed tx = do
-              (mPredFailures, _) <- trySubmitTx tx
+              (mPredFailures, _) <- trySubmitTopTx tx
               pure $ case mPredFailures of
                 Just predFailures -> malformed `elem` predFailures
                 Nothing -> False
@@ -211,7 +211,7 @@ spec = describe "UTXOW" $ do
       refAddr <- freshKeyAddrNoPtr_
       txInitial <-
         impAnn "Sumbitting initial TX" $
-          submitTx $
+          submitTopTx $
             mkBasicTx mkBasicTxBody
               & bodyTxL . outputsTxBodyL
                 .~ [ mkBasicTxOut (mkAddr (hashPlutusScript plutus) StakeRefNull) mempty
@@ -274,7 +274,7 @@ mkPlutusSpendingTx plutus = do
   txIn <- produceScript $ hashPlutusScript plutus
   refAddr <- freshKeyAddrNoPtr_
   refTx <-
-    submitTx $
+    submitTopTx $
       mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL
           .~ [mkBasicTxOut refAddr mempty & referenceScriptTxOutL .~ SJust script]
