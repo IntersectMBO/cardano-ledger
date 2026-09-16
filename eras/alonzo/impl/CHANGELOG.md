@@ -119,6 +119,8 @@
   - `TxDats era`
   - `Redeemers era`
   - `AlonzoTxWits era`
+  - `TxBody TopTx AlonzoEra`
+  - `Tx TopTx AlonzoEra`
 * Add `FromJSON` instance for
   - `AsIx ix it`
   - `AlonzoPlutusPurpose AsIx era`

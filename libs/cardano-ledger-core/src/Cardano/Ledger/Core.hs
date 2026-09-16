@@ -11,7 +11,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -161,6 +160,8 @@ class
   , forall l. NFData (Tx l era)
   , forall l. Show (Tx l era)
   , forall l. Eq (Tx l era)
+  , ToJSON (Tx TopTx era)
+  , FromJSON (Tx TopTx era)
   ) =>
   EraTx era
   where
@@ -234,6 +235,8 @@ class
   , forall l. Show (TxBody l era)
   , forall l. Eq (TxBody l era)
   , forall l. EqRaw (TxBody l era)
+  , ToJSON (TxBody TopTx era)
+  , FromJSON (TxBody TopTx era)
   ) =>
   EraTxBody era
   where

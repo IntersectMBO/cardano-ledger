@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -46,7 +45,7 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
-import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), ToKeyValuePairs (toKeyValuePairs))
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -78,9 +77,13 @@ import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
+import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -391,3 +394,40 @@ instance AllegraEraTxBody AllegraEra where
   {-# INLINEABLE vldtTxBodyL #-}
 
 instance EqRaw (TxBody l AllegraEra)
+
+instance ToKeyValuePairs (TxBody TopTx AllegraEra) where
+  toKeyValuePairs
+    AllegraTxBody
+      { atbInputs
+      , atbOutputs
+      , atbCerts
+      , atbWithdrawals
+      , atbTxFee
+      , atbValidityInterval
+      , atbUpdate
+      , atbAuxDataHash
+      } =
+      [ "inputs" .= Set.toList atbInputs
+      , "outputs" .= F.toList atbOutputs
+      , "certs" .= F.toList atbCerts
+      , "withdrawals" .= atbWithdrawals
+      , "fee" .= atbTxFee
+      , "validityInterval" .= atbValidityInterval
+      , "update" .= atbUpdate
+      , "auxDataHash" .= atbAuxDataHash
+      ]
+
+instance ToJSON (TxBody TopTx AllegraEra) where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance FromJSON (TxBody TopTx AllegraEra) where
+  parseJSON = Aeson.withObject "TxBody AllegraEra" $ \o ->
+    AllegraTxBody
+      <$> (Set.fromList <$> o .: "inputs")
+      <*> (fromList <$> o .: "outputs")
+      <*> (fromList <$> o .: "certs")
+      <*> o .: "withdrawals"
+      <*> o .: "fee"
+      <*> o .: "validityInterval"
+      <*> o .: "update"
+      <*> o .: "auxDataHash"

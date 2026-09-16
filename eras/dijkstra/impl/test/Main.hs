@@ -4,11 +4,13 @@
 module Main where
 
 import Cardano.Ledger.Block (Block (Block))
+import Cardano.Ledger.Core (Tx, TxBody, TxLevel (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules ()
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Leios.BlockHeader as Leios
+import Data.Typeable (Proxy (..), typeRep)
 import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
@@ -51,6 +53,11 @@ main =
     GenesisSpec.spec
     GoldenSpec.spec
     roundTripJsonShelleyEraSpec @DijkstraEra
+    describe "JSON" $ do
+      prop (show $ typeRep $ Proxy @(TxBody SubTx DijkstraEra)) $
+        roundTripAesonProperty @(TxBody SubTx DijkstraEra)
+      prop (show $ typeRep $ Proxy @(Tx SubTx DijkstraEra)) $
+        roundTripAesonProperty @(Tx SubTx DijkstraEra)
     describe "TxInfo" $ do
       BabbageTxInfo.spec @DijkstraEra
       txInfoSpec @DijkstraEra SPlutusV3

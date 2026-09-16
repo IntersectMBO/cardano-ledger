@@ -27,6 +27,7 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -80,3 +81,9 @@ instance Typeable l => DecCBOR (Annotator (Tx l BabbageEra)) where
 
 babbageTxL :: Lens' (Tx l BabbageEra) (AlonzoTx l BabbageEra)
 babbageTxL = lens unBabbageTx (\x y -> x {unBabbageTx = y})
+
+instance ToJSON (Tx TopTx BabbageEra) where
+  toJSON (MkBabbageTx tx) = toJSON tx
+
+instance FromJSON (Tx TopTx BabbageEra) where
+  parseJSON v = MkBabbageTx <$> parseJSON v
