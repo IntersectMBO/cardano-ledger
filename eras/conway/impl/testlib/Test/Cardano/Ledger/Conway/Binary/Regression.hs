@@ -90,7 +90,7 @@ spec = describe "Regression" $ do
           lockScriptAddress = mkAddr scriptHash stakingKeyHash
         collateralReturnAddr <- freshKeyAddr_
         lockedTx <-
-          submitTxAnn @ConwayEra "Script locked tx" $
+          submitTopTxAnn @ConwayEra "Script locked tx" $
             mkBasicTx mkBasicTxBody
               & bodyTxL . outputsTxBodyL
                 .~ SSeq.fromList
@@ -114,13 +114,13 @@ spec = describe "Regression" $ do
                 & bodyTxL . feeTxBodyL .~ Coin 178349
                 & bodyTxL . outputsTxBodyL %~ modifyRootTxOut
                 & witsTxL . addrTxWitsL .~ mempty
-        res <-
+        (mPredFailure, _) <-
           impAnn "Consume the script locked output" $
             withPostFixup (updateAddrTxWits <=< breakCollaterals) $ do
               trySubmitTx @ConwayEra $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
-        (pFailure, _) <- impAnn "Expecting failure" $ expectLeftDeepExpr res
+        pFailure <- expectJustDeep mPredFailure
         let
           hasInsufficientCollateral
             (ConwayUtxowFailure (UtxoFailure (InsufficientCollateral _ _))) = True

@@ -24,6 +24,7 @@ import Cardano.Ledger.Plutus (SLanguage (SPlutusV3), hashPlutusScript)
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Set.NonEmpty as NES
+import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -42,6 +43,7 @@ conwayOnlySpec = describe "CERTS" $ do
       stakeKey <- freshKeyHash
       accountAddress <- getAccountAddressFor $ KeyHashObj stakeKey
       let
+        tx :: forall l. Typeable l => Tx l era
         tx =
           mkBasicTx $
             mkBasicTxBody
@@ -66,6 +68,7 @@ conwayOnlySpec = describe "CERTS" $ do
       (registeredAccountAddress, reward, stakeKey2) <- setupAccountAddress
       void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
       let
+        tx :: forall l. Typeable l => Tx l era
         tx =
           mkBasicTx $
             mkBasicTxBody

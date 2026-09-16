@@ -67,6 +67,7 @@ instance ShelleyEraImp BabbageEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  trySubmitTx = trySubmitTopTx
 
 babbageFixupTx ::
   ( HasCallStack
@@ -152,8 +153,9 @@ produceRefScriptsTx scripts = do
     let txOutZero =
           mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust script
     pure $ setMinCoinTxOut pp txOutZero
-  let txBody = mkBasicTxBody & outputsTxBodyL .~ SSeq.fromList (NE.toList txOuts)
-  submitTx (mkBasicTx txBody)
+  submitTx $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL .~ SSeq.fromList (NE.toList txOuts)
 
 mkTxWithRefInputs ::
   (ShelleyEraImp era, BabbageEraTxBody era) =>
@@ -171,7 +173,7 @@ submitTxWithRefInputs ::
   TxIn ->
   NonEmpty TxIn ->
   ImpTestM era (Tx TopTx era)
-submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
+submitTxWithRefInputs txIn refIns = submitTopTx $ mkTxWithRefInputs txIn refIns
 
 class
   ( AlonzoEraImp era

@@ -95,6 +95,17 @@ instance ShelleyEraImp DijkstraEra where
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
+  trySubmitTx tx =
+    oneof
+      [ trySubmitTopTx tx
+      , trySubmitSubTx tx
+      ]
+
+trySubmitSubTx ::
+  DijkstraEraImp era =>
+  Tx SubTx era ->
+  ImpTestM era (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+trySubmitSubTx subTx = trySubmitTopTx $ mkTopTxWithSubTxs [subTx]
 
 instance MaryEraImp DijkstraEra
 
