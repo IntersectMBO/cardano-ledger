@@ -68,9 +68,11 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..), kindObject, maybeToStrictMayb
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
+  Decoder,
   EncCBOR (encCBOR),
   ToCBOR (..),
   decodeRecordNamed,
+  decodeStrictSeq,
   ifDecoderVersionAtLeast,
   natVersion,
  )
@@ -89,7 +91,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, MaryEra, ShelleyEra)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
-  MemoBytes (Memo),
   Memoized (..),
   byteCountMemoBytes,
   getMemoRawType,
@@ -97,7 +98,7 @@ import Cardano.Ledger.MemoBytes (
   packMemoBytesM,
   unpackMemoBytesM,
  )
-import Cardano.Ledger.MemoBytes.Internal (mkMemoBytesShort)
+import Cardano.Ledger.MemoBytes.Internal (MemoBytes (..), mkMemoBytesShort)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
@@ -114,6 +115,7 @@ import Control.DeepSeq (NFData (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
+import Data.Default (Default (..))
 import Data.Foldable as F (foldl')
 import Data.MemPack (MemPack (packM, packedByteCount, unpackM))
 import Data.Proxy (Proxy (Proxy))
@@ -237,9 +239,12 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
     where
       decRaw :: Word -> Decode Open (Annotator (TimelockRaw era))
       decRaw 0 = Ann (SumD TimelockSignature <! From)
-      decRaw 1 = Ann (SumD TimelockAllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD TimelockAnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD TimelockMOf) <*! Ann From <*! D (sequence <$> decCBOR)
+      decRaw 1 = Ann (SumD TimelockAllOf) <*! D (sequence <$> decodeStrictSeq (decodeNoBytesTimelock @era))
+      decRaw 2 = Ann (SumD TimelockAnyOf) <*! D (sequence <$> decodeStrictSeq (decodeNoBytesTimelock @era))
+      decRaw 3 =
+        Ann (SumD TimelockMOf)
+          <*! Ann From
+          <*! D (sequence <$> decodeStrictSeq (decodeNoBytesTimelock @era))
       decRaw 4 = Ann (SumD TimelockTimeStart <! From)
       decRaw 5 = Ann (SumD TimelockTimeExpire <! From)
       decRaw n = Invalid n
@@ -265,6 +270,10 @@ instance Era era => EncCBOR (Timelock era)
 
 instance Era era => DecCBOR (Annotator (Timelock era)) where
   decCBOR = fmap MkTimelock <$> decCBOR
+
+decodeNoBytesTimelock ::
+  forall era s. DecCBOR (Annotator (TimelockRaw era)) => Decoder s (Annotator (Timelock era))
+decodeNoBytesTimelock = fmap (MkTimelock . (\t -> MemoBytes t mempty def)) <$> decCBOR
 
 instance Memoized (Timelock era) where
   type RawType (Timelock era) = TimelockRaw era
