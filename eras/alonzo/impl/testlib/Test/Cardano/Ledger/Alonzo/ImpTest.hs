@@ -594,7 +594,7 @@ mkTxWithPlutusAndBootstrapAddress ::
   forall era l.
   (AlonzoEraImp era, PlutusLanguage l) =>
   SLanguage l ->
-  ImpTestM era (Tx TopTx era)
+  ImpTestM era (AnyLevelTx era)
 mkTxWithPlutusAndBootstrapAddress slang = do
   ba <- freshBootstrapAddress
   datum <- arbitrary
@@ -610,9 +610,10 @@ mkTxWithPlutusAndBootstrapAddress slang = do
   let txIn = txInAt 0 tx
       txOutBootstrapAddr = mkBasicTxOut @era (AddrBootstrap ba) mempty
   return $
-    mkBasicTx
-      ( mkBasicTxBody @era
-          & inputsTxBodyL .~ [txIn]
-          & outputsTxBodyL .~ [txOutBootstrapAddr]
-      )
-      & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
+    AnyLevelTx $
+      mkBasicTx
+        ( mkBasicTxBody @era
+            & inputsTxBodyL .~ [txIn]
+            & outputsTxBodyL .~ [txOutBootstrapAddr]
+        )
+        & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum

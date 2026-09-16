@@ -126,7 +126,7 @@ spec = describe "UTXOS" $ do
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
         -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt (show lang) $ do
-          tx <- mkTxWithPlutusAndBootstrapAddress slang
+          AnyLevelTx tx <- mkTxWithPlutusAndBootstrapAddress slang
           submitFailingTx
             tx
             [ injectFailure $
