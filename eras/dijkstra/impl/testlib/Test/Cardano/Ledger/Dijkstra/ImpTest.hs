@@ -29,6 +29,8 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   submitFailingSubTx,
   submitFailingMempoolTx,
   expectMempoolRejection,
+  phase2InvalidTxWithSubTxs,
+  voteSubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -38,7 +40,15 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Conway.Governance (ConwayEraGov (..), committeeMembersL)
+import Cardano.Ledger.Conway.Governance (
+  ConwayEraGov (..),
+  GovActionId,
+  Vote,
+  Voter,
+  VotingProcedure (..),
+  VotingProcedures (..),
+  committeeMembersL,
+ )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
@@ -242,6 +252,29 @@ expectMempoolRejection result expectedFailures = case result of
     applyTxError `shouldBeExpr` inject (injectFailure @"MEMPOOL" <$> expectedFailures)
   Right _ ->
     assertFailure $ "Expected a mempool rejection with: " <> show expectedFailures
+
+-- | A top level transaction that nests the given sub-transactions and
+-- is phase-2 invalid, so that the sub-transactions are only partially
+-- processed.
+phase2InvalidTxWithSubTxs ::
+  (HasCallStack, DijkstraEraImp era) =>
+  [Tx SubTx era] ->
+  ImpTestM era (Tx TopTx era)
+phase2InvalidTxWithSubTxs subTxs = do
+  failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
+  fixedUpTx <- fixupTx $ mkTopTxWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
+  pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
+
+-- | A sub-transaction that casts a single vote.
+voteSubTx :: DijkstraEraImp era => Vote -> Voter -> GovActionId -> Tx SubTx era
+voteSubTx vote voter govActionId =
+  mkBasicTx $
+    mkBasicTxBody
+      & votingProceduresTxBodyL
+        .~ VotingProcedures
+          ( Map.singleton voter . Map.singleton govActionId $
+              VotingProcedure {vProcVote = vote, vProcAnchor = SNothing}
+          )
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

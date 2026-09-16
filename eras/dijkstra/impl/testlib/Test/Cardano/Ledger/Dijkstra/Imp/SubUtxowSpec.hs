@@ -17,11 +17,8 @@ import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
-  GovActionId,
   Vote (..),
   Voter (..),
-  VotingProcedure (..),
-  VotingProcedures (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
@@ -465,7 +462,7 @@ missingVKeyWitnessSources =
         (drepCredential, _, _) <- setupSingleDRep 1_000_000
         govActionId <- submitGovAction InfoAction
         keyHash <- expectJust $ credKeyHashWitness drepCredential
-        pure (voteSubTx (DRepVoter drepCredential) govActionId, keyHash)
+        pure (voteSubTx VoteYes (DRepVoter drepCredential) govActionId, keyHash)
     )
   ,
     ( "voting as a committee member"
@@ -473,7 +470,7 @@ missingVKeyWitnessSources =
         hotCredential <- NE.head <$> registerInitialCommittee
         govActionId <- submitGovAction InfoAction
         keyHash <- expectJust $ credKeyHashWitness hotCredential
-        pure (voteSubTx (CommitteeVoter hotCredential) govActionId, keyHash)
+        pure (voteSubTx VoteYes (CommitteeVoter hotCredential) govActionId, keyHash)
     )
   ,
     ( "voting as a stake pool"
@@ -481,20 +478,9 @@ missingVKeyWitnessSources =
         poolKeyHash <- freshKeyHash
         registerPool poolKeyHash
         govActionId <- submitGovAction InfoAction
-        pure (voteSubTx (StakePoolVoter poolKeyHash) govActionId, asWitness poolKeyHash)
+        pure (voteSubTx VoteYes (StakePoolVoter poolKeyHash) govActionId, asWitness poolKeyHash)
     )
   ]
-
--- | A sub-transaction that casts a single yes vote.
-voteSubTx :: DijkstraEraImp era => Voter -> GovActionId -> Tx SubTx era
-voteSubTx voter govActionId =
-  mkBasicTx $
-    mkBasicTxBody
-      & votingProceduresTxBodyL
-        .~ VotingProcedures
-          ( Map.singleton voter . Map.singleton govActionId $
-              VotingProcedure {vProcVote = VoteYes, vProcAnchor = SNothing}
-          )
 
 -- | Every script purpose at which a sub-transaction can require a
 -- native script, paired with a sub-transaction that needs a failing
@@ -547,7 +533,7 @@ failingNativeScriptPurposes =
     , do
         scriptHash <- registerLowerBoundTimeLockDRep
         govActionId <- submitGovAction InfoAction
-        pure (voteSubTx (DRepVoter (ScriptHashObj scriptHash)) govActionId, scriptHash)
+        pure (voteSubTx VoteYes (DRepVoter (ScriptHashObj scriptHash)) govActionId, scriptHash)
     )
   ]
 
