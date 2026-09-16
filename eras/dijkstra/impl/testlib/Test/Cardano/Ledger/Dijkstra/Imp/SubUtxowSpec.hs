@@ -101,8 +101,7 @@ spec = describe "SUBUTXOW" $ do
           , asWitness $ bootstrapKeyHash bootAddr
           )
 
-    -- The spec accepts a pool registration whose owner witness is missing.
-    disableInConformanceIt "registering a stake pool with an owner" $
+    it "registering a stake pool with an owner" $
       withheldWitnessFails $ do
         poolKeyHash <- freshKeyHash
         ownerKeyHash <- freshKeyHash
