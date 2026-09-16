@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
+* Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
 * Move `protVerBlockHeaderL` from `EraBlockHeader` to `PraosEraBlockHeader`
 * Add `TPraosEraBlockHeader`, `PraosEraBlockHeader` and `LeiosEraBlockHeader`
@@ -71,6 +73,8 @@
 
 ### `testlib`
 
+* Replace the `tbhProtVer` field of `TestBlockHeader` with `tbhVersionInfo :: BlockHeaderVersionInfo`
+* Add `Arbitrary` and `ToExpr` instances for `BlockHeaderVersionInfo`
 * Remove `tbhPrevNonce` from `TestBlockHeader`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`

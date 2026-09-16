@@ -323,9 +323,7 @@ bbodyTransition = do
             }
   netId <- liftSTS $ asks networkId
 
-  -- Disable protocol version check for testnets until we are in Dijkstra
-  -- https://github.com/IntersectMBO/cardano-ledger/issues/5763
-  when (netId == Mainnet || curProtVerMajor >= natVersion @12) $
+  when (netId == Mainnet) $
     failOnJust checkHeaderProtVerTooHigh $
       injectFailure . HeaderProtVerTooHigh @era
 
