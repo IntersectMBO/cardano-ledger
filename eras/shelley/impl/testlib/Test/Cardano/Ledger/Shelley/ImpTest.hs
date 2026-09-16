@@ -200,7 +200,7 @@ import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), BlockHeaderVersionInfo (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
@@ -317,13 +317,13 @@ import Numeric.Natural (Natural)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import qualified System.Random.Stateful as R
-import Test.Cardano.Ledger.BlockHeader
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), mkStakeRef, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, txInAt)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.BlockHeader
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
@@ -1608,6 +1608,7 @@ tryTxsInBlock' txs finalState blockIssuer = do
   nes <- use impNESL
 
   let
+    ProtVer curMajor curMinor = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
     blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ txs
     blockHeader =
       TestBlockHeader
@@ -1616,7 +1617,7 @@ tryTxsInBlock' txs finalState blockIssuer = do
         , tbhHSize = 0
         , tbhBHash = hashBlockBody blockBody
         , tbhSlot = slotNo
-        , tbhProtVer = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+        , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 curMajor) curMinor
         }
     block = Block {blockHeader, blockBody}
 

@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.BinarySpec (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Block (BlockHeaderVersionInfo)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -28,6 +29,7 @@ spec = do
     prop "Encode Coin - Decode CompactCoin" $
       roundTripExpectation @Coin (mkTrip encCBOR (fromCompact <$> decCBOR))
     roundTripCborSpec @ProtVer
+    roundTripCborSpec @BlockHeaderVersionInfo
     roundTripCborSpec @Nonce
     roundTripCborSpec @Url
     roundTripCborSpec @DnsName
