@@ -421,13 +421,13 @@ spec = describe "UTXO" $ do
     it "tx balanced across the batch and at the top level - normal mode" $ do
       amounts <- genFullyBalancedAmounts
       topTx <- mkTopTx amounts
-      withFixup noBalanceFixup $ submitTx_ topTx
+      withFixup noBalanceFixup $ submitTopTx_ topTx
 
     it "tx balanced across the batch and at the top level - legacy mode" $ do
       amounts <- genFullyBalancedAmounts
       topTx <- mkTopTx amounts
       topTxLegacy <- mkTopTxLegacyMode amounts topTx
-      withFixup noBalanceFixup $ submitTx_ topTxLegacy
+      withFixup noBalanceFixup $ submitTopTx_ topTxLegacy
 
     it "tx balanced across the batch and at the top level - legacy mode, phase2 invalid" $ do
       amounts <- genFullyBalancedAmounts
@@ -437,7 +437,7 @@ spec = describe "UTXO" $ do
     it "tx balanced across the batch and unbalanced at the top level - normal mode" $ do
       amounts <- genBatchOnlyBalancedAmounts
       topTx <- mkTopTx amounts
-      withFixup noBalanceFixup $ submitTx_ topTx
+      withFixup noBalanceFixup $ submitTopTx_ topTx
 
     it "tx balanced across the batch and unbalanced at the top level - legacy mode" $ do
       amounts <- genBatchOnlyBalancedAmounts
@@ -556,20 +556,20 @@ spec = describe "UTXO" $ do
         amounts <- genTopOnlyBalancedAmounts
         topTx <- mkTopTx amounts
         balanced <- balanceSubTransactions topTx
-        withFixup noBalanceFixup $ submitTx_ balanced
+        withFixup noBalanceFixup $ submitTopTx_ balanced
 
       it "top-only balanced - legacy mode" $ do
         amounts <- genTopOnlyBalancedAmounts
         topTx <- mkTopTx amounts
         topTxLegacy <- mkTopTxLegacyMode amounts topTx
         balanced <- balanceSubTransactions topTxLegacy
-        withFixup noBalanceFixup $ submitTx_ balanced
+        withFixup noBalanceFixup $ submitTopTx_ balanced
 
       it "balanced on both levels keeps it balanced" $ do
         amounts <- genFullyBalancedAmounts
         topTx <- mkTopTx amounts
         balanced <- balanceSubTransactions topTx
-        withFixup noBalanceFixup $ submitTx_ balanced
+        withFixup noBalanceFixup $ submitTopTx_ balanced
   where
     submitInAllModes :: HasCallStack => ImpTestM era (Tx TopTx era) -> ImpTestM era ()
     submitInAllModes genTx = do
@@ -657,9 +657,11 @@ spec = describe "UTXO" $ do
     produceScriptAt :: ScriptHash -> Coin -> ImpTestM era TxIn
     produceScriptAt scriptHash amount = do
       let addr = mkAddr scriptHash StakeRefNull
-      let tx =
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
       txInAt 0 <$> submitTx tx
 
 noBalanceFixup ::

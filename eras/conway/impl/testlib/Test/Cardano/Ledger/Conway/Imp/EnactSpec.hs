@@ -118,11 +118,10 @@ treasuryWithdrawalsSpec =
 
       let sumRequested = foldMap snd withdrawals
 
-      impAnn "Submit a treasury donation that can cover the withdrawals" $ do
-        let tx =
-              mkBasicTx mkBasicTxBody
-                & bodyTxL . treasuryDonationTxBodyL .~ (sumRequested <-> initialTreasury)
-        submitTx_ tx
+      impAnn "Submit a treasury donation that can cover the withdrawals" $
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . treasuryDonationTxBodyL .~ (sumRequested <-> initialTreasury)
       passNEpochs 2
       getsNES treasuryL `shouldReturn` zero
       sumAccountBalances withdrawals `shouldReturn` sumRequested

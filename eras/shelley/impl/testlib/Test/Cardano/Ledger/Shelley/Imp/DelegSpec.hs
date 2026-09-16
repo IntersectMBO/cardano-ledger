@@ -26,6 +26,7 @@ import Cardano.Ledger.State (accountsL, accountsMapL, stakePoolDelegationAccount
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified System.FS.Sim.MockFS as MockFS
 import System.FS.Sim.STM (simHasFS')
@@ -81,14 +82,15 @@ shelleyToBabbageSpec = describe "DELEG" $ do
     registerPool khStakePool
     stakeCredRegTxCert <- genRegTxCert stakeCred
     otherStakeCredRegTxCert <- genRegTxCert otherStakeCred
-    submitTx_ . mkBasicTx $
-      mkBasicTxBody
-        & certsTxBodyL
-          .~ [ stakeCredRegTxCert
-             , delegStakeTxCert stakeCred khStakePool
-             , otherStakeCredRegTxCert
-             , delegStakeTxCert otherStakeCred khStakePool
-             ]
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & certsTxBodyL
+            .~ [ stakeCredRegTxCert
+               , delegStakeTxCert stakeCred khStakePool
+               , otherStakeCredRegTxCert
+               , delegStakeTxCert otherStakeCred khStakePool
+               ]
     expectRegisteredAccountAddress accountAddress
     expectRegisteredAccountAddress otherAccountAddress
     registerAndRetirePoolToMakeReward otherStakeCred
@@ -96,16 +98,17 @@ shelleyToBabbageSpec = describe "DELEG" $ do
     getBalance otherStakeCred `shouldReturn` poolDeposit
     unRegTxCert <- genUnRegTxCert stakeCred
 
-    submitTx_ . mkBasicTx $
-      mkBasicTxBody
-        & certsTxBodyL .~ [unRegTxCert]
-        & withdrawalsTxBodyL
-          .~ Withdrawals
-            ( Map.fromList
-                [ (accountAddress, Coin 0)
-                , (otherAccountAddress, poolDeposit)
-                ]
-            )
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & certsTxBodyL .~ [unRegTxCert]
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              ( Map.fromList
+                  [ (accountAddress, Coin 0)
+                  , (otherAccountAddress, poolDeposit)
+                  ]
+              )
     getBalance otherStakeCred `shouldReturn` Coin 0
     expectNotRegisteredRewardAddress accountAddress
 
@@ -134,6 +137,7 @@ shelleyToBabbageSpec = describe "DELEG" $ do
     getPoolsState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 spec ::
+  forall era.
   ShelleyEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "DELEG" $ do
@@ -150,10 +154,12 @@ spec = describe "DELEG" $ do
     it "When already already registered" $ do
       cred <- ScriptHashObj <$> impAddNativeScript (RequireAllOf [])
       regTxCert <- genRegTxCert cred
-      let tx =
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ [regTxCert]
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [regTxCert]
       submitTx_ tx
       submitFailingTx
         tx
