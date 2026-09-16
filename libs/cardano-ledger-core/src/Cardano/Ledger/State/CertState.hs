@@ -50,6 +50,7 @@ module Cardano.Ledger.State.CertState (
   -- Helpers for `psVRFKeyHashes`
   addVRFKeyHashOccurrence,
   removeVRFKeyHashOccurrence,
+  populateVRFKeyHashes,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -86,7 +87,7 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolParams, StakePoolState (..), spsDelegatorsL)
+import Cardano.Ledger.State.StakePool (StakePoolParams (..), StakePoolState (..), spsDelegatorsL)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -516,3 +517,19 @@ removeVRFKeyHashOccurrence ::
   Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
   Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
 removeVRFKeyHashOccurrence = Map.update (mapNonZero (subtract 1))
+
+-- | Recompute 'psVRFKeyHashes' from scratch out of the registered stake pools: a pool
+-- holds one reference through its active parameters and one more through its future
+-- parameters whenever those carry a different VRF key hash. Meant for hard forks and
+-- era transitions that have to bring the map into a consistent state.
+populateVRFKeyHashes :: PState era -> PState era
+populateVRFKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
+  ps {psVRFKeyHashes = F.foldl' (flip addVRFKeyHashOccurrence) activeVRFKeyHashes futureVRFKeyHashes}
+  where
+    activeVRFKeyHashes = Map.foldr' (addVRFKeyHashOccurrence . spsVrf) Map.empty psStakePools
+    futureVRFKeyHashes =
+      [ futureVrf
+      | (poolId, futureParams) <- Map.toList psFutureStakePoolParams
+      , let futureVrf = sppVrf futureParams
+      , (spsVrf <$> Map.lookup poolId psStakePools) /= Just futureVrf
+      ]

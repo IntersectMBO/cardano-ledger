@@ -37,11 +37,9 @@ import Control.State.Transition (
   tellEvent,
   transitionRules,
  )
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Void (Void)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -102,18 +100,3 @@ updateDRepDelegations certState =
         & certDStateL . accountsL . accountsMapL .~ accountsWithoutUnknownDRepDelegations
         -- Populate DRep delegations with delegatees
         & certVStateL . vsDRepsL .~ dRepsWithDelegations
-
-populateVRFKeyHashes :: PState era -> PState era
-populateVRFKeyHashes pState =
-  pState
-    & psVRFKeyHashesL
-      %~ accumulateVRFKeyHashes (pState ^. psStakePoolsL) (^. spsVrfL)
-        . accumulateVRFKeyHashes (pState ^. psFutureStakePoolParamsL) (^. sppVrfL)
-  where
-    accumulateVRFKeyHashes ::
-      Map (KeyHash StakePool) a ->
-      (a -> VRFVerKeyHash StakePoolVRF) ->
-      Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
-      Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-    accumulateVRFKeyHashes spMap getVrf acc =
-      Map.foldr' (addVRFKeyHashOccurrence . getVrf) acc spMap

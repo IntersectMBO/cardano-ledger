@@ -168,8 +168,8 @@ poolTransition = do
                     -- the active VRF key hash are not counted separately, per
                     -- the invariant on `psVRFKeyHashes`.
                     let removeOldOccurrence = case mbFutureVrf of
-                          Just oldVrf
-                            | oldVrf /= activeVrf -> removeVRFKeyHashOccurrence oldVrf
+                          Just oldFutureVrf
+                            | oldFutureVrf /= activeVrf -> removeVRFKeyHashOccurrence oldFutureVrf
                           _ -> id
                         addNewOccurrence
                           | sppVrf /= activeVrf = addVRFKeyHashOccurrence sppVrf

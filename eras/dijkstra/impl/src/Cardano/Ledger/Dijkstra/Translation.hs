@@ -112,7 +112,9 @@ instance TranslateEra DijkstraEra DState where
     pure DState {dsAccounts = ConwayAccounts (Map.map coerce accounts), ..}
 
 instance TranslateEra DijkstraEra PState where
-  translateEra _ PState {..} = pure $ coerce PState {..}
+  -- The VRF key hashes are recomputed from the registered pools, since the bookkeeping
+  -- of the Conway era does not maintain them reliably.
+  translateEra _ PState {..} = pure $ populateVRFKeyHashes $ coerce PState {..}
 
 instance TranslateEra DijkstraEra VState where
   translateEra _ vState = pure $ coerce vState
