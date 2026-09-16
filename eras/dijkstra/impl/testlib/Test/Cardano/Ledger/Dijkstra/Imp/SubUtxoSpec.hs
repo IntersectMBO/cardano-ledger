@@ -61,7 +61,7 @@ spec = describe "SUBUTXO" $ do
         (mkBasicTx $ mkBasicTxBody & vldtTxBodyL .~ validityInterval)
         [injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot]
 
-    disableInConformanceIt "the validity interval ends at the current slot" $ do
+    it "the validity interval ends at the current slot" $ do
       currentSlot <- gets (^. impCurSlotNoG)
       let validityInterval = ValidityInterval SNothing (SJust currentSlot)
       submitFailingSubTx
