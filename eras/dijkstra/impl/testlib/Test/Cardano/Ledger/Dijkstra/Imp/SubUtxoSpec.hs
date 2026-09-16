@@ -180,7 +180,7 @@ spec = describe "SUBUTXO" $ do
 
     it "referencing an out that another sub-tx spends is accepted" $ do
       txIn <- freshFundedTxIn
-      submitTx_ $
+      submitTopTx_ $
         mkTopTxWithSubTxs
           [ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
           , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [txIn]
@@ -277,7 +277,7 @@ spec = describe "SUBUTXO" $ do
 
   it "one input listed as both a spend and a reference input is accepted, and consumed" $ do
     txIn <- freshFundedTxIn
-    submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
+    submitTopTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
       mkBasicTxBody
         & inputsTxBodyL .~ [txIn]
         & referenceInputsTxBodyL .~ [txIn]
@@ -336,21 +336,21 @@ spec = describe "SUBUTXO" $ do
   describe "Accepted at the boundary" $ do
     it "a validity interval that starts at the current slot and ends at the next one" $ do
       currentSlot <- gets (^. impCurSlotNoG)
-      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
+      submitTopTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody
           & vldtTxBodyL .~ ValidityInterval (SJust currentSlot) (SJust (currentSlot + 1))
 
     it "an output that holds exactly the minimum coin" $ do
       pp <- getsPParams id
       addr <- freshKeyAddr_
-      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
+      submitTopTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [setMinCoinTxOut pp $ mkBasicTxOut addr mempty]
 
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "an output to a bootstrap address whose payload is the largest allowed size" $ do
       bootAddr <- freshBootstrapAddressWithPayloadSize $ Just largestBootstrapAddressAttrsSize
-      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
+      submitTopTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [mkBasicTxOut (AddrBootstrap bootAddr) mempty]
 
   describe "A phase-2 invalid top level transaction" $ do
@@ -367,7 +367,7 @@ spec = describe "SUBUTXO" $ do
     it "does not check the threaded UTxO, so two sub-transactions may name one input" $ do
       (sharedTxIn, subTxs) <- subTxsSpendingOneInput
       topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs subTxs
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+      submitTopTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
       void $ impGetUTxO sharedTxIn
 
     it "spending an output from an earlier sub-tx fails twice" $ do

@@ -93,7 +93,7 @@ spec = describe "LEDGER" $ do
               & bodyTxL . inputsTxBodyL .~ Set.singleton txIn2
               & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
 
-      submitTx_ tx
+      submitTopTx_ tx
 
   describe "DijkstraTreasuryValueMismatch" $ do
     it "the top level transaction declares a treasury value other than the actual one" $ do
