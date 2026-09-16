@@ -210,4 +210,5 @@ spec = describe "UTXOS" $ do
 
         it "Scripts with bootstrap addresses pass" $
           when (eraProtVerLow @era <= eraProtVerHigh @AlonzoEra) $ do
-            mkTxWithPlutusAndBootstrapAddress slang >>= submitTopTx_
+            AnyLevelTx tx <- mkTxWithPlutusAndBootstrapAddress slang
+            submitTx_ tx
