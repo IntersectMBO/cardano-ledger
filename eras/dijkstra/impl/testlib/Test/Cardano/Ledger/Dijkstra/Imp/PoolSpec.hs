@@ -6,7 +6,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), unsafeNonZero)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
@@ -163,17 +163,8 @@ spec = describe "POOL" $ do
       expectVRFs [(vrf, 1), (vrfNew, 1)]
 
     it "re-register a pool whose VRF is shared with another pool" $ do
-      -- Two pools can only share a VRF if both registered it before VRFs had
-      -- to be unique, in which case the hard fork to protocol version 11
-      -- recorded the VRF with a count of two.
       (kh1, vrf) <- registerNewPool
-      (kh2, vrf2) <- registerNewPool
-      modifyNES $
-        nesEsL . esLStateL . lsCertStateL . certPStateL %~ \ps ->
-          ps
-            & psStakePoolsL %~ Map.adjust (spsVrfL .~ vrf) kh2
-            & psVRFKeyHashesL %~ Map.insert vrf (unsafeNonZero 2) . Map.delete vrf2
-      expectPool kh2 (Just vrf)
+      _ <- registerPoolSharingVRF vrf
       expectVRFs [(vrf, 2)]
       -- neither pool may keep the shared VRF when re-registering ...
       registerPoolTx <$> poolParams kh1 vrf >>= \tx ->
@@ -187,6 +178,28 @@ spec = describe "POOL" $ do
       kh3 <- freshKeyHash
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+
+    it "register a pool with a VRF shared by two pools once both have retired" $ do
+      (kh1, vrf) <- registerNewPool
+      kh2 <- registerPoolSharingVRF vrf
+      expectVRFs [(vrf, 2)]
+      -- retiring one of the two pools leaves the VRF in use by the other one ...
+      retirePoolTx kh1 (EpochInterval 1) >>= submitTx_
+      passEpoch
+      expectPool kh1 Nothing
+      expectPool kh2 (Just vrf)
+      expectVRFs [(vrf, 1)]
+      kh3 <- freshKeyHash
+      registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+      -- ... and only once that one has retired as well does the VRF become available
+      retirePoolTx kh2 (EpochInterval 1) >>= submitTx_
+      passEpoch
+      expectPool kh2 Nothing
+      expectVRFs []
+      registerPoolTx <$> poolParams kh3 vrf >>= submitTx_
+      expectPool kh3 (Just vrf)
+      expectVRFs [(vrf, 1)]
 
   describe "maxPledgeLeverage" $ do
     -- The pledge influence factor also rewards a pool for pledging more, which would
@@ -222,6 +235,25 @@ spec = describe "POOL" $ do
     registerPoolTx pps =
       mkBasicTx mkBasicTxBody
         & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
+    -- Two pools can only share a VRF if both registered it before VRFs had to be
+    -- unique, in which case the hard fork to protocol version 11 recorded the VRF
+    -- with a count of two. Registering a pool and then rewriting its VRF puts the
+    -- state into the same shape.
+    registerPoolSharingVRF vrf = do
+      (kh, ownVrf) <- registerNewPool
+      modifyNES $
+        nesEsL . esLStateL . lsCertStateL . certPStateL %~ \ps ->
+          ps
+            & psStakePoolsL %~ Map.adjust (spsVrfL .~ vrf) kh
+            & psVRFKeyHashesL %~ addVRFKeyHashOccurrence vrf . Map.delete ownVrf
+      expectPool kh (Just vrf)
+      pure kh
+    retirePoolTx kh retirementInterval = do
+      curEpochNo <- getsNES nesELL
+      pure $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ SSeq.singleton (RetirePoolTxCert kh (addEpochInterval curEpochNo retirementInterval))
     expectPool poolKh mbVrf = do
       pools <- psStakePools <$> getPState
       spsVrf <$> Map.lookup poolKh pools `shouldBe` mbVrf
