@@ -144,7 +144,9 @@ maxKeyAgeEpochs globals e =
   EpochInterval $
     ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2
   where
-    -- XXX: Avoid using epochInfoPure or determine epochLength differently
+    -- Safe against the forecast horizon as long as @e@ is an already-known
+    -- epoch (see the note above); 'epochInfoPure' is the only handle on the
+    -- epoch length 'Globals' offers.
     EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
 
     Globals {maxKESEvo, slotsPerKESPeriod} = globals

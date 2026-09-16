@@ -209,6 +209,7 @@ library testlib
     containers,
     generic-random,
     microlens,
+    microlens-mtl,
     mtl,
     plutus-ledger-api,
     small-steps,

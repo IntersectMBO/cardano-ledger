@@ -82,17 +82,15 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
     higherStake a b =
       compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
-    toSeat c = (toTuple <$> honoured c, lcWeight c)
+    toSeat c = (honouredKey c, lcWeight c)
 
     -- The key is offered to the committee only while it is still honoured; an
     -- aged-out key leaves the pool seated but keyless.
-    honoured c = do
+    honouredKey c = do
       bks <- lcKey c
       if epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge
-        then SJust (bksKey bks)
+        then let BlsKey vk pop = bksKey bks in SJust (vk, pop)
         else SNothing
-
-    toTuple (BlsKey vk pop) = (vk, pop)
 
 -- | Render a 'LeiosCommittee' as JSON for ledger purposes.
 leiosCommitteeToJSON :: LeiosCommittee -> Value
