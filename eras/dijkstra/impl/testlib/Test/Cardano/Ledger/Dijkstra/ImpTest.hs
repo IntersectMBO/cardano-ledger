@@ -96,6 +96,8 @@ instance ShelleyEraImp DijkstraEra where
   genUnRegTxCert = dijkstraGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
 
+instance AllegraEraImp DijkstraEra
+
 instance MaryEraImp DijkstraEra
 
 instance AlonzoEraImp DijkstraEra where

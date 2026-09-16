@@ -334,6 +334,8 @@ conwayModifyImpInitProtVer ver =
   where
     ratifyState es = def & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
 
+instance AllegraEraImp ConwayEra
+
 instance MaryEraImp ConwayEra
 
 instance AlonzoEraImp ConwayEra where
