@@ -517,7 +517,7 @@ snapShotSpec =
 setSnapShotSpec :: Specification SetSnapShot
 setSnapShotSpec =
   constrained $ \ [var|set|] ->
-    match set $ \ [var|snap|] _pooldistr _epochNo _size _committee ->
+    match set $ \ [var|snap|] _pooldistr _committee ->
       satisfies snap snapShotSpec
 
 goSnapShotSpec :: Specification GoSnapShot

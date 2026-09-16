@@ -422,23 +422,14 @@ instance ToKeyValuePairs MarkSnapShot where
 
 -- | The snapshot that drives leader election ('Cardano.Ledger.State.PoolDistr')
 -- and Leios voting for the epoch after the one it was marked in. The Leios
--- committee is seated here, when the mark rotates into the set position and the
--- SNAP rule can still read 'Cardano.Ledger.BaseTypes.Globals' for the honoured
--- key age; it is stored and loaded verbatim rather than re-selected on decode.
+-- committee is seated here, when the mark rotates into the set position.
 data SetSnapShot = SetSnapShot
   { ssSnapShot :: !SnapShot
   , ssPoolDistr :: !PoolDistr
-  , ssEpochNo :: !EpochNo
-  -- ^ Epoch at the beginning of which the stake was snapshotted, carried over
-  -- from 'msEpochNo'.
-  , ssLeiosCommitteeSize :: !Word16
-  -- ^ Committee size recorded at snapshot creation, carried over from
-  -- 'msLeiosCommitteeSize'.
-  , ssLeiosCommittee :: LeiosCommittee
+  , ssLeiosCommittee :: !LeiosCommittee
   -- ^ The Leios voting committee governing the epoch this snapshot is the
-  -- leader-election distribution of (CIP-0164). Lazy on purpose: seated at
-  -- rotation, forced only when serialized or voted against, and pre-Dijkstra
-  -- eras leave it empty.
+  -- leader-election distribution of (CIP-0164). Seated at rotation while
+  -- pre-Dijkstra eras leave it empty.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SetSnapShot
@@ -448,40 +439,31 @@ instance NFData SetSnapShot
 deriving via AllowThunksIn '["ssLeiosCommittee"] SetSnapShot instance NoThunks SetSnapShot
 
 instance EncCBOR SetSnapShot where
-  encCBOR ss@(SetSnapShot _ _ _ _ _) =
+  encCBOR ss@(SetSnapShot _ _ _) =
     let SetSnapShot {..} = ss
      in -- `ssPoolDistr` is omitted on purpose: it is derived from the snapshot.
         -- The committee is stored so it need not be re-selected on decode, which
         -- also frees us from recording the honoured key age it was seated with.
-        encodeListLen 4
+        encodeListLen 2
           <> encCBOR ssSnapShot
-          <> encCBOR ssEpochNo
-          <> encCBOR ssLeiosCommitteeSize
           <> encCBOR ssLeiosCommittee
 
 instance DecShareCBOR SetSnapShot where
   type Share SetSnapShot = Share SnapShot
-  decSharePlusCBOR = decodeRecordNamedT "SetSnapShot" (const 4) $ do
+  decSharePlusCBOR = decodeRecordNamedT "SetSnapShot" (const 2) $ do
     snapShot <- decSharePlusCBOR
-    epochNo <- lift decCBOR
-    committeeSize <- lift decCBOR
     committee <- lift decCBOR
     pure $
-      mkSetSnapShot
-        (calculatePoolDistr snapShot)
-        committee
-        MarkSnapShot
-          { msSnapShot = snapShot
-          , msEpochNo = epochNo
-          , msLeiosCommitteeSize = committeeSize
-          }
+      SetSnapShot
+        { ssSnapShot = snapShot
+        , ssPoolDistr = calculatePoolDistr snapShot
+        , ssLeiosCommittee = committee
+        }
 
 instance ToKeyValuePairs SetSnapShot where
-  toKeyValuePairs ss@(SetSnapShot _ _ _ _ _) =
+  toKeyValuePairs ss@(SetSnapShot _ _ _) =
     let SetSnapShot {..} = ss
      in [ "snapShot" .= ssSnapShot
-        , "epochNo" .= ssEpochNo
-        , "leiosCommitteeSize" .= ssLeiosCommitteeSize
         , "leiosCommittee" .= leiosCommitteeToJSON ssLeiosCommittee
         ]
 

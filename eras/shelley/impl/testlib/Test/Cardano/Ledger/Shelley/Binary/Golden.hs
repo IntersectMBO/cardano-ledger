@@ -139,10 +139,8 @@ goldenNewEpochStateExpectation
       -- ssPoolDistr is derived, so not serialized; the committee is stored.
       setSnapShotEnc SetSnapShot {..} =
         Em
-          [ E (TkListLen 4)
+          [ E (TkListLen 2)
           , snapShotEnc ssSnapShot
-          , Ev ver ssEpochNo
-          , Ev ver ssLeiosCommitteeSize
           , Ev ver ssLeiosCommittee
           ]
       -- gsPoolDistr is derived, so not serialized.

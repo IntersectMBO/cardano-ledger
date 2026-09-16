@@ -800,8 +800,8 @@ instance Arbitrary SetSnapShot where
     pure $
       mkSetSnapShot
         (calculatePoolDistr (msSnapShot mark))
-        (seatLeiosCommittee maxKeyAge mark)
         mark
+        maxKeyAge
 
 instance Arbitrary GoSnapShot where
   arbitrary = mkGoSnapShot <$> arbitrary
