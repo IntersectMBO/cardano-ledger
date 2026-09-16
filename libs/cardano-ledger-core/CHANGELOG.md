@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
+* Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Remove `EraDecoder` and add `EraCodec` to be used in its place
 * Remove `ppEraDecoder` from `PParam` and add `ppuEraCodec` to `PParamUpdate`
 * Change `directDepositsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
@@ -57,6 +59,8 @@
 
 ### `testlib`
 
+* Replace the `tbhProtVer` field of `TestBlockHeader` with `tbhVersionInfo :: BlockHeaderVersionInfo`
+* Add `Arbitrary` and `ToExpr` instances for `BlockHeaderVersionInfo`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`

@@ -8,10 +8,11 @@
 
 module Test.Cardano.Ledger.BlockHeader where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo)
+import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo, getVersion32, mkVersion32)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Control.DeepSeq (NFData)
+import Data.Maybe (fromMaybe)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -23,7 +24,7 @@ data TestBlockHeader
   , tbhHSize :: Int
   , tbhBHash :: Hash HASH EraIndependentBlockBody
   , tbhSlot :: SlotNo
-  , tbhProtVer :: ProtVer
+  , tbhVersionInfo :: BlockHeaderVersionInfo
   }
   deriving (Generic)
 
@@ -46,10 +47,18 @@ instance Era era => TPraosEraBlockHeader TestBlockHeader era
 
 instance Era era => PraosEraBlockHeader TestBlockHeader era where
   protVerBlockHeaderL =
-    lens (tbhProtVer . blockHeader) $
-      \b@Block {blockHeader} tbhProtVer -> b {blockHeader = blockHeader {tbhProtVer}}
+    lens
+      ( \Block {blockHeader = TestBlockHeader {tbhVersionInfo = BlockHeaderVersionInfo major minor}} ->
+          ProtVer (fromMaybe maxBound (mkVersion32 major)) minor
+      )
+      ( \b@Block {blockHeader} (ProtVer major minor) ->
+          b {blockHeader = blockHeader {tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 major) minor}}
+      )
 
-instance Era era => LeiosEraBlockHeader TestBlockHeader era
+instance Era era => LeiosEraBlockHeader TestBlockHeader era where
+  versionInfoBlockHeaderL =
+    lens (tbhVersionInfo . blockHeader) $
+      \b@Block {blockHeader} tbhVersionInfo -> b {blockHeader = blockHeader {tbhVersionInfo}}
 
 mkTestBlockHeaderNoNonce ::
   forall era h.
@@ -61,5 +70,5 @@ mkTestBlockHeaderNoNonce block =
     , tbhBSize = block ^. blockBodySizeBlockHeaderL
     , tbhBHash = block ^. blockBodyHashBlockHeaderL
     , tbhSlot = block ^. slotNoBlockHeaderL
-    , tbhProtVer = ProtVer (eraProtVerLow @era) 0
+    , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 (eraProtVerLow @era)) 0
     }
