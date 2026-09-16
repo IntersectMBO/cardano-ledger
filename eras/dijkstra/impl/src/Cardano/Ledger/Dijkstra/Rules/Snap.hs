@@ -47,7 +47,6 @@ import Cardano.Ledger.State (
   instantStakeG,
   mkGoSnapShot,
   mkSetSnapShot,
-  seatLeiosCommittee,
   snapShotFromInstantStake,
   swdDelegation,
   swdStake,
@@ -119,13 +118,9 @@ snapTransition = do
       { -- The mark records the committee size; the Leios committee is seated
         -- from it when this snapshot rotates into the set position (CIP-0164).
         ssStakeMark = MarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL)
-      , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet =
-          mkSetSnapShot
-            (ssStakeMarkPoolDistr s)
-            (seatLeiosCommittee maxKeyAge (ssStakeMark s))
-            (ssStakeMark s)
+        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
+      , ssStakeSet = mkSetSnapShot (ssStakeMark s) maxKeyAge
       , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }

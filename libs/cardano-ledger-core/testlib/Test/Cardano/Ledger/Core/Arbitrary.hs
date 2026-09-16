@@ -797,11 +797,7 @@ instance Arbitrary SetSnapShot where
   arbitrary = do
     mark <- arbitrary
     maxKeyAge <- arbitrary
-    pure $
-      mkSetSnapShot
-        (calculatePoolDistr (msSnapShot mark))
-        mark
-        maxKeyAge
+    pure $ mkSetSnapShot mark maxKeyAge
 
 instance Arbitrary GoSnapShot where
   arbitrary = mkGoSnapShot <$> arbitrary

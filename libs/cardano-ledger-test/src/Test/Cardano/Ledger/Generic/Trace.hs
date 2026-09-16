@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochInterval (..), Globals)
 import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -193,7 +193,7 @@ snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
     dstate = certState ^. certDStateL
     snap = stakeDistr u dstate pstate
     mark = MarkSnapShot snap (EpochNo 0) 0
-    set = mkSetSnapShot (calculatePoolDistr snap) emptyLeiosCommittee mark
+    set = mkSetSnapShot mark (EpochInterval 0)
 
 -- ==============================================================================
 

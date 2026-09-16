@@ -12,7 +12,6 @@ module Cardano.Ledger.State.Query where
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
 import Cardano.Ledger.BaseTypes (EpochNo (..), unNonZero, unsafeNonZero)
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
@@ -169,16 +168,14 @@ insertMarkSnapShot epochStateId State.MarkSnapShot {msSnapShot, msEpochNo, msLei
     msSnapShot
 
 insertSetSnapShot :: MonadIO m => Key EpochState -> State.SetSnapShot -> ReaderT SqlBackend m ()
-insertSetSnapShot epochStateId State.SetSnapShot {ssSnapShot, ssEpochNo, ssLeiosCommitteeSize, ssLeiosCommittee} =
+insertSetSnapShot epochStateId State.SetSnapShot {ssSnapShot, ssLeiosCommittee} =
   insertSnapShot
     SnapShot
       { snapShotType = SnapShotSet
       , snapShotEpochStateId = epochStateId
-      , snapShotEpochNo = Just ssEpochNo
-      , snapShotLeiosCommitteeSize = Just ssLeiosCommitteeSize
-      , -- The committee is stored verbatim so loading restores it without
-        -- re-selecting; the honoured key age it was seated with need not be kept.
-        snapShotLeiosCommittee = Just ssLeiosCommittee
+      , snapShotEpochNo = Nothing
+      , snapShotLeiosCommitteeSize = Nothing
+      , snapShotLeiosCommittee = Just ssLeiosCommittee
       }
     ssSnapShot
 
@@ -408,44 +405,22 @@ getSnapShotsNoSharing ::
   Entity EpochState ->
   ReaderT SqlBackend m (State.SnapShots era)
 getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
-  mark <- getSnapShotNoSharing epochStateId SnapShotMark
-  set <- getSnapShotNoSharing epochStateId SnapShotSet
+  (mark, markEpoch, markSize, _) <- getSnapShotNoSharing epochStateId SnapShotMark
+  (set, _, _, setCommittee) <- getSnapShotNoSharing epochStateId SnapShotSet
   (go, _, _, _) <- getSnapShotNoSharing epochStateId SnapShotGo
-  pure $ rebuildSnapShots epochStateSnapShotsFee mark set go
+  pure $
+    State.SnapShots
+      { ssStakeMark = State.MarkSnapShot mark (fromMaybe (EpochNo 0) markEpoch) (fromMaybe 0 markSize)
+      , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
+      , ssStakeSet =
+          State.SetSnapShot
+            set
+            (State.calculatePoolDistr set)
+            (fromMaybe State.emptyLeiosCommittee setCommittee)
+      , ssStakeGo = State.GoSnapShot go (State.calculatePoolDistr go)
+      , ssFee = epochStateSnapShotsFee
+      }
 {-# INLINEABLE getSnapShotsNoSharing #-}
-
--- | Rebuild the phased 'SnapShots' from the three base snapshots, the Leios
--- epoch and committee size the mark and set snapshots persisted, and the seated
--- committee the set snapshot stored verbatim (CIP-0164). The go snapshot carries
--- none, so its intermediate mark uses placeholder values that 'mkGoSnapShot'
--- discards.
-rebuildSnapShots ::
-  Coin ->
-  (State.SnapShot, Maybe EpochNo, Maybe Word16, Maybe State.LeiosCommittee) ->
-  (State.SnapShot, Maybe EpochNo, Maybe Word16, Maybe State.LeiosCommittee) ->
-  State.SnapShot ->
-  State.SnapShots era
-rebuildSnapShots fee (mark, markEpoch, markSize, _) (set, setEpoch, setSize, setCommittee) go =
-  State.SnapShots
-    { ssStakeMark = mkMark mark markEpoch markSize
-    , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
-    , ssStakeSet =
-        State.mkSetSnapShot
-          (State.calculatePoolDistr set)
-          (fromMaybe State.emptyLeiosCommittee setCommittee)
-          (mkMark set setEpoch setSize)
-    , ssStakeGo =
-        State.mkGoSnapShot
-          ( State.mkSetSnapShot
-              (State.calculatePoolDistr go)
-              State.emptyLeiosCommittee
-              (mkMark go Nothing Nothing)
-          )
-    , ssFee = fee
-    }
-  where
-    mkMark s e sz =
-      State.MarkSnapShot s (fromMaybe (EpochNo 0) e) (fromMaybe 0 sz)
 
 getSnapShotsNoSharingM ::
   MonadResource m =>
@@ -520,10 +495,21 @@ getSnapShotsWithSharing ::
   Entity EpochState ->
   ReaderT SqlBackend m (State.SnapShots era)
 getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
-  markT@(mark, _, _, _) <- getSnapShotWithSharing [] epochStateId SnapShotMark
-  setT@(set, _, _, _) <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
+  (mark, markEpoch, markSize, _) <- getSnapShotWithSharing [] epochStateId SnapShotMark
+  (set, _, _, setCommittee) <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
   (go, _, _, _) <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
-  pure $ rebuildSnapShots epochStateSnapShotsFee markT setT go
+  pure $
+    State.SnapShots
+      { ssStakeMark = State.MarkSnapShot mark (fromMaybe (EpochNo 0) markEpoch) (fromMaybe 0 markSize)
+      , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
+      , ssStakeSet =
+          State.SetSnapShot
+            set
+            (State.calculatePoolDistr set)
+            (fromMaybe State.emptyLeiosCommittee setCommittee)
+      , ssStakeGo = State.GoSnapShot go (State.calculatePoolDistr go)
+      , ssFee = epochStateSnapShotsFee
+      }
 {-# INLINEABLE getSnapShotsWithSharing #-}
 
 sourceUTxO ::

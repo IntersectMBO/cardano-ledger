@@ -24,7 +24,6 @@ module Cardano.Ledger.State.SnapShots (
   SetSnapShot (..),
   GoSnapShot (..),
   mkSetSnapShot,
-  seatLeiosCommittee,
   mkGoSnapShot,
   SnapShots (..),
   emptySnapShot,
@@ -97,7 +96,6 @@ import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.LeiosCommittee (
   LeiosCandidate (..),
   LeiosCommittee (..),
-  emptyLeiosCommittee,
   leiosCommitteeToJSON,
   selectLeiosCommittee,
  )
@@ -470,7 +468,7 @@ instance ToKeyValuePairs SetSnapShot where
 -- | The oldest snapshot, consumed by the reward calculation.
 data GoSnapShot = GoSnapShot
   { gsSnapShot :: !SnapShot
-  , gsPoolDistr :: !PoolDistr
+  , gsPoolDistr :: !PoolDistr -- TODO: needed?
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs GoSnapShot
@@ -497,38 +495,27 @@ instance ToKeyValuePairs GoSnapShot where
     let GoSnapShot {..} = gs
      in ["snapShot" .= gsSnapShot]
 
--- | Rotate a mark snapshot into the set position with an already-seated Leios
--- voting committee (CIP-0164). The committee is supplied rather than selected
--- here so that decoding restores it verbatim and the SNAP rule — the only place
--- that can read the honoured key age from 'Cardano.Ledger.BaseTypes.Globals' —
--- seats it via 'seatLeiosCommittee'.
+-- | Rotate a mark snapshot into the set position. This also computes the pool
+-- distribution and selects the Leios committee using the mark snapshot and a
+-- passed maxKeyAge.
 mkSetSnapShot ::
-  -- | The pool distribution of the mark snapshot; passed in so the memoized
-  -- 'ssStakeMarkPoolDistr' is reused at the epoch boundary. See ADR-7.
-  PoolDistr ->
-  LeiosCommittee ->
+  -- | The mark snapshot of which the 'PoolDistr' and 'LeiosCommittee' will be
+  -- computed and forced into the SetSnapShot.
   MarkSnapShot ->
+  -- | Max key age for the leios committee.
+  EpochInterval ->
   SetSnapShot
-mkSetSnapShot poolDistr committee MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize} =
+mkSetSnapShot MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize} maxKeyAge =
   SetSnapShot
     { ssSnapShot = msSnapShot
-    , ssPoolDistr = poolDistr
-    , ssEpochNo = msEpochNo
-    , ssLeiosCommitteeSize = msLeiosCommitteeSize
-    , ssLeiosCommittee = committee
+    , ssPoolDistr = calculatePoolDistr msSnapShot
+    , ssLeiosCommittee =
+        selectLeiosCommittee
+          (addEpochInterval msEpochNo (EpochInterval 1))
+          maxKeyAge
+          msLeiosCommitteeSize
+          (leiosCandidates (ssStakePoolsSnapShot msSnapShot))
     }
-
--- | Seat the Leios voting committee for a mark rotating into the set position,
--- honouring keys no older than @maxKeyAge@ (CIP-0164). The committee governs
--- the epoch this snapshot is the leader-election distribution of, one after the
--- mark's own epoch, which is the epoch keys are judged against.
-seatLeiosCommittee :: EpochInterval -> MarkSnapShot -> LeiosCommittee
-seatLeiosCommittee maxKeyAge MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize} =
-  selectLeiosCommittee
-    (addEpochInterval msEpochNo (EpochInterval 1))
-    maxKeyAge
-    msLeiosCommitteeSize
-    (leiosCandidates (ssStakePoolsSnapShot msSnapShot))
 
 -- | Rotate a set snapshot into the go position.
 mkGoSnapShot :: SetSnapShot -> GoSnapShot
@@ -598,7 +585,7 @@ emptySnapShots =
   SnapShots emptyMark (calculatePoolDistr emptySnapShot) emptySet emptyGo (Coin 0)
   where
     emptyMark = MarkSnapShot emptySnapShot (EpochNo 0) 0
-    emptySet = mkSetSnapShot (calculatePoolDistr emptySnapShot) emptyLeiosCommittee emptyMark
+    emptySet = mkSetSnapShot emptyMark (EpochInterval 0)
     emptyGo = mkGoSnapShot emptySet
 
 mkSnapShot ::

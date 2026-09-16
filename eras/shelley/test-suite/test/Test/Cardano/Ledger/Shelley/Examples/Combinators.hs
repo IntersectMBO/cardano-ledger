@@ -44,6 +44,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  EpochInterval (..),
   Network,
   Nonce (..),
   StrictMaybe (..),
@@ -531,7 +532,7 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
           -- successor of the state's current epoch.
           ssStakeMark = MarkSnapShot snap (succ (nesEL nes)) 0
         , ssStakeMarkPoolDistr = calculatePoolDistr snap
-        , ssStakeSet = mkSetSnapShot (calculatePoolDistr (msSnapShot ssMark)) emptyLeiosCommittee ssMark
+        , ssStakeSet = mkSetSnapShot ssMark (EpochInterval 0)
         , ssStakeGo = mkGoSnapShot ssSet
         , ssFee = fee
         }

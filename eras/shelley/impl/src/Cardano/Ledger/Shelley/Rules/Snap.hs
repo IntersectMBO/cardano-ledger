@@ -15,7 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Snap (
   SnapEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, unNonZero)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo, ShelleyBase, unNonZero)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -96,9 +96,9 @@ snapTransition = do
       { -- Pre-Dijkstra eras have no Leios committee, so its size is zero and it
         -- rotates into the set position empty.
         ssStakeMark = MarkSnapShot istakeSnap eNo 0
-      , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet = mkSetSnapShot (ssStakeMarkPoolDistr s) emptyLeiosCommittee (ssStakeMark s)
+        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
+      , ssStakeSet = mkSetSnapShot (ssStakeMark s) (EpochInterval 0)
       , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }
