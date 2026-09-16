@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -41,6 +42,7 @@ import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -69,7 +71,9 @@ spec = describe "UTXOS" $ do
             addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
         amount <- uniformRM (Coin 10_000_000, Coin 100_000_000)
         txIn <- sendCoinTo addr amount
-        let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+        let
+          tx :: forall l. Typeable l => Tx l era
+          tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
         if lang >= PlutusV3
           then submitTx_ tx
           else
@@ -142,6 +146,7 @@ datumAndReferenceInputsSpec = do
                     ]
           let
             lockedTxIn = mkTxInPartial producingTxId 1
+            consumingTx :: forall l. Typeable l => Tx l era
             consumingTx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
@@ -570,7 +575,7 @@ costModelsSpec =
           committeeMembers'
 
       impAnn "Minting token succeeds" $ do
-        submitTx_ mintingTokenTx
+        submitTopTx_ mintingTokenTx
 
       impAnn "Updating CostModels succeeds" $ do
         void $

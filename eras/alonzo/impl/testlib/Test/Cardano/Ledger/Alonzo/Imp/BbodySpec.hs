@@ -61,7 +61,7 @@ spec = describe "BBODY" $ do
             impAnn "notValidatingTxWithMint" $ do
               submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
             impAnn "validatingTxWithMint" $ do
-              submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
+              submitTopTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
 
             maxExUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
 

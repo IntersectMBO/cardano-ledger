@@ -21,6 +21,7 @@ import Cardano.Ledger.Val (Val (..))
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -123,6 +124,7 @@ spec = describe "GOVCERT" $ do
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
       drepCred <- KeyHashObj <$> freshKeyHash
       let
+        regTx :: forall l. Typeable l => Tx l era
         regTx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
@@ -148,6 +150,7 @@ spec = describe "GOVCERT" $ do
       forM_ initialCommittee $ \ccCred -> do
         ccHotCred <- KeyHashObj <$> freshKeyHash
         let
+          registerHotKeyTx :: forall l. Typeable l => Tx l era
           registerHotKeyTx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
@@ -198,6 +201,7 @@ spec = describe "GOVCERT" $ do
         unknownColdCred <- KeyHashObj <$> freshKeyHash
         unknownHotCred <- KeyHashObj <$> freshKeyHash
         let
+          tx :: forall l. Typeable l => Tx l era
           tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL

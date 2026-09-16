@@ -49,6 +49,7 @@ import qualified Data.OMap.Strict as OMap
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import Data.Typeable (Typeable)
 import Lens.Micro ((%~), (&), (.~), (^.))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
@@ -252,6 +253,7 @@ spec = describe "SUBUTXOW" $ do
           let scriptHash = hashPlutusScript $ redeemerSameAsDatum slang
           txIn <- impAnn "Produce a script output with no datum hash" $ do
             let addr = mkAddr scriptHash StakeRefNull
+                tx :: forall l. Typeable l => Tx l era
                 tx =
                   mkBasicTx mkBasicTxBody
                     & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]

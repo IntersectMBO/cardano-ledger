@@ -87,4 +87,4 @@ spec = describe "LEDGER" $ do
               & bodyTxL . inputsTxBodyL .~ Set.singleton txIn2
               & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
 
-      submitTx_ tx
+      submitTopTx_ tx

@@ -101,7 +101,7 @@ spec = describe "HARDFORK" $ do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & sppVrfL .~ vrf]
     registerStakePool kh vrf =
-      registerStakePoolTx kh vrf >>= submitTx_
+      registerStakePoolTx kh vrf >>= submitTopTx_
     retireStakePool kh retirementInterval = do
       curEpochNo <- getsNES nesELL
       let retirement = addEpochInterval curEpochNo retirementInterval

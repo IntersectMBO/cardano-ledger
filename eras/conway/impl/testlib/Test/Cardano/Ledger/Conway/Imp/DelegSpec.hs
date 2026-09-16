@@ -43,6 +43,7 @@ import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified System.FS.Sim.MockFS as MockFS
 import System.FS.Sim.STM (simHasFS')
@@ -147,9 +148,9 @@ spec = describe "DELEG" $ do
       otherAccountAddress <- getAccountAddressFor otherStakeCred
       khStakePool <- freshKeyHash
       registerPool khStakePool
-      submitTx_ . mkBasicTx $
-        mkBasicTxBody
-          & certsTxBodyL
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
             .~ SSeq.fromList
               [ RegDepositDelegTxCert stakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
               , RegDepositDelegTxCert otherStakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain) keyDeposit
@@ -159,10 +160,10 @@ spec = describe "DELEG" $ do
       submitAndExpireProposalToMakeReward otherStakeCred
       getBalance otherStakeCred `shouldReturn` govActionDeposit
       unRegTxCert <- genUnRegTxCert stakeCred
-      submitTx_ . mkBasicTx $
-        mkBasicTxBody
-          & certsTxBodyL .~ SSeq.fromList [unRegTxCert]
-          & withdrawalsTxBodyL
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ SSeq.fromList [unRegTxCert]
+          & bodyTxL . withdrawalsTxBodyL
             .~ Withdrawals
               ( Map.fromList
                   [ (accountAddress, Coin 0)
@@ -273,7 +274,8 @@ spec = describe "DELEG" $ do
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
       AccountAddress _ (AccountId cred) <- registerAccountAddress
       drepCred <- KeyHashObj <$> freshKeyHash
-      let tx =
+      let tx :: forall l. Typeable l => Tx l era
+          tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
                 .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
