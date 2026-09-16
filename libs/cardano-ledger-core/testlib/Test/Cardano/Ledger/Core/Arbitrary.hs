@@ -789,14 +789,19 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
         (unActiveStake ssActiveStake)
 
 instance Arbitrary MarkSnapShot where
-  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- | Builds a consistent set snapshot: its pool distribution and committee are
--- derived from the mark it rotates, never generated independently.
+-- seated from the mark it rotates, never generated independently.
 instance Arbitrary SetSnapShot where
   arbitrary = do
     mark <- arbitrary
-    pure $ mkSetSnapShot (calculatePoolDistr (msSnapShot mark)) mark
+    maxKeyAge <- arbitrary
+    pure $
+      mkSetSnapShot
+        (calculatePoolDistr (msSnapShot mark))
+        (seatLeiosCommittee maxKeyAge mark)
+        mark
 
 instance Arbitrary GoSnapShot where
   arbitrary = mkGoSnapShot <$> arbitrary

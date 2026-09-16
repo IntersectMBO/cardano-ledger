@@ -131,20 +131,19 @@ goldenNewEpochStateExpectation
           ]
       markSnapShotEnc MarkSnapShot {..} =
         Em
-          [ E (TkListLen 4)
+          [ E (TkListLen 3)
           , snapShotEnc msSnapShot
           , Ev ver msEpochNo
           , Ev ver msLeiosCommitteeSize
-          , Ev ver msMaxKeyAge
           ]
-      -- ssPoolDistr and ssLeiosCommittee are derived, so not serialized.
+      -- ssPoolDistr is derived, so not serialized; the committee is stored.
       setSnapShotEnc SetSnapShot {..} =
         Em
           [ E (TkListLen 4)
           , snapShotEnc ssSnapShot
           , Ev ver ssEpochNo
           , Ev ver ssLeiosCommitteeSize
-          , Ev ver ssMaxKeyAge
+          , Ev ver ssLeiosCommittee
           ]
       -- gsPoolDistr is derived, so not serialized.
       goSnapShotEnc GoSnapShot {..} =

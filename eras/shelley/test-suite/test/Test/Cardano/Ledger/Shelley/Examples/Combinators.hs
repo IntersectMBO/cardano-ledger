@@ -90,7 +90,7 @@ import Cardano.Protocol.TPraos.BlockHeader (
   lastAppliedHash,
   prevHashToNonce,
  )
-import Cardano.Slotting.Slot (EpochInterval (..), EpochNo (..), WithOrigin (..))
+import Cardano.Slotting.Slot (EpochNo (..), WithOrigin (..))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -529,9 +529,9 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
         { -- 'newSnapshot' is applied before 'newEpoch', so the epoch being
           -- entered -- the one the SNAP rule stamps on the fresh mark -- is the
           -- successor of the state's current epoch.
-          ssStakeMark = MarkSnapShot snap (succ (nesEL nes)) 0 (EpochInterval 0)
+          ssStakeMark = MarkSnapShot snap (succ (nesEL nes)) 0
         , ssStakeMarkPoolDistr = calculatePoolDistr snap
-        , ssStakeSet = mkSetSnapShot (calculatePoolDistr (msSnapShot ssMark)) ssMark
+        , ssStakeSet = mkSetSnapShot (calculatePoolDistr (msSnapShot ssMark)) emptyLeiosCommittee ssMark
         , ssStakeGo = mkGoSnapShot ssSet
         , ssFee = fee
         }

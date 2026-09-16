@@ -9,7 +9,6 @@ module Cardano.Ledger.Dijkstra.Transition (
 ) where
 
 import Cardano.Ledger.Alonzo.Transition (AlonzoEraTransition)
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Transition (
   ConwayEraTransition,
@@ -71,11 +70,6 @@ seatInitialLeiosCommittee nes =
       mark
         { msEpochNo = nes ^. nesELL
         , msLeiosCommitteeSize = nes ^. nesEsL . curPParamsEpochStateL . ppLeiosCommitteeSizeL
-        , -- The real key-age bound is derived from 'Globals', which is not
-          -- reachable here (this runs outside 'ShelleyBase'). A network booting
-          -- straight into Dijkstra should keep its genesis-registered keys
-          -- honoured, so seat them with an age bound that never expires.
-          msMaxKeyAge = EpochInterval maxBound
         }
 
 instance ConwayEraTransition DijkstraEra

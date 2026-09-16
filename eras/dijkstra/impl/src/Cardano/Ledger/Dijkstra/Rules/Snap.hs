@@ -47,6 +47,7 @@ import Cardano.Ledger.State (
   instantStakeG,
   mkGoSnapShot,
   mkSetSnapShot,
+  seatLeiosCommittee,
   snapShotFromInstantStake,
   swdDelegation,
   swdStake,
@@ -97,12 +98,12 @@ snapTransition = do
           (certState ^. certDStateL)
           (certState ^. certPStateL)
   -- 'maxKeyAge' is derived from 'Globals', which the pure snapshot rotation
-  -- cannot read, so compute it here and record it on the mark. The committee is
-  -- seated, and keys judged for @eNo + 1@, when the mark rotates into the set
-  -- position. Measure against @eNo@ (the epoch we are entering), not that later
-  -- epoch: this only needs an epoch /length/ to turn the KES lifetime into a
-  -- count of epochs, and a future epoch's length is past the forecast horizon
-  -- whenever the stability window is shorter than an epoch.
+  -- cannot read, so compute it here and seat the committee for the mark that is
+  -- now rotating into the set position, judging keys for @eNo@. Measure against
+  -- @eNo@ (the epoch we are entering), not a later one: this only needs an epoch
+  -- /length/ to turn the KES lifetime into a count of epochs, and a future
+  -- epoch's length is past the forecast horizon whenever the stability window is
+  -- shorter than an epoch.
   maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
 
   tellEvent $
@@ -115,13 +116,16 @@ snapTransition = do
 
   pure $
     SnapShots
-      { -- The mark records the committee size and honoured key age; the Leios
-        -- committee is seated from them when this snapshot rotates into the set
-        -- position (CIP-0164).
-        ssStakeMark = MarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL) maxKeyAge
+      { -- The mark records the committee size; the Leios committee is seated
+        -- from it when this snapshot rotates into the set position (CIP-0164).
+        ssStakeMark = MarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL)
       , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet = mkSetSnapShot (ssStakeMarkPoolDistr s) (ssStakeMark s)
+        ssStakeSet =
+          mkSetSnapShot
+            (ssStakeMarkPoolDistr s)
+            (seatLeiosCommittee maxKeyAge (ssStakeMark s))
+            (ssStakeMark s)
       , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }
