@@ -536,9 +536,6 @@ spec = describe "ENTITIES" $ do
       b <- choose (maxSum - a + 1, maxSum)
       pure (Coin a, Coin b)
 
-    unregisteredAccount :: ImpTestM era AccountAddress
-    unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
-
     submitFailingTopTxBody modifyBody failure =
       submitFailingTx (mkBasicTx (mkBasicTxBody & modifyBody)) [injectFailure failure]
 
