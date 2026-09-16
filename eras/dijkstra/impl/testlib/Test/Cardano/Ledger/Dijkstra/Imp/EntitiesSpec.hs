@@ -393,11 +393,6 @@ spec = describe "ENTITIES" $ do
       let intervals = AccountBalanceIntervals [(accountAddr, AccountBalanceExact balance)]
       submitTx_ $ mkBasicTx $ mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ intervals
       submitTopTx_ $ mkBasicTx $ mkBasicTxBody & startingAccountBalanceIntervalsTxBodyL .~ intervals
-      submitTopTx_ $
-        mkBasicTx $
-          mkBasicTxBody
-            & subTransactionsTxBodyL
-              .~ [mkBasicTx $ mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ intervals]
 
     it "Every violating entry of a single interval map is reported" $ do
       (accountAddr, balance, _) <- setupAccountAddress
@@ -463,11 +458,12 @@ spec = describe "ENTITIES" $ do
 
     it "Interval bounds are checked at their boundaries" $ do
       (accountAddr, balance, _) <- setupAccountAddress
-      let withInterval interval =
+      let withInterval :: Typeable l => AccountBalanceInterval era -> Tx l era
+          withInterval interval =
             mkBasicTx $
               mkBasicTxBody
                 & accountBalanceIntervalsTxBodyL .~ AccountBalanceIntervals [(accountAddr, interval)]
-          intervalHolds = submitTopTx_ . withInterval
+          intervalHolds interval = submitTx_ $ withInterval interval
           intervalViolated interval =
             submitFailingTx
               (withInterval interval)

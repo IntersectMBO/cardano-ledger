@@ -47,6 +47,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -158,22 +159,21 @@ produceRefScriptsTx scripts = do
       & bodyTxL . outputsTxBodyL .~ SSeq.fromList (NE.toList txOuts)
 
 mkTxWithRefInputs ::
-  (ShelleyEraImp era, BabbageEraTxBody era) =>
+  (ShelleyEraImp era, BabbageEraTxBody era, Typeable l) =>
   TxIn ->
   NonEmpty TxIn ->
-  Tx TopTx era
+  Tx l era
 mkTxWithRefInputs txIn refIns =
-  mkBasicTx $
-    mkBasicTxBody
-      & referenceInputsTxBodyL .~ Set.fromList (NE.toList refIns)
-      & inputsTxBodyL .~ [txIn]
+  mkBasicTx mkBasicTxBody
+    & bodyTxL . referenceInputsTxBodyL .~ Set.fromList (NE.toList refIns)
+    & bodyTxL . inputsTxBodyL .~ [txIn]
 
 submitTxWithRefInputs ::
   (ShelleyEraImp era, BabbageEraTxBody era) =>
   TxIn ->
   NonEmpty TxIn ->
   ImpTestM era (Tx TopTx era)
-submitTxWithRefInputs txIn refIns = submitTopTx $ mkTxWithRefInputs txIn refIns
+submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
 
 class
   ( AlonzoEraImp era

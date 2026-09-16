@@ -36,6 +36,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   PlutusArgs,
   ScriptTestContext,
+  AnyLevelTx (..),
   iteFixupL,
   itePostSubmitTxHookL,
   itePostEpochBoundaryHookL,
@@ -598,6 +599,14 @@ class
     ImpTestM
       era
       (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+
+-- | A transaction that is polymorphic in its level. This wrapper makes it possible to
+-- return a level-polymorphic `Tx` from a monadic action: the unwrapped result type
+-- @ImpTestM era (forall l. Typeable l => Tx l era)@ would be impredicative, while binding a
+-- plain @Tx l era@ fixes @l@ to a single level, since bound results are never generalized.
+-- Pattern matching on `AnyLevelTx` recovers the quantification, so the transaction can then
+-- be passed to functions like `submitTx` that accept a transaction at any level.
+newtype AnyLevelTx era = AnyLevelTx {unAnyLevelTx :: forall l. Typeable l => Tx l era}
 
 submitTx ::
   (HasCallStack, ShelleyEraImp era) =>
