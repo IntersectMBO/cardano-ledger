@@ -308,6 +308,8 @@ instance ToExpr (Conway.ConwayGovEvent era) => ToExpr (DijkstraSubGovEvent era)
 
 instance ToExpr (DijkstraSubGovCertPredFailure era)
 
+instance ToExpr (DijkstraPoolPredFailure era)
+
 instance ToExpr (DijkstraSubPoolPredFailure era)
 
 instance ToExpr (DijkstraSubPoolEvent era)

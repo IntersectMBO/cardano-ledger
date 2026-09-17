@@ -83,6 +83,7 @@
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
 * Add `Arbitrary` and `ToExpr` instances for `Milliseconds32`
+* Fix `Arbitrary` instance for `BlsKey` to generate a valid key pair where the proof of possession matches the verification key
 
 ### `cddl`
 
