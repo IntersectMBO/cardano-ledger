@@ -19,12 +19,19 @@ module Test.Cardano.Ledger.Dijkstra.TreeDiff (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert (..))
+import Cardano.Crypto.Peras (
+  PerasBlockRef (..),
+  PerasBoostedBlock (..),
+  PerasRoundNo (..),
+  perasSignatureToBytes,
+  perasVRFOutputToBytes,
+ )
+import Cardano.Crypto.Peras.Cert (PerasCert (..), PerasCertVoters (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
-import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
@@ -56,7 +63,10 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 import Control.State.Transition (STS (..))
+import qualified Data.Bitmap as Bitmap
+import qualified Data.ByteString.Short as SBS
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
@@ -133,7 +143,36 @@ instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
 
 instance ToExpr (TxBody l DijkstraEra)
 
-instance ToExpr PerasCert
+instance ToExpr PerasCert where
+  toExpr PerasCert {pcRoundNo, pcBoostedBlock, pcVoters, pcSignature} =
+    Rec "PerasCert" $
+      OMap.fromList
+        [ ("pcRoundNo", toExpr (unPerasRoundNo pcRoundNo))
+        , ("pcBoostedBlock", toExpr pcBoostedBlock)
+        , ("pcVoters", toExpr pcVoters)
+        , ("pcSignature", toExpr . HexBytes $ perasSignatureToBytes pcSignature)
+        ]
+
+instance ToExpr PerasBoostedBlock where
+  toExpr (PerasBoostedBlock Origin) = App "Origin" []
+  toExpr (PerasBoostedBlock (At ref)) = App "At" [toExpr ref]
+
+instance ToExpr PerasBlockRef where
+  toExpr PerasBlockRef {pbrSlot, pbrHash} =
+    Rec "PerasBlockRef" $
+      OMap.fromList
+        [ ("pbrSlot", toExpr (unSlotNo pbrSlot))
+        , ("pbrHash", toExpr . HexBytes $ SBS.fromShort pbrHash)
+        ]
+
+instance ToExpr PerasCertVoters where
+  toExpr UnsafePerasCertVoters {perasCertVotersBitmap, perasCertNonPersistentVRFOutputs} =
+    Rec "PerasCertVoters" $
+      OMap.fromList
+        [ ("maxIndex", toExpr (Bitmap.logicalUpperBound perasCertVotersBitmap))
+        , ("bitmap", toExpr . HexBytes $ Bitmap.rawSerialise perasCertVotersBitmap)
+        , ("vrfOutputs", toExpr (HexBytes . perasVRFOutputToBytes <$> perasCertNonPersistentVRFOutputs))
+        ]
 
 -- Manual ToExpr to avoid an orphan 'ToExpr (SigDSIGN BLS12381MinSigDSIGN)':
 -- show the BLS signature as its raw byte representation, and the bitfield
@@ -149,7 +188,7 @@ instance ToExpr LeiosCert where
 
 instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)
 
-instance (AlonzoEraTx era, ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
+instance (AlonzoEraTx era, ToExpr (Tx TopTx era)) => ToExpr (DijkstraBlockBody era)
 
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case

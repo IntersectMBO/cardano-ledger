@@ -37,6 +37,7 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 ) where
 
 import Cardano.Crypto.Leios (LeiosCert)
+import Cardano.Crypto.Peras.Cert (PerasCert (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
 import Cardano.Ledger.Binary (
@@ -74,7 +75,6 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
-import Data.Array.Byte (ByteArray)
 import qualified Data.ByteString as BS
 import Data.Coerce (Coercible, coerce)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -107,7 +107,7 @@ data DijkstraBlockBodyRaw era = DijkstraBlockBodyRaw
   deriving (Generic)
 
 instance
-  (NFData (Tx TopTx era), NFData LeiosCert, NFData PerasCert) =>
+  NFData (Tx TopTx era) =>
   NFData (DijkstraBlockBodyRaw era)
 
 type instance MemoHashIndex (DijkstraBlockBodyRaw era) = EraIndependentBlockBody
@@ -153,7 +153,7 @@ deriving instance Eq (Tx TopTx era) => Eq (DijkstraBlockBody era)
 deriving instance Show (Tx TopTx era) => Show (DijkstraBlockBody era)
 
 deriving newtype instance
-  (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBody era)
+  NFData (Tx TopTx era) => NFData (DijkstraBlockBody era)
 
 deriving newtype instance EncCBOR (DijkstraBlockBody era)
 
@@ -217,17 +217,6 @@ deriving via
     , DecCBOR (Annotator (TxWits era))
     ) =>
     DecCBOR (Annotator (DijkstraBlockBody era))
-
--- | Placeholder for Peras certificates
---
--- NOTE: The real type will be brought from 'cardano-base' once it's ready.
-newtype PerasCert = PerasCert ByteArray
-  deriving (Eq, Ord, Show, Generic)
-  deriving newtype (EncCBOR, DecCBOR)
-
-instance NoThunks PerasCert
-
-instance NFData PerasCert
 
 -- | Placeholder for Peras public keys
 --

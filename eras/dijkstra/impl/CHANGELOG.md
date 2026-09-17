@@ -31,6 +31,7 @@
   `Peras` specific certificate in the block body.
 * Add `DijkstraEraTx` type class with `hashTx` function.
 * Add `ConwayEraPParams` as a superclass `DijkstraEraPParams`.
+* Replace the placeholder `PerasCert` in `DijkstraBlockBody` with `PerasCert` from `cardano-crypto-peras`; `PerasCertValidationFailed` now carries that type
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
 * Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
@@ -147,6 +148,7 @@
 * Add `voteSubTx`
 * Add `InjectRuleFailure "LEDGER" DijkstraGovPredFailure era` and
   `InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era` as superclasses of `DijkstraEraImp`
+* Remove `Arbitrary PerasCert`, now provided by `cardano-ledger-binary:testlib`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
 * Add `submitFailingSubTx`
 * Preserve explicitly supplied redeemers when fixing up subtransactions.
