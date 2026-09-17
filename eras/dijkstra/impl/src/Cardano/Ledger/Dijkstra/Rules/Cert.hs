@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,7 +19,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Pool ()
+import Cardano.Ledger.Dijkstra.Rules.Pool (DijkstraPoolPredFailure)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxCert
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -38,7 +37,10 @@ instance InjectRuleFailure "CERT" Conway.ConwayDelegPredFailure DijkstraEra wher
   injectFailure = Conway.DelegFailure
 
 instance InjectRuleFailure "CERT" Shelley.ShelleyPoolPredFailure DijkstraEra where
-  injectFailure = Conway.PoolFailure
+  injectFailure = Conway.PoolFailure . injectFailure
+
+instance InjectRuleFailure "CERT" DijkstraPoolPredFailure DijkstraEra where
+  injectFailure = Conway.PoolFailure . injectFailure
 
 instance InjectRuleFailure "CERT" DijkstraGovCertPredFailure DijkstraEra where
   injectFailure = Conway.GovCertFailure
