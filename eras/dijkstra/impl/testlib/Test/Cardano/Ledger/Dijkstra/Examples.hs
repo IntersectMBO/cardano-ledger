@@ -67,6 +67,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppPerasCertBoostL,
   ppPerasHealingFactorL,
   ppPerasMinCandidateBlockAgeL,
+  ppPerasQuorumThresholdSafetyMarginL,
   ppPerasTargetCommitteeSizeL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
@@ -85,6 +86,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuPerasCertBoostL,
   ppuPerasHealingFactorL,
   ppuPerasMinCandidateBlockAgeL,
+  ppuPerasQuorumThresholdSafetyMarginL,
   ppuPerasTargetCommitteeSizeL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
@@ -198,6 +200,7 @@ exampleDijkstraGenesis =
           , udppPerasCertBoost = 15
           , udppPerasTargetCommitteeSize = 800
           , udppPerasBootstrapRound = SJust 0
+          , udppPerasQuorumThresholdSafetyMargin = 1 %! 20
           }
     }
 
@@ -374,6 +377,7 @@ exampleDijkstraOnwardsEraPParams =
     & ppPerasCertBoostL .~ 15
     & ppPerasTargetCommitteeSizeL .~ 800
     & ppPerasBootstrapRoundL .~ SJust 0
+    & ppPerasQuorumThresholdSafetyMarginL .~ 1 %! 20
 
 exampleDijkstraOnwardsEraPParamsUpdate ::
   (DijkstraEraPParams era, ConwayEraPParams era) => PParamsUpdate era
@@ -397,6 +401,7 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuPerasCertBoostL .~ SJust 15
     & ppuPerasTargetCommitteeSizeL .~ SJust 800
     & ppuPerasBootstrapRoundL .~ SJust (SJust 0)
+    & ppuPerasQuorumThresholdSafetyMarginL .~ SJust (1 %! 20)
 
 exampleBlsKey :: BlsKey
 exampleBlsKey =

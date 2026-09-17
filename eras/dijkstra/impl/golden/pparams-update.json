@@ -1,4 +1,5 @@
 {
+    "perasQuorumThresholdSafetyMargin": 0.05,
     "collateralPercentage": 49812,
     "committeeMinSize": 32338,
     "costModels": {

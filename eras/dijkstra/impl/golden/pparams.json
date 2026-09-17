@@ -81,6 +81,7 @@
     "perasCertBoost":15,
     "perasTargetCommitteeSize":800,
     "perasBootstrapRound":0,
+    "perasQuorumThresholdSafetyMargin":0.05,
     "protocolVersion":{
        "major":4,
        "minor":1

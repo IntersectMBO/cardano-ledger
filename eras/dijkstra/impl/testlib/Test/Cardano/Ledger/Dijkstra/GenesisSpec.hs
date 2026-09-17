@@ -44,6 +44,7 @@ propDijkstraPParamsUpgrade ppu pp = property $ do
   pp' ^. ppPerasCertBoostL `shouldBe` udppPerasCertBoost ppu
   pp' ^. ppPerasTargetCommitteeSizeL `shouldBe` udppPerasTargetCommitteeSize ppu
   pp' ^. ppPerasBootstrapRoundL `shouldBe` udppPerasBootstrapRound ppu
+  pp' ^. ppPerasQuorumThresholdSafetyMarginL `shouldBe` udppPerasQuorumThresholdSafetyMargin ppu
   -- The PlutusV4 CostModel from DijkstraGenesis must win over any pre-existing entry
   Map.lookup PlutusV4 newCostModels `shouldBe` Just (udppPlutusV4CostModel ppu)
   -- All other cost models must carry over from Conway unchanged

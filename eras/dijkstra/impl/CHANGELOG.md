@@ -8,6 +8,7 @@
   - `perasTargetCommitteeSize`
   - `perasBootstrapRound`
   - `perasHealingFactor`
+  - `perasQuorumThresholdSafetyMargin`
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
 * Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
@@ -94,7 +95,7 @@
 
 ### `cddl`
 
-* Add Peras protocol parameter entries (tags 49-53) in `protocol_param_update`
+* Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`

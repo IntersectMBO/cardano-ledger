@@ -1019,6 +1019,7 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 51 ==> VUInt `sized` (2 :: Word64)) //- "peras certificate boost"
         , opt (idx 52 ==> VUInt `sized` (2 :: Word64)) //- "peras target committee size"
         , opt (idx 53 ==> (arr [] / arr [a (VUInt `sized` (8 :: Word64))])) //- "peras bootstrap round"
+        , opt (idx 54 ==> huddleRule @"unit_interval" p) //- "peras quorum threshold safety margin"
         ]
     where
       -- The maximum addressable 'LeiosSeatId' in bytes.
