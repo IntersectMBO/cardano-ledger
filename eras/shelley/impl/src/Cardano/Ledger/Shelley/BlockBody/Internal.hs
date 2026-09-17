@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -61,7 +62,7 @@ import Cardano.Ledger.Binary (
   serialize',
   withSlice,
  )
-import Cardano.Ledger.Block (Block, EraBlockHeader (..))
+import Cardano.Ledger.Block (Block, EraBlockHeader (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -105,6 +106,7 @@ instance NFData (Tx TopTx era) => NFData (ShelleyBlockBody era)
 
 instance EraBlockBody ShelleyEra where
   type BlockBody ShelleyEra = ShelleyBlockBody ShelleyEra
+  type ProtocolEraBlockHeader h ShelleyEra = TPraosEraBlockHeader h ShelleyEra
   mkBasicBlockBody = mkBasicBlockBodyShelley
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = sbbHash

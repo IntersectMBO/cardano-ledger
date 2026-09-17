@@ -26,7 +26,6 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
   BBODY,
   ShelleyBbodyState (..),
   BbodyEnv (..),
-  BbodySignal (..),
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyEvent (..),
   State,
@@ -50,7 +49,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Block (BbodySignal (..), Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosBbodySignal (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.Era (BBODY, ShelleyEra)
@@ -202,7 +201,7 @@ instance
   where
   type State (BBODY era) = ShelleyBbodyState era
 
-  type Signal (BBODY era) = BbodySignal era
+  type Signal (BBODY era) = TPraosBbodySignal era
 
   type Environment (BBODY era) = BbodyEnv era
 
@@ -227,7 +226,7 @@ bbodyTransition ::
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition = do
-  TRC (BbodyEnv pp account, BbodyState ls blocksMade, BbodySignal block@Block {blockBody}) <-
+  TRC (BbodyEnv pp account, BbodyState ls blocksMade, TPraosBbodySignal block@Block {blockBody}) <-
     judgmentContext
 
   validateBlockBodySize block (pp ^. ppProtocolVersionL)

@@ -8,6 +8,7 @@
 
 module Cardano.Ledger.Babbage.Era (
   BabbageEra,
+  BBODY,
   UTXO,
   UTXOS,
   UTXOW,
@@ -21,7 +22,6 @@ module Cardano.Ledger.Babbage.Era (
   BabbageLEDGER,
 ) where
 
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Internal.Era (BabbageEra)
@@ -79,9 +79,9 @@ data LEDGERS c
 
 type instance EraRule "LEDGERS" BabbageEra = LEDGERS BabbageEra
 
--- Rules inherited from Alonzo
+data BBODY era
 
-type instance EraRule "BBODY" BabbageEra = Alonzo.BBODY BabbageEra
+type instance EraRule "BBODY" BabbageEra = BBODY BabbageEra
 
 -- Rules inherited from Shelley
 

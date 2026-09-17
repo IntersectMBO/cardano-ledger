@@ -79,7 +79,7 @@ import Cardano.Ledger.Binary (
   serialize',
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
@@ -490,7 +490,5 @@ instance (Crypto c, Era era) => EraBlockHeader (BHeader c) era where
     lens
       (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
       (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
-  protVerBlockHeaderL =
-    lens
-      (\(Block (BHeader bhb _) _) -> bprotver bhb)
-      (\(Block (BHeader bhb sig) body) protVer -> Block (BHeader (bhb {bprotver = protVer}) sig) body)
+
+instance (Crypto c, Era era) => TPraosEraBlockHeader (BHeader c) era
