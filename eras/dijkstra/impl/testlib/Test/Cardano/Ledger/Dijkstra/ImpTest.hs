@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -31,6 +32,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -64,6 +66,7 @@ import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
@@ -71,6 +74,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (ScriptTestContext (..))
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
@@ -94,11 +98,18 @@ instance ShelleyEraImp DijkstraEra where
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
-  trySubmitTx tx =
-    oneof
+  trySubmitTx tx = do
+    utxo <- getUTxO
+    let
+      AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo $ tx @SubTx ^. bodyTxL
+      plutusScripts = fromJust . impLookupScriptContext . snd <$> scriptsNeeded
+      plutusScriptsAtLeastV4 = all (\(ScriptTestContext (Plutus _) _) -> _) plutusScripts
+    oneof $
       [ trySubmitTopTx tx
-      , trySubmitSubTx tx
       ]
+        <> [ trySubmitSubTx tx
+           | all canBeInSubTx scripts
+           ]
 
 trySubmitSubTx ::
   DijkstraEraImp era =>
