@@ -62,6 +62,7 @@ import Cardano.Slotting.Slot (
   SlotInterval (..),
   SlotNo (..),
   WithOrigin (..),
+  withOriginToMaybe,
  )
 import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -81,6 +82,17 @@ import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Cardano.Base.IP (IPv4, IPv6)
 import qualified Cardano.Binary as Plain (Encoding, ToCBOR (..))
 import Cardano.Crypto.Leios (BitField (..), LeiosCert (..), LeiosCommittee (..), LeiosSeat (..))
+
+import Cardano.Crypto.Peras (
+  PerasBlockRef (..),
+  PerasBoostedBlock (..),
+  PerasRoundNo (..),
+  PerasSeatIndex (..),
+  PerasSignature (..),
+  PerasVRFOutput (..),
+ )
+import Cardano.Crypto.Peras.Cert (PerasCert (..), PerasCertVoters (..))
+import Data.Bitmap (Bitmap)
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -494,3 +506,31 @@ instance EncCBOR LeiosSeat where
 -- they were verified when it was selected.
 instance EncCBOR LeiosCommittee where
   encCBOR = encCBOR . VStrict.toList . leiosCommitteeSeats
+
+instance EncCBOR PerasRoundNo where
+  encCBOR = encCBOR . unPerasRoundNo
+
+instance EncCBOR PerasSeatIndex where
+  encCBOR = encCBOR . unPerasSeatIndex
+
+instance EncCBOR PerasBlockRef where
+  encCBOR (PerasBlockRef slot hash) = encodeListLen 2 <> encCBOR slot <> encCBOR hash
+
+instance EncCBOR PerasBoostedBlock where
+  encCBOR = encodeMaybe encCBOR . withOriginToMaybe . unPerasBoostedBlock
+
+instance EncCBOR PerasSignature where
+  encCBOR = encCBOR . unPerasSignature
+
+instance EncCBOR PerasVRFOutput where
+  encCBOR = encCBOR . unPerasVRFOutput
+
+instance Plain.ToCBOR a => EncCBOR (Bitmap a)
+
+instance EncCBOR PerasCertVoters where
+  encCBOR (UnsafePerasCertVoters bitmap vrfOutputs) =
+    encodeListLen 2 <> encCBOR bitmap <> encCBOR vrfOutputs
+
+instance EncCBOR PerasCert where
+  encCBOR (PerasCert roundNo boostedBlock voters signature) =
+    encodeListLen 4 <> encCBOR roundNo <> encCBOR boostedBlock <> encCBOR voters <> encCBOR signature

@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
 
 import Cardano.Crypto.DSIGN (deriveVerKeyDSIGN)
 import Cardano.Crypto.Leios (LeiosCert, LeiosCommittee (..), LeiosSeat (..))
+import Cardano.Crypto.Peras.Cert (PerasCert)
 import Cardano.Ledger.Binary.Version
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Vector.Strict as V
@@ -13,6 +14,7 @@ import GHC.Stack
 import Test.Cardano.Base.Arbitrary ()
 import Test.Cardano.Binary.Arbitrary ()
 import Test.Cardano.Crypto.Leios.Gen (genLeiosCert, genLeiosSigningKey)
+import Test.Cardano.Crypto.Peras.Gen (genPerasCert)
 import Test.Data.VMap.Arbitrary ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
@@ -45,3 +47,6 @@ instance Arbitrary LeiosSeat where
 
 instance Arbitrary LeiosCommittee where
   arbitrary = UnsafeLeiosCommittee . V.fromList <$> arbitrary
+
+instance Arbitrary PerasCert where
+  arbitrary = genPerasCert True

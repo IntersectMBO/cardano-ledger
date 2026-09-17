@@ -51,7 +51,6 @@ library
     -Wunused-packages
 
   build-depends:
-    FailT,
     aeson,
     base >=4.18 && <5,
     base16-bytestring,
@@ -61,12 +60,14 @@ library
     cardano-binary >=1.9.1,
     cardano-crypto-class >=2.3 && <2.7,
     cardano-crypto-leios >=0.3,
+    cardano-crypto-peras >=0.2,
     cardano-crypto-praos >=2.2.2,
     cardano-slotting ^>=0.2.2,
-    cardano-strict-containers >=0.1.2,
+    cardano-strict-containers >=0.1.7,
     cborg >=0.2.10,
     containers,
     deepseq,
+    FailT,
     formatting,
     mempack,
     microlens,
@@ -115,8 +116,6 @@ library testlib
     ghc-options:
       -Wredundant-constraints
   build-depends:
-    ImpSpec,
-    QuickCheck,
     antigen ^>=0.4,
     base,
     base16-bytestring,
@@ -125,6 +124,7 @@ library testlib
     cardano-binary:{cardano-binary, testlib} >=1.9,
     cardano-crypto-class,
     cardano-crypto-leios:{cardano-crypto-leios, testlib},
+    cardano-crypto-peras:{cardano-crypto-peras, testlib},
     cardano-ledger-binary,
     cardano-prelude-test,
     cardano-slotting:testlib,
@@ -138,11 +138,13 @@ library testlib
     hedgehog,
     hspec,
     hspec-golden,
+    ImpSpec,
     optparse-applicative,
     pretty-show,
     prettyprinter,
     prettyprinter-ansi-terminal,
     primitive,
+    QuickCheck,
     quickcheck-instances >=0.3.32,
     random >=1.2,
     text,
@@ -180,12 +182,12 @@ test-suite tests
     -with-rtsopts=-N
 
   build-depends:
-    QuickCheck,
     base,
     bytestring,
     cardano-base,
     cardano-crypto-class:{cardano-crypto-class, testlib},
     cardano-crypto-leios,
+    cardano-crypto-peras,
     cardano-crypto-praos:{cardano-crypto-praos, testlib},
     cardano-ledger-binary,
     cardano-prelude-test,
@@ -197,6 +199,7 @@ test-suite tests
     hedgehog-quickcheck,
     hspec,
     primitive,
+    QuickCheck,
     tagged,
     testlib,
     text,
