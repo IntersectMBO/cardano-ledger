@@ -33,6 +33,8 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
 ) where
 
 import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
+import Cardano.Crypto.Peras (perasSignatureSize, perasSignatureToBytes, perasVRFOutputToBytes)
+import Cardano.Crypto.Peras.Cert (PerasCertVoters (..))
 import Cardano.Ledger.Binary (maxLeiosCertSignersBytes, rawEncodeFixedSized)
 import Cardano.Ledger.Conway.HuddleSpec hiding (poolParamsGroup)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -56,6 +58,7 @@ import Cardano.Ledger.State (
  )
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless)
+import Data.Bitmap qualified as Bitmap
 import Data.Bits (finiteBitSize)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
@@ -69,6 +72,7 @@ import Data.Word (Word16, Word64)
 import GHC.TypeLits (KnownSymbol)
 import Test.AntiGen (withAnnotation)
 import Test.Cardano.Crypto.Leios.Gen (genLeiosSignature)
+import Test.Cardano.Crypto.Peras.Gen (genPerasCertVoters, genPerasSignature, genPerasVRFOutput)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Text.Heredoc
 import Prelude hiding ((/))
@@ -1097,7 +1101,69 @@ instance HuddleRule "block" DijkstraEra where
         ]
 
 instance HuddleRule "peras_certificate" DijkstraEra where
-  huddleRuleNamed pname _era = pname =.= VBytes
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ "round" ==> VUInt `sized` (4 :: Word64)
+        , "boosted_block" ==> huddleRule @"peras_boosted_block" era
+        , "voters" ==> huddleRule @"peras_voters" era
+        , "signature" ==> huddleRule @"peras_signature" era
+        ]
+
+instance HuddleRule "peras_boosted_block" DijkstraEra where
+  huddleRuleNamed pname era =
+    comment
+      [str| The boosted block: an empty array when it is the genesis block (Origin),
+          | otherwise a single-element array with the slot and header hash of the block.
+          |]
+      $ pname
+        =.= arr []
+        / arr [a (arr ["slot" ==> VUInt, "hash" ==> huddleRule @"hash32" era])]
+
+instance HuddleRule "peras_voters" DijkstraEra where
+  huddleRuleNamed pname era =
+    withCBORGen perasVotersGen $
+      pname
+        =.= arr
+          [ "bitmap"
+              ==> arr
+                [ "max_index" ==> VUInt `sized` (2 :: Word64) //- "inclusive upper bound of the seat indices"
+                , "bits"
+                    ==> VBytes
+                    //- "(max_index / 8) + 1 bytes, LSB-first: seat i is bit (i mod 8) of byte (i div 8)"
+                ]
+          , "vrf_outputs" ==> arr [0 <+ a (huddleRule @"peras_vrf_output" era)]
+          ]
+    where
+      perasVotersGen = do
+        voters <- liftGen (genPerasCertVoters True)
+        let bitmap = perasCertVotersBitmap voters
+        bitmapTerm <-
+          genArrayTerm
+            [ TInteger (toInteger (Bitmap.logicalUpperBound bitmap))
+            , TBytes (Bitmap.rawSerialise bitmap)
+            ]
+        vrfTerm <-
+          genArrayTerm (TBytes . perasVRFOutputToBytes <$> perasCertNonPersistentVRFOutputs voters)
+        SingleTerm <$> genArrayTerm [bitmapTerm, vrfTerm]
+
+instance HuddleRule "peras_signature" DijkstraEra where
+  huddleRuleNamed pname _era =
+    withCBORGen perasSignatureGen $
+      pname =.= VBytes `sized` perasSignatureSize
+    where
+      perasSignatureGen = do
+        sig <- liftGen genPerasSignature
+        pure $ SingleTerm $ TBytes (perasSignatureToBytes sig)
+
+instance HuddleRule "peras_vrf_output" DijkstraEra where
+  huddleRuleNamed pname _era =
+    withCBORGen perasVRFOutputGen $
+      pname =.= VBytes `sized` perasSignatureSize
+    where
+      perasVRFOutputGen = do
+        vrf <- liftGen genPerasVRFOutput
+        pure $ SingleTerm $ TBytes (perasVRFOutputToBytes vrf)
 
 instance HuddleRule "leios_certificate" DijkstraEra where
   huddleRuleNamed pname era =

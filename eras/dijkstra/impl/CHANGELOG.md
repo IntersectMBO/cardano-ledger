@@ -124,6 +124,7 @@
 * Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
 * Rename the `eb_announcement` rule to `eb_references_announcement`
 * Add `header_version_info` rule and use it in `header_body` in place of `protocol_version`
+* Change `peras_certificate` from `bytes` to its structural definition and add the `peras_boosted_block`, `peras_voters`, `peras_signature` and `peras_vrf_output` rules
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
