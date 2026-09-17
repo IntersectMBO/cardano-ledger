@@ -69,6 +69,7 @@ import Cardano.Ledger.Dijkstra.Rules.Entities (
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Pool (DijkstraPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubEntities (SubEntitiesPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubLedger
 import Cardano.Ledger.Dijkstra.Rules.SubLedgers
@@ -177,6 +178,9 @@ instance InjectRuleFailure "LEDGER" Conway.ConwayDelegPredFailure DijkstraEra wh
   injectFailure = DijkstraEntitiesFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyPoolPredFailure DijkstraEra where
+  injectFailure = DijkstraEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" DijkstraPoolPredFailure DijkstraEra where
   injectFailure = DijkstraEntitiesFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" DijkstraGovCertPredFailure DijkstraEra where

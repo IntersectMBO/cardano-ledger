@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
+  `POOL` rule, replacing `ShelleyPoolPredFailure`:
+  - `EraRuleFailure "POOL" DijkstraEra` is now `DijkstraPoolPredFailure DijkstraEra`
+  - Add `BLSKeyInvalidProofOfPossession` constructor to `DijkstraPoolPredFailure`
+  - Verify BLS proof of possession when (re-)registering a pool with a BLS key set
 * Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` protocol parameters:
   - Add `dppRefInputsCostPerMultiAssetPolicy` and `dppRefInputsCostPerDatumByte` fields to `DijkstraPParams`
   - Add `udppRefInputsCostPerMultiAssetPolicy` and `udppRefInputsCostPerDatumByte` fields to `UpgradeDijkstraPParams`
@@ -122,6 +127,8 @@
 
 ### `testlib`
 
+* Fix `Arbitrary` instance for `DijkstraPoolPredFailure` to preserve the CBOR round-trip
+  invariant of `StakePoolRetirementWrongEpochPOOL`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec`
 * Add `declareTreasurySubTx`
 * Add `InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era` as a superclass of `DijkstraEraImp`

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -11,8 +12,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.PParams (ppMaxPledgeLeverageL)
+import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
 import Cardano.Ledger.State
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
@@ -96,7 +97,7 @@ rewardsOfWellAndOverPledgedPools = do
   -- Both pools mint the same number of blocks, so that they have the same apparent
   -- performance. The transactions also fill up the fee pot that is handed out as rewards.
   replicateM_ 3 $
-    forM_ [fst wellPledged, fst overLeveraged] $ \poolId ->
+    forM_ ([fst wellPledged, fst overLeveraged] :: [KeyHash StakePool]) $ \poolId ->
       withIssuerAndTxsInBlock_ (coerce poolId) $ do
         addr <- freshKeyAddr_
         sendCoinTo_ addr $ Coin 1_000_000_000
@@ -226,6 +227,56 @@ spec = describe "POOL" $ do
       -- the well pledged pool earns. It is not cut off from the rewards entirely.
       overLeveragedRewards `shouldSatisfy` (> Coin 0)
       Coin (100 * unCoin overLeveragedRewards) `shouldSatisfy` (< wellPledgedRewards)
+
+  describe "BLS PoolReg" $ do
+    let
+      mkPoolRegTxFromParams pps =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
+
+      getPools = getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+
+    it "registers a pool with a valid BLS key and proof of possession" $ do
+      pps <- freshStakePool
+      ownerBlsKey <- freshBlsKey
+      let ppsWithBlsKey = pps {sppBlsKey = SJust ownerBlsKey}
+      submitTxAnn_ "Registering a new stake pool" $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert ppsWithBlsKey)
+      pools <- getPools
+      stakePoolState <- expectJust $ Map.lookup (sppId pps) pools
+      bksKey <$> spsBlsKey stakePoolState `shouldBe` SJust ownerBlsKey
+
+    it "fails to re-register an existing pool with an invalid BLS proof of possession" $ do
+      pps <- freshStakePool
+      ownerBlsKey <- freshBlsKey
+      let ppsWithBlsKey = pps {sppBlsKey = SJust ownerBlsKey}
+      submitTxAnn_ "Registering a new stake pool" $
+        mkPoolRegTxFromParams ppsWithBlsKey
+      pStateBefore <- getPools
+      invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
+      -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec includes BLS
+      -- proof of possession validation for pool registration.
+      -- See https://github.com/IntersectMBO/formal-ledger-specifications/pull/1300
+      withDisabledPostSubmitTxHook $
+        submitFailingTx
+          (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
+          [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
+      passEpoch
+      getPools `shouldReturn` pStateBefore
+
+    it "fails to register a new pool with an invalid BLS proof of possession" $ do
+      pps <- freshStakePool
+      invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
+      -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec includes BLS
+      -- proof of possession validation for pool registration.
+      -- See https://github.com/IntersectMBO/formal-ledger-specifications/pull/1300
+      withDisabledPostSubmitTxHook $
+        submitFailingTx
+          (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
+          [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
+      pools <- getPools
+      expectNothing $ Map.lookup (sppId pps) pools
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF

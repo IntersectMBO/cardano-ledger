@@ -63,6 +63,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getByronKeyPair,
   freshSafeHash,
   freshKeyHashVRF,
+  freshBlsKey,
   submitTx,
   submitTx_,
   submitTxAnn,
@@ -112,6 +113,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectDelegatedToPool,
   getAccountAddressFor,
   freshUnregisteredAccount,
+  freshStakePool,
   freshPoolParams,
   registerPool,
   registerPoolWithAccountAddress,
@@ -1934,6 +1936,9 @@ freshKeyHashVRF ::
   ImpTestM era (VRFVerKeyHash (r :: KeyRoleVRF))
 freshKeyHashVRF = arbitrary
 
+freshBlsKey :: ImpTestM era BlsKey
+freshBlsKey = arbitrary
+
 -- | Adds a key pair to the keyhash lookup map
 addKeyPair ::
   (HasKeyPairs s, MonadState s m) =>
@@ -2257,6 +2262,16 @@ registerAccountAddress ::
   ) =>
   ImpTestM era AccountAddress
 registerAccountAddress = freshKeyHash >>= registerStakeCredential . KeyHashObj
+
+freshStakePool ::
+  ShelleyEraImp era =>
+  ImpTestM era (StakePoolParams era)
+freshStakePool = do
+  poolId <- freshKeyHash
+  ownerKeyHash <- freshKeyHash
+  let owner = KeyHashObj ownerKeyHash
+  ownerAccountAddress <- registerStakeCredential owner
+  freshPoolParams poolId ownerAccountAddress
 
 freshPoolParams ::
   ShelleyEraImp era =>
