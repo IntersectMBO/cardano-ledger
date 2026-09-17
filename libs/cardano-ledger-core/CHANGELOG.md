@@ -2,6 +2,11 @@
 
 ## 1.22.0.0
 
+* Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
+* Move `protVerBlockHeaderL` from `EraBlockHeader` to `PraosEraBlockHeader`
+* Add `TPraosEraBlockHeader`, `PraosEraBlockHeader` and `LeiosEraBlockHeader`
+* Remove `BbodySignal`
+* Add `TPraosBbodySignal`, `PraosBbodySignal` and `LeiosBbodySignal` instead of `BbodySignal`
 * Add `EraIndependentTx` and `EraIndependentTxWits` phantom types to `Cardano.Ledger.Hashes`.
 * Add `addVRFKeyHashOccurrence`, `removeVRFKeyHashOccurrence` and `populateVRFKeyHashes` to `Cardano.Ledger.State.CertState`
 * Remove `poolDistrDistrL`, `poolDistrTotalL`
@@ -66,6 +71,7 @@
 
 ### `testlib`
 
+* Remove `tbhPrevNonce` from `TestBlockHeader`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`

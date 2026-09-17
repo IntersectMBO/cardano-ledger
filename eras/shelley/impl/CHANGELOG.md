@@ -2,6 +2,9 @@
 
 ## 1.20.0.0
 
+* For `ApplyBlock`:
+  - Remove default implementation for `wrapBlockSignal`
+  - Add new type family constraint `ProtocolEraBlockHeader` as superclass
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`

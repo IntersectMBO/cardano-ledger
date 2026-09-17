@@ -2,6 +2,9 @@
 
 ## 0.4.0.0
 
+* Change `BBODY` signal to `LeiosBbodySignal`
+* Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
+* Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.
 * Make sure `validatePerasCert` always returns `False`, thus effectively disabling unimplemented
   `Peras` specific certificate in the block body.
 * Add `DijkstraEraTx` type class with `hashTx` function.

@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Change `BBODY` signal to `TPraosBbodySignal`
+* Replace `alonzoBbodyTransition` with `bbodyTransition`
 * Add `HashAnnotated (AlonzoTxWits era) EraIndependentTxWits` instance.
 * Add `getTotalExUnits` to `AlonzoEraTx`, with the existing own-redeemer total as its default.
 * Deprecate `totExUnits` in favor of `getTotalExUnits`; require `AlonzoEraTx` in `totExUnits`, `alonzoMinFeeTx` and `validateExUnitsTooBigUTxO`.

@@ -28,7 +28,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
   totalRefScriptSizeInBlock,
-  conwayBbodyTransition,
+  bbodyTransition,
   validateBodyRefScriptsSizeTooBig,
 ) where
 
@@ -55,7 +55,11 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (
+  Block (..),
+  PraosBbodySignal (..),
+  PraosEraBlockHeader (..),
+ )
 import Cardano.Ledger.Conway.Era (BBODY, ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
@@ -82,10 +86,10 @@ import Control.State.Transition (
   RuleType (..),
   STS (..),
   TRC (..),
-  TransitionRule,
   failOnJust,
   judgmentContext,
   liftSTS,
+  withJudgmentContext,
   (?!),
  )
 import Data.Foldable (Foldable (foldMap'))
@@ -263,7 +267,7 @@ instance
   where
   type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (BBODY era) = Shelley.BbodySignal era
+  type Signal (BBODY era) = PraosBbodySignal era
 
   type Environment (BBODY era) = Shelley.BbodyEnv era
 
@@ -274,11 +278,16 @@ instance
   type Event (BBODY era) = Alonzo.AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules = [conwayBbodyTransition @era >> Alonzo.alonzoBbodyTransition @era]
+  transitionRules =
+    [ do
+        bbodyTransition
+        withJudgmentContext $ \env state (PraosBbodySignal block) ->
+          Alonzo.bbodyTransition env state block
+    ]
 
-conwayBbodyTransition ::
+bbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ Shelley.BbodySignal era
+  ( Signal (EraRule "BBODY" era) ~ PraosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
@@ -290,12 +299,12 @@ conwayBbodyTransition ::
   , BabbageEraTxBody era
   , ConwayEraPParams era
   ) =>
-  TransitionRule (EraRule "BBODY" era)
-conwayBbodyTransition = do
+  Rule (EraRule "BBODY" era) 'Transition ()
+bbodyTransition = do
   TRC
     ( Shelley.BbodyEnv pp _
-      , state@(Shelley.BbodyState ls _)
-      , Shelley.BbodySignal block@Block {blockBody}
+      , Shelley.BbodyState ls _
+      , PraosBbodySignal block@Block {blockBody}
       ) <-
     judgmentContext
 
@@ -321,8 +330,6 @@ conwayBbodyTransition = do
       injectFailure . HeaderProtVerTooHigh @era
 
   validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
-
-  pure state
 
 instance
   ( Era era
