@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -49,11 +50,15 @@ module Cardano.Ledger.Conway.Governance.Internal (
   epochStateStakeDistrL,
   epochStateRegDrepL,
   ratifySignalL,
-  reStakePoolDistrL,
+  reVotingStakePoolDistrL,
   reDRepDistrL,
   reDRepStateL,
   reCurrentEpochL,
   reCommitteeStateL,
+  VotingStakePoolDistr (..),
+  vspdIndividualStakeL,
+  vspdTotalVotingStakeL,
+  toVotingStakePoolDistr,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -62,6 +67,7 @@ module Cardano.Ledger.Conway.Governance.Internal (
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   KeyValuePairs (..),
+  NonZero,
   ProtVer (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
@@ -86,7 +92,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), knownNonZeroCoin)
 import Cardano.Ledger.Compactible (CompactForm)
 import Cardano.Ledger.Conway.Era (hardforkConwayBootstrapPhase)
 import Cardano.Ledger.Conway.Governance.Procedures
@@ -553,7 +559,7 @@ instance EraPParams era => NFData (RatifySignal era)
 
 data RatifyEnv era = RatifyEnv
   { reInstantStake :: InstantStake era
-  , reStakePoolDistr :: PoolDistr
+  , reVotingStakePoolDistr :: VotingStakePoolDistr
   , reDRepDistr :: Map DRep (CompactForm Coin)
   , reDRepState :: Map (Credential DRepRole) DRepState
   , reCurrentEpoch :: EpochNo
@@ -568,8 +574,8 @@ instance CanGetInstantStake RatifyEnv
 instance CanSetInstantStake RatifyEnv where
   instantStakeL = lens reInstantStake (\x y -> x {reInstantStake = y})
 
-reStakePoolDistrL :: Lens' (RatifyEnv era) PoolDistr
-reStakePoolDistrL = lens reStakePoolDistr (\x y -> x {reStakePoolDistr = y})
+reVotingStakePoolDistrL :: Lens' (RatifyEnv era) VotingStakePoolDistr
+reVotingStakePoolDistrL = lens reVotingStakePoolDistr (\x y -> x {reVotingStakePoolDistr = y})
 
 reDRepDistrL :: Lens' (RatifyEnv era) (Map DRep (CompactForm Coin))
 reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})
@@ -637,7 +643,7 @@ instance
      in encode $
           Rec (RatifyEnv @era)
             !> To reInstantStake
-            !> To reStakePoolDistr
+            !> To reVotingStakePoolDistr
             !> To reDRepDistr
             !> To reDRepState
             !> To reCurrentEpoch
@@ -695,3 +701,46 @@ instance EraPParams era => DecShareCBOR (RatifyState era) where
         <! D (decodeSeq (decShareCBOR is))
         <! From
         <! From
+
+-- | A map of stake pool IDs to the absolute amount of stake delegated.
+-- Unlike the Stake pool distribution used for leader election, this one also
+-- includes proposals deposits
+data VotingStakePoolDistr = VotingStakePoolDistr
+  { vspdIndividualStake :: !(Map (KeyHash StakePool) (CompactForm Coin))
+  , vspdTotalVotingStake :: !(NonZero Coin)
+  -- ^ Total stake delegated to registered stake pools, including
+  -- proposal deposits. Should be equal to `sum vspdIndividualStake`.
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving (NFData, NoThunks, ToJSON)
+
+instance Default VotingStakePoolDistr where
+  def = VotingStakePoolDistr mempty (knownNonZeroCoin @1)
+
+instance EncCBOR VotingStakePoolDistr where
+  encCBOR (VotingStakePoolDistr amounts total) =
+    encode $
+      Rec VotingStakePoolDistr
+        !> To amounts
+        !> To total
+
+instance DecCBOR VotingStakePoolDistr where
+  decCBOR =
+    decode $
+      RecD VotingStakePoolDistr
+        <! From
+        <! From
+
+vspdIndividualStakeL ::
+  Lens' VotingStakePoolDistr (Map (KeyHash StakePool) (CompactForm Coin))
+vspdIndividualStakeL = lens vspdIndividualStake $ \x y -> x {vspdIndividualStake = y}
+
+vspdTotalVotingStakeL :: Lens' VotingStakePoolDistr (NonZero Coin)
+vspdTotalVotingStakeL = lens vspdTotalVotingStake $ \x y -> x {vspdTotalVotingStake = y}
+
+toVotingStakePoolDistr :: PoolDistr -> VotingStakePoolDistr
+toVotingStakePoolDistr PoolDistr {..} =
+  VotingStakePoolDistr
+    { vspdIndividualStake = Map.map individualTotalPoolStake unPoolDistr
+    , vspdTotalVotingStake = pdTotalActiveStake
+    }

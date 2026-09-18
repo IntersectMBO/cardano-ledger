@@ -619,7 +619,7 @@ instance SpecTranslate ConwayEra (RatifyEnv ConwayEra) where
       stakeDistrs =
         Agda.StakeDistrs
           <$> toSpecRepMap reDRepDistr
-          <*> toSpecRep reStakePoolDistr
+          <*> toSpecRep reVotingStakePoolDistr
       dreps = toSpecRepMap $ Map.map drepExpiry reDRepState
     treasury <- askSpecTransM
     withCtxSpecTransM () $ do
