@@ -158,7 +158,10 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubGovCertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubDelegSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -190,6 +193,7 @@ library testlib
     base,
     bytestring,
     cardano-base,
+    cardano-base:testlib,
     cardano-crypto-class,
     cardano-crypto-leios,
     cardano-data,
@@ -204,6 +208,7 @@ library testlib
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,
     containers,
+    fs-sim,
     generic-random,
     microlens,
     mtl,

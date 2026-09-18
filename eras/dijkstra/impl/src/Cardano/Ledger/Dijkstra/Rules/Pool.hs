@@ -20,13 +20,10 @@ import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Mismatch (..),
-  ProtVer,
   ShelleyBase,
   addEpochInterval,
   knownNonZeroBounded,
-  natVersion,
   networkId,
-  pvMajor,
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
@@ -35,9 +32,8 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEvent (..),
   ShelleyPoolPredFailure (..),
  )
-import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.State
-import Control.Monad (forM_, when)
+import Control.Monad (forM_)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -48,18 +44,9 @@ import Control.State.Transition (
   tellEvent,
   (?!),
  )
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Primitive.ByteArray (sizeofByteArray)
 import Lens.Micro
-
--- Private copies of the protocol-version gates from the hidden
--- `Cardano.Ledger.Shelley.Era` module, kept so that this rule remains a verbatim
--- copy of the Shelley POOL rule. Both are always `True` in this era.
-hardforkAlonzoValidatePoolAccountAddressNetID :: ProtVer -> Bool
-hardforkAlonzoValidatePoolAccountAddressNetID pv = pvMajor pv > natVersion @4
-
-hardforkConwayDisallowDuplicatedVRFKeys :: ProtVer -> Bool
-hardforkConwayDisallowDuplicatedVRFKeys pv = pvMajor pv > natVersion @10
 
 type instance EraRuleFailure "POOL" DijkstraEra = ShelleyPoolPredFailure DijkstraEra
 
@@ -110,27 +97,24 @@ poolTransition = do
     judgmentContext
   case poolCert of
     RegPool stakePoolParams@StakePoolParams {sppId, sppVrf, sppAccountAddress, sppMetadata, sppCost} -> do
-      let pv = pp ^. ppProtocolVersionL
-      when (hardforkAlonzoValidatePoolAccountAddressNetID pv) $ do
-        actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = aaNetworkId sppAccountAddress
-        actualNetID
-          == suppliedNetID
-            ?! injectFailure
-              ( WrongNetworkPOOL
-                  Mismatch
-                    { mismatchSupplied = suppliedNetID
-                    , mismatchExpected = actualNetID
-                    }
-                  sppId
-              )
+      actualNetID <- liftSTS $ asks networkId
+      let suppliedNetID = aaNetworkId sppAccountAddress
+      actualNetID
+        == suppliedNetID
+          ?! injectFailure
+            ( WrongNetworkPOOL
+                Mismatch
+                  { mismatchSupplied = suppliedNetID
+                  , mismatchExpected = actualNetID
+                  }
+                sppId
+            )
 
-      when (SoftForks.restrictPoolMetadataHash pv) $
-        forM_ sppMetadata $ \pmd ->
-          let s = sizeofByteArray $ pmHash pmd
-           in s
-                <= fromIntegral (hashSize ([] @HASH))
-                  ?! injectFailure (PoolMedataHashTooBig sppId s)
+      forM_ sppMetadata $ \pmd ->
+        let s = sizeofByteArray $ pmHash pmd
+         in s
+              <= fromIntegral (hashSize ([] @HASH))
+                ?! injectFailure (PoolMedataHashTooBig sppId s)
 
       let minPoolCost = pp ^. ppMinPoolCostL
       sppCost
@@ -145,12 +129,9 @@ poolTransition = do
       case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
         Nothing -> do
-          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            Map.notMember sppVrf psVRFKeyHashes
-              ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
-          let updateVRFKeyHash
-                | hardforkConwayDisallowDuplicatedVRFKeys pv = Map.insert sppVrf (knownNonZeroBounded @1)
-                | otherwise = id
+          Map.notMember sppVrf psVRFKeyHashes
+            ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
+          let updateVRFKeyHash = Map.insert sppVrf (knownNonZeroBounded @1)
           tellEvent $ injectEvent $ RegisterPool sppId
           pure $
             ps
@@ -159,23 +140,20 @@ poolTransition = do
               & psVRFKeyHashesL %~ updateVRFKeyHash
         -- re-register Pool
         Just stakePoolState -> do
-          when (hardforkConwayDisallowDuplicatedVRFKeys pv) $ do
-            sppVrf == stakePoolState ^. spsVrfL
-              || Map.notMember sppVrf psVRFKeyHashes
-                ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
-          let updateFutureVRFKeyHash
-                | hardforkConwayDisallowDuplicatedVRFKeys pv =
-                    -- If a pool re-registers with a fresh VRF, we have to record it in the map,
-                    -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
-                    -- which we retrieve from futureStakePools.
-                    case Map.lookup sppId psFutureStakePoolParams of
-                      Nothing -> Map.insert sppVrf (knownNonZeroBounded @1)
-                      Just futureStakePoolParams
-                        | futureStakePoolParams ^. sppVrfL /= sppVrf ->
-                            Map.insert sppVrf (knownNonZeroBounded @1)
-                              . Map.delete (futureStakePoolParams ^. sppVrfL)
-                        | otherwise -> id
-                | otherwise = id
+          sppVrf == stakePoolState ^. spsVrfL
+            || Map.notMember sppVrf psVRFKeyHashes
+              ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
+          let updateFutureVRFKeyHash =
+                -- If a pool re-registers with a fresh VRF, we have to record it in the map,
+                -- but also remove the previous VRFHashKey potentially stored in previous re-registration within the same epoch,
+                -- which we retrieve from futureStakePools.
+                case Map.lookup sppId psFutureStakePoolParams of
+                  Nothing -> Map.insert sppVrf (knownNonZeroBounded @1)
+                  Just futureStakePoolParams
+                    | futureStakePoolParams ^. sppVrfL /= sppVrf ->
+                        Map.insert sppVrf (knownNonZeroBounded @1)
+                          . Map.delete (futureStakePoolParams ^. sppVrfL)
+                    | otherwise -> id
           tellEvent $ injectEvent $ ReregisterPool sppId
           -- This `sppId` is already registered, so we want to reregister it.
           -- That means adding it to the futureStakePoolParams or overriding it  with the new 'poolParams'.
