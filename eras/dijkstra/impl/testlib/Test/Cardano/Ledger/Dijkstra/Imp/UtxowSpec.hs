@@ -138,7 +138,8 @@ spec = describe "UTXOW" $ do
         submitFailingTx
           tx
           [injectFailure $ MissingRequiredGuards $ NES.singleton guardKeyHash]
-        submitTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
+        -- TODO make this work with `submitTx_`
+        submitTopTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
       it "A guard required by a sub-transaction must be present in the top-level guards" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash

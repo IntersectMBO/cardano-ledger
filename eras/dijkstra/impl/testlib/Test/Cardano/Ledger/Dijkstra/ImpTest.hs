@@ -66,7 +66,7 @@ import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (catMaybes, mapMaybe)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
@@ -102,13 +102,15 @@ instance ShelleyEraImp DijkstraEra where
     utxo <- getUTxO
     let
       AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo $ tx @SubTx ^. bodyTxL
-      plutusScripts = fromJust . impLookupScriptContext . snd <$> scriptsNeeded
-      plutusScriptsAtLeastV4 = all (\(ScriptTestContext (Plutus _) _) -> _) plutusScripts
+      plutusScripts = mapMaybe (impLookupScriptContext @DijkstraEra . snd) scriptsNeeded
+      plutusScriptAtLeastV4 (ScriptTestContext script _) = plutusLanguage script > PlutusV3
+    nativeScripts <- catMaybes <$> traverse (impLookupNativeScript @DijkstraEra . snd) scriptsNeeded
     oneof $
       [ trySubmitTopTx tx
       ]
         <> [ trySubmitSubTx tx
-           | all canBeInSubTx scripts
+           | all plutusScriptAtLeastV4 plutusScripts
+           , null nativeScripts
            ]
 
 trySubmitSubTx ::

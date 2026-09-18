@@ -36,7 +36,7 @@ spec = describe "LEDGER" $ do
     addr2 <- freshKeyAddr_
     let coin2 = Coin 3000000
     tx2 <-
-      submitTxAnn "Second transaction" $
+      submitTopTxAnn "Second transaction" $
         mkBasicTx mkBasicTxBody
           & bodyTxL . inputsTxBodyL .~ Set.singleton (txInAt 0 tx1)
           & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr2 $ inject coin2)

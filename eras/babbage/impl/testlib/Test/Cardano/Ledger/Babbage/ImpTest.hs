@@ -173,7 +173,8 @@ submitTxWithRefInputs ::
   TxIn ->
   NonEmpty TxIn ->
   ImpTestM era (Tx TopTx era)
-submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
+-- TODO make this work with `submitTx`
+submitTxWithRefInputs txIn refIns = submitTopTx $ mkTxWithRefInputs txIn refIns
 
 class
   ( AlonzoEraImp era

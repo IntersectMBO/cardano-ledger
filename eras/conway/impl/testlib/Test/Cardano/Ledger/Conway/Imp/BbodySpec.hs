@@ -104,7 +104,8 @@ spec = describe "BBODY" $ do
         -- These txs will be grouped into a block
         buildTxs = for_ txScriptCounts $ \n -> do
           refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
-          submitTx $
+          -- TODO make this work with `submitTx`
+          submitTopTx $
             mkBasicTx mkBasicTxBody
               & bodyTxL . referenceInputsTxBodyL .~ Set.fromList refIns
 
