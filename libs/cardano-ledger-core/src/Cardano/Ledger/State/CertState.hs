@@ -47,6 +47,10 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psVRFKeyHashesL,
+  -- Helpers for `psVRFKeyHashes`
+  addVRFKeyHashOccurrence,
+  removeVRFKeyHashOccurrence,
+  populateVRFKeyHashes,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -56,6 +60,8 @@ import Cardano.Ledger.BaseTypes (
   NonZero,
   StrictMaybe,
   ToKeyValuePairs (..),
+  knownNonZeroBounded,
+  mapNonZero,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -81,7 +87,7 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolParams, StakePoolState (..), spsDelegatorsL)
+import Cardano.Ledger.State.StakePool (StakePoolParams (..), StakePoolState (..), spsDelegatorsL)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -492,3 +498,38 @@ psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 
 psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})
+
+-- | Record one more reference to a VRF key hash in 'psVRFKeyHashes'. The count
+-- saturates at 'maxBound' instead of overflowing.
+addVRFKeyHashOccurrence ::
+  VRFVerKeyHash StakePoolVRF ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
+addVRFKeyHashOccurrence vrfKeyHash = Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
+  where
+    -- Saturates at maxBound: if (+1) would overflow to 0, keep the existing value
+    combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
+
+-- | Drop one reference to a VRF key hash from 'psVRFKeyHashes'. The key is
+-- removed once no references remain.
+removeVRFKeyHashOccurrence ::
+  VRFVerKeyHash StakePoolVRF ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+  Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
+removeVRFKeyHashOccurrence = Map.update (mapNonZero (subtract 1))
+
+-- | Recompute 'psVRFKeyHashes' from scratch out of the registered stake pools: a pool
+-- holds one reference through its active parameters and one more through its future
+-- parameters whenever those carry a different VRF key hash. Meant for hard forks and
+-- era transitions that have to bring the map into a consistent state.
+populateVRFKeyHashes :: PState era -> PState era
+populateVRFKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
+  ps {psVRFKeyHashes = F.foldl' (flip addVRFKeyHashOccurrence) activeVRFKeyHashes futureVRFKeyHashes}
+  where
+    activeVRFKeyHashes = Map.foldr' (addVRFKeyHashOccurrence . spsVrf) Map.empty psStakePools
+    futureVRFKeyHashes =
+      [ futureVrf
+      | (poolId, futureParams) <- Map.toList psFutureStakePoolParams
+      , let futureVrf = sppVrf futureParams
+      , (spsVrf <$> Map.lookup poolId psStakePools) /= Just futureVrf
+      ]
