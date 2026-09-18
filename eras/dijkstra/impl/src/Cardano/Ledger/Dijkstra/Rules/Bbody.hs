@@ -42,11 +42,14 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
+  getVersion32,
+  pvMajor,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (
   Block (..),
+  BlockHeaderVersionInfo (..),
   EraBlockHeader (..),
   LeiosBbodySignal (..),
   LeiosEraBlockHeader (..),
@@ -78,6 +81,7 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (fromStrict)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
@@ -89,6 +93,9 @@ data DijkstraBbodyPredFailure era
   | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | PerasCertValidationFailed PerasCert Nonce
+  | -- | The highest major protocol version supported by the block producer, as reported in
+    -- the block header, is lower than the current major protocol version.
+    HeaderProtVerTooLow (Mismatch RelGTEQ Word32)
   deriving (Generic)
 
 instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (DijkstraBbodyPredFailure era)
@@ -120,6 +127,7 @@ instance
       BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> To mm
       PerasCertValidationFailed cert nonce ->
         Sum PerasCertValidationFailed 5 !> To cert !> To nonce
+      HeaderProtVerTooLow mm -> Sum HeaderProtVerTooLow 6 !> To mm
 
 instance
   ( Era era
@@ -134,6 +142,7 @@ instance
     3 -> SumD TooManyExUnits <! From
     4 -> SumD BodyRefScriptsSizeTooBig <! From
     5 -> SumD PerasCertValidationFailed <! From <! From
+    6 -> SumD HeaderProtVerTooLow <! From
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -355,6 +364,18 @@ dijkstraBbodyTransition = do
   Shelley.validateBlockBodySize block (pp ^. ppProtocolVersionL)
 
   Shelley.validateBlockBodyHash block
+
+  let curProtVerMajor = getVersion32 . pvMajor $ pp ^. ppProtocolVersionL
+      BlockHeaderVersionInfo {bhviHighestSupportedMajorVersion} = block ^. versionInfoBlockHeaderL
+  bhviHighestSupportedMajorVersion
+    >= curProtVerMajor
+      ?! injectFailure
+        ( HeaderProtVerTooLow $
+            Mismatch
+              { mismatchSupplied = bhviHighestSupportedMajorVersion
+              , mismatchExpected = curProtVerMajor
+              }
+        )
 
   let bhSlot = block ^. slotNoBlockHeaderL
 

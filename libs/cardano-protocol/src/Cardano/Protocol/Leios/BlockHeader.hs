@@ -31,22 +31,28 @@ import Cardano.Crypto.Util (
   SignableRepresentation (getSignableRepresentation),
  )
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BaseTypes (ProtVer (pvMajor))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
+  Version,
   decodeFixedSized,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   encodeFixedSized,
   encodeListLen,
   encodeNullStrictMaybe,
+  mkVersion32,
   serialize',
   unCBORGroup,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), LeiosEraBlockHeader)
+import Cardano.Ledger.Block (
+  Block (..),
+  BlockHeaderVersionInfo (..),
+  EraBlockHeader (..),
+  LeiosEraBlockHeader (..),
+ )
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
@@ -76,6 +82,7 @@ import Cardano.Protocol.TPraos.OCert (OCert)
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
+import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -123,14 +130,19 @@ data HeaderBody crypto = HeaderBody
   -- ^ Hash of block body
   , hbOCert :: !(OCert crypto)
   -- ^ operational certificate
-  , hbProtVer :: !ProtVer
-  -- ^ protocol version
+  , hbVersionInfo :: !BlockHeaderVersionInfo
+  -- ^ version information reported by the block producer
   , hbBlockBodyContainsLeiosCert :: !Bool
   -- ^ whether the block body contains a Leios certificate
   , hbEbAnnouncement :: !(StrictMaybe EbAnnouncement)
   -- ^ Announcement of Endorser Block (EB)
   }
   deriving (Generic)
+
+headerBodyEncodingVersion :: HeaderBody crypto -> Version
+headerBodyEncodingVersion
+  HeaderBody {hbVersionInfo = BlockHeaderVersionInfo {bhviHighestSupportedMajorVersion}} =
+    fromMaybe maxBound (mkVersion32 bhviHighestSupportedMajorVersion)
 
 deriving instance Crypto crypto => Show (HeaderBody crypto)
 
@@ -140,7 +152,7 @@ instance
   Crypto crypto =>
   SignableRepresentation (HeaderBody crypto)
   where
-  getSignableRepresentation hb = serialize' (pvMajor (hbProtVer hb)) hb
+  getSignableRepresentation hb = serialize' (headerBodyEncodingVersion hb) hb
 
 instance
   Crypto crypto =>
@@ -180,7 +192,7 @@ pattern Header ::
   Header crypto
 pattern Header {headerBody, headerSig} <- (getMemoRawType -> HeaderRaw headerBody headerSig)
   where
-    Header body sig = mkMemoized (pvMajor (hbProtVer body)) $ HeaderRaw body sig
+    Header body sig = mkMemoized (headerBodyEncodingVersion body) $ HeaderRaw body sig
 
 {-# COMPLETE Header #-}
 
@@ -208,7 +220,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
       , hbBodySize
       , hbBodyHash
       , hbOCert
-      , hbProtVer
+      , hbVersionInfo
       , hbBlockBodyContainsLeiosCert
       , hbEbAnnouncement
       } =
@@ -222,7 +234,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
         <> encCBOR hbBodySize
         <> encCBOR hbBodyHash
         <> encCBOR hbOCert
-        <> encCBOR hbProtVer
+        <> encCBOR hbVersionInfo
         <> encCBOR hbBlockBodyContainsLeiosCert
         <> encodeNullStrictMaybe encCBOR hbEbAnnouncement
 
@@ -286,4 +298,10 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
           Block (Header hb {hbSlotNo = s} sig) body
       )
 
-instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era
+instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
+  versionInfoBlockHeaderL =
+    lens
+      (\(Block (Header hb _) _) -> hbVersionInfo hb)
+      ( \(Block (Header hb sig) body) vi ->
+          Block (Header hb {hbVersionInfo = vi} sig) body
+      )
