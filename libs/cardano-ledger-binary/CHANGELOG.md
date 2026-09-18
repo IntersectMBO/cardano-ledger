@@ -13,6 +13,7 @@
 
 ### `testlib`
 
+* Add golden CBOR tests for `LeiosCert`, `LeiosSeat`, and `LeiosCommittee`
 * Add `goldenForHashHex` to `Test.Cardano.Ledger.Binary.Golden`.
 
 ## 1.9.0.0
