@@ -337,7 +337,7 @@ exampleAccountBalanceIntervals =
         )
       ]
 
-exampleDijkstraOnwardsEraPParams :: (DijkstraEraPParams era, ConwayEraPParams era) => PParams era
+exampleDijkstraOnwardsEraPParams :: DijkstraEraPParams era => PParams era
 exampleDijkstraOnwardsEraPParams =
   exampleConwayOnwardsEraPParams
     & ppMaxRefScriptSizePerBlockL .~ 1024 * 1024
@@ -354,8 +354,7 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000)
     & ppMaxRefScriptSizePerEndorserBlockL .~ 12 * 1024 * 1024
 
-exampleDijkstraOnwardsEraPParamsUpdate ::
-  (DijkstraEraPParams era, ConwayEraPParams era) => PParamsUpdate era
+exampleDijkstraOnwardsEraPParamsUpdate :: DijkstraEraPParams era => PParamsUpdate era
 exampleDijkstraOnwardsEraPParamsUpdate =
   exampleConwayOnwardsEraPParamsUpdate
     & ppuMaxRefScriptSizePerBlockL .~ SJust (1024 * 1024)
