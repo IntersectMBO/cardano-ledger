@@ -51,7 +51,8 @@ import Cardano.Ledger.Conway.Rules (
   updateNumDormantEpochs,
  )
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Dijkstra.Era (EPOCH)
+import Cardano.Ledger.Dijkstra.Era (EPOCH, POOLREAP)
+import Cardano.Ledger.Dijkstra.Rules.PoolReap ()
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -242,10 +243,10 @@ epochTransition = do
 
 instance
   ( Era era
-  , STS (Shelley.POOLREAP era)
+  , STS (POOLREAP era)
   , Event (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapEvent era
   ) =>
-  Embed (Shelley.POOLREAP era) (EPOCH era)
+  Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = \case {}
   wrapEvent = PoolReapEvent

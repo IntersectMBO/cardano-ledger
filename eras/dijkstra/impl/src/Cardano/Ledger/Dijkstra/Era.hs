@@ -20,6 +20,7 @@ module Cardano.Ledger.Dijkstra.Era (
   LEDGER,
   MEMPOOL,
   POOL,
+  POOLREAP,
   SUBCERT,
   SUBCERTS,
   SUBENTITIES,
@@ -290,13 +291,15 @@ data POOL era
 
 type instance EraRule "POOL" DijkstraEra = POOL DijkstraEra
 
+data POOLREAP era
+
+type instance EraRule "POOLREAP" DijkstraEra = POOLREAP DijkstraEra
+
 type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
 -- Rules inherited from Shelley
 
 type instance EraRule "LEDGERS" DijkstraEra = Babbage.LEDGERS DijkstraEra
-
-type instance EraRule "POOLREAP" DijkstraEra = Shelley.POOLREAP DijkstraEra
 
 type instance EraRule "RUPD" DijkstraEra = Shelley.RUPD DijkstraEra
 
