@@ -466,9 +466,8 @@ instance ToKeyValuePairs SetSnapShot where
         ]
 
 -- | The oldest snapshot, consumed by the reward calculation.
-data GoSnapShot = GoSnapShot
-  { gsSnapShot :: !SnapShot
-  , gsPoolDistr :: !PoolDistr -- TODO: needed?
+newtype GoSnapShot = GoSnapShot
+  { gsSnapShot :: SnapShot
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs GoSnapShot
@@ -478,20 +477,19 @@ instance NFData GoSnapShot
 instance NoThunks GoSnapShot
 
 instance EncCBOR GoSnapShot where
-  encCBOR gs@(GoSnapShot _ _) =
+  encCBOR gs@(GoSnapShot _) =
     let GoSnapShot {..} = gs
-     in -- `gsPoolDistr` is omitted on purpose: it is derived from the snapshot.
-        encodeListLen 1
+     in encodeListLen 1
           <> encCBOR gsSnapShot
 
 instance DecShareCBOR GoSnapShot where
   type Share GoSnapShot = Share SnapShot
   decSharePlusCBOR = decodeRecordNamedT "GoSnapShot" (const 1) $ do
     gsSnapShot <- decSharePlusCBOR
-    pure GoSnapShot {gsSnapShot, gsPoolDistr = calculatePoolDistr gsSnapShot}
+    pure GoSnapShot {gsSnapShot}
 
 instance ToKeyValuePairs GoSnapShot where
-  toKeyValuePairs gs@(GoSnapShot _ _) =
+  toKeyValuePairs gs@(GoSnapShot _) =
     let GoSnapShot {..} = gs
      in ["snapShot" .= gsSnapShot]
 
@@ -519,8 +517,8 @@ mkSetSnapShot MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize} maxKeyA
 
 -- | Rotate a set snapshot into the go position.
 mkGoSnapShot :: SetSnapShot -> GoSnapShot
-mkGoSnapShot SetSnapShot {ssSnapShot, ssPoolDistr} =
-  GoSnapShot {gsSnapShot = ssSnapShot, gsPoolDistr = ssPoolDistr}
+mkGoSnapShot SetSnapShot {ssSnapShot} =
+  GoSnapShot {gsSnapShot = ssSnapShot}
 
 -- | Snapshots of the stake distribution.
 --

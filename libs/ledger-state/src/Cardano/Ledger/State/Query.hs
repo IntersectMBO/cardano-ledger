@@ -417,7 +417,7 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
             set
             (State.calculatePoolDistr set)
             (fromMaybe State.emptyLeiosCommittee setCommittee)
-      , ssStakeGo = State.GoSnapShot go (State.calculatePoolDistr go)
+      , ssStakeGo = State.GoSnapShot go
       , ssFee = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsNoSharing #-}
@@ -507,7 +507,7 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
             set
             (State.calculatePoolDistr set)
             (fromMaybe State.emptyLeiosCommittee setCommittee)
-      , ssStakeGo = State.GoSnapShot go (State.calculatePoolDistr go)
+      , ssStakeGo = State.GoSnapShot go
       , ssFee = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsWithSharing #-}

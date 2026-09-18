@@ -523,7 +523,7 @@ setSnapShotSpec =
 goSnapShotSpec :: Specification GoSnapShot
 goSnapShotSpec =
   constrained $ \ [var|go|] ->
-    match go $ \ [var|snap|] _pooldistr ->
+    match go $ \ [var|snap|] ->
       satisfies snap snapShotSpec
 
 snapShotsSpec ::
