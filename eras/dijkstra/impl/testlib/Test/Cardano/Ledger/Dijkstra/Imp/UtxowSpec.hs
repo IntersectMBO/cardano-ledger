@@ -183,7 +183,8 @@ spec = describe "UTXOW" $ do
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardCred]
-        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
+        -- TODO make this work with `submitTx_`
+        submitTopTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
 
       it "A Plutus-script guard's datum presence is validated" $ do
         datum <- arbitrary @(Data era)

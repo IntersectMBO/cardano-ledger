@@ -105,7 +105,8 @@ spec = describe "Valid" $ do
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
     tx <-
-      submitTx $
+      -- TODO make this work with `submitTx`
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
           & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
