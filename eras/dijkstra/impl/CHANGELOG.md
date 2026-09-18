@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Make sure `validatePerasCert` always returns `False`, thus effectively disabling unimplemented
+  `Peras` specific certificate in the block body.
 * Add `DijkstraEraTx` type class with `hashTx` function.
 * Add `ConwayEraPParams` as a superclass `DijkstraEraPParams`.
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
