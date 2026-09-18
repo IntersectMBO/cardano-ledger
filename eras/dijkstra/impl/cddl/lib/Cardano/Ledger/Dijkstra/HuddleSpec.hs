@@ -1014,6 +1014,12 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 46 ==> VUInt `sized` (4 :: Word64)) //- "max endorser block txs size"
         , opt (idx 47 ==> huddleRule @"ex_units" p) //- "max endorser block ex units"
         , opt (idx 48 ==> VUInt `sized` (4 :: Word64)) //- "max ref script size per endorser block"
+        , opt (idx 49 ==> huddleRule @"slot_interval" p) //- "peras minimum candidate block age in slots"
+        , opt (idx 50 ==> huddleRule @"positive_interval" p) //- "peras healing factor"
+        , opt (idx 51 ==> VUInt `sized` (2 :: Word64)) //- "peras certificate boost"
+        , opt (idx 52 ==> VUInt `sized` (2 :: Word64)) //- "peras target committee size"
+        , opt (idx 53 ==> (VNil / (VUInt `sized` (8 :: Word64)))) //- "peras bootstrap round"
+        , opt (idx 54 ==> huddleRule @"unit_interval" p) //- "peras quorum threshold safety margin"
         ]
     where
       -- The maximum addressable 'LeiosSeatId' in bytes.
