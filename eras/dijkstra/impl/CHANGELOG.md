@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Add `POOLREAP` rule type and add `poolReapTransition` to `Cardano.Ledger.Dijkstra.Rules.PoolReap`, which decrements superseded VRF key hashes at the epoch boundary instead of dropping them (#6016):
+  - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP DijkstraEra` to `POOLREAP DijkstraEra`
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
 * Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
