@@ -357,28 +357,32 @@ dijkstraUtxoTransition = do
   {- (RedeemersOf txTop ≠ ∅ ⊎ Any (λ txSub → RedeemersOf txSub ≠ ∅) subtxs) → collateralCheck -}
   validate $ validateBatchCollateral pp tx originalUtxo
 
-  {- consumed pp utxo₀ txb = produced pp certState txb -}
-  runTest $
-    first (fmap Shelley.ValueNotConservedUTxO) $
-      validateValueNotConservedUTxO
-        pp
-        originalUtxo
-        originalPState
-        txBody
-
-  {- legacyMode ≡ true → consumedLegacy ≡ producedLegacy -}
-  -- The `PState` has to be the one with all the sub-transactions already applied,
-  -- because if a sub-transaction registered a pool, then the top-transaction
-  -- must not add to the `produced` value if it registers the same pool,
-  -- since it will count as a re-registration.
-  when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+  -- If the transaction is phase2-invalid, the `produced` value in legacy mode will
+  -- wrongly include a deposit for a pool that a sub-transaction already registered,
+  -- because the Phase2Invalid flag prevents `postSubsPState` from being updated.
+  -- It is safe to skip the value conservation check here, because we know
+  -- that none of the modifications to the ledger state will happen
+  -- that affect conservation of value when a transaction is phase-2 invalid.
+  -- For consistency, we're skipping the check in both normal and legacy mode.
+  when (tx ^. isPhase2ValidTxL == Phase2Valid) $ do
+    {- consumed pp utxo₀ txb = produced pp certState txb -}
     runTest $
-      first (fmap ValueNotConservedInLegacyMode) $
+      first (fmap Shelley.ValueNotConservedUTxO) $
         validateValueNotConservedUTxO
           pp
           originalUtxo
-          postSubsPState
-          (txBody & subTransactionsTxBodyL .~ mempty)
+          originalPState
+          txBody
+
+    {- legacyMode ≡ true → consumedLegacy ≡ producedLegacy -}
+    when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
+      runTest $
+        first (fmap ValueNotConservedInLegacyMode) $
+          validateValueNotConservedUTxO
+            pp
+            originalUtxo
+            postSubsPState
+            (txBody & subTransactionsTxBodyL .~ mempty)
 
   {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
