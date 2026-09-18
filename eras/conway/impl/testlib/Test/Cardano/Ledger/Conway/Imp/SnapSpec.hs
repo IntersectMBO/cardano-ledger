@@ -3,6 +3,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.Imp.SnapSpec (
   spec,
@@ -20,18 +21,25 @@ module Test.Cardano.Ledger.Conway.Imp.SnapSpec (
   setupRetiredPoolInLeaderDistr,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval, epochInfoPure)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot (epochInfoFirst)
 import Cardano.Ledger.Val ((<->))
+import Control.Monad.Reader (runReader)
+import Control.State.Transition.Extended (TRC (..), applySTS)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
-import Lens.Micro ((&), (.~))
+import Data.Void (absurd)
+import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -161,9 +169,34 @@ setupRetiredPoolInLeaderDistr = do
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, EraForecast era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SNAP" $ do
+  -- 'TICKF' skips 'SNAP', because a forecast never needs the new mark snapshot
+  -- that 'SNAP' spends its time aggregating. It must still perform the cheap
+  -- half, the rotation, since a forecast across an epoch boundary reads the set
+  -- snapshot: Dijkstra's takes the Leios voting committee from it.
+  it "TICKF rotates the stake snapshots" $ do
+    -- Delegate stake and then cross a boundary, so that the mark snapshot holds
+    -- that stake while set and go do not. Without divergent snapshots, rotating
+    -- them would be unobservable and the assertions below vacuous --- which the
+    -- 'shouldNotBe' guards against.
+    _ <- setupPoolWithStake (Coin 500_000_000)
+    passEpoch
+    nes <- getsNES id
+    globals <- use impGlobalsL
+    -- The first slot of the next epoch, where TICKF crosses the boundary.
+    let nextEpochStart =
+          epochInfoFirst (epochInfoPure globals) (succ (nes ^. nesELL))
+        ticked =
+          either (absurd . NE.head) id
+            . flip runReader globals
+            $ applySTS @(EraRule "TICKF" era) (TRC ((), nes, nextEpochStart))
+        snapshotsOf s = s ^. nesEsL . esSnapshotsL
+    snapshotsOf nes ^. ssStakeMarkL `shouldNotBe` snapshotsOf nes ^. ssStakeSetL
+    snapshotsOf ticked ^. ssStakeSetL `shouldBe` snapshotsOf nes ^. ssStakeMarkL
+    snapshotsOf ticked ^. ssStakeGoL `shouldBe` snapshotsOf nes ^. ssStakeSetL
+
   it "SPO voting stake exceeds leader election stake by the active proposal deposit" $ do
     modifyPParams $ \pp ->
       pp

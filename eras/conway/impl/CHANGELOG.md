@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Augment the `TICKF` rule to also rotate the stake snapshots, set := mark and go := set (mark is left as-is, since it's unused by forecasts)
 * Add `era` parameter to `PoolCert`s
 * Remove `hardforkConwayMoveWithdrawalsAndDRepChecksToLedgerRule`
 * Remove `WithdrawalsNotInRewardsCERTS` from `ConwayCertsPredFailure`
