@@ -8,6 +8,8 @@ homepage: https://github.com/intersectmbo/cardano-ledger
 synopsis: Binary serialization library used throughout ledger
 category: Network
 build-type: Simple
+data-files:
+  golden/*.cbor
 
 source-repository head
   type: git
@@ -152,7 +154,9 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
+    Paths_cardano_ledger_binary
     Test.Cardano.Ledger.Binary.Failure
+    Test.Cardano.Ledger.Binary.GoldenSpec
     Test.Cardano.Ledger.Binary.PlainSpec
     Test.Cardano.Ledger.Binary.RoundTripSpec
     Test.Cardano.Ledger.Binary.Success
@@ -180,7 +184,7 @@ test-suite tests
     bytestring,
     cardano-base,
     cardano-crypto-class:{cardano-crypto-class, testlib},
-    cardano-crypto-leios,
+    cardano-crypto-leios:{cardano-crypto-leios, testlib},
     cardano-crypto-praos:{cardano-crypto-praos, testlib},
     cardano-ledger-binary,
     cardano-prelude-test,

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.10.1.1
+
+*
+
 ## 1.10.1.0
 
 * Fix `shelleyToAllegraUtxoPredFailure` converting `OutputBootAddrAttrsTooBig` into `OutputTooBigUTxO`
