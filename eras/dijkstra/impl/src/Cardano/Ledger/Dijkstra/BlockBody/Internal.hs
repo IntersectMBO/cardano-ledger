@@ -237,5 +237,8 @@ data PerasKey = PerasKey
 --
 -- NOTE: this function will be replaced with the real implementation from
 -- 'cardano-base' once it's ready.
+--
+-- IMPORTANT: Until Peras is implemented this function must return False, which effectively disables
+-- Peras certificate additon to the block body, hence disables Peras all together
 validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
-validatePerasCert _ _ _ = True
+validatePerasCert _ _ _ = False
