@@ -42,6 +42,7 @@ import Cardano.Crypto.DSIGN (
   BLS12381MinSigDSIGN,
   DSIGNAggregatable (PossessionProofDSIGN, createPossessionProofDSIGN),
   DSIGNAlgorithm (genKeyDSIGNWithContext),
+  deriveVerKeyDSIGN,
   seedSizeDSIGN,
  )
 import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
@@ -499,7 +500,15 @@ instance Arbitrary PoolMetadata where
   arbitrary = PoolMetadata <$> arbitrary <*> arbitrary
 
 instance Arbitrary BlsKey where
-  arbitrary = BlsKey <$> arbitrary <*> arbitrary
+  arbitrary = do
+    signingKey <- arbitrary
+    pure $
+      BlsKey
+        (deriveVerKeyDSIGN signingKey)
+        ( createPossessionProofDSIGN
+            minSigPoPDST
+            signingKey
+        )
 
 instance Arbitrary (PossessionProofDSIGN BLS12381MinSigDSIGN) where
   arbitrary = genBlsPossessionProof

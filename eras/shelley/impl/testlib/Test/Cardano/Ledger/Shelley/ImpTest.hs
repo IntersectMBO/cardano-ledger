@@ -63,6 +63,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getByronKeyPair,
   freshSafeHash,
   freshKeyHashVRF,
+  freshBlsKey,
   submitTx,
   submitTx_,
   submitTxAnn,
@@ -1838,6 +1839,9 @@ freshSafeHash = arbitrary
 freshKeyHashVRF ::
   ImpTestM era (VRFVerKeyHash (r :: KeyRoleVRF))
 freshKeyHashVRF = arbitrary
+
+freshBlsKey :: ImpTestM era BlsKey
+freshBlsKey = arbitrary
 
 -- | Adds a key pair to the keyhash lookup map
 addKeyPair ::

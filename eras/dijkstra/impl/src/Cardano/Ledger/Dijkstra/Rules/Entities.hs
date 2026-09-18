@@ -43,6 +43,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, ENTITIES)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Pool (DijkstraPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBalanceIntervals (..))
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
@@ -213,6 +214,9 @@ instance InjectRuleFailure "ENTITIES" Conway.ConwayDelegPredFailure DijkstraEra 
   injectFailure = CertsFailure . injectFailure @"CERTS"
 
 instance InjectRuleFailure "ENTITIES" Shelley.ShelleyPoolPredFailure DijkstraEra where
+  injectFailure = CertsFailure . injectFailure @"CERTS"
+
+instance InjectRuleFailure "ENTITIES" DijkstraPoolPredFailure DijkstraEra where
   injectFailure = CertsFailure . injectFailure @"CERTS"
 
 instance InjectRuleFailure "ENTITIES" Conway.ConwayGovCertPredFailure DijkstraEra where

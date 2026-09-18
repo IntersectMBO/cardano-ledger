@@ -25,7 +25,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
@@ -43,7 +43,6 @@ import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Plutus (Language (..))
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
@@ -290,6 +289,22 @@ instance
   where
   arbitrary = genericArbitraryU
 
+instance Arbitrary (DijkstraPoolPredFailure era) where
+  arbitrary =
+    oneof
+      [ StakePoolNotRegisteredOnKeyPOOL <$> arbitrary
+      , do
+          supplied <- arbitrary
+          gtExpected <- arbitrary
+          StakePoolRetirementWrongEpochPOOL (Mismatch supplied gtExpected) . Mismatch supplied <$> arbitrary
+      , StakePoolCostTooLowPOOL <$> arbitrary
+      , WrongNetworkPOOL <$> arbitrary <*> arbitrary
+      , PoolMedataHashTooBig <$> arbitrary <*> arbitrary
+      , VRFKeyHashAlreadyRegistered <$> arbitrary <*> arbitrary
+      , BlsKeyInvalidProofOfPossession <$> arbitrary <*> arbitrary
+      ]
+  shrink = genericShrink
+
 instance
   Arbitrary (Conway.ConwayDelegPredFailure era) =>
   Arbitrary (DijkstraSubDelegPredFailure era)
@@ -309,7 +324,7 @@ instance
   arbitrary = DijkstraSubGovCertPredFailure <$> arbitrary
 
 instance
-  Arbitrary (Shelley.ShelleyPoolPredFailure era) =>
+  Arbitrary (DijkstraPoolPredFailure era) =>
   Arbitrary (DijkstraSubPoolPredFailure era)
   where
   arbitrary = DijkstraSubPoolPredFailure <$> arbitrary
