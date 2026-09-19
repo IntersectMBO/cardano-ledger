@@ -760,7 +760,7 @@ mkSnapShotFromStakePoolParams ::
   SnapShot
 mkSnapShotFromStakePoolParams activeStake poolParams =
   resetStakePoolSnapShotFromPoolParams poolParams $
-    mkSnapShot (BaseTypes.EpochNo 0) (BaseTypes.EpochInterval 0) 0 activeStake VMap.empty
+    mkSnapShot activeStake VMap.empty
 
 -- | Given a snapshot and stake pool params fully override the stake pools snapshot.
 resetStakePoolSnapShotFromPoolParams ::

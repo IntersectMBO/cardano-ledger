@@ -612,9 +612,6 @@ resetStakeDistribution nes =
     initSnapShot :: SnapShot
     initSnapShot =
       snapShotFromInstantStake
-        (EpochNo 0)
-        (EpochInterval 0)
-        0
         (addInstantStake (nes ^. utxoL) mempty)
         dState
         pState

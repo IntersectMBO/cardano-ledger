@@ -69,6 +69,7 @@ library
     aeson >=2.2,
     base >=4.18 && <5,
     bytestring,
+    cardano-crypto-leios,
     cardano-data,
     cardano-ledger-allegra ^>=1.10,
     cardano-ledger-alonzo >=1.16,
