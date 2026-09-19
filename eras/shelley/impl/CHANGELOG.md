@@ -23,6 +23,7 @@
 
 ### `testlib`
 
+* Add `unregisteredAccount`
 * Rename `freshBootstapAddress` to `freshBootstrapAddress` and express it in terms of the new `freshBootstrapAddressWithPayloadSize`, which takes the HD payload size, or `Nothing` for a plain Byron address.
 * Add `freshBootstrapAddressOversizedPayload` and `largestBootstrapAddressAttrsSize`
 * Add `rederiveAddrTxWits`, which re-derives key witnesses for a modified transaction body
