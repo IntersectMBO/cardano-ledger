@@ -129,9 +129,6 @@ spec = describe "Invalid transactions" $ do
           txIn <- impAnn "Produce script at a txout with a missing datahash" $ do
             let scriptHash = redeemerSameAsDatumHash
             let addr = mkAddr scriptHash StakeRefNull
-            let tx =
-                  mkBasicTx mkBasicTxBody
-                    & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]
             let resetDataHash = dataHashTxOutL .~ SNothing
             let resetTxOutDataHash =
                   bodyTxL . outputsTxBodyL
@@ -143,7 +140,10 @@ spec = describe "Invalid transactions" $ do
             txInAt 0
               <$> withPostFixup
                 (fixupResetAddrWits <$> resetTxOutDataHash)
-                (submitTx tx)
+                ( submitTopTx $
+                    mkBasicTx mkBasicTxBody
+                      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]
+                )
           let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
           -- PlutusV3 no longer requires a spending Datum, but it should still fail since the
           -- actual script expects it

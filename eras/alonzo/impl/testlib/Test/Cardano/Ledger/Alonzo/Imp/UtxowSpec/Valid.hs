@@ -35,6 +35,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
+import Data.Typeable (Typeable)
 import GHC.Exts (fromList)
 import Lens.Micro (to, (%~), (&), (.~))
 import Lens.Micro.Mtl (use)
@@ -55,11 +56,14 @@ spec = describe "Valid transactions" $ do
     let
       datumHash = hashData @era $ Data (P.I 123)
       txOut = mkBasicTxOut addr (inject amount) & dataHashTxOutL .~ SJust datumHash
-      tx1 = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
-    txIn <- txInAt 0 <$> submitTx tx1
-    let
-      tx2 = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
-    submitTx_ tx2
+    -- TODO make this work with `submitTx`
+    tx <-
+      submitTopTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ [txOut]
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . inputsTxBodyL .~ [txInAt 0 tx]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -100,12 +104,14 @@ spec = describe "Valid transactions" $ do
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
         -- TODO: Re-enable after issues are resolved, by removing this override
         disableInConformanceIt "Validating MINT script" $ do
-          submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
+          AnyLevelTx tx <- mkTokenMintingTx alwaysSucceedsNoDatumHash
+          submitTx_ tx
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
         -- TODO: Re-enable after issues are resolved, by removing this override
         disableInConformanceIt "Not validating MINT script" $ do
-          submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
+          AnyLevelTx tx <- mkTokenMintingTx alwaysFailsNoDatumHash
+          submitPhase2Invalid_ tx
 
         it "Acceptable supplementary datum" $ do
           inputAddr <- freshKeyHash @Payment
@@ -119,14 +125,11 @@ spec = describe "Valid transactions" $ do
                 (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
                 (MaryValue amount mempty)
                 & dataHashTxOutL .~ SJust datumHash
-            txBody =
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & outputsTxBodyL .~ [txOut]
-            tx =
-              mkBasicTx txBody
-                & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
-          submitTx_ tx
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txIn]
+              & bodyTxL . outputsTxBodyL .~ [txOut]
+              & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
 
 alonzoToConwaySpec ::
   forall era.
@@ -185,22 +188,23 @@ alonzoToConwaySpec = do
               mkBasicTxOut
                 (mkAddr outputAddr StakeRefNull)
                 (MaryValue mempty multiAsset)
-            txBody =
-              mkBasicTxBody
-                & inputsTxBodyL .~ fromList txIns
-                & vldtTxBodyL .~ ValidityInterval SNothing (SJust $ slotNo + 1)
-                & mintTxBodyL .~ multiAsset
-                & withdrawalsTxBodyL .~ Withdrawals (fromList [(acct, mempty) | acct <- rewardAccounts])
-                & certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> rewardScriptHashes)
-                & outputsTxBodyL .~ [txOut]
-          submitTx_ $ mkBasicTx txBody
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ fromList txIns
+              & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing (SJust $ slotNo + 1)
+              & bodyTxL . mintTxBodyL .~ multiAsset
+              & bodyTxL . withdrawalsTxBodyL .~ Withdrawals (fromList [(acct, mempty) | acct <- rewardAccounts])
+              & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> rewardScriptHashes)
+              & bodyTxL . outputsTxBodyL .~ [txOut]
 
         it "Multiple identical certificates" $ do
           let scriptHash = alwaysSucceedsNoDatumHash
           void . registerStakeCredential $ ScriptHashObj scriptHash
-          let tx =
-                mkBasicTx mkBasicTxBody
-                  & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
+          let
+            tx :: forall l. Typeable l => Tx l era
+            tx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
           if eraProtVerLow @era < natVersion @9
             then
               -- This passes UTXOW rules but not DELEG rules; however, we care about only UTXOW rules here

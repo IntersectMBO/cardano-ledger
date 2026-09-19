@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -32,6 +33,8 @@ import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (
+  EraRule,
+  EraTx (..),
   ProtVerHigh,
   bodyTxL,
   eraProtVerHigh,
@@ -57,6 +60,9 @@ import Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
  )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
+import Control.State.Transition.Extended (STS (..))
+import qualified Data.List.NonEmpty as NE
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -70,6 +76,10 @@ spec = describe "UTXOS" $ do
   describe "PlutusV1 with references" $ do
     let inBabbage = eraProtVerLow @era <= eraProtVerHigh @BabbageEra
         behavior = if inBabbage then "fails" else "succeeds"
+        submitBabbageFailingTx ::
+          (forall l. Typeable l => Tx l era) ->
+          NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+          ImpTestM era ()
         submitBabbageFailingTx tx failures =
           if inBabbage then submitFailingTx tx failures else submitTx_ tx
 
@@ -81,13 +91,11 @@ spec = describe "UTXOS" $ do
       let txOut =
             mkCoinTxOut addr (inject $ Coin 5_000_000)
               & referenceScriptTxOutL .~ pure nativeScript
-          tx =
-            mkBasicTx $
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & outputsTxBodyL .~ [txOut]
       submitBabbageFailingTx
-        tx
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ [txIn]
+            & bodyTxL . outputsTxBodyL .~ [txOut]
+        )
         [ injectFailure $
             Alonzo.CollectErrors
               [ BadTranslation . inject $
@@ -100,13 +108,11 @@ spec = describe "UTXOS" $ do
           nativeScriptHash = hashScript . fromNativeScript @era $ RequireAllOf []
       txIn <- produceScript plutusScriptHash
       refIn <- produceScript nativeScriptHash
-      let tx =
-            mkBasicTx $
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & referenceInputsTxBodyL .~ [refIn]
       submitBabbageFailingTx
-        tx
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ [txIn]
+            & bodyTxL . referenceInputsTxBodyL .~ [refIn]
+        )
         [ injectFailure $
             Alonzo.CollectErrors
               [ BadTranslation . inject $
@@ -120,7 +126,7 @@ spec = describe "UTXOS" $ do
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
         -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt (show lang) $ do
-          tx <- mkTxWithPlutusAndBootstrapAddress slang
+          AnyLevelTx tx <- mkTxWithPlutusAndBootstrapAddress slang
           submitFailingTx
             tx
             [ injectFailure $
@@ -138,7 +144,7 @@ spec = describe "UTXOS" $ do
           mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
             & datumTxOutL .~ mkInlineDatum (PV1.I 0)
       tx <-
-        submitTx $
+        submitTopTx $
           mkBasicTx $
             mkBasicTxBody & outputsTxBodyL .~ [txOut]
       let txIn = txInAt 0 tx
@@ -158,7 +164,7 @@ spec = describe "UTXOS" $ do
         mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
           & datumTxOutL .~ mkInlineDatum (PV1.I 1)
     tx <-
-      submitTx $
+      submitTopTx $
         mkBasicTx $
           mkBasicTxBody & outputsTxBodyL .~ [txOut]
     let txIn = txInAt 0 tx

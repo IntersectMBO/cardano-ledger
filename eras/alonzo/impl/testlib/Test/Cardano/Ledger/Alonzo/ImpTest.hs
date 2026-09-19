@@ -454,6 +454,7 @@ instance ShelleyEraImp AlonzoEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  trySubmitTx = trySubmitTopTx
 
 instance MaryEraImp AlonzoEra
 
@@ -529,12 +530,13 @@ submitPhase2Invalid tx = do
       tx ^. isPhase2ValidTxL `shouldBe` Phase2Valid
       -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
       -- TODO: remove `withDisabledPostSubmitTxHook` once the issue above is resolved
-      (predFailure, fixedUpTx) <- expectLeft =<< withDisabledPostSubmitTxHook (trySubmitTx tx)
+      (mPredFailures, fixedUpTx) <- withDisabledPostSubmitTxHook (trySubmitTopTx tx)
+      predFailures <- expectJustDeep mPredFailures
       scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
-      predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
+      predFailures `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
       pure fixedUpTx
   impAnn "Submit tx with IsValid False" $ do
-    withNoFixup $ submitTx $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
+    withNoFixup $ submitTopTx $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
 
 impAlonzoExpectTxSuccess ::
   ( HasCallStack
@@ -590,7 +592,7 @@ mkTxWithPlutusAndBootstrapAddress ::
   forall era l.
   (AlonzoEraImp era, PlutusLanguage l) =>
   SLanguage l ->
-  ImpTestM era (Tx TopTx era)
+  ImpTestM era (AnyLevelTx era)
 mkTxWithPlutusAndBootstrapAddress slang = do
   ba <- freshBootstrapAddress
   datum <- arbitrary
@@ -599,16 +601,18 @@ mkTxWithPlutusAndBootstrapAddress slang = do
       txOutScript =
         mkBasicTxOut @era (mkAddr scriptHash StakeRefNull) mempty
           & dataHashTxOutL .~ SJust datumHash
+  -- TODO make this work with `submitTx`
   tx <-
-    submitTx $
+    submitTopTx $
       mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [txOutScript]
   let txIn = txInAt 0 tx
       txOutBootstrapAddr = mkBasicTxOut @era (AddrBootstrap ba) mempty
   return $
-    mkBasicTx
-      ( mkBasicTxBody @era
-          & inputsTxBodyL .~ [txIn]
-          & outputsTxBodyL .~ [txOutBootstrapAddr]
-      )
-      & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
+    AnyLevelTx $
+      mkBasicTx
+        ( mkBasicTxBody @era
+            & inputsTxBodyL .~ [txIn]
+            & outputsTxBodyL .~ [txOutBootstrapAddr]
+        )
+        & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum

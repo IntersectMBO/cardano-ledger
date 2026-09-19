@@ -36,6 +36,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import qualified Data.Text as T
+import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Exts (fromList)
 import Lens.Micro ((&), (.~), (<>~), (^.))
@@ -84,7 +85,9 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
+    let
+      tx :: forall l. Typeable l => Tx l era
+      tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
     pv <- getProtVer
     -- In bootstrap phase and in post-Conway eras (CIP-181), the DRep delegation check
@@ -116,12 +119,12 @@ spec = describe "LEDGER" $ do
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
-    let tx =
-          mkBasicTx $
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals
-                  [(ra, balance)]
+    let
+      tx :: forall l. Typeable l => Tx l era
+      tx =
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
     pv <- getProtVer
     -- In bootstrap phase and post-Conway eras (CIP-181), the DRep delegation check
     -- does not apply, so the withdrawal succeeds.
@@ -145,12 +148,10 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    let tx =
-          mkBasicTx $
-            mkBasicTxBody
-              & certsTxBodyL .~ [UnRegDepositTxCert cred refund]
-              & (withdrawalsTxBodyL .~ Withdrawals [(ra, balance)])
-    submitTx_ tx
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred refund]
+        & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
   it "Withdraw from a key delegated to an expired DRep" $ do
     modifyPParams $ \pp ->
@@ -322,4 +323,4 @@ spec = describe "LEDGER" $ do
             submitFailingMempoolTx "unallowed votes" tx $
               NonEmpty.singleton . injectFailure . ConwayMempoolFailure $
                 "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
-          withNoFixup $ submitTx_ txFixed
+          withNoFixup $ submitTopTx_ txFixed

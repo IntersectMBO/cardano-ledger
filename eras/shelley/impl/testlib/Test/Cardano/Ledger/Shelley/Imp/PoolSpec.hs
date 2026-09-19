@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -22,7 +23,7 @@ import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Set as Set
-import Data.Typeable (cast)
+import Data.Typeable (Typeable, cast)
 import Lens.Micro
 import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Core.KeyPair
@@ -67,12 +68,16 @@ spec = describe "POOL" $ do
               }
       kh <- freshKeyHash
       pps <- freshPoolParams kh badAccountAddress
-      let tx = registerPoolTx pps
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx = registerPoolTx pps
       if pvMajor pv < natVersion @5
         then
           submitTx_ tx
         else
-          submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
+          submitFailingTx
+            tx
+            [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
 
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
     -- TODO: Re-enable after issue is resolved, by removing this override
@@ -85,25 +90,29 @@ spec = describe "POOL" $ do
       let metadata = PoolMetadata url metadataHash
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
       pps <- poolParams kh vrf
-      let tx = registerPoolTx (pps & sppMetadataL .~ SJust metadata)
       if pvMajor pv < natVersion @5
         then
-          submitTx_ tx
+          submitTx_ $ registerPoolTx (pps & sppMetadataL .~ SJust metadata)
         else
-          submitFailingTx tx [injectFailure $ PoolMedataHashTooBig kh (fromIntegral tooBigSize)]
+          submitFailingTx
+            (registerPoolTx (pps & sppMetadataL .~ SJust metadata))
+            [injectFailure $ PoolMedataHashTooBig kh (fromIntegral tooBigSize)]
 
     it "register a new pool with an already registered VRF" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
-        if pvMajor pv < natVersion @11
-          then do
-            submitTx_ tx
-            expectPool khNew (Just vrf)
-          else do
-            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
-            expectPool khNew Nothing
+      pps <- poolParams khNew vrf
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx = registerPoolTx pps
+      if pvMajor pv < natVersion @11
+        then do
+          submitTx_ tx
+          expectPool khNew (Just vrf)
+        else do
+          submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
+          expectPool khNew Nothing
       expectPool kh (Just vrf)
 
     it "new pool parameters are adopted at the epoch boundary after re-registration" $ do
@@ -141,51 +150,55 @@ spec = describe "POOL" $ do
       _ <- registerStakeCredential stakeCred2
       delegateStake stakeCred poolKh
       vrf1 <- freshKeyHashVRF
-      registerPoolTx <$> poolParams poolKh vrf1 >>= \tx -> do
-        submitTx_ tx
-        expectPoolDelegs poolKh (Just [stakeCred])
-        delegateStake stakeCred2 poolKh
-        expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
-        passEpoch
-        expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
+      pps1 <- poolParams poolKh vrf1
+      submitTx_ $ registerPoolTx pps1
+      expectPoolDelegs poolKh (Just [stakeCred])
+      delegateStake stakeCred2 poolKh
+      expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
+      passEpoch
+      expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
 
       vrf2 <- freshKeyHashVRF
-      registerPoolTx <$> poolParams poolKh vrf2 >>= \tx -> do
-        submitTx_ tx
-        expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
+      pps2 <- poolParams poolKh vrf2
+      submitTx_ $ registerPoolTx pps2
+      expectPoolDelegs poolKh (Just [stakeCred, stakeCred2])
 
-        unRegTxCert <- genUnRegTxCert stakeCred2
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [unRegTxCert]
-        expectPoolDelegs poolKh (Just [stakeCred])
-        delegateStake stakeCred poolKh2
-        expectPoolDelegs poolKh (Just [])
-        passEpoch
-        expectPoolDelegs poolKh (Just [])
+      unRegTxCert <- genUnRegTxCert stakeCred2
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [unRegTxCert]
+      expectPoolDelegs poolKh (Just [stakeCred])
+      delegateStake stakeCred poolKh2
+      expectPoolDelegs poolKh (Just [])
+      passEpoch
+      expectPoolDelegs poolKh (Just [])
 
     it "re-register a pool with an already registered VRF" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh1, vrf1) <- registerNewPool
       (kh2, vrf2) <- registerNewPool
-      registerPoolTx <$> poolParams kh1 vrf2 >>= \tx ->
-        if pvMajor pv < natVersion @11
-          then do
-            submitTx_ tx
-            expectPool kh1 (Just vrf1)
-            expectFuturePool kh1 (Just vrf2)
-            passEpoch
-            expectPool kh1 (Just vrf2)
-            expectPool kh2 (Just vrf2)
-          else do
-            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf2]
-            expectPool kh1 (Just vrf1)
-            expectFuturePool kh1 Nothing
+      pps <- poolParams kh1 vrf2
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx = registerPoolTx pps
+      if pvMajor pv < natVersion @11
+        then do
+          submitTx_ tx
+          expectPool kh1 (Just vrf1)
+          expectFuturePool kh1 (Just vrf2)
+          passEpoch
+          expectPool kh1 (Just vrf2)
+          expectPool kh2 (Just vrf2)
+        else do
+          submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf2]
+          expectPool kh1 (Just vrf1)
+          expectFuturePool kh1 Nothing
 
     it "re-register a pool with its own VRF" $ do
       (kh, vrf) <- registerNewPool
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectPool kh (Just vrf)
       expectFuturePool kh (Just vrf)
       passEpoch
@@ -195,7 +208,8 @@ spec = describe "POOL" $ do
     it "re-register a pool with a fresh VRF" $ do
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      pps1 <- poolParams kh vrfNew
+      submitTx_ $ registerPoolTx pps1
       expectPool kh (Just vrf)
       expectFuturePool kh (Just vrfNew)
       passEpoch
@@ -203,7 +217,8 @@ spec = describe "POOL" $ do
       expectVRFs [vrfNew]
       -- now the original VRF can be reused
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
+      pps2 <- poolParams khNew vrf
+      submitTx_ $ registerPoolTx pps2
       expectVRFs [vrf, vrfNew]
 
     it "register a new pool with the VRF of a re-registered pool " $ do
@@ -211,45 +226,55 @@ spec = describe "POOL" $ do
       (kh, _) <- registerNewPool
       vrfNew <- freshKeyHashVRF
       -- re-register pool with a new vrf
-      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      pps1 <- poolParams kh vrfNew
+      submitTx_ $ registerPoolTx pps1
       passEpoch
       -- try to register a new pool with the new vrf
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrfNew >>= \tx ->
-        if pvMajor pv < natVersion @11
-          then do
-            submitTx_ tx
-            expectPool kh (Just vrfNew)
-            expectPool khNew (Just vrfNew)
-          else
-            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrfNew]
+      pps2 <- poolParams khNew vrfNew
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx = registerPoolTx pps2
+      if pvMajor pv < natVersion @11
+        then do
+          submitTx_ tx
+          expectPool kh (Just vrfNew)
+          expectPool khNew (Just vrfNew)
+        else
+          submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrfNew]
 
     it "after the epoch changes, reuse VRFs that get overwritten" $ do
       (kh, vrf) <- registerNewPool
       vrf1 <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrf1 >>= submitTx_
+      pps1 <- poolParams kh vrf1
+      submitTx_ $ registerPoolTx pps1
       expectVRFs [vrf, vrf1]
       vrf2 <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrf2 >>= submitTx_
+      pps2 <- poolParams kh vrf2
+      submitTx_ $ registerPoolTx pps2
       expectVRFs [vrf, vrf2]
       vrf3 <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrf3 >>= submitTx_
+      pps3 <- poolParams kh vrf3
+      submitTx_ $ registerPoolTx pps3
       expectVRFs [vrf, vrf3]
       passEpoch
       expectPool kh (Just vrf3)
       expectVRFs [vrf3]
       -- reuse VRFs that didn't get used
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf1 >>= submitTx_
+      pps4 <- poolParams khNew vrf1
+      submitTx_ $ registerPoolTx pps4
       expectPool khNew (Just vrf1)
       expectVRFs [vrf1, vrf3]
       -- the original pool can be re-registered with one of the discarded VRFs too
-      registerPoolTx <$> poolParams kh vrf2 >>= submitTx_
+      pps5 <- poolParams kh vrf2
+      submitTx_ $ registerPoolTx pps5
       expectVRFs [vrf1, vrf2, vrf3]
       passEpoch
       expectVRFs [vrf1, vrf2]
       -- the original pool can be re-registered with the original VRF too
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      pps6 <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps6
       expectVRFs [vrf, vrf1, vrf2]
       passEpoch
       expectVRFs [vrf, vrf1]
@@ -258,26 +283,30 @@ spec = describe "POOL" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      pps1 <- poolParams kh vrfNew
+      submitTx_ $ registerPoolTx pps1
       -- try to register a pool with the original VRF that got overwritten
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
-        if pvMajor pv < natVersion @11
-          then do
-            submitTx_ tx
-            expectPool kh (Just vrf)
-            expectPool khNew (Just vrf)
-            passEpoch
-            expectPool kh (Just vrfNew)
-            expectPool khNew (Just vrf)
-          else do
-            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
+      pps2 <- poolParams khNew vrf
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx = registerPoolTx pps2
+      if pvMajor pv < natVersion @11
+        then do
+          submitTx_ tx
+          expectPool kh (Just vrf)
+          expectPool khNew (Just vrf)
+          passEpoch
+          expectPool kh (Just vrfNew)
+          expectPool khNew (Just vrf)
+        else do
+          submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
 
   describe "Retiring pools" $ do
     it "retire an unregistered pool" $ do
       khNew <- freshKeyHash
-      retirePoolTx khNew (EpochInterval 10) >>= \tx ->
-        submitFailingTx tx [injectFailure $ StakePoolNotRegisteredOnKeyPOOL khNew]
+      AnyLevelTx tx <- retirePoolTx khNew (EpochInterval 10)
+      submitFailingTx tx [injectFailure $ StakePoolNotRegisteredOnKeyPOOL khNew]
 
     it "retire a pool with too high a retirement epoch" $ do
       (kh, _) <- registerNewPool
@@ -287,61 +316,69 @@ spec = describe "POOL" $ do
             EpochInterval $ fromIntegral $ unEpochInterval maxRetireInterval + 1
       let supplied = addEpochInterval curEpochNo maxRetireIntervalPlus
 
-      retirePoolTx kh maxRetireIntervalPlus >>= \tx ->
-        submitFailingTx
-          tx
-          [ injectFailure $
-              StakePoolRetirementWrongEpochPOOL
-                (Mismatch supplied curEpochNo)
-                (Mismatch supplied (addEpochInterval curEpochNo maxRetireInterval))
-          ]
+      AnyLevelTx tx <- retirePoolTx kh maxRetireIntervalPlus
+      submitFailingTx
+        tx
+        [ injectFailure $
+            StakePoolRetirementWrongEpochPOOL
+              (Mismatch supplied curEpochNo)
+              (Mismatch supplied (addEpochInterval curEpochNo maxRetireInterval))
+        ]
       expectRetiring False kh
 
     it "retire a pool with too low a retirement epoch" $ do
       (kh, _) <- registerNewPool
       curEpochNo <- getsNES nesELL
       maxRetireInterval <- getsPParams ppEMaxL
-      retirePoolTx kh (EpochInterval 0) >>= \tx ->
-        submitFailingTx
-          tx
-          [ injectFailure $
-              StakePoolRetirementWrongEpochPOOL
-                (Mismatch curEpochNo curEpochNo)
-                (Mismatch curEpochNo (addEpochInterval curEpochNo maxRetireInterval))
-          ]
+      AnyLevelTx tx <- retirePoolTx kh (EpochInterval 0)
+      submitFailingTx
+        tx
+        [ injectFailure $
+            StakePoolRetirementWrongEpochPOOL
+              (Mismatch curEpochNo curEpochNo)
+              (Mismatch curEpochNo (addEpochInterval curEpochNo maxRetireInterval))
+        ]
       expectRetiring False kh
 
     it "re-register a retiring pool with an already registered vrf" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh1, _) <- registerNewPool
       (_, vrf2) <- registerNewPool
-      retirePoolTx kh1 (EpochInterval 10) >>= submitTx_
-      registerPoolTx <$> poolParams kh1 vrf2 >>= \tx ->
-        if pvMajor pv < natVersion @11
-          then do
-            submitTx_ tx
-            expectRetiring False kh1
-            expectFuturePool kh1 (Just vrf2)
-            passEpoch
-            expectPool kh1 (Just vrf2)
-          else do
-            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf2]
-            expectRetiring True kh1
-            expectFuturePool kh1 Nothing
+      AnyLevelTx tx1 <- retirePoolTx kh1 (EpochInterval 10)
+      submitTx_ tx1
+      pps <- poolParams kh1 vrf2
+      let
+        tx2 :: forall l. Typeable l => Tx l era
+        tx2 = registerPoolTx pps
+      if pvMajor pv < natVersion @11
+        then do
+          submitTx_ tx2
+          expectRetiring False kh1
+          expectFuturePool kh1 (Just vrf2)
+          passEpoch
+          expectPool kh1 (Just vrf2)
+        else do
+          submitFailingTx tx2 [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf2]
+          expectRetiring True kh1
+          expectFuturePool kh1 Nothing
 
     it "re-register retiring pool with its own VRF" $ do
       (kh, vrf) <- registerNewPool
-      retirePoolTx kh (EpochInterval 10) >>= submitTx_
+      AnyLevelTx tx <- retirePoolTx kh (EpochInterval 10)
+      submitTx_ tx
       expectRetiring True kh
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectPool kh (Just vrf)
       expectRetiring False kh
 
     it "re-register a retiring pool with a fresh VRF" $ do
       (kh, vrf) <- registerNewPool
-      retirePoolTx kh (EpochInterval 10) >>= submitTx_
+      AnyLevelTx tx <- retirePoolTx kh (EpochInterval 10)
+      submitTx_ tx
       vrfNew <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      pps1 <- poolParams kh vrfNew
+      submitTx_ $ registerPoolTx pps1
       expectRetiring False kh
       expectFuturePool kh (Just vrfNew)
       passEpoch
@@ -349,22 +386,27 @@ spec = describe "POOL" $ do
       expectVRFs [vrfNew]
       -- now the original VRF can be reused
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
+      pps2 <- poolParams khNew vrf
+      submitTx_ $ registerPoolTx pps2
 
     it "register a pool with the VRF of a retiring pool" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       let retirement = 1
-      retirePoolTx kh (EpochInterval retirement) >>= submitTx_
+      AnyLevelTx tx1 <- retirePoolTx kh (EpochInterval retirement)
+      submitTx_ tx1
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
-        if pvMajor pv < natVersion @11
-          then do
-            submitTx_ tx
-            expectPool khNew (Just vrf)
-          else do
-            submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
-            expectPool khNew Nothing
+      pps <- poolParams khNew vrf
+      let
+        tx2 :: forall l. Typeable l => Tx l era
+        tx2 = registerPoolTx pps
+      if pvMajor pv < natVersion @11
+        then do
+          submitTx_ tx2
+          expectPool khNew (Just vrf)
+        else do
+          submitFailingTx tx2 [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
+          expectPool khNew Nothing
       expectRetiring True kh
       passNEpochs (fromIntegral retirement)
       expectRetiring False khNew
@@ -379,7 +421,8 @@ spec = describe "POOL" $ do
         delegateStake cred poolKh
         pure cred
 
-      retirePoolTx poolKh (EpochInterval retirement) >>= submitTx_
+      AnyLevelTx tx <- retirePoolTx poolKh (EpochInterval retirement)
+      submitTx_ tx
       expectPoolDelegs poolKh (Just [stakeCred1])
       stakeCred2 <- do
         cred <- KeyHashObj <$> freshKeyHash
@@ -395,22 +438,26 @@ spec = describe "POOL" $ do
     it "re-register a pool with the same keyhash and VRF " $ do
       (kh, vrf) <- registerNewPool
       let retirement = 1
-      retirePoolTx kh (EpochInterval retirement) >>= submitTx_
+      AnyLevelTx tx <- retirePoolTx kh (EpochInterval retirement)
+      submitTx_ tx
       passNEpochs (fromIntegral retirement)
       expectPool kh Nothing
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectPool kh (Just vrf)
       expectVRFs [vrf]
 
     it "register a pool with the VRF of a retired pool" $ do
       (kh, vrf) <- registerNewPool
       let retirement = 1
-      retirePoolTx kh (EpochInterval retirement) >>= submitTx_
+      AnyLevelTx tx <- retirePoolTx kh (EpochInterval retirement)
+      submitTx_ tx
       expectRetiring True kh
       passNEpochs (fromIntegral retirement)
       expectRetiring False kh
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
+      pps <- poolParams khNew vrf
+      submitTx_ $ registerPoolTx pps
       expectPool khNew (Just vrf)
       expectRetiring False khNew
       expectVRFs [vrf]
@@ -536,18 +583,21 @@ spec = describe "POOL" $ do
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
-      submitTx_ . registerPoolTx =<< poolParams kh vrf
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectPool kh (Just vrf)
       pure (kh, vrf)
     registerPoolTx pps =
       mkBasicTx mkBasicTxBody
         & bodyTxL . certsTxBodyL .~ [RegPoolTxCert pps]
+    retirePoolTx :: KeyHash StakePool -> EpochInterval -> ImpTestM era (AnyLevelTx era)
     retirePoolTx kh retirementInterval = do
       curEpochNo <- getsNES nesELL
       let retirement = addEpochInterval curEpochNo retirementInterval
       pure $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
+        AnyLevelTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
     expectPool poolKh mbVrf = do
       pps <- psStakePools <$> getPState
       spsVrf <$> Map.lookup poolKh pps `shouldBe` mbVrf
