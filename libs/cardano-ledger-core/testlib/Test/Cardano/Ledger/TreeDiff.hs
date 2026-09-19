@@ -272,6 +272,8 @@ instance ToExpr (StakePoolParams era)
 
 instance ToExpr BlsKey
 
+instance ToExpr BlsKeyState
+
 instance ToExpr StakePoolState
 
 instance ToExpr StakePoolRelay
@@ -292,9 +294,23 @@ instance ToExpr (Datum era) where
   toExpr (Datum bd) = App "Datum" [toExpr bd]
 
 -- EpochBoundary
+instance ToExpr LeiosSeat where
+  toExpr (LeiosSeat w vk) =
+    Rec "LeiosSeat" $
+      OMap.fromList [("seatWeight", toExpr w), ("seatVKey", toExpr vk)]
+
+instance ToExpr LeiosCommittee where
+  toExpr = App "LeiosCommittee" . map toExpr . foldr (:) [] . leiosCommitteeSeats
+
 instance ToExpr (SnapShots era)
 
 instance ToExpr SnapShot
+
+instance ToExpr MarkSnapShot
+
+instance ToExpr SetSnapShot
+
+instance ToExpr GoSnapShot
 
 instance ToExpr StakePoolSnapShot
 

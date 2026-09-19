@@ -712,6 +712,17 @@ instance HasSpec BlsKey where
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
+instance HasSpec BlsKeyState where
+  type TypeSpec BlsKeyState = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
 instance Era era => HasSimpleRep (StakePoolParams era)
 
 instance Era era => HasSpec (StakePoolParams era)
@@ -1444,9 +1455,34 @@ instance HasSimpleRep StakePoolSnapShot
 
 instance HasSpec StakePoolSnapShot
 
+-- | The Leios committee is derived from the pool snapshot by the ledger, never
+-- generated independently, so it is opaque to the spec and always empty here.
+instance HasSpec LeiosCommittee where
+  type TypeSpec LeiosCommittee = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pure emptyLeiosCommittee
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
 instance HasSimpleRep SnapShot
 
 instance HasSpec SnapShot
+
+instance HasSimpleRep MarkSnapShot
+
+instance HasSpec MarkSnapShot
+
+instance HasSimpleRep SetSnapShot
+
+instance HasSpec SetSnapShot
+
+instance HasSimpleRep GoSnapShot
+
+instance HasSpec GoSnapShot
 
 instance HasSimpleRep Stake
 

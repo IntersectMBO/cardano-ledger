@@ -44,6 +44,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  EpochInterval (..),
   Network,
   Nonce (..),
   StrictMaybe (..),
@@ -90,7 +91,7 @@ import Cardano.Protocol.TPraos.BlockHeader (
   lastAppliedHash,
   prevHashToNonce,
  )
-import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
+import Cardano.Slotting.Slot (EpochNo (..), WithOrigin (..))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -269,7 +270,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psStakePools =
                 Map.insert
                   (sppId pool)
-                  (mkStakePoolState poolDeposit mempty pool)
+                  (mkStakePoolState (EpochNo 0) poolDeposit mempty pool)
                   (psStakePools ps)
             }
         Just _ ->
@@ -311,7 +312,7 @@ updatePoolParams network pool cs = cs {chainNes = nes'}
         { psStakePools =
             Map.insert
               (sppId pool)
-              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
+              (mkStakePoolState (EpochNo 0) (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
               (psStakePools ps)
         , psFutureStakePoolParams =
             Map.mapMaybeWithKey
@@ -526,10 +527,13 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
       } = esSnapshots es
     snaps =
       SnapShots
-        { ssStakeMark = snap
+        { -- 'newSnapshot' is applied before 'newEpoch', so the epoch being
+          -- entered -- the one the SNAP rule stamps on the fresh mark -- is the
+          -- successor of the state's current epoch.
+          ssStakeMark = MarkSnapShot snap (succ (nesEL nes)) 0
         , ssStakeMarkPoolDistr = calculatePoolDistr snap
-        , ssStakeSet = ssMark
-        , ssStakeGo = ssSet
+        , ssStakeSet = mkSetSnapShot ssMark (EpochInterval 0)
+        , ssStakeGo = mkGoSnapShot ssSet
         , ssFee = fee
         }
     es' = es {esSnapshots = snaps}

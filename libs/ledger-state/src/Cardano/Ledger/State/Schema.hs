@@ -17,7 +17,7 @@
 module Cardano.Ledger.State.Schema where
 
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut)
-import Cardano.Ledger.BaseTypes (TxIx (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), TxIx (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (PParams)
@@ -31,6 +31,7 @@ import Cardano.Ledger.State.UTxO
 import qualified Cardano.Ledger.TxIn as TxIn
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import Data.Word (Word16)
 import Database.Persist.Sqlite
 import Database.Persist.TH
 
@@ -77,6 +78,9 @@ EpochState
 SnapShot
   type SnapShotType
   epochStateId EpochStateId
+  epochNo EpochNo Maybe
+  leiosCommitteeSize Word16 Maybe
+  leiosCommittee Shelley.LeiosCommittee Maybe
   -- UniqueSnapShot type epochStateId
 SnapShotStake
   snapShotId SnapShotId

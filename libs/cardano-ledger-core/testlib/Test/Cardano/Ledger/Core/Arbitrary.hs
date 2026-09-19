@@ -501,6 +501,9 @@ instance Arbitrary PoolMetadata where
 instance Arbitrary BlsKey where
   arbitrary = BlsKey <$> arbitrary <*> arbitrary
 
+instance Arbitrary BlsKeyState where
+  arbitrary = BlsKeyState <$> arbitrary <*> arbitrary
+
 instance Arbitrary (PossessionProofDSIGN BLS12381MinSigDSIGN) where
   arbitrary = genBlsPossessionProof
 
@@ -778,12 +781,26 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
     snapShotFromStakePoolParams stakePoolParams =
       let delegations = Map.findWithDefault mempty (sppId stakePoolParams) delegatorsPerStakePool
        in mkStakePoolSnapShot ssActiveStake ssTotalActiveStake $
-            mkStakePoolState mempty delegations stakePoolParams
+            mkStakePoolState (BaseTypes.EpochNo 0) mempty delegations stakePoolParams
     delegatorsPerStakePool =
       VMap.foldlWithKey
         (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)
         mempty
         (unActiveStake ssActiveStake)
+
+instance Arbitrary MarkSnapShot where
+  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary
+
+-- | Builds a consistent set snapshot: its pool distribution and committee are
+-- seated from the mark it rotates, never generated independently.
+instance Arbitrary SetSnapShot where
+  arbitrary = do
+    mark <- arbitrary
+    maxKeyAge <- arbitrary
+    pure $ mkSetSnapShot mark maxKeyAge
+
+instance Arbitrary GoSnapShot where
+  arbitrary = mkGoSnapShot <$> arbitrary
 
 instance Arbitrary (SnapShots era) where
   arbitrary = do
@@ -791,7 +808,7 @@ instance Arbitrary (SnapShots era) where
     ssStakeSet <- arbitrary
     ssStakeGo <- arbitrary
     ssFee <- arbitrary
-    let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
+    let ssStakeMarkPoolDistr = calculatePoolDistr (msSnapShot ssStakeMark)
     pure $ SnapShots {..}
 
 -- | In the system, Stake never contains more than the sum of all Ada (which is constant).

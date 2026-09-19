@@ -99,7 +99,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
  )
 import Cardano.Ledger.Shelley.State
-import Cardano.Ledger.Slot (epochInfoSize)
+import Cardano.Ledger.Slot (EpochNo (..), epochInfoSize)
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -559,7 +559,7 @@ createRUpdOld_ ::
   ShelleyBase RewardUpdateOld
 createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
   asc <- asks activeSlotCoeff
-  let SnapShot activeStake' _ stakePoolsSnapShot = ssStakeGo ss
+  let SnapShot activeStake' _ stakePoolsSnapShot = gsSnapShot (ssStakeGo ss)
       stake' = Stake $ VMap.fromMap $ Map.map (unNonZero . swdStake) $ VMap.toMap $ unActiveStake activeStake'
       delegs' = VMap.fromMap $ Map.map swdDelegation $ VMap.toMap $ unActiveStake activeStake'
       -- reserves and rewards change
@@ -777,7 +777,7 @@ mkRewardAns
                 VMap.filter (\_ swd -> swdDelegation swd == stakePoolId) $
                   unActiveStake activeStake
             delegators = Map.findWithDefault mempty stakePoolId delegatorsPerStakePool
-            stakePoolState = mkStakePoolState (pp ^. ppPoolDepositCompactL) delegators stakePoolParams
+            stakePoolState = mkStakePoolState (EpochNo 0) (pp ^. ppPoolDepositCompactL) delegators stakePoolParams
             stakePoolSnapShot = mkStakePoolSnapShot stakeRestrictedToPool totalActiveStake stakePoolState
          in mkPoolRewardInfo
               pp

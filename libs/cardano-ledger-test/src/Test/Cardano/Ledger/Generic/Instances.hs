@@ -17,6 +17,7 @@ import Cardano.Ledger.Alonzo.Scripts (isPlutusScript)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  EpochNo (..),
   ProtVer (..),
   SlotNo (..),
   StrictMaybe (..),
@@ -117,7 +118,7 @@ applyShelleyCert model dcert = case dcert of
       { mStakePools =
           Map.insert
             hk
-            (mkStakePoolState (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
+            (mkStakePoolState (EpochNo 0) (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
             (mStakePools model)
       , mDeposited =
           if Map.member hk (mStakePools model)
