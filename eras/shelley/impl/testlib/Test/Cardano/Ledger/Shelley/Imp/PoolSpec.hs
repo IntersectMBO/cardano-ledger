@@ -13,6 +13,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
+import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Rules
@@ -22,6 +23,7 @@ import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import Data.Typeable (cast)
 import Lens.Micro
 import Test.Cardano.Base.Bytes (genByteArray)
@@ -73,6 +75,25 @@ spec = describe "POOL" $ do
           submitTx_ tx
         else
           submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
+
+    it "register a pool with an owner w/o a vkey witness" $ do
+      poolKeyHash <- freshKeyHash
+      ownerKeyHash <- freshKeyHash
+      let ownerKeyHashW = asWitness ownerKeyHash
+          dropWitness =
+            pure
+              . (witsTxL . addrTxWitsL %~ Set.filter ((/= ownerKeyHashW) . witVKeyHash))
+              . (witsTxL . bootAddrTxWitsL .~ mempty)
+      accountAddress <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+      pps <- freshPoolParams poolKeyHash accountAddress
+      withPostFixup dropWitness $
+        submitFailingTx
+          ( mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [RegPoolTxCert pps {sppOwners = Set.singleton ownerKeyHash}]
+          )
+          [injectFailure . MissingVKeyWitnessesUTXOW @era $ NES.singleton ownerKeyHashW]
 
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
     -- TODO: Re-enable after issue is resolved, by removing this override

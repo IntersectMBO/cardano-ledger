@@ -33,11 +33,13 @@ instance ShelleyEraImp MaryEra where
   delegStakeTxCert = shelleyDelegStakeTxCert
 
 class
-  ( ShelleyEraImp era
+  ( AllegraEraImp era
   , MaryEraTest era
   , Value era ~ MaryValue
   ) =>
   MaryEraImp era
+
+instance AllegraEraImp MaryEra
 
 instance MaryEraImp MaryEra
 

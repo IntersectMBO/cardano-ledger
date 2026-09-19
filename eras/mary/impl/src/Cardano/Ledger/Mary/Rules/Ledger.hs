@@ -5,6 +5,7 @@
 
 module Cardano.Ledger.Mary.Rules.Ledger () where
 
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Rules.Delegs ()
@@ -22,6 +23,9 @@ instance InjectRuleFailure "LEDGER" Shelley.AccountAlreadyRegistered MaryEra whe
   injectFailure = Shelley.DelegsFailure . Shelley.DelplFailure . Shelley.DelegFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyUtxoPredFailure MaryEra where
+  injectFailure = Shelley.UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" Allegra.AllegraUtxoPredFailure MaryEra where
   injectFailure = Shelley.UtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyPpupPredFailure MaryEra where

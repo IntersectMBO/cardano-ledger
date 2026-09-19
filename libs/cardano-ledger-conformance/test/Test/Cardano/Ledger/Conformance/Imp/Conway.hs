@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Allegra.Imp.UtxoSpec qualified as AllegraUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.BbodySpec qualified as AlonzoBBODY
 import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
@@ -72,6 +73,7 @@ spec = do
             SNAP.spec
 
             ShelleyUTXO.spec
+            AllegraUTXO.spec
             MaryUTXO.spec
             AlonzoUTXO.spec
             BabbageUTXO.spec

@@ -91,7 +91,8 @@ spec = describe "SUBUTXOW" $ do
     forM_ (missingVKeyWitnessSources @era) $ \(sourceName, mkSubTx) ->
       it sourceName $ withheldWitnessFails mkSubTx
 
-    -- The conformance translation has no representation for bootstrap addresses.
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "spending a bootstrap address input" $
       withheldWitnessFails $ do
         bootAddr <- freshBootstrapAddress
@@ -101,8 +102,7 @@ spec = describe "SUBUTXOW" $ do
           , asWitness $ bootstrapKeyHash bootAddr
           )
 
-    -- The spec accepts a pool registration whose owner witness is missing.
-    disableInConformanceIt "registering a stake pool with an owner" $
+    it "registering a stake pool with an owner" $
       withheldWitnessFails $ do
         poolKeyHash <- freshKeyHash
         ownerKeyHash <- freshKeyHash
@@ -126,7 +126,8 @@ spec = describe "SUBUTXOW" $ do
     forM_ (failingNativeScriptPurposes @era) $ \(purposeName, mkSubTx) ->
       it purposeName $ failingScriptFails mkSubTx
 
-    -- The spec attributes a failing minting script to UTXOW, not SUBUTXOW.
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "minting" $
       failingScriptFails $ do
         scriptHash <- unsatisfiableTimeLock
@@ -358,6 +359,8 @@ spec = describe "SUBUTXOW" $ do
             (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
             (SubMalformedScriptWitnesses @era $ NES.singleton scriptHash)
 
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
+        -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt "SubMalformedReferenceScripts" $ do
           script <- fromPlutusScript <$> mkPlutusScript (asSLanguage slang malformedPlutus)
           addr <- freshKeyAddr_
@@ -373,6 +376,8 @@ spec = describe "SUBUTXOW" $ do
                 hashScript script
             ]
 
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1323
+        -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt "SubInvalidMetadata" $ do
           let auxData :: TxAuxData era
               auxData =
