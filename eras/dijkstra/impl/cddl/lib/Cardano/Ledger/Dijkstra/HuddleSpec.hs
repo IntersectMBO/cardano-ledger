@@ -1033,7 +1033,7 @@ leiosHeaderBodyRule ::
   ( HuddleRule "vrf_cert" era
   , HuddleRule "operational_cert" era
   , HuddleRule "protocol_version" era
-  , HuddleRule "eb_announcement" era
+  , HuddleRule "eb_references_announcement" era
   ) =>
   Proxy "header_body" ->
   Proxy era ->
@@ -1052,7 +1052,7 @@ leiosHeaderBodyRule pname p =
       , a $ huddleRule @"operational_cert" p
       , a $ huddleRule @"protocol_version" p
       , "block_body_contains_leios_cert" ==> VBool
-      , "eb_announcement" ==> (huddleRule @"eb_announcement" p / VNil)
+      , "eb_references_announcement" ==> (huddleRule @"eb_references_announcement" p / VNil)
       ]
 
 instance HuddleRule "vrf_cert" DijkstraEra where
@@ -1064,7 +1064,7 @@ instance HuddleRule "header_body" DijkstraEra where
 instance HuddleRule "header" DijkstraEra where
   huddleRuleNamed = headerRule
 
-instance HuddleRule "eb_announcement" DijkstraEra where
+instance HuddleRule "eb_references_announcement" DijkstraEra where
   huddleRuleNamed pname p =
     pname
       =.= arr

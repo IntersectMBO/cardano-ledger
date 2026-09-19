@@ -2,6 +2,7 @@
 
 ## 0.1.1.0
 
+* Rename `hbEbAnnouncement` to `hbEbReferencesAnnouncement` and change its type to `EbReferencesAnnouncement`
 * Remove `EbAnnouncement` (moved to `cardano-ledger-core`)
 * Add `bodyHeaderL`, `sigHeaderL`
 * Widen `cardano-crypto-class` upper bound to `<2.7`

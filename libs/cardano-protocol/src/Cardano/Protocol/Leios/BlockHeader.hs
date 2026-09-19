@@ -48,7 +48,7 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (
-  EbAnnouncement,
+  EbReferencesAnnouncement,
   EraBlockHeader (..),
   headerBlockL,
  )
@@ -107,7 +107,7 @@ data HeaderBody crypto = HeaderBody
   -- ^ protocol version
   , hbBlockBodyContainsLeiosCert :: !Bool
   -- ^ whether the block body contains a Leios certificate
-  , hbEbAnnouncement :: !(StrictMaybe EbAnnouncement)
+  , hbEbReferencesAnnouncement :: !(StrictMaybe EbReferencesAnnouncement)
   -- ^ Announcement of Endorser Block (EB)
   }
   deriving (Generic)
@@ -190,7 +190,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
       , hbOCert
       , hbProtVer
       , hbBlockBodyContainsLeiosCert
-      , hbEbAnnouncement
+      , hbEbReferencesAnnouncement
       } =
       encodeListLen 12
         <> encCBOR hbBlockNo
@@ -204,7 +204,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
         <> encCBOR hbOCert
         <> encCBOR hbProtVer
         <> encCBOR hbBlockBodyContainsLeiosCert
-        <> encodeNullStrictMaybe encCBOR hbEbAnnouncement
+        <> encodeNullStrictMaybe encCBOR hbEbReferencesAnnouncement
 
 instance Crypto crypto => DecCBOR (HeaderBody crypto) where
   decCBOR =
