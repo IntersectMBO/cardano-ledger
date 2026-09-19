@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
-import Cardano.Ledger.Block (Block (Block), EbAnnouncement)
+import Cardano.Ledger.Block (Block (Block), EbReferencesAnnouncement)
 import Cardano.Ledger.Conway.Governance (
   GovAction,
   ProposalProcedure,
@@ -98,4 +98,4 @@ spec = do
         genLeiosBlock
         v
         "block"
-      fullCddlSpec @EbAnnouncement v "eb_announcement"
+      fullCddlSpec @EbReferencesAnnouncement v "eb_references_announcement"

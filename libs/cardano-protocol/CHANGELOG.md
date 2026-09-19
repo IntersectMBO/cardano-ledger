@@ -2,6 +2,7 @@
 
 ## 0.2.0.0
 
+* Rename `hbEbAnnouncement` to `hbEbReferencesAnnouncement` and change its type to `EbReferencesAnnouncement`
 * Remove `EbAnnouncement` (moved to `cardano-ledger-core`)
 * Change the `hbProtVer` field of the Leios `HeaderBody` to `hbVersionInfo :: BlockHeaderVersionInfo`
 * Widen `cardano-crypto-class` upper bound to `<2.7`
