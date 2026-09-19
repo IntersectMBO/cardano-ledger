@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `ConwayEraPParams` as a superclass `DijkstraEraPParams`.
 * Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
 * Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`

@@ -1045,7 +1045,7 @@ emptyDijkstraPParamsUpdate =
     , dppMaxRefScriptSizePerEndorserBlock = THKD SNothing
     }
 
-class DijkstraEraPParams era => DijkstraEraPParams era where
+class ConwayEraPParams era => DijkstraEraPParams era where
   hkdMaxRefScriptSizePerBlockL :: Lens' (PParamsHKD f era) (HKD f Word32)
   hkdMaxRefScriptSizePerTxL :: Lens' (PParamsHKD f era) (HKD f Word32)
   hkdRefScriptCostStrideL :: Lens' (PParamsHKD f era) (HKD f (NonZero Word32))
