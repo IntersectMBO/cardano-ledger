@@ -2,7 +2,7 @@
 
 ## 1.6.0.1
 
-*
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 
 ## 1.6.0.0
 

@@ -120,8 +120,8 @@ library
     bytestring >=0.10 && <0.11.3 || >=0.11.4,
     cardano-base >=0.1.6,
     cardano-crypto,
-    cardano-crypto-class >=2.4 && <2.6,
-    cardano-crypto-leios,
+    cardano-crypto-class >=2.4 && <2.7,
+    cardano-crypto-leios ^>=0.3,
     cardano-crypto-wrapper,
     cardano-data >=1.3,
     cardano-ledger-binary ^>=1.10,
@@ -326,7 +326,6 @@ test-suite tests
     Test.Cardano.Ledger.JsonSpec
     Test.Cardano.Ledger.PlutusSpec
     Test.Cardano.Ledger.State.LeiosCommitteeSpec
-    Test.Cardano.Ledger.State.PoolDistrSpec
     Test.Cardano.Ledger.State.SnapShotsSpec
     Test.Cardano.Ledger.State.StakePoolSpec
     Test.Cardano.Ledger.StorableSpec

@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra.Era (
   GOVCERT,
   LEDGER,
   MEMPOOL,
+  POOL,
   SNAP,
   SUBCERT,
   SUBCERTS,
@@ -286,6 +287,10 @@ type DijkstraMEMPOOL = MEMPOOL
 
 type instance EraRule "MEMPOOL" DijkstraEra = MEMPOOL DijkstraEra
 
+data POOL era
+
+type instance EraRule "POOL" DijkstraEra = POOL DijkstraEra
+
 type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 
 data SNAP era
@@ -301,5 +306,3 @@ type instance EraRule "POOLREAP" DijkstraEra = Shelley.POOLREAP DijkstraEra
 type instance EraRule "RUPD" DijkstraEra = Shelley.RUPD DijkstraEra
 
 type instance EraRule "TICK" DijkstraEra = Shelley.TICK DijkstraEra
-
-type instance EraRule "POOL" DijkstraEra = Shelley.POOL DijkstraEra

@@ -8,12 +8,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- | Dijkstra's SNAP rule. Like Shelley's, but as it builds the fresh mark
--- snapshot it seats the Leios voting committee (CIP-0164) on it: the top
--- @leiosCommitteeSize@ pools by stake, carrying whichever registered BLS keys
--- are still honoured. The committee travels with the snapshot so consensus can
--- read it two epochs later, when the snapshot becomes the active stake
--- distribution.
+-- | Dijkstra's SNAP rule. Like Shelley's, but the fresh mark snapshot records
+-- the epoch, @leiosCommitteeSize@ protocol parameter, and the maximum honoured
+-- voting key age, from which the Leios voting committee (CIP-0164) is seated
+-- when the snapshot rotates into the set position, carrying whichever
+-- registered BLS keys are still honoured.
 module Cardano.Ledger.Dijkstra.Rules.Snap (
   maxKeyAgeEpochs,
 ) where
@@ -23,7 +22,6 @@ import Cardano.Ledger.BaseTypes (
   EpochSize (..),
   Globals (..),
   ShelleyBase,
-  addEpochInterval,
   epochInfoPure,
   unNonZero,
  )
@@ -39,6 +37,7 @@ import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.State (
   EraCertState,
   EraStake,
+  MarkSnapShot (..),
   SnapShot (..),
   SnapShots (..),
   calculatePoolDistr,
@@ -46,6 +45,8 @@ import Cardano.Ledger.State (
   certPStateL,
   emptySnapShots,
   instantStakeG,
+  mkGoSnapShot,
+  mkSetSnapShot,
   snapShotFromInstantStake,
   swdDelegation,
   swdStake,
@@ -90,30 +91,19 @@ snapTransition = do
 
   let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
       instantStake = ls ^. instantStakeG
-      -- The fresh mark snapshot becomes the active stake distribution at the
-      -- next epoch boundary -- NEWEPOCH sets @nesPd@ from the previous mark,
-      -- which is what this snapshot rotates into as @ssStakeSet@ -- so its
-      -- committee is judged for @eNo + 1@, the epoch it will actually vote in
-      -- (CIP-0164).
-      activeEpoch = addEpochInterval eNo (EpochInterval 1)
-  -- Measured against the epoch we are entering, not the one the committee will
-  -- vote in: all this needs is an epoch /length/ to turn the KES lifetime into a
-  -- count of epochs, and a future epoch's length is past the forecast horizon
-  -- whenever the stability window is shorter than an epoch.
+      istakeSnap =
+        snapShotFromInstantStake
+          instantStake
+          (certState ^. certDStateL)
+          (certState ^. certPStateL)
+  -- 'maxKeyAge' is derived from 'Globals', which the pure snapshot rotation
+  -- cannot read, so compute it here and seat the committee for the mark that is
+  -- now rotating into the set position, judging keys for @eNo@. Measure against
+  -- @eNo@ (the epoch we are entering), not a later one: this only needs an epoch
+  -- /length/ to turn the KES lifetime into a count of epochs, and a future
+  -- epoch's length is past the forecast horizon whenever the stability window is
+  -- shorter than an epoch.
   maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
-
-  let
-    -- The committee is seated here, on the fresh mark snapshot, sized by the
-    -- Leios committee-size parameter and honouring keys against @activeEpoch@
-    -- (CIP-0164).
-    istakeSnap =
-      snapShotFromInstantStake
-        activeEpoch
-        maxKeyAge
-        (pp ^. ppLeiosCommitteeSizeL)
-        instantStake
-        (certState ^. certDStateL)
-        (certState ^. certPStateL)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
@@ -125,11 +115,13 @@ snapTransition = do
 
   pure $
     SnapShots
-      { ssStakeMark = istakeSnap
-      , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
+      { -- The mark records the committee size; the Leios committee is seated
+        -- from it when this snapshot rotates into the set position (CIP-0164).
+        ssStakeMark = MarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL)
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeSet = ssStakeMark s
-      , ssStakeGo = ssStakeSet s
+        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
+      , ssStakeSet = mkSetSnapShot (ssStakeMark s) maxKeyAge
+      , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }
 
@@ -147,7 +139,9 @@ maxKeyAgeEpochs globals e =
   EpochInterval $
     ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2
   where
-    -- XXX: Avoid using epochInfoPure or determine epochLength differently
+    -- Safe against the forecast horizon as long as @e@ is an already-known
+    -- epoch (see the note above); 'epochInfoPure' is the only handle on the
+    -- epoch length 'Globals' offers.
     EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
 
     Globals {maxKESEvo, slotsPerKESPeriod} = globals

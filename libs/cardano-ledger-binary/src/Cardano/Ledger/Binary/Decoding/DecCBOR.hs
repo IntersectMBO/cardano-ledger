@@ -72,7 +72,13 @@ import Data.ByteString.Short (ShortByteString(SBS))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
-import Cardano.Crypto.Leios (BitField (..), LeiosCert (..), maxLeiosCommitteeSize)
+import Cardano.Crypto.Leios (
+  BitField (..),
+  LeiosCert (..),
+  LeiosCommittee (..),
+  LeiosSeat (..),
+  maxLeiosCommitteeSize,
+ )
 import Control.Monad (when)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Fixed (Fixed (..))
@@ -94,6 +100,7 @@ import qualified Data.VMap as VMap
 import qualified Data.Vector as V
 import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Storable as VS
+import qualified Data.Vector.Strict as VStrict
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -725,3 +732,11 @@ instance DecCBOR LeiosCert where
               <> " bytes exceeds the maximum of "
               <> show maxLeiosCertSignersBytes
         pure signers
+
+instance DecCBOR LeiosSeat where
+  decCBOR = decodeRecordNamed "LeiosSeat" (const 2) $ LeiosSeat <$> decCBOR <*> decCBOR
+
+-- | Straight to the constructor: 'mkLeiosCommittee' takes proofs of possession,
+-- which a seated committee no longer carries.
+instance DecCBOR LeiosCommittee where
+  decCBOR = UnsafeLeiosCommittee . VStrict.fromList <$> decCBOR

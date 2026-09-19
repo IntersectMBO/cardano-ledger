@@ -2,7 +2,14 @@
 
 ## 1.15.0.0
 
+* Require `AlonzoEraTx` in `babbageUtxoValidation` so execution limits use the era's total execution units.
+* Encode a wrapped `AlonzoContextError` under tag 8 in `BabbageContextError`, and add `TxCert era` and `PlutusPurpose AsItem era` constraints to its `NFData` and `EncCBOR` instances
+* Add `DecCBOR (TxCert era)` and `DecCBOR (PlutusPurpose AsItem era)` constraints to the `DecCBOR (BabbageContextError era)` instance
+* Add `AlonzoEraTransition` instance for `BabbageEra`
 * Add `FromJSON` instance for `BabbageTxOut era`
+* Add `ToJSON` and `FromJSON` instances for
+  - `TxBody TopTx BabbageEra`
+  - `Tx TopTx BabbageEra`
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` argument instead of `ProtVer` and `Maybe (Data era)`
 * Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`
 * Add `EncCBOR`, `ToCBOR` for `Block`

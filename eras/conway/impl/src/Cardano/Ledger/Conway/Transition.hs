@@ -16,17 +16,16 @@ module Cardano.Ledger.Conway.Transition (
   ConwayEraTransition (..),
   TransitionConfig (..),
   registerDRepsThenDelegs,
+  conwayInjectIntoTestState,
   conwayRegisterInitialAccounts,
   conwayRegisterInitialFundsThenStaking,
   injectStakeCredentials,
   injectDRepsThenDelegs,
 ) where
 
+import Cardano.Ledger.Alonzo.Transition (AlonzoEraTransition, alonzoInjectCostModels)
 import Cardano.Ledger.Babbage
-import Cardano.Ledger.Babbage.Transition (
-  TransitionConfig (BabbageTransitionConfig),
-  alonzoInjectCostModels,
- )
+import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionConfig))
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (compactCoinOrError)
 import Cardano.Ledger.Conway.Era
@@ -64,7 +63,7 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import System.FS.API (HasFS)
 
-class (EraTransition era, ConwayEraCertState era) => ConwayEraTransition era where
+class (AlonzoEraTransition era, ConwayEraCertState era) => ConwayEraTransition era where
   tcConwayGenesisL :: Lens' (TransitionConfig era) ConwayGenesis
   default tcConwayGenesisL ::
     ConwayEraTransition (PreviousEra era) =>
@@ -127,15 +126,15 @@ instance EraTransition ConwayEra where
 
   mkTransitionConfig = ConwayTransitionConfig
 
-  injectIntoTestState hasFS cfg newEpochState =
-    conwayRegisterInitialFundsThenStaking hasFS cfg $
-      alonzoInjectCostModels (cfg ^. tcPreviousEraConfigL . tcPreviousEraConfigL) newEpochState
+  injectIntoTestState = conwayInjectIntoTestState
 
   tcPreviousEraConfigL =
     lens ctcBabbageTransitionConfig (\ctc pc -> ctc {ctcBabbageTransitionConfig = pc})
 
   tcTranslationContextL =
     lens ctcConwayGenesis (\ctc ag -> ctc {ctcConwayGenesis = ag})
+
+instance AlonzoEraTransition ConwayEra
 
 instance ConwayEraTransition ConwayEra where
   tcConwayGenesisL = lens ctcConwayGenesis (\g x -> g {ctcConwayGenesis = x})
@@ -153,6 +152,21 @@ tcInitialDRepsL =
     tcConwayGenesisL . lens cgInitialDReps (\g x -> g {cgInitialDReps = x})
 
 instance NoThunks (TransitionConfig ConwayEra)
+
+-- | Inject the cost models from the @extraConfig@ of `Cardano.Ledger.Alonzo.Genesis.AlonzoGenesis`
+-- and register initial funds and staking.
+--
+-- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
+-- when 'NetworkId' is set to 'Mainnet'.
+conwayInjectIntoTestState ::
+  (ConwayEraTransition era, HasCallStack, MonadST m, MonadThrow m) =>
+  HasFS m h ->
+  TransitionConfig era ->
+  NewEpochState era ->
+  m (NewEpochState era)
+conwayInjectIntoTestState hasFS cfg =
+  conwayRegisterInitialFundsThenStaking hasFS cfg
+    . alonzoInjectCostModels cfg
 
 conwayRegisterInitialFundsThenStaking ::
   (ConwayEraTransition era, HasCallStack, MonadST m, MonadThrow m) =>

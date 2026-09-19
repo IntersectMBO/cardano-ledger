@@ -5,14 +5,29 @@
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 * Cap the reward pot of an over-leveraged stake pool in `mkPoolRewardInfo`, whenever the
   maximum pledge leverage is set in the protocol parameters
-* Add `FromJSON` instance for `ShelleyTxOut era`
+* Add `FromJSON` instance for
+  - `GenesisDelegCert`
+  - `MIRPot`
+  - `MIRTarget`
+  - `MIRCert`
+  - `ShelleyTxOut era`
+* Add `ToJSON` and `FromJSON` instances for
+  - `TxBody TopTx ShelleyEra`
+  - `Tx TopTx ShelleyEra`
+  - `Update era`
+* Re-export the `msSnapShotL`, `ssSnapShotL`, `gsSnapShotL` lenses from `Cardano.Ledger.Shelley.LedgerState`
 
 ### `testlib`
 
+* Rename `freshBootstapAddress` to `freshBootstrapAddress` and express it in terms of the new `freshBootstrapAddressWithPayloadSize`, which takes the HD payload size, or `Nothing` for a plain Byron address.
+* Add `freshBootstrapAddressOversizedPayload` and `largestBootstrapAddressAttrsSize`
+* Add `rederiveAddrTxWits`, which re-derives key witnesses for a modified transaction body
+* Add `freshTxOutWithCoin`, `freshMainnetKeyAddr_` and `freshFundedTxIn`
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Add `submitFailingSubsetTx{,M}`
 * Make `fixupTxOuts` parametric on level

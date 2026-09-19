@@ -233,9 +233,6 @@ poolReapTransition = do
       Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
       Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
     removeVRFKeyHashOccurrences vrfs vrfsMap = F.foldl' (flip removeVRFKeyHashOccurrence) vrfsMap vrfs
-    removeVRFKeyHashOccurrence =
-      -- Removes the key from the map if the value drops to 0
-      Map.update (mapNonZero (\n -> n - 1))
     delegsToClear cState pools =
       foldMap spsDelegators $
         Map.restrictKeys (cState ^. certPStateL . psStakePoolsL) pools

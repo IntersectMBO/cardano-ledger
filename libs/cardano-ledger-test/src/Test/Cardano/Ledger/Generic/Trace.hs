@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochInterval (..), Globals)
 import Cardano.Ledger.Coin (knownNonZeroCoin)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -187,11 +187,13 @@ makeEpochState gstate ledgerstate =
 snaps ::
   (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots era
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
-  SnapShots snap (calculatePoolDistr snap) snap snap f
+  SnapShots mark (calculatePoolDistr snap) set (mkGoSnapShot set) f
   where
     pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
     snap = stakeDistr u dstate pstate
+    mark = MarkSnapShot snap (EpochNo 0) 0
+    set = mkSetSnapShot mark (EpochInterval 0)
 
 -- ==============================================================================
 

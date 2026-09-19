@@ -10,15 +10,20 @@
 
 module Test.Cardano.Ledger.Conway.Imp.CertsSpec (conwayOnlySpec, spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
+import Cardano.Ledger.Address
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.Rules (
+  ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure (..),
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Plutus (SLanguage (SPlutusV3), hashPlutusScript)
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NEM
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -82,6 +87,22 @@ conwayOnlySpec = describe "CERTS" $ do
                     ]
                 }
           )
+
+    it "Withdrawing with the wrong network" $ do
+      stakeKey <- freshKeyHash
+      accountAddress <- registerStakeCredential (KeyHashObj stakeKey)
+      let wrongNetworkAccount = accountAddress & accountAddressNetworkIdL .~ Mainnet
+          withdrawals = Withdrawals [(wrongNetworkAccount, zero)]
+          tx =
+            mkBasicTx $
+              mkBasicTxBody
+                & withdrawalsTxBodyL .~ withdrawals
+          notInRewardsFailure = injectFailure . ConwayWithdrawalsMissingAccounts @era $ withdrawals
+      let wrongNetworkFailure =
+            injectFailure . WrongNetworkWithdrawal @era Testnet $ NES.singleton wrongNetworkAccount
+      void $ delegateToDRep (KeyHashObj stakeKey) (Coin 1_000_000) DRepAlwaysAbstain
+      -- when the network is wrong, missing account failure is emitted even if the stake credential is registered
+      submitFailingTx tx [wrongNetworkFailure, notInRewardsFailure]
 
 spec ::
   forall era.

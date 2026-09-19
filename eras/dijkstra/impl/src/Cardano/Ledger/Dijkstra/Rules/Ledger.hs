@@ -535,8 +535,8 @@ conwayToDijkstraLedgerPredFailure = \case
   Conway.ConwayTreasuryValueMismatch mm -> DijkstraTreasuryValueMismatch mm
   Conway.ConwayTxRefScriptsSizeTooBig mm -> DijkstraTxRefScriptsSizeTooBig mm
   Conway.ConwayMempoolFailure _ -> error "Impossible: MempoolFailure has been moved to MEMPOOL rule in Dijkstra"
-  Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraEntitiesFailure (MissingAccountsInWithdrawals ws)
-  Conway.ConwayIncompleteWithdrawals ws -> DijkstraEntitiesFailure (IncompleteWithdrawals ws)
+  Conway.ConwayWithdrawalsMissingAccounts ws -> DijkstraEntitiesFailure (WithdrawalAccountsMissing ws)
+  Conway.ConwayIncompleteWithdrawals ws -> DijkstraEntitiesFailure (WithdrawalAmountsInexactInLegacyMode ws)
 
 shelleyToDijkstraLedgerPredFailure ::
   forall era.
@@ -545,8 +545,8 @@ shelleyToDijkstraLedgerPredFailure ::
 shelleyToDijkstraLedgerPredFailure = \case
   Shelley.UtxowFailure x -> DijkstraUtxowFailure x
   Shelley.DelegsFailure _ -> error "Impossible: DELEGS has been removed in Dijkstra"
-  Shelley.ShelleyWithdrawalsMissingAccounts x -> DijkstraEntitiesFailure (MissingAccountsInWithdrawals x)
-  Shelley.ShelleyIncompleteWithdrawals x -> DijkstraEntitiesFailure (IncompleteWithdrawals x)
+  Shelley.ShelleyWithdrawalsMissingAccounts x -> DijkstraEntitiesFailure (WithdrawalAccountsMissing x)
+  Shelley.ShelleyIncompleteWithdrawals x -> DijkstraEntitiesFailure (WithdrawalAmountsInexactInLegacyMode x)
 
 instance
   ( STS (ENTITIES era)

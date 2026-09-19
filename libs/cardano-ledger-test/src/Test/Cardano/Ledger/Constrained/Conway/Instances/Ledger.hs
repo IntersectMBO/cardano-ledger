@@ -1419,6 +1419,10 @@ instance HasSimpleRep IndividualPoolStake
 
 instance HasSpec IndividualPoolStake
 
+instance HasSimpleRep VotingStakePoolDistr
+
+instance HasSpec VotingStakePoolDistr
+
 instance HasSimpleRep (Conway.ConwayGovCertEnv ConwayEra)
 
 instance HasSpec (Conway.ConwayGovCertEnv ConwayEra)
@@ -1467,6 +1471,18 @@ instance HasSpec LeiosCommittee where
 instance HasSimpleRep SnapShot
 
 instance HasSpec SnapShot
+
+instance HasSimpleRep MarkSnapShot
+
+instance HasSpec MarkSnapShot
+
+instance HasSimpleRep SetSnapShot
+
+instance HasSpec SetSnapShot
+
+instance HasSimpleRep GoSnapShot
+
+instance HasSpec GoSnapShot
 
 instance HasSimpleRep Stake
 
@@ -1561,7 +1577,7 @@ type DRepPulserTypes =
    , Accounts ConwayEra
    , Int
    , InstantStake ConwayEra
-   , PoolDistr
+   , VotingStakePoolDistr
    , Map DRep (CompactForm Coin)
    , Map (Credential DRepRole) DRepState
    , EpochNo
@@ -1585,7 +1601,7 @@ instance
       dpAccounts
       dpIndex
       dpInstantStake
-      dpStakePoolDistr
+      dpVotingStakePoolDistr
       dpDRepDistr
       dpDRepState
       dpCurrentEpoch

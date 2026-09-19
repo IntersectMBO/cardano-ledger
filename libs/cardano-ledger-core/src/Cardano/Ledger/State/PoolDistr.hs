@@ -19,10 +19,8 @@
 -- <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>.
 module Cardano.Ledger.State.PoolDistr (
   IndividualPoolStake (..),
-  PoolDistr (..),
-  poolDistrDistrL,
-  poolDistrTotalL,
   individualTotalPoolStakeL,
+  PoolDistr (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -34,17 +32,16 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decodeBreakOr,
+  decodeListLenOrIndef,
   encodeListLen,
-  getDecoderVersion,
-  ifEncodingVersionAtLeast,
-  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Binary.Decoding (decodeRecordNamed)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.State.StakePool (BlsKey (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (unless)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default
 import Data.Map.Strict (Map)
@@ -84,27 +81,42 @@ data IndividualPoolStake = IndividualPoolStake
 individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
 
--- BlsKey is only supported from version 12 (Dijkstra), so the record grows a
--- fourth field exactly at the era boundary that introduces it.
+-- BlsKey is only supported from version 12 (Dijkstra), but for backwards
+-- compatibility the fourth field is left optional.
 instance EncCBOR IndividualPoolStake where
   encCBOR (IndividualPoolStake stake stakeCoin vrf blsKey) =
-    mconcat
-      [ ifEncodingVersionAtLeast (natVersion @12) (encodeListLen 4) (encodeListLen 3)
+    mconcat $
+      [ encodeListLen $ case blsKey of
+          SJust _ -> 4
+          SNothing -> 3
       , encCBOR stake
       , encCBOR stakeCoin
       , encCBOR vrf
-      , ifEncodingVersionAtLeast (natVersion @12) (encCBOR blsKey) mempty
       ]
+        <> [ encCBOR blsKey
+           | SJust _ <- [blsKey]
+           ]
 
 instance DecCBOR IndividualPoolStake where
   decCBOR = do
-    blsKeySupported <- getDecoderVersion <&> (>= natVersion @12)
-    decodeRecordNamed "IndividualPoolStake" (const (if blsKeySupported then 4 else 3)) $
-      IndividualPoolStake
-        <$> decCBOR
-        <*> decCBOR
-        <*> decCBOR
-        <*> if blsKeySupported then decCBOR else pure SNothing
+    mLen <- decodeListLenOrIndef
+    IndividualPoolStake
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> case mLen of
+        Just 3 -> pure SNothing
+        Just 4 -> decCBOR
+        Just _ -> fail "Invalid length"
+        Nothing -> do
+          brk <- decodeBreakOr
+          if brk
+            then pure SNothing
+            else do
+              res <- decCBOR
+              brk2 <- decodeBreakOr
+              unless brk2 $ fail "Expected break"
+              pure res
 
 instance ToKeyValuePairs IndividualPoolStake where
   toKeyValuePairs indivPoolStake@(IndividualPoolStake _ _ _ _) =
@@ -121,21 +133,13 @@ instance ToKeyValuePairs IndividualPoolStake where
 data PoolDistr = PoolDistr
   { unPoolDistr :: !(Map (KeyHash StakePool) IndividualPoolStake)
   , pdTotalActiveStake :: !(NonZero Coin)
-  -- ^ Total stake delegated to registered stake pools. In addition to
-  -- the stake considered for the `individualPoolStake` Rational, we add
-  -- proposal-deposits to this field.
+  -- ^ Total stake delegated to registered stake pools
   }
   deriving stock (Show, Eq, Generic)
   deriving (NFData, NoThunks, ToJSON)
 
 instance Default PoolDistr where
   def = PoolDistr mempty (knownNonZeroCoin @1)
-
-poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash StakePool) IndividualPoolStake)
-poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
-
-poolDistrTotalL :: Lens' PoolDistr (NonZero Coin)
-poolDistrTotalL = lens pdTotalActiveStake $ \x y -> x {pdTotalActiveStake = y}
 
 instance EncCBOR PoolDistr where
   encCBOR (PoolDistr distr total) =

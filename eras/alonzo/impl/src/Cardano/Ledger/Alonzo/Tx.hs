@@ -106,7 +106,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
   unTxDatsL,
  )
-import Cardano.Ledger.BaseTypes (integralToBounded)
+import Cardano.Ledger.BaseTypes (ToKeyValuePairs (..), integralToBounded)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -134,7 +134,8 @@ import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
@@ -260,6 +261,49 @@ alonzoTxEqRaw tx1 tx2 =
 instance EqRaw (Tx l AlonzoEra) where
   eqRaw = alonzoTxEqRaw
 
+instance
+  ( ToJSON (TxBody TopTx era)
+  , ToJSON (TxWits era)
+  , ToJSON (TxAuxData era)
+  ) =>
+  ToKeyValuePairs (AlonzoTx TopTx era)
+  where
+  toKeyValuePairs AlonzoTx {atBody, atWits, atIsPhase2Valid, atAuxData} =
+    [ "body" .= atBody
+    , "wits" .= atWits
+    , "isPhase2Valid" .= atIsPhase2Valid
+    , "auxData" .= atAuxData
+    ]
+
+instance
+  ( ToJSON (TxBody TopTx era)
+  , ToJSON (TxWits era)
+  , ToJSON (TxAuxData era)
+  ) =>
+  ToJSON (AlonzoTx TopTx era)
+  where
+  toJSON = Aeson.object . toKeyValuePairs
+
+instance
+  ( FromJSON (TxBody TopTx era)
+  , FromJSON (TxWits era)
+  , FromJSON (TxAuxData era)
+  ) =>
+  FromJSON (AlonzoTx TopTx era)
+  where
+  parseJSON = withObject "AlonzoTx" $ \o ->
+    AlonzoTx
+      <$> o .: "body"
+      <*> o .: "wits"
+      <*> o .: "isPhase2Valid"
+      <*> o .: "auxData"
+
+instance ToJSON (Tx TopTx AlonzoEra) where
+  toJSON (MkAlonzoTx tx) = toJSON tx
+
+instance FromJSON (Tx TopTx AlonzoEra) where
+  parseJSON v = MkAlonzoTx <$> parseJSON v
+
 alonzoTxL :: Lens' (Tx l AlonzoEra) (AlonzoTx l AlonzoEra)
 alonzoTxL = lens unAlonzoTx $ const MkAlonzoTx
 
@@ -276,6 +320,11 @@ class
 
   isValidTxL :: Lens' (Tx TopTx era) IsPhase2Valid
   isValidTxL = isPhase2ValidTxL
+
+  -- | Total declared execution units, including sub-transactions when supported.
+  -- Earlier eras only have the transaction's own redeemers.
+  getTotalExUnits :: Tx l era -> ExUnits
+  getTotalExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
 
 {-# DEPRECATED isValidTxL "In favor of `isPhase2ValidTxL`" #-}
 
@@ -443,10 +492,7 @@ toCBORForSizeComputation AlonzoTx {atBody, atWits, atAuxData} =
     <> encodeNullStrictMaybe encCBOR atAuxData
 
 alonzoMinFeeTx ::
-  ( EraTx era
-  , AlonzoEraTxWits era
-  , AlonzoEraPParams era
-  ) =>
+  AlonzoEraTx era =>
   PParams era ->
   Tx l era ->
   Coin
@@ -455,13 +501,14 @@ alonzoMinFeeTx pp tx =
     <+> (pp ^. ppTxFeeFixedL)
     <+> txscriptfee (pp ^. ppPricesL) allExunits
   where
-    allExunits = totExUnits tx
+    allExunits = getTotalExUnits tx
 
 totExUnits ::
-  (EraTx era, AlonzoEraTxWits era) =>
+  AlonzoEraTx era =>
   Tx l era ->
   ExUnits
-totExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+totExUnits = getTotalExUnits
+{-# DEPRECATED totExUnits "In favor of `getTotalExUnits`" #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

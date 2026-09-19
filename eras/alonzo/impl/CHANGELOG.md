@@ -2,6 +2,15 @@
 
 ## 1.17.0.0
 
+* Add `getTotalExUnits` to `AlonzoEraTx`, with the existing own-redeemer total as its default.
+* Deprecate `totExUnits` in favor of `getTotalExUnits`; require `AlonzoEraTx` in `totExUnits`, `alonzoMinFeeTx` and `validateExUnitsTooBigUTxO`.
+* Add `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors to `AlonzoContextError`
+* Stop re-exporting `TxOutSource` from `Cardano.Ledger.Alonzo.Plutus.TxInfo` (it remains available from `Cardano.Ledger.Plutus.TxInfo`)
+* Change `transTxCert` to return `Either (ContextError era) PV1.DCert` instead of `PV1.DCert` and add an `Inject (AlonzoContextError era) (ContextError era)` constraint; unsupported certificates now produce `CertificateNotSupported` instead of a partial `error`
+* Change `transTxCertCommon` to return `Either (ContextError era) PV1.DCert` instead of `Maybe PV1.DCert`
+* Change `transPlutusPurpose` to accept `PlutusPurpose AsIxItem era` instead of `AlonzoPlutusPurpose AsIxItem era`; unsupported purposes now produce `PlutusPurposeNotSupported`
+* Add `AlonzoEraTransition` class with a `tcAlonzoGenesisL` lens
+* Change `alonzoInjectCostModels` to accept the `TransitionConfig` of the current era instead of `TransitionConfig AlonzoEra`
 * Switch `toPlutusScriptPurpose` to accept `LedgerTxInfo` instead of `ProtVer`
 * Add `ltiScriptsUsed` and `ltiScriptHashesUsed` to `LedgerTxInfo`
 * Add `toScriptHashByPurpose` helper
@@ -15,6 +24,9 @@
 
 ### `testlib`
 
+* Export `makeCollateralInput` and `txWithMaxRedeemers`
+* Use annotated transaction script collection in `impPlutusWithContexts` so phase-2 test expectations include subtransactions.
+* Add `Inject (AlonzoContextError era) (ContextError era)` superclass constraint to the `AlonzoEraTest` type class
 * Add `mkTestLedgerTxInfo` helper
 * Add `Serialise` instance for `PV4.POSIXTimeRange`
 * Add `Serialise` instances for `PlutusLedgerApi.V4` script context types
@@ -107,6 +119,8 @@
   - `TxDats era`
   - `Redeemers era`
   - `AlonzoTxWits era`
+  - `TxBody TopTx AlonzoEra`
+  - `Tx TopTx AlonzoEra`
 * Add `FromJSON` instance for
   - `AsIx ix it`
   - `AlonzoPlutusPurpose AsIx era`

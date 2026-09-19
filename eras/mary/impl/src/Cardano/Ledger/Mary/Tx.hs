@@ -15,7 +15,7 @@ module Cardano.Ledger.Mary.Tx (
 
 import Cardano.Ledger.Allegra.Tx (Tx (..), validateTimelock)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
-import Cardano.Ledger.Core (EraTx (..), HasEraTxLevel (..), STxTopLevel (..))
+import Cardano.Ledger.Core (EraTx (..), HasEraTxLevel (..), STxTopLevel (..), TxLevel (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.TxAuxData ()
@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.Tx (
   witsShelleyTxL,
  )
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
@@ -77,6 +78,12 @@ instance EraTx MaryEra where
 
 instance EqRaw (Tx t MaryEra) where
   eqRaw = shelleyTxEqRaw
+
+instance ToJSON (Tx TopTx MaryEra) where
+  toJSON (MkMaryTx tx) = toJSON tx
+
+instance FromJSON (Tx TopTx MaryEra) where
+  parseJSON v = MkMaryTx <$> parseJSON v
 
 maryTxL :: Lens' (Tx t MaryEra) (ShelleyTx t MaryEra)
 maryTxL = lens unMaryTx (\x y -> x {unMaryTx = y})

@@ -103,9 +103,9 @@ goldenNewEpochStateExpectation
             , Ev ver esLState
             , Em
                 [ E (TkListLen 4)
-                , snapShotEnc ssStakeMark
-                , snapShotEnc ssStakeSet
-                , snapShotEnc ssStakeGo
+                , markSnapShotEnc ssStakeMark
+                , setSnapShotEnc ssStakeSet
+                , goSnapShotEnc ssStakeGo
                 , E ssFee
                 ]
             , Ev ver esNonMyopic
@@ -128,6 +128,26 @@ goldenNewEpochStateExpectation
           [ E (TkListLen 2)
           , Ev ver ssActiveStake
           , Ev ver ssStakePoolsSnapShot
+          ]
+      markSnapShotEnc MarkSnapShot {..} =
+        Em
+          [ E (TkListLen 3)
+          , snapShotEnc msSnapShot
+          , Ev ver msEpochNo
+          , Ev ver msLeiosCommitteeSize
+          ]
+      -- ssPoolDistr is derived, so not serialized; the committee is stored.
+      setSnapShotEnc SetSnapShot {..} =
+        Em
+          [ E (TkListLen 2)
+          , snapShotEnc ssSnapShot
+          , Ev ver ssLeiosCommittee
+          ]
+      -- gsPoolDistr is derived, so not serialized.
+      goSnapShotEnc GoSnapShot {..} =
+        Em
+          [ E (TkListLen 1)
+          , snapShotEnc gsSnapShot
           ]
 
 shelleyDecodeDuplicateDelegCertSucceeds :: Version -> Spec

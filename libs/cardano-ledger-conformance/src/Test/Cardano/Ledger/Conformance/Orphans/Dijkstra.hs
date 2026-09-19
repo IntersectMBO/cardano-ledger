@@ -101,8 +101,6 @@ instance NFData GState
 
 instance NFData CertState
 
-instance NFData StakeDistrs
-
 instance NFData RatifyEnv
 
 instance NFData RatifyState
@@ -196,8 +194,6 @@ instance ToExpr PState
 instance ToExpr GState
 
 instance ToExpr CertState
-
-instance ToExpr StakeDistrs
 
 instance ToExpr RatifyEnv
 

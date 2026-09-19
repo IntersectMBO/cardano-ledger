@@ -48,6 +48,7 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
@@ -98,8 +99,7 @@ conwayTxL :: Lens' (Tx l ConwayEra) (AlonzoTx l ConwayEra)
 conwayTxL = lens unConwayTx (\x y -> x {unConwayTx = y})
 
 getConwayMinFeeTx ::
-  ( EraTx era
-  , AlonzoEraTxWits era
+  ( AlonzoEraTx era
   , ConwayEraPParams era
   ) =>
   PParams era ->
@@ -147,3 +147,9 @@ instance AlonzoEraTx ConwayEra where
 
 instance Typeable l => DecCBOR (Annotator (Tx l ConwayEra)) where
   decCBOR = fmap MkConwayTx <$> decCBOR
+
+instance ToJSON (Tx TopTx ConwayEra) where
+  toJSON (MkConwayTx tx) = toJSON tx
+
+instance FromJSON (Tx TopTx ConwayEra) where
+  parseJSON v = MkConwayTx <$> parseJSON v

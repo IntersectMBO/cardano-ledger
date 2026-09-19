@@ -53,10 +53,8 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
 import qualified Data.OSet.Strict as OSet
 import Data.Proxy (Proxy (..))
-import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
@@ -108,31 +106,7 @@ spec = describe "TxInfo" $ do
         ledgerTxInfo = mkLocalLedgerTxInfo utxo tx
       pure $
         toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
-          `shouldBeLeft` inject (PointerPresentInOutput @era (NES.singleton . TxOutFromOutput $ TxIx 0))
-    prop "Collects all Ptr sources when multiple outputs have pointers" $ do
-      pc0 <- arbitrary
-      pc1 <- arbitrary
-      pc2 <- arbitrary
-      ptr0 <- arbitrary
-      ptr2 <- arbitrary
-      stakeCred <- arbitrary
-      val0 <- arbitrary
-      val1 <- arbitrary
-      val2 <- arbitrary
-      let
-        txOuts =
-          [ mkBasicTxOut (Addr Testnet pc0 (StakeRefPtr ptr0)) val0
-          , mkBasicTxOut (Addr Testnet pc1 (StakeRefBase stakeCred)) val1
-          , mkBasicTxOut (Addr Testnet pc2 (StakeRefPtr ptr2)) val2
-          ]
-        tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
-        ledgerTxInfo = mkLocalLedgerTxInfo mempty tx
-      pure $
-        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
-          `shouldBeLeft` inject
-            ( PointerPresentInOutput @era . fromJust $
-                NES.fromSet [TxOutFromOutput $ TxIx 0, TxOutFromOutput $ TxIx 2]
-            )
+          `shouldBeLeft` inject (PointerPresentInOutput @era (TxOutFromOutput $ TxIx 0))
     prop "Fails translation when Byron addresses present in outputs" $ do
       ba0 <- arbitrary
       ba2 <- arbitrary
@@ -170,10 +144,7 @@ spec = describe "TxInfo" $ do
         ledgerTxInfo = mkLocalLedgerTxInfo mempty tx
       pure $
         toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
-          `shouldBeLeft` inject
-            ( PointerPresentInOutput @era . fromJust $
-                NES.fromSet [TxOutFromOutput $ TxIx 0, TxOutFromOutput $ TxIx 2]
-            )
+          `shouldBeLeft` inject (PointerPresentInOutput @era (TxOutFromOutput $ TxIx 0))
     prop "Translates outputs in the order they appear in the TxBody" $ do
       pc0 <- arbitrary
       pc1 <- arbitrary

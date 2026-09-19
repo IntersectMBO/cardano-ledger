@@ -2,6 +2,12 @@
 
 ## 1.22.0.0
 
+* Add `addVRFKeyHashOccurrence`, `removeVRFKeyHashOccurrence` and `populateVRFKeyHashes` to `Cardano.Ledger.State.CertState`
+* Remove `poolDistrDistrL`, `poolDistrTotalL`
+* Remove `EraDecoder` and add `EraCodec` to be used in its place
+* Remove `ppEraDecoder` from `PParam` and add `ppuEraCodec` to `PParamUpdate`
+* Change `directDepositsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
+* Change `withdrawalsMissingAccounts` in `Account` to take a `Network` argument and match Conway-style network-aware semantics
 * Bump `plutus-ledger-api` lower bound to `>=1.68`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
@@ -18,6 +24,7 @@
 * Add `Ord` instance for `TxOutSource`
 * Change `PlutusArgs 'PlutusV4` to contain `PV4.ScriptContext` instead of `PV3.ScriptContext`
 * Add `NFData` instance for `PV4.ScriptContext`
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Remove `numSegComponents` from `EraBlockBody`
 * Remove generic `EncCBOR`, `ToCBOR`, and `DecCBOR` instances for `Block` in favor of per-era instances
 * Change `decodeMetadatum` to require definite-length chunks in indefinite-length bytestrings
@@ -45,10 +52,16 @@
 * Add `FromJSON (TxOut era)` as `EraTxOut` superclass constraint
 * Add `FromJSON t` as `Val t` superclass constraint
 * Add `ToJSON` and `FromJSON` instances for `Datum era`
-* Add `Cardano.Ledger.State.LeiosCommittee` module: re-exports cardano-base's `LeiosCommittee` and `LeiosSeat`, and adds `emptyLeiosCommittee`, `LeiosCandidate`, and `selectLeiosCommittee` for choosing the per-epoch Leios voting committee (CIP-0164)
-* Add `ssLeiosCommittee` field and `ssLeiosCommitteeL` to `SnapShot`. It is encoded and decoded only from protocol version 12 (Dijkstra) onwards, leaving `SnapShot` serialisation unchanged in earlier eras
-* Add `leiosCandidates` to `SnapShots`, projecting a stake pool snapshot to the `LeiosCandidate`s that `selectLeiosCommittee` ranks
-* Add a Leios committee-size argument to `mkSnapShot`, `resetStakePoolsSnapShot`, and `snapShotFromInstantStake`; they now seat `ssLeiosCommittee` from the pool snapshot (CIP-0164). Pre-Dijkstra callers pass `0`, leaving the committee empty
+* Add `ToJSON (TxBody TopTx era)` and `FromJSON (TxBody TopTx era)` as `EraTxBody` superclass constraints
+* Add `ToJSON (Tx TopTx era)` and `FromJSON (Tx TopTx era)` as `EraTx` superclass constraints
+* Add `ToJSON` and `FromJSON` instances for `Withdrawals`
+* Add `FromJSON` instance for `ScriptHash` and `TxAuxDataHash`
+* Differentiate stake snapshots by phase:
+  - Add `MarkSnapShot`, `SetSnapShot` and `GoSnapShot`, with `SnapShots` now holding one of each.
+  - Seat Leios voting committee (CIP-0164) on the `SetSnapShot` when the mark rotates into the set position.
+  - Add `mkSetSnapShot`, `mkGoSnapShot`, `leiosCandidates`, and the `msSnapShotL`, `ssSnapShotL`, `ssLeiosCommitteeL`, `gsSnapShotL` lenses
+  - The on-disk ledger state format changes and requires replay
+* Add `selectLeiosCommittee`, `LeiosCandidate` and `emptyLeiosCommittee` for Leios committee selection (CIP-0164). The `LeiosSeat`/`LeiosCommittee` CBOR instances live in `cardano-ledger-binary`; only their JSON instances are here
 
 ### `testlib`
 
@@ -181,6 +194,7 @@
 * Add round-trip JSON property test for `TxAuxData era` to the shared era spec
 * Add round-trip JSON property test for `TxWits era` to the shared era spec
 * Add round-trip JSON property test for `TxOut era` to the shared era spec
+* Add round-trip JSON property test for `TxBody TopTx era` to the shared era spec
 
 ## 1.20.0.0
 

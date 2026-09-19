@@ -335,7 +335,10 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Era era => Arbitrary (AlonzoContextError era) where
+instance
+  (Era era, Arbitrary (TxCert era), Arbitrary (PlutusPurpose AsItem era)) =>
+  Arbitrary (AlonzoContextError era)
+  where
   arbitrary = genericArbitraryU
 
 instance

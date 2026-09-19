@@ -85,7 +85,9 @@ instance Arbitrary TxOutSource where
 
 instance
   ( Era era
+  , Arbitrary (TxCert era)
   , Arbitrary (PlutusPurpose AsIx era)
+  , Arbitrary (PlutusPurpose AsItem era)
   ) =>
   Arbitrary (BabbageContextError era)
   where

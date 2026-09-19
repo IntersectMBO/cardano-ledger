@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfo,
   toPlutusTxInfoForPurpose,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..))
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.Babbage.Core
@@ -37,6 +37,7 @@ import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.TxInfo (TxOutSource (..))
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)

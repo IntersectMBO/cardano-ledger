@@ -709,17 +709,16 @@ queryStakeSnapshots ::
   Maybe (Set (KeyHash StakePool)) ->
   StakeSnapshots
 queryStakeSnapshots nes mPoolIds =
-  let SnapShots
-        { ssStakeMark
-        , ssStakeSet
-        , ssStakeGo
-        } = esSnapshots $ nesEs nes
+  let snaps = esSnapshots $ nesEs nes
+      markSnap = snaps ^. ssStakeMarkL . msSnapShotL
+      setSnap = snaps ^. ssStakeSetL . ssSnapShotL
+      goSnap = snaps ^. ssStakeGoL . gsSnapShotL
 
       mkStakeSnapshotMaybe poolId = do
         let
-          markPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeMark)
-          setPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeSet)
-          goPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot ssStakeGo)
+          markPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot markSnap)
+          setPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot setSnap)
+          goPoolStake = spssStake <$> VMap.lookup poolId (ssStakePoolsSnapShot goSnap)
         -- Non-registered stake pools or ones that have no stake are of no interest to us.
         guard (fold [markPoolStake, setPoolStake, goPoolStake] > Just mempty)
         Just
@@ -734,9 +733,9 @@ queryStakeSnapshots nes mPoolIds =
             maybe mempty (fromCompact . spssStake) . VMap.lookup poolId . ssStakePoolsSnapShot
          in
           StakeSnapshot
-            { ssMarkPool = lookupStake ssStakeMark
-            , ssSetPool = lookupStake ssStakeSet
-            , ssGoPool = lookupStake ssStakeGo
+            { ssMarkPool = lookupStake markSnap
+            , ssSetPool = lookupStake setSnap
+            , ssGoPool = lookupStake goSnap
             }
       version = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
       poolIds =
@@ -745,24 +744,24 @@ queryStakeSnapshots nes mPoolIds =
             | version < natVersion @11 ->
                 foldMap
                   (VMap.keysSet . VMap.filter (\_ -> (> 0) . spssNumDelegators) . ssStakePoolsSnapShot)
-                  [ssStakeMark, ssStakeSet, ssStakeGo]
+                  [markSnap, setSnap, goSnap]
             | otherwise ->
                 foldMap
                   (VMap.keysSet . VMap.filter (\_ -> (> mempty) . spssStake) . ssStakePoolsSnapShot)
-                  [ssStakeMark, ssStakeSet, ssStakeGo]
+                  [markSnap, setSnap, goSnap]
           Just ids -> ids
    in StakeSnapshots
         { ssStakeSnapshots =
             if version < natVersion @11
               then Map.fromSet mkStakeSnapshot poolIds
               else Map.mapMaybe id $ Map.fromSet mkStakeSnapshotMaybe poolIds
-        , ssMarkTotal = ssTotalActiveStake ssStakeMark
-        , ssSetTotal = ssTotalActiveStake ssStakeSet
-        , ssGoTotal = ssTotalActiveStake ssStakeGo
+        , ssMarkTotal = ssTotalActiveStake markSnap
+        , ssSetTotal = ssTotalActiveStake setSnap
+        , ssGoTotal = ssTotalActiveStake goSnap
         , -- Deliberately not filtered by 'poolIds': a committee is only
           -- meaningful whole, since a seat's weight is a share of it, and its
           -- position is the index votes reference.
-          ssLeiosCommittee = leiosCommitteeOf ssStakeSet
+          ssLeiosCommittee = leiosCommitteeOf (snaps ^. ssStakeSetL)
         }
 
 -- | Attribute the seats of a snapshot's Leios committee back to the pools
@@ -776,15 +775,15 @@ queryStakeSnapshots nes mPoolIds =
 -- storing the association keeps this from being a second, drifting copy of the
 -- selection rule; zipping keeps the answer honest even if it ever did drift,
 -- since the seat still supplies the vote-affecting fields.
-leiosCommitteeOf :: SnapShot -> Vector QueryLeiosSeat
-leiosCommitteeOf snap =
+leiosCommitteeOf :: SetSnapShot -> Vector QueryLeiosSeat
+leiosCommitteeOf setSnap =
   Vector.zipWith toSeat (Vector.convert seats) candidates
   where
-    seats = leiosCommitteeSeats (snap ^. ssLeiosCommitteeL)
+    seats = leiosCommitteeSeats (setSnap ^. ssLeiosCommitteeL)
     candidates =
       seatedLeiosCandidates
         (fromIntegral (VS.length seats))
-        (leiosCandidates (ssStakePoolsSnapShot snap))
+        (leiosCandidates (ssStakePoolsSnapShot (setSnap ^. ssSnapShotL)))
     toSeat seat candidate =
       QueryLeiosSeat
         { qlsPoolId = lcPoolId candidate

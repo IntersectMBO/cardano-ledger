@@ -32,6 +32,8 @@ import Test.Cardano.Ledger.Dijkstra.Imp.CertSpec qualified as CERT
 import Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec qualified as ENTITIES
 import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
 import Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec qualified as POOL
+import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec qualified as SUBUTXO
+import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec qualified as SUBUTXOW
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec qualified as UTXO
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec qualified as UTXOW
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -50,16 +52,14 @@ spec = do
     withImpInit @(LedgerSpec DijkstraEra) $
       modifyImpInitProtVer @DijkstraEra (natVersion @12) $
         modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
-          disableImpInitPostEpochBoundaryHook $ do
+          modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
             ConwayBBODY.spec
 
             CERT.spec
 
             xdescribe "disabled" ConwayCERTS.spec
 
-            xdescribe
-              "disabled until the formal spec models starting account balance intervals"
-              ENTITIES.spec
+            ENTITIES.spec
 
             ShelleyDELEG.spec
             ConwayDELEG.spec
@@ -90,12 +90,14 @@ spec = do
             BabbageUTXO.spec
             ConwayUTXO.spec
             UTXO.spec
+            SUBUTXO.spec
 
             ShelleyUTXOW.spec
             AlonzoUTXOW.spec
             BabbageUTXOW.spec
             ConwayUTXOW.spec
             UTXOW.spec
+            SUBUTXOW.spec
 
             AlonzoUTXOS.spec
             BabbageUTXOS.spec

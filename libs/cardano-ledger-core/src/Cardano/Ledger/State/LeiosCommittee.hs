@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | The Leios voting committee: the pools entitled to vote on endorser blocks
 -- for one epoch (CIP-0164). The committee type itself is cardano-base's
@@ -10,29 +10,25 @@
 module Cardano.Ledger.State.LeiosCommittee (
   LeiosCommittee (..),
   LeiosSeat (..),
-  Weight,
   emptyLeiosCommittee,
   LeiosCandidate (..),
   selectLeiosCommittee,
   seatedLeiosCandidates,
+  leiosCommitteeToJSON,
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
-import Cardano.Ledger.BaseTypes (EpochInterval, StrictMaybe (..), addEpochInterval)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  decodeFixedSized,
-  decodeStrictMaybe,
-  encodeFixedSized,
-  encodeStrictMaybe,
+import Cardano.Ledger.BaseTypes (
+  EpochInterval,
+  StrictMaybe (..),
+  addEpochInterval,
+  strictMaybeToMaybe,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.State.StakePool (BlsKey (..), BlsKeyState (..))
-import Data.Aeson (ToJSON (..), object, (.=))
+import Data.Aeson (ToJSON (..), Value, object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Ord (Down (..))
 import Data.Vector (Vector)
@@ -76,24 +72,20 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
     & V.convert
     & mkLeiosCommittee
   where
-    toSeat c = (toTuple <$> honoured c, lcWeight c)
+    toSeat c = (honouredKey c, lcWeight c)
 
     -- The key is offered to the committee only while it is still honoured; an
     -- aged-out key leaves the pool seated but keyless.
-    honoured c = do
+    honouredKey c = do
       bks <- lcKey c
       if epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge
-        then SJust (bksKey bks)
+        then let BlsKey vk pop = bksKey bks in SJust (vk, pop)
         else SNothing
 
-    toTuple (BlsKey vk pop) = (vk, pop)
-
--- | The candidates that get a seat, in seat order.
---
--- Shared with the pool-state queries so that a seat can be attributed back to
--- its pool without a second implementation of the ranking: a query that sorted
--- for itself would silently disagree with the committee the moment this rule
--- changed.
+-- | The candidates that get a seat, in seat order: the @committeeSize@ pools
+-- with the most stake, largest first, ties broken by ascending pool id.
+-- Factored out of 'selectLeiosCommittee' so a query can re-derive which pool
+-- holds a stored seat without a second, drifting copy of the ranking rule.
 seatedLeiosCandidates :: Word16 -> Vector LeiosCandidate -> Vector LeiosCandidate
 seatedLeiosCandidates committeeSize candidates =
   candidates
@@ -104,45 +96,18 @@ seatedLeiosCandidates committeeSize candidates =
     -- and leave the rest untouched instead of ordering the whole vector.
     sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
 
-    size = min (fromIntegral committeeSize) (V.length candidates)
+    size = min (fromIntegral @Word16 @Int committeeSize) (V.length candidates)
 
     higherStake a b =
       compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
--- Orphans: the committee is part of the ledger state, but its type belongs to
--- cardano-base, which has no reason to know how we serialize it.
-
-instance EncCBOR LeiosSeat where
-  encCBOR (LeiosSeat weight vkey) =
-    encode $
-      Rec LeiosSeat
-        !> To weight
-        !> E (encodeStrictMaybe encodeFixedSized) vkey
-
-instance DecCBOR LeiosSeat where
-  decCBOR =
-    decode $
-      RecD LeiosSeat
-        <! From
-        <! D (decodeStrictMaybe decodeFixedSized)
-
--- | Decoding goes straight to the constructor rather than through
--- 'mkLeiosCommittee': that takes proofs of possession, which a seated committee
--- no longer carries — they were verified when it was selected.
-instance EncCBOR LeiosCommittee where
-  encCBOR = encCBOR . VS.toList . leiosCommitteeSeats
-
-instance DecCBOR LeiosCommittee where
-  decCBOR = UnsafeLeiosCommittee . VS.fromList <$> decCBOR
-
-instance ToJSON LeiosSeat where
-  toJSON (LeiosSeat weight vkey) =
-    object
-      [ "seatWeight" .= weight
-      , "seatVKey" .= case vkey of
-          SNothing -> Nothing
-          SJust vk -> Just (show vk)
-      ]
-
-instance ToJSON LeiosCommittee where
-  toJSON = toJSON . VS.toList . leiosCommitteeSeats
+-- | Render a 'LeiosCommittee' as JSON for ledger purposes.
+leiosCommitteeToJSON :: LeiosCommittee -> Value
+leiosCommitteeToJSON =
+  toJSON . map leiosSeatToJSON . VS.toList . leiosCommitteeSeats
+  where
+    leiosSeatToJSON (LeiosSeat weight vkey) =
+      object
+        [ "seatWeight" .= weight
+        , "seatVKey" .= show (strictMaybeToMaybe vkey)
+        ]

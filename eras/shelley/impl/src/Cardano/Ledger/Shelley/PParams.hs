@@ -4,14 +4,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -57,10 +54,12 @@ module Cardano.Ledger.Shelley.PParams (
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  KeyValuePairs (..),
   NonNegativeInterval,
   Nonce (NeutralNonce),
   ProtVer (..),
   StrictMaybe (..),
+  ToKeyValuePairs (toKeyValuePairs),
   UnitInterval,
   decodeProtVer,
   succVersion,
@@ -81,8 +80,12 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
+  FromJSON (parseJSON),
   ToJSON (..),
+  (.:),
+  (.=),
  )
+import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -247,6 +250,7 @@ emptyShelleyPParamsUpdate =
 data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
   deriving (Generic)
+  deriving (ToJSON) via KeyValuePairs (Update era)
 
 deriving instance Eq (PParamsUpdate era) => Eq (Update era)
 
@@ -257,14 +261,32 @@ deriving instance Show (PParamsUpdate era) => Show (Update era)
 instance NoThunks (PParamsUpdate era) => NoThunks (Update era)
 
 instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (Update era) where
-  encCBOR (Update ppUpdate e) =
-    encodeListLen 2 <> encCBOR ppUpdate <> encCBOR e
+  encCBOR (Update proposedPPUpdates epochNo) =
+    encodeListLen 2 <> encCBOR proposedPPUpdates <> encCBOR epochNo
 
 instance
   (Era era, DecCBOR (PParamsUpdate era)) =>
   DecCBOR (Update era)
   where
   decCBOR = decode $ RecD Update <! From <! From
+
+instance EraPParams era => ToKeyValuePairs (Update era) where
+  toKeyValuePairs (Update ppUpdates epochNo) =
+    [ "proposedPPUpdates" .= ppUpdates
+    , "epoch" .= epochNo
+    ]
+
+instance
+  ( EraPParams era
+  , FromJSON (PParamsUpdate era)
+  ) =>
+  FromJSON (Update era)
+  where
+  parseJSON =
+    Aeson.withObject "Update" $ \o ->
+      Update
+        <$> o .: "proposedPPUpdates"
+        <*> o .: "epoch"
 
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
@@ -292,6 +314,15 @@ deriving instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ProposedPPU
 instance EraPParams era => ToJSON (ProposedPPUpdates era) where
   toJSON (ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
   toEncoding (ProposedPPUpdates ppUpdates) = toEncoding $ Map.toList ppUpdates
+
+instance
+  ( EraPParams era
+  , FromJSON (PParamsUpdate era)
+  ) =>
+  FromJSON (ProposedPPUpdates era)
+  where
+  parseJSON v =
+    ProposedPPUpdates . Map.fromList <$> parseJSON v
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
@@ -342,8 +373,7 @@ ppTxFeePerByte =
   PParam
     { ppName = "txFeePerByte"
     , ppLens = ppTxFeePerByteL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 0 ppuTxFeePerByteL
+    , ppUpdate = Just $ PParamUpdate 0 ppuTxFeePerByteL Nothing
     }
 
 ppMinFeeA :: EraPParams era => PParam era
@@ -355,8 +385,7 @@ ppTxFeeFixed =
   PParam
     { ppName = "txFeeFixed"
     , ppLens = ppTxFeeFixedCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 1 ppuTxFeeFixedCompactL
+    , ppUpdate = Just $ PParamUpdate 1 ppuTxFeeFixedCompactL Nothing
     }
 
 ppMinFeeB :: EraPParams era => PParam era
@@ -368,8 +397,7 @@ ppMaxBBSize =
   PParam
     { ppName = "maxBlockBodySize"
     , ppLens = ppMaxBBSizeL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 2 ppuMaxBBSizeL
+    , ppUpdate = Just $ PParamUpdate 2 ppuMaxBBSizeL Nothing
     }
 
 ppMaxTxSize :: EraPParams era => PParam era
@@ -377,8 +405,7 @@ ppMaxTxSize =
   PParam
     { ppName = "maxTxSize"
     , ppLens = ppMaxTxSizeL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 3 ppuMaxTxSizeL
+    , ppUpdate = Just $ PParamUpdate 3 ppuMaxTxSizeL Nothing
     }
 
 ppMaxBHSize :: EraPParams era => PParam era
@@ -386,8 +413,7 @@ ppMaxBHSize =
   PParam
     { ppName = "maxBlockHeaderSize"
     , ppLens = ppMaxBHSizeL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 4 ppuMaxBHSizeL
+    , ppUpdate = Just $ PParamUpdate 4 ppuMaxBHSizeL Nothing
     }
 
 ppKeyDeposit :: EraPParams era => PParam era
@@ -395,8 +421,7 @@ ppKeyDeposit =
   PParam
     { ppName = "stakeAddressDeposit"
     , ppLens = ppKeyDepositCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 5 ppuKeyDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 5 ppuKeyDepositCompactL Nothing
     }
 
 ppPoolDeposit :: EraPParams era => PParam era
@@ -404,8 +429,7 @@ ppPoolDeposit =
   PParam
     { ppName = "stakePoolDeposit"
     , ppLens = ppPoolDepositCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 6 ppuPoolDepositCompactL
+    , ppUpdate = Just $ PParamUpdate 6 ppuPoolDepositCompactL Nothing
     }
 
 ppEMax :: EraPParams era => PParam era
@@ -413,8 +437,7 @@ ppEMax =
   PParam
     { ppName = "poolRetireMaxEpoch"
     , ppLens = ppEMaxL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 7 ppuEMaxL
+    , ppUpdate = Just $ PParamUpdate 7 ppuEMaxL Nothing
     }
 
 ppNOpt :: EraPParams era => PParam era
@@ -422,8 +445,7 @@ ppNOpt =
   PParam
     { ppName = "stakePoolTargetNum"
     , ppLens = ppNOptL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 8 ppuNOptL
+    , ppUpdate = Just $ PParamUpdate 8 ppuNOptL Nothing
     }
 
 ppA0 :: EraPParams era => PParam era
@@ -431,8 +453,7 @@ ppA0 =
   PParam
     { ppName = "poolPledgeInfluence"
     , ppLens = ppA0L
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 9 ppuA0L
+    , ppUpdate = Just $ PParamUpdate 9 ppuA0L Nothing
     }
 
 ppRho :: EraPParams era => PParam era
@@ -440,8 +461,7 @@ ppRho =
   PParam
     { ppName = "monetaryExpansion"
     , ppLens = ppRhoL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 10 ppuRhoL
+    , ppUpdate = Just $ PParamUpdate 10 ppuRhoL Nothing
     }
 
 ppTau :: EraPParams era => PParam era
@@ -449,8 +469,7 @@ ppTau =
   PParam
     { ppName = "treasuryCut"
     , ppLens = ppTauL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 11 ppuTauL
+    , ppUpdate = Just $ PParamUpdate 11 ppuTauL Nothing
     }
 
 ppD :: (EraPParams era, AtMostEra "Alonzo" era) => PParam era
@@ -458,8 +477,7 @@ ppD =
   PParam
     { ppName = "decentralization"
     , ppLens = ppDL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 12 ppuDL
+    , ppUpdate = Just $ PParamUpdate 12 ppuDL Nothing
     }
 
 ppExtraEntropy :: (EraPParams era, AtMostEra "Alonzo" era) => PParam era
@@ -467,8 +485,7 @@ ppExtraEntropy =
   PParam
     { ppName = "extraPraosEntropy"
     , ppLens = ppExtraEntropyL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 13 ppuExtraEntropyL
+    , ppUpdate = Just $ PParamUpdate 13 ppuExtraEntropyL Nothing
     }
 
 ppProtocolVersion :: forall era. (EraPParams era, AtMostEra "Babbage" era) => PParam era
@@ -476,8 +493,18 @@ ppProtocolVersion =
   PParam
     { ppName = "protocolVersion"
     , ppLens = ppProtocolVersionL
-    , ppEraDecoder = Just (EraDecoder (decodeProtVer @era))
-    , ppUpdate = Just $ PParamUpdate 14 ppuProtocolVersionL
+    , ppUpdate =
+        Just $
+          PParamUpdate
+            { ppuTag = 14
+            , ppuLens = ppuProtocolVersionL
+            , ppuEraCodec =
+                Just $
+                  EraCodec
+                    { eraCodecEncoder = encCBOR
+                    , eraCodecDecoder = decodeProtVer @era
+                    }
+            }
     }
 
 ppMinUTxOValue :: (EraPParams era, AtMostEra "Mary" era) => PParam era
@@ -485,8 +512,7 @@ ppMinUTxOValue =
   PParam
     { ppName = "minUTxOValue"
     , ppLens = ppMinUTxOValueCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 15 ppuMinUTxOValueCompactL
+    , ppUpdate = Just $ PParamUpdate 15 ppuMinUTxOValueCompactL Nothing
     }
 
 ppMinPoolCost :: EraPParams era => PParam era
@@ -494,8 +520,7 @@ ppMinPoolCost =
   PParam
     { ppName = "minPoolCost"
     , ppLens = ppMinPoolCostCompactL
-    , ppEraDecoder = Nothing
-    , ppUpdate = Just $ PParamUpdate 16 ppuMinPoolCostCompactL
+    , ppUpdate = Just $ PParamUpdate 16 ppuMinPoolCostCompactL Nothing
     }
 
 shelleyPParams ::

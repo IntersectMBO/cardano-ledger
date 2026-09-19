@@ -10,7 +10,7 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), unNonZero, unsafeNonZero)
+import Cardano.Ledger.BaseTypes (EpochNo (..), unNonZero, unsafeNonZero)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
@@ -35,10 +35,12 @@ import Data.Default (def)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
+import Data.Word (Word16)
 import Database.Persist.Sqlite
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.Era (EraTest, accountsFromAccountsMap, mkTestAccountState)
@@ -134,14 +136,16 @@ insertLedgerState epochStateKey Shelley.LedgerState {..} = do
       , ledgerStateEpochStateId = epochStateKey
       }
 
+-- | Insert a snapshot row together with the stake, delegation and pool rows
+-- shared by every phase. The phase-specific inserters build the row (with its
+-- Leios committee inputs) and delegate here for the common contents.
 insertSnapShot ::
   MonadIO m =>
-  Key EpochState ->
-  SnapShotType ->
+  SnapShot ->
   State.SnapShot ->
   ReaderT SqlBackend m ()
-insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
-  snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
+insertSnapShot snapShotRow State.SnapShot {..} = do
+  snapShotId <- insert snapShotRow
   VG.forM_ (VMap.unVMap $ State.unActiveStake ssActiveStake) $ \(cred, swd) -> do
     stakeId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (SnapShotStake snapShotId stakeId (unNonZero $ State.swdStake swd))
@@ -151,18 +155,52 @@ insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness keyHash))
     insert_ (SnapShotStakePool snapShotId keyHashId spss)
 
+insertMarkSnapShot :: MonadIO m => Key EpochState -> State.MarkSnapShot -> ReaderT SqlBackend m ()
+insertMarkSnapShot epochStateId State.MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize} =
+  insertSnapShot
+    SnapShot
+      { snapShotType = SnapShotMark
+      , snapShotEpochStateId = epochStateId
+      , snapShotEpochNo = Just msEpochNo
+      , snapShotLeiosCommitteeSize = Just msLeiosCommitteeSize
+      , snapShotLeiosCommittee = Nothing
+      }
+    msSnapShot
+
+insertSetSnapShot :: MonadIO m => Key EpochState -> State.SetSnapShot -> ReaderT SqlBackend m ()
+insertSetSnapShot epochStateId State.SetSnapShot {ssSnapShot, ssLeiosCommittee} =
+  insertSnapShot
+    SnapShot
+      { snapShotType = SnapShotSet
+      , snapShotEpochStateId = epochStateId
+      , snapShotEpochNo = Nothing
+      , snapShotLeiosCommitteeSize = Nothing
+      , snapShotLeiosCommittee = Just ssLeiosCommittee
+      }
+    ssSnapShot
+
+-- | The go snapshot carries no Leios committee inputs of its own.
+insertGoSnapShot :: MonadIO m => Key EpochState -> State.GoSnapShot -> ReaderT SqlBackend m ()
+insertGoSnapShot epochStateId State.GoSnapShot {gsSnapShot} =
+  insertSnapShot
+    SnapShot
+      { snapShotType = SnapShotGo
+      , snapShotEpochStateId = epochStateId
+      , snapShotEpochNo = Nothing
+      , snapShotLeiosCommitteeSize = Nothing
+      , snapShotLeiosCommittee = Nothing
+      }
+    gsSnapShot
+
 insertSnapShots ::
   MonadIO m =>
   Key EpochState ->
   State.SnapShots era ->
   ReaderT SqlBackend m ()
 insertSnapShots epochStateKey State.SnapShots {..} = do
-  mapM_
-    (uncurry (insertSnapShot epochStateKey))
-    [ (SnapShotMark, ssStakeMark)
-    , (SnapShotSet, ssStakeSet)
-    , (SnapShotGo, ssStakeGo)
-    ]
+  insertMarkSnapShot epochStateKey ssStakeMark
+  insertSetSnapShot epochStateKey ssStakeSet
+  insertGoSnapShot epochStateKey ssStakeGo
 
 insertEpochState ::
   MonadIO m => Shelley.EpochState CurrentEra -> ReaderT SqlBackend m ()
@@ -324,15 +362,20 @@ getSnapShotNoSharing ::
   MonadResource m =>
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m State.SnapShot
+  ReaderT SqlBackend m (State.SnapShot, Maybe EpochNo, Maybe Word16, Maybe State.LeiosCommittee)
 getSnapShotNoSharing epochStateId snapShotType = do
-  snapShotId <-
+  (snapShotId, leiosEpochNo, leiosCommitteeSize, leiosCommittee) <-
     selectFirst
       [SnapShotType ==. snapShotType, SnapShotEpochStateId ==. epochStateId]
       []
       <&> \case
         Nothing -> error $ "Missing a snapshot: " ++ show snapShotType
-        Just (Entity snapShotId _) -> snapShotId
+        Just
+          ( Entity
+              snapShotId
+              SnapShot {snapShotEpochNo, snapShotLeiosCommitteeSize, snapShotLeiosCommittee}
+            ) ->
+            (snapShotId, snapShotEpochNo, snapShotLeiosCommitteeSize, snapShotLeiosCommittee)
   stake <-
     selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
@@ -353,7 +396,8 @@ getSnapShotNoSharing epochStateId snapShotType = do
               (\c -> State.StakeWithDelegation (unsafeNonZero c))
               stake
               delegations
-  pure $ State.mkSnapShot (EpochNo 0) (EpochInterval 0) 0 activeStake stakePoolSnapShot
+  pure
+    (State.mkSnapShot activeStake stakePoolSnapShot, leiosEpochNo, leiosCommitteeSize, leiosCommittee)
 {-# INLINEABLE getSnapShotNoSharing #-}
 
 getSnapShotsNoSharing ::
@@ -361,15 +405,19 @@ getSnapShotsNoSharing ::
   Entity EpochState ->
   ReaderT SqlBackend m (State.SnapShots era)
 getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
-  mark <- getSnapShotNoSharing epochStateId SnapShotMark
-  set <- getSnapShotNoSharing epochStateId SnapShotSet
-  go <- getSnapShotNoSharing epochStateId SnapShotGo
+  (mark, markEpoch, markSize, _) <- getSnapShotNoSharing epochStateId SnapShotMark
+  (set, _, _, setCommittee) <- getSnapShotNoSharing epochStateId SnapShotSet
+  (go, _, _, _) <- getSnapShotNoSharing epochStateId SnapShotGo
   pure $
     State.SnapShots
-      { ssStakeMark = mark
+      { ssStakeMark = State.MarkSnapShot mark (fromMaybe (EpochNo 0) markEpoch) (fromMaybe 0 markSize)
       , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
-      , ssStakeSet = set
-      , ssStakeGo = go
+      , ssStakeSet =
+          State.SetSnapShot
+            set
+            (State.calculatePoolDistr set)
+            (fromMaybe State.emptyLeiosCommittee setCommittee)
+      , ssStakeGo = State.GoSnapShot go
       , ssFee = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsNoSharing #-}
@@ -396,7 +444,7 @@ getSnapShotWithSharing ::
   [State.SnapShot] ->
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m State.SnapShot
+  ReaderT SqlBackend m (State.SnapShot, Maybe EpochNo, Maybe Word16, Maybe State.LeiosCommittee)
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherCredentials =
         interns
@@ -405,13 +453,18 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherPoolParams =
         interns (foldMap (internsFromVMap . State.ssStakePoolsSnapShot) otherSnapShots)
           . Keys.coerceKeyRole
-  snapShotId <-
+  (snapShotId, leiosEpochNo, leiosCommitteeSize, leiosCommittee) <-
     selectFirst
       [SnapShotType ==. snapShotType, SnapShotEpochStateId ==. epochStateId]
       []
       <&> \case
         Nothing -> error $ "Missing a snapshot: " ++ show snapShotType
-        Just (Entity snapShotId _) -> snapShotId
+        Just
+          ( Entity
+              snapShotId
+              SnapShot {snapShotEpochNo, snapShotLeiosCommitteeSize, snapShotLeiosCommittee}
+            ) ->
+            (snapShotId, snapShotEpochNo, snapShotLeiosCommitteeSize, snapShotLeiosCommittee)
   stake <-
     selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
@@ -433,7 +486,8 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
               (\c -> State.StakeWithDelegation (unsafeNonZero c))
               stake
               delegations
-  pure $ State.mkSnapShot (EpochNo 0) (EpochInterval 0) 0 activeStake stakePoolSnapShot
+  pure
+    (State.mkSnapShot activeStake stakePoolSnapShot, leiosEpochNo, leiosCommitteeSize, leiosCommittee)
 {-# INLINEABLE getSnapShotWithSharing #-}
 
 getSnapShotsWithSharing ::
@@ -441,15 +495,19 @@ getSnapShotsWithSharing ::
   Entity EpochState ->
   ReaderT SqlBackend m (State.SnapShots era)
 getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
-  mark <- getSnapShotWithSharing [] epochStateId SnapShotMark
-  set <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
-  go <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
+  (mark, markEpoch, markSize, _) <- getSnapShotWithSharing [] epochStateId SnapShotMark
+  (set, _, _, setCommittee) <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
+  (go, _, _, _) <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
   pure $
     State.SnapShots
-      { ssStakeMark = mark
+      { ssStakeMark = State.MarkSnapShot mark (fromMaybe (EpochNo 0) markEpoch) (fromMaybe 0 markSize)
       , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
-      , ssStakeSet = set
-      , ssStakeGo = go
+      , ssStakeSet =
+          State.SetSnapShot
+            set
+            (State.calculatePoolDistr set)
+            (fromMaybe State.emptyLeiosCommittee setCommittee)
+      , ssStakeGo = State.GoSnapShot go
       , ssFee = epochStateSnapShotsFee
       }
 {-# INLINEABLE getSnapShotsWithSharing #-}

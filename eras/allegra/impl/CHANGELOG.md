@@ -2,6 +2,7 @@
 
 ## 1.10.1.0
 
+* Fix `shelleyToAllegraUtxoPredFailure` converting `OutputBootAddrAttrsTooBig` into `OutputTooBigUTxO`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
@@ -28,6 +29,8 @@
 * Add `ToJSON` and `FromJSON` instances for
   - `AllegraTxAuxData era`
   - `Timelock era`
+  - `TxBody TopTx AllegraEra`
+  - `Tx TopTx AllegraEra`
 * Export `allegraBasedEraNativeScriptToJSON` and `allegraBasedEraNativeScriptJSONParser` from `Cardano.Ledger.Allegra.Scripts`
 
 ### `cddl`

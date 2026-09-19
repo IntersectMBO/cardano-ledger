@@ -12,6 +12,7 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Rules.Cert ()
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Pool ()
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
 import GHC.Base (absurd)
@@ -58,11 +59,11 @@ instance
   wrapEvent = absurd
 
 instance
-  ( STS (Shelley.POOL era)
+  ( STS (POOL era)
   , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
   , Event (EraRule "POOL" era) ~ Shelley.PoolEvent era
   ) =>
-  Embed (Shelley.POOL era) (CERT era)
+  Embed (POOL era) (CERT era)
   where
   wrapFailed = Conway.PoolFailure
   wrapEvent = Conway.PoolEvent

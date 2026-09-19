@@ -2,6 +2,25 @@
 
 ## 0.4.0.0
 
+* Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
+* Include subtransaction execution units in transaction and block limits and minimum script fees.
+* Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
+* Add `WithdrawalAccountsMissingFromOriginal` constructor to `EntitiesPredFailure`
+* Rename `EntitiesPredFailure` constructors:
+  - `MissingAccountsInWithdrawals` to `WithdrawalAccountsMissing`
+  - `IncompleteWithdrawals` to `WithdrawalAmountsInexactInLegacyMode`
+  - `ExceededBalancesInWithdrawals` to `WithdrawalAmountsExceedingOriginalBalance`
+  - `WrongNetworkInWithdrawals` to `WithdrawalAddressesWithWrongNetwork`
+  - `MissingAccountsInDirectDeposits` to `DirectDepositAccountsMissing`
+  - `WrongNetworkInDirectDeposits` to `DirectDepositAddressesWithWrongNetwork`
+* Rename `SubEntitiesPredFailure` constructors:
+  - `SubMissingAccountsInWithdrawals` to `SubWithdrawalAccountsMissing`
+  - `SubMissingOriginalAccountsInWithdrawals` to `SubWithdrawalAccountsMissingFromOriginal`
+  - `SubWrongNetworkInWithdrawals` to `SubWithdrawalAddressesWithWrongNetwork`
+  - `SubMissingAccountsInDirectDeposits` to `SubDirectDepositAccountsMissing`
+  - `SubWrongNetworkInDirectDeposits` to `SubDirectDepositAddressesWithWrongNetwork`
+* Add `POOL` rule type and add `poolTransition` to `Cardano.Ledger.Dijkstra.Rules.Pool`
+* Add `AlonzoEraTransition` instance for `DijkstraEra`
 * Re-export `GuardingPurpose` from `Cardano.Ledger.Dijkstra.Core` for consistency with prior eras.
 * Adapt to `plutus-ledger-api` v1.38: remove `txInfoFee` from PV4 `TxInfo`, convert `txInfoValidRange` via `transPOSIXTimeRange`, use `Credential` instead of `AccountId` for withdrawals and direct deposits
 * Add `era` parameter to `PoolCert`s
@@ -34,7 +53,7 @@
   - `dueCertState` -> `ueOriginalCertState`
   - `dueOriginalUtxo` -> `ueOriginalUtxo`
 * Add `ScriptHashNotFoundForPurpose` constructor to `DijkstraContextError`
-* Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `NonEmptySet TxOutSource` instead of `NonEmpty (TxOut era)`
+* Change `PointerPresentInOutput` constructor of `DijkstraContextError` to contain a `TxOutSource` instead of `NonEmpty (TxOut era)`
 * Add `udppPlutusV4CostModel` field to `UpgradeDijkstraPParams`
 * Add `HKDSemialign` constraint to `upgradeDijkstraPParams`
 * Add `EncCBOR`, `ToCBOR` for `Block`
@@ -79,6 +98,12 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
+* Add `submitFailingSubTx`
+* Preserve explicitly supplied redeemers when fixing up subtransactions.
+* Add `InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era` as a superclass of `DijkstraEraImp`
+* Add `mkTopTxWithSubTxs`, `traverseSubTxs` and `withPostFixupSubTxs`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec`
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubTransactions`
@@ -237,6 +262,10 @@
 * Add `ToJSON` and `FromJSON` instances for
   - `DijkstraNativeScript era`
   - `AccountBalanceInterval era`
+  - `TxBody TopTx DijkstraEra`
+  - `TxBody SubTx DijkstraEra`
+  - `Tx TopTx DijkstraEra`
+  - `Tx SubTx DijkstraEra`
 * Add `FromJSON` instance for
   - `DijkstraScript era`
   - `DijkstraDelegCert`

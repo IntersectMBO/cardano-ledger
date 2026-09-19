@@ -2,6 +2,7 @@
 
 ## 0.1.1.0
 
+* Widen `cardano-crypto-class` upper bound to `<2.7`
 * Export `HeaderConstr` from `Cardano.Protocol.Praos.BlockHeader` and `Cardano.Protocol.Leios.BlockHeader`
 
 ### `testlib`

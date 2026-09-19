@@ -14,8 +14,9 @@ module Test.Cardano.Ledger.Alonzo.Era (
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context
+import Cardano.Ledger.Alonzo.Plutus.TxInfo
 import Cardano.Ledger.Alonzo.UTxO
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (Inject, ProtVer)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -48,6 +49,7 @@ class
   , Script era ~ AlonzoScript era
   , EraPlutusTxInfo PlutusV1 era
   , Arbitrary (PlutusPurpose AsIx era)
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   AlonzoEraTest era
 

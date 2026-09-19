@@ -20,6 +20,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Pool ()
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxCert
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
