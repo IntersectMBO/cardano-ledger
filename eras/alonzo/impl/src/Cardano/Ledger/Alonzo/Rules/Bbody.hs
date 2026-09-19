@@ -24,7 +24,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
   BBODY,
   AlonzoBbodyPredFailure (..),
   AlonzoBbodyEvent (..),
-  alonzoBbodyTransition,
+  bbodyTransition,
   validateExUnits,
 ) where
 
@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), OrdExUnits (..), pointWiseEx
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosBbodySignal (..))
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -52,9 +52,9 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
-  judgmentContext,
   liftSTS,
   trans,
+  withJudgmentContext,
   (?!),
  )
 import Data.Sequence (Seq)
@@ -174,31 +174,26 @@ validateExUnits txs ppMax =
                 }
           )
 
-alonzoBbodyTransition ::
-  forall era.
+bbodyTransition ::
+  forall era h.
   ( STS (EraRule "BBODY" era)
-  , Signal (EraRule "BBODY" era) ~ Shelley.BbodySignal era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
-  , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
   , AlonzoEraTx era
+  , EraBlockHeader h era
   ) =>
+  Shelley.BbodyEnv era ->
+  Shelley.ShelleyBbodyState era ->
+  Block h era ->
   TransitionRule (EraRule "BBODY" era)
-alonzoBbodyTransition = do
-  TRC
-    ( Shelley.BbodyEnv pp account
-      , Shelley.BbodyState ls blocksMade
-      , Shelley.BbodySignal block@Block {blockBody}
-      ) <-
-    judgmentContext
-
+bbodyTransition (Shelley.BbodyEnv pp account) (Shelley.BbodyState ls blocksMade) block@Block {blockBody} = do
   Shelley.validateBlockBodySize block (pp ^. ppProtocolVersionL)
 
   Shelley.validateBlockBodyHash block
@@ -238,7 +233,7 @@ instance
   where
   type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (BBODY era) = Shelley.BbodySignal era
+  type Signal (BBODY era) = TPraosBbodySignal era
 
   type Environment (BBODY era) = Shelley.BbodyEnv era
 
@@ -248,7 +243,10 @@ instance
   type Event (BBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules = [alonzoBbodyTransition @era]
+  transitionRules =
+    [ withJudgmentContext $ \env state (TPraosBbodySignal block) ->
+        bbodyTransition env state block
+    ]
 
 instance
   ( Era era

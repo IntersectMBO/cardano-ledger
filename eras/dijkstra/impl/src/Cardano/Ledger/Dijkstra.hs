@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import Cardano.Ledger.BaseTypes (Inject (inject))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, LeiosBbodySignal (..), LeiosEraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
 import Cardano.Ledger.Dijkstra.Block ()
 import Cardano.Ledger.Dijkstra.BlockBody ()
@@ -90,10 +90,8 @@ instance ApplyTx DijkstraEra where
 
 instance ApplyTick DijkstraEra
 
--- Even though `EraBlockHeader` looks like it is implied there is a
--- loopy superclasses warning that suggests to add it here
-instance (EraBlockHeader h DijkstraEra, DijkstraEraBlockHeader h DijkstraEra) => ApplyBlock h DijkstraEra where
-  wrapBlockSignal = DijkstraBbodySignal
+instance (EraBlockHeader h DijkstraEra, LeiosEraBlockHeader h DijkstraEra) => ApplyBlock h DijkstraEra where
+  wrapBlockSignal = LeiosBbodySignal
 
 instance RunConwayRatify DijkstraEra
 

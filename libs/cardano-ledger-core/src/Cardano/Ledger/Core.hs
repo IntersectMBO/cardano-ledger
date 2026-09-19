@@ -121,7 +121,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.Kind (Type)
+import Data.Kind (Constraint, Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -618,7 +618,7 @@ hashScript =
       (\x -> scriptPrefixTag @era x <> originalBytes x)
 
 --------------------------------------------------------------------------------
--- EraBlockBody - Segregated Witness
+-- EraBlockBody
 --------------------------------------------------------------------------------
 
 -- $erablockbody
@@ -650,6 +650,8 @@ class
   EraBlockBody era
   where
   type BlockBody era = (r :: Type) | r -> era
+
+  type ProtocolEraBlockHeader h era :: Constraint
 
   mkBasicBlockBody :: BlockBody era
 

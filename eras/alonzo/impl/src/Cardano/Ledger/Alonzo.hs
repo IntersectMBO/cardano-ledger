@@ -56,7 +56,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   resolveNeededPlutusScriptsWithPurpose,
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, TPraosBbodySignal (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus (plutusLanguage)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
@@ -118,7 +118,8 @@ instance ApplyTx AlonzoEra where
 
 instance ApplyTick AlonzoEra
 
-instance EraBlockHeader h AlonzoEra => ApplyBlock h AlonzoEra
+instance (EraBlockHeader h AlonzoEra, TPraosEraBlockHeader h AlonzoEra) => ApplyBlock h AlonzoEra where
+  wrapBlockSignal = TPraosBbodySignal
 
 mkAlonzoStAnnTx ::
   ( AlonzoEraUTxO era

@@ -28,7 +28,7 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx (Tx (..))
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, TPraosBbodySignal (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.List.NonEmpty (NonEmpty)
@@ -48,4 +48,5 @@ instance ApplyTx AllegraEra where
 
 instance ApplyTick AllegraEra
 
-instance EraBlockHeader h AllegraEra => ApplyBlock h AllegraEra
+instance (EraBlockHeader h AllegraEra, TPraosEraBlockHeader h AllegraEra) => ApplyBlock h AllegraEra where
+  wrapBlockSignal = TPraosBbodySignal

@@ -47,6 +47,7 @@ import Cardano.Ledger.Binary (
   serialize',
   withSlice,
  )
+import Cardano.Ledger.Block (TPraosEraBlockHeader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.DeepSeq (NFData)
@@ -96,6 +97,7 @@ instance NFData (Tx TopTx era) => NFData (AlonzoBlockBody era)
 
 instance EraBlockBody AlonzoEra where
   type BlockBody AlonzoEra = AlonzoBlockBody AlonzoEra
+  type ProtocolEraBlockHeader h AlonzoEra = TPraosEraBlockHeader h AlonzoEra
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = abbHash

@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.PropertyTests (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, SlotNo)
+import Cardano.Ledger.Block (TPraosBbodySignal)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
@@ -86,7 +87,7 @@ commonTests ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Signal (EraRule "BBODY" era) ~ BbodySignal era
+  , Signal (EraRule "BBODY" era) ~ TPraosBbodySignal era
   , EraRule "POOL" era ~ POOL era
   , InjectRuleFailure "POOL" ShelleyPoolPredFailure era
   , InjectRuleEvent "POOL" PoolEvent era

@@ -2,20 +2,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.BlockHeader where
 
-import Cardano.Ledger.BaseTypes (Nonce, ProtVer, SlotNo)
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
-import Cardano.Ledger.Core (
-  Era,
-  EraIndependentBlockBody,
-  HASH,
-  Hash,
-  KeyHash,
-  KeyRole (BlockIssuer),
- )
+import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo)
+import Cardano.Ledger.Block
+import Cardano.Ledger.Core
 import Control.DeepSeq (NFData)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -28,7 +23,6 @@ data TestBlockHeader
   , tbhHSize :: Int
   , tbhBHash :: Hash HASH EraIndependentBlockBody
   , tbhSlot :: SlotNo
-  , tbhPrevNonce :: Maybe Nonce
   , tbhProtVer :: ProtVer
   }
   deriving (Generic)
@@ -47,11 +41,19 @@ instance Era era => EraBlockHeader TestBlockHeader era where
   slotNoBlockHeaderL =
     lens (tbhSlot . blockHeader) $
       \b@Block {blockHeader} tbhSlot -> b {blockHeader = blockHeader {tbhSlot}}
+
+instance Era era => TPraosEraBlockHeader TestBlockHeader era
+
+instance Era era => PraosEraBlockHeader TestBlockHeader era where
   protVerBlockHeaderL =
     lens (tbhProtVer . blockHeader) $
       \b@Block {blockHeader} tbhProtVer -> b {blockHeader = blockHeader {tbhProtVer}}
 
-mkTestBlockHeaderNoNonce :: EraBlockHeader h era => Block h era -> TestBlockHeader
+instance Era era => LeiosEraBlockHeader TestBlockHeader era
+
+mkTestBlockHeaderNoNonce ::
+  forall era h.
+  EraBlockHeader h era => Block h era -> TestBlockHeader
 mkTestBlockHeaderNoNonce block =
   TestBlockHeader
     { tbhIssuer = block ^. blockIssuerBlockHeaderG
@@ -59,6 +61,5 @@ mkTestBlockHeaderNoNonce block =
     , tbhBSize = block ^. blockBodySizeBlockHeaderL
     , tbhBHash = block ^. blockBodyHashBlockHeaderL
     , tbhSlot = block ^. slotNoBlockHeaderL
-    , tbhPrevNonce = Nothing
-    , tbhProtVer = block ^. protVerBlockHeaderL
+    , tbhProtVer = ProtVer (eraProtVerLow @era) 0
     }

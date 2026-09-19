@@ -32,7 +32,7 @@ module Cardano.Ledger.Shelley.API.Validation (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
-import Cardano.Ledger.Block (Block, EraBlockHeader)
+import Cardano.Ledger.Block (Block, EraBlockHeader, TPraosBbodySignal (..), TPraosEraBlockHeader)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -40,7 +40,6 @@ import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
-import Cardano.Ledger.Shelley.Rules (BbodySignal (..))
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Slot (SlotNo)
@@ -90,15 +89,12 @@ class
   ( ApplyTick era
   , EraBlockBody era
   , EraBlockHeader h era
+  , ProtocolEraBlockHeader h era
   , NFData (PredicateFailure (EraRule "BBODY" era))
   ) =>
   ApplyBlock h era
   where
   wrapBlockSignal :: Block h era -> Signal (EraRule "BBODY" era)
-  default wrapBlockSignal ::
-    Signal (EraRule "BBODY" era) ~ BbodySignal era =>
-    Block h era -> Signal (EraRule "BBODY" era)
-  wrapBlockSignal = BbodySignal
 
   -- | Run the `BBODY` rule with `globalAssertionPolicy`. This function always succeeds, but
   -- whenever validation is turned on it is necessary to check for presence of predicate failures
@@ -198,7 +194,8 @@ applyTickNoEvents globals newEpochState slotNo =
 
 instance ApplyTick ShelleyEra
 
-instance EraBlockHeader h ShelleyEra => ApplyBlock h ShelleyEra
+instance (EraBlockHeader h ShelleyEra, TPraosEraBlockHeader h ShelleyEra) => ApplyBlock h ShelleyEra where
+  wrapBlockSignal = TPraosBbodySignal
 
 chainChecks ::
   forall m h era.

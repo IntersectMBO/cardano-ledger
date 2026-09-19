@@ -21,7 +21,7 @@ module Cardano.Ledger.Mary (
 ) where
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, TPraosBbodySignal (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Mary.BlockBody ()
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Forecast ()
@@ -54,4 +54,5 @@ instance ApplyTx MaryEra where
 
 instance ApplyTick MaryEra
 
-instance EraBlockHeader h MaryEra => ApplyBlock h MaryEra
+instance (EraBlockHeader h MaryEra, TPraosEraBlockHeader h MaryEra) => ApplyBlock h MaryEra where
+  wrapBlockSignal = TPraosBbodySignal

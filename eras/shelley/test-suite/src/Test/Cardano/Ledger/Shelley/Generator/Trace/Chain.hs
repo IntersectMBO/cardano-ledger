@@ -14,7 +14,7 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
-import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, TPraosBbodySignal)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
@@ -98,7 +98,7 @@ instance
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ BbodySignal era
+  , Signal (EraRule "BBODY" era) ~ TPraosBbodySignal era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState

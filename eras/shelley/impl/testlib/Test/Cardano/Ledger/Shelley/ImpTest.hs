@@ -1616,7 +1616,6 @@ tryTxsInBlock' txs finalState blockIssuer = do
         , tbhHSize = 0
         , tbhBHash = hashBlockBody blockBody
         , tbhSlot = slotNo
-        , tbhPrevNonce = Nothing
         , tbhProtVer = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
         }
     block = Block {blockHeader, blockBody}

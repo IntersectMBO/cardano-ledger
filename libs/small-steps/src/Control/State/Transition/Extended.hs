@@ -62,6 +62,7 @@ module Control.State.Transition.Extended (
   failureOnNonEmptySet,
   failureOnNonEmptyMap,
   judgmentContext,
+  withJudgmentContext,
   trans,
   liftSTS,
   tellEvent,
@@ -495,6 +496,17 @@ liftSTS f = wrap $ Lift f pure
 -- | Get the judgment context
 judgmentContext :: Rule sts rtype (RuleContext rtype sts)
 judgmentContext = wrap $ GetCtx pure
+
+withJudgmentContext ::
+  ( Environment sts ->
+    State sts ->
+    Signal sts ->
+    TransitionRule sts
+  ) ->
+  TransitionRule sts
+withJudgmentContext action = do
+  TRC (env, st, signal) <- judgmentContext
+  action env st signal
 
 {------------------------------------------------------------------------------
 -- STS interpreters

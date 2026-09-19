@@ -46,7 +46,7 @@ import Cardano.Ledger.Binary (
   unCBORGroup,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), LeiosEraBlockHeader)
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
@@ -285,9 +285,5 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
       ( \(Block (Header hb sig) body) s ->
           Block (Header hb {hbSlotNo = s} sig) body
       )
-  protVerBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbProtVer hb)
-      ( \(Block (Header hb sig) body) pv ->
-          Block (Header hb {hbProtVer = pv} sig) body
-      )
+
+instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era

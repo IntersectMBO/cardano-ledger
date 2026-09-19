@@ -21,12 +21,17 @@ module Cardano.Ledger.Block (
   Block (..),
   bheader,
   bbody,
-  BbodySignal (..),
+  TPraosBbodySignal (..),
+  PraosBbodySignal (..),
+  LeiosBbodySignal (..),
   EraBlockHeader (..),
+  TPraosEraBlockHeader,
+  PraosEraBlockHeader (..),
+  LeiosEraBlockHeader (..),
   neededTxInsForBlock,
 ) where
 
-import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
@@ -36,7 +41,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, (^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era = Block
@@ -93,7 +98,14 @@ neededTxInsForBlock Block {blockBody} = Set.filter isNotNewInput allTxIns
     newTxIds = Set.fromList $ map txIdTxBody txBodies
     isNotNewInput (TxIn txId _) = txId `Set.notMember` newTxIds
 
-data BbodySignal era = forall h. EraBlockHeader h era => BbodySignal (Block h era)
+data TPraosBbodySignal era
+  = forall h. (TPraosEraBlockHeader h era, EraBlockHeader h era) => TPraosBbodySignal (Block h era)
+
+data PraosBbodySignal era
+  = forall h. (PraosEraBlockHeader h era, EraBlockHeader h era) => PraosBbodySignal (Block h era)
+
+data LeiosBbodySignal era
+  = forall h. (LeiosEraBlockHeader h era, EraBlockHeader h era) => LeiosBbodySignal (Block h era)
 
 class Era era => EraBlockHeader h era where
   blockIssuerBlockHeaderG :: SimpleGetter (Block h era) (KeyHash BlockIssuer)
@@ -101,4 +113,12 @@ class Era era => EraBlockHeader h era where
   blockBodySizeBlockHeaderL :: Lens' (Block h era) Word32
   blockBodyHashBlockHeaderL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
   slotNoBlockHeaderL :: Lens' (Block h era) SlotNo
+
+class Era era => TPraosEraBlockHeader h era
+
+class Era era => PraosEraBlockHeader h era where
   protVerBlockHeaderL :: Lens' (Block h era) ProtVer
+
+class Era era => LeiosEraBlockHeader h era where
+  prevNonceBlockHeaderL :: Lens' (Block h era) Nonce
+  prevNonceBlockHeaderL = lens (const NeutralNonce) (\b _ -> b)

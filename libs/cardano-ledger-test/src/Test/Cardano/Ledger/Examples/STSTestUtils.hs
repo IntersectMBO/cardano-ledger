@@ -27,36 +27,21 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
   someScriptAddr,
-  testBBODY,
-  runLEDGER,
-  testUTXOW,
-  testUTXOWsubset,
-  testUTXOspecialCase,
   alwaysFailsHash,
   alwaysSucceedsHash,
   timelockScript,
   timelockHash,
-  timelockStakeCred,
-  genericCont,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, pattern RequireTimeStart)
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIx, ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
-import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), mkTxIxPartial)
-import Cardano.Ledger.Block (BbodySignal, EraBlockHeader)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus (Language)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Shelley.API (Block, LedgerEnv (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState, UTxOState, smartUTxOState)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
   pattern RequireAllOf,
@@ -66,10 +51,6 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.State.Transition.Extended (STS (..), TRC (..))
-import Data.Default (Default (..))
-import Data.Foldable (Foldable (..))
-import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word32)
@@ -82,8 +63,7 @@ import Test.Cardano.Ledger.Common hiding (Result)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.ModelState (Model)
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), runSTS, runSTS')
-import Test.Cardano.Ledger.Shelley.Era (EraTest, ShelleyEraTest)
+import Test.Cardano.Ledger.Shelley.Era (EraTest)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 
@@ -165,9 +145,6 @@ timelockHash ::
   ScriptHash
 timelockHash n = hashScript @era $ timelockScript n
 
-timelockStakeCred :: forall era. AllegraEraScript era => Credential Staking
-timelockStakeCred = ScriptHashObj (timelockHash @era 2)
-
 -- ======================================================================
 -- ========================= Initial Utxo ===============================
 -- ======================================================================
@@ -240,233 +217,3 @@ mkSingleRedeemer ::
   forall era. AlonzoEraScript era => PlutusPurpose AsIx era -> Data era -> Redeemers era
 mkSingleRedeemer tag datum =
   Redeemers @era $ Map.singleton tag (datum, ExUnits 5000 5000)
-
--- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
--- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed
--- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
--- so we need to case over the Era proof, to get the path correctly.
-testBBODY ::
-  forall era h.
-  ( HasCallStack
-  , Eq (State (EraRule "LEDGERS" era))
-  , ToExpr (PredicateFailure (EraRule "BBODY" era))
-  , ToExpr (State (EraRule "LEDGERS" era))
-  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
-  , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
-  , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ BbodySignal era
-  , STS (EraRule "BBODY" era)
-  , EraBlockHeader h era
-  ) =>
-  Shelley.ShelleyBbodyState era ->
-  Block h era ->
-  Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (Shelley.ShelleyBbodyState era) ->
-  PParams era ->
-  Expectation
-testBBODY initialSt block expected pparams =
-  let env = Shelley.BbodyEnv pparams def
-   in runSTS @"BBODY" @era (TRC (env, initialSt, Shelley.BbodySignal block)) (genericCont "" expected)
-
--- | Use an equality test on the expected and computed [PredicateFailure]
-testUTXOW ::
-  forall era.
-  ( Reflect era
-  , HasCallStack
-  , ShelleyEraTest era
-  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , STS (EraRule "UTXOW" era)
-  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  ) =>
-  UTxO era ->
-  PParams era ->
-  Tx TopTx era ->
-  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
-  Expectation
-testUTXOW utxo p tx = testUTXOWwith (genericCont (show (utxo, tx))) utxo p tx
-
--- | Use a subset test on the expected and computed [PredicateFailure]
-testUTXOWsubset ::
-  forall era.
-  ( Reflect era
-  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
-  , STS (EraRule "UTXOW" era)
-  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  , ShelleyEraTest era
-  ) =>
-  UTxO era ->
-  PParams era ->
-  Tx TopTx era ->
-  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
-  Expectation
-testUTXOWsubset = testUTXOWwith subsetCont
-
--- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
-testUTXOspecialCase ::
-  forall era.
-  ( Reflect era
-  , HasCallStack
-  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
-  , STS (EraRule "UTXOW" era)
-  ) =>
-  UTxO era ->
-  PParams era ->
-  Tx TopTx era ->
-  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
-  Expectation
-testUTXOspecialCase utxo pparam tx expected =
-  let env = UtxoEnv (SlotNo 0) pparam def
-      state = smartUTxOState pparam utxo (Coin 0) (Coin 0) def mempty
-   in runSTS @"UTXOW" @era (TRC (env, state, tx)) (specialCont @era expected)
-
--- | This type is what you get when you use runSTS in the UTXOW rule. It is also
---   the type one uses for expected answers, to compare the 'computed' against 'expected'
-type Result era =
-  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era))
-
-testUTXOWwith ::
-  forall era.
-  ( ShelleyEraTest era
-  , STS (EraRule "UTXOW" era)
-  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
-  ) =>
-  (Result era -> Result era -> Expectation) ->
-  UTxO era ->
-  PParams era ->
-  Tx TopTx era ->
-  Result era ->
-  Expectation
-testUTXOWwith cont utxo pparams tx expected =
-  let env = UtxoEnv (SlotNo 0) pparams def
-      state = smartUTxOState pparams utxo (Coin 0) (Coin 0) def mempty
-   in runSTS @"UTXOW" @era (TRC (env, state, tx)) (cont expected)
-
-runLEDGER ::
-  forall era.
-  ( BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , STS (EraRule "LEDGER" era)
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
-  ) =>
-  LedgerState era ->
-  PParams era ->
-  Tx TopTx era ->
-  Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (State (EraRule "LEDGER" era))
-runLEDGER state pparams tx =
-  let env = LedgerEnv (SlotNo 0) Nothing minBound pparams def
-   in runSTS' @"LEDGER" @era (TRC (env, state, tx))
-
--- | A small example of what a continuation for 'runSTS' might look like
-genericCont ::
-  ( Eq (t x)
-  , Eq y
-  , ToExpr y
-  , HasCallStack
-  , ToExpr (t x)
-  ) =>
-  String ->
-  Either (t x) y ->
-  Either (t x) y ->
-  Expectation
-genericCont cause expected computed =
-  when (computed /= expected) $
-    assertFailure $
-      "Mismatch between expected and computed:\n" <> ansiDocToString diff <> "\n\nCause:\n" <> cause
-  where
-    diff = diffExpr expected computed
-
-subsetCont ::
-  ( Foldable t
-  , Eq (t x)
-  , Eq x
-  , Eq y
-  , ToExpr x
-  , ToExpr y
-  , Show (t x)
-  , Show y
-  ) =>
-  Either (t x) y ->
-  Either (t x) y ->
-  Expectation
-subsetCont expected computed =
-  let
-    isSubset small big = all (`elem` big) small
-   in
-    case (computed, expected) of
-      (Left c, Left e) ->
-        -- It is OK if the expected is a subset of what's computed
-        if isSubset e c then e `shouldBe` e else c `shouldBe` e
-      (Right c, Right e) -> c `shouldBe` e
-      (Left x, Right y) ->
-        error $
-          "expected to pass with "
-            ++ show (toExpr y)
-            ++ "\n\nBut failed with\n\n"
-            ++ show (toExpr $ toList x)
-      (Right y, Left x) ->
-        error $
-          "expected to fail with "
-            ++ show (toExpr $ toList x)
-            ++ "\n\nBut passed with\n\n"
-            ++ show (toExpr y)
-
-specialCont ::
-  forall era a.
-  ( Eq (PredicateFailure (EraRule "UTXOW" era))
-  , Eq a
-  , Show (PredicateFailure (EraRule "UTXOW" era))
-  , Show a
-  , Reflect era
-  , HasCallStack
-  ) =>
-  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) a ->
-  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) a ->
-  Expectation
-specialCont expected computed =
-  case (computed, expected) of
-    (Left (x :| []), Left (y :| [])) ->
-      case (findMismatch (reify @era) x, findMismatch (reify @era) y) of
-        (Just _, Just _) -> y `shouldBe` y
-        (_, _) -> error "Not both ValidationTagMismatch case 1"
-    (Left _, Left _) -> error "Not both ValidationTagMismatch case 2"
-    (Right x, Right y) -> x `shouldBe` y
-    (Left _, Right _) -> error "expected to pass, but failed."
-    (Right _, Left _) -> error "expected to fail, but passed."
-
--- ========================================
--- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
--- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed
--- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
--- so we need to case over the Era proof, to get the path correctly.
-findMismatch ::
-  Proof era ->
-  PredicateFailure (EraRule "UTXOW" era) ->
-  Maybe (PredicateFailure (EraRule "UTXOS" era))
-findMismatch
-  Alonzo
-  ( Alonzo.ShelleyInAlonzoUtxowPredFailure
-      (Shelley.UtxoFailure (Alonzo.UtxosFailure x@(Alonzo.ValidationTagMismatch _ _)))
-    ) = Just $ injectFailure x
-findMismatch
-  Babbage
-  ( Babbage.UtxoFailure
-      (Babbage.AlonzoInBabbageUtxoPredFailure (Alonzo.UtxosFailure x@(Alonzo.ValidationTagMismatch _ _)))
-    ) = Just $ injectFailure x
-findMismatch
-  Conway
-  ( Conway.UtxoFailure
-      (Conway.UtxosFailure x@(Conway.ValidationTagMismatch _ _))
-    ) = Just $ injectFailure x
-findMismatch _ _ = Nothing

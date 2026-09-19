@@ -45,7 +45,12 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (
+  Block (..),
+  EraBlockHeader (..),
+  LeiosBbodySignal (..),
+  LeiosEraBlockHeader (..),
+ )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
@@ -57,9 +62,7 @@ import Cardano.Ledger.Dijkstra.BlockBody (
  )
 import Cardano.Ledger.Dijkstra.Era (
   BBODY,
-  DijkstraBbodySignal (..),
   DijkstraEra,
-  DijkstraEraBlockHeader (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
@@ -307,7 +310,7 @@ instance
   where
   type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (BBODY era) = DijkstraBbodySignal era
+  type Signal (BBODY era) = LeiosBbodySignal era
 
   type Environment (BBODY era) = Shelley.BbodyEnv era
 
@@ -322,7 +325,7 @@ instance
 
 dijkstraBbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ DijkstraBbodySignal era
+  ( Signal (EraRule "BBODY" era) ~ LeiosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
@@ -345,7 +348,7 @@ dijkstraBbodyTransition = do
   TRC
     ( Shelley.BbodyEnv pp account
       , Shelley.BbodyState ls blocksMade
-      , DijkstraBbodySignal block@Block {blockBody}
+      , LeiosBbodySignal block@Block {blockBody}
       ) <-
     judgmentContext
 

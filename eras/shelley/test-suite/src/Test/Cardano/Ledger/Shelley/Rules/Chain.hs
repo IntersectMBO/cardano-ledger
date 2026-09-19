@@ -38,7 +38,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Block (BbodySignal (..), Block (..), EraBlockHeader)
+import Cardano.Ledger.Block (Block (..), EraBlockHeader, TPraosBbodySignal (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   chainChecks,
@@ -254,7 +254,7 @@ instance
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ BbodySignal era
+  , Signal (EraRule "BBODY" era) ~ TPraosBbodySignal era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState
@@ -289,7 +289,7 @@ chainTransition ::
   ( Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ BbodySignal era
+  , Signal (EraRule "BBODY" era) ~ TPraosBbodySignal era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState
@@ -369,7 +369,7 @@ chainTransition =
 
         BbodyState ls' bcur' <-
           trans @(EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, BbodySignal blk)
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, TPraosBbodySignal blk)
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh
