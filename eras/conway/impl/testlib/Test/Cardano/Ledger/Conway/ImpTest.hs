@@ -369,6 +369,7 @@ class
   , InjectRuleEvent "TICK" ConwayHardForkEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Inject (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (ApplyTxError era)
+  , ToExpr (ApplyTxError era)
   ) =>
   ConwayEraImp era
 

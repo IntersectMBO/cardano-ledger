@@ -27,6 +27,8 @@
 
 ### `testlib`
 
+* Add `ToExpr (ApplyTxError era)` as a superclass of `ConwayEraImp`
+* Add `ToExpr` instance for `ApplyTxError ConwayEra`
 * Add reusable `SNAP` voting-stake test helpers (shared with the Dijkstra testlib) to `Test.Cardano.Ledger.Conway.Imp.SnapSpec`: `getSpoVotingStake`, `getDRepVotingStake`, `getLeaderElectionStake`, `isPoolInLeaderDistr`, `isPoolInRewardSnapshot`, `setupExpiredRefundScenario`, `setupReapedPoolScenario`, `setupWithdrawalScenario`, `setupCombinedScenario`, `setupRetiredPoolInLeaderDistr`
 * Add `DecCBOR` instance for `Block`
 
