@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -200,8 +201,8 @@ spec = describe "UTXOW" $ do
             -- TODO replace with `submitFailingTx` once we have fixup support for plutus scripts
             hasMalformed :: (forall l. Typeable l => Tx l era) -> ImpTestM era Bool
             hasMalformed tx = do
-              (mPredFailures, _) <- trySubmitTopTx tx
-              pure $ case mPredFailures of
+              SubmitTxResult {..} <- trySubmitTopTx tx
+              pure $ case strFailures of
                 Just predFailures -> malformed `elem` predFailures
                 Nothing -> False
         hasMalformed (mkTx SNothing) `shouldReturn` True
