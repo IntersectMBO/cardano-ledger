@@ -263,7 +263,7 @@ import Control.Monad
 import Control.Monad.ST (ST)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
-import Data.Binary.Get (Get, getWord32le, runGetOrFail)
+import Data.Binary.Get (Get, getWord32be, getWord32le, runGetOrFail)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -1360,7 +1360,7 @@ binaryGetDecoder name getter = do
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
-  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32le
+  toIPv4w <$> binaryGetDecoder "decodeIPv4" getWord32be
 {-# INLINE decodeIPv4 #-}
 
 getHostAddress6 :: Get (Word32, Word32, Word32, Word32)
