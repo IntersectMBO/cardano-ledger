@@ -104,13 +104,12 @@ import Cardano.Ledger.Plutus (
   transDatum,
   transEpochNo,
   transKeyHash,
-  transSafeHash,
   transScriptHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..), UTxO)
-import Cardano.Ledger.TxIn (TxId (TxId), TxIn (..))
+import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
@@ -618,7 +617,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxInInfo _ = transTxInInfoV4
 
 transTxInV4 :: TxIn -> PV4.TxOutRef
-transTxInV4 (TxIn txid txIx) = PV4.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
+transTxInV4 (TxIn txid txIx) = PV4.TxOutRef (Conway.transTxId txid) (toInteger (txIxToInt txIx))
 
 transTxInInfoV4 ::
   forall era.
@@ -803,9 +802,6 @@ toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = d
         , PV4.scriptContextScriptHash = sh
         }
 
-transTxId :: TxId -> PV4.TxId
-transTxId (TxId h) = PV4.TxId $ transSafeHash h
-
 transPlutusPurposeV4 ::
   forall era proxy.
   ( DijkstraEraScript era
@@ -827,7 +823,7 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
       Just scriptHash -> Right $ transScriptHash scriptHash
   case plutusPurpose of
     SpendingPurpose (AsIxItem _ (TxIn txId (TxIx ix))) ->
-      pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
+      pure . PV4.Spending sh $ PV4.TxOutRef (Conway.transTxId txId) (toInteger ix)
     MintingPurpose (AsIxItem _ pId) -> pure . PV4.Minting sh $ Alonzo.transPolicyID pId
     CertifyingPurpose (AsIxItem ix cert) ->
       PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
