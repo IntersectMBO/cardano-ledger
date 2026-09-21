@@ -5,6 +5,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -114,13 +115,13 @@ spec = describe "Regression" $ do
                 & bodyTxL . feeTxBodyL .~ Coin 178349
                 & bodyTxL . outputsTxBodyL %~ modifyRootTxOut
                 & witsTxL . addrTxWitsL .~ mempty
-        (mPredFailure, _) <-
+        SubmitTxResult {..} <-
           impAnn "Consume the script locked output" $
             withPostFixup (updateAddrTxWits <=< breakCollaterals) $ do
               trySubmitTx @ConwayEra $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
-        pFailure <- expectJustDeep mPredFailure
+        pFailure <- expectJustDeep strFailures
         let
           hasInsufficientCollateral
             (ConwayUtxowFailure (UtxoFailure (InsufficientCollateral _ _))) = True
