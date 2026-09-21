@@ -2,13 +2,6 @@
 
 ## 1.24.0.0
 
-* Change the type of `computeDRepDistr` to take and return a `VotingStakePoolDistr` instead of a `PoolDistr`
-* Rename `reStakePoolDistrL` to `reVotingStakePoolDistrL` and change its type to use `VotingStakePoolDistr`
-* Rename `DRepPulser {dpStakePoolDistr}` to `dpVotingStakePoolDistr` and change the type to `VotingStakePoolDistr`
-* Rename `RatifyEnv {reStakePoolDistr}` to `reVotingStakePoolDistr` and change the type to `VotingStakePoolDistr`
-* Add `toVotingStakePoolDistr`
-* Add `VotingStakePoolDistr` with lenses `vspdIndividualStakeL`, `vspdTotalVotingStakeL`
-* Require `AlonzoEraTx` in `getConwayMinFeeTx` so script fees use the era's total execution units.
 * Remove `transPlutusPurposeV1V2`, superseded by `Alonzo.transPlutusPurpose`
 * No longer export the `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors of `ConwayContextError`, in favor of the same cases defined in Alonzo.
 * Add `conwayInjectIntoTestState`

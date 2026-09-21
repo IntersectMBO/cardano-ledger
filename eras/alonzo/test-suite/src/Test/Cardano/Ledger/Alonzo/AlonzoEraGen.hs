@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   ScriptIntegrity (..),
   hashScriptIntegrity,
+  totExUnits,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
@@ -521,7 +522,7 @@ instance EraGen AlonzoEra where
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
-        txTotal = foldMap getTotalExUnits txns
+        txTotal = foldMap totExUnits txns
         ppMax = pp ^. ppMaxBlockExUnitsL
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns

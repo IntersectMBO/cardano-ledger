@@ -341,7 +341,7 @@ babbageUtxoValidation ::
   forall era.
   ( EraUTxO era
   , BabbageEraTxBody era
-  , AlonzoEraTx era
+  , AlonzoEraTxWits era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Alonzo.AlonzoUtxoPredFailure era

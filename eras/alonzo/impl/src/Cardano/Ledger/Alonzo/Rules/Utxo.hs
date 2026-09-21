@@ -54,7 +54,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (
   UtxosEnv (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
@@ -462,7 +462,10 @@ validateWrongNetworkInTxBody netId txBody =
 --
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
-  AlonzoEraTx era =>
+  ( AlonzoEraTxWits era
+  , EraTx era
+  , AlonzoEraPParams era
+  ) =>
   PParams era ->
   Tx l era ->
   Test (AlonzoUtxoPredFailure era)
@@ -473,7 +476,7 @@ validateExUnitsTooBigUTxO pp tx =
   where
     maxTxExUnits = pp ^. ppMaxTxExUnitsL
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:
-    totalExUnits = getTotalExUnits tx
+    totalExUnits = totExUnits tx
 
 -- | Ensure that number of collaterals does not exceed the allowed @maxCollInputs@ parameter.
 --

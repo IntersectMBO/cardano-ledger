@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), OrdExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Tx (totExUnits)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
@@ -164,7 +165,7 @@ validateExUnits ::
   ExUnits ->
   Rule (EraRule "BBODY" era) 'Transition ()
 validateExUnits txs ppMax =
-  let txTotal = foldMap getTotalExUnits txs
+  let txTotal = foldMap totExUnits txs
    in pointWiseExUnits (<=) txTotal ppMax
         ?! injectFailure
           ( TooManyExUnits $

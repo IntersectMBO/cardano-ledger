@@ -11,10 +11,9 @@ module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec (spec) where
 
 import Cardano.Ledger.Address (bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
-import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId,
@@ -23,12 +22,10 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
   VotingProcedures (..),
  )
-import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credKeyHashWitness)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraSubUtxowPredFailure (..))
-import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -263,10 +260,9 @@ spec = describe "SUBUTXOW" $ do
                        )
             txInAt 0
               <$> withPostFixup (rederiveAddrTxWits . resetTxOutDataHash) (submitTx tx)
-          submitFailingLegacySubTx
-            lang
+          submitFailingTx
             (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])
-            (SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn)
+            [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -279,10 +275,9 @@ spec = describe "SUBUTXOW" $ do
           txIn <- produceScript redeemerSameAsDatumHash
           let missingDatum = hashData @era (Data (P.I 3))
           withPostFixupSubTxs (fixupResetAddrWits . (witsTxL . datsTxWitsL .~ mempty)) $
-            submitFailingLegacySubTx
-              lang
+            submitFailingTx
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              (SubMissingRequiredDatums @era (NES.singleton missingDatum) [])
+              [injectFailure $ SubMissingRequiredDatums @era (NES.singleton missingDatum) []]
 
         it "SubNotAllowedSupplementalDatums" $ do
           txIn <- produceScript redeemerSameAsDatumHash
@@ -294,10 +289,11 @@ spec = describe "SUBUTXOW" $ do
                         %~ Map.insert extraDatumHash extraDatum
                     )
           withPostFixupSubTxs addExtraDatum $
-            submitFailingLegacySubTx
-              lang
+            submitFailingTx
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              (SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) [])
+              [ injectFailure $
+                  SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) []
+              ]
 
         it "SubMissingRedeemers" $ do
           txIn <- produceScript redeemerSameAsDatumHash
@@ -305,8 +301,7 @@ spec = describe "SUBUTXOW" $ do
           withPostFixupSubTxs (fixupResetAddrWits . (witsTxL . rdmrsTxWitsL .~ mempty)) $
             submitFailingTx
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              [ injectFailure $ Conway.CollectErrors [NoRedeemer missingRedeemer]
-              , injectFailure $
+              [ injectFailure $
                   SubMissingRedeemers @era [(missingRedeemer, redeemerSameAsDatumHash)]
               ]
 
@@ -320,10 +315,9 @@ spec = describe "SUBUTXOW" $ do
                         %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0)
                     )
           withPostFixupSubTxs addExtraRedeemer $
-            submitFailingLegacySubTx
-              lang
+            submitFailingTx
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              (SubExtraRedeemers @era [extraPurpose])
+              [injectFailure $ SubExtraRedeemers @era [extraPurpose]]
 
         describe "SubScriptIntegrityHashMismatch" $ do
           let testHashMismatch badHash = do
@@ -343,20 +337,22 @@ spec = describe "SUBUTXOW" $ do
                   rederiveAddrTxWits $
                     fixedUpTx & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton badSubTx
                 withNoFixup $
-                  submitFailingLegacySubTx lang badTopTx $
-                    SubScriptIntegrityHashMismatch @era
-                      Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
-                      (originalBytes <$> expectedIntegrity)
+                  submitFailingTx
+                    badTopTx
+                    [ injectFailure $
+                        SubScriptIntegrityHashMismatch @era
+                          Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
+                          (originalBytes <$> expectedIntegrity)
+                    ]
           it "the supplied hash is wrong" $ testHashMismatch . SJust =<< arbitrary
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
         it "SubMalformedScriptWitnesses" $ do
           let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
           txIn <- produceScript scriptHash
-          submitFailingLegacySubTx
-            lang
+          submitFailingTx
             (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-            (SubMalformedScriptWitnesses @era $ NES.singleton scriptHash)
+            [injectFailure . SubMalformedScriptWitnesses @era $ NES.singleton scriptHash]
 
         disableInConformanceIt "SubMalformedReferenceScripts" $ do
           script <- fromPlutusScript <$> mkPlutusScript (asSLanguage slang malformedPlutus)
@@ -384,27 +380,6 @@ spec = describe "SUBUTXOW" $ do
           submitFailingTx
             (mkTopTxWithSubTxs [subTx])
             [injectFailure $ SubInvalidMetadata @era]
-
--- Legacy sub-transaction scripts also fail context translation, independently
--- of the SUBUTXOW predicate under test. Fixup can change the sub-transaction id.
-submitFailingLegacySubTx ::
-  forall era.
-  DijkstraEraImp era =>
-  Language ->
-  Tx TopTx era ->
-  DijkstraSubUtxowPredFailure era ->
-  ImpTestM era ()
-submitFailingLegacySubTx lang tx expectedFailure =
-  submitFailingTxM tx $ \fixedUpTx ->
-    case OMap.elems $ fixedUpTx ^. bodyTxL . subTransactionsTxBodyL of
-      [subTx] ->
-        pure
-          [ injectFailure $
-              Conway.CollectErrors
-                [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
-          , injectFailure expectedFailure
-          ]
-      _ -> assertFailure "Expected exactly one sub-transaction"
 
 -- | Every distinct reason a sub-transaction requires a key witness,
 -- paired with a sub-transaction that requires it and the key hash whose
