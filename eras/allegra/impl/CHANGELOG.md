@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.10.1.0
+## 1.10.2.0
 
 * Fix `shelleyToAllegraUtxoPredFailure` converting `OutputBootAddrAttrsTooBig` into `OutputTooBigUTxO`
 * Add `EncCBOR`, `ToCBOR` for `Block`
@@ -13,6 +13,10 @@
 ### `cddl`
 
 * Add `HuddleRule "vrf_cert"` instance
+
+## 1.10.1.0
+
+*
 
 ## 1.10.0.0
 
