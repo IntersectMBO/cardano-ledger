@@ -156,7 +156,7 @@ produceRefScriptsTx scripts = do
     let txOutZero =
           mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust script
     pure $ setMinCoinTxOut pp txOutZero
-  submitTx $
+  submitTopTx $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL .~ SSeq.fromList (NE.toList txOuts)
 
@@ -175,7 +175,8 @@ submitTxWithRefInputs ::
   TxIn ->
   NonEmpty TxIn ->
   ImpTestM era (Tx TopTx era)
-submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
+-- TODO make this work with `submitTx`
+submitTxWithRefInputs txIn refIns = submitTopTx $ mkTxWithRefInputs txIn refIns
 
 class
   ( AlonzoEraImp era

@@ -139,7 +139,8 @@ datumAndReferenceInputsSpec = do
           let shSpending = hashPlutusScript $ redeemerSameAsDatum slang
           refTxOut <- mkRefTxOut shSpending
           producingTxId <-
-            fmap txIdTx . submitTxAnn "Producing transaction" $
+            -- TODO make this work with `submitTxAnn`
+            fmap txIdTx . submitTopTxAnn "Producing transaction" $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL
                   .~ SSeq.fromList
@@ -625,7 +626,8 @@ setupRefTx ::
 setupRefTx lang = do
   let shSpending = hashPlutusScript (redeemerSameAsDatum lang)
   refTxOut <- mkRefTxOut shSpending
-  fmap txIdTx . submitTxAnn "Producing transaction" $
+  -- TODO make this work with `submitTxAnn`
+  fmap txIdTx . submitTopTxAnn "Producing transaction" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
         .~ SSeq.fromList
