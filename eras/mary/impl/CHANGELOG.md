@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.11.1.1
+## 1.12.0.0
 
 *
+
+### `testlib`
+
+* Change `mkTokenMintingTx` to return an `AnyLevelTx era` instead of a `Tx l era`
 
 ## 1.11.1.0
 
