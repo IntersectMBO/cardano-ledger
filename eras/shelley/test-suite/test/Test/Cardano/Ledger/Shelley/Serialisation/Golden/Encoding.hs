@@ -49,7 +49,6 @@ import Cardano.Ledger.Binary (
   encodeFixedSized,
   fromPlainEncoding,
   hashWithEncoder,
-  ipv4ToBytes,
   shelleyProtVer,
   toCBOR,
   toPlainEncoding,
@@ -486,7 +485,7 @@ tests =
           poolUrl = "pool.io"
           poolMDHash = byteArrayFromShortByteString "{}"
           ipv4 = toIPv4 [127, 0, 0, 1]
-          ipv4Bytes = ipv4ToBytes . toIPv4 $ [127, 0, 0, 1]
+          ipv4Bytes = "\DEL\NUL\NUL\SOH"
           poolRelays =
             StrictSeq.fromList
               [ SingleHostAddr SNothing (SJust ipv4) SNothing
