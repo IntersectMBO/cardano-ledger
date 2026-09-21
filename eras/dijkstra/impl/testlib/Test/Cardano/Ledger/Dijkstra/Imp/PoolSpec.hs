@@ -19,6 +19,7 @@ import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -110,7 +111,10 @@ spec = describe "POOL" $ do
     it "re-register a pool with its own future VRF" $ do
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
-      tx <- registerPoolTx <$> poolParams kh vrfNew
+      pps <- poolParams kh vrfNew
+      let
+        tx :: Typeable l => Tx l era
+        tx = registerPoolTx pps
       submitTx_ tx
       expectPool kh (Just vrf)
       expectFuturePool kh (Just vrfNew)
@@ -128,12 +132,14 @@ spec = describe "POOL" $ do
     it "keep tracking the active VRF after re-registering with it and then with a fresh one" $ do
       (kh, vrf) <- registerNewPool
       -- re-register with the pool's own active VRF ...
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectFuturePool kh (Just vrf)
       expectVRFs [(vrf, 1)]
       -- ... and then with a fresh one
       vrfNew <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      ppsNew <- poolParams kh vrfNew
+      submitTx_ $ registerPoolTx ppsNew
       -- the pool keeps producing blocks with the original VRF until the
       -- epoch boundary, so it must still be tracked
       expectPool kh (Just vrf)
@@ -145,20 +151,24 @@ spec = describe "POOL" $ do
       expectPool kh (Just vrfNew)
       expectVRFs [(vrfNew, 1)]
       -- after the epoch boundary the original VRF can be taken over
-      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
+      ppsTakeOver <- poolParams khNew vrf
+      submitTx_ $ registerPoolTx ppsTakeOver
       expectVRFs [(vrf, 1), (vrfNew, 1)]
 
     it "re-registering with the active VRF releases the pending future VRF" $ do
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      ppsNew <- poolParams kh vrfNew
+      submitTx_ $ registerPoolTx ppsNew
       expectVRFs [(vrf, 1), (vrfNew, 1)]
       -- going back to the active VRF frees the previously requested one
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectFuturePool kh (Just vrf)
       expectVRFs [(vrf, 1)]
       khNew <- freshKeyHash
-      registerPoolTx <$> poolParams khNew vrfNew >>= submitTx_
+      ppsTakeOver <- poolParams khNew vrfNew
+      submitTx_ $ registerPoolTx ppsTakeOver
       expectPool khNew (Just vrfNew)
       expectVRFs [(vrf, 1), (vrfNew, 1)]
 
@@ -171,7 +181,8 @@ spec = describe "POOL" $ do
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf)
       -- ... but either may switch to a fresh one
       vrfNew <- freshKeyHashVRF
-      registerPoolTx <$> poolParams kh1 vrfNew >>= submitTx_
+      ppsNew <- poolParams kh1 vrfNew
+      submitTx_ $ registerPoolTx ppsNew
       expectFuturePool kh1 (Just vrfNew)
       expectVRFs [(vrf, 2), (vrfNew, 1)]
       -- and the shared VRF stays taken while any pool still uses it
@@ -184,7 +195,8 @@ spec = describe "POOL" $ do
       kh2 <- registerPoolSharingVRF vrf
       expectVRFs [(vrf, 2)]
       -- retiring one of the two pools leaves the VRF in use by the other one ...
-      retirePoolTx kh1 (EpochInterval 1) >>= submitTx_
+      AnyLevelTx retireTx1 <- retirePoolTx kh1 (EpochInterval 1)
+      submitTx_ retireTx1
       passEpoch
       expectPool kh1 Nothing
       expectPool kh2 (Just vrf)
@@ -193,11 +205,13 @@ spec = describe "POOL" $ do
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
       -- ... and only once that one has retired as well does the VRF become available
-      retirePoolTx kh2 (EpochInterval 1) >>= submitTx_
+      AnyLevelTx retireTx2 <- retirePoolTx kh2 (EpochInterval 1)
+      submitTx_ retireTx2
       passEpoch
       expectPool kh2 Nothing
       expectVRFs []
-      registerPoolTx <$> poolParams kh3 vrf >>= submitTx_
+      pps <- poolParams kh3 vrf
+      submitTx_ $ registerPoolTx pps
       expectPool kh3 (Just vrf)
       expectVRFs [(vrf, 1)]
 
@@ -229,9 +243,11 @@ spec = describe "POOL" $ do
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
-      submitTx_ . registerPoolTx =<< poolParams kh vrf
+      pps <- poolParams kh vrf
+      submitTx_ $ registerPoolTx pps
       expectPool kh (Just vrf)
       pure (kh, vrf)
+    registerPoolTx :: Typeable l => StakePoolParams era -> Tx l era
     registerPoolTx pps =
       mkBasicTx mkBasicTxBody
         & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
@@ -248,12 +264,14 @@ spec = describe "POOL" $ do
             & psVRFKeyHashesL %~ addVRFKeyHashOccurrence vrf . Map.delete ownVrf
       expectPool kh (Just vrf)
       pure kh
+    retirePoolTx :: KeyHash StakePool -> EpochInterval -> ImpTestM era (AnyLevelTx era)
     retirePoolTx kh retirementInterval = do
       curEpochNo <- getsNES nesELL
       pure $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (RetirePoolTxCert kh (addEpochInterval curEpochNo retirementInterval))
+        AnyLevelTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.singleton (RetirePoolTxCert kh (addEpochInterval curEpochNo retirementInterval))
     expectPool poolKh mbVrf = do
       pools <- psStakePools <$> getPState
       spsVrf <$> Map.lookup poolKh pools `shouldBe` mbVrf

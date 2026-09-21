@@ -196,7 +196,7 @@ spec = describe "UTXO" $ do
             tokenAddr <- freshKeyAddr_
             let tokens n = multiAssetFromList [(policyId, assetName, n)]
             mintTx <-
-              submitTx $
+              submitTopTx $
                 mkBasicTx $
                   mkBasicTxBody
                     & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
@@ -443,7 +443,7 @@ spec = describe "UTXO" $ do
         tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
-      txInAt 0 <$> submitTx tx
+      txInAt 0 <$> submitTopTx tx
 
 noBalanceFixup ::
   ( HasCallStack

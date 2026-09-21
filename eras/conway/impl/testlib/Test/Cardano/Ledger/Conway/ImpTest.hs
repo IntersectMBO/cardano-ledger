@@ -657,8 +657,9 @@ trySubmitVote vote voter gaId =
                   )
               )
           )
+    -- TODO switch to `trySubmitTx` once we have figured out how to handle subtx failures
     (mPredFailures, fixedUpTx) <-
-      trySubmitTx $
+      trySubmitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . votingProceduresTxBodyL .~ votingProcedures
     pure $ case mPredFailures of
@@ -730,7 +731,8 @@ trySubmitProposals ::
     era
     (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
 trySubmitProposals proposals = do
-  trySubmitTx $
+  -- TODO switch to `trySubmitTx` when we have a way to handle sub-tx failures
+  trySubmitTopTx $
     mkBasicTx mkBasicTxBody
       & bodyTxL . proposalProceduresTxBodyL .~ GHC.fromList (toList proposals)
 

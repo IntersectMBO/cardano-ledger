@@ -138,7 +138,8 @@ spec = describe "UTXOW" $ do
         submitFailingTx
           tx
           [injectFailure $ MissingRequiredGuards $ NES.singleton guardKeyHash]
-        submitTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
+        -- TODO make this work with `submitTx_`
+        submitTopTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
       it "A guard required by a sub-transaction must be present in the top-level guards" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
@@ -181,7 +182,8 @@ spec = describe "UTXOW" $ do
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardCred]
-        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
+        -- TODO make this work with `submitTx_`
+        submitTopTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
 
       it "A Plutus-script guard's datum presence is validated" $ do
         datum <- arbitrary @(Data era)
@@ -197,7 +199,7 @@ spec = describe "UTXOW" $ do
             -- TODO replace with `submitFailingTx` once we have fixup support for plutus scripts
             hasMalformed :: (forall l. Typeable l => Tx l era) -> ImpTestM era Bool
             hasMalformed tx = do
-              (mPredFailures, _) <- trySubmitTx tx
+              (mPredFailures, _) <- trySubmitTopTx tx
               pure $ case mPredFailures of
                 Just predFailures -> malformed `elem` predFailures
                 Nothing -> False
@@ -211,7 +213,7 @@ spec = describe "UTXOW" $ do
       refAddr <- freshKeyAddrNoPtr_
       txInitial <-
         impAnn "Sumbitting initial TX" $
-          submitTx $
+          submitTopTx $
             mkBasicTx mkBasicTxBody
               & bodyTxL . outputsTxBodyL
                 .~ [ mkBasicTxOut (mkAddr (hashPlutusScript plutus) StakeRefNull) mempty
@@ -274,7 +276,7 @@ mkPlutusSpendingTx plutus = do
   txIn <- produceScript $ hashPlutusScript plutus
   refAddr <- freshKeyAddrNoPtr_
   refTx <-
-    submitTx $
+    submitTopTx $
       mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL
           .~ [mkBasicTxOut refAddr mempty & referenceScriptTxOutL .~ SJust script]

@@ -601,8 +601,9 @@ mkTxWithPlutusAndBootstrapAddress slang = do
       txOutScript =
         mkBasicTxOut @era (mkAddr scriptHash StakeRefNull) mempty
           & dataHashTxOutL .~ SJust datumHash
+  -- TODO make this work with `submitTx`
   tx <-
-    submitTx $
+    submitTopTx $
       mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [txOutScript]
   let txIn = txInAt 0 tx
