@@ -2,7 +2,7 @@
 
 ## 1.10.0.1
 
-*
+* Fix IPv4 encoding order to use network order instead of swapped
 
 ## 1.10.0.0
 
