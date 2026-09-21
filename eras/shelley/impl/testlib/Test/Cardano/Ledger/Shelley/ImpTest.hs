@@ -3,6 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -15,6 +16,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -37,6 +39,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   PlutusArgs,
   ScriptTestContext,
   AnyLevelTx (..),
+  SubmitTxResult (..),
   iteFixupL,
   itePostSubmitTxHookL,
   itePostEpochBoundaryHookL,
@@ -314,6 +317,7 @@ import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
 import Data.Void
 import Data.Word
+import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, KnownSymbol, Symbol, symbolVal, type (<=))
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
@@ -596,9 +600,19 @@ class
   trySubmitTx ::
     HasCallStack =>
     (forall l. Typeable l => Tx l era) ->
-    ImpTestM
-      era
-      (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+    ImpTestM era (SubmitTxResult era)
+
+data SubmitTxResult era = SubmitTxResult
+  { strFailures :: Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  , strFinalTx :: Tx TopTx era
+  }
+  deriving (Generic)
+
+instance
+  ( NFData (Tx TopTx era)
+  , NFData (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  NFData (SubmitTxResult era)
 
 -- | A transaction that is polymorphic in its level. This wrapper makes it possible to
 -- return a level-polymorphic `Tx` from a monadic action: the unwrapped result type
@@ -613,8 +627,8 @@ submitTx ::
   (forall l. Typeable l => Tx l era) ->
   ImpTestM era (Tx TopTx era)
 submitTx tx = do
-  (res, finalTx) <- trySubmitTx tx
-  expectNothingExpr res $> finalTx
+  SubmitTxResult {..} <- trySubmitTx tx
+  expectNothingExpr strFailures $> strFinalTx
 
 submitTx_ ::
   (HasCallStack, ShelleyEraImp era) =>
@@ -627,8 +641,8 @@ submitTopTx ::
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 submitTopTx tx = do
-  (res, finalTx) <- trySubmitTopTx tx
-  expectNothingExpr res $> finalTx
+  SubmitTxResult {..} <- trySubmitTopTx tx
+  expectNothingExpr strFailures $> strFinalTx
 
 submitTopTx_ ::
   (HasCallStack, ShelleyEraImp era) =>
@@ -1362,9 +1376,7 @@ trySubmitTopTx ::
   , HasCallStack
   ) =>
   Tx TopTx era ->
-  ImpTestM
-    era
-    (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+  ImpTestM era (SubmitTxResult era)
 trySubmitTopTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
@@ -1391,7 +1403,7 @@ trySubmitTopTx tx = do
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
       liftIO $ forM_ predFailures $ roundTripEraExpectation @era
-      pure (Just predFailures, txFixed)
+      pure $ SubmitTxResult (Just predFailures) txFixed
     Right (newState, events) -> do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
@@ -1418,7 +1430,7 @@ trySubmitTopTx tx = do
 
       expectTxSuccess txFixed
 
-      pure (Nothing, txFixed)
+      pure $ SubmitTxResult Nothing txFixed
 
 -- | Submit a transaction that is expected to be rejected with the given predicate failures.
 -- The inputs and outputs are automatically balanced.
@@ -1442,9 +1454,9 @@ submitFailingTxM ::
   (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingTxM tx mkExpectedFailures = do
-  (result, fixedUpTx) <- trySubmitTopTx tx
-  actualFailures <- expectJustDeep result
-  expectedFailures <- mkExpectedFailures fixedUpTx
+  SubmitTxResult {..} <- trySubmitTopTx tx
+  actualFailures <- expectJustDeep strFailures
+  expectedFailures <- mkExpectedFailures strFinalTx
   expectExprEqualWithMessage
     "The predicate failures were not as expected"
     actualFailures
@@ -1472,9 +1484,9 @@ submitFailingSubsetTxM ::
   (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingSubsetTxM tx mkExpectedFailures = do
-  (mPredFailures, fixedUpTx) <- trySubmitTopTx tx
-  expectedFailures <- mkExpectedFailures fixedUpTx
-  predFailures <- expectJustDeep mPredFailures
+  SubmitTxResult {..} <- trySubmitTopTx tx
+  expectedFailures <- mkExpectedFailures strFinalTx
+  predFailures <- expectJustDeep strFailures
   let
     predSet = Set.fromList $ toList predFailures
     expectedSet = Set.fromList $ toList expectedFailures

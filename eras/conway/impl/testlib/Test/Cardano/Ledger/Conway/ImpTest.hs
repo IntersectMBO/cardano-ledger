@@ -658,13 +658,13 @@ trySubmitVote vote voter gaId =
               )
           )
     -- TODO switch to `trySubmitTx` once we have figured out how to handle subtx failures
-    (mPredFailures, fixedUpTx) <-
+    SubmitTxResult {..} <-
       trySubmitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . votingProceduresTxBodyL .~ votingProcedures
-    pure $ case mPredFailures of
+    pure $ case strFailures of
       Just predFailures -> Left predFailures
-      Nothing -> Right $ txIdTx fixedUpTx
+      Nothing -> Right $ txIdTx strFinalTx
 
 submitProposal_ ::
   (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
@@ -685,9 +685,9 @@ submitProposals ::
 submitProposals proposals = do
   curEpochNo <- getsNES nesELL
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  (mPredFailures, tx) <- trySubmitProposals proposals
-  expectNothingExpr mPredFailures
-  let txId = txIdTx tx
+  SubmitTxResult {..} <- trySubmitProposals proposals
+  expectNothingExpr strFailures
+  let txId = txIdTx strFinalTx
       proposalsWithGovActionId =
         NE.zipWith (\idx p -> (GovActionId txId (GovActionIx idx), p)) (0 NE.:| [1 ..]) proposals
   forM proposalsWithGovActionId $ \(govActionId, proposal) -> do
@@ -712,12 +712,12 @@ trySubmitProposal ::
   ProposalProcedure era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitProposal proposal = do
-  (res, tx) <- trySubmitProposals (pure proposal)
-  pure $ case res of
+  SubmitTxResult {..} <- trySubmitProposals (pure proposal)
+  pure $ case strFailures of
     Nothing ->
       Right
         GovActionId
-          { gaidTxId = txIdTx tx
+          { gaidTxId = txIdTx strFinalTx
           , gaidGovActionIx = GovActionIx 0
           }
     Just err -> Left err
@@ -727,9 +727,7 @@ trySubmitProposals ::
   , ConwayEraTxBody era
   ) =>
   NE.NonEmpty (ProposalProcedure era) ->
-  ImpTestM
-    era
-    (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+  ImpTestM era (SubmitTxResult era)
 trySubmitProposals proposals = do
   -- TODO switch to `trySubmitTx` when we have a way to handle sub-tx failures
   trySubmitTopTx $
@@ -754,10 +752,9 @@ trySubmitGovAction ::
   GovAction era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitGovAction ga = do
-  let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
-  (mPredFailures, tx) <- trySubmitGovActions (pure ga)
-  pure $ case mPredFailures of
-    Nothing -> Right $ mkGovActionId tx
+  SubmitTxResult {..} <- trySubmitGovActions (pure ga)
+  pure $ case strFailures of
+    Nothing -> Right $ GovActionId (txIdTx strFinalTx) (GovActionIx 0)
     Just predFailures -> Left predFailures
 
 submitAndExpireProposalToMakeReward ::
@@ -785,9 +782,7 @@ submitAndExpireProposalToMakeReward stakingC = do
 trySubmitGovActions ::
   ConwayEraImp era =>
   NE.NonEmpty (GovAction era) ->
-  ImpTestM
-    era
-    (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+  ImpTestM era (SubmitTxResult era)
 trySubmitGovActions gas = do
   proposals <- traverse mkProposal gas
   trySubmitProposals proposals
@@ -844,9 +839,9 @@ submitGovActions ::
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (NE.NonEmpty GovActionId)
 submitGovActions gas = do
-  (mPredFailures, fixedUpTx) <- trySubmitGovActions gas
-  expectNothingExpr mPredFailures
-  let txId = txIdTx fixedUpTx
+  SubmitTxResult {..} <- trySubmitGovActions gas
+  expectNothingExpr strFailures
+  let txId = txIdTx strFinalTx
   pure $ NE.zipWith (\idx _ -> GovActionId txId (GovActionIx idx)) (0 NE.:| [1 ..]) gas
 
 mkTreasuryWithdrawalsGovAction ::

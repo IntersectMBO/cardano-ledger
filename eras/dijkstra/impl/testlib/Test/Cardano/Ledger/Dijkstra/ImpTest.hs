@@ -122,7 +122,7 @@ instance ShelleyEraImp DijkstraEra where
 trySubmitSubTx ::
   DijkstraEraImp era =>
   Tx SubTx era ->
-  ImpTestM era (Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era))), Tx TopTx era)
+  ImpTestM era (SubmitTxResult era)
 trySubmitSubTx subTx = trySubmitTopTx $ mkTopTxWithSubTxs [subTx]
 
 instance MaryEraImp DijkstraEra
