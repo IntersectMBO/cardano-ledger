@@ -33,6 +33,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GOVCERT
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as GOV
 import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HARDFORK
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Conway.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as RATIFY
 import qualified Test.Cardano.Ledger.Conway.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as UTXO
@@ -61,6 +62,7 @@ spec era = do
     GOV.spec
     GOVCERT.spec
     LEDGER.spec
+    MEMPOOL.spec
     HARDFORK.spec
     RATIFY.spec
     SNAP.spec

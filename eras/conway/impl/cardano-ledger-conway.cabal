@@ -211,6 +211,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Imp.GovSpec
     Test.Cardano.Ledger.Conway.Imp.HardForkSpec
     Test.Cardano.Ledger.Conway.Imp.LedgerSpec
+    Test.Cardano.Ledger.Conway.Imp.MempoolSpec
     Test.Cardano.Ledger.Conway.Imp.RatifySpec
     Test.Cardano.Ledger.Conway.Imp.SnapSpec
     Test.Cardano.Ledger.Conway.Imp.UtxoSpec
@@ -270,8 +271,6 @@ library testlib
     fs-sim,
     generic-random,
     microlens,
-    microlens-mtl,
-    mtl,
     plutus-ledger-api,
     prettyprinter,
     small-steps >=1.2,
