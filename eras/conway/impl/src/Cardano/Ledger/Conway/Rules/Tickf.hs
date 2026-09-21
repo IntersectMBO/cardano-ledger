@@ -13,8 +13,13 @@ import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (
+  MarkSnapShot (msEpochNo),
   SnapShots (ssStakeGo, ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet),
+  maxKeyAgeEpochs,
+  mkGoSnapShot,
+  mkSetSnapShot,
  )
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Void (Void)
 import Lens.Micro ((&), (.~), (^.))
@@ -76,7 +81,24 @@ instance
         -- announcement from the previous epoch. It merely means the committee
         -- is being acquired from an earlier ledger state than that of the
         -- announcing block.
-        let ss' = ss {ssStakeSet = ssStakeMark ss, ssStakeGo = ssStakeSet ss}
+        --
+        -- One rotation suffices because TICKF only ever serves forecasting, and
+        -- a forecast's range does not reach past the next epoch boundary, so at
+        -- most one boundary is ever crossed here. Two would need two rotations,
+        -- but the guard above returns the state unrotated in that case, so this
+        -- rule would be wrong were it ever put to another use.
+        --
+        -- Judge key age against the epoch this rotation seats the committee for,
+        -- which 'mkSetSnapShot' derives from the mark being rotated. Reading it
+        -- from that same mark keeps the two in step without relying on the mark's
+        -- epoch agreeing with 'nesEL'.
+        maxKeyAge <-
+          liftSTS $ asks (`maxKeyAgeEpochs` succ (msEpochNo (ssStakeMark ss)))
+        let ss' =
+              ss
+                { ssStakeSet = mkSetSnapShot (ssStakeMark ss) maxKeyAge
+                , ssStakeGo = mkGoSnapShot (ssStakeSet ss)
+                }
 
         -- We can skip 'POOLREAP';
         -- we don't need to do the checks:

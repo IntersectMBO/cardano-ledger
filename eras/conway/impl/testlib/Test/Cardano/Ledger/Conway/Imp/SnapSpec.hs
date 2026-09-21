@@ -194,9 +194,14 @@ spec = describe "SNAP" $ do
             . flip runReader globals
             $ applySTS @(EraRule "TICKF" era) (TRC ((), nes, nextEpochStart))
         snapshotsOf s = s ^. nesEsL . esSnapshotsL
-    snapshotsOf nes ^. ssStakeMarkL `shouldNotBe` snapshotsOf nes ^. ssStakeSetL
-    snapshotsOf ticked ^. ssStakeSetL `shouldBe` snapshotsOf nes ^. ssStakeMarkL
-    snapshotsOf ticked ^. ssStakeGoL `shouldBe` snapshotsOf nes ^. ssStakeSetL
+    -- Only the underlying 'SnapShot' rotates; the set position additionally
+    -- derives its pool distribution and Leios committee from the mark.
+    snapshotsOf nes ^. ssStakeMarkL . msSnapShotL
+      `shouldNotBe` snapshotsOf nes ^. ssStakeSetL . ssSnapShotL
+    snapshotsOf ticked ^. ssStakeSetL . ssSnapShotL
+      `shouldBe` snapshotsOf nes ^. ssStakeMarkL . msSnapShotL
+    snapshotsOf ticked ^. ssStakeGoL . gsSnapShotL
+      `shouldBe` snapshotsOf nes ^. ssStakeSetL . ssSnapShotL
 
   it "SPO voting stake exceeds leader election stake by the active proposal deposit" $ do
     modifyPParams $ \pp ->
