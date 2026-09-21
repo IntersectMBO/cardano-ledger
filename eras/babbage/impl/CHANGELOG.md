@@ -22,6 +22,7 @@
 
 ### `testlib`
 
+* Make `mkTxWithRefInputs` parametric on level
 * Expose `fixupCollateralReturn`
 * Add `DecCBOR` instance for `Block`
 

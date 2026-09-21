@@ -6,7 +6,7 @@
 
 ### `testlib`
 
-* Move `mkTokenMintingTx` to `cardano-ledger-alonzo:testlib`
+* Change `mkTokenMintingTx` to return an `AnyLevelTx era` instead of a `Tx l era`
 
 ## 1.11.1.0
 
