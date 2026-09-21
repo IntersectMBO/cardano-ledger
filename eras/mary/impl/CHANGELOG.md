@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.11.1.0
+## 1.12.0.0
 
 * Widen `cardano-crypto-class` upper bound to `<2.7`
 * Add `FromJSON` instance for `MaryValue`
@@ -13,6 +13,7 @@
 
 ### `testlib`
 
+* Change `mkTokenMintingTx` to return an `AnyLevelTx era` instead of a `Tx l era`
 * Add `DecCBOR` instance for `Block`
 
 ### `cddl`

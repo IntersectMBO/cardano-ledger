@@ -24,6 +24,18 @@
 
 ### `testlib`
 
+* Move `trySubmitTx` into the `ShelleyEraImp` class and change it to accept a
+  `forall l. Typeable l => Tx l era` and to return `SubmitTxResult era`
+* Rename the top level `trySubmitTx` to `trySubmitTopTx` and change its result type from
+  `Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era)`
+  to `SubmitTxResult era`
+* Add `SubmitTxResult` with `strFailures` and `strFinalTx` fields
+* Add `AnyLevelTx`, which makes it possible to return a level polymorphic transaction from a
+  monadic action
+* Change `submitTx`, `submitTx_`, `submitTxAnn` and `submitTxAnn_` to accept a
+  `forall l. Typeable l => Tx l era` instead of a `Tx TopTx era`
+* Add `submitTopTx`, `submitTopTx_`, `submitTopTxAnn` and `submitTopTxAnn_`, which accept a
+  `Tx TopTx era`
 * Rename `freshBootstapAddress` to `freshBootstrapAddress` and express it in terms of the new `freshBootstrapAddressWithPayloadSize`, which takes the HD payload size, or `Nothing` for a plain Byron address.
 * Add `freshBootstrapAddressOversizedPayload` and `largestBootstrapAddressAttrsSize`
 * Add `rederiveAddrTxWits`, which re-derives key witnesses for a modified transaction body
