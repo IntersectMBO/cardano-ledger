@@ -34,6 +34,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transDelegatee,
   transDRep,
   transMap,
+  transTxId,
   transTxInInfoV1,
   transTxOutV1,
   transMintValue,
