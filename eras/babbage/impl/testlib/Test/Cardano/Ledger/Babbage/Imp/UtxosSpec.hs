@@ -144,7 +144,7 @@ spec = describe "UTXOS" $ do
           mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
             & datumTxOutL .~ mkInlineDatum (PV1.I 0)
       tx <-
-        submitTx $
+        submitTopTx $
           mkBasicTx $
             mkBasicTxBody & outputsTxBodyL .~ [txOut]
       let txIn = txInAt 0 tx
@@ -164,7 +164,7 @@ spec = describe "UTXOS" $ do
         mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
           & datumTxOutL .~ mkInlineDatum (PV1.I 1)
     tx <-
-      submitTx $
+      submitTopTx $
         mkBasicTx $
           mkBasicTxBody & outputsTxBodyL .~ [txOut]
     let txIn = txInAt 0 tx

@@ -156,7 +156,7 @@ spec = describe "Invalid transactions" $ do
             txInAt 0
               <$> withPostFixup
                 (fixupResetAddrWits <$> resetTxOutDataHash)
-                ( submitTx $
+                ( submitTopTx $
                     mkBasicTx mkBasicTxBody
                       & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]
                 )
