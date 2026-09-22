@@ -28,6 +28,7 @@
 module Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   LedgerTxInfo (..),
+  LedgerLevelTxInfo (..),
   toScriptHashByPurpose,
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
@@ -62,7 +63,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   hoistPlutusPurpose,
   toAsIx,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
+import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -99,6 +100,18 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
 
+-- | Information needed for TxInfo construction that is level specific.
+data LedgerLevelTxInfo level era where
+  LedgerTopTxInfo ::
+    -- | This is a field that is only used starting with Dijkstra era and only by top level
+    -- transactions.
+    Map TxId (TxInfoResult era) ->
+    LedgerLevelTxInfo TopTx era
+  LedgerSubTxInfo ::
+    -- | Index of this sub-transaction in the `subTransactionTxBodyL` list
+    TxIx ->
+    LedgerLevelTxInfo SubTx era
+
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era where
   LedgerTxInfo ::
@@ -110,9 +123,7 @@ data LedgerTxInfo era where
     , ltiScriptsUsed :: [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
     , ltiScriptHashesUsed :: Map.Map (PlutusPurpose AsIx era) ScriptHash
     -- ^ Map that will be used for looking up `ScriptHash`. Currently unused until Dijkstra era, hence is lazy.
-    , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
-    -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
-    -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
+    , ltiLevelTxInfo :: LedgerLevelTxInfo level era
     } ->
     LedgerTxInfo era
 

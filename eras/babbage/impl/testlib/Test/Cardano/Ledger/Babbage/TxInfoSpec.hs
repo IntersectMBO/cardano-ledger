@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo (..),
+  LedgerLevelTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
   toPlutusTxInfoForPurpose,
@@ -205,7 +206,9 @@ successfulTranslation ::
   (SLanguage l -> PlutusTxInfo l -> Expectation) ->
   Expectation
 successfulTranslation slang tx f =
-  let lti = mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss exampleUTxO tx
+  let lti =
+        mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss exampleUTxO tx $
+          LedgerTopTxInfo mempty
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo -> f slang txInfo
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
@@ -224,7 +227,9 @@ expectTranslationError ::
   ContextError era ->
   Expectation
 expectTranslationError slang tx expected =
-  let lti = mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss exampleUTxO tx
+  let lti =
+        mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss exampleUTxO tx $
+          LedgerTopTxInfo mempty
    in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
         Right txInfo ->
           assertFailure $ "This translation was expected to fail, but it succeeded: " <> show txInfo

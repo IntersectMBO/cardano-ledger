@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext,
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
   toScriptHashByPurpose,
@@ -150,7 +151,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelTxInfo = LedgerTopTxInfo mempty
         }
    in
     AlonzoStAnnTx

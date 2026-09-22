@@ -34,6 +34,7 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   PlutusScriptPurpose,
   PlutusTxInfo,
@@ -815,6 +816,7 @@ transGuardingTopTxInfo ::
   LedgerTxInfo era ->
   PV4.TxInfo ->
   ScriptHash ->
+  LedgerLevelTxInfo TopTx era ->
   Tx TopTx era ->
   Either (ContextError era) PV4.TopTxInfo
 transGuardingTopTxInfo proxy lti txInfo guardingScriptHash topTx = do
@@ -832,12 +834,7 @@ transGuardingTopTxInfo proxy lti txInfo guardingScriptHash topTx = do
       let txId = txIdTx subTx
       mkTxInfo <- unPlutusTxInfoResult $
         case Map.lookup txId (ltiMemoizedSubTransactions lti) of
-          Nothing ->
-            toPlutusTxInfo proxy $
-              lti
-                { ltiTx = subTx
-                , ltiMemoizedSubTransactions = mempty
-                }
+          Nothing -> error $ "Missing TxInfoResult for " <> show txId
           Just txInfoResults ->
             lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
       subTxInfo <-

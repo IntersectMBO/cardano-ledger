@@ -37,6 +37,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   ContextError,
   EraPlutusContext (..),
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
   toScriptHashByPurpose,
@@ -82,7 +83,7 @@ import qualified PlutusLedgerApi.Common as P
 -- ===============================================================
 
 collectPlutusScriptsWithContext ::
-  forall era l.
+  forall era.
   ( AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
@@ -92,7 +93,7 @@ collectPlutusScriptsWithContext ::
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx l era ->
+  Tx TopTx era ->
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
@@ -109,7 +110,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelTxInfo = LedgerTopTxInfo mempty
         }
     (_, plutusScriptsUsed) =
       resolveNeededPlutusScriptsWithPurpose
@@ -346,7 +347,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelTxInfo = LedgerTopTxInfo mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
