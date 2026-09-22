@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `HashAnnotated (AlonzoTxWits era) EraIndependentTxWits` instance.
 * Add `getTotalExUnits` to `AlonzoEraTx`, with the existing own-redeemer total as its default.
 * Deprecate `totExUnits` in favor of `getTotalExUnits`; require `AlonzoEraTx` in `totExUnits`, `alonzoMinFeeTx` and `validateExUnitsTooBigUTxO`.
 * Add `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors to `AlonzoContextError`

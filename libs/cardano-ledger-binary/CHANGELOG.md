@@ -13,7 +13,7 @@
 
 ### `testlib`
 
-*
+* Add `goldenForHashHex` to `Test.Cardano.Ledger.Binary.Golden`.
 
 ## 1.9.0.0
 
