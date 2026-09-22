@@ -32,6 +32,7 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   PlutusScriptPurpose,
   PlutusTxInfo,
@@ -120,6 +121,7 @@ import Cardano.Ledger.Plutus (
   transEpochNo,
   transKeyHash,
   transScriptHash,
+  transTxIx,
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -620,7 +622,10 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoCurrentTreasuryAmount =
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
+            , PV4.txInfoSubTxIx =
+                case ltiLevelTxInfo of
+                  LedgerTopTxInfo {} -> Nothing
+                  LedgerSubTxInfo txIx -> Just $ transTxIx txIx
             , PV4.txInfoWithdrawals = transWithdrawals $ txBody ^. withdrawalsTxBodyL
             , PV4.txInfoDirectDeposits = transDirectDeposits $ txBody ^. directDepositsTxBodyL
             , PV4.txInfoAccountBalanceIntervals =
@@ -829,7 +834,7 @@ transGuardingTopTxInfo ::
   ScriptHash ->
   Tx TopTx era ->
   Either (ContextError era) PV4.TopTxInfo
-transGuardingTopTxInfo proxy lti txInfo guardingScriptHash topTx = do
+transGuardingTopTxInfo proxy lti@(LedgerTxInfo {ltiLevelTxInfo = LedgerTopTxInfo subTxInfoResults}) txInfo guardingScriptHash topTx = do
   let
     lookupRequiredTopLevelGuardDatum :: Tx level era -> Maybe (TxId, Data era)
     lookupRequiredTopLevelGuardDatum tx = do
@@ -843,13 +848,8 @@ transGuardingTopTxInfo proxy lti txInfo guardingScriptHash topTx = do
     forM (OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
       let txId = txIdTx subTx
       mkTxInfo <- unPlutusTxInfoResult $
-        case Map.lookup txId (ltiMemoizedSubTransactions lti) of
-          Nothing ->
-            toPlutusTxInfo proxy $
-              lti
-                { ltiTx = subTx
-                , ltiMemoizedSubTransactions = mempty
-                }
+        case Map.lookup txId subTxInfoResults of
+          Nothing -> error $ "Missing TxInfoResult for " <> show txId
           Just txInfoResults ->
             lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
       subTxInfo <-

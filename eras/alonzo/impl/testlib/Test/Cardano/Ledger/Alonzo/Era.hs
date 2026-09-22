@@ -99,8 +99,9 @@ mkTestLedgerTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx level era ->
+  LedgerLevelTxInfo level era ->
   LedgerTxInfo era
-mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx =
+mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx levelTxInfo =
   let
     scriptsProvided = getScriptsProvided utxo tx
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -115,5 +116,5 @@ mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx =
       , ltiTx = tx
       , ltiScriptsUsed = plutusScriptsUsed
       , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-      , ltiMemoizedSubTransactions = mempty
+      , ltiLevelTxInfo = levelTxInfo
       }

@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Add `LedgerLevelTxInfo`
+* Replace optional `ltiMemoizedSubTransactions` field with required `ltiLevelTxInfo`
+* Make `collectPlutusScriptsWithContext` restricted to `TopTx` level only
 * Change `BBODY` signal to `TPraosBbodySignal`
 * Replace `alonzoBbodyTransition` with `bbodyTransition`
 * Add `HashAnnotated (AlonzoTxWits era) EraIndependentTxWits` instance.
