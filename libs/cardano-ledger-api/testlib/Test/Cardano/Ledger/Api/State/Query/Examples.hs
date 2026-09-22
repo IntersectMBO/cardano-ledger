@@ -53,6 +53,7 @@ import Cardano.Ledger.Api.State.Query (
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+  QueryLeiosSeat (..),
   QueryPoolStateResult (..),
   QueryResultPoolDistr,
   StakeSnapshot (..),
@@ -77,12 +78,14 @@ import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.State (
   BlsKey,
+  BlsKeyState (..),
   ChainAccountState (..),
   FuturePParams (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   StakePoolParams (..),
   StakePoolRelay (..),
+  mkStakePoolState,
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Data.Default (def)
@@ -96,6 +99,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Vector as Vector
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -488,29 +492,36 @@ queryPoolParametersExamples =
 queryPoolStateExamples :: [QueryPoolStateResult era]
 queryPoolStateExamples =
   [ QueryPoolStateResult
-      { qpsrStakePoolParams = Map.empty
+      { qpsrStakePools = Map.empty
       , qpsrFutureStakePoolParams = Map.empty
       , qpsrRetiring = Map.empty
-      , qpsrDeposits = Map.empty
       }
   , QueryPoolStateResult
-      { qpsrStakePoolParams =
+      { qpsrStakePools =
           Map.fromList
-            [ (sppId exampleStakePoolParams, exampleStakePoolParams)
-            , (mkKeyHash 99, exampleStakePoolParams {sppId = mkKeyHash 99})
+            [ (sppId exampleStakePoolParams, exampleStakePoolStateWithBlsKey)
+            , (mkKeyHash 99, exampleStakePoolState)
             ]
       , qpsrFutureStakePoolParams =
           Map.singleton
             (mkKeyHash 100)
             (exampleStakePoolParams {sppId = mkKeyHash 100})
       , qpsrRetiring = Map.singleton (mkKeyHash 99) (EpochNo 250)
-      , qpsrDeposits =
-          Map.fromList
-            [ (mkKeyHash 1, Coin 500_000_000)
-            , (mkKeyHash 99, Coin 500_000_000)
-            ]
       }
   ]
+  where
+    exampleStakePoolState =
+      mkStakePoolState (EpochNo 191) (CompactCoin 500_000_000) delegators exampleStakePoolParams
+    -- A pool that registered a voting key: the epoch it registered in rides
+    -- along on the key, which is the whole reason this query reports
+    -- StakePoolState.
+    exampleStakePoolStateWithBlsKey =
+      mkStakePoolState
+        (EpochNo 191)
+        (CompactCoin 500_000_000)
+        delegators
+        exampleStakePoolParams {sppBlsKey = SJust exampleBlsKey}
+    delegators = Set.fromList [KeyHashObj (mkKeyHash 7), KeyHashObj (mkKeyHash 8)]
 
 queryFuturePParamsExamples :: EraTest era => [Maybe (PParams era)]
 queryFuturePParamsExamples = [Nothing, Just def, Just examplePParams]
@@ -632,6 +643,7 @@ queryStakeSnapshotsExamples =
       , ssMarkTotal = knownNonZeroCoin @1
       , ssSetTotal = knownNonZeroCoin @1
       , ssGoTotal = knownNonZeroCoin @1
+      , ssLeiosCommittee = Vector.empty
       }
   , StakeSnapshots
       { ssStakeSnapshots =
@@ -652,6 +664,29 @@ queryStakeSnapshotsExamples =
                   , ssGoPool = Coin 250_000_000
                   }
               )
+            ]
+      , -- The three states a seat can be in: voting, seated with a key the
+        -- committee no longer honours, and seated having never registered one.
+        ssLeiosCommittee =
+          Vector.fromList
+            [ QueryLeiosSeat
+                { qlsPoolId = mkKeyHash 1
+                , qlsWeight = 2 % 3
+                , qlsKey = SJust (BlsKeyState exampleBlsKey (EpochNo 191))
+                , qlsVoting = True
+                }
+            , QueryLeiosSeat
+                { qlsPoolId = mkKeyHash 2
+                , qlsWeight = 1 % 3
+                , qlsKey = SJust (BlsKeyState exampleBlsKey (EpochNo 12))
+                , qlsVoting = False
+                }
+            , QueryLeiosSeat
+                { qlsPoolId = mkKeyHash 3
+                , qlsWeight = 0
+                , qlsKey = SNothing
+                , qlsVoting = False
+                }
             ]
       , ssMarkTotal = knownNonZeroCoin @5_000_000_000
       , ssSetTotal = knownNonZeroCoin @4_500_000_000

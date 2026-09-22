@@ -506,10 +506,11 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] ->
+    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] [var|committee|] ->
       [ assert $ activeStake ==. lit (ActiveStake VMap.empty)
       , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
       , assert $ pools ==. lit VMap.empty
+      , assert $ committee ==. lit emptyLeiosCommittee
       ]
 
 -- | The set/go snapshots wrap an empty base snapshot; their derived fields
@@ -541,7 +542,8 @@ snapShotsSpec marksnap =
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
 getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
 getMarkSnapShot ls =
-  resetStakePoolsSnapShot markStakePoolState $ mkSnapShot markActiveStake VMap.empty
+  resetStakePoolsSnapShot markStakePoolState $
+    mkSnapShot markActiveStake VMap.empty
   where
     markActiveStake :: ActiveStake
     markActiveStake =

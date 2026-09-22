@@ -13,6 +13,7 @@ module Cardano.Ledger.State.LeiosCommittee (
   emptyLeiosCommittee,
   LeiosCandidate (..),
   selectLeiosCommittee,
+  seatedLeiosCandidates,
   leiosCommitteeToJSON,
 ) where
 
@@ -66,22 +67,11 @@ selectLeiosCommittee ::
   EpochNo -> EpochInterval -> Word16 -> Vector LeiosCandidate -> LeiosCommittee
 selectLeiosCommittee _ _ 0 _ = emptyLeiosCommittee
 selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
-  candidates
-    & sortByStake
-    & V.take size
+  seatedLeiosCandidates committeeSize candidates
     & V.map toSeat
     & V.convert
     & mkLeiosCommittee
   where
-    -- Only the top @size@ need to be in order, so partial-sort them in place
-    -- and leave the rest untouched instead of ordering the whole vector.
-    sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
-
-    size = min (fromIntegral @Word16 @Int committeeSize) (V.length candidates)
-
-    higherStake a b =
-      compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
-
     toSeat c = (honouredKey c, lcWeight c)
 
     -- The key is offered to the committee only while it is still honoured; an
@@ -91,6 +81,25 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
       if epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge
         then let BlsKey vk pop = bksKey bks in SJust (vk, pop)
         else SNothing
+
+-- | The candidates that get a seat, in seat order: the @committeeSize@ pools
+-- with the most stake, largest first, ties broken by ascending pool id.
+-- Factored out of 'selectLeiosCommittee' so a query can re-derive which pool
+-- holds a stored seat without a second, drifting copy of the ranking rule.
+seatedLeiosCandidates :: Word16 -> Vector LeiosCandidate -> Vector LeiosCandidate
+seatedLeiosCandidates committeeSize candidates =
+  candidates
+    & sortByStake
+    & V.take size
+  where
+    -- Only the top @size@ need to be in order, so partial-sort them in place
+    -- and leave the rest untouched instead of ordering the whole vector.
+    sortByStake = V.modify (\mv -> Intro.partialSortBy higherStake mv size)
+
+    size = min (fromIntegral @Word16 @Int committeeSize) (V.length candidates)
+
+    higherStake a b =
+      compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
 -- | Render a 'LeiosCommittee' as JSON for ledger purposes.
 leiosCommitteeToJSON :: LeiosCommittee -> Value

@@ -611,7 +611,10 @@ resetStakeDistribution nes =
     -- establish an initial stake distribution.
     initSnapShot :: SnapShot
     initSnapShot =
-      snapShotFromInstantStake (addInstantStake (nes ^. utxoL) mempty) dState pState
+      snapShotFromInstantStake
+        (addInstantStake (nes ^. utxoL) mempty)
+        dState
+        pState
 
 -- | Register the initial funds in the 'NewEpochState'.
 --

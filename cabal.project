@@ -27,9 +27,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-base.git
-  --sha256: sha256-WUBluY6UqvBkS5cNsJnKMOaW+1dTfL3mg8iq/kVPV0o=
-  tag: 242f1ebde40b137ac024d8b68265e2935e0eba14
-  subdir: cardano-crypto-leios
+  -- TODO: refresh with nix-prefetch-git after pushing the tag
+  --sha256: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  tag: 2b6a7721b12d2b2b29f19374b0dd763e2210efd3
+  -- Real master (not leios-prototype), past PR #695 which is the same
+  -- DST fix, and past cardano-base's own crypton memory->ram migration --
+  -- unlike leios-prototype's DST-fix commit, this one is on the same
+  -- crypton line as cardano-ledger master's own cardano-crypto-wrapper, so
+  -- no crypton pin/allow-older is needed. Same four subdirs as o-c/node's
+  -- leios-prototype pin (cardano-crypto-class must come from the same
+  -- commit as cardano-crypto-leios, or the DSIGN class shapes mismatch).
+  subdir:
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-leios
+    cardano-crypto-praos
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec

@@ -86,6 +86,7 @@ module Cardano.Ledger.Api.State.Query (
   queryStakeSnapshots,
   StakeSnapshot (..),
   StakeSnapshots (..),
+  QueryLeiosSeat (..),
 
   -- * @GetLedgerPeerSnapshot@
   queryStakePoolRelays,
@@ -94,6 +95,7 @@ module Cardano.Ledger.Api.State.Query (
   getNextEpochCommitteeMembers,
 ) where
 
+import Cardano.Crypto.Leios (Weight)
 import Cardano.Ledger.Api.State.Query.Account as Account
 import Cardano.Ledger.Api.State.Query.Governance as Governance
 import Cardano.Ledger.BaseTypes (
@@ -140,7 +142,7 @@ import Control.DeepSeq
 import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
-import Data.Foldable (fold, foldMap')
+import Data.Foldable (fold, foldMap', toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
@@ -150,6 +152,9 @@ import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
+import Data.Vector (Vector)
+import qualified Data.Vector as Vector
+import qualified Data.Vector.Strict as VS
 import GHC.Generics
 import Lens.Micro
 
@@ -454,68 +459,62 @@ queryStakePoolDefaultVote nes poolId =
   defaultStakePoolVote poolId (nes ^. nesEsL . epochStateStakePoolsL) $
     nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
 
--- | Used only for the `queryPoolState` query. This resembles the older way of
--- representing StakePoolState in Ledger.
+-- | Used only for the `queryPoolState` query.
+--
+-- Registered pools are reported as `StakePoolState`, so a pool's voting key
+-- carries the epoch it was registered in and its delegators are visible. The
+-- deposit lives on `StakePoolState` too, which is why there is no separate
+-- deposits map. Future parameters are staged changes rather than state, so those
+-- stay `StakePoolParams`.
 data QueryPoolStateResult era = QueryPoolStateResult
-  { qpsrStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
+  { qpsrStakePools :: !(Map (KeyHash StakePool) StakePoolState)
   , qpsrFutureStakePoolParams :: !(Map (KeyHash StakePool) (StakePoolParams era))
   , qpsrRetiring :: !(Map (KeyHash StakePool) EpochNo)
-  , qpsrDeposits :: !(Map (KeyHash StakePool) Coin)
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (QueryPoolStateResult era)
 
 instance EncCBOR (QueryPoolStateResult era) where
-  encCBOR (QueryPoolStateResult a b c d) =
-    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+  encCBOR (QueryPoolStateResult a b c) =
+    encodeListLen 3 <> encCBOR a <> encCBOR b <> encCBOR c
 
 instance Era era => DecCBOR (QueryPoolStateResult era) where
-  decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 4) $ do
-    qpsrStakePoolParams <- decCBOR
+  decCBOR = decodeRecordNamed "QueryPoolStateResult" (const 3) $ do
+    qpsrStakePools <- decCBOR
     qpsrFutureStakePoolParams <- decCBOR
     qpsrRetiring <- decCBOR
-    qpsrDeposits <- decCBOR
-    pure
-      QueryPoolStateResult {qpsrStakePoolParams, qpsrFutureStakePoolParams, qpsrRetiring, qpsrDeposits}
+    pure QueryPoolStateResult {qpsrStakePools, qpsrFutureStakePoolParams, qpsrRetiring}
 
 instance ToKeyValuePairs (QueryPoolStateResult era) where
-  toKeyValuePairs qpsr@(QueryPoolStateResult _ _ _ _) =
+  toKeyValuePairs qpsr@(QueryPoolStateResult _ _ _) =
     let QueryPoolStateResult {..} = qpsr
-     in [ "stakePoolParams" .= qpsrStakePoolParams
+     in [ "stakePools" .= qpsrStakePools
         , "futureStakePoolParams" .= qpsrFutureStakePoolParams
         , "retiring" .= qpsrRetiring
-        , "deposits" .= qpsrDeposits
         ]
 
 mkQueryPoolStateResult ::
   (forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x) ->
   PState era ->
-  Network ->
   QueryPoolStateResult era
-mkQueryPoolStateResult f ps network =
+mkQueryPoolStateResult f ps =
   QueryPoolStateResult
-    { qpsrStakePoolParams =
-        Map.mapWithKey (stakePoolStateToStakePoolParams network) restrictedStakePools
+    { qpsrStakePools = f $ psStakePools ps
     , qpsrFutureStakePoolParams = f $ psFutureStakePoolParams ps
     , qpsrRetiring = f $ psRetiring ps
-    , qpsrDeposits = Map.map (fromCompact . spsDeposit) restrictedStakePools
     }
-  where
-    restrictedStakePools = f $ psStakePools ps
 
--- | Query the QueryPoolStateResult. This is slightly different from the internal
--- representation used by Ledger and is intended to resemble how the internal
--- representation used to be.
+-- | Query the QueryPoolStateResult, optionally restricted to a set of pools.
 queryPoolState ::
   EraCertState era =>
-  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> Network -> QueryPoolStateResult era
-queryPoolState nes mPoolKeys network =
+  NewEpochState era -> Maybe (Set (KeyHash StakePool)) -> QueryPoolStateResult era
+queryPoolState nes mPoolKeys =
   let pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
       f :: forall x. Map.Map (KeyHash StakePool) x -> Map.Map (KeyHash StakePool) x
       f = case mPoolKeys of
         Nothing -> id
         Just keys -> (`Map.restrictKeys` keys)
-   in mkQueryPoolStateResult f pstate network
+   in mkQueryPoolStateResult f pstate
 
 -- | Query the current StakePoolParams.
 queryPoolParameters ::
@@ -579,11 +578,44 @@ stakeSnapshotToPair
     , "stakeGo" .= ssGoPool
     ]
 
+-- | One seat of the Leios voting committee (CIP-0164), attributed to the pool
+-- that holds it.
+--
+-- A seat on its own says only what weight it carries and whether it can vote;
+-- 'ssLeiosCommittee' puts them back in the order the committee was seated in,
+-- so a seat's position in that vector is the index votes reference.
+--
+-- The two key fields answer different questions, and the interesting case is
+-- when they disagree: 'qlsKey' is what the pool has registered, and
+-- 'qlsVoting' is whether the committee is honouring it. A seat with a key but
+-- @qlsVoting = False@ is one whose key has aged out (CIP-0164) -- seated, but
+-- unable to vote, and holding weight nobody else can use. That state is
+-- otherwise invisible: the committee itself stores a keyless seat, which is
+-- indistinguishable from a pool that never registered at all.
+data QueryLeiosSeat = QueryLeiosSeat
+  { qlsPoolId :: !(KeyHash StakePool)
+  , qlsWeight :: !Weight
+  -- ^ The seat's share of the vote, as the committee counts it.
+  , qlsKey :: !(StrictMaybe BlsKeyState)
+  -- ^ The pool's registered voting key and the epoch it registered in, as of
+  -- this snapshot. 'SNothing' if it never registered one.
+  , qlsVoting :: !Bool
+  -- ^ Whether the seat actually carries the key, i.e. the key is still
+  -- honoured.
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData QueryLeiosSeat
+
 data StakeSnapshots = StakeSnapshots
   { ssStakeSnapshots :: !(Map (KeyHash StakePool) StakeSnapshot)
   , ssMarkTotal :: !(NonZero Coin)
   , ssSetTotal :: !(NonZero Coin)
   , ssGoTotal :: !(NonZero Coin)
+  , ssLeiosCommittee :: !(Vector QueryLeiosSeat)
+  -- ^ The committee seated on the @set@ snapshot, which is the one governing
+  -- the current epoch -- the committee consensus is voting with right now.
+  -- Reported in seat order. Empty before Dijkstra.
   }
   deriving (Eq, Show, Generic)
 
@@ -596,21 +628,45 @@ instance EncCBOR StakeSnapshots where
       , ssMarkTotal
       , ssSetTotal
       , ssGoTotal
+      , ssLeiosCommittee
       } =
-      encodeListLen 4
+      encodeListLen 5
         <> encCBOR ssStakeSnapshots
         <> encCBOR ssMarkTotal
         <> encCBOR ssSetTotal
         <> encCBOR ssGoTotal
+        <> encCBOR (toList ssLeiosCommittee)
 
 instance DecCBOR StakeSnapshots where
   decCBOR = do
-    enforceSize "StakeSnapshots" 4
+    enforceSize "StakeSnapshots" 5
     StakeSnapshots
       <$> decCBOR
       <*> decCBOR
       <*> decCBOR
       <*> decCBOR
+      <*> (Vector.fromList <$> decCBOR)
+
+instance EncCBOR QueryLeiosSeat where
+  encCBOR (QueryLeiosSeat a b c d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+
+instance DecCBOR QueryLeiosSeat where
+  decCBOR = decodeRecordNamed "QueryLeiosSeat" (const 4) $ do
+    qlsPoolId <- decCBOR
+    qlsWeight <- decCBOR
+    qlsKey <- decCBOR
+    qlsVoting <- decCBOR
+    pure QueryLeiosSeat {qlsPoolId, qlsWeight, qlsKey, qlsVoting}
+
+instance ToJSON QueryLeiosSeat where
+  toJSON QueryLeiosSeat {qlsPoolId, qlsWeight, qlsKey, qlsVoting} =
+    object
+      [ "poolId" .= qlsPoolId
+      , "weight" .= qlsWeight
+      , "key" .= qlsKey
+      , "voting" .= qlsVoting
+      ]
 
 instance ToJSON StakeSnapshots where
   toJSON = object . stakeSnapshotsToPair
@@ -624,8 +680,10 @@ stakeSnapshotsToPair
     , ssMarkTotal
     , ssSetTotal
     , ssGoTotal
+    , ssLeiosCommittee
     } =
-    [ "pools" .= ssStakeSnapshots
+    [ "leiosCommittee" .= toList ssLeiosCommittee
+    , "pools" .= ssStakeSnapshots
     , "total"
         .= object
           [ "stakeMark" .= ssMarkTotal
@@ -701,6 +759,38 @@ queryStakeSnapshots nes mPoolIds =
         , ssMarkTotal = ssTotalActiveStake markSnap
         , ssSetTotal = ssTotalActiveStake setSnap
         , ssGoTotal = ssTotalActiveStake goSnap
+        , -- Deliberately not filtered by 'poolIds': a committee is only
+          -- meaningful whole, since a seat's weight is a share of it, and its
+          -- position is the index votes reference.
+          ssLeiosCommittee = leiosCommitteeOf (snaps ^. ssStakeSetL)
+        }
+
+-- | Attribute the seats of a snapshot's Leios committee back to the pools
+-- holding them.
+--
+-- The seats themselves are authoritative -- they are what consensus votes with
+-- -- so weight and whether the seat can vote are read from them. What they do
+-- not record is which pool a seat belongs to, or when that pool's key was
+-- registered, so those come from the candidates the committee was seated from,
+-- re-ranked with the very function that seated it. Re-ranking rather than
+-- storing the association keeps this from being a second, drifting copy of the
+-- selection rule; zipping keeps the answer honest even if it ever did drift,
+-- since the seat still supplies the vote-affecting fields.
+leiosCommitteeOf :: SetSnapShot -> Vector QueryLeiosSeat
+leiosCommitteeOf setSnap =
+  Vector.zipWith toSeat (Vector.convert seats) candidates
+  where
+    seats = leiosCommitteeSeats (setSnap ^. ssLeiosCommitteeL)
+    candidates =
+      seatedLeiosCandidates
+        (fromIntegral (VS.length seats))
+        (leiosCandidates (ssStakePoolsSnapShot (setSnap ^. ssSnapShotL)))
+    toSeat seat candidate =
+      QueryLeiosSeat
+        { qlsPoolId = lcPoolId candidate
+        , qlsWeight = seatWeight seat
+        , qlsKey = lcKey candidate
+        , qlsVoting = isJust (strictMaybeToMaybe (seatVKey seat))
         }
 
 -- | Query the current epoch number.
