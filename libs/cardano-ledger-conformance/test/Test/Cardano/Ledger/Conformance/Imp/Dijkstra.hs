@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as ConwayEPOCH
 import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as ConwayGOVCERT
 import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as ConwayGOV
 import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as ConwayLEDGER
+import Test.Cardano.Ledger.Conway.Imp.MempoolSpec qualified as ConwayMEMPOOL
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as ConwayRATIFY
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec qualified as ConwaySNAP
 import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as ConwayUTXO
@@ -31,6 +32,7 @@ import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as ConwayUTXOW
 import Test.Cardano.Ledger.Dijkstra.Imp.CertSpec qualified as CERT
 import Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec qualified as ENTITIES
 import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
+import Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec qualified as MEMPOOL
 import Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec qualified as POOL
 import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec qualified as SUBUTXO
 import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec qualified as SUBUTXOW
@@ -76,6 +78,9 @@ spec = do
             ShelleyLEDGER.spec
             ConwayLEDGER.spec
             LEDGER.spec
+
+            ConwayMEMPOOL.spec
+            MEMPOOL.spec
 
             ShelleyPOOL.spec
             POOL.spec

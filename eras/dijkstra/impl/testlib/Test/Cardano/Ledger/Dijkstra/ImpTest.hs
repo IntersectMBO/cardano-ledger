@@ -26,6 +26,8 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   traverseSubTxs,
   withPostFixupSubTxs,
   submitFailingSubTx,
+  submitFailingMempoolTx,
+  expectMempoolRejection,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -213,6 +215,30 @@ submitFailingSubTx ::
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingSubTx subTx = submitFailingTx $ mkTopTxWithSubTxs [subTx]
+
+-- | Submit a transaction through the mempool that is expected to be rejected
+-- with exactly the given predicate failures.
+submitFailingMempoolTx ::
+  (HasCallStack, DijkstraEraImp era) =>
+  Tx TopTx era ->
+  NonEmpty (DijkstraMempoolPredFailure era) ->
+  ImpTestM era ()
+submitFailingMempoolTx tx expectedFailures = do
+  result <- trySubmitMempoolTx tx
+  expectMempoolRejection result expectedFailures
+
+-- | Expect the result of a mempool submission to be a rejection with exactly
+-- the given predicate failures.
+expectMempoolRejection ::
+  (HasCallStack, DijkstraEraImp era) =>
+  Either (ApplyTxError era) a ->
+  NonEmpty (DijkstraMempoolPredFailure era) ->
+  ImpTestM era ()
+expectMempoolRejection result expectedFailures = case result of
+  Left applyTxError ->
+    applyTxError `shouldBeExpr` inject (injectFailure @"MEMPOOL" <$> expectedFailures)
+  Right _ ->
+    assertFailure $ "Expected a mempool rejection with: " <> show expectedFailures
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

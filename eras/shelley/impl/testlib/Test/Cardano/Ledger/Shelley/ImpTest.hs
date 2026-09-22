@@ -72,6 +72,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitFailingSubsetTx,
   submitFailingSubsetTxM,
   trySubmitTx,
+  trySubmitMempoolTx,
+  tryReapplyMempoolTx,
   submitBlock_,
   submitBlock,
   submitFailingBlock,
@@ -214,7 +216,16 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
-import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
+import Cardano.Ledger.Shelley.API.Mempool (
+  ApplyTx (..),
+  MempoolEnv,
+  MempoolState,
+  ValidatedTx,
+  applyTxWithFullValidation,
+  mkMempoolEnv,
+  mkMempoolState,
+  reapplyValidatedTx,
+ )
 import Cardano.Ledger.Shelley.API.Validation (
   ApplyBlock,
   BlockTransitionError (..),
@@ -1440,6 +1451,37 @@ submitFailingSubsetTxM tx mkExpectedFailures = do
     "Some required predicate failures were absent"
     significantSet
     expectedSet
+
+-- | Submit a transaction through `applyTxWithFullValidation`, instead
+-- of running the LEDGER rule directly.
+trySubmitMempoolTx ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Tx TopTx era ->
+  ImpTestM era (Either (ApplyTxError era) (MempoolState era, ValidatedTx era))
+trySubmitMempoolTx tx = do
+  txFixed <- asks iteFixup >>= ($ tx)
+  logToExpr txFixed
+  withMempoolContext $ \globals mempoolEnv mempoolState ->
+    applyTxWithFullValidation globals mempoolEnv mempoolState txFixed
+
+-- | Reapply a transaction that the mempool has already validated.
+tryReapplyMempoolTx ::
+  ShelleyEraImp era =>
+  ValidatedTx era ->
+  ImpTestM era (Either (ApplyTxError era) (MempoolState era))
+tryReapplyMempoolTx validatedTx =
+  withMempoolContext $ \globals mempoolEnv mempoolState ->
+    reapplyValidatedTx globals mempoolEnv mempoolState validatedTx
+
+withMempoolContext ::
+  ShelleyEraImp era =>
+  (Globals -> MempoolEnv era -> MempoolState era -> a) ->
+  ImpTestM era a
+withMempoolContext f = do
+  globals <- use impGlobalsL
+  nes <- use impNESL
+  slotNo <- use impCurSlotNoG
+  pure $ f globals (mkMempoolEnv nes slotNo) (mkMempoolState nes)
 
 -- * Submitting blocks
 

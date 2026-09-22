@@ -99,6 +99,9 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec`
+* Add `submitFailingMempoolTx` and `expectMempoolRejection`
+* Add `ToExpr` instance for `ApplyTxError DijkstraEra`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
 * Add `submitFailingSubTx`
 * Preserve explicitly supplied redeemers when fixing up subtransactions.
