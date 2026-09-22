@@ -56,7 +56,8 @@ expectStakePoolParams kh expected = impAnn "expectStakePoolParams" $ do
   impAnn "accountId" $
     (view spsAccountIdL <$> actual)
       `shouldBeExpr` (view (sppAccountAddressL . accountAddressIdL) <$> expected)
-  impAnn "blsKey" $ (view spsBlsKeyL <$> actual) `shouldBeExpr` (view sppBlsKeyL <$> expected)
+  impAnn "blsKey" $
+    (fmap bksKey . view spsBlsKeyStateL <$> actual) `shouldBeExpr` (view sppBlsKeyL <$> expected)
   impAnn "vrf" $ (view spsVrfL <$> actual) `shouldBeExpr` (view sppVrfL <$> expected)
   impAnn "pledge" $ (view spsPledgeL <$> actual) `shouldBeExpr` (view sppPledgeL <$> expected)
   impAnn "cost" $ (view spsCostL <$> actual) `shouldBeExpr` (view sppCostL <$> expected)

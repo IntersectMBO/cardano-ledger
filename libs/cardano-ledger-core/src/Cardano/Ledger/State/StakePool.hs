@@ -32,7 +32,7 @@ module Cardano.Ledger.State.StakePool (
 
   -- * Lenses
   spsVrfL,
-  spsBlsKeyL,
+  spsBlsKeyStateL,
   spsPledgeL,
   spsCostL,
   spsMarginL,
@@ -194,8 +194,8 @@ data StakePoolState = StakePoolState
 spsVrfL :: Lens' StakePoolState (VRFVerKeyHash StakePoolVRF)
 spsVrfL = lens spsVrf (\sps u -> sps {spsVrf = u})
 
-spsBlsKeyL :: Lens' StakePoolState (StrictMaybe BlsKeyState)
-spsBlsKeyL = lens spsBlsKey $ \sps blsKey -> sps {spsBlsKey = blsKey}
+spsBlsKeyStateL :: Lens' StakePoolState (StrictMaybe BlsKeyState)
+spsBlsKeyStateL = lens spsBlsKey $ \sps blsKey -> sps {spsBlsKey = blsKey}
 
 spsPledgeL :: Lens' StakePoolState Coin
 spsPledgeL = lens spsPledge $ \sps c -> sps {spsPledge = c}
