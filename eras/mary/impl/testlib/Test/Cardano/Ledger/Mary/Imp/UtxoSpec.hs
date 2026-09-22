@@ -31,11 +31,10 @@ mintBasicToken = do
   let txAsset = MultiAsset $ Map.singleton (PolicyID scriptHash) $ Map.singleton (AssetName "testAsset") amount
       txValue :: MaryValue
       txValue = MaryValue mempty txAsset
-      txBody =
-        mkBasicTxBody
-          & outputsTxBodyL .~ [mkBasicTxOut addr txValue]
-          & mintTxBodyL .~ txAsset
-  submitTx $ mkBasicTx txBody
+  submitTopTx $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr txValue]
+      & bodyTxL . mintTxBodyL .~ txAsset
 
 spec ::
   ( HasCallStack

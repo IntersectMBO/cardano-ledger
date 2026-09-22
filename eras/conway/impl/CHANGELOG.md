@@ -27,6 +27,8 @@
 
 ### `testlib`
 
+* Change `trySubmitProposals` and `trySubmitGovActions` to return `SubmitTxResult era` instead of
+  `Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era)`
 * Add reusable `SNAP` voting-stake test helpers (shared with the Dijkstra testlib) to `Test.Cardano.Ledger.Conway.Imp.SnapSpec`: `getSpoVotingStake`, `getDRepVotingStake`, `getLeaderElectionStake`, `isPoolInLeaderDistr`, `isPoolInRewardSnapshot`, `setupExpiredRefundScenario`, `setupReapedPoolScenario`, `setupWithdrawalScenario`, `setupCombinedScenario`, `setupRetiredPoolInLeaderDistr`
 * Add `DecCBOR` instance for `Block`
 

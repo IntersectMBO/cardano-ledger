@@ -24,6 +24,8 @@
 
 ### `testlib`
 
+* Change `mkTxWithPlutusAndBootstrapAddress` to return an `AnyLevelTx era` instead of a
+  `Tx TopTx era`
 * Export `makeCollateralInput` and `txWithMaxRedeemers`
 * Use annotated transaction script collection in `impPlutusWithContexts` so phase-2 test expectations include subtransactions.
 * Add `Inject (AlonzoContextError era) (ContextError era)` superclass constraint to the `AlonzoEraTest` type class

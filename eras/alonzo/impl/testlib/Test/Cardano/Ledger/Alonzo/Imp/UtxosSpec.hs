@@ -181,7 +181,7 @@ spec = describe "UTXOS" $ do
         it "Invalid plutus script fails in phase 2" $ do
           txIn0 <- produceScript redeemerSameAsDatumHash
           exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
-          submitTxAnn_ "Submitting consuming transaction" $
+          submitTopTxAnn_ "Submitting consuming transaction" $
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
               & isPhase2ValidTxL .~ Phase2Invalid
@@ -208,4 +208,5 @@ spec = describe "UTXOS" $ do
 
         it "Scripts with bootstrap addresses pass" $
           when (eraProtVerLow @era <= eraProtVerHigh @AlonzoEra) $ do
-            mkTxWithPlutusAndBootstrapAddress slang >>= submitTx_
+            AnyLevelTx tx <- mkTxWithPlutusAndBootstrapAddress slang
+            submitTx_ tx

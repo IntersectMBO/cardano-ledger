@@ -71,8 +71,8 @@ spec = describe "UTXO" $ do
             -- just the pool deposits are in `produced` because the transaction is not fixed up
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "counts distinct pool deposits in top and sub separately" $ do
       let genTx = do
@@ -82,8 +82,8 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [poolB, poolA, poolB] [[poolA, poolA, poolB], [poolA, poolB]]
             expectProduced tx $ inject ((2 :: Int) <×> (pp ^. ppPoolDepositL))
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "includes sub-tx cert deposits when top has no certs" $ do
       pp <- getsPParams id
@@ -92,8 +92,8 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [] [[poolKh]]
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "does not count re-registrations of an already-registered pool across the batch" $ do
       let genTx = do
@@ -102,8 +102,8 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [poolKh] [[poolKh]]
             expectProduced tx mempty
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "dedupes across multiple subtransactions registering the same fresh pool" $ do
       pp <- getsPParams id
@@ -112,8 +112,8 @@ spec = describe "UTXO" $ do
             tx <- registerPoolTxWithSubTxs [] [[poolKh], [poolKh]]
             expectProduced tx $ inject (pp ^. ppPoolDepositL)
             pure tx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
     it "sums outputs, fee, treasury donations and deposits across the batch" $ do
       pp <- getsPParams id
@@ -182,8 +182,8 @@ spec = describe "UTXO" $ do
               (poolDeposit <> dRepDeposit)
             pure topTx
 
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
     disableInConformanceIt "sums assets burned by the top and the sub transaction" $ do
       let genTx = do
@@ -196,7 +196,7 @@ spec = describe "UTXO" $ do
             tokenAddr <- freshKeyAddr_
             let tokens n = multiAssetFromList [(policyId, assetName, n)]
             mintTx <-
-              submitTx $
+              submitTopTx $
                 mkBasicTx $
                   mkBasicTxBody
                     & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
@@ -229,8 +229,8 @@ spec = describe "UTXO" $ do
                     (tokens (topBurnAmount + subBurnAmount))
             expectProduced topTx expected
             pure topTx
-      submitTx_ =<< genTx
-      submitTx_ =<< switchTxToLegacyMode =<< genTx
+      submitTopTx_ =<< genTx
+      submitTopTx_ =<< switchTxToLegacyMode =<< genTx
 
   describe "Value preservation" $ do
     let mkSubTx :: BatchAmounts -> ImpTestM era (Tx SubTx era)
@@ -272,18 +272,18 @@ spec = describe "UTXO" $ do
     it "tx balanced across the batch and at the top level - normal mode" $ do
       amounts <- genFullyBalancedAmounts
       topTx <- mkTopTx amounts
-      withFixup noBalanceFixup $ submitTx_ topTx
+      withFixup noBalanceFixup $ submitTopTx_ topTx
 
     it "tx balanced across the batch and at the top level - legacy mode" $ do
       amounts <- genFullyBalancedAmounts
       topTx <- mkTopTx amounts
       topTxLegacy <- mkTopTxLegacyMode amounts topTx
-      withFixup noBalanceFixup $ submitTx_ topTxLegacy
+      withFixup noBalanceFixup $ submitTopTx_ topTxLegacy
 
     it "tx balanced across the batch and unbalanced at the top level - normal mode" $ do
       amounts <- genBatchOnlyBalancedAmounts
       topTx <- mkTopTx amounts
-      withFixup noBalanceFixup $ submitTx_ topTx
+      withFixup noBalanceFixup $ submitTopTx_ topTx
 
     it "tx balanced across the batch and unbalanced at the top level - legacy mode" $ do
       amounts <- genBatchOnlyBalancedAmounts
@@ -373,20 +373,20 @@ spec = describe "UTXO" $ do
         amounts <- genTopOnlyBalancedAmounts
         topTx <- mkTopTx amounts
         balanced <- balanceSubTransactions topTx
-        withFixup noBalanceFixup $ submitTx_ balanced
+        withFixup noBalanceFixup $ submitTopTx_ balanced
 
       it "top-only balanced - legacy mode" $ do
         amounts <- genTopOnlyBalancedAmounts
         topTx <- mkTopTx amounts
         topTxLegacy <- mkTopTxLegacyMode amounts topTx
         balanced <- balanceSubTransactions topTxLegacy
-        withFixup noBalanceFixup $ submitTx_ balanced
+        withFixup noBalanceFixup $ submitTopTx_ balanced
 
       it "balanced on both levels keeps it balanced" $ do
         amounts <- genFullyBalancedAmounts
         topTx <- mkTopTx amounts
         balanced <- balanceSubTransactions topTx
-        withFixup noBalanceFixup $ submitTx_ balanced
+        withFixup noBalanceFixup $ submitTopTx_ balanced
   where
     registerPoolTxWithSubTxs ::
       [KeyHash StakePool] -> -- top's pool certs
@@ -438,10 +438,12 @@ spec = describe "UTXO" $ do
     produceScriptAt :: ScriptHash -> Coin -> ImpTestM era TxIn
     produceScriptAt scriptHash amount = do
       let addr = mkAddr scriptHash StakeRefNull
-      let tx =
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
-      txInAt 0 <$> submitTx tx
+      let
+        tx :: forall l. Typeable l => Tx l era
+        tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
+      txInAt 0 <$> submitTopTx tx
 
 noBalanceFixup ::
   ( HasCallStack

@@ -48,8 +48,11 @@ spec = describe "Invalid" $ do
         txOut =
           mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
             & datumTxOutL .~ mkInlineDatum (PV1.I 0)
-        tx = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
-    txIn <- txInAt 0 <$> submitTx tx
+    tx <-
+      submitTopTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ [txOut]
+    let txIn = txInAt 0 tx
     submitFailingTx
       (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn])
       [ injectFailure $
@@ -116,8 +119,8 @@ spec = describe "Invalid" $ do
               txOut =
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ mkInlineDatum (PV1.I 1)
-              tx = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
-          txIn <- txInAt 0 <$> submitTx tx
+          tx <- submitTopTx $ mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
+          let txIn = txInAt 0 tx
           submitPhase2Invalid_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/724
@@ -129,9 +132,13 @@ spec = describe "Invalid" $ do
               txOut =
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ DatumHash datumHash
-              tx = mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut]
           ProtVer pv _ <- getProtVer
-          txIn <- txInAt 0 <$> submitTx tx
+          tx <-
+            submitTopTx $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL .~ [txOut]
+          let txIn = txInAt 0 tx
+
           addr <-
             if pv < natVersion @12
               then freshKeyAddr_
@@ -159,7 +166,7 @@ spec = describe "Invalid" $ do
                 mkBasicTxOut addr mempty
                   & referenceScriptTxOutL .~ SJust script
           tx <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOutDatum, txOutScript]
           let txInDatum = txInAt 0 tx
@@ -180,8 +187,11 @@ spec = describe "Invalid" $ do
               txOut =
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ mkInlineDatum (PV1.B "abcde")
-              tx = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
-          txIn <- txInAt 0 <$> submitTx tx
+          tx <-
+            submitTopTx $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL .~ [txOut]
+          let txIn = txInAt 0 tx
           let redundantDatum = Data @era $ PV1.I 1
           submitFailingTx
             ( mkBasicTx mkBasicTxBody
@@ -209,7 +219,7 @@ spec = describe "Invalid" $ do
                   & datumTxOutL .~ DatumHash datumHash
 
           tx <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOutInline, txOutHash]
           let txInInline = txInAt 0 tx

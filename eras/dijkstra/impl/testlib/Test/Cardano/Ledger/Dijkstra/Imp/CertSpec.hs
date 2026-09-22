@@ -45,7 +45,7 @@ spec = describe "CERT" $ do
         subTransaction =
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL .~ SSeq.singleton deRegCert
-      submitTx_ $
+      submitTopTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTransaction
       expectStakeCredNotRegistered stakingCred

@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Mary.ImpTest (
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
-import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -31,6 +30,7 @@ instance ShelleyEraImp MaryEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  trySubmitTx = trySubmitTopTx
 
 class
   ( ShelleyEraImp era
@@ -41,7 +41,7 @@ class
 
 instance MaryEraImp MaryEra
 
-mkTokenMintingTx :: (MaryEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
+mkTokenMintingTx :: MaryEraImp era => ScriptHash -> ImpTestM era (AnyLevelTx era)
 mkTokenMintingTx sh = do
   name <- arbitrary
   count <- choose (1, 10)
@@ -49,6 +49,7 @@ mkTokenMintingTx sh = do
   let ma = multiAssetFromList [(policyId, name, count)]
   addr <- freshKeyAddr_
   pure $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]
+    AnyLevelTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . mintTxBodyL .~ ma
+        & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]

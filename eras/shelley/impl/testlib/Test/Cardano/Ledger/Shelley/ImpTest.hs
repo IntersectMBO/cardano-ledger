@@ -3,6 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -15,6 +16,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -36,6 +38,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   PlutusArgs,
   ScriptTestContext,
+  AnyLevelTx (..),
+  SubmitTxResult (..),
   iteFixupL,
   itePostSubmitTxHookL,
   itePostEpochBoundaryHookL,
@@ -65,13 +69,17 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshKeyHashVRF,
   submitTx,
   submitTx_,
+  submitTopTx,
+  submitTopTx_,
   submitTxAnn,
   submitTxAnn_,
+  submitTopTxAnn,
+  submitTopTxAnn_,
   submitFailingTx,
   submitFailingTxM,
   submitFailingSubsetTx,
   submitFailingSubsetTxM,
-  trySubmitTx,
+  trySubmitTopTx,
   submitBlock_,
   submitBlock,
   submitFailingBlock,
@@ -287,7 +295,6 @@ import Control.State.Transition.Extended (
   SingEP (..),
   ValidationPolicy (..),
  )
-import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
@@ -310,6 +317,7 @@ import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
 import Data.Void
 import Data.Word
+import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, KnownSymbol, Symbol, symbolVal, type (<=))
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
@@ -588,6 +596,59 @@ class
   genUnRegTxCert :: Credential Staking -> ImpTestM era (TxCert era)
 
   delegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
+
+  trySubmitTx ::
+    HasCallStack =>
+    (forall l. Typeable l => Tx l era) ->
+    ImpTestM era (SubmitTxResult era)
+
+data SubmitTxResult era = SubmitTxResult
+  { strFailures :: Maybe (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  , strFinalTx :: Tx TopTx era
+  }
+  deriving (Generic)
+
+instance
+  ( NFData (Tx TopTx era)
+  , NFData (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  NFData (SubmitTxResult era)
+
+-- | A transaction that is polymorphic in its level. This wrapper makes it possible to
+-- return a level-polymorphic `Tx` from a monadic action: the unwrapped result type
+-- @ImpTestM era (forall l. Typeable l => Tx l era)@ would be impredicative, while binding a
+-- plain @Tx l era@ fixes @l@ to a single level, since bound results are never generalized.
+-- Pattern matching on `AnyLevelTx` recovers the quantification, so the transaction can then
+-- be passed to functions like `submitTx` that accept a transaction at any level.
+newtype AnyLevelTx era = AnyLevelTx {unAnyLevelTx :: forall l. Typeable l => Tx l era}
+
+submitTx ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era (Tx TopTx era)
+submitTx tx = do
+  SubmitTxResult {..} <- trySubmitTx tx
+  expectNothingExpr strFailures $> strFinalTx
+
+submitTx_ ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era ()
+submitTx_ = void . submitTx
+
+submitTopTx ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+submitTopTx tx = do
+  SubmitTxResult {..} <- trySubmitTopTx tx
+  expectNothingExpr strFailures $> strFinalTx
+
+submitTopTx_ ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Tx TopTx era ->
+  ImpTestM era ()
+submitTopTx_ = void . submitTopTx
 
 impSatisfySignature ::
   KeyHash Witness ->
@@ -914,6 +975,7 @@ instance
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  trySubmitTx = trySubmitTopTx
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1308,22 +1370,14 @@ logFeeMismatch tx = do
 
 -- * Submitting transactions
 
-submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era ()
-submitTx_ = void . submitTx
-
-submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
-submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
-
-trySubmitTx ::
+trySubmitTopTx ::
   forall era.
   ( ShelleyEraImp era
   , HasCallStack
   ) =>
   Tx TopTx era ->
-  ImpTestM
-    era
-    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
-trySubmitTx tx = do
+  ImpTestM era (SubmitTxResult era)
+trySubmitTopTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
 
@@ -1349,7 +1403,7 @@ trySubmitTx tx = do
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
       liftIO $ forM_ predFailures $ roundTripEraExpectation @era
-      pure $ Left (predFailures, txFixed)
+      pure $ SubmitTxResult (Just predFailures) txFixed
     Right (newState, events) -> do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
@@ -1376,7 +1430,7 @@ trySubmitTx tx = do
 
       expectTxSuccess txFixed
 
-      pure $ Right txFixed
+      pure $ SubmitTxResult Nothing txFixed
 
 -- | Submit a transaction that is expected to be rejected with the given predicate failures.
 -- The inputs and outputs are automatically balanced.
@@ -1400,11 +1454,12 @@ submitFailingTxM ::
   (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingTxM tx mkExpectedFailures = do
-  (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
-  expectedFailures <- mkExpectedFailures fixedUpTx
+  SubmitTxResult {..} <- trySubmitTopTx tx
+  actualFailures <- expectJustDeep strFailures
+  expectedFailures <- mkExpectedFailures strFinalTx
   expectExprEqualWithMessage
     "The predicate failures were not as expected"
-    predFailures
+    actualFailures
     expectedFailures
 
 -- | Submit a transaction that is expected to be rejected with at least the given predicate failures.
@@ -1429,8 +1484,9 @@ submitFailingSubsetTxM ::
   (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingSubsetTxM tx mkExpectedFailures = do
-  (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
-  expectedFailures <- mkExpectedFailures fixedUpTx
+  SubmitTxResult {..} <- trySubmitTopTx tx
+  expectedFailures <- mkExpectedFailures strFinalTx
+  predFailures <- expectJustDeep strFailures
   let
     predSet = Set.fromList $ toList predFailures
     expectedSet = Set.fromList $ toList expectedFailures
@@ -1451,7 +1507,7 @@ submitBlock_ ::
   ) =>
   [Tx TopTx era] ->
   ImpTestM era ()
-submitBlock_ = withTxsInBlock_ . traverse_ submitTx_
+submitBlock_ = withTxsInBlock_ . traverse_ submitTopTx_
 
 -- | Submit a list of transactions as a block that's expected to succeed.
 -- The inputs and outputs are automatically balanced.
@@ -1461,7 +1517,7 @@ submitBlock ::
   ) =>
   [Tx TopTx era] ->
   ImpTestM era (Block TestBlockHeader era)
-submitBlock = withTxsInBlock . traverse_ submitTx_
+submitBlock = withTxsInBlock . traverse_ submitTopTx_
 
 -- | Submit a list of transactions as a block that's expected to fail
 -- with the given predicate failures.
@@ -1473,7 +1529,7 @@ submitFailingBlock ::
   [Tx TopTx era] ->
   NonEmpty (PredicateFailure (EraRule "BBODY" era)) ->
   ImpTestM era ()
-submitFailingBlock = withTxsInFailingBlock . traverse_ submitTx_
+submitFailingBlock = withTxsInFailingBlock . traverse_ submitTopTx_
 
 -- | Submit a list of transactions as a block that's expected to be rejected,
 -- and compute the expected predicate failures from the created block using the supplied action.
@@ -1485,7 +1541,7 @@ submitFailingBlockM ::
   [Tx TopTx era] ->
   (Block TestBlockHeader era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
   ImpTestM era ()
-submitFailingBlockM = withTxsInFailingBlockM . traverse_ submitTx_
+submitFailingBlockM = withTxsInFailingBlockM . traverse_ submitTopTx_
 
 -- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
 withIssuerAndTxsInBlock_ ::
@@ -2008,8 +2064,10 @@ sendCoinTo_ addr = void . sendCoinTo addr
 
 sendValueTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era TxIn
 sendValueTo addr amount = do
+  -- We only use TopTx here to make it easy to find the TxIn
+  -- TODO make this work with SubTx as well
   tx <-
-    submitTxAnn
+    submitTopTxAnn
       ("Giving " <> show amount <> " to " <> show addr)
       $ mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
@@ -2035,13 +2093,27 @@ getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 submitTxAnn ::
   (HasCallStack, ShelleyEraImp era) =>
   String ->
-  Tx TopTx era ->
+  (forall l. Typeable l => Tx l era) ->
   ImpTestM era (Tx TopTx era)
-submitTxAnn msg tx = impAnn msg (trySubmitTx tx >>= expectRightDeepExpr)
+submitTxAnn msg tx = impAnn msg $ submitTx tx
 
 submitTxAnn_ ::
-  (HasCallStack, ShelleyEraImp era) => String -> Tx TopTx era -> ImpTestM era ()
+  (HasCallStack, ShelleyEraImp era) => String -> (forall l. Typeable l => Tx l era) -> ImpTestM era ()
 submitTxAnn_ msg = void . submitTxAnn msg
+
+submitTopTxAnn ::
+  (HasCallStack, ShelleyEraImp era) =>
+  String ->
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+submitTopTxAnn msg = impAnn msg . submitTopTx
+
+submitTopTxAnn_ ::
+  (HasCallStack, ShelleyEraImp era) =>
+  String ->
+  Tx TopTx era ->
+  ImpTestM era ()
+submitTopTxAnn_ msg = void . submitTopTxAnn msg
 
 getAccountAddressFor ::
   Credential Staking ->
@@ -2313,16 +2385,20 @@ impGetUTxO txIn = impAnn "Looking up TxOut" $ do
     Nothing -> error $ "Failed to get TxOut for " <> show txIn
 
 produceScript ::
+  forall era.
   (ShelleyEraImp era, HasCallStack) =>
   ScriptHash ->
   ImpTestM era TxIn
 produceScript scriptHash = do
   let addr = mkAddr scriptHash StakeRefNull
-  let tx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
+  let
+    tx :: forall l. Typeable l => Tx l era
+    tx =
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
   logString $ "Produced script: " <> show scriptHash
-  txInAt 0 <$> submitTx tx
+  -- TODO make this work with `submitTx`
+  txInAt 0 <$> submitTopTx tx
 
 advanceToPointOfNoReturn :: ImpTestM era ()
 advanceToPointOfNoReturn = do
@@ -2353,10 +2429,10 @@ genCantFollow pv@ProtVer {pvMajor, pvMinor} =
     maxMinor = maxBound @Word32
     cantFollowMinor
       | pvMinor == pred maxMinor = do
-          newMinor <- choose (minBound, pred $ pvMinor)
+          newMinor <- choose (minBound, pred pvMinor)
           pure pv {pvMinor = newMinor}
       | otherwise = do
-          newMinor <- choose (succ $ succ $ pvMinor, maxBound)
+          newMinor <- choose (succ $ succ pvMinor, maxBound)
           pure pv {pvMinor = newMinor}
     -- For major version we can only go backwards
     cantFollowMajor = do
