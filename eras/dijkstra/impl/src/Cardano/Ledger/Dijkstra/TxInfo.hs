@@ -816,10 +816,9 @@ transGuardingTopTxInfo ::
   LedgerTxInfo era ->
   PV4.TxInfo ->
   ScriptHash ->
-  LedgerLevelTxInfo TopTx era ->
   Tx TopTx era ->
   Either (ContextError era) PV4.TopTxInfo
-transGuardingTopTxInfo proxy lti txInfo guardingScriptHash topTx = do
+transGuardingTopTxInfo proxy lti@(LedgerTxInfo{ltiLevelTxInfo = LedgerTopTxInfo subTxInfoResults}) txInfo guardingScriptHash topTx = do
   let
     lookupRequiredTopLevelGuardDatum :: Tx level era -> Maybe (TxId, Data era)
     lookupRequiredTopLevelGuardDatum tx = do
@@ -833,7 +832,7 @@ transGuardingTopTxInfo proxy lti txInfo guardingScriptHash topTx = do
     forM (OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
       let txId = txIdTx subTx
       mkTxInfo <- unPlutusTxInfoResult $
-        case Map.lookup txId (ltiMemoizedSubTransactions lti) of
+        case Map.lookup txId subTxInfoResults of
           Nothing -> error $ "Missing TxInfoResult for " <> show txId
           Just txInfoResults ->
             lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
