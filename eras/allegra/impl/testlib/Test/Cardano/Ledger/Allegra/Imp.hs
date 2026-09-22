@@ -8,16 +8,19 @@ module Test.Cardano.Ledger.Allegra.Imp (spec, Shelley.shelleyToBabbageSpec) wher
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
+import qualified Test.Cardano.Ledger.Allegra.Imp.UtxoSpec as UTXO
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 
 spec ::
-  ( ShelleyEraImp era
+  ( AllegraEraImp era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->
   Spec
 spec era = do
   Shelley.spec era
-  describe "AllegraEra Onwards" $ pure ()
+  describe "AllegraEra Onwards" $
+    withImpInitEachEraVersion era $ do
+      UTXO.spec

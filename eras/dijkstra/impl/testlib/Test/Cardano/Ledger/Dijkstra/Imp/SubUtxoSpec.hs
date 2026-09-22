@@ -61,7 +61,7 @@ spec = describe "SUBUTXO" $ do
         (mkBasicTx $ mkBasicTxBody & vldtTxBodyL .~ validityInterval)
         [injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot]
 
-    disableInConformanceIt "the validity interval ends at the current slot" $ do
+    it "the validity interval ends at the current slot" $ do
       currentSlot <- gets (^. impCurSlotNoG)
       let validityInterval = ValidityInterval SNothing (SJust currentSlot)
       submitFailingSubTx
@@ -190,6 +190,8 @@ spec = describe "SUBUTXO" $ do
       getUTxO >>= (`expectUTxOContent` [(txIn, isNothing)])
 
   describe "SubOutputBootAddrAttrsTooBig" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "an output to a bootstrap address whose attributes exceed the limit" $ do
       bootAddr <- freshBootstrapAddressOversizedPayload
       let subTx :: Tx SubTx era
@@ -200,6 +202,8 @@ spec = describe "SUBUTXO" $ do
         txOuts <- subTxOutputs fixedUpTx
         pure [injectFailure $ SubOutputBootAddrAttrsTooBig @era txOuts]
 
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "several such outputs, reported in their order in the body" $ do
       firstBootAddr <- freshBootstrapAddressOversizedPayload
       secondBootAddr <- freshBootstrapAddressOversizedPayload
@@ -282,6 +286,8 @@ spec = describe "SUBUTXO" $ do
     getUTxO >>= (`expectUTxOContent` [(txIn, isNothing)])
 
   describe "Composite tests" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt
       "seven failures of one sub-transaction, in the reverse of the order the rule checks them"
       $ do
@@ -342,6 +348,8 @@ spec = describe "SUBUTXO" $ do
       submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [setMinCoinTxOut pp $ mkBasicTxOut addr mempty]
 
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "an output to a bootstrap address whose payload is the largest allowed size" $ do
       bootAddr <- freshBootstrapAddressWithPayloadSize $ Just largestBootstrapAddressAttrsSize
       submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
