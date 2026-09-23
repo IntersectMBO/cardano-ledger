@@ -403,12 +403,13 @@ submitFailingLegacySubTx lang tx expectedFailure =
   submitFailingTxM tx $ \fixedUpTx ->
     case OMap.elems $ fixedUpTx ^. bodyTxL . subTransactionsTxBodyL of
       [subTx] ->
-        pure
-          [ injectFailure $
-              Conway.CollectErrors
-                [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
-          , injectFailure expectedFailure
-          ]
+        pure $
+          injectFailure expectedFailure
+            NE.:| [ injectFailure $
+                      Conway.CollectErrors
+                        [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
+                  | lang < PlutusV4
+                  ]
       _ -> assertFailure "Expected exactly one sub-transaction"
 
 -- | Every distinct reason a sub-transaction requires a key witness,
