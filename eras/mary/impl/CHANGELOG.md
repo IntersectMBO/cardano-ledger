@@ -17,6 +17,7 @@
 
 ### `testlib`
 
+* Move `mkTokenMintingTx` to `cardano-ledger-alonzo:testlib`
 * Add `DecCBOR` instance for `Block`
 
 ### `cddl`
