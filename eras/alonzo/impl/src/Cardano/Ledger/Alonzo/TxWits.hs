@@ -104,9 +104,11 @@ import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
   MemoBytes,
+  MemoHashIndex,
   Memoized (..),
   eqRawType,
   getMemoRawType,
+  getMemoSafeHash,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -272,6 +274,11 @@ newtype AlonzoTxWits era = MkAlonzoTxWits (MemoBytes (AlonzoTxWitsRaw era))
 
 instance Memoized (AlonzoTxWits era) where
   type RawType (AlonzoTxWits era) = AlonzoTxWitsRaw era
+
+type instance MemoHashIndex (AlonzoTxWitsRaw era) = EraIndependentTxWits
+
+instance HashAnnotated (AlonzoTxWits era) EraIndependentTxWits where
+  hashAnnotated = getMemoSafeHash
 
 instance AlonzoEraScript era => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y

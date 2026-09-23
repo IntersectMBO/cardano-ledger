@@ -12,10 +12,12 @@ module Test.Cardano.Ledger.Binary.Golden (
   toPackageGolden,
   goldenForToCBOR,
   goldenForEncCBOR,
+  goldenForHashHex,
   cborGoldenSpec,
   cborAnnGoldenSpec,
 ) where
 
+import Cardano.Crypto.Hash (Hash, hashToStringAsHex)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -150,6 +152,24 @@ goldenForEncCBOR goldenFileName version t =
     , Golden.encodePretty = show . CBORBytes . BSL.toStrict
     , Golden.writeToFile = BSL.writeFile
     , Golden.readFromFile = BSL.readFile
+    , Golden.goldenFile = goldenFileName
+    , Golden.actualFile = Nothing
+    , Golden.failFirstTime = False
+    }
+
+-- | `Golden` specification for a cryptographic hash, stored as a hex string
+goldenForHashHex ::
+  -- | Path to the golden file relative to the root of the package
+  FilePath ->
+  -- | Hash value to compare against the golden file
+  Hash h a ->
+  Golden.Golden String
+goldenForHashHex goldenFileName h =
+  Golden.Golden
+    { Golden.output = hashToStringAsHex h
+    , Golden.encodePretty = id
+    , Golden.writeToFile = writeFile
+    , Golden.readFromFile = readFile
     , Golden.goldenFile = goldenFileName
     , Golden.actualFile = Nothing
     , Golden.failFirstTime = False

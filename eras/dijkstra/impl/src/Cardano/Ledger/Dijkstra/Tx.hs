@@ -17,11 +17,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.Tx (
   DijkstraTx (..),
   Tx (..),
+  DijkstraEraTx (..),
   DijkstraStAnnTx (..),
   validateDijkstraNativeScript,
   decodeDijkstraTopTx,
@@ -29,6 +31,7 @@ module Cardano.Ledger.Dijkstra.Tx (
   toCBORForBlockInclusion,
 ) where
 
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError,
@@ -68,6 +71,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
@@ -78,6 +82,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coerce (coerce)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -428,6 +433,38 @@ validateDijkstraNativeScript tx =
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateDijkstraNativeScript #-}
+
+-- | Typeclass for Dijkstra era transactions that require a deterministic,
+-- encoding-independent transaction hash — i.e. a hash that is stable regardless
+-- of how the transaction was serialized. This is needed, for example, by the
+-- Leios protocol to unambiguously identify transactions across nodes.
+class AlonzoEraTx era => DijkstraEraTx era where
+  -- | Compute a stable hash that covers the full transaction content: body,
+  -- witnesses, auxiliary data, and phase-2 validity flag. Unlike 'txId', which
+  -- only hashes the bytes of the transaction body, this hash should uniquely
+  -- identify the complete transaction.
+  hashTx :: Tx TopTx era -> SafeHash EraIndependentTx
+
+-- | Hash all four Dijkstra transaction components deterministically.
+--
+-- The hash is @Blake2b-256(body_hash || wits_hash || aux_hash ||
+-- isValid_bytes)@, where each component hash is the 'hashAnnotated' of the
+-- corresponding 'MemoBytes' field (a pre-computed, memoized 32-byte value).
+-- Concatenating these fixed-length hashes rather than re-serializing the
+-- assembled transaction avoids susceptibility to non-canonical CBOR: the same
+-- logical transaction can be CBOR-encoded in multiple ways, but its component
+-- hashes are always identical.
+instance DijkstraEraTx DijkstraEra where
+  hashTx tx =
+    unsafeMakeSafeHash $
+      coerce $
+        Hash.hashWith id $
+          Hash.hashToBytes (extractHash (hashAnnotated (tx ^. bodyTxL)))
+            <> Hash.hashToBytes (extractHash (hashAnnotated (tx ^. witsTxL)))
+            <> case tx ^. auxDataTxL of
+              SNothing -> mempty
+              SJust auxData -> Hash.hashToBytes (extractHash (hashAnnotated auxData))
+            <> LBS.toStrict (serialize (eraProtVerLow @DijkstraEra) (tx ^. isPhase2ValidTxL))
 
 --------------------------------------------------------------------------------
 -- Serialisation
