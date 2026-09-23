@@ -24,6 +24,7 @@
   - `perasHealingFactor`
   - `perasQuorumThresholdSafetyMargin`
 * Add `HeaderProtVerTooLow` constructor to `DijkstraBbodyPredFailure`
+* Change `eraMaxLanguage` to `PlutusV4`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
 * Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.
