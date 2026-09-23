@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `blockHeaderL`, `blockBodyL`
 * Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
 * Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`

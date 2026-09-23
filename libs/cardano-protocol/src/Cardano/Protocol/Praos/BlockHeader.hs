@@ -50,7 +50,7 @@ import Cardano.Ledger.Binary (
   unCBORGroup,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), PraosEraBlockHeader (..))
+import Cardano.Ledger.Block (EraBlockHeader (..), PraosEraBlockHeader (..), blockHeaderL)
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
@@ -79,7 +79,7 @@ import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (lens, to)
+import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks (..))
 
 -- | The body of the header is the part which gets hashed to form the hash
@@ -235,34 +235,21 @@ deriving via
   instance
     Crypto crypto => DecCBOR (Annotator (Header crypto))
 
+headerBodyL :: Crypto c => Lens' (Header c) (HeaderBody c)
+headerBodyL = lens headerBody (\h b -> h {headerBody = b})
+
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
-  blockIssuerBlockHeaderG =
-    to (\(Block (Header hb _) _) -> hashKey (hbVk hb))
   blockHeaderSizeBlockHeaderG =
-    to (\(Block hdr _) -> originalBytesSize hdr)
+    blockHeaderL . to originalBytesSize
+  blockIssuerBlockHeaderG =
+    blockHeaderL . headerBodyL . to (hashKey . hbVk)
   blockBodySizeBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbBodySize hb)
-      ( \(Block (Header hb sig) body) sz ->
-          Block (Header hb {hbBodySize = sz} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbBodySize (\hb sz -> hb {hbBodySize = sz})
   blockBodyHashBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbBodyHash hb)
-      ( \(Block (Header hb sig) body) h ->
-          Block (Header hb {hbBodyHash = h} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbBodyHash (\hb h -> hb {hbBodyHash = h})
   slotNoBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbSlotNo hb)
-      ( \(Block (Header hb sig) body) s ->
-          Block (Header hb {hbSlotNo = s} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
 
 instance (Crypto c, Era era) => PraosEraBlockHeader (Header c) era where
   protVerBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbProtVer hb)
-      ( \(Block (Header hb sig) body) pv ->
-          Block (Header hb {hbProtVer = pv} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbProtVer (\hb pv -> hb {hbProtVer = pv})

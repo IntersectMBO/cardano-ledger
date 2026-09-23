@@ -19,6 +19,8 @@
 
 module Cardano.Ledger.Block (
   Block (..),
+  blockHeaderL,
+  blockBodyL,
   bheader,
   bbody,
   TPraosBbodySignal (..),
@@ -32,7 +34,7 @@ module Cardano.Ledger.Block (
   neededTxInsForBlock,
 ) where
 
-import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer)
+import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -68,6 +70,12 @@ deriving anyclass instance
   NoThunks (Block h era)
 
 instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
+
+blockHeaderL :: Lens' (Block h era) h
+blockHeaderL = lens blockHeader (\b h -> b {blockHeader = h})
+
+blockBodyL :: Lens' (Block h era) (BlockBody era)
+blockBodyL = lens blockBody (\b h -> b {blockBody = h})
 
 bheader ::
   Block h era ->
