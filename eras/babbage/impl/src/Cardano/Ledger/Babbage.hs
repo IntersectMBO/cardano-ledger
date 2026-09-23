@@ -50,7 +50,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut, TxBody (BabbageTxBody))
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, PraosBbodySignal (..), PraosEraBlockHeader)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.List.NonEmpty (NonEmpty)
@@ -70,4 +70,5 @@ instance ApplyTx BabbageEra where
 
 instance ApplyTick BabbageEra
 
-instance EraBlockHeader h BabbageEra => ApplyBlock h BabbageEra
+instance (EraBlockHeader h BabbageEra, PraosEraBlockHeader h BabbageEra) => ApplyBlock h BabbageEra where
+  wrapBlockSignal = PraosBbodySignal

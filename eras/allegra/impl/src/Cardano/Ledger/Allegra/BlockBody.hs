@@ -25,7 +25,7 @@ import Cardano.Ledger.Binary (
   toPlainEncoding,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Core (EraBlockBody (..), eraProtVerLow)
 import Cardano.Ledger.Shelley.BlockBody (
   ShelleyBlockBody,
@@ -38,6 +38,7 @@ import Data.Typeable (Typeable)
 
 instance EraBlockBody AllegraEra where
   type BlockBody AllegraEra = ShelleyBlockBody AllegraEra
+  type ProtocolEraBlockHeader h AllegraEra = TPraosEraBlockHeader h AllegraEra
   mkBasicBlockBody = mkBasicBlockBodyShelley
   txSeqBlockBodyL = txSeqBlockBodyShelleyL
   hashBlockBody = shelleyBlockBodyHash

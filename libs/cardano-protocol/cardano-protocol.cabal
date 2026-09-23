@@ -45,7 +45,7 @@ library
     cardano-crypto-class >=2.5 && <2.7,
     cardano-crypto-praos ^>=2.2,
     cardano-ledger-binary >=1.8,
-    cardano-ledger-core >=1.21,
+    cardano-ledger-core ^>=1.22,
     cardano-slotting,
     cardano-strict-containers,
     containers,
