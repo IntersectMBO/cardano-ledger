@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (toPlutusTxInfoForPurpose)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
-  TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
+  TransactionScriptFailure (ContextError, RedeemerPointsToUnknownScriptHash),
   evalTxExUnits,
  )
 import Cardano.Ledger.Alonzo.Rules (
@@ -35,6 +35,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
+  Language (..),
   SLanguage (..),
   emptyCostModels,
   hashPlutusScript,
@@ -154,8 +155,19 @@ spec = describe "UTXOS" $ do
             let report = evalTxExUnits pp txBorked utxo epochInfo systemStart
             logToExpr report
 
-            Map.filter isLeft report
-              `shouldBe` Map.singleton badPurpose (Left (RedeemerPointsToUnknownScriptHash badPurpose))
+            let scriptFailures = Map.filter isLeft report
+                expectedBad = Left (RedeemerPointsToUnknownScriptHash badPurpose)
+            if lang >= PlutusV4
+              then do
+                -- PlutusV4 script purposes embed their script hash, so the dangling
+                -- redeemer pointer also fails context translation for every other redeemer
+                Map.keys scriptFailures `shouldBe` Map.keys report
+                Map.lookup badPurpose scriptFailures `shouldBe` Just expectedBad
+                forM_ (Map.delete badPurpose scriptFailures) $ \failure ->
+                  case failure of
+                    Left (ContextError _) -> pure ()
+                    _ -> assertFailure $ "Expected a ContextError, but got: " <> show failure
+              else scriptFailures `shouldBe` Map.singleton badPurpose expectedBad
 
         describe "Spending scripts with a Datum" $ do
           forM_ scripts $ \(name, script) -> do
