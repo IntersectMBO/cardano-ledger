@@ -27,6 +27,7 @@
 
 ### `testlib`
 
+* Add `mkTokenMintingTx`
 * Export `makeCollateralInput` and `txWithMaxRedeemers`
 * Use annotated transaction script collection in `impPlutusWithContexts` so phase-2 test expectations include subtransactions.
 * Add `Inject (AlonzoContextError era) (ContextError era)` superclass constraint to the `AlonzoEraTest` type class
