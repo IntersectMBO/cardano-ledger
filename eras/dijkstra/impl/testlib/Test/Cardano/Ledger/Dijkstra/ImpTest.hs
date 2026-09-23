@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   fixupSubTransactions,
   balanceSubTransactions,
   switchTxToLegacyMode,
+  switchTxToPhase2InvalidLegacyMode,
   mkTopTxWithSubTxs,
   traverseSubTxs,
   withPostFixupSubTxs,
@@ -74,7 +75,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -303,6 +304,14 @@ switchTxToLegacyMode ::
   ImpTestM era (Tx TopTx era)
 switchTxToLegacyMode tx = do
   txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
+  pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]
+
+switchTxToPhase2InvalidLegacyMode ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+switchTxToPhase2InvalidLegacyMode tx = do
+  txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
   pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]
 
 dijkstraFixupTx ::

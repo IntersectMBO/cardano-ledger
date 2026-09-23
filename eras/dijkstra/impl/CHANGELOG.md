@@ -99,6 +99,7 @@
 
 ### `testlib`
 
+* Add `switchTxToPhase2InvalidLegacyMode`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec`
 * Add `submitFailingMempoolTx` and `expectMempoolRejection`
 * Add `ToExpr` instance for `ApplyTxError DijkstraEra`
