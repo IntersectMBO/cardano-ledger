@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `headerBlockL`, `bodyBlockL`
 * Add `addVRFKeyHashOccurrence`, `removeVRFKeyHashOccurrence` and `populateVRFKeyHashes` to `Cardano.Ledger.State.CertState`
 * Remove `poolDistrDistrL`, `poolDistrTotalL`
 * Remove `EraDecoder` and add `EraCodec` to be used in its place
