@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Change `eraMaxLanguage` to `PlutusV4`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
 * Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.
