@@ -35,6 +35,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
+  Language (..),
   SLanguage (..),
   emptyCostModels,
   hashPlutusScript,
@@ -129,7 +130,8 @@ spec = describe "UTXOS" $ do
               submitTx_ $
                 mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
-          it "Attempt to calculate ExUnits with an invalid tx" $ do
+          -- PlutusV4 is covered by an exact-failure version of this test in Dijkstra
+          when (lang < PlutusV4) . it "Attempt to calculate ExUnits with an invalid tx" $ do
             txIn <- produceScript alwaysSucceedsWithDatumHash
             let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
