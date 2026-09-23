@@ -79,7 +79,11 @@ import Cardano.Ledger.Binary (
   serialize',
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosEraBlockHeader)
+import Cardano.Ledger.Block (
+  EraBlockHeader (..),
+  TPraosEraBlockHeader,
+  blockHeaderL,
+ )
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
@@ -115,7 +119,7 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (lens, to)
+import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -464,6 +468,9 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
+headerBodyL :: Crypto c => Lens' (BHeader c) (BHBody c)
+headerBodyL = lens (\(BHeader b _) -> b) (\(BHeader _ s) b -> BHeader b s)
+
 makeHeaderView :: Crypto c => BHeader c -> Maybe Nonce -> BHeaderView
 makeHeaderView bh@(BHeader bhb _) nonce =
   BHeaderView
@@ -476,19 +483,15 @@ makeHeaderView bh@(BHeader bhb _) nonce =
     (bprotver bhb)
 
 instance (Crypto c, Era era) => EraBlockHeader (BHeader c) era where
-  blockIssuerBlockHeaderG = to (\(Block (BHeader bhb _) _) -> hashKey $ bheaderVk bhb)
-  blockHeaderSizeBlockHeaderG = to (\(Block bh _) -> originalBytesSize bh)
+  blockHeaderSizeBlockHeaderG =
+    blockHeaderL . to originalBytesSize
+  blockIssuerBlockHeaderG =
+    blockHeaderL . headerBodyL . to (hashKey . bheaderVk)
   blockBodySizeBlockHeaderL =
-    lens
-      (\(Block (BHeader bhb _) _) -> bsize bhb)
-      (\(Block (BHeader bhb sig) body) newSize -> Block (BHeader (bhb {bsize = newSize}) sig) body)
+    blockHeaderL . headerBodyL . lens bsize (\hb sz -> hb {bsize = sz})
   blockBodyHashBlockHeaderL =
-    lens
-      (\(Block (BHeader bhb _) _) -> bhash bhb)
-      (\(Block (BHeader bhb sig) body) newHash -> Block (BHeader (bhb {bhash = newHash}) sig) body)
+    blockHeaderL . headerBodyL . lens bhash (\hb h -> hb {bhash = h})
   slotNoBlockHeaderL =
-    lens
-      (\(Block (BHeader bhb _) _) -> bheaderSlotNo bhb)
-      (\(Block (BHeader bhb sig) body) newSlot -> Block (BHeader (bhb {bheaderSlotNo = newSlot}) sig) body)
+    blockHeaderL . headerBodyL . lens bheaderSlotNo (\hb sn -> hb {bheaderSlotNo = sn})
 
 instance (Crypto c, Era era) => TPraosEraBlockHeader (BHeader c) era
