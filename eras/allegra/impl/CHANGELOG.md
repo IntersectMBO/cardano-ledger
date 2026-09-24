@@ -2,6 +2,7 @@
 
 ## 1.10.2.0
 
+* Add `Semigroup` and `Monoid` instances for `ValidityInterval`
 * Fix `shelleyToAllegraUtxoPredFailure` converting `OutputBootAddrAttrsTooBig` into `OutputTooBigUTxO`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
