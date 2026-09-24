@@ -116,6 +116,9 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec`
+* Add `declareTreasurySubTx`
+* Add `InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era` as a superclass of `DijkstraEraImp`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec`
 * Add `DijkstraEraBlockBody era` and `InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era` superclasses to `DijkstraEraImp`
 * Add `switchTxToPhase2InvalidLegacyMode`
@@ -123,7 +126,7 @@
 * Add `submitFailingMempoolTx` and `expectMempoolRejection`
 * Add `ToExpr` instance for `ApplyTxError DijkstraEra`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec`
-* Add `phase2InvalidTxWithSubTxs` and `voteSubTx`
+* Add `phase2InvalidTx` and `voteSubTx`
 * Add `InjectRuleFailure "LEDGER" DijkstraGovPredFailure era` and
   `InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era` as superclasses of `DijkstraEraImp`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
