@@ -11,12 +11,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 #if __GLASGOW_HASKELL__ >= 910
 -- See https://gitlab.haskell.org/ghc/ghc/-/issues/27342
@@ -45,11 +43,14 @@ import Cardano.Ledger.Alonzo.Scripts (toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
+  BoundedRational (..),
   Exclusive (..),
   Inclusive (..),
   Inject (..),
+  ProtVer (..),
   StrictMaybe (..),
   TxIx (TxIx),
+  getVersion32,
   kindObjectValue,
   strictMaybe,
   strictMaybeToMaybe,
@@ -58,6 +59,16 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (
+  Constitution (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovPurposeId (..),
+  ProposalProcedure (..),
+  VotingProcedure (..),
+  VotingProcedures (..),
+ )
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Conway.TxInfo (
   ConwayContextError (..),
@@ -67,10 +78,10 @@ import Cardano.Ledger.Conway.TxInfo (
   transDelegatee,
   transHotCommitteeCred,
   transMap,
-  transProposal,
   transSlotToPOSIXTime,
   transTxInInfoV1,
   transTxInInfoV3,
+  transVote,
   transVoter,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
@@ -97,6 +108,7 @@ import Cardano.Ledger.Plutus (
   decodePlutusRunnable,
   getPlutusData,
   plutusLanguage,
+  transAccountAddress,
   transCoinToLovelace,
   transCoinToValue,
   transCred,
@@ -597,9 +609,9 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoRedeemers = plutusRedeemers
             , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
             , PV4.txInfoId = Conway.transTxBodyId txBody
-            , PV4.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
+            , PV4.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
             , PV4.txInfoProposalProcedures =
-                map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
+                map (transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
             , PV4.txInfoCurrentTreasuryAmount =
                 strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
             , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
@@ -846,3 +858,71 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
     GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
     _ ->
       Left $ inject $ Alonzo.PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose
+
+transVotingProcedures ::
+  VotingProcedures era -> PV4.Map PV4.Voter (PV4.Map PV4.GovernanceActionId PV4.Vote)
+transVotingProcedures =
+  transMap transVoter (transMap transGovActionId (transVote . vProcVote)) . unVotingProcedures
+
+transProposal ::
+  ConwayEraPlutusTxInfo l era =>
+  proxy l ->
+  ProposalProcedure era ->
+  PV4.ProposalProcedure
+transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
+  PV4.ProposalProcedure
+    { PV4.ppDeposit = transCoinToLovelace pProcDeposit
+    , PV4.ppReturnAddr = transAccountAddress pProcReturnAddr
+    , PV4.ppGovernanceAction = transGovAction proxy pProcGovAction
+    }
+
+transGovActionId :: GovActionId -> PV4.GovernanceActionId
+transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
+  PV4.GovernanceActionId
+    { PV4.gaidTxId = transTxId gaidTxId
+    , PV4.gaidGovActionIx = toInteger $ unGovActionIx gaidGovActionIx
+    }
+
+transGovAction :: ConwayEraPlutusTxInfo l era => proxy l -> GovAction era -> PV4.GovernanceAction
+transGovAction proxy = \case
+  ParameterChange pGovActionId ppu govPolicy ->
+    PV4.ParameterChange
+      (transPrevGovActionId pGovActionId)
+      (toPlutusChangedParameters proxy ppu)
+      (transGovPolicy govPolicy)
+  HardForkInitiation pGovActionId protVer ->
+    PV4.HardForkInitiation
+      (transPrevGovActionId pGovActionId)
+      (transProtVer protVer)
+  TreasuryWithdrawals withdrawals govPolicy ->
+    PV4.TreasuryWithdrawals
+      (transMap transAccountAddress transCoinToLovelace withdrawals)
+      (transGovPolicy govPolicy)
+  NoConfidence pGovActionId -> PV4.NoConfidence (transPrevGovActionId pGovActionId)
+  UpdateCommittee pGovActionId ccToRemove ccToAdd threshold ->
+    PV4.UpdateCommittee
+      (transPrevGovActionId pGovActionId)
+      (map (PV4.ColdCommitteeCredential . transCred) $ Set.toList ccToRemove)
+      (transMap (PV4.ColdCommitteeCredential . transCred) transEpochNo ccToAdd)
+      (transBoundedRational threshold)
+  NewConstitution pGovActionId constitution ->
+    PV4.NewConstitution
+      (transPrevGovActionId pGovActionId)
+      (transConstitution constitution)
+  InfoAction -> PV4.InfoAction
+  where
+    transGovPolicy = \case
+      SJust govPolicy -> Just (transScriptHash govPolicy)
+      SNothing -> Nothing
+    transConstitution (Constitution _ govPolicy) =
+      PV4.Constitution (transGovPolicy govPolicy)
+    transPrevGovActionId = \case
+      SJust (GovPurposeId gaId) -> Just (transGovActionId gaId)
+      SNothing -> Nothing
+
+transProtVer :: ProtVer -> PV4.ProtocolVersion
+transProtVer (ProtVer major minor) =
+  PV4.ProtocolVersion (toInteger (getVersion32 major)) (toInteger minor)
+
+transBoundedRational :: BoundedRational r => r -> PV4.Rational
+transBoundedRational = PV4.fromHaskellRatio . unboundRational

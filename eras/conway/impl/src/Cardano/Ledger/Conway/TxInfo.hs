@@ -43,6 +43,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transVotingProcedures,
   transProposal,
   transVoter,
+  transVote,
   toPlutusV3Args,
   transTxCertV1V2,
   transPlutusPurposeV3,

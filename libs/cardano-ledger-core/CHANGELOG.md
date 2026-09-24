@@ -73,6 +73,9 @@
 
 ### `testlib`
 
+* Regenerate the compiled scripts in `Test.Cardano.Ledger.Plutus.Examples` with `plutus-tx-1.70`.
+  All `PlutusV3` and `PlutusV4` script hashes change, and the `PlutusV4` scripts now expect the
+  list-encoded `ScriptContext` introduced in `plutus-ledger-api-1.69`
 * Replace the `tbhProtVer` field of `TestBlockHeader` with `tbhVersionInfo :: BlockHeaderVersionInfo`
 * Add `Arbitrary` and `ToExpr` instances for `BlockHeaderVersionInfo`
 * Remove `tbhPrevNonce` from `TestBlockHeader`
