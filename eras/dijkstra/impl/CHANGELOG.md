@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` protocol parameters:
+  - Add `dppRefInputsCostPerMultiAssetPolicy` and `dppRefInputsCostPerDatumByte` fields to `DijkstraPParams`
+  - Add `udppRefInputsCostPerMultiAssetPolicy` and `udppRefInputsCostPerDatumByte` fields to `UpgradeDijkstraPParams`
+  - Add `hkdRefInputsCostPerMultiAssetPolicyL` and `hkdRefInputsCostPerDatumByteL` to `DijkstraEraPParams`
+  - Add `ppRefInputsCostPerMultiAssetPolicyL`, `ppRefInputsCostPerDatumByteL`, `ppuRefInputsCostPerMultiAssetPolicyL` and `ppuRefInputsCostPerDatumByteL`
 * Add the Peras protocol parameters:
   - `perasMinCandidateBlockAge`
   - `perasCertBoost`
@@ -104,6 +109,7 @@
 
 ### `cddl`
 
+* Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` entries (tags 55-56) in `protocol_param_update`
 * Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
 * Rename the `eb_announcement` rule to `eb_references_announcement`
 * Add `header_version_info` rule and use it in `header_body` in place of `protocol_version`
