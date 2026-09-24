@@ -136,6 +136,55 @@ spec = describe "ENTITIES" $ do
           Withdrawals [(account3, amountY)]
       ]
 
+  it "Withdrawals from an account unregistered by an earlier sub-transaction" $ do
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    keyDeposit <- getsPParams ppKeyDepositL
+    account <- registerStakeCredential stakingCred
+    let subUnregister =
+          mkBasicTx $
+            mkBasicTxBody
+              & certsTxBodyL .~ [UnRegDepositTxCert stakingCred keyDeposit]
+        subWithdraw =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(account, zero)]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & subTransactionsTxBodyL .~ [subUnregister, subWithdraw]
+
+    -- the account is still present in the original accounts, so only the check
+    -- against the updated accounts fails
+    submitFailingTx
+      tx
+      [ injectFailure . SubWithdrawalAccountsMissing @era $
+          Withdrawals [(account, zero)]
+      ]
+
+  it "Top-level withdrawal from an account unregistered by a sub-transaction" $ do
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    keyDeposit <- getsPParams ppKeyDepositL
+    account <- registerStakeCredential stakingCred
+    let subUnregister =
+          mkBasicTx $
+            mkBasicTxBody
+              & certsTxBodyL .~ [UnRegDepositTxCert stakingCred keyDeposit]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(account, zero)]
+              & subTransactionsTxBodyL .~ [subUnregister]
+        accountMissing =
+          injectFailure . WithdrawalAccountsMissing @era $
+            Withdrawals [(account, zero)]
+
+    -- the aggregate check against the original accounts passes, since the account
+    -- is still there with a zero balance
+    submitFailingTx tx [accountMissing]
+
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx legacyTx [accountMissing]
+
   it "Direct deposits to an unregistered account" $ do
     account <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     amountX <- Coin . getPositive <$> arbitrary
@@ -341,6 +390,33 @@ spec = describe "ENTITIES" $ do
               NEM.fromMap [(account, Mismatch depositAmount zero)]
       ]
 
+  it "Direct deposits cannot fund withdrawals from an account registered in the same batch" $ do
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    account <- getAccountAddressFor stakingCred
+    keyDeposit <- getsPParams ppKeyDepositL
+    depositAmount <- Coin . getPositive <$> arbitrary
+    let subRegisterAndDeposit =
+          mkBasicTx $
+            mkBasicTxBody
+              & certsTxBodyL .~ [RegDepositTxCert stakingCred keyDeposit]
+              & directDepositsTxBodyL .~ DirectDeposits [(account, depositAmount)]
+        subWithdraw =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL .~ Withdrawals [(account, depositAmount)]
+        tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & subTransactionsTxBodyL .~ [subRegisterAndDeposit, subWithdraw]
+        missingFromOriginal =
+          injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
+            Withdrawals [(account, depositAmount)]
+
+    submitFailingTx tx [missingFromOriginal]
+
+    legacyTx <- switchTxToLegacyMode tx
+    submitFailingTx legacyTx [missingFromOriginal]
+
   it "Top transaction can drain an account funded by a sub-transaction direct deposit, in legacy mode" $ do
     account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
     depositAmount <- Coin . getPositive <$> arbitrary
@@ -365,6 +441,41 @@ spec = describe "ENTITIES" $ do
     legacyTx <- switchTxToLegacyMode tx
     submitTx_ legacyTx
     getBalance (account ^. accountAddressCredentialL) `shouldReturn` zero
+
+  it
+    "Top transaction can drain an account registered by a sub-transaction, in legacy mode"
+    $ do
+      keyDeposit <- getsPParams ppKeyDepositL
+      let drainsInLegacyMode amount = do
+            stakingCred <- KeyHashObj <$> freshKeyHash
+            account <- getAccountAddressFor stakingCred
+            let subRegisterAndFund =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & certsTxBodyL .~ [RegDepositTxCert stakingCred keyDeposit]
+                      & directDepositsTxBodyL .~ DirectDeposits [(account, amount)]
+                tx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & withdrawalsTxBodyL .~ Withdrawals [(account, amount)]
+                      & subTransactionsTxBodyL .~ [subRegisterAndFund]
+
+            -- in normal mode the account must already be present in the original accounts
+            submitFailingTx
+              tx
+              [ injectFailure . WithdrawalAccountsMissingFromOriginal @era $
+                  Withdrawals [(account, amount)]
+              ]
+
+            submitTx_ =<< switchTxToLegacyMode tx
+            expectStakeCredRegistered stakingCred
+            getBalance stakingCred `shouldReturn` zero
+
+      -- withdrawing zero from an account the batch itself registered
+      drainsInLegacyMode zero
+      -- withdrawing exactly what the same sub-transaction direct-deposited
+      depositAmount <- Coin . getPositive <$> arbitrary
+      drainsInLegacyMode depositAmount
 
   describe "Account balance intervals" $ do
     it "Account balance intervals for the top-level transaction" $
