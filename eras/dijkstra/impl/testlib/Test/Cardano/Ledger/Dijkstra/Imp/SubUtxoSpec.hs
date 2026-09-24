@@ -357,7 +357,7 @@ spec = describe "SUBUTXO" $ do
     it "still rejects a sub-transaction with the wrong network id in its body" $ do
       let subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & networkIdTxBodyL .~ SJust Mainnet
-      topTx <- phase2InvalidTxWithSubTxs [subTx]
+      topTx <- phase2InvalidTx $ mkTopTxWithSubTxs [subTx]
       withNoFixup $
         submitFailingTx
           topTx
@@ -367,14 +367,14 @@ spec = describe "SUBUTXO" $ do
 
     it "does not check the threaded UTxO, so two sub-transactions may name one input" $ do
       (sharedTxIn, subTxs) <- subTxsSpendingOneInput
-      topTx <- phase2InvalidTxWithSubTxs subTxs
+      topTx <- phase2InvalidTx $ mkTopTxWithSubTxs subTxs
       withNoFixup $ submitTx_ topTx
       void $ impGetUTxO sharedTxIn
 
     it "spending an output from an earlier sub-tx fails twice" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       topTx <-
-        phase2InvalidTxWithSubTxs
+        phase2InvalidTx . mkTopTxWithSubTxs $
           [ producingSubTx
           , mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [producedTxIn]
           ]
