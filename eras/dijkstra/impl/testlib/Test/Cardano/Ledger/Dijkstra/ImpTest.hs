@@ -139,6 +139,7 @@ class
   , InjectRuleFailure "LEDGER" DijkstraGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -184,6 +185,9 @@ instance InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure DijkstraEra where
 
 instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovPredFailure DijkstraEra where
   injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
 
 -- | A top level transaction that nests the given sub-transactions and
 -- is otherwise empty.
