@@ -401,7 +401,7 @@ spec = describe "ENTITIES" $ do
 
     it "Every violating entry of a single interval map is reported" $ do
       (accountAddr, balance, _) <- setupAccountAddress
-      unregistered <- unregisteredAccount
+      unregistered <- freshUnregisteredAccount
       let onWrongNetwork = accountAddr & accountAddressNetworkIdL .~ Mainnet
           violated = AccountBalanceExact (balance <+> Coin 1)
       submitFailingTx
@@ -557,7 +557,7 @@ spec = describe "ENTITIES" $ do
       submitFailing
         (AccountBalanceIntervals [(onWrongNetwork, violated)])
         (mkWrongNetwork Testnet (NES.singleton onWrongNetwork))
-      unregistered <- unregisteredAccount
+      unregistered <- freshUnregisteredAccount
       submitFailing
         (AccountBalanceIntervals [(unregistered, violated)])
         (mkMissingAccounts (NEM.singleton unregistered violated))

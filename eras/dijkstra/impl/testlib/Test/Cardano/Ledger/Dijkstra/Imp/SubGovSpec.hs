@@ -105,7 +105,7 @@ spec = describe "SUBGOV" $ do
 
   describe "ProposalReturnAccountDoesNotExist" $
     it "an unregistered return account" $ do
-      account <- unregisteredAccount
+      account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
       submitFailingSubTx
         (proposeSubTx proposal)
@@ -116,7 +116,7 @@ spec = describe "SUBGOV" $ do
   describe "TreasuryWithdrawalReturnAccountsDoNotExist" $
     it "an unregistered withdrawal account" $ do
       useNativeGuardrailsScript
-      account <- unregisteredAccount
+      account <- freshUnregisteredAccount
       registeredAccount <- registerAccountAddress
       govAction <-
         mkTreasuryWithdrawalsGovAction
@@ -361,8 +361,8 @@ spec = describe "SUBGOV" $ do
 
   describe "Composite tests" $ do
     it "failures of several proposals, in the order of the body" $ do
-      firstAccount <- unregisteredAccount
-      secondAccount <- unregisteredAccount
+      firstAccount <- freshUnregisteredAccount
+      secondAccount <- freshUnregisteredAccount
       firstProposal <- mkProposalWithAccountAddress InfoAction firstAccount
       secondProposal <- mkProposalWithAccountAddress InfoAction secondAccount
       let subTx :: Tx SubTx era
@@ -398,7 +398,7 @@ spec = describe "SUBGOV" $ do
       guardrailsScriptHash <- getGovPolicy
       wrongScriptHash <- impAddNativeScript . RequireSignature =<< freshKeyHash
       expectedDeposit <- getsPParams ppGovActionDepositL
-      account <- unregisteredAccount
+      account <- freshUnregisteredAccount
       anchor <- arbitrary
       let onWrongNetwork = account & accountAddressNetworkIdL .~ Mainnet
           suppliedDeposit = expectedDeposit <-> Coin 1
@@ -429,8 +429,8 @@ spec = describe "SUBGOV" $ do
         ]
 
     it "failures of several sub-transactions, in sub-transaction order" $ do
-      firstAccount <- unregisteredAccount
-      secondAccount <- unregisteredAccount
+      firstAccount <- freshUnregisteredAccount
+      secondAccount <- freshUnregisteredAccount
       firstProposal <- mkProposalWithAccountAddress InfoAction firstAccount
       secondProposal <- mkProposalWithAccountAddress InfoAction secondAccount
       submitFailingTx
@@ -442,7 +442,7 @@ spec = describe "SUBGOV" $ do
         ]
 
     it "the top-level failure precedes the same failure from a sub-transaction" $ do
-      account <- unregisteredAccount
+      account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
       submitFailingTx
         ( mkTopTxWithSubTxs [proposeSubTx proposal]
@@ -612,7 +612,7 @@ spec = describe "SUBGOV" $ do
 
   describe "A phase-2 invalid top level transaction" $
     it "raises no SUBGOV failure" $ do
-      account <- unregisteredAccount
+      account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
       topTx <- phase2InvalidTxWithSubTxs [proposeSubTx proposal]
       withNoFixup $ submitTx_ topTx

@@ -108,7 +108,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectStakeCredNotRegistered,
   expectDelegatedToPool,
   getAccountAddressFor,
-  unregisteredAccount,
+  freshUnregisteredAccount,
   freshPoolParams,
   registerPool,
   registerPoolWithAccountAddress,
@@ -2097,8 +2097,8 @@ getAccountAddressFor stakingC = do
   pure $ AccountAddress networkId (AccountId stakingC)
 
 -- | An account address whose staking credential is not registered.
-unregisteredAccount :: Era era => ImpTestM era AccountAddress
-unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
+freshUnregisteredAccount :: Era era => ImpTestM era AccountAddress
+freshUnregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
 
 registerStakeCredential ::
   forall era.
