@@ -14,6 +14,7 @@ import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -324,7 +325,11 @@ spec = describe "SUBUTXOW" $ do
             submitFailingLegacySubTx
               lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              [injectFailure $ SubExtraRedeemers @era [extraPurpose]]
+              [ injectFailure $
+                  Conway.CollectErrors
+                    [BadTranslation . inject $ RedeemerPointerPointsToNothing extraPurpose]
+              , injectFailure $ SubExtraRedeemers @era [extraPurpose]
+              ]
 
         describe "SubScriptIntegrityHashMismatch" $ do
           let testHashMismatch badHash = do
