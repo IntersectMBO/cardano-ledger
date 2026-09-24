@@ -31,7 +31,6 @@ import Test.Cardano.Ledger.Imp.Common
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
   it "Batch with successful withdrawals and direct deposits" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (acc1, balance1, kh1) <- setupAccountAddress
     (acc2, balance2, kh2) <- setupAccountAddress
     (acc3, balance3, kh3) <- setupAccountAddress
@@ -62,8 +61,6 @@ spec = describe "ENTITIES" $ do
     finalBalanceD `shouldBe` (balance3 <-> partialWithdrawal)
 
   it "Partial withdrawals" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-
     (account1, balance1, kh1) <- setupAccountAddress
     (account2, balance2, kh2) <- setupAccountAddress
     lessThanBalance1 <- Coin <$> choose (1, unCoin balance1 - 1)
@@ -100,8 +97,6 @@ spec = describe "ENTITIES" $ do
     getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
 
   it "Withdrawals from an unregistered staking address" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-
     account1 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     amountX <- Coin . getPositive <$> arbitrary
@@ -256,7 +251,6 @@ spec = describe "ENTITIES" $ do
       ]
 
   it "Aggregate of top and sub withdrawals exceeds account balance" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, balance, _) <- setupAccountAddress
     (topAmount, subAmount) <- genCoinPairExceeding balance
     let tx =
@@ -280,7 +274,6 @@ spec = describe "ENTITIES" $ do
       ]
 
   it "Aggregate of sub withdrawals exceeds account balance" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, balance, _) <- setupAccountAddress
     (subAmount1, subAmount2) <- genCoinPairExceeding balance
     (subAmount1 <+> subAmount2) `shouldSatisfy` (> balance)
@@ -306,7 +299,6 @@ spec = describe "ENTITIES" $ do
       ]
 
   it "Individual withdrawal exceeds account balance" $ do
-    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     (account, balance, _) <- setupAccountAddress
     atMostBalance <- Coin <$> choose (1, unCoin balance)
     moreThanBalance <- (balance <+>) . Coin . getPositive <$> arbitrary
@@ -627,10 +619,12 @@ spec = describe "ENTITIES" $ do
     setupAccountAddress = do
       kh <- freshKeyHash
       let cred = KeyHashObj kh
+          balance = Coin 1_000_000
       ra <- registerStakeCredential cred
-      submitAndExpireProposalToMakeReward cred
-      b <- getBalance cred
-      pure (ra, b, kh)
+      submitTx_ $
+        mkBasicTx $
+          mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(ra, balance)]
+      pure (ra, balance, kh)
 
     mkTxWithBatchWithdrawals :: Withdrawals -> [Withdrawals] -> Tx TopTx era
     mkTxWithBatchWithdrawals topWdrls subs =
