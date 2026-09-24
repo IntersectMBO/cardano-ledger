@@ -36,6 +36,7 @@ import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
 import Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec qualified as MEMPOOL
 import Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec qualified as POOL
 import Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec qualified as SUBGOV
+import Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec qualified as SUBLEDGER
 import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec qualified as SUBUTXO
 import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec qualified as SUBUTXOW
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec qualified as UTXO
@@ -80,6 +81,7 @@ spec = do
             ShelleyLEDGER.spec
             ConwayLEDGER.spec
             LEDGER.spec
+            SUBLEDGER.spec
 
             ConwayMEMPOOL.spec
             MEMPOOL.spec
