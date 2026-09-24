@@ -31,6 +31,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   expectMempoolRejection,
   phase2InvalidTx,
   voteSubTx,
+  declareTreasurySubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -285,6 +286,11 @@ voteSubTx vote voter govActionId =
           ( Map.singleton voter . Map.singleton govActionId $
               VotingProcedure {vProcVote = vote, vProcAnchor = SNothing}
           )
+
+-- | A sub-transaction that declares the given value as the current treasury value.
+declareTreasurySubTx :: DijkstraEraImp era => Coin -> Tx SubTx era
+declareTreasurySubTx declaredTreasury =
+  mkBasicTx $ mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
