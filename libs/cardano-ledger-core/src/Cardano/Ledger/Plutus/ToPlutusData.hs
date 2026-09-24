@@ -135,13 +135,6 @@ instance ToPlutusData Word32 where
         Just $ fromInteger @Word32 n
   fromPlutusData _ = Nothing
 
-instance ToPlutusData Word64 where
-  toPlutusData w64 = I (toInteger @Word64 w64)
-  fromPlutusData (I n)
-    | n >= 0 && n <= toInteger (maxBound @Word64) =
-        Just $ fromInteger @Word64 n
-  fromPlutusData _ = Nothing
-
 instance ToPlutusData Word16 where
   toPlutusData w16 = I (toInteger @Word16 w16)
   fromPlutusData (I n) | n >= 0 && n <= toInteger (maxBound @Word16) = Just $ fromInteger @Word16 n

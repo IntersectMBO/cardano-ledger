@@ -98,7 +98,6 @@ dataSpec = do
     roundTripPlutusDataSpec @CoinPerByte
     roundTripPlutusDataSpec @MaxPledgeLeverage
     roundTripPlutusDataSpec @Word32
-    roundTripPlutusDataSpec @Word64
     roundTripPlutusDataSpec @Word16
     roundTripPlutusDataSpec @Word8
     roundTripPlutusDataSpec @EpochInterval

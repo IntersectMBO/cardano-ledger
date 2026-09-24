@@ -127,7 +127,7 @@ import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
@@ -257,7 +257,7 @@ data DijkstraPParams f era = DijkstraPParams
   , dppPerasTargetCommitteeSize ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
   , dppPerasBootstrapRound ::
-      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f (StrictMaybe Word64))
+      !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f (StrictMaybe Word32))
   , dppPerasQuorumThresholdSafetyMargin ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f UnitInterval)
   }
@@ -389,7 +389,7 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppPerasHealingFactor :: !(HKD f PositiveInterval)
   , udppPerasCertBoost :: !(HKD f Word16)
   , udppPerasTargetCommitteeSize :: !(HKD f Word16)
-  , udppPerasBootstrapRound :: !(HKD f (StrictMaybe Word64))
+  , udppPerasBootstrapRound :: !(HKD f (StrictMaybe Word32))
   , udppPerasQuorumThresholdSafetyMargin :: !(HKD f UnitInterval)
   }
   deriving (Generic)
@@ -1248,7 +1248,7 @@ class ConwayEraPParams era => DijkstraEraPParams era where
   hkdPerasHealingFactorL :: Lens' (PParamsHKD f era) (HKD f PositiveInterval)
   hkdPerasCertBoostL :: Lens' (PParamsHKD f era) (HKD f Word16)
   hkdPerasTargetCommitteeSizeL :: Lens' (PParamsHKD f era) (HKD f Word16)
-  hkdPerasBootstrapRoundL :: Lens' (PParamsHKD f era) (HKD f (StrictMaybe Word64))
+  hkdPerasBootstrapRoundL :: Lens' (PParamsHKD f era) (HKD f (StrictMaybe Word32))
   hkdPerasQuorumThresholdSafetyMarginL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
 
 instance DijkstraEraPParams DijkstraEra where
@@ -1393,7 +1393,7 @@ ppPerasCertBoostL = ppLensHKD . hkdPerasCertBoostL @_ @Identity
 ppPerasTargetCommitteeSizeL :: DijkstraEraPParams era => Lens' (PParams era) Word16
 ppPerasTargetCommitteeSizeL = ppLensHKD . hkdPerasTargetCommitteeSizeL @_ @Identity
 
-ppPerasBootstrapRoundL :: DijkstraEraPParams era => Lens' (PParams era) (StrictMaybe Word64)
+ppPerasBootstrapRoundL :: DijkstraEraPParams era => Lens' (PParams era) (StrictMaybe Word32)
 ppPerasBootstrapRoundL = ppLensHKD . hkdPerasBootstrapRoundL @_ @Identity
 
 ppPerasQuorumThresholdSafetyMarginL :: DijkstraEraPParams era => Lens' (PParams era) UnitInterval
@@ -1415,7 +1415,7 @@ ppuPerasTargetCommitteeSizeL ::
 ppuPerasTargetCommitteeSizeL = ppuLensHKD . hkdPerasTargetCommitteeSizeL @_ @StrictMaybe
 
 ppuPerasBootstrapRoundL ::
-  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (StrictMaybe Word64))
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe (StrictMaybe Word32))
 ppuPerasBootstrapRoundL = ppuLensHKD . hkdPerasBootstrapRoundL @_ @StrictMaybe
 
 ppuPerasQuorumThresholdSafetyMarginL ::

@@ -2,7 +2,7 @@
 
 ## 1.22.0.0
 
-* Add `ToPlutusData` instances for `Word64` and `SlotInterval`
+* Add `ToPlutusData` instance for `SlotInterval`
 * Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
 * Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
