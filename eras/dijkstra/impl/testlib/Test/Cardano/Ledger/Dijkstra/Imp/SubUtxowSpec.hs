@@ -14,6 +14,7 @@ import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -27,7 +28,7 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credKeyHashWitness)
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (DijkstraSubUtxowPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules (DijkstraSubUtxowPredFailure (..), STS (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
@@ -267,7 +268,7 @@ spec = describe "SUBUTXOW" $ do
           submitFailingLegacySubTx
             lang
             (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])
-            (SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn)
+            [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -283,7 +284,7 @@ spec = describe "SUBUTXOW" $ do
             submitFailingLegacySubTx
               lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              (SubMissingRequiredDatums @era (NES.singleton missingDatum) [])
+              [injectFailure $ SubMissingRequiredDatums @era (NES.singleton missingDatum) []]
 
         it "SubNotAllowedSupplementalDatums" $ do
           txIn <- produceScript redeemerSameAsDatumHash
@@ -298,7 +299,7 @@ spec = describe "SUBUTXOW" $ do
             submitFailingLegacySubTx
               lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              (SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) [])
+              [injectFailure $ SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) []]
 
         it "SubMissingRedeemers" $ do
           txIn <- produceScript redeemerSameAsDatumHash
@@ -324,7 +325,11 @@ spec = describe "SUBUTXOW" $ do
             submitFailingLegacySubTx
               lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              (SubExtraRedeemers @era [extraPurpose])
+              [ injectFailure $
+                  Conway.CollectErrors
+                    [BadTranslation . inject $ RedeemerPointerPointsToNothing extraPurpose]
+              , injectFailure $ SubExtraRedeemers @era [extraPurpose]
+              ]
 
         describe "SubScriptIntegrityHashMismatch" $ do
           let testHashMismatch badHash = do
@@ -344,10 +349,14 @@ spec = describe "SUBUTXOW" $ do
                   rederiveAddrTxWits $
                     fixedUpTx & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton badSubTx
                 withNoFixup $
-                  submitFailingLegacySubTx lang badTopTx $
-                    SubScriptIntegrityHashMismatch @era
-                      Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
-                      (originalBytes <$> expectedIntegrity)
+                  submitFailingLegacySubTx
+                    lang
+                    badTopTx
+                    [ injectFailure $
+                        SubScriptIntegrityHashMismatch @era
+                          Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
+                          (originalBytes <$> expectedIntegrity)
+                    ]
           it "the supplied hash is wrong" $ testHashMismatch . SJust =<< arbitrary
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
@@ -357,7 +366,7 @@ spec = describe "SUBUTXOW" $ do
           submitFailingLegacySubTx
             lang
             (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-            (SubMalformedScriptWitnesses @era $ NES.singleton scriptHash)
+            [injectFailure . SubMalformedScriptWitnesses @era $ NES.singleton scriptHash]
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
         -- TODO: Re-enable after issue is resolved, by removing this override
@@ -397,18 +406,20 @@ submitFailingLegacySubTx ::
   DijkstraEraImp era =>
   Language ->
   Tx TopTx era ->
-  DijkstraSubUtxowPredFailure era ->
+  NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
-submitFailingLegacySubTx lang tx expectedFailure =
+submitFailingLegacySubTx lang tx expectedFailures =
   submitFailingTxM tx $ \fixedUpTx ->
     case OMap.elems $ fixedUpTx ^. bodyTxL . subTransactionsTxBodyL of
       [subTx] ->
-        pure
-          [ injectFailure $
-              Conway.CollectErrors
-                [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
-          , injectFailure expectedFailure
-          ]
+        pure $
+          NE.appendList
+            expectedFailures
+            [ injectFailure $
+                Conway.CollectErrors
+                  [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
+            | lang < PlutusV4
+            ]
       _ -> assertFailure "Expected exactly one sub-transaction"
 
 -- | Every distinct reason a sub-transaction requires a key witness,

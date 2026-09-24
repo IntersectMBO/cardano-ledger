@@ -132,7 +132,10 @@ spec = describe "Valid" $ do
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 txInitial]
 
           it "Passed as a reference script" $ do
-            addr <- freshKeyAddr_
+            addr <-
+              if slang >= PlutusV4
+                then freshKeyAddrNoPtr_
+                else freshKeyAddr_
             plutus <- mkPlutusScript $ alwaysSucceedsWithDatum lang
             let
               script = fromPlutusScript plutus
@@ -151,7 +154,10 @@ spec = describe "Valid" $ do
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
 
           it "Passed as a reference script and with an inline datum" $ do
-            addr <- freshKeyAddr_
+            addr <-
+              if slang >= PlutusV4
+                then freshKeyAddrNoPtr_
+                else freshKeyAddr_
             plutus <- mkPlutusScript $ alwaysSucceedsWithDatum lang
             let
               script = fromPlutusScript plutus
@@ -171,7 +177,10 @@ spec = describe "Valid" $ do
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
 
         it "Use a reference script to authorize a delegation certificate" $ do
-          addr <- freshKeyAddr_
+          addr <-
+            if slang >= PlutusV4
+              then freshKeyAddrNoPtr_
+              else freshKeyAddr_
           plutus <- mkPlutusScript $ alwaysSucceedsNoDatum lang
           let
             script = fromPlutusScript plutus

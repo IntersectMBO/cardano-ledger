@@ -466,7 +466,7 @@ instance AlonzoEraScript DijkstraEra where
 
   type PlutusPurpose f DijkstraEra = DijkstraPlutusPurpose f DijkstraEra
 
-  eraMaxLanguage = PlutusV3
+  eraMaxLanguage = PlutusV4
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of
