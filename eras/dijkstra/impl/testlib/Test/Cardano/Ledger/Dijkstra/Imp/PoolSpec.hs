@@ -4,7 +4,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec) where
+module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (
+  spec,
+  rewardsOfWellAndOverPledgedPools,
+  registerPoolWithPledge,
+) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))

@@ -44,7 +44,7 @@ import Control.State.Transition (
   tellEvent,
   (?!),
  )
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Primitive.ByteArray (sizeofByteArray)
 import Lens.Micro
 
