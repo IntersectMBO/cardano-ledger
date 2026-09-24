@@ -614,7 +614,7 @@ spec = describe "SUBGOV" $ do
     it "raises no SUBGOV failure" $ do
       account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
-      topTx <- phase2InvalidTxWithSubTxs [proposeSubTx proposal]
+      topTx <- phase2InvalidTx $ mkTopTxWithSubTxs [proposeSubTx proposal]
       withNoFixup $ submitTx_ topTx
 
 -- | Expect the given voter to have cast the given vote on a governance action.
