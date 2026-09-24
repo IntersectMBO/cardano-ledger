@@ -90,7 +90,7 @@ predicateFailuresSpec =
   describe "Predicate failures" $ do
     it "ProposalReturnAccountDoesNotExist" $ do
       mkProposal InfoAction >>= submitProposal_
-      unregisteredAccountAddress <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+      unregisteredAccountAddress <- freshUnregisteredAccount
 
       proposal <- mkProposalWithAccountAddress InfoAction unregisteredAccountAddress
       submitBootstrapAwareFailingProposal_ proposal $
@@ -1062,7 +1062,7 @@ withdrawalsSpec =
   describe "Withdrawals" $ do
     it "Fails predicate when treasury withdrawal has nonexistent return address" $ do
       policy <- getGovPolicy
-      unregisteredAccountAddress <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
+      unregisteredAccountAddress <- freshUnregisteredAccount
       registeredAccountAddress <- registerAccountAddress
       let genPositiveCoin = Coin . getPositive <$> arbitrary
       withdrawals <-

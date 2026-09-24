@@ -401,7 +401,7 @@ spec = describe "ENTITIES" $ do
 
     it "Every violating entry of a single interval map is reported" $ do
       (accountAddr, balance, _) <- setupAccountAddress
-      unregistered <- unregisteredAccount
+      unregistered <- freshUnregisteredAccount
       let onWrongNetwork = accountAddr & accountAddressNetworkIdL .~ Mainnet
           violated = AccountBalanceExact (balance <+> Coin 1)
       submitFailingTx
@@ -536,9 +536,6 @@ spec = describe "ENTITIES" $ do
       b <- choose (maxSum - a + 1, maxSum)
       pure (Coin a, Coin b)
 
-    unregisteredAccount :: ImpTestM era AccountAddress
-    unregisteredAccount = freshKeyHash >>= getAccountAddressFor . KeyHashObj
-
     submitFailingTopTxBody modifyBody failure =
       submitFailingTx (mkBasicTx (mkBasicTxBody & modifyBody)) [injectFailure failure]
 
@@ -560,7 +557,7 @@ spec = describe "ENTITIES" $ do
       submitFailing
         (AccountBalanceIntervals [(onWrongNetwork, violated)])
         (mkWrongNetwork Testnet (NES.singleton onWrongNetwork))
-      unregistered <- unregisteredAccount
+      unregistered <- freshUnregisteredAccount
       submitFailing
         (AccountBalanceIntervals [(unregistered, violated)])
         (mkMissingAccounts (NEM.singleton unregistered violated))

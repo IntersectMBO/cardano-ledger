@@ -31,7 +31,6 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
   multiAssetFromList,
  )
-import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Tools (setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
@@ -49,7 +48,6 @@ import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (<>~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SUBUTXO" $ do
@@ -445,12 +443,3 @@ outputTooBigEntry pp txOut =
   , fromIntegral $ pp ^. ppMaxValSizeL
   , txOut
   )
-
-phase2InvalidTxWithSubTxs ::
-  (HasCallStack, DijkstraEraImp era) =>
-  [Tx SubTx era] ->
-  ImpTestM era (Tx TopTx era)
-phase2InvalidTxWithSubTxs subTxs = do
-  failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
-  fixedUpTx <- fixupTx $ mkTopTxWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
-  pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
