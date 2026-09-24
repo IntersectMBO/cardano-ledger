@@ -731,6 +731,8 @@ protocol_param_update =
   , ? 52 : uint .size 2                ; peras target committee size
   , ? 53 : nil/ uint .size 4 ; peras bootstrap round
   , ? 54 : unit_interval               ; peras quorum threshold safety margin
+  , ? 55 : coin                        ; minfee per multi-asset policy id in reference inputs
+  , ? 56 : coin                        ; minfee per datum byte in reference inputs
   }
 
 epoch_interval = uint .size 4

@@ -40,6 +40,8 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppMaxEndorserBlockTxsSizeL,
   ppMaxEndorserBlockExUnitsL,
   ppMaxRefScriptSizePerEndorserBlockL,
+  ppRefInputsCostPerMultiAssetPolicyL,
+  ppRefInputsCostPerDatumByteL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
   ppuMaxRefScriptSizePerTxL,
@@ -61,6 +63,8 @@ module Cardano.Ledger.Dijkstra.PParams (
   ppuMaxEndorserBlockTxsSizeL,
   ppuMaxEndorserBlockExUnitsL,
   ppuMaxRefScriptSizePerEndorserBlockL,
+  ppuRefInputsCostPerMultiAssetPolicyL,
+  ppuRefInputsCostPerDatumByteL,
 
   -- * Deprecated
   dppMinFeeA,
@@ -137,6 +141,25 @@ import NoThunks.Class (NoThunks)
 -- * @maxRefScriptSizePerTx@
 -- * @refScriptCostStride@
 -- * @refScriptCostMultiplier@
+-- * @maxPledgeLeverage@
+-- * @minPoolMargin@
+-- * @leiosAnnouncementPeriodLength@
+-- * @leiosVotePeriodLength@
+-- * @leiosDiffusionPeriodLength@
+-- * @leiosCommitteeSize@
+-- * @leiosQuorumStakeThreshold@
+-- * @maxEndorserBlockReferencesSize@
+-- * @maxEndorserBlockTxsSize@
+-- * @maxEndorserBlockExecutionUnits@
+-- * @maxRefScriptSizePerEndorserBlock@
+-- * @perasMinCandidateBlockAge@
+-- * @perasHealingFactor@
+-- * @perasCertBoost@
+-- * @perasTargetCommitteeSize@
+-- * @perasBootstrapRound@
+-- * @perasQuorumThresholdSafetyMargin@
+-- * @refInputsCostPerMultiAssetPolicy@
+-- * @refInputsCostPerDatumByte@
 data DijkstraPParams f era = DijkstraPParams
   { dppTxFeePerByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ The linear factor for the minimum fee calculation
@@ -267,6 +290,15 @@ data DijkstraPParams f era = DijkstraPParams
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f UnitInterval)
   -- ^ Extra safety margin added on top of the 75% quorum threshold baseline.
   -- Must be between 0 and 0.25, inclusive.
+  , dppRefInputsCostPerMultiAssetPolicy :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
+  -- ^ Fee charged for every multi-asset policy present in the values of a
+  -- transaction's reference inputs. Extracting large amounts of data from disk
+  -- is a bottleneck once ledger state is stored on disk, so this acts as a
+  -- monetary deterrent against it.
+  , dppRefInputsCostPerDatumByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
+  -- ^ Fee charged per byte of datum attached to a transaction's reference
+  -- inputs. Same rationale as
+  -- 'dppRefInputsCostPerMultiAssetPolicy'.
   }
   deriving (Generic)
 
@@ -347,6 +379,8 @@ dijkstraApplyPPUpdates pp ppu = do
     , dppPerasTargetCommitteeSize = ppApplyUpdate dppPerasTargetCommitteeSize
     , dppPerasBootstrapRound = ppApplyUpdate dppPerasBootstrapRound
     , dppPerasQuorumThresholdSafetyMargin = ppApplyUpdate dppPerasQuorumThresholdSafetyMargin
+    , dppRefInputsCostPerMultiAssetPolicy = ppApplyUpdate dppRefInputsCostPerMultiAssetPolicy
+    , dppRefInputsCostPerDatumByte = ppApplyUpdate dppRefInputsCostPerDatumByte
     }
   where
     ppApplyUpdate :: (forall f. DijkstraPParams f era -> THKD g f a) -> THKD g Identity a
@@ -398,6 +432,8 @@ data UpgradeDijkstraPParams f era = UpgradeDijkstraPParams
   , udppPerasTargetCommitteeSize :: !(HKD f Word16)
   , udppPerasBootstrapRound :: !(HKD f (StrictMaybe Word32))
   , udppPerasQuorumThresholdSafetyMargin :: !(HKD f UnitInterval)
+  , udppRefInputsCostPerMultiAssetPolicy :: !(HKD f Coin)
+  , udppRefInputsCostPerDatumByte :: !(HKD f CoinPerByte)
   }
   deriving (Generic)
 
@@ -429,6 +465,8 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppPerasTargetCommitteeSize <- o .: "perasTargetCommitteeSize"
     udppPerasBootstrapRound <- o .: "perasBootstrapRound"
     udppPerasQuorumThresholdSafetyMargin <- o .: "perasQuorumThresholdSafetyMargin"
+    udppRefInputsCostPerMultiAssetPolicy <- o .: "refInputsCostPerMultiAssetPolicy"
+    udppRefInputsCostPerDatumByte <- o .: "refInputsCostPerDatumByte"
     pure UpgradeDijkstraPParams {..}
 
 instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
@@ -455,6 +493,8 @@ instance ToKeyValuePairs (UpgradeDijkstraPParams Identity era) where
     , "perasTargetCommitteeSize" .= udppPerasTargetCommitteeSize udpp
     , "perasBootstrapRound" .= udppPerasBootstrapRound udpp
     , "perasQuorumThresholdSafetyMargin" .= udppPerasQuorumThresholdSafetyMargin udpp
+    , "refInputsCostPerMultiAssetPolicy" .= udppRefInputsCostPerMultiAssetPolicy udpp
+    , "refInputsCostPerDatumByte" .= udppRefInputsCostPerDatumByte udpp
     ]
 
 deriving via
@@ -477,6 +517,8 @@ instance Era era => DecCBOR (UpgradeDijkstraPParams Identity era) where
         <! From
         <! From
         <! D (decodeCostModel PlutusV4)
+        <! From
+        <! From
         <! From
         <! From
         <! From
@@ -519,10 +561,14 @@ instance Era era => EncCBOR (UpgradeDijkstraPParams Identity era) where
         !> To udppPerasTargetCommitteeSize
         !> To udppPerasBootstrapRound
         !> To udppPerasQuorumThresholdSafetyMargin
+        !> To udppRefInputsCostPerMultiAssetPolicy
+        !> To udppRefInputsCostPerDatumByte
 
 emptyDijkstraUpgradePParamsUpdate :: UpgradeDijkstraPParams StrictMaybe era
 emptyDijkstraUpgradePParamsUpdate =
   UpgradeDijkstraPParams
+    SNothing
+    SNothing
     SNothing
     SNothing
     SNothing
@@ -616,6 +662,8 @@ upgradeDijkstraPParams UpgradeDijkstraPParams {..} ConwayPParams {..} =
     , dppPerasTargetCommitteeSize = THKD udppPerasTargetCommitteeSize
     , dppPerasBootstrapRound = THKD udppPerasBootstrapRound
     , dppPerasQuorumThresholdSafetyMargin = THKD udppPerasQuorumThresholdSafetyMargin
+    , dppRefInputsCostPerMultiAssetPolicy = THKD udppRefInputsCostPerMultiAssetPolicy
+    , dppRefInputsCostPerDatumByte = THKD udppRefInputsCostPerDatumByte
     }
 
 downgradeDijkstraPParams :: DijkstraPParams f DijkstraEra -> ConwayPParams f ConwayEra
@@ -745,6 +793,8 @@ instance EraPParams DijkstraEra where
     , ppPerasTargetCommitteeSize
     , ppPerasBootstrapRound
     , ppPerasQuorumThresholdSafetyMargin
+    , ppRefInputsCostPerMultiAssetPolicy
+    , ppRefInputsCostPerDatumByte
     ]
 
 ppMaxRefScriptSizePerBlock :: PParam DijkstraEra
@@ -1046,6 +1096,34 @@ ppPerasQuorumThresholdSafetyMargin =
             }
     }
 
+ppRefInputsCostPerMultiAssetPolicy :: PParam DijkstraEra
+ppRefInputsCostPerMultiAssetPolicy =
+  PParam
+    { ppName = "refInputsCostPerMultiAssetPolicy"
+    , ppLens = ppRefInputsCostPerMultiAssetPolicyL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 55
+            , ppuLens = ppuRefInputsCostPerMultiAssetPolicyL
+            , ppuEraCodec = Nothing
+            }
+    }
+
+ppRefInputsCostPerDatumByte :: PParam DijkstraEra
+ppRefInputsCostPerDatumByte =
+  PParam
+    { ppName = "refInputsCostPerDatumByte"
+    , ppLens = ppRefInputsCostPerDatumByteL
+    , ppUpdate =
+        Just
+          PParamUpdate
+            { ppuTag = 56
+            , ppuLens = ppuRefInputsCostPerDatumByteL
+            , ppuEraCodec = Nothing
+            }
+    }
+
 instance AlonzoEraPParams DijkstraEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens (unTHKD . dppCostModels) $ \pp x -> pp {dppCostModels = THKD x}
@@ -1176,6 +1254,8 @@ emptyDijkstraPParams =
     , dppPerasTargetCommitteeSize = THKD 800
     , dppPerasBootstrapRound = THKD SNothing
     , dppPerasQuorumThresholdSafetyMargin = THKD (fromJust $ boundRational 0.05)
+    , dppRefInputsCostPerMultiAssetPolicy = THKD (Coin 0)
+    , dppRefInputsCostPerDatumByte = THKD (CoinPerByte $ CompactCoin 0)
     }
 
 emptyDijkstraPParamsUpdate :: DijkstraPParams StrictMaybe era
@@ -1233,6 +1313,8 @@ emptyDijkstraPParamsUpdate =
     , dppPerasTargetCommitteeSize = THKD SNothing
     , dppPerasBootstrapRound = THKD SNothing
     , dppPerasQuorumThresholdSafetyMargin = THKD SNothing
+    , dppRefInputsCostPerMultiAssetPolicy = THKD SNothing
+    , dppRefInputsCostPerDatumByte = THKD SNothing
     }
 
 class ConwayEraPParams era => DijkstraEraPParams era where
@@ -1257,6 +1339,8 @@ class ConwayEraPParams era => DijkstraEraPParams era where
   hkdPerasTargetCommitteeSizeL :: Lens' (PParamsHKD f era) (HKD f Word16)
   hkdPerasBootstrapRoundL :: Lens' (PParamsHKD f era) (HKD f (StrictMaybe Word32))
   hkdPerasQuorumThresholdSafetyMarginL :: Lens' (PParamsHKD f era) (HKD f UnitInterval)
+  hkdRefInputsCostPerMultiAssetPolicyL :: Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdRefInputsCostPerDatumByteL :: Lens' (PParamsHKD f era) (HKD f CoinPerByte)
 
 instance DijkstraEraPParams DijkstraEra where
   hkdMaxRefScriptSizePerBlockL = lens (unTHKD . dppMaxRefScriptSizePerBlock) $ \pp x -> pp {dppMaxRefScriptSizePerBlock = THKD x}
@@ -1280,6 +1364,8 @@ instance DijkstraEraPParams DijkstraEra where
   hkdPerasTargetCommitteeSizeL = lens (unTHKD . dppPerasTargetCommitteeSize) $ \pp x -> pp {dppPerasTargetCommitteeSize = THKD x}
   hkdPerasBootstrapRoundL = lens (unTHKD . dppPerasBootstrapRound) $ \pp x -> pp {dppPerasBootstrapRound = THKD x}
   hkdPerasQuorumThresholdSafetyMarginL = lens (unTHKD . dppPerasQuorumThresholdSafetyMargin) $ \pp x -> pp {dppPerasQuorumThresholdSafetyMargin = THKD x}
+  hkdRefInputsCostPerMultiAssetPolicyL = lens (unTHKD . dppRefInputsCostPerMultiAssetPolicy) $ \pp x -> pp {dppRefInputsCostPerMultiAssetPolicy = THKD x}
+  hkdRefInputsCostPerDatumByteL = lens (unTHKD . dppRefInputsCostPerDatumByte) $ \pp x -> pp {dppRefInputsCostPerDatumByte = THKD x}
 
 ppMaxRefScriptSizePerBlockL :: DijkstraEraPParams era => Lens' (PParams era) Word32
 ppMaxRefScriptSizePerBlockL = ppLensHKD . hkdMaxRefScriptSizePerBlockL @_ @Identity
@@ -1323,6 +1409,12 @@ ppMaxEndorserBlockExUnitsL = ppLensHKD . hkdMaxEndorserBlockExUnitsL @_ @Identit
 
 ppMaxRefScriptSizePerEndorserBlockL :: DijkstraEraPParams era => Lens' (PParams era) Word32
 ppMaxRefScriptSizePerEndorserBlockL = ppLensHKD . hkdMaxRefScriptSizePerEndorserBlockL @_ @Identity
+
+ppRefInputsCostPerMultiAssetPolicyL :: DijkstraEraPParams era => Lens' (PParams era) Coin
+ppRefInputsCostPerMultiAssetPolicyL = ppLensHKD . hkdRefInputsCostPerMultiAssetPolicyL @_ @Identity
+
+ppRefInputsCostPerDatumByteL :: DijkstraEraPParams era => Lens' (PParams era) CoinPerByte
+ppRefInputsCostPerDatumByteL = ppLensHKD . hkdRefInputsCostPerDatumByteL @_ @Identity
 
 ppuMaxRefScriptSizePerBlockL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
@@ -1428,3 +1520,11 @@ ppuPerasBootstrapRoundL = ppuLensHKD . hkdPerasBootstrapRoundL @_ @StrictMaybe
 ppuPerasQuorumThresholdSafetyMarginL ::
   DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe UnitInterval)
 ppuPerasQuorumThresholdSafetyMarginL = ppuLensHKD . hkdPerasQuorumThresholdSafetyMarginL @_ @StrictMaybe
+
+ppuRefInputsCostPerMultiAssetPolicyL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuRefInputsCostPerMultiAssetPolicyL = ppuLensHKD . hkdRefInputsCostPerMultiAssetPolicyL @_ @StrictMaybe
+
+ppuRefInputsCostPerDatumByteL ::
+  DijkstraEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
+ppuRefInputsCostPerDatumByteL = ppuLensHKD . hkdRefInputsCostPerDatumByteL @_ @StrictMaybe

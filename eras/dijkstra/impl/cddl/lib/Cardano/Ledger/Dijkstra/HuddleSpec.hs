@@ -1020,6 +1020,8 @@ instance HuddleRule "protocol_param_update" DijkstraEra where
         , opt (idx 52 ==> VUInt `sized` (2 :: Word64)) //- "peras target committee size"
         , opt (idx 53 ==> (VNil / (VUInt `sized` (4 :: Word64)))) //- "peras bootstrap round"
         , opt (idx 54 ==> huddleRule @"unit_interval" p) //- "peras quorum threshold safety margin"
+        , opt (idx 55 ==> huddleRule @"coin" p) //- "minfee per multi-asset policy id in reference inputs"
+        , opt (idx 56 ==> huddleRule @"coin" p) //- "minfee per datum byte in reference inputs"
         ]
     where
       -- The maximum addressable 'LeiosSeatId' in bytes.

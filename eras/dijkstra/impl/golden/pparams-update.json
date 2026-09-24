@@ -1,6 +1,6 @@
 {
-    "collateralPercentage": 32321,
-    "committeeMinSize": 42033,
+    "collateralPercentage": 276,
+    "committeeMaxTermLength": 422945841,
     "costModels": {
         "PlutusV4": [
             -3442498386149374647,
@@ -4568,47 +4568,60 @@
             ]
         }
     },
-    "dRepDeposit": 1.1508010104875177267e19,
-    "executionUnitPrices": {
-        "priceMemory": 1.27970852931845855,
-        "priceSteps": 1.578641807026390687e14
+    "dRepActivity": 2408298982,
+    "dRepVotingThresholds": {
+        "committeeNoConfidence": 0.279943712287,
+        "committeeNormal": {
+            "denominator": 10000000000000000000,
+            "numerator": 8667424330584125747
+        },
+        "hardForkInitiation": 0.737,
+        "motionNoConfidence": 0.1890752231787153,
+        "ppEconomicGroup": 0.740512434918249238,
+        "ppGovGroup": 0.31959,
+        "ppNetworkGroup": 0.70726,
+        "ppTechnicalGroup": 5.0e-4,
+        "treasuryWithdrawal": 0.3666296083,
+        "updateToConstitution": 0.9659
     },
-    "govActionLifetime": 1730486417,
-    "leiosAnnouncementPeriodLength": 1640719514,
-    "leiosCommitteeSize": 59772,
-    "leiosDiffusionPeriodLength": 3278451994,
-    "leiosQuorumStakeThreshold": 0.34678858275565,
-    "leiosVotePeriodLength": 651296120,
+    "govActionDeposit": 17,
+    "leiosAnnouncementPeriodLength": 2410369318,
+    "leiosCommitteeSize": 13594,
+    "leiosDiffusionPeriodLength": 651296120,
+    "leiosQuorumStakeThreshold": {
+        "denominator": 5000000000000000000,
+        "numerator": 672387873839434807
+    },
+    "leiosVotePeriodLength": 1640719514,
     "maxBlockBodySize": 2419364813,
-    "maxBlockHeaderSize": 59907,
-    "maxCollateralInputs": 37431,
-    "maxEndorserBlockTxsSize": 2724633359,
-    "maxRefScriptSizePerBlock": 3535164703,
-    "maxRefScriptSizePerEndorserBlock": 4289467586,
-    "maxRefScriptSizePerTx": 1142014354,
-    "maxTxExecutionUnits": {
+    "maxBlockExecutionUnits": {
         "memory": 512205141218103229,
         "steps": 2399292653251759762
     },
+    "maxBlockHeaderSize": 59907,
+    "maxCollateralInputs": 32321,
+    "maxEndorserBlockReferencesSize": 1724235133,
+    "maxPledgeLeverage": 982307.9892655255824,
+    "maxRefScriptSizePerEndorserBlock": 2724633359,
+    "maxRefScriptSizePerTx": 3535164703,
     "maxTxSize": 938825652,
-    "maxValueSize": 905445652,
     "minPoolCost": 81,
-    "minPoolMargin": 0.855772775525917,
-    "perasCertBoost": 10595,
-    "perasHealingFactor": 6.634704322471310449e15,
-    "perasMinCandidateBlockAge": 3811191758,
-    "perasQuorumThresholdSafetyMargin": 0.37594056706,
+    "perasBootstrapRound": null,
+    "perasCertBoost": 11214,
+    "perasHealingFactor": 2.151370872170713515e12,
+    "perasTargetCommitteeSize": 35675,
     "poolPledgeInfluence": 9.050892402144401728e11,
     "poolRetireMaxEpoch": 216086819,
     "poolVotingThresholds": {
-        "committeeNoConfidence": 5.0e-4,
-        "committeeNormal": 0.740512434918249238,
-        "hardForkInitiation": 0.31959,
-        "motionNoConfidence": 0.384,
-        "ppSecurityGroup": 0.3666296083
+        "committeeNoConfidence": 0.53032812389418,
+        "committeeNormal": 0.263842043436696826,
+        "hardForkInitiation": 5.44e-2,
+        "motionNoConfidence": 0.233,
+        "ppSecurityGroup": 0.2
     },
-    "refScriptCostMultiplier": 52525.04770252315008,
-    "refScriptCostStride": 3280257066,
+    "refInputsCostPerDatumByte": 758464,
+    "refScriptCostMultiplier": 4.425198080496941431e10,
+    "refScriptCostStride": 792503223,
     "stakeAddressDeposit": 12614,
     "stakePoolDeposit": 60,
     "treasuryCut": 1,
