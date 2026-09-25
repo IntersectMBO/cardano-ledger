@@ -155,6 +155,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.GenesisSpec
     Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
