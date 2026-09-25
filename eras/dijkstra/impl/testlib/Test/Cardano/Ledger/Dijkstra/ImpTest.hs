@@ -29,8 +29,9 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   submitFailingSubTx,
   submitFailingMempoolTx,
   expectMempoolRejection,
-  phase2InvalidTxWithSubTxs,
+  phase2InvalidTx,
   voteSubTx,
+  declareTreasurySubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -138,6 +139,7 @@ class
   , InjectRuleFailure "LEDGER" DijkstraGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -183,6 +185,9 @@ instance InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure DijkstraEra where
 
 instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovPredFailure DijkstraEra where
   injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
 
 -- | A top level transaction that nests the given sub-transactions and
 -- is otherwise empty.
@@ -261,16 +266,18 @@ expectMempoolRejection result expectedFailures = case result of
   Right _ ->
     assertFailure $ "Expected a mempool rejection with: " <> show expectedFailures
 
--- | A top level transaction that nests the given sub-transactions and
--- is phase-2 invalid, so that the sub-transactions are only partially
--- processed.
-phase2InvalidTxWithSubTxs ::
+-- | The given transaction, fixed up and made phase-2 invalid by spending an
+-- additional input locked by an always failing script.
+--
+-- Any sub-transactions it nests are then only partially processed. The result
+-- is already fixed up, so it must be submitted with `withNoFixup`.
+phase2InvalidTx ::
   (HasCallStack, DijkstraEraImp era) =>
-  [Tx SubTx era] ->
+  Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
-phase2InvalidTxWithSubTxs subTxs = do
+phase2InvalidTx tx = do
   failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
-  fixedUpTx <- fixupTx $ mkTopTxWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
+  fixedUpTx <- fixupTx $ tx & bodyTxL . inputsTxBodyL %~ Set.insert failingScriptTxIn
   pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
 
 -- | A sub-transaction that casts a single vote.
@@ -283,6 +290,11 @@ voteSubTx vote voter govActionId =
           ( Map.singleton voter . Map.singleton govActionId $
               VotingProcedure {vProcVote = vote, vProcAnchor = SNothing}
           )
+
+-- | A sub-transaction that declares the given value as the current treasury value.
+declareTreasurySubTx :: DijkstraEraImp era => Coin -> Tx SubTx era
+declareTreasurySubTx declaredTreasury =
+  mkBasicTx $ mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era

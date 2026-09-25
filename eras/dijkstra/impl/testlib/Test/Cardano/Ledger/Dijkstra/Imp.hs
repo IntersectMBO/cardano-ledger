@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec as SUBGOV
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec as SUBLEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec as SUBUTXO
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec as SUBUTXOW
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
@@ -37,6 +38,7 @@ spec era = do
   describe "DijkstraEra Onwards" $ withImpInitEachEraVersion era $ do
     LEDGER.spec
     MEMPOOL.spec
+    SUBLEDGER.spec
     CERT.spec
     ENTITIES.spec
     SUBGOV.spec
