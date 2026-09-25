@@ -28,10 +28,12 @@ module Cardano.Ledger.Block (
   TPraosEraBlockHeader,
   PraosEraBlockHeader (..),
   LeiosEraBlockHeader (..),
+  BlockHeaderVersionInfo (..),
   neededTxInsForBlock,
 ) where
 
 import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
@@ -129,3 +131,26 @@ class Era era => LeiosEraBlockHeader h era where
   -- as part of this ticket: https://github.com/IntersectMBO/cardano-ledger/issues/6098
   prevNonceBlockHeaderL :: Lens' (Block h era) Nonce
   prevNonceBlockHeaderL = lens (const NeutralNonce) (\b _ -> b)
+
+  versionInfoBlockHeaderL :: Lens' (Block h era) BlockHeaderVersionInfo
+
+-- | Version information reported by the block producer in the block header.
+--
+-- It has the same wire format as 'ProtVer', but neither field is validated upon decoding.
+-- See <https://github.com/IntersectMBO/cardano-ledger/issues/5763>.
+data BlockHeaderVersionInfo = BlockHeaderVersionInfo
+  { bhviHighestSupportedMajorVersion :: !Word32
+  -- ^ Highest major protocol version that the block producer is capable of hard forking into
+  , bhviSelfReportedSoftwareTag :: !Word32
+  -- ^ Arbitrary value chosen by the block producer's software; not interpreted by the ledger
+  }
+  deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, NoThunks)
+
+instance EncCBOR BlockHeaderVersionInfo where
+  encCBOR (BlockHeaderVersionInfo major tag) = encodeListLen 2 <> encCBOR major <> encCBOR tag
+
+instance DecCBOR BlockHeaderVersionInfo where
+  decCBOR =
+    decodeRecordNamed "BlockHeaderVersionInfo" (const 2) $
+      BlockHeaderVersionInfo <$> decCBOR <*> decCBOR

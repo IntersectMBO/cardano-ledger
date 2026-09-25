@@ -65,7 +65,7 @@ header_body =
   , block_body_size                : uint .size 4
   , block_body_hash                : hash32                ; merkle triple root
   , operational_cert
-  , protocol_version
+  , header_version_info
   , block_body_contains_leios_cert : bool
   , eb_announcement                : eb_announcement/ nil
   ]
@@ -97,9 +97,10 @@ kes_period = uint .size 8
 
 signature = bytes .size 64
 
-protocol_version = [major_protocol_version, uint .size 4]
-
-major_protocol_version = 0 .. 13
+header_version_info =
+  [ highest_supported_major_version : uint .size 4
+  , self_reported_software_tag : uint .size 4
+  ]
 
 eb_announcement =
   [ eb_hash : hash32
@@ -786,6 +787,10 @@ max_pledge_leverage = nonnegative_interval/ nil
 guardrails_script_hash = script_hash
 
 hard_fork_initiation_action = (1, gov_action_id/ nil, protocol_version)
+
+protocol_version = [major_protocol_version, uint .size 4]
+
+major_protocol_version = 0 .. 13
 
 treasury_withdrawals_action =
   (2, {* reward_account => coin}, guardrails_script_hash/ nil)

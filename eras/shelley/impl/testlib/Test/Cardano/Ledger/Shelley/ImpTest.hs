@@ -204,7 +204,7 @@ import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), BlockHeaderVersionInfo (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
@@ -1652,6 +1652,7 @@ tryTxsInBlock' txs finalState blockIssuer = do
   nes <- use impNESL
 
   let
+    ProtVer curMajor curMinor = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
     blockBody = mkBasicBlockBody @era & txSeqBlockBodyL .~ txs
     blockHeader =
       TestBlockHeader
@@ -1660,7 +1661,7 @@ tryTxsInBlock' txs finalState blockIssuer = do
         , tbhHSize = 0
         , tbhBHash = hashBlockBody blockBody
         , tbhSlot = slotNo
-        , tbhProtVer = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+        , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 curMajor) curMinor
         }
     block = Block {blockHeader, blockBody}
 

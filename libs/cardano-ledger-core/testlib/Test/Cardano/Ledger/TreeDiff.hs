@@ -195,6 +195,8 @@ instance ToExpr BlocksMade
 
 instance ToExpr ProtVer
 
+instance ToExpr BlockHeaderVersionInfo
+
 instance ToExpr Anchor
 
 instance (Typeable r, ToExpr a) => ToExpr (Mismatch r a) where

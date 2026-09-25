@@ -1,7 +1,8 @@
 # Version history for `cardano-protocol`
 
-## 0.1.1.0
+## 0.2.0.0
 
+* Change the `hbProtVer` field of the Leios `HeaderBody` to `hbVersionInfo :: BlockHeaderVersionInfo`
 * Widen `cardano-crypto-class` upper bound to `<2.7`
 * Export `HeaderConstr` from `Cardano.Protocol.Praos.BlockHeader` and `Cardano.Protocol.Leios.BlockHeader`
 

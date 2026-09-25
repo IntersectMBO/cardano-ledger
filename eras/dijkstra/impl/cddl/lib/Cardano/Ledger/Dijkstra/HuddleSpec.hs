@@ -1032,7 +1032,7 @@ leiosHeaderBodyRule ::
   forall era.
   ( HuddleRule "vrf_cert" era
   , HuddleRule "operational_cert" era
-  , HuddleRule "protocol_version" era
+  , HuddleRule "header_version_info" era
   , HuddleRule "eb_announcement" era
   ) =>
   Proxy "header_body" ->
@@ -1050,7 +1050,7 @@ leiosHeaderBodyRule pname p =
       , "block_body_size" ==> VUInt `sized` (4 :: Word64)
       , "block_body_hash" ==> huddleRule @"hash32" p //- "merkle triple root"
       , a $ huddleRule @"operational_cert" p
-      , a $ huddleRule @"protocol_version" p
+      , a $ huddleRule @"header_version_info" p
       , "block_body_contains_leios_cert" ==> VBool
       , "eb_announcement" ==> (huddleRule @"eb_announcement" p / VNil)
       ]
@@ -1060,6 +1060,14 @@ instance HuddleRule "vrf_cert" DijkstraEra where
 
 instance HuddleRule "header_body" DijkstraEra where
   huddleRuleNamed = leiosHeaderBodyRule
+
+instance HuddleRule "header_version_info" DijkstraEra where
+  huddleRuleNamed pname _ =
+    pname
+      =.= arr
+        [ "highest_supported_major_version" ==> VUInt `sized` (4 :: Word64)
+        , "self_reported_software_tag" ==> VUInt `sized` (4 :: Word64)
+        ]
 
 instance HuddleRule "header" DijkstraEra where
   huddleRuleNamed = headerRule

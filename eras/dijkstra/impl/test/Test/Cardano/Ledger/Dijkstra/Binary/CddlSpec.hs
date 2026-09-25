@@ -35,7 +35,6 @@ import Test.Cardano.Ledger.Binary.Cuddle (
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary (genNonEmptyVotingProcedures)
-import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer)
 import Test.Cardano.Ledger.Core.Binary (
   fullAnnCddlSpec,
   fullAnnGenCddlSpec,
@@ -50,20 +49,8 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary (
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary ()
 
-genLeiosHeader :: Gen (Leios.Header StandardCrypto)
-genLeiosHeader = do
-  h <- arbitrary
-  pv <- genEraProtVer @DijkstraEra
-  pure $ Leios.Header ((Leios.headerBody h) {Leios.hbProtVer = pv}) (Leios.headerSig h)
-
-genLeiosHeaderBody :: Gen (Leios.HeaderBody StandardCrypto)
-genLeiosHeaderBody = do
-  hb <- arbitrary
-  pv <- genEraProtVer @DijkstraEra
-  pure hb {Leios.hbProtVer = pv}
-
 genLeiosBlock :: Gen (Block (Leios.Header StandardCrypto) DijkstraEra)
-genLeiosBlock = Block <$> genLeiosHeader <*> genSmallDijkstraTxsBlockBody
+genLeiosBlock = Block <$> arbitrary <*> genSmallDijkstraTxsBlockBody
 
 spec :: Spec
 spec = do
@@ -103,10 +90,10 @@ spec = do
       -- Leios block header
       huddleRoundTripAnnCborSpec @(Leios.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Leios.Header StandardCrypto) v "header"
-      huddleRoundTripGenValidate @(Leios.Header StandardCrypto) genLeiosHeader v "header"
+      huddleRoundTripGenValidate @(Leios.Header StandardCrypto) arbitrary v "header"
       huddleDecoderEquivalenceSpec @(Leios.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Leios.HeaderBody StandardCrypto) v "header_body"
-      huddleRoundTripGenValidate @(Leios.HeaderBody StandardCrypto) genLeiosHeaderBody v "header_body"
+      huddleRoundTripGenValidate @(Leios.HeaderBody StandardCrypto) arbitrary v "header_body"
       huddleRoundTripGenValidate @(Block (Leios.Header StandardCrypto) DijkstraEra)
         genLeiosBlock
         v

@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Add `HeaderProtVerTooLow` constructor to `DijkstraBbodyPredFailure`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
 * Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.
@@ -96,6 +97,7 @@
 
 ### `cddl`
 
+* Add `header_version_info` rule and use it in `header_body` in place of `protocol_version`
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
