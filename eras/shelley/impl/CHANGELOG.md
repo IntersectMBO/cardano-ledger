@@ -27,6 +27,11 @@
 
 ### `testlib`
 
+* Add `withTxsInModifiedFailingBlockM` and `withTxsInModifiedFailingSubsetBlockM`, which resubmit the gathered transactions in a block modified by the supplied function
+* Add `modifyBlockBody`, which modifies the block body and updates the claimed body size and hash in the block header to match
+* Add a `Block` modifying function as the first argument of `withTxsInBlockEither` and `tryTxsInBlock`
+* Change `tryTxsInBlock` to accept a `KeyHash BlockIssuer` instead of generating a fresh one
+* Add `InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era`, `InjectRuleFailure "BBODY" ShelleyUtxoPredFailure era` and `Ord (PredicateFailure (EraRule "BBODY" era))` superclasses to `ShelleyEraImp`
 * Add `trySubmitMempoolTx` and `tryReapplyMempoolTx`
 * Add `freshUnregisteredAccount`
 * Rename `freshBootstapAddress` to `freshBootstrapAddress` and express it in terms of the new `freshBootstrapAddressWithPayloadSize`, which takes the HD payload size, or `Nothing` for a plain Byron address.
