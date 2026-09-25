@@ -179,6 +179,32 @@ spec = describe "POOL" $ do
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
 
+    it "a VRF shared by two pools stays taken across the epoch boundary when one holder moves away" $ do
+      -- Two pools can only share a VRF if they registered it before uniqueness was
+      -- enforced (mirrored here by registerPoolSharingVRF). When one holder switches
+      -- to a fresh VRF, the epoch boundary must decrement the shared hash's count,
+      -- not drop it, so the other pool's reference survives.
+      (kh1, vrf) <- registerNewPool
+      kh2 <- registerPoolSharingVRF vrf
+      expectVRFs [(vrf, 2)]
+      vrfNew <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh1 vrfNew >>= submitTx_
+      expectVRFs [(vrf, 2), (vrfNew, 1)]
+      passEpoch
+      expectPool kh1 (Just vrfNew)
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
+      -- the VRF is still in use by the other pool, so it cannot be claimed
+      kh3 <- freshKeyHash
+      registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+      -- it only becomes available once the last holder moves away as well
+      vrfNew2 <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh2 vrfNew2 >>= submitTx_
+      passEpoch
+      expectVRFs [(vrfNew, 1), (vrfNew2, 1)]
+      registerPoolTx <$> poolParams kh3 vrf >>= submitTx_
+      expectVRFs [(vrf, 1), (vrfNew, 1), (vrfNew2, 1)]
+
     it "register a pool with a VRF shared by two pools once both have retired" $ do
       (kh1, vrf) <- registerNewPool
       kh2 <- registerPoolSharingVRF vrf

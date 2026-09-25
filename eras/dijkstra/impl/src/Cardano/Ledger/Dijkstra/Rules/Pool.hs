@@ -83,11 +83,10 @@ instance
 -- hash differs from the active one. A future VRF key hash that coincides with
 -- the pool's active one is not counted separately.
 --
--- POOLREAP follows the same accounting at the epoch boundary when it adopts
--- future parameters and retires pools, except that it drops a superseded
--- active VRF key hash entirely instead of decrementing its count. The two only
--- differ for VRF key hashes that several pools have shared since before their
--- uniqueness was enforced.
+-- The Dijkstra POOLREAP rule follows the same accounting at the epoch
+-- boundary: adopting future parameters decrements the superseded active VRF
+-- key hash, and retiring a pool decrements its final one, so a hash shared
+-- with other pools survives with a reduced count.
 poolTransition ::
   forall rule era.
   ( EraPParams era

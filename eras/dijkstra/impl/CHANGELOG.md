@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Add `POOLREAP` rule type and add `poolReapTransition` to `Cardano.Ledger.Dijkstra.Rules.PoolReap`, which decrements superseded VRF key hashes at the epoch boundary instead of dropping them (#6016):
+  - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP DijkstraEra` to `POOLREAP DijkstraEra`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
 * Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.
