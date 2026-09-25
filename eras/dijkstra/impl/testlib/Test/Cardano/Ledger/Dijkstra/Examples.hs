@@ -43,7 +43,7 @@ import Cardano.Ledger.BaseTypes (
   boundRational,
   knownNonZeroBounded,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..))
@@ -202,6 +202,10 @@ exampleDijkstraGenesis =
           , udppPerasTargetCommitteeSize = 800
           , udppPerasBootstrapRound = SJust 0
           , udppPerasQuorumThresholdSafetyMargin = 1 %! 20
+          , -- No pricing logic uses these yet, they are enabled by a later
+            -- intra-era hard fork within the Dijkstra era.
+            udppRefInputsCostPerMultiAssetPolicy = Coin 0
+          , udppRefInputsCostPerDatumByte = CoinPerByte (CompactCoin 0)
           }
     }
 
