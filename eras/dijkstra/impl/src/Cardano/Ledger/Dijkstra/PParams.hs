@@ -250,16 +250,23 @@ data DijkstraPParams f era = DijkstraPParams
   -- all transactions within an endorser block.
   , dppPerasMinCandidateBlockAge ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f SlotInterval)
+  -- ^ Minimum age for a block to be eligible for voting in a Peras round.
   , dppPerasHealingFactor ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f PositiveInterval)
+  -- ^ Healing time coefficient used to derive the length of a cooldown period.
   , dppPerasCertBoost ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
+  -- ^ Extra chain weight that a Peras Certificate gives to a boosted block.
   , dppPerasTargetCommitteeSize ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
+  -- ^ Target size of the voting committee.
   , dppPerasBootstrapRound ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f (StrictMaybe Word32))
+  -- ^ Round number used to manually bootstrap voting at a specific time.
   , dppPerasQuorumThresholdSafetyMargin ::
       !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f UnitInterval)
+  -- ^ Extra safety margin added on top of the 75% quorum threshold baseline.
+  -- Must be between 0 and 0.25, inclusive.
   }
   deriving (Generic)
 
@@ -1163,11 +1170,11 @@ emptyDijkstraPParams =
     , dppMaxEndorserBlockTxsSize = THKD 0
     , dppMaxEndorserBlockExUnits = THKD (OrdExUnits $ ExUnits 0 0)
     , dppMaxRefScriptSizePerEndorserBlock = THKD 0
-    , dppPerasMinCandidateBlockAge = THKD (SlotInterval 90)
+    , dppPerasMinCandidateBlockAge = THKD (SlotInterval 0)
     , dppPerasHealingFactor = THKD (fromJust $ boundRational 0.5)
     , dppPerasCertBoost = THKD 15
     , dppPerasTargetCommitteeSize = THKD 800
-    , dppPerasBootstrapRound = THKD (SJust 0)
+    , dppPerasBootstrapRound = THKD SNothing
     , dppPerasQuorumThresholdSafetyMargin = THKD (fromJust $ boundRational 0.05)
     }
 
