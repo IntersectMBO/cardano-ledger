@@ -12,6 +12,7 @@ import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
 import Control.State.Transition (Event)
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as DELEG
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as EPOCH
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as LEDGER
@@ -30,6 +31,7 @@ spec ::
   Spec
 spec era = do
   describe "ShelleyEra Onwards" $ withImpInitEachEraVersion era $ do
+    BBODY.spec
     DELEG.spec
     EPOCH.spec
     LEDGER.spec

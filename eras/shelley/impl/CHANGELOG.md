@@ -27,6 +27,8 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Shelley.Imp.BbodySpec`
+* Compute the block body size in `tryTxsInBlock` with the current protocol version instead of `eraProtVerLow`
 * Add `withTxsInModifiedFailingBlockM` and `withTxsInModifiedFailingSubsetBlockM`, which resubmit the gathered transactions in a block modified by the supplied function
 * Add `modifyBlockBody`, which modifies the block body and updates the claimed body size and hash in the block header to match
 * Add a `Block` modifying function as the first argument of `withTxsInBlockEither` and `tryTxsInBlock`
