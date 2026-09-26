@@ -82,6 +82,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withTxsInBlock,
   withTxsInFailingBlock,
   withTxsInFailingBlockM,
+  modifyBlockBody,
+  withTxsInModifiedFailingBlockM,
+  withTxsInModifiedFailingSubsetBlockM,
   withTxsInBlockEither,
   withIssuerAndTxsInBlock_,
   withIssuerAndTxsInBlock,
@@ -204,7 +207,12 @@ import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (Block (..), BlockHeaderVersionInfo (..))
+import Cardano.Ledger.Block (
+  Block (..),
+  BlockHeaderVersionInfo (..),
+  blockBodyHashBlockHeaderL,
+  blockBodySizeBlockHeaderL,
+ )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
@@ -260,6 +268,7 @@ import Cardano.Ledger.Shelley.Rules (
   AccountAlreadyRegistered,
   BbodyEnv (..),
   LedgerEnv (..),
+  ShelleyBbodyPredFailure,
   ShelleyBbodyState (..),
   ShelleyDelegPredFailure,
   ShelleyPoolPredFailure,
@@ -531,6 +540,9 @@ class
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   , InjectRuleFailure "BBODY" ShelleyPoolPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ShelleyUtxoPredFailure era
+  , Ord (PredicateFailure (EraRule "BBODY" era))
   , ApplyBlock TestBlockHeader era
   ) =>
   ShelleyEraImp era
@@ -1557,7 +1569,8 @@ withIssuerAndTxsInBlock ::
   KeyHash BlockIssuer ->
   ImpTestM era () ->
   ImpTestM era (Block TestBlockHeader era)
-withIssuerAndTxsInBlock blockIssuer = expectRightDeepExpr <=< withTxsInBlockEither (Just blockIssuer)
+withIssuerAndTxsInBlock blockIssuer =
+  expectRightDeepExpr <=< withTxsInBlockEither id (Just blockIssuer)
 
 -- | Gather all the txs submitted by @act@ and resubmit them as a block that's expected to succeed.
 withTxsInBlock ::
@@ -1566,7 +1579,7 @@ withTxsInBlock ::
   ) =>
   ImpTestM era () ->
   ImpTestM era (Block TestBlockHeader era)
-withTxsInBlock = expectRightDeepExpr <=< withTxsInBlockEither Nothing
+withTxsInBlock = expectRightDeepExpr <=< withTxsInBlockEither id Nothing
 
 -- | Gather all the txs submitted by @act@ and resubmit them as a block
 -- that's expected to fail with the given predicate failures.
@@ -1588,17 +1601,70 @@ withTxsInFailingBlockM ::
   ImpTestM era () ->
   (Block TestBlockHeader era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
   ImpTestM era ()
-withTxsInFailingBlockM act mkExpectedFailures = do
-  (predFailures, block) <- expectLeftDeepExpr <=< withTxsInBlockEither Nothing $ act
+withTxsInFailingBlockM = withTxsInModifiedFailingBlockM id
+
+-- | Apply the supplied modification to the block body and update the block header, so that the
+-- claimed body size and body hash match the modified body.
+modifyBlockBody ::
+  EraBlockBody era =>
+  ProtVer ->
+  (BlockBody era -> BlockBody era) ->
+  Block TestBlockHeader era ->
+  Block TestBlockHeader era
+modifyBlockBody protVer modifyBody block =
+  block {blockBody = modifiedBlockBody}
+    & blockBodySizeBlockHeaderL .~ fromIntegral (blockBodySize protVer modifiedBlockBody)
+    & blockBodyHashBlockHeaderL .~ hashBlockBody modifiedBlockBody
+  where
+    modifiedBlockBody = modifyBody $ blockBody block
+
+-- | Gather all the txs submitted by @act@, modify the block created from them with the supplied
+-- function and resubmit it as a block that's expected to fail. Expected predicate failures are
+-- computed from the modified block.
+withTxsInModifiedFailingBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  (Block TestBlockHeader era -> Block TestBlockHeader era) ->
+  ImpTestM era () ->
+  (Block TestBlockHeader era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+withTxsInModifiedFailingBlockM modifyBlock act mkExpectedFailures = do
+  (predFailures, block) <- expectLeftDeepExpr <=< withTxsInBlockEither modifyBlock Nothing $ act
   expectedFailures <- mkExpectedFailures block
   predFailures `shouldBeExpr` expectedFailures
 
--- | Given an action that submits transactions, try to resubmit the transactions as a block.
--- Return the block that was created using the transactions and any predicate
--- failures that are produced.
+-- | Gather all the txs submitted by @act@, modify the block created from them with the supplied
+-- function and resubmit it as a block that's expected to fail with at least the predicate failures
+-- computed from the modified block.
+withTxsInModifiedFailingSubsetBlockM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  (Block TestBlockHeader era -> Block TestBlockHeader era) ->
+  ImpTestM era () ->
+  (Block TestBlockHeader era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "BBODY" era)))) ->
+  ImpTestM era ()
+withTxsInModifiedFailingSubsetBlockM modifyBlock act mkExpectedFailures = do
+  (predFailures, block) <- expectLeftDeepExpr <=< withTxsInBlockEither modifyBlock Nothing $ act
+  expectedFailures <- mkExpectedFailures block
+  let
+    predSet = Set.fromList $ toList predFailures
+    expectedSet = Set.fromList $ toList expectedFailures
+    significantSet = predSet `Set.intersection` expectedSet
+  logToExpr predFailures
+  expectExprEqualWithMessage
+    "Some required predicate failures were absent"
+    significantSet
+    expectedSet
+
+-- | Given an action that submits transactions, try to resubmit the transactions as a block that
+-- has been modified by the supplied function. Return that block and any predicate failures that
+-- are produced.
 withTxsInBlockEither ::
   forall era.
   ShelleyEraImp era =>
+  (Block TestBlockHeader era -> Block TestBlockHeader era) ->
   Maybe (KeyHash BlockIssuer) ->
   ImpTestM era () ->
   ImpTestM
@@ -1607,37 +1673,21 @@ withTxsInBlockEither ::
         (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block TestBlockHeader era)
         (Block TestBlockHeader era)
     )
-withTxsInBlockEither mIssuer act = do
+withTxsInBlockEither modifyBlock mIssuer act = do
   stateBefore <- get
   txs <- impRecordSubmittedTxs act
   stateAfter <- get
   put stateBefore
-  case mIssuer of
-    Nothing -> tryTxsInBlock txs stateAfter
-    Just blockIssuer -> tryTxsInBlock' txs stateAfter blockIssuer
+  blockIssuer <- maybe freshKeyHash pure mIssuer
+  tryTxsInBlock modifyBlock txs stateAfter blockIssuer
 
--- | Given a sequence of fixed-up transactions and an expected final test state,
--- try to submit the transactions as a block.
--- Return the block that was created using the transactions and any predicate
--- failures that are produced.
+-- | Given a sequence of fixed-up transactions and an expected final test state, try to submit the
+-- transactions as a block that has been modified by the supplied function. Return that block and
+-- any predicate failures that are produced.
 tryTxsInBlock ::
   forall era.
   ShelleyEraImp era =>
-  StrictSeq (Tx TopTx era) ->
-  ImpTestState era ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block TestBlockHeader era)
-        (Block TestBlockHeader era)
-    )
-tryTxsInBlock txs finalState = do
-  blockIssuer <- freshKeyHash
-  tryTxsInBlock' txs finalState blockIssuer
-
-tryTxsInBlock' ::
-  forall era.
-  ShelleyEraImp era =>
+  (Block TestBlockHeader era -> Block TestBlockHeader era) ->
   StrictSeq (Tx TopTx era) ->
   ImpTestState era ->
   KeyHash BlockIssuer ->
@@ -1647,7 +1697,7 @@ tryTxsInBlock' ::
         (NonEmpty (PredicateFailure (EraRule "BBODY" era)), Block TestBlockHeader era)
         (Block TestBlockHeader era)
     )
-tryTxsInBlock' txs finalState blockIssuer = do
+tryTxsInBlock modifyBlock txs finalState blockIssuer = do
   slotNo <- use impCurSlotNoG
   nes <- use impNESL
 
@@ -1663,7 +1713,7 @@ tryTxsInBlock' txs finalState blockIssuer = do
         , tbhSlot = slotNo
         , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 curMajor) curMinor
         }
-    block = Block {blockHeader, blockBody}
+    block = modifyBlock Block {blockHeader, blockBody}
 
   globals <- use impGlobalsL
 

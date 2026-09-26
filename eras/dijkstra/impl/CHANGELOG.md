@@ -107,6 +107,8 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec`
+* Add `DijkstraEraBlockBody era` and `InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era` superclasses to `DijkstraEraImp`
 * Add `switchTxToPhase2InvalidLegacyMode`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec`
 * Add `submitFailingMempoolTx` and `expectMempoolRejection`

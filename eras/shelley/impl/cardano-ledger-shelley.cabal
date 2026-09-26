@@ -209,6 +209,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.Era
     Test.Cardano.Ledger.Shelley.Examples
     Test.Cardano.Ledger.Shelley.Imp
+    Test.Cardano.Ledger.Shelley.Imp.BbodySpec
     Test.Cardano.Ledger.Shelley.Imp.DelegSpec
     Test.Cardano.Ledger.Shelley.Imp.EpochSpec
     Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
