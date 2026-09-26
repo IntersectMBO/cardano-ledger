@@ -290,18 +290,21 @@ govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation Stri
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
-  (ConwayEraAccounts era, EraStake era) =>
+  (ConwayEraAccounts era, EraStake era, EraPParams era) =>
   SimpleGetter (ConwayGovState era) (Map DRep (CompactForm Coin))
 conwayGovStateDRepDistrG = to (psDRepDistr . fst . finishDRepPulser . cgsDRepPulsingState)
 
-getRatifyState :: (ConwayEraAccounts era, EraStake era) => ConwayGovState era -> RatifyState era
+getRatifyState ::
+  (ConwayEraAccounts era, EraStake era, EraPParams era) =>
+  ConwayGovState era ->
+  RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
 
 -- | This function updates the thunk, which will contain new PParams once evaluated or
 -- Nothing when there was no update. At the same time if we already know the future of
 -- PParams, then it will act as an identity function.
 predictFuturePParams ::
-  (ConwayEraAccounts era, EraStake era) =>
+  (ConwayEraAccounts era, EraStake era, EraPParams era) =>
   ConwayGovState era ->
   ConwayGovState era
 predictFuturePParams govState =

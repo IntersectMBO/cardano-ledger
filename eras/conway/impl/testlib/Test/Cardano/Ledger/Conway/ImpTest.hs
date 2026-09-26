@@ -1687,7 +1687,7 @@ lastEpochProposals =
       )
 
 pulsingStateSnapshotL ::
-  (EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   Lens' (DRepPulsingState era) (PulsingSnapshot era)
 pulsingStateSnapshotL = lens getter setter
   where
