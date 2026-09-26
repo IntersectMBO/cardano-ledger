@@ -76,6 +76,15 @@
        "steps":0
     },
     "maxRefScriptSizePerEndorserBlock":0,
+     "perasMinCandidateBlockAge":0,
+     "perasHealingFactor": {
+             "denominator": 10000000000000000000,
+             "numerator": 1
+     },
+     "perasCertBoost":0,
+     "perasTargetCommitteeSize":0,
+     "perasBootstrapRound":null,
+     "perasQuorumThresholdSafetyMargin":0,
     "protocolVersion":{
        "major":4,
        "minor":1

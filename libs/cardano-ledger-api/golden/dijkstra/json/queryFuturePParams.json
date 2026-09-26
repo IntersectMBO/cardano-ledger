@@ -57,6 +57,15 @@
         "minPoolCost": 0,
         "minPoolMargin": 0,
         "monetaryExpansion": 0,
+        "perasBootstrapRound": null,
+        "perasCertBoost": 0,
+        "perasHealingFactor": {
+            "denominator": 10000000000000000000,
+            "numerator": 1
+        },
+        "perasMinCandidateBlockAge": 0,
+        "perasQuorumThresholdSafetyMargin": 0,
+        "perasTargetCommitteeSize": 0,
         "poolPledgeInfluence": 0,
         "poolRetireMaxEpoch": 0,
         "poolVotingThresholds": {
@@ -811,6 +820,12 @@
         "minPoolCost": 340000000,
         "minPoolMargin": 0,
         "monetaryExpansion": 3.0e-3,
+        "perasBootstrapRound": 0,
+        "perasCertBoost": 15,
+        "perasHealingFactor": 0.5,
+        "perasMinCandidateBlockAge": 90,
+        "perasQuorumThresholdSafetyMargin": 5.0e-2,
+        "perasTargetCommitteeSize": 800,
         "poolPledgeInfluence": 0.3,
         "poolRetireMaxEpoch": 18,
         "poolVotingThresholds": {

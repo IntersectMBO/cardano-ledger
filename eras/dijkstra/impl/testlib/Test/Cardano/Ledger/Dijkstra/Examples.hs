@@ -63,6 +63,12 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppMaxRefScriptSizePerBlockL,
   ppMaxRefScriptSizePerEndorserBlockL,
   ppMaxRefScriptSizePerTxL,
+  ppPerasBootstrapRoundL,
+  ppPerasCertBoostL,
+  ppPerasHealingFactorL,
+  ppPerasMinCandidateBlockAgeL,
+  ppPerasQuorumThresholdSafetyMarginL,
+  ppPerasTargetCommitteeSizeL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
   ppuLeiosAnnouncementPeriodLengthL,
@@ -76,6 +82,12 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuMaxRefScriptSizePerBlockL,
   ppuMaxRefScriptSizePerEndorserBlockL,
   ppuMaxRefScriptSizePerTxL,
+  ppuPerasBootstrapRoundL,
+  ppuPerasCertBoostL,
+  ppuPerasHealingFactorL,
+  ppuPerasMinCandidateBlockAgeL,
+  ppuPerasQuorumThresholdSafetyMarginL,
+  ppuPerasTargetCommitteeSizeL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
  )
@@ -106,6 +118,7 @@ import Cardano.Ledger.State (
   BlsKey (..),
   StakePoolParams (..),
  )
+import Cardano.Slotting.Slot (SlotInterval (..))
 import qualified Data.ByteString as Strict
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -183,6 +196,12 @@ exampleDijkstraGenesis =
           , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
           , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
           , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
+          , udppPerasMinCandidateBlockAge = SlotInterval 90
+          , udppPerasHealingFactor = 1 %! 2
+          , udppPerasCertBoost = 15
+          , udppPerasTargetCommitteeSize = 800
+          , udppPerasBootstrapRound = SJust 0
+          , udppPerasQuorumThresholdSafetyMargin = 1 %! 20
           }
     }
 
@@ -354,6 +373,12 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxEndorserBlockTxsSizeL .~ 12 * 1024 * 1024
     & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000)
     & ppMaxRefScriptSizePerEndorserBlockL .~ 12 * 1024 * 1024
+    & ppPerasMinCandidateBlockAgeL .~ SlotInterval 90
+    & ppPerasHealingFactorL .~ 1 %! 2
+    & ppPerasCertBoostL .~ 15
+    & ppPerasTargetCommitteeSizeL .~ 800
+    & ppPerasBootstrapRoundL .~ SJust 0
+    & ppPerasQuorumThresholdSafetyMarginL .~ 1 %! 20
 
 exampleDijkstraOnwardsEraPParamsUpdate :: DijkstraEraPParams era => PParamsUpdate era
 exampleDijkstraOnwardsEraPParamsUpdate =
@@ -371,6 +396,12 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxEndorserBlockTxsSizeL .~ SJust (12 * 1024 * 1024)
     & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000))
     & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (12 * 1024 * 1024)
+    & ppuPerasMinCandidateBlockAgeL .~ SJust (SlotInterval 90)
+    & ppuPerasHealingFactorL .~ SJust (1 %! 2)
+    & ppuPerasCertBoostL .~ SJust 15
+    & ppuPerasTargetCommitteeSizeL .~ SJust 800
+    & ppuPerasBootstrapRoundL .~ SJust (SJust 0)
+    & ppuPerasQuorumThresholdSafetyMarginL .~ SJust (1 %! 20)
 
 exampleBlsKey :: BlsKey
 exampleBlsKey =
