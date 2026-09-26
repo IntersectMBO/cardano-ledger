@@ -2,6 +2,10 @@
 
 ## 1.22.0.0
 
+* Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`
+* Rename `EraIndependentEb` to `EraIndependentEbReferences`
+* Add `EbReferencesAnnouncement` (moved and renamed from `EbAnnouncement` in `cardano-protocol`)
+* Add `blockHeaderL`, `blockBodyL`, `bhviProtVerL`
 * Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
 * Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
@@ -73,6 +77,7 @@
 
 ### `testlib`
 
+* Add `tbhEbRefsAnn` to `TestBlockHeader`
 * Replace the `tbhProtVer` field of `TestBlockHeader` with `tbhVersionInfo :: BlockHeaderVersionInfo`
 * Add `Arbitrary` and `ToExpr` instances for `BlockHeaderVersionInfo`
 * Remove `tbhPrevNonce` from `TestBlockHeader`
@@ -110,7 +115,7 @@
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`
-* Remove `consumed ` from `EraUTxO`
+* Remove `consumed` from `EraUTxO`
 * Remove no longer needed `(Credential DRepRole -> Maybe Coin)` argument from:
   - `getTotalRefundsTxCerts`
   - `getTotalRefundsTxBody`

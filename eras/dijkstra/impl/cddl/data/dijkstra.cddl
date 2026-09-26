@@ -63,11 +63,11 @@ header_body =
   , vrf_vkey                       : vrf_vkey
   , vrf_result                     : vrf_cert
   , block_body_size                : uint .size 4
-  , block_body_hash                : hash32                ; merkle triple root
+  , block_body_hash                : hash32                           ; merkle triple root
   , operational_cert
   , header_version_info
   , block_body_contains_leios_cert : bool
-  , eb_announcement                : eb_announcement/ nil
+  , eb_references_announcement     : eb_references_announcement/ nil
   ]
 
 block_number = uint .size 8
@@ -102,9 +102,9 @@ header_version_info =
   , self_reported_software_tag : uint .size 4
   ]
 
-eb_announcement =
+eb_references_announcement =
   [ eb_hash : hash32
-  , eb_size : uint .size 4 ; size of the EB block closure
+  , eb_size : uint .size 4 ; size of the EB references
   ]
 
 block_body =

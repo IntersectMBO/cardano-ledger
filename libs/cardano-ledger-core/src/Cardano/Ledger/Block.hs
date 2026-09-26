@@ -12,13 +12,14 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Block (
   Block (..),
+  blockHeaderL,
+  blockBodyL,
   bheader,
   bbody,
   TPraosBbodySignal (..),
@@ -30,9 +31,10 @@ module Cardano.Ledger.Block (
   LeiosEraBlockHeader (..),
   BlockHeaderVersionInfo (..),
   neededTxInsForBlock,
+  EbReferencesAnnouncement (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer)
+import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..), StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -68,6 +70,12 @@ deriving anyclass instance
   NoThunks (Block h era)
 
 instance (NFData h, NFData (BlockBody era)) => NFData (Block h era)
+
+blockHeaderL :: Lens' (Block h era) h
+blockHeaderL = lens blockHeader (\b h -> b {blockHeader = h})
+
+blockBodyL :: Lens' (Block h era) (BlockBody era)
+blockBodyL = lens blockBody (\b h -> b {blockBody = h})
 
 bheader ::
   Block h era ->
@@ -134,6 +142,8 @@ class Era era => LeiosEraBlockHeader h era where
 
   versionInfoBlockHeaderL :: Lens' (Block h era) BlockHeaderVersionInfo
 
+  ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)
+
 -- | Version information reported by the block producer in the block header.
 --
 -- It has the same wire format as 'ProtVer', but neither field is validated upon decoding.
@@ -154,3 +164,26 @@ instance DecCBOR BlockHeaderVersionInfo where
   decCBOR =
     decodeRecordNamed "BlockHeaderVersionInfo" (const 2) $
       BlockHeaderVersionInfo <$> decCBOR <*> decCBOR
+
+-- | Announcement of Endorser Block (EB) references.
+data EbReferencesAnnouncement = EbReferencesAnnouncement
+  { ebReferencesAnnouncementHash :: !(SafeHash EraIndependentEbReferences)
+  -- ^ Hash of the announced Endorser Block references
+  , ebReferencesAnnouncementSize :: !Word32
+  -- ^ Size of the announced Endorser Block references
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData)
+
+instance EncCBOR EbReferencesAnnouncement where
+  encCBOR (EbReferencesAnnouncement h s) =
+    encodeListLen 2
+      <> encCBOR h
+      <> encCBOR s
+
+instance DecCBOR EbReferencesAnnouncement where
+  decCBOR =
+    decodeRecordNamed "EbReferencesAnnouncement" (const 2) $
+      EbReferencesAnnouncement
+        <$> decCBOR
+        <*> decCBOR
