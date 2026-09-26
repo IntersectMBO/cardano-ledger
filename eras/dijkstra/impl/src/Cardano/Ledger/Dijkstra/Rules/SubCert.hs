@@ -46,6 +46,7 @@ import Cardano.Ledger.Dijkstra.Era (
   SUBPOOL,
  )
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.Pool (DijkstraPoolPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubDeleg (DijkstraSubDelegPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubGovCert (DijkstraSubGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.SubPool (DijkstraSubPoolEvent, DijkstraSubPoolPredFailure)
@@ -233,8 +234,8 @@ conwayToDijkstraSubCertPredFailure ::
   forall era.
   ( InjectRuleFailure "SUBDELEG" Conway.ConwayDelegPredFailure era
   , PredicateFailure (EraRule "DELEG" era) ~ Conway.ConwayDelegPredFailure era
-  , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
-  , PredicateFailure (EraRule "POOL" era) ~ Shelley.ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" DijkstraPoolPredFailure era
+  , PredicateFailure (EraRule "POOL" era) ~ DijkstraPoolPredFailure era
   , InjectRuleFailure "SUBGOVCERT" DijkstraGovCertPredFailure era
   , PredicateFailure (EraRule "GOVCERT" era) ~ DijkstraGovCertPredFailure era
   ) =>

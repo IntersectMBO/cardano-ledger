@@ -7,8 +7,6 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -32,7 +30,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBPOOL,
  )
-import Cardano.Ledger.Dijkstra.Rules.Pool (poolTransition)
+import Cardano.Ledger.Dijkstra.Rules.Pool (DijkstraPoolPredFailure, poolTransition)
 import Cardano.Ledger.Dijkstra.State
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.DeepSeq (NFData)
@@ -48,7 +46,7 @@ import Control.State.Transition.Extended (
  )
 import GHC.Generics (Generic)
 
-newtype DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure (Shelley.ShelleyPoolPredFailure era)
+newtype DijkstraSubPoolPredFailure era = DijkstraSubPoolPredFailure (DijkstraPoolPredFailure era)
   deriving (Eq, Ord, Show, Generic, DecCBOR, EncCBOR, NFData)
 
 type instance EraRuleFailure "SUBPOOL" DijkstraEra = DijkstraSubPoolPredFailure DijkstraEra
@@ -58,6 +56,9 @@ type instance EraRuleEvent "SUBPOOL" DijkstraEra = DijkstraSubPoolEvent Dijkstra
 instance InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure DijkstraEra where
+  injectFailure = DijkstraSubPoolPredFailure . injectFailure
+
+instance InjectRuleFailure "SUBPOOL" DijkstraPoolPredFailure DijkstraEra where
   injectFailure = DijkstraSubPoolPredFailure
 
 instance InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent DijkstraEra
@@ -74,7 +75,7 @@ instance
   , InjectRuleEvent "SUBPOOL" DijkstraSubPoolEvent era
   , InjectRuleEvent "SUBPOOL" Shelley.PoolEvent era
   , InjectRuleFailure "SUBPOOL" DijkstraSubPoolPredFailure era
-  , InjectRuleFailure "SUBPOOL" Shelley.ShelleyPoolPredFailure era
+  , InjectRuleFailure "SUBPOOL" DijkstraPoolPredFailure era
   ) =>
   STS (SUBPOOL era)
   where

@@ -27,6 +27,7 @@
 
 ### `testlib`
 
+* Add `freshStakePool` and `freshBlsKey` to `Test.Cardano.Ledger.Shelley.ImpTest`
 * Add `Test.Cardano.Ledger.Shelley.Imp.BbodySpec`
 * Compute the block body size in `tryTxsInBlock` with the current protocol version instead of `eraProtVerLow`
 * Add `withTxsInModifiedFailingBlockM` and `withTxsInModifiedFailingSubsetBlockM`, which resubmit the gathered transactions in a block modified by the supplied function

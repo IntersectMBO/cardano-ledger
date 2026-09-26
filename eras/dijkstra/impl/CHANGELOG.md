@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
+  `POOL` rule, replacing `ShelleyPoolPredFailure`:
+  - `EraRuleFailure "POOL" DijkstraEra` is now `DijkstraPoolPredFailure DijkstraEra`
+  - Add `BLSKeyInvalidProofOfPossession` constructor to `DijkstraPoolPredFailure`
+  - Verify BLS proof of possession when (re-)registering a pool with a BLS key set
 * Add `HeaderProtVerTooLow` constructor to `DijkstraBbodyPredFailure`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
@@ -107,6 +112,8 @@
 
 ### `testlib`
 
+* Fix `Arbitrary` instance for `DijkstraPoolPredFailure` to preserve the CBOR round-trip
+  invariant of `StakePoolRetirementWrongEpochPOOL`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec`
 * Add `DijkstraEraBlockBody era` and `InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era` superclasses to `DijkstraEraImp`
 * Add `switchTxToPhase2InvalidLegacyMode`
