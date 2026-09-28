@@ -1,14 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.BlockHeader where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo, getVersion32, mkVersion32)
+import Cardano.Ledger.BaseTypes (ProtVer (..), SlotNo, StrictMaybe (..), getVersion32, mkVersion32)
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
 import Control.DeepSeq (NFData)
@@ -25,40 +24,35 @@ data TestBlockHeader
   , tbhBHash :: Hash HASH EraIndependentBlockBody
   , tbhSlot :: SlotNo
   , tbhVersionInfo :: BlockHeaderVersionInfo
+  , tbhEbRefsAnn :: StrictMaybe EbReferencesAnnouncement
   }
   deriving (Generic)
 
 instance NFData TestBlockHeader
 
 instance Era era => EraBlockHeader TestBlockHeader era where
-  blockIssuerBlockHeaderG = to $ tbhIssuer . blockHeader
-  blockHeaderSizeBlockHeaderG = to $ tbhHSize . blockHeader
+  blockIssuerBlockHeaderG = blockHeaderL . to tbhIssuer
+  blockHeaderSizeBlockHeaderG = blockHeaderL . to tbhHSize
   blockBodySizeBlockHeaderL =
-    lens (tbhBSize . blockHeader) $
-      \b@Block {blockHeader} tbhBSize -> b {blockHeader = blockHeader {tbhBSize}}
+    blockHeaderL . lens tbhBSize (\bh sz -> bh {tbhBSize = sz})
   blockBodyHashBlockHeaderL =
-    lens (tbhBHash . blockHeader) $
-      \b@Block {blockHeader} tbhBHash -> b {blockHeader = blockHeader {tbhBHash}}
+    blockHeaderL . lens tbhBHash (\bh h -> bh {tbhBHash = h})
   slotNoBlockHeaderL =
-    lens (tbhSlot . blockHeader) $
-      \b@Block {blockHeader} tbhSlot -> b {blockHeader = blockHeader {tbhSlot}}
+    blockHeaderL . lens tbhSlot (\hb sn -> hb {tbhSlot = sn})
 
 instance Era era => TPraosEraBlockHeader TestBlockHeader era
 
 instance Era era => PraosEraBlockHeader TestBlockHeader era where
   protVerBlockHeaderL =
-    lens
-      ( \Block {blockHeader = TestBlockHeader {tbhVersionInfo = BlockHeaderVersionInfo major minor}} ->
-          ProtVer (fromMaybe maxBound (mkVersion32 major)) minor
-      )
-      ( \b@Block {blockHeader} (ProtVer major minor) ->
-          b {blockHeader = blockHeader {tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 major) minor}}
-      )
+    versionInfoBlockHeaderL
+      . lens
+        (\(BlockHeaderVersionInfo major minor) -> ProtVer (fromMaybe maxBound (mkVersion32 major)) minor)
+        (\_ (ProtVer major minor) -> BlockHeaderVersionInfo (getVersion32 major) minor)
 
 instance Era era => LeiosEraBlockHeader TestBlockHeader era where
-  versionInfoBlockHeaderL =
-    lens (tbhVersionInfo . blockHeader) $
-      \b@Block {blockHeader} tbhVersionInfo -> b {blockHeader = blockHeader {tbhVersionInfo}}
+  versionInfoBlockHeaderL = blockHeaderL . lens tbhVersionInfo (\bh vi -> bh {tbhVersionInfo = vi})
+  ebReferencesAnnouncementBlockHeaderL =
+    blockHeaderL . lens tbhEbRefsAnn (\hb ma -> hb {tbhEbRefsAnn = ma})
 
 mkTestBlockHeaderNoNonce ::
   forall era h.
@@ -71,4 +65,5 @@ mkTestBlockHeaderNoNonce block =
     , tbhBHash = block ^. blockBodyHashBlockHeaderL
     , tbhSlot = block ^. slotNoBlockHeaderL
     , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 (eraProtVerLow @era)) 0
+    , tbhEbRefsAnn = SNothing
     }

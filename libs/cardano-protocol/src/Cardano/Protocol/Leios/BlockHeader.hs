@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -10,6 +9,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Block header associated with Leios.
@@ -20,7 +20,6 @@
 module Cardano.Protocol.Leios.BlockHeader (
   Header (HeaderConstr, Header, headerBody, headerSig),
   HeaderBody (..),
-  EbAnnouncement (..),
   headerHash,
   headerSize,
 ) where
@@ -31,6 +30,7 @@ import Cardano.Crypto.Util (
   SignableRepresentation (getSignableRepresentation),
  )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes (mkVersion32)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
@@ -42,25 +42,23 @@ import Cardano.Ledger.Binary (
   encodeFixedSized,
   encodeListLen,
   encodeNullStrictMaybe,
-  mkVersion32,
   serialize',
   unCBORGroup,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (
-  Block (..),
   BlockHeaderVersionInfo (..),
+  EbReferencesAnnouncement,
   EraBlockHeader (..),
   LeiosEraBlockHeader (..),
+  blockHeaderL,
  )
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
-  EraIndependentEb,
   HASH,
   HashAnnotated (..),
-  SafeHash,
   SafeToHash,
   extractHash,
   originalBytesSize,
@@ -81,35 +79,12 @@ import Cardano.Protocol.TPraos.BlockHeader (PrevHash)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
-import Control.DeepSeq (NFData)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (lens, to)
+import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks (..))
-
--- | Announcement of an Endorser Block (EB).
-data EbAnnouncement = EbAnnouncement
-  { ebAnnouncementHash :: !(SafeHash EraIndependentEb)
-  , ebAnnouncementSize :: !Word32
-  -- ^ Size of the EB block closure
-  }
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (NoThunks, NFData)
-
-instance EncCBOR EbAnnouncement where
-  encCBOR (EbAnnouncement h s) =
-    encodeListLen 2
-      <> encCBOR h
-      <> encCBOR s
-
-instance DecCBOR EbAnnouncement where
-  decCBOR =
-    decodeRecordNamed "EbAnnouncement" (const 2) $
-      EbAnnouncement
-        <$> decCBOR
-        <*> decCBOR
 
 data HeaderBody crypto = HeaderBody
   { hbBlockNo :: !BlockNo
@@ -134,15 +109,21 @@ data HeaderBody crypto = HeaderBody
   -- ^ version information reported by the block producer
   , hbBlockBodyContainsLeiosCert :: !Bool
   -- ^ whether the block body contains a Leios certificate
-  , hbEbAnnouncement :: !(StrictMaybe EbAnnouncement)
-  -- ^ Announcement of Endorser Block (EB)
+  , hbEbReferencesAnnouncement :: !(StrictMaybe EbReferencesAnnouncement)
+  -- ^ Announcement of Endorser Block (EB) references
   }
   deriving (Generic)
 
+hbVersionInfoL :: Lens' (HeaderBody crypto) BlockHeaderVersionInfo
+hbVersionInfoL = lens hbVersionInfo (\hb vi -> hb {hbVersionInfo = vi})
+
+hbEbReferencesAnnouncementL :: Lens' (HeaderBody crypto) (StrictMaybe EbReferencesAnnouncement)
+hbEbReferencesAnnouncementL =
+  lens hbEbReferencesAnnouncement (\hb ma -> hb {hbEbReferencesAnnouncement = ma})
+
 headerBodyEncodingVersion :: HeaderBody crypto -> Version
-headerBodyEncodingVersion
-  HeaderBody {hbVersionInfo = BlockHeaderVersionInfo {bhviHighestSupportedMajorVersion}} =
-    fromMaybe maxBound (mkVersion32 bhviHighestSupportedMajorVersion)
+headerBodyEncodingVersion =
+  fromMaybe maxBound . mkVersion32 . bhviHighestSupportedMajorVersion . hbVersionInfo
 
 deriving instance Crypto crypto => Show (HeaderBody crypto)
 
@@ -222,7 +203,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
       , hbOCert
       , hbVersionInfo
       , hbBlockBodyContainsLeiosCert
-      , hbEbAnnouncement
+      , hbEbReferencesAnnouncement
       } =
       encodeListLen 12
         <> encCBOR hbBlockNo
@@ -236,7 +217,7 @@ instance Crypto crypto => EncCBOR (HeaderBody crypto) where
         <> encCBOR hbOCert
         <> encCBOR hbVersionInfo
         <> encCBOR hbBlockBodyContainsLeiosCert
-        <> encodeNullStrictMaybe encCBOR hbEbAnnouncement
+        <> encodeNullStrictMaybe encCBOR hbEbReferencesAnnouncement
 
 instance Crypto crypto => DecCBOR (HeaderBody crypto) where
   decCBOR =
@@ -274,34 +255,23 @@ deriving via
   instance
     Crypto c => DecCBOR (Annotator (Header c))
 
+headerBodyL :: Crypto c => Lens' (Header c) (HeaderBody c)
+headerBodyL = lens headerBody (\h b -> h {headerBody = b})
+
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
-  blockIssuerBlockHeaderG =
-    to (\(Block (Header hb _) _) -> hashKey (hbVk hb))
   blockHeaderSizeBlockHeaderG =
-    to (\(Block hdr _) -> originalBytesSize hdr)
+    blockHeaderL . to originalBytesSize
+  blockIssuerBlockHeaderG =
+    blockHeaderL . headerBodyL . to (hashKey . hbVk)
   blockBodySizeBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbBodySize hb)
-      ( \(Block (Header hb sig) body) sz ->
-          Block (Header hb {hbBodySize = sz} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbBodySize (\hb sz -> hb {hbBodySize = sz})
   blockBodyHashBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbBodyHash hb)
-      ( \(Block (Header hb sig) body) h ->
-          Block (Header hb {hbBodyHash = h} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbBodyHash (\hb h -> hb {hbBodyHash = h})
   slotNoBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbSlotNo hb)
-      ( \(Block (Header hb sig) body) s ->
-          Block (Header hb {hbSlotNo = s} sig) body
-      )
+    blockHeaderL . headerBodyL . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
 
 instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
   versionInfoBlockHeaderL =
-    lens
-      (\(Block (Header hb _) _) -> hbVersionInfo hb)
-      ( \(Block (Header hb sig) body) vi ->
-          Block (Header hb {hbVersionInfo = vi} sig) body
-      )
+    blockHeaderL . headerBodyL . hbVersionInfoL
+  ebReferencesAnnouncementBlockHeaderL =
+    blockHeaderL . headerBodyL . hbEbReferencesAnnouncementL

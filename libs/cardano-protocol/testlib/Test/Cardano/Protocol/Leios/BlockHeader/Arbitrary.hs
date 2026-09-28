@@ -14,11 +14,10 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (DecCBOR)
-import Cardano.Ledger.Block (Block (Block))
+import Cardano.Ledger.Block (Block (Block), EbReferencesAnnouncement (EbReferencesAnnouncement))
 import Cardano.Ledger.Core (BlockBody, EraBlockBody)
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Leios.BlockHeader (
-  EbAnnouncement (EbAnnouncement),
   Header (Header, HeaderConstr),
   HeaderBody (HeaderBody),
  )
@@ -28,8 +27,8 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
 import Test.Crypto.Instances ()
 
-instance Arbitrary EbAnnouncement where
-  arbitrary = EbAnnouncement <$> arbitrary <*> arbitrary
+instance Arbitrary EbReferencesAnnouncement where
+  arbitrary = EbReferencesAnnouncement <$> arbitrary <*> arbitrary
 
 instance
   (Crypto c, VRF.Signable (VRF c) ~ SignableRepresentation) =>

@@ -1033,7 +1033,7 @@ leiosHeaderBodyRule ::
   ( HuddleRule "vrf_cert" era
   , HuddleRule "operational_cert" era
   , HuddleRule "header_version_info" era
-  , HuddleRule "eb_announcement" era
+  , HuddleRule "eb_references_announcement" era
   ) =>
   Proxy "header_body" ->
   Proxy era ->
@@ -1052,7 +1052,7 @@ leiosHeaderBodyRule pname p =
       , a $ huddleRule @"operational_cert" p
       , a $ huddleRule @"header_version_info" p
       , "block_body_contains_leios_cert" ==> VBool
-      , "eb_announcement" ==> (huddleRule @"eb_announcement" p / VNil)
+      , "eb_references_announcement" ==> (huddleRule @"eb_references_announcement" p / VNil)
       ]
 
 instance HuddleRule "vrf_cert" DijkstraEra where
@@ -1072,12 +1072,12 @@ instance HuddleRule "header_version_info" DijkstraEra where
 instance HuddleRule "header" DijkstraEra where
   huddleRuleNamed = headerRule
 
-instance HuddleRule "eb_announcement" DijkstraEra where
+instance HuddleRule "eb_references_announcement" DijkstraEra where
   huddleRuleNamed pname p =
     pname
       =.= arr
         [ "eb_hash" ==> huddleRule @"hash32" p
-        , "eb_size" ==> VUInt `sized` (4 :: Word64) //- "size of the EB block closure"
+        , "eb_size" ==> VUInt `sized` (4 :: Word64) //- "size of the EB references"
         ]
 
 instance HuddleRule "block" DijkstraEra where
