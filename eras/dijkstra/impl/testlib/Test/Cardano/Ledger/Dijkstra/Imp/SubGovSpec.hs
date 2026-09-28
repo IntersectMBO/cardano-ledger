@@ -54,7 +54,7 @@ spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SUBGOV" $ do
   it "a proposal in a sub-transaction is accepted" $ do
     proposal <- mkProposal InfoAction
-    submittedTx <- submitTx . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
+    submittedTx <- submitTopTx . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
     case fst <$> OMap.assocList (submittedTx ^. bodyTxL . subTransactionsTxBodyL) of
       [subTxId] -> do
         gas <- getGovActionState $ GovActionId subTxId (GovActionIx 0)
@@ -347,7 +347,7 @@ spec = describe "SUBGOV" $ do
       useNativeGuardrailsScript
       govAction <- mkMinFeeUpdateGovAction SNothing
       proposal <- mkProposal govAction
-      submitTx_ . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
+      submitTopTx_ . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
 
     it "an expiration epoch one after the current one" $ do
       committeeCredential <- KeyHashObj <$> freshKeyHash
@@ -357,7 +357,7 @@ spec = describe "SUBGOV" $ do
           mempty
           [(committeeCredential, EpochInterval 1)]
           (0 %! 1)
-      submitTx_ . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
+      submitTopTx_ . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
 
   describe "Composite tests" $ do
     it "failures of several proposals, in the order of the body" $ do
@@ -457,13 +457,13 @@ spec = describe "SUBGOV" $ do
     it "DisallowedProposalDuringBootstrap does not fire for a non-bootstrap proposal" $ do
       anchor <- arbitrary
       proposal <- mkProposal . NewConstitution SNothing $ Constitution anchor SNothing
-      submitTx_ . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
+      submitTopTx_ . mkTopTxWithSubTxs . pure $ proposeSubTx proposal
 
     it "DisallowedVotesDuringBootstrap does not fire for a DRep vote" $ do
       (drep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govActionId <- submitGovAction . NewConstitution SNothing $ Constitution anchor SNothing
-      submitTx_ . mkTopTxWithSubTxs . pure $ voteSubTx VoteYes (DRepVoter drep) govActionId
+      submitTopTx_ . mkTopTxWithSubTxs . pure $ voteSubTx VoteYes (DRepVoter drep) govActionId
       expectVote govActionId (DRepVoter drep) VoteYes
 
   describe "Sub-transaction semantics" $ do
@@ -472,7 +472,7 @@ spec = describe "SUBGOV" $ do
       subProposal <- mkProposal InfoAction
       (subTx, subGovActionId) <- proposeSubTxWithStableId subProposal
       submittedTx <-
-        submitTx $
+        submitTopTx $
           mkTopTxWithSubTxs [subTx] & bodyTxL . proposalProceduresTxBodyL .~ [topProposal]
       subGas <- getGovActionState subGovActionId
       topGas <- getGovActionState $ GovActionId (txIdTx submittedTx) (GovActionIx 0)
@@ -485,7 +485,7 @@ spec = describe "SUBGOV" $ do
       secondProposal <- mkProposal InfoAction
       (firstSubTx, firstGovActionId) <- proposeSubTxWithStableId firstProposal
       (secondSubTx, secondGovActionId) <- proposeSubTxWithStableId secondProposal
-      submitTx_ $ mkTopTxWithSubTxs [firstSubTx, secondSubTx]
+      submitTopTx_ $ mkTopTxWithSubTxs [firstSubTx, secondSubTx]
       gaidGovActionIx firstGovActionId `shouldBe` GovActionIx 0
       gaidGovActionIx secondGovActionId `shouldBe` GovActionIx 0
       gaidTxId firstGovActionId `shouldNotBe` gaidTxId secondGovActionId
@@ -505,7 +505,7 @@ spec = describe "SUBGOV" $ do
                 & inputsTxBodyL .~ [txIn]
                 & proposalProceduresTxBodyL .~ [firstProposal, secondProposal]
           subTxId = txIdTx subTx
-      submitTx_ $ mkTopTxWithSubTxs [subTx]
+      submitTopTx_ $ mkTopTxWithSubTxs [subTx]
       firstGas <- getGovActionState $ GovActionId subTxId (GovActionIx 0)
       secondGas <- getGovActionState $ GovActionId subTxId (GovActionIx 1)
       gasProposalProcedure firstGas `shouldBe` firstProposal
@@ -515,7 +515,7 @@ spec = describe "SUBGOV" $ do
       (drep, _, _) <- setupSingleDRep 1_000_000
       proposal <- mkProposal InfoAction
       (proposingSubTx, govActionId) <- proposeSubTxWithStableId proposal
-      submitTx_ $
+      submitTopTx_ $
         mkTopTxWithSubTxs [proposingSubTx, voteSubTx VoteYes (DRepVoter drep) govActionId]
       expectVote govActionId (DRepVoter drep) VoteYes
 
@@ -532,14 +532,14 @@ spec = describe "SUBGOV" $ do
       proposal <- mkProposal InfoAction
       (proposingSubTx, govActionId) <- proposeSubTxWithStableId proposal
       let votes = votingProceduresFor VoteYes [DRepVoter drep] govActionId
-      submitTx_ $
+      submitTopTx_ $
         mkTopTxWithSubTxs [proposingSubTx] & bodyTxL . votingProceduresTxBodyL .~ votes
       expectVote govActionId (DRepVoter drep) VoteYes
 
     it "a vote in a sub-transaction replaces one cast by an earlier sibling" $ do
       (drep, _, _) <- setupSingleDRep 1_000_000
       govActionId <- submitGovAction InfoAction
-      submitTx_ $
+      submitTopTx_ $
         mkTopTxWithSubTxs
           [ voteSubTx VoteYes (DRepVoter drep) govActionId
           , voteSubTx VoteNo (DRepVoter drep) govActionId
@@ -553,21 +553,21 @@ spec = describe "SUBGOV" $ do
       (parentSubTx, parentGovActionId) <- proposeSubTxWithStableId parentProposal
       childAction <- mkMinFeeUpdateGovAction $ SJust parentGovActionId
       childProposal <- mkProposal childAction
-      submitTx_ $ mkTopTxWithSubTxs [parentSubTx, proposeSubTx childProposal]
+      submitTopTx_ $ mkTopTxWithSubTxs [parentSubTx, proposeSubTx childProposal]
       void $ getGovActionState parentGovActionId
 
     it "a committee member votes in a sub-transaction" $ do
       hotCredential <- NE.head <$> registerInitialCommittee
       govActionId <- submitGovAction InfoAction
       let voter = CommitteeVoter hotCredential
-      submitTx_ . mkTopTxWithSubTxs . pure $ voteSubTx VoteYes voter govActionId
+      submitTopTx_ . mkTopTxWithSubTxs . pure $ voteSubTx VoteYes voter govActionId
       expectVote govActionId voter VoteYes
 
     it "a stake pool votes in a sub-transaction" $ do
       (poolId, _, _) <- setupPoolWithStake $ Coin 42_000_000
       govActionId <- submitGovAction InfoAction
       let voter = StakePoolVoter poolId
-      submitTx_ . mkTopTxWithSubTxs . pure $ voteSubTx VoteYes voter govActionId
+      submitTopTx_ . mkTopTxWithSubTxs . pure $ voteSubTx VoteYes voter govActionId
       expectVote govActionId voter VoteYes
 
     it "a sub-transaction votes with a DRep it registers in that same sub-transaction" $ do
@@ -575,7 +575,7 @@ spec = describe "SUBGOV" $ do
       drepCredential <- KeyHashObj <$> freshKeyHash
       deposit <- getsPParams ppDRepDepositL
       txIn <- freshFundedTxIn
-      submitTx_ . mkTopTxWithSubTxs . pure $
+      submitTopTx_ . mkTopTxWithSubTxs . pure $
         voteSubTx VoteYes (DRepVoter drepCredential) govActionId
           & bodyTxL . inputsTxBodyL .~ [txIn]
           & bodyTxL . certsTxBodyL .~ [RegDRepTxCert drepCredential deposit SNothing]
@@ -587,7 +587,7 @@ spec = describe "SUBGOV" $ do
       submitVote_ VoteYes (DRepVoter drep) govActionId
       expectVote govActionId (DRepVoter drep) VoteYes
       deposit <- getsPParams ppDRepDepositL
-      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
+      submitTopTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert drep deposit]
       cleanedGas <- getGovActionState govActionId
       Map.lookup drep (gasDRepVotes cleanedGas) `shouldBe` Nothing
@@ -605,7 +605,7 @@ spec = describe "SUBGOV" $ do
                 & inputsTxBodyL .~ [txIn]
                 & proposalProceduresTxBodyL .~ [proposal]
                 & votingProceduresTxBodyL .~ votes
-      submitTx_ $ mkTopTxWithSubTxs [subTx]
+      submitTopTx_ $ mkTopTxWithSubTxs [subTx]
       newGas <- getGovActionState $ GovActionId (txIdTx subTx) (GovActionIx 0)
       gasProposalProcedure newGas `shouldBe` proposal
       expectVote existingGovActionId (DRepVoter drep) VoteYes
@@ -615,7 +615,7 @@ spec = describe "SUBGOV" $ do
       account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
       topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs [proposeSubTx proposal]
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+      submitTopTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
 
 -- | Expect the given voter to have cast the given vote on a governance action.
 expectVote :: (HasCallStack, DijkstraEraImp era) => GovActionId -> Voter -> Vote -> ImpTestM era ()
