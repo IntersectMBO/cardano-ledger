@@ -459,7 +459,7 @@ spec = describe "ENTITIES" $ do
                   Withdrawals [(account, amount)]
               ]
 
-            submitTx_ =<< switchTxToLegacyMode tx
+            submitTopTx_ =<< switchTxToLegacyMode tx
             expectStakeCredRegistered stakingCred
             getBalance stakingCred `shouldReturn` zero
 

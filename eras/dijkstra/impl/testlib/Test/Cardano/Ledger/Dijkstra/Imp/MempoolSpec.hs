@@ -108,6 +108,6 @@ spec = describe "MEMPOOL" $ do
       tx <- fixupTx $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
       withNoFixup $ do
         (_, validatedTx) <- expectRight =<< trySubmitMempoolTx tx
-        submitTx_ tx
+        submitTopTx_ tx
         reapplyResult <- tryReapplyMempoolTx validatedTx
         expectMempoolRejection reapplyResult [AllInputsAreSpent]

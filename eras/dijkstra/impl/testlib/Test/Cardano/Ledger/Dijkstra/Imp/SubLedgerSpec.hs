@@ -51,13 +51,13 @@ spec = describe "SUBLEDGER" $ do
   describe "Accepted at the boundary" $ do
     it "a sub-transaction declares the actual treasury value" $ do
       actualTreasury <- getsNES treasuryL
-      submitTx_ . mkTopTxWithSubTxs $ [declareTreasurySubTx actualTreasury]
+      submitTopTx_ . mkTopTxWithSubTxs $ [declareTreasurySubTx actualTreasury]
 
     it "a treasury donation in an earlier sub-transaction does not change the value checked" $ do
       actualTreasury <- getsNES treasuryL
       let donatingSubTx :: Tx SubTx era
           donatingSubTx = mkBasicTx $ mkBasicTxBody & treasuryDonationTxBodyL .~ Coin 1_000
-      submitTx_ . mkTopTxWithSubTxs $ [donatingSubTx, declareTreasurySubTx actualTreasury]
+      submitTopTx_ . mkTopTxWithSubTxs $ [donatingSubTx, declareTreasurySubTx actualTreasury]
 
   describe "A phase-2 invalid top level transaction" $
     disableInConformanceIt "raises no SUBLEDGER failure" $ do
@@ -65,4 +65,4 @@ spec = describe "SUBLEDGER" $ do
       topTx <-
         switchTxToPhase2InvalidLegacyMode . mkTopTxWithSubTxs $
           [declareTreasurySubTx $ actualTreasury <> Coin 1]
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+      submitTopTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
