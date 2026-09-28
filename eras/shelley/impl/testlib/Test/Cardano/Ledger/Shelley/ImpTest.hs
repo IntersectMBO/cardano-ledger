@@ -314,6 +314,7 @@ import Control.State.Transition.Extended (
  )
 import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
+import Data.Containers.ListUtils (nubOrd)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
 import Data.Foldable (fold, toList, traverse_)
@@ -1384,17 +1385,22 @@ trySubmitTx tx = do
           (utxosUtxo (lsUTxOState lState))
           mempty
           txFixed
-  res <- first NES.fromNonEmpty <$> tryRunImpRule @"LEDGER" lEnv lState stAnnTx
+  res <- tryRunImpRule @"LEDGER" lEnv lState stAnnTx
 
   -- Run `postSubmitTxHook`
   let trc = TRC (lEnv, lState, stAnnTx)
-  asks itePostSubmitTxHook >>= (\f -> f globals trc res)
+  asks itePostSubmitTxHook >>= (\f -> f globals trc $ first NES.fromNonEmpty res)
 
   case res of
     Left predFailures -> do
+      let
+        predFailuresList = toList predFailures
+        predFailuresSet = NES.fromNonEmpty predFailures
+      impAnn "Checking for duplicate predicate failures" $
+        nubOrd predFailuresList `shouldBeExpr` predFailuresList
       -- Verify that produced predicate failures are ready for the node-to-client protocol
-      liftIO $ forM_ predFailures $ roundTripEraExpectation @era
-      pure $ SubmitTxResult (NES.toSet predFailures) txFixed
+      liftIO $ forM_ predFailuresSet $ roundTripEraExpectation @era
+      pure $ SubmitTxResult (NES.toSet predFailuresSet) txFixed
     Right (newState, events) -> do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
