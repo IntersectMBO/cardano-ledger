@@ -2,6 +2,10 @@
 
 ## 0.4.0.0
 
+* Add `POOLREAP` rule for Dijkstra:
+  - Add `Cardano.Ledger.Dijkstra.Rules.PoolReap` module
+  - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP` to `POOLREAP`
+  - Add `EraRuleEvent "POOLREAP" DijkstraEra` type instance
 * Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
   `POOL` rule, replacing `ShelleyPoolPredFailure`:
   - `EraRuleFailure "POOL" DijkstraEra` is now `DijkstraPoolPredFailure DijkstraEra`
