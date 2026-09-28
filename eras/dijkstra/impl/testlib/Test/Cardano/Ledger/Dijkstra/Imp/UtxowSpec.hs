@@ -177,9 +177,7 @@ spec = describe "UTXOW" $ do
             -- TODO replace with `submitFailingTx` once we have fixup support for plutus scripts
             hasMalformed tx = do
               result <- trySubmitTx tx
-              pure $ case result of
-                Left (predFailures, _) -> malformed `elem` predFailures
-                Right _ -> False
+              pure $ malformed `elem` strFailures result
         hasMalformed (mkTx SNothing) `shouldReturn` True
         hasMalformed (mkTx (SJust datum)) `shouldReturn` False
 

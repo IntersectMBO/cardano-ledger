@@ -210,11 +210,10 @@ import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended (STS (..))
-import Data.Bifunctor (bimap)
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, fromMaybe, isJust)
@@ -646,8 +645,8 @@ trySubmitVote ::
   GovActionId ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) TxId)
 trySubmitVote vote voter gaId =
-  impAnn ("Submitting vote (" <> show vote <> ")") $
-    fmap (bimap fst txIdTx) $
+  impAnn ("Submitting vote (" <> show vote <> ")") $ do
+    SubmitTxResult {..} <-
       trySubmitTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . votingProceduresTxBodyL
@@ -663,6 +662,9 @@ trySubmitVote vote voter gaId =
                       )
                   )
               )
+    pure $ case strFailures of
+      [] -> Right $ txIdTx strFinalTx
+      (x : xs) -> Left $ x :| xs
 
 submitProposal_ ::
   (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
@@ -683,8 +685,9 @@ submitProposals ::
 submitProposals proposals = do
   curEpochNo <- getsNES nesELL
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  tx <- trySubmitProposals proposals >>= expectRightExpr
-  let txId = txIdTx tx
+  SubmitTxResult {..} <- trySubmitProposals proposals
+  expectNullExpr strFailures
+  let txId = txIdTx strFinalTx
       proposalsWithGovActionId =
         NE.zipWith (\idx p -> (GovActionId txId (GovActionIx idx), p)) (0 NE.:| [1 ..]) proposals
   forM proposalsWithGovActionId $ \(govActionId, proposal) -> do
@@ -709,24 +712,22 @@ trySubmitProposal ::
   ProposalProcedure era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitProposal proposal = do
-  res <- trySubmitProposals (pure proposal)
-  pure $ case res of
-    Right tx ->
+  SubmitTxResult {..} <- trySubmitProposals (pure proposal)
+  pure $ case strFailures of
+    [] ->
       Right
         GovActionId
-          { gaidTxId = txIdTx tx
+          { gaidTxId = txIdTx strFinalTx
           , gaidGovActionIx = GovActionIx 0
           }
-    Left (err, _) -> Left err
+    (x : xs) -> Left $ x :| xs
 
 trySubmitProposals ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   NE.NonEmpty (ProposalProcedure era) ->
-  ImpTestM
-    era
-    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
+  ImpTestM era (SubmitTxResult era)
 trySubmitProposals proposals = do
   trySubmitTx $
     mkBasicTx mkBasicTxBody
@@ -751,7 +752,10 @@ trySubmitGovAction ::
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitGovAction ga = do
   let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
-  bimap fst mkGovActionId <$> trySubmitGovActions (pure ga)
+  SubmitTxResult {..} <- trySubmitGovActions (pure ga)
+  pure $ case strFailures of
+    [] -> Right . mkGovActionId $ strFinalTx
+    (x : xs) -> Left $ x :| xs
 
 submitAndExpireProposalToMakeReward ::
   ConwayEraImp era =>
@@ -778,9 +782,7 @@ submitAndExpireProposalToMakeReward stakingC = do
 trySubmitGovActions ::
   ConwayEraImp era =>
   NE.NonEmpty (GovAction era) ->
-  ImpTestM
-    era
-    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
+  ImpTestM era (SubmitTxResult era)
 trySubmitGovActions gas = do
   proposals <- traverse mkProposal gas
   trySubmitProposals proposals
@@ -837,8 +839,9 @@ submitGovActions ::
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (NE.NonEmpty GovActionId)
 submitGovActions gas = do
-  tx <- trySubmitGovActions gas >>= expectRightExpr
-  let txId = txIdTx tx
+  SubmitTxResult {..} <- trySubmitGovActions gas
+  expectNullExpr strFailures
+  let txId = txIdTx strFinalTx
   pure $ NE.zipWith (\idx _ -> GovActionId txId (GovActionIx idx)) (0 NE.:| [1 ..]) gas
 
 mkTreasuryWithdrawalsGovAction ::

@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -531,10 +532,11 @@ submitPhase2Invalid tx = do
       tx ^. isPhase2ValidTxL `shouldBe` Phase2Valid
       -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
       -- TODO: remove `withDisabledPostSubmitTxHook` once the issue above is resolved
-      (predFailure, fixedUpTx) <- expectLeft =<< withDisabledPostSubmitTxHook (trySubmitTx tx)
-      scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
-      predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
-      pure fixedUpTx
+      SubmitTxResult {..} <- trySubmitTx tx
+      actualFailures <- expectNonEmpty strFailures
+      scriptPredicateFailure <- impScriptPredicateFailure strFinalTx
+      actualFailures `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
+      pure strFinalTx
   impAnn "Submit tx with IsValid False" $ do
     withNoFixup $ submitTx $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
 

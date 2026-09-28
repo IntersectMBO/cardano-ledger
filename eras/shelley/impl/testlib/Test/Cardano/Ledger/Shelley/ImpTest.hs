@@ -3,6 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -15,6 +16,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -34,6 +36,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
+  SubmitTxResult (..),
   PlutusArgs,
   ScriptTestContext,
   iteFixupL,
@@ -309,7 +312,6 @@ import Control.State.Transition.Extended (
   SingEP (..),
   ValidationPolicy (..),
  )
-import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
@@ -332,6 +334,7 @@ import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
 import Data.Void
 import Data.Word
+import GHC.Generics (Generic)
 import GHC.TypeLits (KnownNat, KnownSymbol, Symbol, symbolVal, type (<=))
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
@@ -1337,7 +1340,22 @@ submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (
 submitTx_ = void . submitTx
 
 submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
-submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
+submitTx tx = do
+  SubmitTxResult {..} <- trySubmitTx tx
+  expectNullExpr strFailures
+  pure strFinalTx
+
+data SubmitTxResult era = SubmitTxResult
+  { strFailures :: [PredicateFailure (EraRule "LEDGER" era)]
+  , strFinalTx :: Tx TopTx era
+  }
+  deriving (Generic)
+
+instance
+  ( NFData (Tx TopTx era)
+  , NFData (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  NFData (SubmitTxResult era)
 
 trySubmitTx ::
   forall era.
@@ -1345,9 +1363,7 @@ trySubmitTx ::
   , HasCallStack
   ) =>
   Tx TopTx era ->
-  ImpTestM
-    era
-    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
+  ImpTestM era (SubmitTxResult era)
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
@@ -1374,7 +1390,7 @@ trySubmitTx tx = do
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
       liftIO $ forM_ predFailures $ roundTripEraExpectation @era
-      pure $ Left (predFailures, txFixed)
+      pure $ SubmitTxResult (toList predFailures) txFixed
     Right (newState, events) -> do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
@@ -1401,7 +1417,7 @@ trySubmitTx tx = do
 
       expectTxSuccess txFixed
 
-      pure $ Right txFixed
+      pure $ SubmitTxResult mempty txFixed
 
 -- | Submit a transaction that is expected to be rejected with the given predicate failures.
 -- The inputs and outputs are automatically balanced.
@@ -1425,11 +1441,12 @@ submitFailingTxM ::
   (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingTxM tx mkExpectedFailures = do
-  (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
-  expectedFailures <- mkExpectedFailures fixedUpTx
+  SubmitTxResult {..} <- trySubmitTx tx
+  actualFailures <- expectNonEmpty strFailures
+  expectedFailures <- mkExpectedFailures strFinalTx
   expectExprEqualWithMessage
     "The predicate failures were not as expected"
-    predFailures
+    actualFailures
     expectedFailures
 
 -- | Submit a transaction that is expected to be rejected with at least the given predicate failures.
@@ -1454,13 +1471,14 @@ submitFailingSubsetTxM ::
   (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingSubsetTxM tx mkExpectedFailures = do
-  (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
-  expectedFailures <- mkExpectedFailures fixedUpTx
+  SubmitTxResult {..} <- trySubmitTx tx
+  actualFailures <- expectNonEmpty strFailures
+  expectedFailures <- mkExpectedFailures strFinalTx
   let
-    predSet = Set.fromList $ toList predFailures
+    predSet = Set.fromList $ toList actualFailures
     expectedSet = Set.fromList $ toList expectedFailures
     significantSet = predSet `Set.intersection` expectedSet
-  logToExpr predFailures
+  logToExpr actualFailures
   expectExprEqualWithMessage
     "Some required predicate failures were absent"
     significantSet
@@ -2134,7 +2152,7 @@ submitTxAnn ::
   String ->
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
-submitTxAnn msg tx = impAnn msg (trySubmitTx tx >>= expectRightDeepExpr)
+submitTxAnn msg = impAnn msg . submitTx
 
 submitTxAnn_ ::
   (HasCallStack, ShelleyEraImp era) => String -> Tx TopTx era -> ImpTestM era ()
