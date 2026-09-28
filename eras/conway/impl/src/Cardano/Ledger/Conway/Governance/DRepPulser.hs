@@ -41,7 +41,9 @@ import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
   KeyValuePairs (..),
+  ProtVer (..),
   ToKeyValuePairs (..),
+  natVersion,
   unNonZero,
   unsafeNonZero,
  )
@@ -71,12 +73,15 @@ import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Default (Default (..))
 import Data.Foldable (fold)
+import Data.Functor (($>))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -200,6 +205,7 @@ instance EraPParams era => DecCBOR (PulsingSnapshot era) where
 computeDRepDistr ::
   forall era.
   (EraStake era, ConwayEraAccounts era) =>
+  ProtVer ->
   InstantStake era ->
   Map (Credential DRepRole) DRepState ->
   Map (Credential Staking) (CompactForm Coin) ->
@@ -207,7 +213,7 @@ computeDRepDistr ::
   Map DRep (CompactForm Coin) ->
   Map (Credential Staking) (AccountState era) ->
   (Map DRep (CompactForm Coin), VotingStakePoolDistr)
-computeDRepDistr instantStake regDReps proposalDeposits vpDistr dRepDistr =
+computeDRepDistr curProtVer instantStake regDReps proposalDeposits vpDistr dRepDistr =
   Map.foldlWithKey' go (dRepDistr, vpDistr)
   where
     go (!drepAccum, !poolAccum) stakeCred accountState =
@@ -221,7 +227,7 @@ computeDRepDistr instantStake regDReps proposalDeposits vpDistr dRepDistr =
     addToPoolDistr accountState mProposalDeposit distr = fromMaybe distr $ do
       stakePool <- accountState ^. stakePoolDelegationAccountStateL
       proposalDeposit <- mProposalDeposit
-      ips <- Map.lookup stakePool $ distr ^. vspdIndividualStakeL
+      ips <- Map.lookup stakePool (distr ^. vspdIndividualStakeL) <|> mIpsDef
       pure $
         distr
           & vspdIndividualStakeL %~ Map.insert stakePool (ips <> proposalDeposit)
@@ -240,6 +246,7 @@ computeDRepDistr instantStake regDReps proposalDeposits vpDistr dRepDistr =
           -- that it is in fact true due to #4772
           | Map.member cred regDReps -> updatedDistr
           | otherwise -> distr
+    mIpsDef = guard (pvMajor curProtVer >= natVersion @12) $> mempty
 
 -- | The type of a Pulser which uses 'computeDRepDistr' as its underlying
 -- function. Note that we use two type equality (~) constraints to fix both
@@ -284,12 +291,12 @@ data DRepPulser era (m :: Type -> Type) ans where
     DRepPulser era m ans
 
 instance
-  (EraPParams era, EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   Eq (DRepPulser era Identity (RatifyState era))
   where
   x == y = finishDRepPulser (DRPulsing x) == finishDRepPulser (DRPulsing y)
 
-instance (EraStake era, ConwayEraAccounts era) => Pulsable (DRepPulser era) where
+instance (EraStake era, EraPParams era, ConwayEraAccounts era) => Pulsable (DRepPulser era) where
   done DRepPulser {dpAccounts, dpIndex} = dpIndex >= Map.size (dpAccounts ^. accountsMapL)
 
   current x@(DRepPulser {}) = snd $ finishDRepPulser (DRPulsing x)
@@ -300,6 +307,7 @@ instance (EraStake era, ConwayEraAccounts era) => Pulsable (DRepPulser era) wher
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex (dpAccounts ^. accountsMapL)
             (dRepDistr, poolDistr) =
               computeDRepDistr
+                (dpEnactState ^. ensProtVerL)
                 dpInstantStake
                 dpDRepState
                 dpProposalDeposits
@@ -386,7 +394,7 @@ class
           Right ratifyState' -> ratifyState'
 
 finishDRepPulser ::
-  (EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   DRepPulsingState era ->
   (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
@@ -402,6 +410,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
     !leftOver = Map.drop dpIndex (dpAccounts ^. accountsMapL)
     (finalDRepDistr, finalVotingStakePoolDistr) =
       computeDRepDistr
+        (dpEnactState ^. ensProtVerL)
         dpInstantStake
         dpDRepState
         dpProposalDeposits
@@ -451,7 +460,7 @@ instance
 -- | This is potentially an expensive getter. Make sure not to use it in the first 80% of
 -- the epoch.
 psDRepDistrG ::
-  (EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   SimpleGetter (DRepPulsingState era) (Map DRep (CompactForm Coin))
 psDRepDistrG = to get
   where
@@ -492,7 +501,7 @@ instance EraPParams era => DecCBOR (DRepPulsingState era) where
 -- High level operations of DRepDistr
 
 pulseDRepPulsingState ::
-  (EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   DRepPulsingState era ->
   DRepPulsingState era
 pulseDRepPulsingState x@(DRComplete _ _) = x
@@ -503,14 +512,14 @@ pulseDRepPulsingState (DRPulsing x@(DRepPulser {})) =
         else DRPulsing x2
 
 completeDRepPulsingState ::
-  (EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   DRepPulsingState era ->
   DRepPulsingState era
 completeDRepPulsingState x@(DRPulsing _) = uncurry DRComplete (finishDRepPulser x)
 completeDRepPulsingState x@(DRComplete {}) = x
 
 extractDRepPulsingState ::
-  (EraStake era, ConwayEraAccounts era) =>
+  (EraStake era, EraPParams era, ConwayEraAccounts era) =>
   DRepPulsingState era ->
   RatifyState era
 extractDRepPulsingState x@(DRPulsing _) = snd (finishDRepPulser x)

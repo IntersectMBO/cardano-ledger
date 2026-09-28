@@ -2,6 +2,18 @@
 
 ## 1.24.0.0
 
+* Add an `EraPParams era` constraint to
+  - `Eq (DRepPulser era Identity (RatifyState era))`
+  - `Pulsable (DRepPulser era)`
+  - `conwayGovStateDRepDistrG`
+  - `psDRepDistrG`
+  - `completeDRepPulsingState`
+  - `extractDRepPulsingState`
+  - `finishDRepPulser`
+  - `getRatifyState`
+  - `predictFuturePParams`
+  - `pulseDRepPulsingState`
+* Change the type of `computeDRepDistr` to take a protocol version
 * Replace `conwayBbodyTransition` with `bbodyTransition`
 * Change the type of `computeDRepDistr` to take and return a `VotingStakePoolDistr` instead of a `PoolDistr`
 * Rename `reStakePoolDistrL` to `reVotingStakePoolDistrL` and change its type to use `VotingStakePoolDistr`
@@ -28,6 +40,7 @@
 
 ### `testlib`
 
+* Add an `EraPParams era` constraint to `pulsingStateSnapshotL`
 * Add `Test.Cardano.Ledger.Conway.Imp.MempoolSpec`, holding the mempool tests that were in `Test.Cardano.Ledger.Conway.Imp.LedgerSpec`
 * Add `ToExpr (ApplyTxError era)` as a superclass of `ConwayEraImp`
 * Add `ToExpr` instance for `ApplyTxError ConwayEra`
