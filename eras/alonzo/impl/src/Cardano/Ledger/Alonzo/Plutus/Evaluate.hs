@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -180,8 +179,8 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels =
         gg (Right t) (Right cs) =
           case f t of
             Right c -> Right $ c : cs
-            Left e -> Left [e]
-        gg (Left a) (Right _) = Left [a]
+            Left e -> Left $ pure e
+        gg (Left a) (Right _) = Left $ pure a
         gg (Right _) (Left cs) = Left cs
         gg (Left a) (Left cs) = Left $ NonEmpty.cons a cs
 
