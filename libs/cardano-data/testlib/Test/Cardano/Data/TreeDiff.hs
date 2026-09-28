@@ -10,7 +10,6 @@ import Data.Map.NonEmpty qualified as NEM
 import Data.OMap.Strict
 import Data.OSet.Strict
 import Data.Set.NonEmpty (NonEmptySet)
-import Data.Set.NonEmpty qualified as NES
 import Test.Cardano.Ledger.Binary.TreeDiff (Expr (..), ToExpr (..))
 
 instance ToExpr a => ToExpr (OSet a) where
@@ -21,7 +20,7 @@ instance (HasOKey k v, ToExpr v) => ToExpr (OMap k v) where
   toExpr = toExpr . F.toList
 
 instance ToExpr a => ToExpr (NonEmptySet a) where
-  toExpr = toExpr . NES.toList
+  toExpr = toExpr . toList
 
 instance (Ord k, ToExpr k, ToExpr v) => ToExpr (NonEmptyMap k v) where
   listToExpr = listToExpr . F.toList

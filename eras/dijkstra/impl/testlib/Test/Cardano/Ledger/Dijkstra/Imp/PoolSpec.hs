@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -96,7 +97,7 @@ rewardsOfWellAndOverPledgedPools = do
   -- Both pools mint the same number of blocks, so that they have the same apparent
   -- performance. The transactions also fill up the fee pot that is handed out as rewards.
   replicateM_ 3 $
-    forM_ [fst wellPledged, fst overLeveraged] $ \poolId ->
+    forM_ @[] [fst wellPledged, fst overLeveraged] $ \poolId ->
       withIssuerAndTxsInBlock_ (coerce poolId) $ do
         addr <- freshKeyAddr_
         sendCoinTo_ addr $ Coin 1_000_000_000
@@ -140,7 +141,7 @@ spec = describe "POOL" $ do
       expectVRFs [(vrf, 1), (vrfNew, 1)]
       khNew <- freshKeyHash
       registerPoolTx <$> poolParams khNew vrf >>= \tx ->
-        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf)
+        submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf]
       passEpoch
       expectPool kh (Just vrfNew)
       expectVRFs [(vrfNew, 1)]
@@ -168,7 +169,7 @@ spec = describe "POOL" $ do
       expectVRFs [(vrf, 2)]
       -- neither pool may keep the shared VRF when re-registering ...
       registerPoolTx <$> poolParams kh1 vrf >>= \tx ->
-        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf)
+        submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh1 vrf]
       -- ... but either may switch to a fresh one
       vrfNew <- freshKeyHashVRF
       registerPoolTx <$> poolParams kh1 vrfNew >>= submitTx_
@@ -177,7 +178,7 @@ spec = describe "POOL" $ do
       -- and the shared VRF stays taken while any pool still uses it
       kh3 <- freshKeyHash
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
-        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+        submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf]
 
     it "register a pool with a VRF shared by two pools once both have retired" $ do
       (kh1, vrf) <- registerNewPool
@@ -191,7 +192,7 @@ spec = describe "POOL" $ do
       expectVRFs [(vrf, 1)]
       kh3 <- freshKeyHash
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
-        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+        submitFailingTx tx [injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf]
       -- ... and only once that one has retired as well does the VRF become available
       retirePoolTx kh2 (EpochInterval 1) >>= submitTx_
       passEpoch

@@ -121,7 +121,7 @@ datumAndReferenceInputsSpec = do
           whenMajorVersionAtMost @10 $
             submitFailingTx
               consumingTx
-              (pure . injectFailure $ Babbage.BabbageNonDisjointRefInputs badTxIns)
+              [injectFailure $ Babbage.BabbageNonDisjointRefInputs badTxIns]
           whenMajorVersionAtLeast @11 $
             when (lang > eraMaxLanguage @BabbageEra) $
               submitFailingTx @era
@@ -150,10 +150,10 @@ datumAndReferenceInputsSpec = do
             then
               submitFailingTx
                 consumingTx
-                ( pure . injectFailure $
+                [ injectFailure $
                     Alonzo.CollectErrors
                       [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-                )
+                ]
             else
               submitTxAnn_ "Consuming transaction" consumingTx
 
@@ -305,13 +305,13 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                     & bodyTxL . certsTxBodyL
                       .~ SSeq.singleton badCert
                 )
-                ( pure . injectFailure $
+                [ injectFailure $
                     Alonzo.CollectErrors
                       [ BadTranslation $
                           inject $
                             Alonzo.CertificateNotSupported badCert
                       ]
-                )
+                ]
         describe "DelegTxCert" $ do
           it "V1" $ do
             (drep, delegator, _) <- setupSingleDRep 1_000_000_000
@@ -641,9 +641,9 @@ testPlutusV1V2Failure sh badField lenz errorField = do
         & bodyTxL . inputsTxBodyL .~ Set.singleton txIn
         & bodyTxL . lenz .~ badField
     )
-    ( pure . injectFailure $
+    [ injectFailure $
         Alonzo.CollectErrors [BadTranslation errorField]
-    )
+    ]
 
 enactCostModels ::
   ConwayEraImp era =>

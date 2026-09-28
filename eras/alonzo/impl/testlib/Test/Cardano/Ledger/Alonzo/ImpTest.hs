@@ -109,6 +109,7 @@ import Data.MapExtras (fromElems)
 import Data.Maybe (catMaybes, isJust, isNothing, mapMaybe)
 import Data.Set ((\\))
 import qualified Data.Set as Set
+import qualified Data.Set.NonEmpty as NES
 import qualified Data.Text as T
 import Lens.Micro
 import Lens.Micro.Mtl (use)
@@ -533,9 +534,9 @@ submitPhase2Invalid tx = do
       -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
       -- TODO: remove `withDisabledPostSubmitTxHook` once the issue above is resolved
       SubmitTxResult {..} <- trySubmitTx tx
-      actualFailures <- expectNonEmpty strFailures
+      actualFailures <- expectNonEmptySet strFailures
       scriptPredicateFailure <- impScriptPredicateFailure strFinalTx
-      actualFailures `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
+      actualFailures `shouldBeExpr` NES.singleton (injectFailure scriptPredicateFailure)
       pure strFinalTx
   impAnn "Submit tx with IsValid False" $ do
     withNoFixup $ submitTx $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid

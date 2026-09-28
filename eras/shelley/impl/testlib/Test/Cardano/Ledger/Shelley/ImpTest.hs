@@ -312,6 +312,7 @@ import Control.State.Transition.Extended (
   SingEP (..),
   ValidationPolicy (..),
  )
+import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default (Default (..))
@@ -327,7 +328,10 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
@@ -773,7 +777,7 @@ modifyImpInitPostSubmitTxHook ::
     Globals ->
     TRC (EraRule "LEDGER" era) ->
     Either
-      (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+      (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
     ImpM t ()
   ) ->
@@ -792,7 +796,7 @@ withPostSubmitTxHook ::
     Globals ->
     TRC (EraRule "LEDGER" era) ->
     Either
-      (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+      (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
     ImpM t ()
   ) ->
@@ -972,7 +976,7 @@ data ImpTestEnv era = ImpTestEnv
       Globals ->
       TRC (EraRule "LEDGER" era) ->
       Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+        (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       ImpM t ()
   , itePostEpochBoundaryHook ::
@@ -994,7 +998,7 @@ itePostSubmitTxHookL ::
       Globals ->
       TRC (EraRule "LEDGER" era) ->
       Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+        (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       ImpM t ()
     )
@@ -1346,7 +1350,7 @@ submitTx tx = do
   pure strFinalTx
 
 data SubmitTxResult era = SubmitTxResult
-  { strFailures :: [PredicateFailure (EraRule "LEDGER" era)]
+  { strFailures :: Set (PredicateFailure (EraRule "LEDGER" era))
   , strFinalTx :: Tx TopTx era
   }
   deriving (Generic)
@@ -1380,9 +1384,9 @@ trySubmitTx tx = do
           (utxosUtxo (lsUTxOState lState))
           mempty
           txFixed
-  res <- tryRunImpRule @"LEDGER" lEnv lState stAnnTx
+  res <- first NES.fromNonEmpty <$> tryRunImpRule @"LEDGER" lEnv lState stAnnTx
 
-  -- Check for conformance
+  -- Run `postSubmitTxHook`
   let trc = TRC (lEnv, lState, stAnnTx)
   asks itePostSubmitTxHook >>= (\f -> f globals trc res)
 
@@ -1390,7 +1394,7 @@ trySubmitTx tx = do
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
       liftIO $ forM_ predFailures $ roundTripEraExpectation @era
-      pure $ SubmitTxResult (toList predFailures) txFixed
+      pure $ SubmitTxResult (NES.toSet predFailures) txFixed
     Right (newState, events) -> do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
@@ -1426,7 +1430,7 @@ submitFailingTx ::
   , ShelleyEraImp era
   ) =>
   Tx TopTx era ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingTx tx = submitFailingTxM tx . const . pure
 
@@ -1438,11 +1442,11 @@ submitFailingTxM ::
   , ShelleyEraImp era
   ) =>
   Tx TopTx era ->
-  (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
+  (Tx TopTx era -> ImpTestM era (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingTxM tx mkExpectedFailures = do
   SubmitTxResult {..} <- trySubmitTx tx
-  actualFailures <- expectNonEmpty strFailures
+  actualFailures <- expectNonEmptySet strFailures
   expectedFailures <- mkExpectedFailures strFinalTx
   expectExprEqualWithMessage
     "The predicate failures were not as expected"
@@ -1456,7 +1460,7 @@ submitFailingSubsetTx ::
   , ShelleyEraImp era
   ) =>
   Tx TopTx era ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingSubsetTx tx = submitFailingSubsetTxM tx . const . pure
 
@@ -1468,11 +1472,11 @@ submitFailingSubsetTxM ::
   , ShelleyEraImp era
   ) =>
   Tx TopTx era ->
-  (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
+  (Tx TopTx era -> ImpTestM era (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingSubsetTxM tx mkExpectedFailures = do
   SubmitTxResult {..} <- trySubmitTx tx
-  actualFailures <- expectNonEmpty strFailures
+  actualFailures <- expectNonEmptySet strFailures
   expectedFailures <- mkExpectedFailures strFinalTx
   let
     predSet = Set.fromList $ toList actualFailures

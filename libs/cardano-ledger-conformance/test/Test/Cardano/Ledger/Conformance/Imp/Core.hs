@@ -17,7 +17,7 @@ import Cardano.Ledger.Core (EraRule)
 import Control.State.Transition
 import Data.Bifunctor (Bifunctor (..))
 import Data.Data (Proxy (..))
-import Data.List.NonEmpty as NE
+import Data.Set.NonEmpty (NonEmptySet)
 import Data.Text qualified as T
 import GHC.TypeLits (symbolVal)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
@@ -43,7 +43,7 @@ conformanceHook ::
   TRC (EraRule rule era) ->
   ExecContext rule era ->
   Either
-    (NonEmpty (PredicateFailure (EraRule rule era)))
+    (NonEmptySet (PredicateFailure (EraRule rule era)))
     (State (EraRule rule era), [Event (EraRule rule era)]) ->
   ImpM t ()
 conformanceHook globals trc@(TRC (env, state, signal)) ctx impRuleResult =
@@ -98,7 +98,7 @@ submitTxConformanceHook ::
   Globals ->
   TRC (EraRule "LEDGER" era) ->
   Either
-    (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+    (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
   ImpM t ()
 submitTxConformanceHook globals trc =

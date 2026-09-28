@@ -81,6 +81,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
@@ -252,7 +253,7 @@ submitFailingSubTx ::
   , DijkstraEraImp era
   ) =>
   Tx SubTx era ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingSubTx subTx = submitFailingTx $ mkTopTxWithSubTxs [subTx]
 

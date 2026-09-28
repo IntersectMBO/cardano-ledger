@@ -220,6 +220,8 @@ import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import qualified Data.Text as T
 import Data.Tree
 import Data.Typeable (Typeable)
@@ -629,7 +631,7 @@ submitFailingVote ::
   ) =>
   Voter ->
   GovActionId ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingVote voter gaId expectedFailure =
   trySubmitVote VoteYes voter gaId >>= (`shouldBeLeftExpr` expectedFailure)
@@ -643,7 +645,7 @@ trySubmitVote ::
   Vote ->
   Voter ->
   GovActionId ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) TxId)
+  ImpTestM era (Either (NonEmptySet (PredicateFailure (EraRule "LEDGER" era))) TxId)
 trySubmitVote vote voter gaId =
   impAnn ("Submitting vote (" <> show vote <> ")") $ do
     SubmitTxResult {..} <-
@@ -662,9 +664,9 @@ trySubmitVote vote voter gaId =
                       )
                   )
               )
-    pure $ case strFailures of
-      [] -> Right $ txIdTx strFinalTx
-      (x : xs) -> Left $ x :| xs
+    pure $ case NES.fromFoldable strFailures of
+      Nothing -> Right $ txIdTx strFinalTx
+      Just s -> Left s
 
 submitProposal_ ::
   (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
@@ -710,17 +712,17 @@ trySubmitProposal ::
   , ConwayEraTxBody era
   ) =>
   ProposalProcedure era ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
+  ImpTestM era (Either (NonEmptySet (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitProposal proposal = do
   SubmitTxResult {..} <- trySubmitProposals (pure proposal)
-  pure $ case strFailures of
-    [] ->
+  pure $ case NES.fromFoldable strFailures of
+    Nothing ->
       Right
         GovActionId
           { gaidTxId = txIdTx strFinalTx
           , gaidGovActionIx = GovActionIx 0
           }
-    (x : xs) -> Left $ x :| xs
+    Just s -> Left s
 
 trySubmitProposals ::
   ( ShelleyEraImp era
@@ -739,7 +741,7 @@ submitFailingProposal ::
   , HasCallStack
   ) =>
   ProposalProcedure era ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingProposal proposal expectedFailure =
   trySubmitProposal proposal >>= (`shouldBeLeftExpr` expectedFailure)
@@ -749,13 +751,13 @@ submitFailingProposal proposal expectedFailure =
 trySubmitGovAction ::
   ConwayEraImp era =>
   GovAction era ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
+  ImpTestM era (Either (NonEmptySet (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitGovAction ga = do
   let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
   SubmitTxResult {..} <- trySubmitGovActions (pure ga)
-  pure $ case strFailures of
-    [] -> Right . mkGovActionId $ strFinalTx
-    (x : xs) -> Left $ x :| xs
+  pure $ case NES.fromFoldable strFailures of
+    Nothing -> Right . mkGovActionId $ strFinalTx
+    Just s -> Left s
 
 submitAndExpireProposalToMakeReward ::
   ConwayEraImp era =>
@@ -908,7 +910,7 @@ submitFailingGovAction ::
   , HasCallStack
   ) =>
   GovAction era ->
-  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingGovAction ga expectedFailure = trySubmitGovAction ga >>= (`shouldBeLeftExpr` expectedFailure)
 
@@ -1865,19 +1867,19 @@ submitBootstrapAwareFailingProposal_ ::
 submitBootstrapAwareFailingProposal_ p = void . submitBootstrapAwareFailingProposal p
 
 data SubmitFailureExpectation era
-  = FailBootstrap (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-  | FailPostBootstrap (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  = FailBootstrap (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
+  | FailPostBootstrap (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)))
   | FailBootstrapAndPostBootstrap (FailBoth era)
 
 data FailBoth era = FailBoth
-  { bootstrapFailures :: NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
-  , postBootstrapFailures :: NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+  { bootstrapFailures :: NonEmptySet (PredicateFailure (EraRule "LEDGER" era))
+  , postBootstrapFailures :: NonEmptySet (PredicateFailure (EraRule "LEDGER" era))
   }
 
 submitBootstrapAware ::
   EraGov era =>
   ImpTestM era a ->
-  (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)) -> ImpTestM era a) ->
+  (NonEmptySet (PredicateFailure (EraRule "LEDGER" era)) -> ImpTestM era a) ->
   SubmitFailureExpectation era ->
   ImpTestM era a
 submitBootstrapAware action failAction =

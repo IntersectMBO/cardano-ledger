@@ -65,6 +65,7 @@ module Test.Cardano.Ledger.Imp.Common (
   expectNothingExpr,
   expectNullExpr,
   expectNonEmpty,
+  expectNonEmptySet,
 
   -- * MonadGen
   module QuickCheckT,
@@ -91,6 +92,9 @@ import Control.Monad.IO.Class
 import Data.Array.Byte (ByteArray)
 import Data.List (isInfixOf)
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Set (Set)
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import qualified System.Random.Stateful as R
 import qualified Test.Cardano.Ledger.Binary.TreeDiff as TreeDiff
 import Test.Cardano.Ledger.Common as X hiding (
@@ -240,6 +244,11 @@ expectNullExpr l
 expectNonEmpty :: (HasCallStack, MonadIO m) => [a] -> m (NonEmpty a)
 expectNonEmpty (x : xs) = pure $ x :| xs
 expectNonEmpty [] = assertFailure "Expected nonempty, got empty"
+
+expectNonEmptySet :: (HasCallStack, MonadIO m, Ord a) => Set a -> m (NonEmptySet a)
+expectNonEmptySet s = case NES.fromFoldable s of
+  Just nes -> pure nes
+  Nothing -> assertFailure "Expected a nonempty set, got empty"
 
 uniformByteArrayM :: HasStatefulGen a m => Int -> m ByteArray
 uniformByteArrayM n = askStatefulGen >>= R.uniformByteArrayM False n

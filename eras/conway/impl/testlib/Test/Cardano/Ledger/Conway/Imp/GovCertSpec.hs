@@ -64,7 +64,7 @@ spec = describe "GOVCERT" $ do
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
         )
-        (pure (injectFailure $ ConwayCommitteeIsUnknown someCred))
+        [injectFailure $ ConwayCommitteeIsUnknown someCred]
     it "re-registering a CC hot key" $ do
       void registerInitialCommittee
       initialCommittee <- getCommitteeMembers
@@ -88,13 +88,13 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton
                 (RegDRepTxCert (KeyHashObj khDRep) providedDRepDeposit SNothing)
         )
-        ( pure . injectFailure $
+        [ injectFailure $
             ConwayDRepIncorrectDeposit $
               Mismatch
                 { mismatchSupplied = providedDRepDeposit
                 , mismatchExpected = expectedDRepDeposit
                 }
-        )
+        ]
     it "invalid refund provided with DRep deregistration cert" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -111,13 +111,13 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton
                 (UnRegDRepTxCert drepCred refund)
         )
-        ( pure . injectFailure $
+        [ injectFailure $
             ConwayDRepIncorrectRefund $
               Mismatch
                 { mismatchSupplied = refund
                 , mismatchExpected = drepDeposit
                 }
-        )
+        ]
     it "DRep already registered" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -131,7 +131,7 @@ spec = describe "GOVCERT" $ do
       submitTx_ regTx
       submitFailingTx
         regTx
-        (pure . injectFailure $ ConwayDRepAlreadyRegistered drepCred)
+        [injectFailure $ ConwayDRepAlreadyRegistered drepCred]
     it "unregistering a nonexistent DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -141,7 +141,7 @@ spec = describe "GOVCERT" $ do
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
         )
-        (pure . injectFailure $ ConwayDRepNotRegistered drepCred)
+        [injectFailure $ ConwayDRepNotRegistered drepCred]
     it "registering a resigned CC member hotkey" $ do
       void registerInitialCommittee
       initialCommittee <- getCommitteeMembers
@@ -159,7 +159,7 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
         submitFailingTx
           registerHotKeyTx
-          (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)
+          [injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred]
     it "resigning a nonexistent CC member hotkey" $ do
       void registerInitialCommittee
       nonExistentColdKey <- KeyHashObj <$> freshKeyHash
