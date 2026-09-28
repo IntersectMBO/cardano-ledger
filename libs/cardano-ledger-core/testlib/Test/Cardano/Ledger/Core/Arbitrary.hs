@@ -101,6 +101,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Slotting.Slot (SlotInterval (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -191,6 +192,9 @@ instance Arbitrary Port where
 
 instance Arbitrary Milliseconds32 where
   arbitrary = Milliseconds32 <$> arbitrary
+
+instance Arbitrary SlotInterval where
+  arbitrary = SlotInterval <$> arbitrary
 
 -- JSON instances can't roundtrip, unless these are decimal.
 

@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `ToPlutusData` instance for `SlotInterval`
 * Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`
 * Rename `EraIndependentEb` to `EraIndependentEbReferences`
 * Add `EbReferencesAnnouncement` (moved and renamed from `EbAnnouncement` in `cardano-protocol`)
@@ -77,6 +78,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` and `ToExpr` instances for `SlotInterval`
 * Add `tbhEbRefsAnn` to `TestBlockHeader`
 * Regenerate the compiled scripts in `Test.Cardano.Ledger.Plutus.Examples` with `plutus-tx-1.70`.
   All `PlutusV3` and `PlutusV4` script hashes change, and the `PlutusV4` scripts now expect the
