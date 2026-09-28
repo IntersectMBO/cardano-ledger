@@ -1,25 +1,29 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary () where
+module Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary (genHeader) where
 
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Binary (DecCBOR)
+import Cardano.Ledger.Binary (DecCBOR, Version, natVersion)
 import Cardano.Ledger.Block (Block (Block), EbReferencesAnnouncement (EbReferencesAnnouncement))
 import Cardano.Ledger.Core (BlockBody, EraBlockBody)
+import Cardano.Ledger.MemoBytes (mkMemoized)
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Leios.BlockHeader (
-  Header (Header, HeaderConstr),
+  Header (HeaderConstr),
   HeaderBody (HeaderBody),
+  HeaderRaw (HeaderRaw),
  )
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -49,6 +53,20 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+genHeader ::
+  ( Crypto c
+  , VRF.Signable (VRF c) ~ SignableRepresentation
+  , KES.Signable (KES c) ~ SignableRepresentation
+  ) =>
+  Version ->
+  Gen (Header c)
+genHeader version = do
+  hBody <- arbitrary
+  period <- arbitrary
+  sKey <- arbitrary
+  let hSig = KES.unsoundPureSignedKES () period hBody sKey
+  pure $ mkMemoized version $ HeaderRaw hBody hSig
+
 instance
   ( Crypto c
   , VRF.Signable (VRF c) ~ SignableRepresentation
@@ -56,12 +74,7 @@ instance
   ) =>
   Arbitrary (Header c)
   where
-  arbitrary = do
-    hBody <- arbitrary
-    period <- arbitrary
-    sKey <- arbitrary
-    let hSig = KES.unsoundPureSignedKES () period hBody sKey
-    pure $ Header hBody hSig
+  arbitrary = genHeader =<< elements [natVersion @12 .. maxBound]
 
 deriving newtype instance Crypto c => DecCBOR (Header c)
 
@@ -74,4 +87,4 @@ instance
   ) =>
   Arbitrary (Block (Header c) era)
   where
-  arbitrary = Block <$> arbitrary <*> arbitrary
+  arbitrary = Block <$> genHeader (natVersion @12) <*> arbitrary

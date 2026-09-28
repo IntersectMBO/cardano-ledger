@@ -2,6 +2,8 @@
 
 ## 0.2.0.0
 
+* Remove the `Header` pattern synonym from `Cardano.Protocol.Leios.BlockHeader`
+* Add `mkHeader`, `headerBody` and `headerSig`, `HeaderRaw` to `Cardano.Protocol.Leios.BlockHeader`
 * Rename `hbEbAnnouncement` to `hbEbReferencesAnnouncement` and change its type to `EbReferencesAnnouncement`
 * Remove `EbAnnouncement` (moved to `cardano-ledger-core`)
 * Change the `hbProtVer` field of the Leios `HeaderBody` to `hbVersionInfo :: BlockHeaderVersionInfo`
@@ -10,6 +12,7 @@
 
 ### `testlib`
 
+* Add `genHeader` to `Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary`
 * Add `testlib` with `Test.Cardano.Protocol.TPraos.BlockHeader.Arbitrary`, `Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary` and `Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary`, providing `Arbitrary` instances for `OCert`, `KESPeriod`, `PrevHash`, `InputVRF`, the TPraos `BHeader`/`BHBody`/`Block`, and the Praos and Leios `Header`/`HeaderBody`/`Block`, and non-annotator `DecCBOR` instances for the TPraos `BHeader` and the Praos and Leios `Header`
 
 ## 0.1.0.0
