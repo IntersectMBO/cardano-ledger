@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Add `poolReapAssertions`
+* Export `renderPoolReapViolation`
 * Remove `nesPd` field from `NewEpochState` and `nesPdL`:
   - Add `nesStakePoolDistrG`, which reads the stake pool distribution from the set snapshot instead
   - Remove the re-export of `ssStakeMarkPoolDistrL` from `Cardano.Ledger.Shelley.LedgerState`
