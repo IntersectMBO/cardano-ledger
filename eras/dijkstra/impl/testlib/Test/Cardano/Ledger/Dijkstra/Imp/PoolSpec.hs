@@ -139,6 +139,7 @@ spec = describe "POOL" $ do
       -- the pool keeps producing blocks with the original VRF until the
       -- epoch boundary, so it must still be tracked
       expectPool kh (Just vrf)
+      expectFuturePool kh (Just vrfNew)
       expectVRFs [(vrf, 1), (vrfNew, 1)]
       khNew <- freshKeyHash
       registerPoolTx <$> poolParams khNew vrf >>= \tx ->
@@ -146,9 +147,14 @@ spec = describe "POOL" $ do
       passEpoch
       expectPool kh (Just vrfNew)
       expectVRFs [(vrfNew, 1)]
-      -- after the epoch boundary the original VRF can be taken over
+      -- after the epoch boundary the original VRF can be taken over ...
       registerPoolTx <$> poolParams khNew vrf >>= submitTx_
+      expectPool khNew (Just vrf)
       expectVRFs [(vrf, 1), (vrfNew, 1)]
+      -- ... but only by a single pool
+      kh3 <- freshKeyHash
+      registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
 
     it "re-registering with the active VRF releases the pending future VRF" $ do
       (kh, vrf) <- registerNewPool
@@ -162,6 +168,28 @@ spec = describe "POOL" $ do
       khNew <- freshKeyHash
       registerPoolTx <$> poolParams khNew vrfNew >>= submitTx_
       expectPool khNew (Just vrfNew)
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
+
+    it "oscillating between the active and a fresh VRF within an epoch keeps the active one taken" $ do
+      (kh, vrf) <- registerNewPool
+      vrfNew <- freshKeyHashVRF
+      -- switch to a fresh VRF, back to the active one and to the fresh one again
+      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
+      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      expectVRFs [(vrf, 1)]
+      registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+      expectPool kh (Just vrf)
+      expectFuturePool kh (Just vrfNew)
+      -- the active VRF stays in use until the epoch boundary, so it must stay taken
+      expectVRFs [(vrf, 1), (vrfNew, 1)]
+      khNew <- freshKeyHash
+      registerPoolTx <$> poolParams khNew vrf >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered khNew vrf)
+      passEpoch
+      expectPool kh (Just vrfNew)
+      expectVRFs [(vrfNew, 1)]
+      registerPoolTx <$> poolParams khNew vrf >>= submitTx_
       expectVRFs [(vrf, 1), (vrfNew, 1)]
 
     it "re-register a pool whose VRF is shared with another pool" $ do
