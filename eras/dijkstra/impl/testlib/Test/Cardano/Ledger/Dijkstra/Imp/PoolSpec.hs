@@ -20,6 +20,7 @@ import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Word
 import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -179,6 +180,61 @@ spec = describe "POOL" $ do
       kh3 <- freshKeyHash
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+
+    describe "a VRF shared by two pools" $ do
+      -- GHC 9.14 requires the type signatures of these helpers: without them, type checking
+      -- this module does not finish and the build times out.
+      let registerTwoPoolsSharingVRF ::
+            ImpTestM era (KeyHash StakePool, KeyHash StakePool, VRFVerKeyHash StakePoolVRF)
+          registerTwoPoolsSharingVRF = do
+            (kh1, vrf) <- registerNewPool
+            kh2 <- registerPoolSharingVRF vrf
+            expectVRFs [(vrf, 2)]
+            pure (kh1, kh2, vrf)
+          switchToFreshVRF :: KeyHash StakePool -> ImpTestM era (VRFVerKeyHash StakePoolVRF)
+          switchToFreshVRF kh = do
+            vrfNew <- freshKeyHashVRF
+            registerPoolTx <$> poolParams kh vrfNew >>= submitTx_
+            pure vrfNew
+          -- The shared VRF has been released: only the given counts are left, and another
+          -- pool can register with it.
+          expectReleased ::
+            VRFVerKeyHash StakePoolVRF -> [(VRFVerKeyHash StakePoolVRF, Word64)] -> ImpTestM era ()
+          expectReleased vrf vrfs = do
+            expectVRFs vrfs
+            kh <- freshKeyHash
+            registerPoolTx <$> poolParams kh vrf >>= submitTx_
+            expectPool kh (Just vrf)
+            expectVRFs $ (vrf, 1) : vrfs
+
+      it "stays taken across the epoch boundary when one holder moves away" $ do
+        -- When one holder switches to a fresh VRF, the other pool's reference to the
+        -- shared VRF must survive the epoch boundary.
+        (kh1, kh2, vrf) <- registerTwoPoolsSharingVRF
+        vrfNew1 <- switchToFreshVRF kh1
+        expectVRFs [(vrf, 2), (vrfNew1, 1)]
+        passEpoch
+        expectPool kh1 (Just vrfNew1)
+        expectVRFs [(vrf, 1), (vrfNew1, 1)]
+        -- the VRF is still in use by the other pool, so it cannot be claimed
+        kh3 <- freshKeyHash
+        registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
+          submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
+        -- it only becomes available once the last holder moves away as well
+        vrfNew2 <- switchToFreshVRF kh2
+        passEpoch
+        expectReleased vrf [(vrfNew1, 1), (vrfNew2, 1)]
+
+      it "is released once both holders move away in the same epoch" $ do
+        (kh1, kh2, vrf) <- registerTwoPoolsSharingVRF
+        vrfNew1 <- switchToFreshVRF kh1
+        vrfNew2 <- switchToFreshVRF kh2
+        expectVRFs [(vrf, 2), (vrfNew1, 1), (vrfNew2, 1)]
+        passEpoch
+        expectPool kh1 (Just vrfNew1)
+        expectPool kh2 (Just vrfNew2)
+        -- no pool holds the shared VRF any more, so it is up for grabs again
+        expectReleased vrf [(vrfNew1, 1), (vrfNew2, 1)]
 
     it "register a pool with a VRF shared by two pools once both have retired" $ do
       (kh1, vrf) <- registerNewPool
