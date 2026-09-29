@@ -86,7 +86,6 @@ import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..))
-import Control.Monad (join)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
@@ -193,12 +192,7 @@ class
 -- nested `Either`
 newtype PlutusTxInfoResult l era
   = PlutusTxInfoResult
-  { unPlutusTxInfoResult ::
-      Either
-        (ContextError era)
-        ( PlutusPurpose AsPurpose era ->
-          Either (ContextError era) (PlutusTxInfo l)
-        )
+  { unPlutusTxInfoResult :: Either (ContextError era) (PlutusTxInfo l)
   }
 
 -- | Given the prepared `PlutusTxInfoResult` and the purpose this function allows constructing the `PlutusTxInfo`, while memoizing the computation from  `PlutusTxInfoResult` for its subsequent uses.
@@ -206,8 +200,8 @@ mkPlutusTxInfoFromResult ::
   PlutusPurpose AsPurpose era ->
   PlutusTxInfoResult l era ->
   Either (ContextError era) (PlutusTxInfo l)
-mkPlutusTxInfoFromResult sp (PlutusTxInfoResult txInfoResult) =
-  join $ ($ sp) <$> txInfoResult
+mkPlutusTxInfoFromResult _sp (PlutusTxInfoResult txInfoResult) = txInfoResult
+{-# DEPRECATED mkPlutusTxInfoFromResult "In favor of `unPlutusTxInfoResult`" #-}
 
 -- | This is what `toPlutusTxInfo` would be without the intermediate `PlutusTxInfoResult`.
 --

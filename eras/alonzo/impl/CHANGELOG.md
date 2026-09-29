@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Remove nested `Either` in `PlutusTxInfoResult` and remove `PlutusPurpose` argument
+* Deprecate `mkPlutusTxInfoFromResult` as no longer needed
 * Make `LedgerTxInfo` level aware
 * Add `HasEraTxLevel` for `LedgerTxInfo`
 * Add `LedgerLevelTxInfo`

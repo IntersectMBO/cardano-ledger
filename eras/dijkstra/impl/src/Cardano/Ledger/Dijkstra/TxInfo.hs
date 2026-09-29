@@ -349,22 +349,19 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV1.TxInfo
-            { PV1.txInfoInputs = inputs
-            , PV1.txInfoOutputs = outputs
-            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-            , PV1.txInfoDCert = txCerts
-            , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
-            , PV1.txInfoValidRange = timeRange
-            , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV1.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV1.TxInfo
+          { PV1.txInfoInputs = inputs
+          , PV1.txInfoOutputs = outputs
+          , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+          , PV1.txInfoDCert = txCerts
+          , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV1.txInfoId = Alonzo.transTxBodyId txBody
+          }
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -413,24 +410,21 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- Babbage.transTxRedeemers proxy lti
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV2.TxInfo
-            { PV2.txInfoInputs = inputs
-            , PV2.txInfoOutputs = outputs
-            , PV2.txInfoReferenceInputs = refInputs
-            , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-            , PV2.txInfoDCert = txCerts
-            , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
-            , PV2.txInfoValidRange = timeRange
-            , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV2.txInfoRedeemers = plutusRedeemers
-            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV2.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV2.TxInfo
+          { PV2.txInfoInputs = inputs
+          , PV2.txInfoOutputs = outputs
+          , PV2.txInfoReferenceInputs = refInputs
+          , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+          , PV2.txInfoDCert = txCerts
+          , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
+          , PV2.txInfoValidRange = timeRange
+          , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV2.txInfoRedeemers = plutusRedeemers
+          , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV2.txInfoId = Alonzo.transTxBodyId txBody
+          }
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
@@ -460,33 +454,30 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- Babbage.transTxRedeemers proxy lti
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV3.TxInfo
-            { PV3.txInfoInputs = inputsInfo
-            , PV3.txInfoOutputs = outputs
-            , PV3.txInfoReferenceInputs = refInputsInfo
-            , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
-            , PV3.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
-            , PV3.txInfoTxCerts = txCerts
-            , PV3.txInfoWdrl = Conway.transTxBodyWithdrawals txBody
-            , PV3.txInfoValidRange = timeRange
-            , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV3.txInfoRedeemers = plutusRedeemers
-            , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV3.txInfoId = Conway.transTxBodyId txBody
-            , PV3.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
-            , PV3.txInfoProposalProcedures =
-                map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
-            , PV3.txInfoCurrentTreasuryAmount =
-                strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
-            , PV3.txInfoTreasuryDonation =
-                case txBody ^. treasuryDonationTxBodyL of
-                  Coin 0 -> Nothing
-                  coin -> Just $ transCoinToLovelace coin
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV3.TxInfo
+          { PV3.txInfoInputs = inputsInfo
+          , PV3.txInfoOutputs = outputs
+          , PV3.txInfoReferenceInputs = refInputsInfo
+          , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
+          , PV3.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
+          , PV3.txInfoTxCerts = txCerts
+          , PV3.txInfoWdrl = Conway.transTxBodyWithdrawals txBody
+          , PV3.txInfoValidRange = timeRange
+          , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV3.txInfoRedeemers = plutusRedeemers
+          , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV3.txInfoId = Conway.transTxBodyId txBody
+          , PV3.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
+          , PV3.txInfoProposalProcedures =
+              map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
+          , PV3.txInfoCurrentTreasuryAmount =
+              strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
+          , PV3.txInfoTreasuryDonation =
+              case txBody ^. treasuryDonationTxBodyL of
+                Coin 0 -> Nothing
+                coin -> Just $ transCoinToLovelace coin
+          }
 
   toPlutusArgs = Conway.toPlutusV3Args
 
@@ -604,36 +595,34 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- Babbage.transTxRedeemers proxy lti
-      let
-        txInfo =
-          PV4.TxInfo
-            { PV4.txInfoInputs = inputsInfo
-            , PV4.txInfoOutputs = outputs
-            , PV4.txInfoReferenceInputs = refInputsInfo
-            , PV4.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
-            , PV4.txInfoTxCerts = txCerts
-            , PV4.txInfoValidRange = timeRange
-            , PV4.txInfoRedeemers = plutusRedeemers
-            , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
-            , PV4.txInfoId = Conway.transTxBodyId txBody
-            , PV4.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
-            , PV4.txInfoProposalProcedures =
-                map (transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
-            , PV4.txInfoCurrentTreasuryAmount =
-                strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
-            , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx =
-                case ltiLevelTxInfo of
-                  LedgerTopTxInfo {} -> Nothing
-                  LedgerSubTxInfo txIx -> Just $ transTxIx txIx
-            , PV4.txInfoWithdrawals = transWithdrawals $ txBody ^. withdrawalsTxBodyL
-            , PV4.txInfoDirectDeposits = transDirectDeposits $ txBody ^. directDepositsTxBodyL
-            , PV4.txInfoAccountBalanceIntervals =
-                transAccountBalanceIntervals $ txBody ^. accountBalanceIntervalsTxBodyL
-            , PV4.txInfoGuards = transTxBodyGuards txBody
-            , PV4.txInfoRequiredTopLevelGuards = transTxBodyRequiredTopLevelGuards txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV4.TxInfo
+          { PV4.txInfoInputs = inputsInfo
+          , PV4.txInfoOutputs = outputs
+          , PV4.txInfoReferenceInputs = refInputsInfo
+          , PV4.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
+          , PV4.txInfoTxCerts = txCerts
+          , PV4.txInfoValidRange = timeRange
+          , PV4.txInfoRedeemers = plutusRedeemers
+          , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+          , PV4.txInfoId = Conway.transTxBodyId txBody
+          , PV4.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
+          , PV4.txInfoProposalProcedures =
+              map (transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
+          , PV4.txInfoCurrentTreasuryAmount =
+              strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
+          , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
+          , PV4.txInfoSubTxIx =
+              case ltiLevelTxInfo of
+                LedgerTopTxInfo {} -> Nothing
+                LedgerSubTxInfo txIx -> Just $ transTxIx txIx
+          , PV4.txInfoWithdrawals = transWithdrawals $ txBody ^. withdrawalsTxBodyL
+          , PV4.txInfoDirectDeposits = transDirectDeposits $ txBody ^. directDepositsTxBodyL
+          , PV4.txInfoAccountBalanceIntervals =
+              transAccountBalanceIntervals $ txBody ^. accountBalanceIntervalsTxBodyL
+          , PV4.txInfoGuards = transTxBodyGuards txBody
+          , PV4.txInfoRequiredTopLevelGuards = transTxBodyRequiredTopLevelGuards txBody
+          }
 
   toPlutusArgs = toPlutusV4Args
 
@@ -845,14 +834,13 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
   subTransactionsWithDatums <-
     forM (OMap.elems (ltiTx ^. bodyTxL . subTransactionsTxBodyL)) $ \subTx -> do
       let txId = txIdTx subTx
-      mkTxInfo <- unPlutusTxInfoResult $
-        case Map.lookup txId subTxInfoResults of
-          Nothing -> error $ "Missing TxInfoResult for " <> show txId
-          Just txInfoResults ->
-            lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
       subTxInfo <-
         left (inject . SubTxContextError txId) $
-          mkTxInfo (error "Unevaluated. TODO: Remove purpose argument")
+          unPlutusTxInfoResult $
+            case Map.lookup txId subTxInfoResults of
+              Nothing -> error $ "Missing TxInfoResult for " <> show txId
+              Just txInfoResults ->
+                lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
       pure (subTxInfo, lookupRequiredTopLevelGuardDatum subTx)
 
   let

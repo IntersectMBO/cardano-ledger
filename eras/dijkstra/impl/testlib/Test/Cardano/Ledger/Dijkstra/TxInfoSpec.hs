@@ -278,9 +278,7 @@ spec = describe "TxInfo" $ do
         let
           tx = mkBasicTx @era @SubTx mkBasicTxBody
           ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerSubTxInfo (TxIx 0)
-          txInfoResult =
-            ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+          txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
         txInfoResult
           `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
       prop "DirectDepositsNotSupported" $ do
@@ -292,9 +290,7 @@ spec = describe "TxInfo" $ do
             mkBasicTx @era @TopTx $
               mkBasicTxBody & directDepositsTxBodyL .~ dd
           ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-          txInfoResult =
-            ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+          txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
         pure $
           txInfoResult `shouldBeLeft` inject (DirectDepositsNotSupported @era dd)
       prop "AccountBalanceIntervalsNotSupported" $ \neAccountBalanceIntervals ->
@@ -304,9 +300,7 @@ spec = describe "TxInfo" $ do
             mkBasicTx @era @TopTx $
               mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ abi
           ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-          txInfoResult =
-            ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+          txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
       prop "GuardScriptHashesNotSupported" $ \(scriptHash :: ScriptHash) ->
@@ -317,9 +311,7 @@ spec = describe "TxInfo" $ do
             mkBasicTx @era @TopTx $
               mkBasicTxBody & guardsTxBodyL .~ guards
           ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-          txInfoResult =
-            ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+          txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (GuardScriptHashesNotSupported @era neScriptHashes)
       prop "RequiredTopLevelGuardsNotSupported" $ \neRequiredTopLevelGuards ->
@@ -328,9 +320,7 @@ spec = describe "TxInfo" $ do
             mkBasicTx @era @TopTx $
               mkBasicTxBody & requiredTopLevelGuardsL .~ NEM.toMap neRequiredTopLevelGuards
           ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-          txInfoResult =
-            ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+          txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult
             `shouldBeLeft` inject (RequiredTopLevelGuardsNotSupported @era neRequiredTopLevelGuards)

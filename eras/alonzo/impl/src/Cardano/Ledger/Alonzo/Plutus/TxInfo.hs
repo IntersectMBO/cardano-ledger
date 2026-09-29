@@ -52,11 +52,7 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts (
-  PlutusScript (..),
-  toAsItem,
-  toAsPurpose,
- )
+import Cardano.Ledger.Alonzo.Scripts (PlutusScript (..), toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (TxDats, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
 import Cardano.Ledger.BaseTypes (
@@ -116,8 +112,7 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
   case script of
     SupportedPlutusRunnable plutusRunnable -> do
       let slang = isLanguage `asSameLanguage` plutusRunnable
-      mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
-      txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
+      txInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
       plutusArgs <-
         toPlutusArgs
           slang
@@ -146,24 +141,21 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
         transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
       txCerts <- transTxBodyCerts proxy ltiProtVer txBody
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV1.TxInfo
-            { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
-              -- preserve this behavior by only retaining the Just case:
-              PV1.txInfoInputs = catMaybes txInsMaybes
-            , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
-            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
-            , PV1.txInfoDCert = txCerts
-            , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
-            , PV1.txInfoValidRange = timeRange
-            , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
-            , PV1.txInfoId = transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV1.TxInfo
+          { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
+            -- preserve this behavior by only retaining the Just case:
+            PV1.txInfoInputs = catMaybes txInsMaybes
+          , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
+          , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
+          , PV1.txInfoDCert = txCerts
+          , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
+          , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
+          , PV1.txInfoId = transTxBodyId txBody
+          }
 
   toPlutusArgs = toPlutusV1Args
 

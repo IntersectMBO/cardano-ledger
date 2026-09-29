@@ -377,22 +377,19 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV1.TxInfo
-            { PV1.txInfoInputs = inputs
-            , PV1.txInfoOutputs = outputs
-            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-            , PV1.txInfoDCert = txCerts
-            , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
-            , PV1.txInfoValidRange = timeRange
-            , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV1.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right $
+        PV1.TxInfo
+          { PV1.txInfoInputs = inputs
+          , PV1.txInfoOutputs = outputs
+          , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+          , PV1.txInfoDCert = txCerts
+          , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV1.txInfoId = Alonzo.transTxBodyId txBody
+          }
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -417,24 +414,21 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- transTxRedeemers proxy lti
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV2.TxInfo
-            { PV2.txInfoInputs = inputs
-            , PV2.txInfoOutputs = outputs
-            , PV2.txInfoReferenceInputs = refInputs
-            , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-            , PV2.txInfoDCert = txCerts
-            , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
-            , PV2.txInfoValidRange = timeRange
-            , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV2.txInfoRedeemers = plutusRedeemers
-            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV2.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV2.TxInfo
+          { PV2.txInfoInputs = inputs
+          , PV2.txInfoOutputs = outputs
+          , PV2.txInfoReferenceInputs = refInputs
+          , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+          , PV2.txInfoDCert = txCerts
+          , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
+          , PV2.txInfoValidRange = timeRange
+          , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV2.txInfoRedeemers = plutusRedeemers
+          , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV2.txInfoId = Alonzo.transTxBodyId txBody
+          }
 
   toPlutusArgs = toPlutusV2Args
 
