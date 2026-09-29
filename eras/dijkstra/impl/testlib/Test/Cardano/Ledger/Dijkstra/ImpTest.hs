@@ -29,8 +29,8 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   submitFailingSubTx,
   submitFailingMempoolTx,
   expectMempoolRejection,
-  phase2InvalidTxWithSubTxs,
   voteSubTx,
+  declareTreasurySubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -142,6 +142,7 @@ class
   , InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -202,6 +203,9 @@ instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra
 
 instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
   injectFailure = SubCertFailure . injectFailure @"SUBCERT"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
 
 -- | A top level transaction that nests the given sub-transactions and
 -- is otherwise empty.
@@ -280,18 +284,6 @@ expectMempoolRejection result expectedFailures = case result of
   Right _ ->
     assertFailure $ "Expected a mempool rejection with: " <> show expectedFailures
 
--- | A top level transaction that nests the given sub-transactions and
--- is phase-2 invalid, so that the sub-transactions are only partially
--- processed.
-phase2InvalidTxWithSubTxs ::
-  (HasCallStack, DijkstraEraImp era) =>
-  [Tx SubTx era] ->
-  ImpTestM era (Tx TopTx era)
-phase2InvalidTxWithSubTxs subTxs = do
-  failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
-  fixedUpTx <- fixupTx $ mkTopTxWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
-  pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
-
 -- | A sub-transaction that casts a single vote.
 voteSubTx :: DijkstraEraImp era => Vote -> Voter -> GovActionId -> Tx SubTx era
 voteSubTx vote voter govActionId =
@@ -302,6 +294,11 @@ voteSubTx vote voter govActionId =
           ( Map.singleton voter . Map.singleton govActionId $
               VotingProcedure {vProcVote = vote, vProcAnchor = SNothing}
           )
+
+-- | A sub-transaction that declares the given value as the current treasury value.
+declareTreasurySubTx :: DijkstraEraImp era => Coin -> Tx SubTx era
+declareTreasurySubTx declaredTreasury =
+  mkBasicTx $ mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
