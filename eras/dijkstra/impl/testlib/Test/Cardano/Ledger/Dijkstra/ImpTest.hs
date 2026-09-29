@@ -131,6 +131,7 @@ class
   , DijkstraEraBlockBody era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraPoolPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
   , InjectRuleFailure "LEDGER" SubEntitiesPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraUtxoPredFailure era
