@@ -208,25 +208,24 @@ spec = describe "LEDGER" $ do
         ]
 
   describe "A phase-2 invalid top level transaction" $ do
-    it "is accepted when it exercises neither check" $ do
-      topTx <- phase2InvalidTx $ mkBasicTx mkBasicTxBody
-      withNoFixup $ submitTx_ topTx
+    it "is accepted when it exercises neither check" $
+      submitPhase2Invalid_ =<< switchTxToPhase2InvalidLegacyMode (mkBasicTx mkBasicTxBody)
 
     disableInConformanceIt "is not checked for the treasury value" $ do
       actualTreasury <- getsNES treasuryL
       topTx <-
-        phase2InvalidTx . mkBasicTx $
+        switchTxToPhase2InvalidLegacyMode . mkBasicTx $
           mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust (actualTreasury <> Coin 1)
-      withNoFixup $ submitTx_ topTx
+      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
 
     disableInConformanceIt "is not checked for the reference script size" $ do
       (size, refTxIn) <- refScriptInput
       modifyPParams $ ppMaxRefScriptSizePerTxL .~ fromIntegral (size - 1)
 
       topTx <-
-        phase2InvalidTx . mkBasicTx $
+        switchTxToPhase2InvalidLegacyMode . mkBasicTx $
           mkBasicTxBody & referenceInputsTxBodyL .~ Set.singleton refTxIn
-      withNoFixup $ submitTx_ topTx
+      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
 
 -- | The size in bytes of a reference script, and an input that carries it.
 refScriptInput :: forall era. DijkstraEraImp era => ImpTestM era (Int, TxIn)

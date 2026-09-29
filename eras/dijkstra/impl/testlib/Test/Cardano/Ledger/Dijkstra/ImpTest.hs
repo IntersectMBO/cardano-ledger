@@ -29,7 +29,6 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   submitFailingSubTx,
   submitFailingMempoolTx,
   expectMempoolRejection,
-  phase2InvalidTx,
   voteSubTx,
   declareTreasurySubTx,
 ) where
@@ -284,20 +283,6 @@ expectMempoolRejection result expectedFailures = case result of
     applyTxError `shouldBeExpr` inject (injectFailure @"MEMPOOL" <$> expectedFailures)
   Right _ ->
     assertFailure $ "Expected a mempool rejection with: " <> show expectedFailures
-
--- | The given transaction, fixed up and made phase-2 invalid by spending an
--- additional input locked by an always failing script.
---
--- Any sub-transactions it nests are then only partially processed. The result
--- is already fixed up, so it must be submitted with `withNoFixup`.
-phase2InvalidTx ::
-  (HasCallStack, DijkstraEraImp era) =>
-  Tx TopTx era ->
-  ImpTestM era (Tx TopTx era)
-phase2InvalidTx tx = do
-  failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
-  fixedUpTx <- fixupTx $ tx & bodyTxL . inputsTxBodyL %~ Set.insert failingScriptTxIn
-  pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid
 
 -- | A sub-transaction that casts a single vote.
 voteSubTx :: DijkstraEraImp era => Vote -> Voter -> GovActionId -> Tx SubTx era

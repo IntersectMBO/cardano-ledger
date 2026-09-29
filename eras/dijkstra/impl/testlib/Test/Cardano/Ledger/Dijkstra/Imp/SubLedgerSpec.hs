@@ -63,6 +63,6 @@ spec = describe "SUBLEDGER" $ do
     disableInConformanceIt "raises no SUBLEDGER failure" $ do
       actualTreasury <- getsNES treasuryL
       topTx <-
-        phase2InvalidTx . mkTopTxWithSubTxs $
+        switchTxToPhase2InvalidLegacyMode . mkTopTxWithSubTxs $
           [declareTreasurySubTx $ actualTreasury <> Coin 1]
-      withNoFixup $ submitTx_ topTx
+      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid

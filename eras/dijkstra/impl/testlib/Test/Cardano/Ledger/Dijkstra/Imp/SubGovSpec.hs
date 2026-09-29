@@ -614,8 +614,8 @@ spec = describe "SUBGOV" $ do
     it "raises no SUBGOV failure" $ do
       account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
-      topTx <- phase2InvalidTx $ mkTopTxWithSubTxs [proposeSubTx proposal]
-      withNoFixup $ submitTx_ topTx
+      topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs [proposeSubTx proposal]
+      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
 
 -- | Expect the given voter to have cast the given vote on a governance action.
 expectVote :: (HasCallStack, DijkstraEraImp era) => GovActionId -> Voter -> Vote -> ImpTestM era ()

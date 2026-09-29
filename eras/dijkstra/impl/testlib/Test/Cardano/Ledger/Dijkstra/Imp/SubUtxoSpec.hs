@@ -357,33 +357,31 @@ spec = describe "SUBUTXO" $ do
     it "still rejects a sub-transaction with the wrong network id in its body" $ do
       let subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & networkIdTxBodyL .~ SJust Mainnet
-      topTx <- phase2InvalidTx $ mkTopTxWithSubTxs [subTx]
-      withNoFixup $
-        submitFailingTx
-          topTx
-          [ injectFailure . SubWrongNetworkInTxBody @era $
-              Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
-          ]
+      topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs [subTx]
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure . SubWrongNetworkInTxBody @era $
+            Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
+        ]
 
     it "does not check the threaded UTxO, so two sub-transactions may name one input" $ do
       (sharedTxIn, subTxs) <- subTxsSpendingOneInput
-      topTx <- phase2InvalidTx $ mkTopTxWithSubTxs subTxs
-      withNoFixup $ submitTx_ topTx
+      topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs subTxs
+      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
       void $ impGetUTxO sharedTxIn
 
     it "spending an output from an earlier sub-tx fails twice" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       topTx <-
-        phase2InvalidTx . mkTopTxWithSubTxs $
+        switchTxToPhase2InvalidLegacyMode . mkTopTxWithSubTxs $
           [ producingSubTx
           , mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [producedTxIn]
           ]
-      withNoFixup $
-        submitFailingTx
-          topTx
-          [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
-          , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
-          ]
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        ]
 
 freshSubTxProducingOutput ::
   (HasCallStack, DijkstraEraImp era) =>
