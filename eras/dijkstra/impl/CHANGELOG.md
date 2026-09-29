@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
+* Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
 * Add `WithdrawalAccountsMissingFromOriginal` constructor to `EntitiesPredFailure`
 * Rename `EntitiesPredFailure` constructors:
