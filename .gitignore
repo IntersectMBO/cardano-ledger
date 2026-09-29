@@ -35,6 +35,7 @@ cabal.project.local
 stack.yaml.lock
 .ghc.environment.*
 ghcid.txt
+.tricorder.yaml
 
 ## Editors
 TAGS

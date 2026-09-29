@@ -118,6 +118,7 @@ test-suite cardano-data-tests
     aeson,
     base,
     bytestring,
+    cardano-base:testlib >=0.1.7.1,
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-strict-containers:{cardano-strict-containers, testlib},
