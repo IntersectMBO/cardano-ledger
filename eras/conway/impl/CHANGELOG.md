@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Augment the `TICKF` rule to also rotate the stake snapshots, set := mark and go := set (mark is left as-is, since it's unused by forecasts)
 * Remove `transPlutusPurposeV1V2`, superseded by `Alonzo.transPlutusPurpose`
 * No longer export the `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors of `ConwayContextError`, in favor of the same cases defined in Alonzo.
 * Add `conwayInjectIntoTestState`
