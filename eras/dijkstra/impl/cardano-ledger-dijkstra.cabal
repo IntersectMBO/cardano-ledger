@@ -216,7 +216,7 @@ library testlib
     microlens,
     microlens-mtl,
     mtl,
-    plutus-ledger-api,
+    plutus-ledger-api >=1.71,
     small-steps,
     tree-diff,
 

@@ -787,15 +787,15 @@ scriptPurposeToScriptInfo ::
   PV4.TxInfo ->
   PlutusPurpose AsIx era ->
   PV4.ScriptPurpose ->
-  Either (ContextError era) (PV2.ScriptHash, PV4.ScriptInfo)
+  Either (ContextError era) PV4.ScriptInfo
 scriptPurposeToScriptInfo proxy datum lti txInfo ixPlutusPurpose = \case
-  PV4.Spending sh ref -> pure (sh, PV4.SpendingScript ref datum)
-  PV4.Minting sh currencySymbol -> pure (sh, PV4.MintingScript currencySymbol)
-  PV4.Withdrawing sh credential -> pure (sh, PV4.WithdrawingScript $ PV4.AccountId credential)
-  PV4.Certifying sh ix cert -> pure (sh, PV4.CertifyingScript ix cert)
-  PV4.Voting sh vote -> pure (sh, PV4.VotingScript vote)
-  PV4.Proposing sh ix proposal -> pure (sh, PV4.ProposingScript ix proposal)
-  PV4.Guarding sh ix -> do
+  PV4.Spending _ ref -> pure (PV4.SpendingScript ref datum)
+  PV4.Minting _ currencySymbol -> pure (PV4.MintingScript currencySymbol)
+  PV4.Withdrawing _ credential -> pure (PV4.WithdrawingScript $ PV4.AccountId credential)
+  PV4.Certifying _ ix cert -> pure (PV4.CertifyingScript ix cert)
+  PV4.Voting _ vote -> pure (PV4.VotingScript vote)
+  PV4.Proposing _ ix proposal -> pure (PV4.ProposingScript ix proposal)
+  PV4.Guarding _ ix -> do
     guardingScriptHash <- case Map.lookup ixPlutusPurpose (ltiScriptHashesUsed lti) of
       Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPlutusPurpose
       Just scriptHash -> Right scriptHash
@@ -804,7 +804,17 @@ scriptPurposeToScriptInfo proxy datum lti txInfo ixPlutusPurpose = \case
         lti
         (fmap Just . transGuardingTopTxInfo proxy txInfo guardingScriptHash)
         (\_ -> pure Nothing)
-    pure (sh, PV4.GuardingScript ix topTxInfo)
+    pure (PV4.GuardingScript ix topTxInfo)
+
+scriptHashFromScriptPurpose :: PV4.ScriptPurpose -> PV2.ScriptHash
+scriptHashFromScriptPurpose = \case
+  PV4.Spending sh _ -> sh
+  PV4.Minting sh _ -> sh
+  PV4.Withdrawing sh _ -> sh
+  PV4.Certifying sh _ _ -> sh
+  PV4.Voting sh _ -> sh
+  PV4.Proposing sh _ _ -> sh
+  PV4.Guarding sh _ -> sh
 
 transGuardingTopTxInfo ::
   forall proxy (l :: Language) era.
@@ -892,10 +902,12 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
         , ttisGuards = foldMap PV4.txInfoGuards batchTxInfo
         , ttisRequiredTopLevelGuards =
             transCred <$> Set.toList batchRequiredTopLevelGuards
-        , -- TODO: ttisScriptPurposes field is changed in
-          -- https://github.com/IntersectMBO/plutus/pull/7963 and will be updated once plutus is
-          -- released
-          ttisScriptPurposes = foldMap (assocMapKeys . PV4.txInfoRedeemers) batchTxInfo
+        , ttisRedeemerHashes =
+            -- Plutus `ScriptHash` ordering is the same as the one in Ledger, so we can just extract
+            -- already translated `ScriptHash`es
+            Set.toList $
+              Set.fromList $
+                foldMap (map scriptHashFromScriptPurpose . assocMapKeys . PV4.txInfoRedeemers) batchTxInfo
         , ttisData = PV4.unsafeFromList $ Alonzo.transDatums batchDatums
         , ttisVotes = transVotingProcedures batchVotes
         , ttisProposalProcedures = foldMap PV4.txInfoProposalProcedures batchTxInfo
@@ -932,7 +944,7 @@ toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = d
   let
     spendDatum = transDatum <$> getSpendingDatum ltiUTxO ltiTx (hoistPlutusPurpose toAsItem plutusPurpose)
     ixPurpose = hoistPlutusPurpose toAsIx plutusPurpose
-  (sh, scriptInfo) <-
+  scriptInfo <-
     scriptPurposeToScriptInfo proxy spendDatum lti txInfo ixPurpose scriptPurpose
   pure $
     PlutusV4Args $
@@ -940,7 +952,7 @@ toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = d
         { PV4.scriptContextTxInfo = txInfo
         , PV4.scriptContextRedeemer = Babbage.transRedeemer redeemerData
         , PV4.scriptContextScriptInfo = scriptInfo
-        , PV4.scriptContextScriptHash = sh
+        , PV4.scriptContextScriptHash = scriptHashFromScriptPurpose scriptPurpose
         }
 
 transPlutusPurposeV4 ::
