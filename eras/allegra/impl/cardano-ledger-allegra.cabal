@@ -194,6 +194,7 @@ test-suite tests
   other-modules:
     Test.Cardano.Ledger.Allegra.Binary.CddlSpec
     Test.Cardano.Ledger.Allegra.BinarySpec
+    Test.Cardano.Ledger.Allegra.ScriptsSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -210,9 +211,11 @@ test-suite tests
 
   build-depends:
     base,
+    cardano-base:testlib >=0.1.7.1,
     cardano-ledger-allegra,
     cardano-ledger-allegra:cddl,
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
+    quickcheck-classes,
     testlib,
