@@ -318,15 +318,17 @@ spec = describe "SUBUTXOW" $ do
                   . ( witsTxL . rdmrsTxWitsL . unRedeemersL
                         %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0)
                     )
-          withPostFixupSubTxs addExtraRedeemer $
-            submitFailingLegacySubTx
+          withPostFixupSubTxs addExtraRedeemer
+            $ submitFailingLegacySubTx
               lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
+            $ NE.prependList
               [ injectFailure $
                   Conway.CollectErrors
                     [BadTranslation . inject $ RedeemerPointerPointsToNothing extraPurpose]
-              , injectFailure $ SubExtraRedeemers @era [extraPurpose]
+              | lang >= PlutusV4
               ]
+              [injectFailure $ SubExtraRedeemers @era [extraPurpose]]
 
         describe "SubScriptIntegrityHashMismatch" $ do
           let testHashMismatch badHash = do
@@ -410,13 +412,13 @@ submitFailingLegacySubTx lang tx expectedFailures =
     case OMap.elems $ fixedUpTx ^. bodyTxL . subTransactionsTxBodyL of
       [subTx] ->
         pure $
-          NE.appendList
-            expectedFailures
+          NE.prependList
             [ injectFailure $
                 Conway.CollectErrors
                   [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
             | lang < PlutusV4
             ]
+            expectedFailures
       _ -> assertFailure "Expected exactly one sub-transaction"
 
 -- | Every distinct reason a sub-transaction requires a key witness,
