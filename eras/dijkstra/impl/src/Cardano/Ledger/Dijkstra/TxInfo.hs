@@ -126,7 +126,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.State (StakePoolParams (..), UTxO)
-import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Cardano.Ledger.TxIn (TxId, TxIn (..), txIdToHex)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
@@ -836,11 +836,13 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
       let txId = txIdTx subTx
       subTxInfo <-
         left (inject . SubTxContextError txId) $
-          unPlutusTxInfoResult $
-            case Map.lookup txId subTxInfoResults of
-              Nothing -> error $ "Missing TxInfoResult for " <> show txId
-              Just txInfoResults ->
-                lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
+          case Map.lookup txId subTxInfoResults of
+            Nothing ->
+              -- In `Cardano.Ledger.Dijkstra.mkDijkstraStAnnSubTx` we ensure `ltiLevelTxInfo` is
+              -- correctly populated for each sub-transaction
+              Left $ inject $ Alonzo.ImpossibleContextError @era $ "Missing TxInfoResult for " <> txIdToHex txId
+            Just txInfoResults ->
+              unPlutusTxInfoResult $ lookupTxInfoResult (plutusSLanguage proxy) txInfoResults
       pure (subTxInfo, lookupRequiredTopLevelGuardDatum subTx)
 
   let

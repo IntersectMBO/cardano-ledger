@@ -21,6 +21,7 @@ module Cardano.Ledger.TxIn (
   mkTxInPartial,
   txInToText,
   parseTxId,
+  txIdToHex,
   TxIx,
 ) where
 
@@ -111,9 +112,12 @@ parseTxId t = case Text.splitOn "#" t of
     pure (txId, txIx)
   _ -> fail "expected 'txhash#ix'"
 
+txIdToHex :: TxId -> Text
+txIdToHex (TxId txidHash) = hashToTextAsHex (extractHash txidHash)
+
 txInToText :: TxIn -> Text
-txInToText (TxIn (TxId txidHash) ix) =
-  hashToTextAsHex (extractHash txidHash)
+txInToText (TxIn txId ix) =
+  txIdToHex txId
     <> Text.pack "#"
     <> Text.pack (show (unTxIx ix))
 

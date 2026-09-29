@@ -224,6 +224,9 @@ data AlonzoContextError era
   | TimeTranslationPastHorizon Text
   | CertificateNotSupported (TxCert era)
   | PlutusPurposeNotSupported (PlutusPurpose AsItem era)
+  | -- | This is a freeform failure message for impossible scenarios. It is better to produce an
+    -- impossible message than crash with an `error` exception.
+    ImpossibleContextError Text
   deriving (Generic)
 
 deriving instance
@@ -267,6 +270,8 @@ instance
       encode $ Sum CertificateNotSupported 9 !> To txCert
     PlutusPurposeNotSupported purpose ->
       encode $ Sum PlutusPurposeNotSupported 10 !> To purpose
+    ImpossibleContextError msg ->
+      encode $ Sum ImpossibleContextError 11 !> To msg
 
 instance
   ( Era era
@@ -280,6 +285,7 @@ instance
     7 -> SumD (TimeTranslationPastHorizon @era) <! From
     9 -> SumD (CertificateNotSupported @era) <! From
     10 -> SumD (PlutusPurposeNotSupported @era) <! From
+    11 -> SumD (ImpossibleContextError @era) <! From
     n -> Invalid n
 
 instance
@@ -295,6 +301,8 @@ instance
       kindObjectValue "CertificateNotSupported" ["certificate" .= toJSON txCert]
     PlutusPurposeNotSupported purpose ->
       kindObjectValue "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
+    ImpossibleContextError msg ->
+      kindObjectValue "ImpossibleContextError" ["error" .= toJSON msg]
 
 transLookupTxOut ::
   forall era.
