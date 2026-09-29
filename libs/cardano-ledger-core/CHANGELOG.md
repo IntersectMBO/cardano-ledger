@@ -2,11 +2,12 @@
 
 ## 1.22.0.0
 
+* Add `assocMapToList`, `assocMapKeys` and `assocMapElems`
 * Add `ToPlutusData` instance for `SlotInterval`
 * Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`
 * Rename `EraIndependentEb` to `EraIndependentEbReferences`
 * Add `EbReferencesAnnouncement` (moved and renamed from `EbAnnouncement` in `cardano-protocol`)
-* Add `blockHeaderL`, `blockBodyL`, `bhviProtVerL`
+* Add `blockHeaderL`, `blockBodyL`
 * Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
 * Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`

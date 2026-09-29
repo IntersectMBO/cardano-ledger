@@ -453,7 +453,7 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
     addSubTxIn subTx
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
       | otherwise = do
-          addr <- freshKeyAddr_
+          addr <- freshKeyAddrNoPtr_
           -- restore default fixup behaviour temporarily,
           -- to make sure it isn't affected by any higher-level fixup modifications
           newTxIn <- withFixup fixupTx $ sendCoinTo addr (Coin 1_000_000)
@@ -491,7 +491,7 @@ mkBalancerSubTx consumed produced = do
   case consumed `compare` produced of
     EQ -> pure Nothing
     ord -> do
-      addr <- freshKeyAddr_
+      addr <- freshKeyAddrNoPtr_
       let
         (surplus, shortfall) = case ord of
           GT -> (consumed <-> produced, mempty)

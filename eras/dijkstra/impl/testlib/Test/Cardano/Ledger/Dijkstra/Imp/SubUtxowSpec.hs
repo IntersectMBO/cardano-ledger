@@ -360,7 +360,7 @@ spec = describe "SUBUTXOW" $ do
         -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt "SubMalformedReferenceScripts" $ do
           script <- fromPlutusScript <$> mkPlutusScript (asSLanguage slang malformedPlutus)
-          addr <- freshKeyAddr_
+          addr <- freshKeyAddrNoPtr_
           let subTx :: Tx SubTx era
               subTx =
                 mkBasicTx $

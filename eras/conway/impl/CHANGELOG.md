@@ -2,6 +2,8 @@
 
 ## 1.24.0.0
 
+* Export `transTxId`
+* Add `Semigroup` and `Monoid` instances for `VotingProcedures`
 * Replace `conwayBbodyTransition` with `bbodyTransition`
 * Change the type of `computeDRepDistr` to take and return a `VotingStakePoolDistr` instead of a `PoolDistr`
 * Rename `reStakePoolDistrL` to `reVotingStakePoolDistrL` and change its type to use `VotingStakePoolDistr`
