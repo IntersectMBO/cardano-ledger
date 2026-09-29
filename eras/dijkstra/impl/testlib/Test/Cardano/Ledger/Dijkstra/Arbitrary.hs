@@ -139,6 +139,8 @@ instance Arbitrary (UpgradeDijkstraPParams Identity DijkstraEra) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary DijkstraGenesis where
   arbitrary = genericArbitraryU

@@ -88,5 +88,7 @@
     "protocolVersion":{
        "major":4,
        "minor":1
-    }
+    },
+    "refInputsCostPerMultiAssetPolicy": 0,
+    "refInputsCostPerDatumByte": 0
  }
