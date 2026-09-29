@@ -9,6 +9,7 @@ import qualified Test.Cardano.Ledger.Allegra.Binary.Golden as Golden
 import qualified Test.Cardano.Ledger.Allegra.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Allegra.Imp as Imp
 import Test.Cardano.Ledger.Allegra.ImpTest ()
+import qualified Test.Cardano.Ledger.Allegra.ScriptsSpec as ScriptsSpec
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
@@ -23,6 +24,7 @@ main =
   ledgerEraTestMain @AllegraEra $ do
     BinarySpec.spec
     CddlSpec.spec
+    ScriptsSpec.spec
     roundTripJsonEraSpec @AllegraEra
     roundTripJsonShelleyEraSpec @AllegraEra
     Golden.spec @AllegraEra
