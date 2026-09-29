@@ -506,11 +506,10 @@ ledgerStateSpec pp univ ctx epoch =
 snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
-    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] [var|committee|] ->
+    match snap $ \ [var|activeStake|] [var|totalActiveStake|] [var|pools|] ->
       [ assert $ activeStake ==. lit (ActiveStake VMap.empty)
       , assert $ totalActiveStake ==. lit (knownNonZeroCoin @1)
       , assert $ pools ==. lit VMap.empty
-      , assert $ committee ==. lit emptyLeiosCommittee
       ]
 
 -- | The set/go snapshots wrap an empty base snapshot; their derived fields
