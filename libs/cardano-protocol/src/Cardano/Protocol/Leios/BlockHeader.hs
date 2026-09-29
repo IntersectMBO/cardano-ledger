@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -6,11 +5,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Block header associated with Leios.
 --
@@ -18,8 +18,12 @@
 -- appended. Everything else is identical to the Praos header, see
 -- "Cardano.Protocol.Praos.BlockHeader" for details.
 module Cardano.Protocol.Leios.BlockHeader (
-  Header (HeaderConstr, Header, headerBody, headerSig),
+  Header (HeaderConstr),
+  HeaderRaw (..),
   HeaderBody (..),
+  mkHeader,
+  headerBody,
+  headerSig,
   headerHash,
   headerSize,
 ) where
@@ -71,7 +75,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Cardano.Protocol.Crypto (Crypto, KES, VRF)
 import Cardano.Protocol.Praos.VRF (InputVRF)
@@ -81,6 +85,7 @@ import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Proxy (Proxy (..))
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
@@ -166,16 +171,20 @@ type instance MemoHashIndex (HeaderRaw crypto) = EraIndependentBlockHeader
 instance HashAnnotated (Header crypto) EraIndependentBlockHeader where
   hashAnnotated = getMemoSafeHash
 
-pattern Header ::
-  Crypto crypto =>
+mkHeader ::
+  forall era crypto proxy.
+  (Era era, Crypto crypto) =>
+  proxy era ->
   HeaderBody crypto ->
   KES.SignedKES (KES crypto) (HeaderBody crypto) ->
   Header crypto
-pattern Header {headerBody, headerSig} <- (getMemoRawType -> HeaderRaw headerBody headerSig)
-  where
-    Header body sig = mkMemoized (headerBodyEncodingVersion body) $ HeaderRaw body sig
+mkHeader _ body sig = mkMemoizedEra @era $ HeaderRaw body sig
 
-{-# COMPLETE Header #-}
+headerBody :: Header crypto -> HeaderBody crypto
+headerBody = headerRawBody . getMemoRawType
+
+headerSig :: Header crypto -> KES.SignedKES (KES crypto) (HeaderBody crypto)
+headerSig = headerRawSig . getMemoRawType
 
 headerSize :: Header crypto -> Int
 headerSize = originalBytesSize
@@ -255,23 +264,23 @@ deriving via
   instance
     Crypto c => DecCBOR (Annotator (Header c))
 
-headerBodyL :: Crypto c => Lens' (Header c) (HeaderBody c)
-headerBodyL = lens headerBody (\h b -> h {headerBody = b})
+headerBodyL :: (Era era, Crypto c) => proxy era -> Lens' (Header c) (HeaderBody c)
+headerBodyL p = lens headerBody (\h b -> mkHeader p b (headerSig h))
 
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockHeaderSizeBlockHeaderG =
     blockHeaderL . to originalBytesSize
   blockIssuerBlockHeaderG =
-    blockHeaderL . headerBodyL . to (hashKey . hbVk)
+    blockHeaderL . headerBodyL (Proxy @era) . to (hashKey . hbVk)
   blockBodySizeBlockHeaderL =
-    blockHeaderL . headerBodyL . lens hbBodySize (\hb sz -> hb {hbBodySize = sz})
+    blockHeaderL . headerBodyL (Proxy @era) . lens hbBodySize (\hb sz -> hb {hbBodySize = sz})
   blockBodyHashBlockHeaderL =
-    blockHeaderL . headerBodyL . lens hbBodyHash (\hb h -> hb {hbBodyHash = h})
+    blockHeaderL . headerBodyL (Proxy @era) . lens hbBodyHash (\hb h -> hb {hbBodyHash = h})
   slotNoBlockHeaderL =
-    blockHeaderL . headerBodyL . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
+    blockHeaderL . headerBodyL (Proxy @era) . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
 
 instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
   versionInfoBlockHeaderL =
-    blockHeaderL . headerBodyL . hbVersionInfoL
+    blockHeaderL . headerBodyL (Proxy @era) . hbVersionInfoL
   ebReferencesAnnouncementBlockHeaderL =
-    blockHeaderL . headerBodyL . hbEbReferencesAnnouncementL
+    blockHeaderL . headerBodyL (Proxy @era) . hbEbReferencesAnnouncementL
