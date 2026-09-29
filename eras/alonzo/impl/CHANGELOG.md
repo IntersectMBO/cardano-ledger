@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Make `LedgerTxInfo` level aware
+* Add `HasEraTxLevel` for `LedgerTxInfo`
 * Add `LedgerLevelTxInfo`
 * Replace optional `ltiMemoizedSubTransactions` field with required `ltiLevelTxInfo`
 * Make `collectPlutusScriptsWithContext` restricted to `TopTx` level only

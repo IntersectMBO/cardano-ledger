@@ -113,7 +113,7 @@ genTranslationInstance = do
 
 mkPlutusTxInfo ::
   (HasCallStack, EraPlutusTxInfo l era) =>
-  SLanguage l -> LedgerTxInfo era -> PlutusPurpose AsIx era -> PlutusTxInfo l
+  SLanguage l -> LedgerTxInfo level era -> PlutusPurpose AsIx era -> PlutusTxInfo l
 mkPlutusTxInfo slang lti plutusPurpose =
   either (error . show) id $
     toPlutusTxInfoForPurpose slang lti (hoistPlutusPurpose toAsPurpose plutusPurpose)

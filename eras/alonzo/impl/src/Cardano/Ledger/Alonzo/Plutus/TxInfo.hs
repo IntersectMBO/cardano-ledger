@@ -104,10 +104,9 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
 mkPlutusWithContext ::
-  forall era.
   SupportedPlutusRunnable era ->
   PlutusPurpose AsIxItem era ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   TxInfoResult era ->
   Data era ->
   ExUnits ->
@@ -177,7 +176,7 @@ toPlutusV1Args ::
   , EraPlutusTxInfo 'PlutusV1 era
   ) =>
   proxy 'PlutusV1 ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
@@ -198,7 +197,7 @@ toPlutusV1Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->

@@ -100,7 +100,7 @@ mkTestLedgerTxInfo ::
   UTxO era ->
   Tx level era ->
   LedgerLevelTxInfo level era ->
-  LedgerTxInfo era
+  LedgerTxInfo level era
 mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx levelTxInfo =
   let
     scriptsProvided = getScriptsProvided utxo tx

@@ -4,12 +4,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -120,23 +118,21 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         mempty
 
 scriptsWithContextFromLedgerTxInfo ::
-  forall era.
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , EraPlutusContext era
   ) =>
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   CostModels ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfo lti =
   scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
 
 scriptsWithContextFromLedgerTxInfoWithResult ::
-  forall era.
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
   ) =>
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   TxInfoResult era ->
   CostModels ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
@@ -146,9 +142,7 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels =
     (map getScriptWithRedeemer (ltiScriptsUsed lti))
     (Right [])
   where
-    redeemers =
-      case lti of
-        LedgerTxInfo {ltiTx} -> ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+    redeemers = ltiTx lti ^. witsTxL . rdmrsTxWitsL . unRedeemersL
     getScriptWithRedeemer (plutusPurpose, plutusScriptRunnable) =
       let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
        in case Map.lookup redeemerIndex redeemers of

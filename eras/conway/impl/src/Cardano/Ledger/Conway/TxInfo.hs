@@ -752,7 +752,7 @@ toPlutusV3Args ::
   , EraPlutusTxInfo 'PlutusV3 era
   ) =>
   proxy 'PlutusV3 ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->

@@ -193,14 +193,14 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPointerV2V3 ::
-  forall proxy l era.
+  forall proxy l level era.
   ( EraTx era
   , AlonzoEraTxBody era
   , EraPlutusTxInfo l era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPointerV2V3 proxy lti@LedgerTxInfo {ltiTx} (ptr, (d, _)) =
@@ -220,7 +220,7 @@ transTxRedeemers ::
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
 transTxRedeemers proxy lti@LedgerTxInfo {ltiTx} =
   PV2.unsafeFromList
@@ -445,7 +445,7 @@ toPlutusV2Args ::
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>
   proxy 'PlutusV2 ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->

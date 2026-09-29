@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -113,7 +114,7 @@ data LedgerLevelTxInfo level era where
     LedgerLevelTxInfo SubTx era
 
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
-data LedgerTxInfo era where
+data LedgerTxInfo level era where
   LedgerTxInfo ::
     { ltiProtVer :: !ProtVer
     , ltiEpochInfo :: !(EpochInfo (Either Text))
@@ -125,7 +126,10 @@ data LedgerTxInfo era where
     -- ^ Map that will be used for looking up `ScriptHash`. Currently unused until Dijkstra era, hence is lazy.
     , ltiLevelTxInfo :: LedgerLevelTxInfo level era
     } ->
-    LedgerTxInfo era
+    LedgerTxInfo level era
+
+instance (HasEraTxLevel Tx era, EraTxLevel era) => HasEraTxLevel LedgerTxInfo era where
+  toSTxLevel = toSTxLevel . ltiTx
 
 toScriptHashByPurpose ::
   Ord (PlutusPurpose AsIx era) =>
@@ -154,18 +158,18 @@ class
 
   toPlutusScriptPurpose ::
     proxy l ->
-    LedgerTxInfo era ->
+    LedgerTxInfo level era ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
   toPlutusTxInfo ::
     proxy l ->
-    LedgerTxInfo era ->
+    LedgerTxInfo level era ->
     PlutusTxInfoResult l era
 
   toPlutusArgs ::
     proxy l ->
-    LedgerTxInfo era ->
+    LedgerTxInfo level era ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Data era ->
@@ -212,7 +216,7 @@ mkPlutusTxInfoFromResult sp (PlutusTxInfoResult txInfoResult) =
 toPlutusTxInfoForPurpose ::
   EraPlutusTxInfo l era =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PlutusPurpose AsPurpose era ->
   Either (ContextError era) (PlutusTxInfo l)
 toPlutusTxInfoForPurpose proxy lti sp =
@@ -240,7 +244,7 @@ class
   mkSupportedPlutusRunnable :: Version -> PlutusScript era -> SupportedPlutusRunnable era
 
   -- | Construct `PlutusTxInfo` for all supported languages in this era.
-  mkTxInfoResult :: LedgerTxInfo era -> TxInfoResult era
+  mkTxInfoResult :: LedgerTxInfo level era -> TxInfoResult era
 
   -- | `TxInfo` for the same language can be shared between executions of every script of the same
   -- version in a single transaction.
