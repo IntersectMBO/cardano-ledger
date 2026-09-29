@@ -92,6 +92,7 @@
 
 ### `testlib`
 
+* Add `testLawsGroup` to `Test.Cardano.Ledger.Common`
 * Add `Arbitrary` and `ToExpr` instances for `SlotInterval`
 * Add `tbhEbRefsAnn` to `TestBlockHeader`
 * Regenerate the compiled scripts in `Test.Cardano.Ledger.Plutus.Examples` with `plutus-tx-1.70`.

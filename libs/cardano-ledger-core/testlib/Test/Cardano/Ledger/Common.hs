@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -62,6 +63,9 @@ module Test.Cardano.Ledger.Common (
   goldenForToJSON,
   roundTripAesonProperty,
 
+  -- ** Typeclass laws
+  testLawsGroup,
+
   -- * Miscellanous helpers
   tracedDiscard,
   forEachEraVersion,
@@ -75,6 +79,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Types as Aeson (parseEither)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Foldable (traverse_)
 import Data.Typeable
 import qualified Debug.Trace as Debug
 import Test.Cardano.Ledger.Binary.Golden (toPackageGolden)
@@ -96,6 +101,7 @@ import Test.Hspec.Runner
 import Test.ImpSpec (ansiDocToString, impSpecConfig, impSpecMainWithConfig)
 import Test.ImpSpec.Expectations
 import Test.QuickCheck as X hiding (NonZero, Witness)
+import Test.QuickCheck.Classes.Base (Laws (..))
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (mkQCGen)
 import UnliftIO.Exception (evaluateDeep)
@@ -255,3 +261,22 @@ roundTripAesonProperty expected = property $ do
   -- There is no need to go through `ByteString` if we fully force the `Value`.
   produced <- expectRightDeep $ Aeson.parseEither Aeson.parseJSON jsonValue
   produced `shouldBeExpr` expected
+
+-- | Check the typeclass `Laws` of a type, one example per law:
+--
+-- > describe "Semigroup and Monoid" $
+-- >   testLawsGroup @ValidityInterval
+-- >     [ semigroupLaws
+-- >     , monoidLaws
+-- >     ]
+--
+-- This should be used instead of `Test.QuickCheck.Classes.lawsCheckOne`, which
+-- reports through `Test.QuickCheck.quickCheck`. That writes straight to stdout,
+-- thus it is not probably indented in the test console output. It also discards
+-- the QuickCheck `Result`, which means that a violated law does not fail the
+-- test suite.
+testLawsGroup :: forall a. [Proxy a -> Laws] -> Spec
+testLawsGroup =
+  traverse_ $ \mkLaws -> do
+    let Laws {..} = mkLaws (Proxy @a)
+    describe lawsTypeclass $ traverse_ (uncurry prop) lawsProperties

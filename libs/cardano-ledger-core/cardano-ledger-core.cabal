@@ -275,6 +275,7 @@ library testlib
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
     prettyprinter,
     primitive,
+    quickcheck-classes-base,
     quickcheck-transformer,
     random >=1.2,
     small-steps >=1.2,

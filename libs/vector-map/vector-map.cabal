@@ -42,6 +42,7 @@ library
 
 library testlib
   exposed-modules:
+    Test.Common.QuickCheck
     Test.Data.VMap.Arbitrary
     Test.Data.VMap.TreeDiff
 
@@ -60,6 +61,8 @@ library testlib
   build-depends:
     QuickCheck,
     base,
+    hspec,
+    quickcheck-classes-base,
     quickcheck-instances,
     tree-diff,
     vector,
@@ -70,7 +73,6 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
-    Test.Common
     Test.VMap
 
   default-language: Haskell2010
@@ -90,8 +92,8 @@ test-suite tests
     containers,
     hspec,
     hspec-core,
-    quickcheck-classes-base,
-    vector-map,
+    quickcheck-classes,
+    vector-map:{vector-map, testlib},
 
 benchmark bench
   type: exitcode-stdio-1.0

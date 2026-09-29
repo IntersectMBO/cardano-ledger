@@ -94,6 +94,7 @@ spec =
           \set oset -> toSet oset `shouldBe` set
     context "Typeclass laws" $ do
       it "Type" $
+        -- TODO Replace with 'testLawsGroup' from cardano-base once we update it
         lawsCheckOne
           (Proxy :: Proxy (OSet Int))
           [ eqLaws
