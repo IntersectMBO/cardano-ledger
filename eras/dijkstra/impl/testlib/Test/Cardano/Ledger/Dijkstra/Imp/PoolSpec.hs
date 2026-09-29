@@ -156,6 +156,24 @@ spec = describe "POOL" $ do
       registerPoolTx <$> poolParams kh3 vrf >>= \tx ->
         submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrf)
 
+    it "a pending future VRF cannot be claimed by another pool" $ do
+      (kh1, vrf1) <- registerNewPool
+      (kh2, vrf2) <- registerNewPool
+      vrfNew <- freshKeyHashVRF
+      registerPoolTx <$> poolParams kh1 vrfNew >>= submitTx_
+      expectPool kh1 (Just vrf1)
+      expectFuturePool kh1 (Just vrfNew)
+      expectVRFs [(vrf1, 1), (vrf2, 1), (vrfNew, 1)]
+      -- a VRF is taken as soon as a re-registration requests it, so neither a new pool ...
+      kh3 <- freshKeyHash
+      registerPoolTx <$> poolParams kh3 vrfNew >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh3 vrfNew)
+      -- ... nor another registered pool may claim it
+      registerPoolTx <$> poolParams kh2 vrfNew >>= \tx ->
+        submitFailingTx tx (pure . injectFailure $ VRFKeyHashAlreadyRegistered kh2 vrfNew)
+      expectFuturePool kh2 Nothing
+      expectVRFs [(vrf1, 1), (vrf2, 1), (vrfNew, 1)]
+
     it "re-registering with the active VRF releases the pending future VRF" $ do
       (kh, vrf) <- registerNewPool
       vrfNew <- freshKeyHashVRF
