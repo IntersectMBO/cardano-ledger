@@ -41,9 +41,11 @@ import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
+  Decoder,
   EncCBOR (..),
   ToCBOR,
   decodeRecordSum,
+  decodeStrictSeq,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -55,18 +57,17 @@ import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
-  MemoBytes,
   Memoized (..),
   getMemoRawType,
-  pattern Memo,
  )
-import Cardano.Ledger.MemoBytes.Internal (memoBytesEra)
+import Cardano.Ledger.MemoBytes.Internal (MemoBytes (..), memoBytesEra)
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), (.:))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
 import qualified Data.ByteString as BS
+import Data.Default (Default (..))
 import Data.Foldable (toList)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -120,8 +121,14 @@ class EraScript era => ShelleyEraScript era where
 instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MkMultiSig (MemoBytes (MultiSigRaw era))
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
+
+instance Eq (MultiSig era) where
+  MkMultiSig (MemoBytes _ _ h1) == MkMultiSig (MemoBytes _ _ h2) = h1 == h2
+
+instance Ord (MultiSig era) where
+  compare (MkMultiSig (MemoBytes _ _ h1)) (MkMultiSig (MemoBytes _ _ h2)) = compare h1 h2
 
 instance Memoized (MultiSig era) where
   type RawType (MultiSig era) = MultiSigRaw era
@@ -266,16 +273,20 @@ instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
     \case
       0 -> (,) 2 . pure . MultiSigSignature . KeyHash <$> decCBOR
       1 -> do
-        multiSigs <- sequence <$> decCBOR
+        multiSigs <- sequence <$> decodeStrictSeq (decodeNoBytesMultiSig @era)
         pure (2, MultiSigAllOf <$> multiSigs)
       2 -> do
-        multiSigs <- sequence <$> decCBOR
+        multiSigs <- sequence <$> decodeStrictSeq (decodeNoBytesMultiSig @era)
         pure (2, MultiSigAnyOf <$> multiSigs)
       3 -> do
         m <- decCBOR
-        multiSigs <- sequence <$> decCBOR
+        multiSigs <- sequence <$> decodeStrictSeq (decodeNoBytesMultiSig @era)
         pure (3, MultiSigMOf m <$> multiSigs)
       k -> invalidKey k
+
+decodeNoBytesMultiSig ::
+  forall era s. DecCBOR (Annotator (MultiSigRaw era)) => Decoder s (Annotator (MultiSig era))
+decodeNoBytesMultiSig = fmap (MkMultiSig . (\t -> MemoBytes t mempty def)) <$> decCBOR
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.

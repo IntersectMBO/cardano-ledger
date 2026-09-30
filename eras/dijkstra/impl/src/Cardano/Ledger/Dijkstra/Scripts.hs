@@ -53,6 +53,7 @@ import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (decCBOR),
   DecCBORGroup (..),
+  Decoder,
   DecoderError (..),
   EncCBOR (encCBOR),
   EncCBORGroup (..),
@@ -62,6 +63,7 @@ import Cardano.Ledger.Binary (
   decodeNullMaybe,
   decodeRecordNamed,
   decodeRecordSum,
+  decodeStrictSeq,
   decodeWord8,
   encodeListLen,
   encodeNull,
@@ -84,6 +86,7 @@ import Cardano.Ledger.Dijkstra.PParams ()
 import Cardano.Ledger.Dijkstra.TxCert ()
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.MemoBytes
+import Cardano.Ledger.MemoBytes.Internal (MemoBytes (..))
 import Cardano.Ledger.Plutus (Language (..), Plutus, SLanguage (..), plutusSLanguage)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
@@ -92,6 +95,7 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), withObject, (.:))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
+import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.MemPack (
   MemPack,
@@ -294,15 +298,15 @@ instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
       hash <- decCBOR
       pure (2, pure (DijkstraRequireSignature hash))
     1 -> do
-      xs <- decCBOR
-      pure (2, DijkstraRequireAllOf <$> sequence xs)
+      xs <- sequence <$> decodeStrictSeq (decodeNoBytesDijkstraNativeScript @era)
+      pure (2, DijkstraRequireAllOf <$> xs)
     2 -> do
-      xs <- decCBOR
-      pure (2, DijkstraRequireAnyOf <$> sequence xs)
+      xs <- sequence <$> decodeStrictSeq (decodeNoBytesDijkstraNativeScript @era)
+      pure (2, DijkstraRequireAnyOf <$> xs)
     3 -> do
       m <- decCBOR
-      xs <- decCBOR
-      pure (3, DijkstraRequireMOf m <$> sequence xs)
+      xs <- sequence <$> decodeStrictSeq (decodeNoBytesDijkstraNativeScript @era)
+      pure (3, DijkstraRequireMOf m <$> xs)
     4 -> do
       m <- decCBOR
       pure (2, pure (DijkstraTimeStart m))
@@ -314,9 +318,21 @@ instance Era era => DecCBOR (Annotator (DijkstraNativeScriptRaw era)) where
       pure (2, pure (DijkstraRequireGuard cred))
     n -> invalidKey n
 
+decodeNoBytesDijkstraNativeScript ::
+  forall era s.
+  DecCBOR (Annotator (DijkstraNativeScriptRaw era)) =>
+  Decoder s (Annotator (DijkstraNativeScript era))
+decodeNoBytesDijkstraNativeScript = fmap (MkDijkstraNativeScript . (\t -> MemoBytes t mempty def)) <$> decCBOR
+
 newtype DijkstraNativeScript era = MkDijkstraNativeScript (MemoBytes (DijkstraNativeScriptRaw era))
-  deriving (Eq, Ord, Generic)
+  deriving (Generic)
   deriving newtype (ToCBOR, NFData, SafeToHash)
+
+instance Eq (DijkstraNativeScript era) where
+  MkDijkstraNativeScript (MemoBytes _ _ h1) == MkDijkstraNativeScript (MemoBytes _ _ h2) = h1 == h2
+
+instance Ord (DijkstraNativeScript era) where
+  compare (MkDijkstraNativeScript (MemoBytes _ _ h1)) (MkDijkstraNativeScript (MemoBytes _ _ h2)) = compare h1 h2
 
 deriving instance Show (DijkstraNativeScript era)
 
