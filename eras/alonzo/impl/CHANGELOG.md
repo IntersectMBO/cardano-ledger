@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `alonzoSpendableInputsTxBodyF`
 * Add an `ImpossibleContextError` case to `AlonzoContextError`
 * Remove nested `Either` in `PlutusTxInfoResult` and remove `PlutusPurpose` argument
 * Deprecate `mkPlutusTxInfoFromResult` as no longer needed

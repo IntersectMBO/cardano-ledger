@@ -73,7 +73,7 @@ spec = describe "LEDGER" $ do
 
       submitFailingTx
         tx
-        [ injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
+        [ injectFailure $ BadInputsUTxO $ NES.singleton badInput
         , injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
         ]
 

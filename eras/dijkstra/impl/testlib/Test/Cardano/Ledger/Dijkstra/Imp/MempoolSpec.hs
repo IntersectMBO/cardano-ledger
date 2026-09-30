@@ -71,7 +71,7 @@ spec = describe "MEMPOOL" $ do
       submitFailingMempoolTx
         (mkTopTxWithSubTxs [subTx])
         [ LedgerFailure . injectFailure . SubBadInputsUTxO $ NES.singleton spentTxIn
-        , LedgerFailure . injectFailure . SubBadInputsUTxO $ NES.singleton spentTxIn
+        , LedgerFailure . injectFailure . BadInputsUTxO $ NES.singleton spentTxIn
         ]
 
   -- `MempoolFailure` is unreachable in Dijkstra: the check that raises

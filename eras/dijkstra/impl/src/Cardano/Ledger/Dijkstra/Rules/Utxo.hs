@@ -342,8 +342,10 @@ dijkstraUtxoTransition = do
   {- SpendInputs ≠ ∅ -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
-  let allInputs = txBody ^. allInputsTxBodyF
-      inputs = txBody ^. inputsTxBodyL
+  let
+    -- allInputs finds all inputs in a transaction, including sub-transactions
+    allInputs = txBody ^. allInputsTxBodyF
+    inputs = txBody ^. inputsTxBodyL
 
   {- SpendInputsOf txTop ∪ RefInputsOf txTop ∪ CollInputsOf txTop ⊆ dom(utxo₀) -}
   runTest $ Shelley.validateBadInputsUTxO originalUtxo allInputs

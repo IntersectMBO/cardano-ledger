@@ -51,7 +51,6 @@ module Cardano.Ledger.Babbage.TxBody (
   babbageMinUTxOValue,
   BabbageTxBodyRaw (..),
   babbageAllInputsTxBodyF,
-  babbageSpendableInputsTxBodyF,
   BabbageEraTxBody (..),
   getEitherAddrBabbageTxOut,
   EraIndependentScriptIntegrity,
@@ -59,7 +58,11 @@ module Cardano.Ledger.Babbage.TxBody (
 ) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.TxBody (alonzoRedeemerPointer, alonzoRedeemerPointerInverse)
+import Cardano.Ledger.Alonzo.TxBody (
+  alonzoRedeemerPointer,
+  alonzoRedeemerPointerInverse,
+  alonzoSpendableInputsTxBodyF,
+ )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxCert ()
@@ -222,14 +225,6 @@ instance Memoized (TxBody l BabbageEra) where
 
 deriving newtype instance NFData (TxBody l BabbageEra)
 
-babbageSpendableInputsTxBodyF ::
-  BabbageEraTxBody era => SimpleGetter (TxBody TopTx era) (Set TxIn)
-babbageSpendableInputsTxBodyF =
-  to $ \txBody ->
-    (txBody ^. inputsTxBodyL)
-      `Set.union` (txBody ^. collateralInputsTxBodyL)
-{-# INLINEABLE babbageSpendableInputsTxBodyF #-}
-
 babbageAllInputsTxBodyF ::
   BabbageEraTxBody era => SimpleGetter (TxBody TopTx era) (Set TxIn)
 babbageAllInputsTxBodyF =
@@ -284,11 +279,8 @@ instance EraTxBody BabbageEra where
       txBodyRaw {btbrAuxDataHash = auxDataHash}
   {-# INLINE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. babbageSpendableInputsTxBodyF))
+  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. alonzoSpendableInputsTxBodyF))
   {-# INLINE spendableInputsTxBodyF #-}
-
-  allInputsTxBodyF = babbageAllInputsTxBodyF
-  {-# INLINE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrWithdrawals} -> btbrWithdrawals) $

@@ -23,14 +23,7 @@ import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
-import Cardano.Ledger.Core (
-  EraTx (..),
-  EraTxWits (..),
-  HasEraTxLevel (..),
-  NativeScript,
-  STxTopLevel (..),
-  TxLevel (..),
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Shelley.Tx (
@@ -85,6 +78,9 @@ instance EraTx AllegraEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
+
+  allInputsTxBodyF = inputsTxBodyL
+  {-# INLINEABLE allInputsTxBodyF #-}
 
 instance HasEraTxLevel Tx AllegraEra where
   toSTxLevel (MkAllegraTx ShelleyTx {}) = STopTxOnly @AllegraEra
