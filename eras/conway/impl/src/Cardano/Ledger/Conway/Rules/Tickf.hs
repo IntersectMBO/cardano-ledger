@@ -12,7 +12,14 @@ import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (SnapShots (ssStakeMarkPoolDistr))
+import Cardano.Ledger.State (
+  MarkSnapShot (msEpochNo),
+  SnapShots (ssStakeGo, ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet),
+  maxKeyAgeEpochs,
+  mkGoSnapShot,
+  mkSetSnapShot,
+ )
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Void (Void)
 import Lens.Micro ((&), (.~), (^.))
@@ -51,7 +58,47 @@ instance
       then pure nes
       else do
         let govState = nes ^. newEpochStateGovStateL
-        -- We can skip 'SNAP'; we already have the equivalent pd'.
+        -- We can skip most of 'SNAP'. Its cheap half is the snapshot rotation,
+        -- which 'ss'' below does; all that is then left out is its expensive
+        -- half, constructing a new mark snapshot by aggregating the whole
+        -- instant stake. A forecast never reads that new mark snapshot, since
+        -- it governs the epoch after the one being forecast into.
+        --
+        -- Historically the rotation was left out too, and 'nesPd' was patched
+        -- by hand from the cached 'ssStakeMarkPoolDistr' instead. That sufficed
+        -- because no forecast projection read the snapshots at all: through
+        -- Conway they read only 'nesPd', the current protocol parameters and
+        -- (Shelley) the genesis delegates. So the stale snapshots were not
+        -- merely unnoticed, they were unreachable.
+        --
+        -- Dijkstra's forecast is the first to read one: it takes the Leios
+        -- voting committee from 'ssStakeSet'. Without the rotation, a forecast
+        -- across an epoch boundary would report the anchor epoch's committee
+        -- rather than the target epoch's.
+        --
+        -- Note that forecasting the committee across an epoch boundary does not
+        -- necessarily mean a Leios certificate is certifying a Leios
+        -- announcement from the previous epoch. It merely means the committee
+        -- is being acquired from an earlier ledger state than that of the
+        -- announcing block.
+        --
+        -- One rotation suffices because TICKF only ever serves forecasting, and
+        -- a forecast's range does not reach past the next epoch boundary, so at
+        -- most one boundary is ever crossed here. Two would need two rotations,
+        -- but the guard above returns the state unrotated in that case, so this
+        -- rule would be wrong were it ever put to another use.
+        --
+        -- Judge key age against the epoch this rotation seats the committee for,
+        -- which 'mkSetSnapShot' derives from the mark being rotated. Reading it
+        -- from that same mark keeps the two in step without relying on the mark's
+        -- epoch agreeing with 'nesEL'.
+        maxKeyAge <-
+          liftSTS $ asks (`maxKeyAgeEpochs` succ (msEpochNo (ssStakeMark ss)))
+        let ss' =
+              ss
+                { ssStakeSet = mkSetSnapShot (ssStakeMark ss) maxKeyAge
+                , ssStakeGo = mkGoSnapShot (ssStakeSet ss)
+                }
 
         -- We can skip 'POOLREAP';
         -- we don't need to do the checks:
@@ -60,7 +107,7 @@ instance
         -- return value here was used to validate their headers.
 
         pure $!
-          nes {nesPd = pd'}
+          nes {nesPd = pd', nesEs = es {esSnapshots = ss'}}
             & newEpochStateGovStateL . curPParamsGovStateL .~ nextEpochPParams govState
             & newEpochStateGovStateL . prevPParamsGovStateL .~ (govState ^. curPParamsGovStateL)
             & newEpochStateGovStateL . futurePParamsGovStateL .~ NoPParamsUpdate

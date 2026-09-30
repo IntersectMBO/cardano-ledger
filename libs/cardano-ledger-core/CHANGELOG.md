@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Add `maxKeyAgeEpochs` accessor in `Cardano.Ledger.State.SnapShots` module
 * Add `assocMapToList`, `assocMapKeys` and `assocMapElems`
 * Add `ToPlutusData` instance for `SlotInterval`
 * Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`

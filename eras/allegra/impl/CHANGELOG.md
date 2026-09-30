@@ -15,7 +15,7 @@
 
 * Add `HuddleRule "vrf_cert"` instance
 
-## 1.10.1.0
+## 1.10.1.1
 
 *
 
