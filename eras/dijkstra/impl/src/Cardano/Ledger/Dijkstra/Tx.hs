@@ -65,7 +65,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
  )
 import Cardano.Ledger.Dijkstra.TxAuxData ()
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..), dijkstraAllInputsTxBodyF)
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -240,6 +240,9 @@ instance EraTx DijkstraEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
+
+  allInputsTxBodyF = dijkstraAllInputsTxBodyF
+  {-# INLINE allInputsTxBodyF #-}
 
 bodyDijkstraTxL :: Lens' (DijkstraTx l era) (TxBody l era)
 bodyDijkstraTxL =

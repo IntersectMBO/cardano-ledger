@@ -99,16 +99,16 @@ module Cardano.Ledger.Dijkstra.TxBody (
   directDepositsDijkstraTxBodyRawL,
   accountBalanceIntervalsDijkstraTxBodyRawL,
   startingAccountBalanceIntervalsDijkstraTxBodyRawL,
+  dijkstraAllInputsTxBodyF,
 ) where
 
 import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
-import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
+import Cardano.Ledger.Alonzo.TxBody (Indexable (..), alonzoSpendableInputsTxBodyF)
 import Cardano.Ledger.Babbage.TxBody (
   allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
-  babbageSpendableInputsTxBodyF,
  )
 import Cardano.Ledger.BaseTypes (Network, StrictMaybe (..))
 import Cardano.Ledger.Binary
@@ -160,7 +160,7 @@ import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import Data.Typeable (Typeable, typeRep)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to, (.~), (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, to, (.~), (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
 
 data DijkstraTxBodyRaw l era where
@@ -994,11 +994,8 @@ instance
   {-# INLINE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = to $ \txBody ->
-    withBothTxLevels txBody (^. babbageSpendableInputsTxBodyF) (^. inputsTxBodyL)
+    withBothTxLevels txBody (^. alonzoSpendableInputsTxBodyF) (^. inputsTxBodyL)
   {-# INLINE spendableInputsTxBodyF #-}
-
-  allInputsTxBodyF = babbageAllInputsTxBodyF
-  {-# INLINE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL = memoRawTypeL @DijkstraEra . withdrawalsDijkstraTxBodyRawL
   {-# INLINE withdrawalsTxBodyL #-}
@@ -1326,6 +1323,15 @@ currentTreasuryValueDijkstraTxBodyRawL =
         x@DijkstraTxBodyRaw {} -> \y -> x {dtbrCurrentTreasuryValue = y}
         x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrCurrentTreasuryValue = y}
     )
+
+dijkstraAllInputsTxBodyF ::
+  (EraTx era, DijkstraEraTxBody era) => SimpleGetter (TxBody TopTx era) (Set TxIn)
+dijkstraAllInputsTxBodyF = to $ \txBody ->
+  foldMap allSubTxInputs (txBody ^. subTransactionsTxBodyL)
+    <> txBody ^. babbageAllInputsTxBodyF
+  where
+    allSubTxInputs subTxBody =
+      subTxBody ^. bodyTxL . inputsTxBodyL <> subTxBody ^. bodyTxL . referenceInputsTxBodyL
 
 instance
   ( NFData (Tx SubTx DijkstraEra)

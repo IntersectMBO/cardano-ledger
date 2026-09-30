@@ -205,9 +205,6 @@ instance EraTxBody MaryEra where
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
 
-  allInputsTxBodyF = inputsTxBodyL
-  {-# INLINEABLE allInputsTxBodyF #-}
-
   withdrawalsTxBodyL =
     lensMemoRawType @MaryEra (\AllegraTxBodyRaw {atbrWithdrawals} -> atbrWithdrawals) $ \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}

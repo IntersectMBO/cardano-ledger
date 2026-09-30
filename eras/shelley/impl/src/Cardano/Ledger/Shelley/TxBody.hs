@@ -217,9 +217,6 @@ instance EraTxBody ShelleyEra where
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
 
-  allInputsTxBodyF = inputsTxBodyL
-  {-# INLINE allInputsTxBodyF #-}
-
   inputsTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrInputs} -> stbrInputs) $
       \txBodyRaw@ShelleyTxBodyRaw {} inputs -> txBodyRaw {stbrInputs = inputs}

@@ -360,9 +360,6 @@ instance EraTxBody AllegraEra where
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
 
-  allInputsTxBodyF = inputsTxBodyL
-  {-# INLINEABLE allInputsTxBodyF #-}
-
   withdrawalsTxBodyL =
     lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrWithdrawals} -> atbrWithdrawals) $
       \txBodyRaw@AllegraTxBodyRaw {} withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}

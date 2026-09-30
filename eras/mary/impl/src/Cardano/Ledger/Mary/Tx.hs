@@ -15,7 +15,7 @@ module Cardano.Ledger.Mary.Tx (
 
 import Cardano.Ledger.Allegra.Tx (Tx (..), validateTimelock)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
-import Cardano.Ledger.Core (EraTx (..), HasEraTxLevel (..), STxTopLevel (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.TxAuxData ()
@@ -74,6 +74,9 @@ instance EraTx MaryEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
+
+  allInputsTxBodyF = inputsTxBodyL
+  {-# INLINEABLE allInputsTxBodyF #-}
 
 instance EqRaw (Tx t MaryEra) where
   eqRaw = shelleyTxEqRaw

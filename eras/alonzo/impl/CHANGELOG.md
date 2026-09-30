@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `alonzoSpendableInputsTxBodyF`
 * Switch `toPlutusScriptPurpose` to accept `LedgerTxInfo` instead of `ProtVer`
 * Add `ltiScriptsUsed` and `ltiScriptHashesUsed` to `LedgerTxInfo`
 * Add `toScriptHashByPurpose` helper

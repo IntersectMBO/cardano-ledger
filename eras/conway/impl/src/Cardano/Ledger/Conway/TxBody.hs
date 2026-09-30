@@ -54,13 +54,9 @@ module Cardano.Ledger.Conway.TxBody (
   upgradeBabbageTxOut,
 ) where
 
-import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
+import Cardano.Ledger.Alonzo.TxBody (Indexable (..), alonzoSpendableInputsTxBodyF)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (
-  allSizedOutputsBabbageTxBodyF,
-  babbageAllInputsTxBodyF,
-  babbageSpendableInputsTxBodyF,
- )
+import Cardano.Ledger.Babbage.TxBody (allSizedOutputsBabbageTxBodyF)
 import Cardano.Ledger.BaseTypes (Network, fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
@@ -338,11 +334,8 @@ instance EraTxBody ConwayEra where
     \txb x -> txb {ctbrAuxDataHash = x}
   {-# INLINE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. babbageSpendableInputsTxBodyF))
+  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. alonzoSpendableInputsTxBodyF))
   {-# INLINE spendableInputsTxBodyF #-}
-
-  allInputsTxBodyF = babbageAllInputsTxBodyF
-  {-# INLINE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL = lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrWithdrawals} -> ctbrWithdrawals) $
     \txb x -> txb {ctbrWithdrawals = x}
