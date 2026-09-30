@@ -166,7 +166,7 @@ import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import Data.Typeable (Typeable, typeRep)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to, (.~), (^.))
+import Lens.Micro (Lens', lens, to, (.~), (^.), SimpleGetter)
 import NoThunks.Class (InspectHeap (..), NoThunks)
 
 data DijkstraTxBodyRaw l era where
@@ -222,13 +222,8 @@ data DijkstraTxBodyRaw l era where
 deriving instance (EraTxBody era, Eq (Tx SubTx era)) => Eq (DijkstraTxBodyRaw l era)
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
-  , ToJSON (Tx SubTx DijkstraEra)
-  , FromJSON (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   EqRaw (TxBody l DijkstraEra)
@@ -556,49 +551,26 @@ instance
 
 deriving instance
   ( Typeable l
-  , Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
-  , ToJSON (Tx SubTx DijkstraEra)
-  , FromJSON (Tx SubTx DijkstraEra)
+  , EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   NoThunks (TxBody l DijkstraEra)
 
 deriving instance
-  ( Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
-  , ToJSON (Tx SubTx DijkstraEra)
-  , FromJSON (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Eq (TxBody l DijkstraEra)
 
 deriving newtype instance
-  ( NFData (Tx SubTx DijkstraEra)
-  , Eq (Tx SubTx DijkstraEra)
-  , Show (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
-  , ToJSON (Tx SubTx DijkstraEra)
-  , FromJSON (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   NFData (TxBody l DijkstraEra)
 
 deriving instance
-  ( Show (Tx SubTx DijkstraEra)
-  , Eq (Tx SubTx DijkstraEra)
-  , NFData (Tx SubTx DijkstraEra)
-  , EncCBOR (Tx SubTx DijkstraEra)
-  , DecCBOR (Annotator (Tx SubTx DijkstraEra))
-  , ToJSON (Tx SubTx DijkstraEra)
-  , FromJSON (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Show (Tx SubTx DijkstraEra)
   , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
   ) =>
   Show (TxBody l DijkstraEra)
@@ -724,7 +696,8 @@ instance
   toJSON = Aeson.object . toKeyValuePairs
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -763,7 +736,8 @@ instance
       <*> o .: "startingAccountBalanceIntervals"
 
 instance
-  ( FromJSON (TxOut DijkstraEra)
+  ( EraTx DijkstraEra
+  , FromJSON (TxOut DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
@@ -797,7 +771,8 @@ instance
       <*> o .: "accountBalanceIntervals"
 
 pattern DijkstraTxBody ::
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -939,7 +914,8 @@ pattern DijkstraTxBody
             startingAccountBalanceIntervals
 
 pattern DijkstraSubTxBody ::
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1066,13 +1042,8 @@ deriving via
   Mem (DijkstraTxBodyRaw l DijkstraEra)
   instance
     ( Typeable l
-    , Eq (Tx SubTx DijkstraEra)
-    , NFData (Tx SubTx DijkstraEra)
-    , Show (Tx SubTx DijkstraEra)
-    , EncCBOR (Tx SubTx DijkstraEra)
+    , EraTx DijkstraEra
     , DecCBOR (Annotator (Tx SubTx DijkstraEra))
-    , ToJSON (Tx SubTx DijkstraEra)
-    , FromJSON (Tx SubTx DijkstraEra)
     , OMap.HasOKey TxId (Tx SubTx DijkstraEra)
     ) =>
     DecCBOR (Annotator (TxBody l DijkstraEra))
@@ -1182,7 +1153,8 @@ startingAccountBalanceIntervalsDijkstraTxBodyRawL =
     \txb x -> txb {dtbrStartingAccountBalanceIntervals = x}
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1214,7 +1186,7 @@ instance
     withBothTxLevels txBody (^. babbageSpendableInputsTxBodyF) (^. inputsTxBodyL)
   {-# INLINE spendableInputsTxBodyF #-}
 
-  allInputsTxBodyF = babbageAllInputsTxBodyF
+  allInputsTxBodyF = dijkstraAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL = memoRawTypeL @DijkstraEra . withdrawalsDijkstraTxBodyRawL
@@ -1332,7 +1304,8 @@ vldtDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1359,7 +1332,8 @@ mintDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1403,7 +1377,8 @@ networkIdDijkstraTxBodyRawL =
     )
 
 instance
-  ( Eq (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , Eq (Tx SubTx DijkstraEra)
   , NFData (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1462,7 +1437,8 @@ referenceInputsDijkstraTxBodyRawL =
     )
 
 instance
-  ( NFData (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , NFData (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1553,7 +1529,8 @@ currentTreasuryValueDijkstraTxBodyRawL =
     )
 
 instance
-  ( NFData (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , NFData (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1622,7 +1599,8 @@ requiredTopLevelGuardsDijkstraTxBodyRawL =
     )
 
 instance
-  ( NFData (Tx SubTx DijkstraEra)
+  ( EraTx DijkstraEra
+  , NFData (Tx SubTx DijkstraEra)
   , Eq (Tx SubTx DijkstraEra)
   , Show (Tx SubTx DijkstraEra)
   , EncCBOR (Tx SubTx DijkstraEra)
@@ -1671,3 +1649,11 @@ decodeGuards = do
         Just True -> decCBOR
         Just False -> KeyHashObj <$> decCBOR
   decodeOSet decodeElement
+
+dijkstraAllInputsTxBodyF :: (EraTx era, DijkstraEraTxBody era) => SimpleGetter (TxBody TopTx era) (Set TxIn)
+dijkstraAllInputsTxBodyF = to $ \txBody ->
+  foldMap allSubTxInputs (txBody ^. subTransactionsTxBodyL)
+    <> txBody ^. babbageAllInputsTxBodyF
+  where
+    allSubTxInputs subTxBody =
+      subTxBody ^. bodyTxL . inputsTxBodyL <> subTxBody ^. bodyTxL . referenceInputsTxBodyL
