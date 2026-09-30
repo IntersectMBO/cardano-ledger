@@ -10,6 +10,8 @@
 module Test.Cardano.Ledger.Dijkstra.Imp.SubGovCertSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..), StrictMaybe (..))
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (GovAction (..), Voter (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
@@ -183,6 +185,26 @@ spec = describe "SUBGOVCERT" $ do
           [ injectFailure . DijkstraSubGovCertPredFailure $
               DijkstraCommitteeHasPreviouslyResigned ccColdCred
           ]
+    it "Fails when the committee has been dissolved by a no-confidence action" $
+      whenPostBootstrap $ do
+        initialCommittee <- getCommitteeMembers
+        (drepCred, _, _) <- setupSingleDRep 1_000_000
+        (spoKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        gaid <- submitGovAction $ NoConfidence SNothing
+        submitYesVote_ (DRepVoter drepCred) gaid
+        submitYesVote_ (StakePoolVoter spoKH) gaid
+        passNEpochs 2
+        impAnn "There should not be a committee" $ getCommittee `shouldReturn` SNothing
+        forM_ initialCommittee $ \ccColdCred -> do
+          ccHotCred <- KeyHashObj <$> freshKeyHash
+          submitFailingTx
+            ( mkTopTxWithSubTxs
+                [ mkBasicTx mkBasicTxBody
+                    & bodyTxL . certsTxBodyL .~ [AuthCommitteeHotKeyTxCert ccColdCred ccHotCred]
+                ]
+            )
+            [ injectFailure . DijkstraSubGovCertPredFailure $ DijkstraCommitteeIsUnknown ccColdCred
+            ]
   describe "Committee cold key resignation" $ do
     it "Resigning with an anchor succeeds" $ do
       void registerInitialCommittee
