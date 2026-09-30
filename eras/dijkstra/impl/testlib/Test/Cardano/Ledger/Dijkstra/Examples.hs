@@ -122,6 +122,7 @@ import Cardano.Slotting.Slot (SlotInterval (..))
 import qualified Data.ByteString as Strict
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import qualified Data.MapExtras as Map
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
@@ -290,11 +291,7 @@ addDijkstraBasedTxFeatures tx =
   tx
     & witsTxL
       <>~ ( mkBasicTxWits
-              -- NOTE: PlutusV4 scripts are NOT part of Dijkstra's transaction_witness_set
-              -- CDDL (only V1/V2/V3 are). Including them here would cause a roundtrip
-              -- failure as they get silently dropped during serialization. See
-              -- TODO in 'Cardano.Ledger.Dijkstra.HuddleSpec'.
-              -- & scriptTxWitsL <>~ Map.fromElems hashScript [alwaysSucceeds @'PlutusV4 3]
+              & scriptTxWitsL <>~ Map.fromElems hashScript [alwaysSucceeds @'PlutusV4 3]
               & rdmrsTxWitsL <>~ redeemers
           )
     & modifyTxAuxData

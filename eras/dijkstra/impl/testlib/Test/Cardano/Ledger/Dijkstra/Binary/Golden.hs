@@ -54,6 +54,7 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV1
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV2
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV3
+    goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV4
     goldenDuplicatePlutusDataDisallowed @era version
     goldenEmptyFields @era version
   describe "Subtransactions" $ do
@@ -103,7 +104,7 @@ goldenEmptyFields version =
         decoderFailure 7 "Empty list of scripts is not allowed"
       it "plutusV3Script" . expectFailureOnTxWitsEmptyFieldWithTag @era version 7 $
         decoderFailure 7 "Empty list of scripts is not allowed"
-    txWitsDecodingFailsOnInvalidField @era version [0 .. 7]
+    txWitsDecodingFailsOnInvalidField @era version [0 .. 8]
 
 witsDuplicateVKeyWits :: Enc
 witsDuplicateVKeyWits =
@@ -147,7 +148,6 @@ witsDuplicatePlutus slang =
         SPlutusV2 -> 6
         SPlutusV3 -> 7
         SPlutusV4 -> 8
-        l -> error $ "Unsupported plutus version: " <> show l
     , Em
         [ E $ TkTag 258
         , E $ TkListLen 2
