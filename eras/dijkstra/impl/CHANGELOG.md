@@ -114,6 +114,7 @@
 
 ### `cddl`
 
+* Add a field for `plutus_v4_script`s in `transaction_witness_set`
 * Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` entries (tags 55-56) in `protocol_param_update`
 * Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
 * Rename the `eb_announcement` rule to `eb_references_announcement`

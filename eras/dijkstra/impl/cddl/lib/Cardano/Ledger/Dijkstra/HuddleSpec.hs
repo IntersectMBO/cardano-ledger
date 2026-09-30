@@ -1197,7 +1197,7 @@ instance HuddleRule "transaction_witness_set" DijkstraEra where
         , opt $ idx 5 ==> huddleRule @"redeemers" p
         , opt $ idx 6 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v2_script" p)
         , opt $ idx 7 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v3_script" p)
-        -- TODO: Add plutus_v4_script at index 8 once AlonzoTxWitsRaw encoder/decoder supports it
+        , opt $ idx 8 ==> huddleRule1 @"nonempty_set" p (huddleRule @"plutus_v4_script" p)
         ]
 
 instance HuddleRule "native_script" DijkstraEra where
