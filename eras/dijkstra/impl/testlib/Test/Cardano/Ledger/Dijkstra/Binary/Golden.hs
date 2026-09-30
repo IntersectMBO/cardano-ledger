@@ -89,6 +89,8 @@ goldenEmptyFields version =
         decoderFailure 4 "Empty list of scripts is not allowed"
       it "plutusV3Script" . expectFailureOnTxWitsEmptyField @era version 7 $
         decoderFailure 4 "Empty list of scripts is not allowed"
+      it "plutusV4Script" . expectFailureOnTxWitsEmptyField @era version 8 $
+        decoderFailure 4 "Empty list of scripts is not allowed"
     describe "Tagged" $ do
       it "addrTxWits" . expectFailureOnTxWitsEmptyFieldWithTag @era version 0 $
         decoderFailure 7 "Expected a non-empty set, but got an empty set"
