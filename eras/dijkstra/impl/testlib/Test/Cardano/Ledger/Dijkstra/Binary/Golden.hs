@@ -146,7 +146,7 @@ witsDuplicatePlutus slang =
         SPlutusV1 -> 3
         SPlutusV2 -> 6
         SPlutusV3 -> 7
-        -- TODO add PlutusV4 support once the CDDL for TxWits is updated to include V4 scripts
+        SPlutusV4 -> 8
         l -> error $ "Unsupported plutus version: " <> show l
     , Em
         [ E $ TkTag 258
