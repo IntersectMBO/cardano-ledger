@@ -23,16 +23,20 @@ import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
   curPParamsEpochStateL,
+  esLStateL,
   esSnapshotsL,
+  lsCertStateL,
   nesELL,
   nesEsL,
  )
 import Cardano.Ledger.Shelley.Transition
 import Cardano.Ledger.State (
+  certPStateL,
   mkGoSnapShot,
   mkMarkSnapShot,
   mkSetSnapShot,
   msSnapShotL,
+  populateVRFKeyHashes,
   ssStakeGoL,
   ssStakeMarkL,
   ssStakeSetL,
@@ -50,8 +54,12 @@ instance EraTransition DijkstraEra where
 
   mkTransitionConfig = DijkstraTransitionConfig
 
+  -- Stake pools from the genesis are registered without going through POOL, so the VRF
+  -- key hashes that POOL tracks have to be recomputed once those pools are in place.
   injectIntoTestState hasFS cfg nes =
-    seatInitialLeiosCommittee cfg <$> conwayInjectIntoTestState hasFS cfg nes
+    seatInitialLeiosCommittee cfg
+      . (nesEsL . esLStateL . lsCertStateL . certPStateL %~ populateVRFKeyHashes)
+      <$> conwayInjectIntoTestState hasFS cfg nes
 
   tcPreviousEraConfigL =
     lens dtcConwayTransitionConfig (\dtc pc -> dtc {dtcConwayTransitionConfig = pc})
