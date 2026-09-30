@@ -359,7 +359,9 @@ spec = describe "SUBUTXOW" $ do
           it "the supplied hash is wrong" $ testHashMismatch . SJust =<< arbitrary
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
-        it "SubMalformedScriptWitnesses" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "SubMalformedScriptWitnesses" $ do
           let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
           txIn <- produceScript scriptHash
           submitFailingLegacySubTx
