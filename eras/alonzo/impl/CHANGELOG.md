@@ -2,6 +2,14 @@
 
 ## 1.17.0.0
 
+* Add an `ImpossibleContextError` case to `AlonzoContextError`
+* Remove nested `Either` in `PlutusTxInfoResult` and remove `PlutusPurpose` argument
+* Deprecate `mkPlutusTxInfoFromResult` as no longer needed
+* Make `LedgerTxInfo` level aware
+* Add `HasEraTxLevel` for `LedgerTxInfo`
+* Add `LedgerLevelTxInfo`
+* Replace optional `ltiMemoizedSubTransactions` field with required `ltiLevelTxInfo`
+* Make `collectPlutusScriptsWithContext` restricted to `TopTx` level only
 * Change `BBODY` signal to `TPraosBbodySignal`
 * Replace `alonzoBbodyTransition` with `bbodyTransition`
 * Add `HashAnnotated (AlonzoTxWits era) EraIndependentTxWits` instance.

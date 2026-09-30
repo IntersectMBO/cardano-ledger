@@ -184,7 +184,8 @@ spec = describe "UTXOW" $ do
         hasMalformed (mkTx (SJust datum)) `shouldReturn` False
 
   describe "PlutusV4" $ do
-    it "Extra redeemer for a key-locked certificate fails" $ do
+    -- Fix Plutus example: https://github.com/IntersectMBO/cardano-ledger/issues/6123
+    xit "Extra redeemer for a key-locked certificate fails" $ do
       let plutus = alwaysSucceedsNoDatum SPlutusV4
       script <- fromPlutusScript <$> mkPlutusScript plutus
       refAddr <- freshKeyAddrNoPtr_

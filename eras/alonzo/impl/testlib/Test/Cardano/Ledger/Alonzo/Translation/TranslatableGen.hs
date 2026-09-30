@@ -20,6 +20,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext,
   EraPlutusTxInfo (..),
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxInfo,
   SupportedLanguage (..),
@@ -94,7 +95,7 @@ genTranslationInstance = do
   supportedLanguage :: SupportedLanguage era <- arbitrary
   tx <- tgTx supportedLanguage
   utxo <- tgUtxo supportedLanguage tx
-  let lti = mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx
+  let lti = mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
   plutusPurpose <- arbitrary
   pure $ case supportedLanguage of
     SupportedLanguage slang ->
@@ -112,7 +113,7 @@ genTranslationInstance = do
 
 mkPlutusTxInfo ::
   (HasCallStack, EraPlutusTxInfo l era) =>
-  SLanguage l -> LedgerTxInfo era -> PlutusPurpose AsIx era -> PlutusTxInfo l
+  SLanguage l -> LedgerTxInfo level era -> PlutusPurpose AsIx era -> PlutusTxInfo l
 mkPlutusTxInfo slang lti plutusPurpose =
   either (error . show) id $
     toPlutusTxInfoForPurpose slang lti (hoistPlutusPurpose toAsPurpose plutusPurpose)

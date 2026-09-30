@@ -52,11 +52,7 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts (
-  PlutusScript (..),
-  toAsItem,
-  toAsPurpose,
- )
+import Cardano.Ledger.Alonzo.Scripts (PlutusScript (..), toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (TxDats, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
 import Cardano.Ledger.BaseTypes (
@@ -104,10 +100,9 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
 mkPlutusWithContext ::
-  forall era.
   SupportedPlutusRunnable era ->
   PlutusPurpose AsIxItem era ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   TxInfoResult era ->
   Data era ->
   ExUnits ->
@@ -117,8 +112,7 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
   case script of
     SupportedPlutusRunnable plutusRunnable -> do
       let slang = isLanguage `asSameLanguage` plutusRunnable
-      mkTxInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
-      txInfo <- mkTxInfo $ hoistPlutusPurpose toAsPurpose plutusPurpose
+      txInfo <- unPlutusTxInfoResult $ lookupTxInfoResult slang txInfoResult
       plutusArgs <-
         toPlutusArgs
           slang
@@ -147,24 +141,21 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
         transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ toPlutusTxInInfo proxy ltiUTxO
       txCerts <- transTxBodyCerts proxy ltiProtVer txBody
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV1.TxInfo
-            { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
-              -- preserve this behavior by only retaining the Just case:
-              PV1.txInfoInputs = catMaybes txInsMaybes
-            , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
-            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
-            , PV1.txInfoDCert = txCerts
-            , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
-            , PV1.txInfoValidRange = timeRange
-            , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
-            , PV1.txInfoId = transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV1.TxInfo
+          { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
+            -- preserve this behavior by only retaining the Just case:
+            PV1.txInfoInputs = catMaybes txInsMaybes
+          , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
+          , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
+          , PV1.txInfoDCert = txCerts
+          , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
+          , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
+          , PV1.txInfoId = transTxBodyId txBody
+          }
 
   toPlutusArgs = toPlutusV1Args
 
@@ -177,7 +168,7 @@ toPlutusV1Args ::
   , EraPlutusTxInfo 'PlutusV1 era
   ) =>
   proxy 'PlutusV1 ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
@@ -198,7 +189,7 @@ toPlutusV1Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData =
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
@@ -233,6 +224,9 @@ data AlonzoContextError era
   | TimeTranslationPastHorizon Text
   | CertificateNotSupported (TxCert era)
   | PlutusPurposeNotSupported (PlutusPurpose AsItem era)
+  | -- | This is a freeform failure message for impossible scenarios. It is better to produce an
+    -- impossible message than crash with an `error` exception.
+    ImpossibleContextError Text
   deriving (Generic)
 
 deriving instance
@@ -276,6 +270,8 @@ instance
       encode $ Sum CertificateNotSupported 9 !> To txCert
     PlutusPurposeNotSupported purpose ->
       encode $ Sum PlutusPurposeNotSupported 10 !> To purpose
+    ImpossibleContextError msg ->
+      encode $ Sum ImpossibleContextError 11 !> To msg
 
 instance
   ( Era era
@@ -289,6 +285,7 @@ instance
     7 -> SumD (TimeTranslationPastHorizon @era) <! From
     9 -> SumD (CertificateNotSupported @era) <! From
     10 -> SumD (PlutusPurposeNotSupported @era) <! From
+    11 -> SumD (ImpossibleContextError @era) <! From
     n -> Invalid n
 
 instance
@@ -304,6 +301,8 @@ instance
       kindObjectValue "CertificateNotSupported" ["certificate" .= toJSON txCert]
     PlutusPurposeNotSupported purpose ->
       kindObjectValue "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
+    ImpossibleContextError msg ->
+      kindObjectValue "ImpossibleContextError" ["error" .= toJSON msg]
 
 transLookupTxOut ::
   forall era.

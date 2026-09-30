@@ -193,14 +193,14 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPointerV2V3 ::
-  forall proxy l era.
+  forall proxy l level era.
   ( EraTx era
   , AlonzoEraTxBody era
   , EraPlutusTxInfo l era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPointerV2V3 proxy lti@LedgerTxInfo {ltiTx} (ptr, (d, _)) =
@@ -220,7 +220,7 @@ transTxRedeemers ::
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
 transTxRedeemers proxy lti@LedgerTxInfo {ltiTx} =
   PV2.unsafeFromList
@@ -377,22 +377,19 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
           [minBound ..]
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV1.TxInfo
-            { PV1.txInfoInputs = inputs
-            , PV1.txInfoOutputs = outputs
-            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-            , PV1.txInfoDCert = txCerts
-            , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
-            , PV1.txInfoValidRange = timeRange
-            , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV1.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right $
+        PV1.TxInfo
+          { PV1.txInfoInputs = inputs
+          , PV1.txInfoOutputs = outputs
+          , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+          , PV1.txInfoDCert = txCerts
+          , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV1.txInfoId = Alonzo.transTxBodyId txBody
+          }
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
@@ -417,24 +414,21 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
           (F.toList (txBody ^. outputsTxBodyL))
       txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
       plutusRedeemers <- transTxRedeemers proxy lti
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV2.TxInfo
-            { PV2.txInfoInputs = inputs
-            , PV2.txInfoOutputs = outputs
-            , PV2.txInfoReferenceInputs = refInputs
-            , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
-            , PV2.txInfoDCert = txCerts
-            , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
-            , PV2.txInfoValidRange = timeRange
-            , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV2.txInfoRedeemers = plutusRedeemers
-            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV2.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+      Right
+        PV2.TxInfo
+          { PV2.txInfoInputs = inputs
+          , PV2.txInfoOutputs = outputs
+          , PV2.txInfoReferenceInputs = refInputs
+          , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+          , PV2.txInfoDCert = txCerts
+          , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
+          , PV2.txInfoValidRange = timeRange
+          , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV2.txInfoRedeemers = plutusRedeemers
+          , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV2.txInfoId = Alonzo.transTxBodyId txBody
+          }
 
   toPlutusArgs = toPlutusV2Args
 
@@ -445,7 +439,7 @@ toPlutusV2Args ::
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>
   proxy 'PlutusV2 ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Data era ->
