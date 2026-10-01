@@ -1069,7 +1069,7 @@ instance HuddleRule "eb_announcement" DijkstraEra where
     pname
       =.= arr
         [ "eb_hash" ==> huddleRule @"hash32" p
-        , "eb_size" ==> VUInt `sized` (4 :: Word64) //- "size of the EB block closure"
+        , "eb_size" ==> VUInt `sized` (4 :: Word64) //- "size of the EB references"
         ]
 
 instance HuddleRule "block" DijkstraEra where

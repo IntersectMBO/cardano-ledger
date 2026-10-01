@@ -103,7 +103,7 @@ major_protocol_version = 0 .. 13
 
 eb_announcement =
   [ eb_hash : hash32
-  , eb_size : uint .size 4 ; size of the EB block closure
+  , eb_size : uint .size 4 ; size of the EB references
   ]
 
 block_body =
