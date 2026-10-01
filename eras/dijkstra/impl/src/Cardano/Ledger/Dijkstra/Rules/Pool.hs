@@ -193,9 +193,10 @@ instance
 -- hash differs from the active one. A future VRF key hash that coincides with
 -- the pool's active one is not counted separately.
 --
--- The Dijkstra POOLREAP rule restores this invariant at the epoch boundary by
--- recomputing the map from the pools that remain registered once the future
--- parameters have been adopted and the retired pools have been reaped.
+-- The Dijkstra POOLREAP rule keeps this invariant at the epoch boundary: a
+-- pool whose future VRF key hash differs from its active one releases the
+-- reference to the active one once the future parameters are adopted, and a
+-- retired pool releases the reference to the VRF key hash it uses.
 poolTransition ::
   forall rule era.
   ( EraPParams era
