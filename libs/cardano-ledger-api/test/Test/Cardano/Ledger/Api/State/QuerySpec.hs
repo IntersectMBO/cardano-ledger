@@ -151,6 +151,8 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @(QueryPoolStateResult era)
+      prop "QueryResultNonMyopicMemberRewards" $
+        roundTripEraExpectation @era @QueryResultNonMyopicMemberRewards
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
     describe "Queries" $ do
       committeeMembersStateSpec @era
