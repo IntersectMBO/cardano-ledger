@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Dijkstra.Era (
   DijkstraEraTest,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..), EraPlutusTxInfo)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
@@ -82,6 +82,7 @@ class
   , DijkstraEraTxBody era
   , DijkstraEraScript era
   , DijkstraEraUTxO era
+  , EraPlutusTxInfo PlutusV4 era
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   DijkstraEraTest era
