@@ -1,9 +1,10 @@
 # Version history for `cardano-data`
 
-## 1.3.2.0
+## 1.4.0.0
 
 * Add `Ord` instances for `NonEmptyMap`, `NonEmptySet`
 * Add `Semigroup` instance for `NonEmptySet`
+* Rename `Data.CanonicalMaps.pointWise` to `pointwise`
 
 ## 1.3.1.0
 
