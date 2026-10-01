@@ -37,6 +37,7 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoTx (..),
   Tx (..),
  )
+import Cardano.Ledger.Babbage.TxBody (babbageAllInputsTxBodyF)
 import Cardano.Ledger.BaseTypes (NonZero (..), unboundRational)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (Coin))
@@ -91,6 +92,9 @@ instance EraTx ConwayEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = getConwayMinFeeTx
+
+  allInputsTxBodyF = babbageAllInputsTxBodyF
+  {-# INLINE allInputsTxBodyF #-}
 
 instance EqRaw (Tx l ConwayEra) where
   eqRaw = alonzoTxEqRaw

@@ -18,7 +18,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -53,6 +52,7 @@ module Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
   MaryEraTxBody (..),
   Indexable (..),
+  alonzoSpendableInputsTxBodyF,
   getAdaOnly,
   decodeDataHash32,
   encodeDataHash32,
@@ -244,12 +244,8 @@ instance EraTxBody AlonzoEra where
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. allInputsTxBodyF))
+  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. alonzoSpendableInputsTxBodyF))
   {-# INLINE spendableInputsTxBodyF #-}
-
-  allInputsTxBodyF =
-    to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
-  {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrWithdrawals} -> atbrWithdrawals) $
@@ -307,6 +303,14 @@ instance AlonzoEraTxBody AlonzoEra where
   redeemerPointer = alonzoRedeemerPointer
 
   redeemerPointerInverse = alonzoRedeemerPointerInverse
+
+alonzoSpendableInputsTxBodyF ::
+  AlonzoEraTxBody era => SimpleGetter (TxBody TopTx era) (Set TxIn)
+alonzoSpendableInputsTxBodyF =
+  to $ \txBody ->
+    (txBody ^. inputsTxBodyL)
+      `Set.union` (txBody ^. collateralInputsTxBodyL)
+{-# INLINEABLE alonzoSpendableInputsTxBodyF #-}
 
 deriving newtype instance Eq (TxBody l AlonzoEra)
 

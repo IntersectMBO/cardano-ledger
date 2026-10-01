@@ -111,6 +111,7 @@ import Cardano.Ledger.Core (
   TxAuxDataHash (..),
   TxLevel (..),
   Value,
+  allInputsTxBodyF,
   binaryUpgradeTxBody,
   txIdTxBody,
  )

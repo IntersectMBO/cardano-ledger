@@ -2,6 +2,7 @@
 
 ## 1.22.0.0
 
+* Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug
 * Add `assocMapToList`, `assocMapKeys` and `assocMapElems`
 * Add `ToPlutusData` instance for `SlotInterval`
 * Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`

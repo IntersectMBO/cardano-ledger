@@ -221,6 +221,13 @@ class
     Int ->
     Coin
 
+  -- This getter is defined in `EraTx`, instead of `EraTxBody` in order to work around the GHC bug: <link TBA>
+
+  -- | This getter will produce all inputs from the UTxO map that this transaction is
+  -- referencing, even if some of them cannot be spent by the transaction. For example
+  -- starting with Babbage era it will also include reference inputs.
+  allInputsTxBodyF :: SimpleGetter (TxBody TopTx era) (Set TxIn)
+
 class
   ( EraTxOut era
   , EraTxCert era
@@ -259,11 +266,6 @@ class
   -- spend, which ones will depend on the validity of the transaction itself. Starting in
   -- Alonzo this will include collateral inputs.
   spendableInputsTxBodyF :: SimpleGetter (TxBody l era) (Set TxIn)
-
-  -- | This getter will produce all inputs from the UTxO map that this transaction is
-  -- referencing, even if some of them cannot be spent by the transaction. For example
-  -- starting with Babbage era it will also include reference inputs.
-  allInputsTxBodyF :: SimpleGetter (TxBody TopTx era) (Set TxIn)
 
   certsTxBodyL :: Lens' (TxBody l era) (StrictSeq (TxCert era))
 
