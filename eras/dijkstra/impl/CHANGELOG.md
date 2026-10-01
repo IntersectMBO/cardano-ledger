@@ -1,7 +1,10 @@
 # Revision history for `cardano-ledger-dijkstra`
 
-## 0.4.1.0
+## 0.5.0.0
 
+* Add `kesMaxKeyAgeEpochs` to compute how many epochs a registered Leios voting key (CIP-0164) stays valid from the KES parameters
+* Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
+* Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Change `eraMaxLanguage` to `PlutusV4`
 
 ## 0.4.0.0

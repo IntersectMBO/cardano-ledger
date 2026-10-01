@@ -1,8 +1,16 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.24.0.1
+## 1.25.0.0
 
-*
+* Change `TICKF` to run the `SNAP` rule at the epoch boundary:
+  - Add `SNAP` related constraints to the `STS` instance of `TICKF`
+  - Add `Embed (SNAP era) (TICKF era)` instance for Shelley's `SNAP` rule
+  - Add `TickfSnapEvent` constructor to `ConwayTickfEvent` and export it
+  - Add `Generic`, `Eq` and `NFData` instances for `ConwayTickfEvent`
+
+### `testlib`
+
+* Add `ToExpr` instance for `ConwayTickfEvent`
 
 ## 1.24.0.0
 

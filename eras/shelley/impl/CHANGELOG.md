@@ -1,8 +1,23 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.20.0.1
+## 1.21.0.0
 
-*
+* Remove `nesPd` field from `NewEpochState` and `nesPdL`:
+  - Add `nesStakePoolDistrG`, which reads the stake pool distribution from the set snapshot instead
+  - Remove the re-export of `ssStakeMarkPoolDistrL` from `Cardano.Ledger.Shelley.LedgerState`
+  - `NewEpochState` no longer encodes `nesPd`, so the on-disk ledger state format changes and requires replay
+* Change `TICKF` to run the `SNAP` rule at the epoch boundary:
+  - Add `SNAP` related constraints to the `STS` instance of `TICKF` and to `validatingTickTransitionFORECAST`
+  - Add `Embed (SNAP era) (TICKF era)` instance
+* Export `ShelleyTickfEvent` from `Cardano.Ledger.Shelley.Rules`:
+  - Add the `TickfSnapEvent` constructor
+  - Add `Generic`, `Eq` and `NFData` instances for it
+* Change `resetStakeDistribution` to seed the set and go snapshots together with the mark snapshot, so stake from genesis staking now earns rewards in the first epochs
+
+### `testlib`
+
+* Add `EraForecast` superclass to `ShelleyEraImp`, together with `Eq`, `ToExpr`, `NFData` and `Typeable` superclasses for the `TICKF` event
+* Add `ToExpr` instance for `ShelleyTickfEvent`
 
 ## 1.20.0.0
 

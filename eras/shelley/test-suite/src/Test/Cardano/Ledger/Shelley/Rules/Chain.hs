@@ -62,6 +62,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   futurePParamsEpochStateL,
   nesEpochStateL,
+  nesStakePoolDistrG,
   prevPParamsEpochStateL,
   smartUTxOState,
   updateNES,
@@ -224,7 +225,6 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         )
         SNothing
         def
-        def
     )
     cs
     initNonce
@@ -342,8 +342,8 @@ chainTransition =
 
         nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, s)
 
-        let NewEpochState e1 _ _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _pd _ = nes'
+        let NewEpochState e1 _ _ _ _ _ = nes
+            NewEpochState e2 _ bcur es _ _ = nes'
         let EpochState account ls _ _ = es
             pp' = es ^. curPParamsEpochStateL
         let LedgerState _ certState = ls
@@ -362,7 +362,7 @@ chainTransition =
         PrtclState cs' etaV' etaC' <-
           trans @(PRTCL MockCrypto) $
             TRC
-              ( PrtclEnv (pp' ^. ppDL) _pd genDelegs eta0'
+              ( PrtclEnv (pp' ^. ppDL) (nes' ^. nesStakePoolDistrG) genDelegs eta0'
               , PrtclState cs etaV etaC
               , bh
               )

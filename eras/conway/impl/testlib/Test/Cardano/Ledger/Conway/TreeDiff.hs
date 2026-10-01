@@ -257,6 +257,8 @@ instance
   ) =>
   ToExpr (ConwayNewEpochEvent era)
 
+instance ToExpr (Event (EraRule "SNAP" era)) => ToExpr (ConwayTickfEvent era)
+
 instance ToExpr (ConwayHardForkEvent era)
 
 instance

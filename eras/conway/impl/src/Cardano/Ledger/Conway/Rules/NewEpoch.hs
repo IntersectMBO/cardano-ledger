@@ -125,7 +125,6 @@ instance
           def
           SNothing
           def
-          def
     ]
 
   transitionRules = [newEpochTransition]
@@ -154,7 +153,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , nes@(NewEpochState eL _ bcur es0 ru _ _)
+      , nes@(NewEpochState eL _ bcur es0 ru _)
       , eNo
       ) <-
     judgmentContext
@@ -175,8 +174,6 @@ newEpochTransition = do
       es2 <- trans @(EraRule "EPOCH" era) $ TRC ((), es1, eNo)
       let adaPots = totalAdaPotsES es2
       tellEvent $ TotalAdaPotsEvent adaPots
-      let pd' = ssStakeMarkPoolDistr (esSnapshots es0)
-      -- See `Shelley.NEWEPOCH` for details on the implementation
       pure $
         nes
           { nesEL = eNo
@@ -184,7 +181,6 @@ newEpochTransition = do
           , nesBcur = BlocksMade mempty
           , nesEs = es2
           , nesRu = SNothing
-          , nesPd = pd'
           }
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty

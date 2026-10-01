@@ -152,7 +152,7 @@ instance
 
         nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
 
-        let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
+        let NewEpochState _ _ (BlocksMade current) epochState _ _ = nes'
             EpochState account ledgerState _ _ = epochState
             pparams = epochState ^. curPParamsEpochStateL
 

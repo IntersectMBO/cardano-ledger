@@ -154,7 +154,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance
   ( EraTxOut era
