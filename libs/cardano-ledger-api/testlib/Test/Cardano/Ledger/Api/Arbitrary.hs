@@ -13,6 +13,10 @@ instance Arbitrary MemberStatus where
 instance Arbitrary (QueryPoolStateResult era) where
   arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
+instance Arbitrary QueryResultNonMyopicMemberRewards where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 instance Arbitrary StakeSnapshot where
   arbitrary = genericArbitraryU
   shrink = genericShrink
