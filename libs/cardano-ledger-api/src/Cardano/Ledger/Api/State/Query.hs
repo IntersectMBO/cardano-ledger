@@ -726,7 +726,7 @@ queryStakePoolRelays ::
   NewEpochState era ->
   Map (KeyHash StakePool) (Rational, StrictSeq StakePoolRelay)
 queryStakePoolRelays nes =
-  Map.mapMaybeWithKey getRelays (unPoolDistr (nesPd nes))
+  Map.mapMaybeWithKey getRelays (unPoolDistr (nes ^. nesStakePoolDistrG))
   where
     pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
     pools = psStakePools pstate
@@ -818,15 +818,16 @@ instance DecCBOR QueryResultPoolDistr where
 
 -- | Query the pool distribution derived from the set-snapshot.
 --
--- Returns the pre-computed 'PoolDistr' stored in 'NewEpochState'
--- (@nesPd@), optionally filtered to the given set of pools. Empty set
+-- Returns the pre-computed 'PoolDistr' stored in the set snapshot
+-- (@nesStakePoolDistrG@), optionally filtered to the given set of pools. Empty set
 -- returns all pools.
 querySetSnapshotStakePoolDistr ::
   NewEpochState era ->
   Set (KeyHash StakePool) ->
   QueryResultPoolDistr
 querySetSnapshotStakePoolDistr nes poolIds
-  | Set.null poolIds = toQueryResultPoolDistr (nesPd nes)
+  | Set.null poolIds = toQueryResultPoolDistr pd
   | otherwise =
-      let pd = nesPd nes
-       in toQueryResultPoolDistr (pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds})
+      toQueryResultPoolDistr (pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds})
+  where
+    pd = nes ^. nesStakePoolDistrG

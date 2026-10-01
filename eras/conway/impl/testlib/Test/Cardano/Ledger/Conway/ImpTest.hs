@@ -199,7 +199,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEpochStateL,
   nesEsL,
-  nesPdL,
+  nesStakePoolDistrG,
   newEpochStateGovStateL,
   utxosGovStateL,
  )
@@ -1031,7 +1031,7 @@ getRatifyEnv :: (ConwayEraGov era, ConwayEraCertState era) => ImpTestM era (Rati
 getRatifyEnv = do
   eNo <- getsNES nesELL
   instantStake <- getsNES instantStakeG
-  poolDistr <- getsNES nesPdL
+  poolDistr <- getsNES nesStakePoolDistrG
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL

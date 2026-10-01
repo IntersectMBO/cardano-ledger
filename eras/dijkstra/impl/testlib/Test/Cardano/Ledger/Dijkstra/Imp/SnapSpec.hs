@@ -2,15 +2,30 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), EpochSize (..), Globals (..))
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
+  EpochSize (..),
+  Globals (..),
+  epochInfoPure,
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.PParams (ppLeiosCommitteeSizeL)
 import Cardano.Ledger.Dijkstra.Rules (maxKeyAgeEpochs)
+import Cardano.Ledger.Shelley.LedgerState (esSnapshotsL, nesELL, nesEsL)
+import Cardano.Ledger.Slot (epochInfoFirst)
+import Cardano.Ledger.State (MarkSnapShot (..), ssLeiosCommitteeL, ssStakeMarkL, ssStakeSetL)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad (forM)
+import Lens.Micro (to, (&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec (
   getActiveProposalDeposits,
@@ -44,6 +59,35 @@ spec = describe "SNAP" $ do
             }
     -- 62 * 129600 / 432000 = 18.6, rounded up to 19, plus 2 epochs of activation delay.
     maxKeyAgeEpochs mainnetGlobals (EpochNo 0) `shouldBe` EpochInterval 21
+
+  it "TICKF across the epoch boundary seats the same Leios committee as TICK" $ do
+    -- committee is large enough to seat every pool, so the fresh pool is guaranteed a seat
+    modifyPParams $ \pp -> pp & ppLeiosCommitteeSizeL .~ 1_000
+    -- register a fresh pool with some stake and cross a boundary, so that the committee memoized
+    -- in the mark snapshot differs from the one in the set snapshot
+    pool <- freshKeyHash
+    registerPool pool
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    _ <- registerStakeCredential stakingCred
+    delegateStake stakingCred pool
+    paymentKeyHash <- freshKeyHash @Payment
+    sendCoinTo_ (mkAddr paymentKeyHash stakingCred) (Coin 1_000_000_000)
+    passEpoch
+    let setCommittee s = s ^. nesEsL . esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
+    markCommittee <- getsNES $ nesEsL . esSnapshotsL . ssStakeMarkL . to msLeiosCommittee
+    getsNES (to setCommittee) `shouldNotReturn` markCommittee
+
+    globals <- use impGlobalsL
+    nes <- getsNES id
+    -- the first slot of the next epoch, where TICKF crosses the boundary
+    let nextEpochFirstSlot = epochInfoFirst (epochInfoPure globals) (succ (nes ^. nesELL))
+    ticked <- runImpRule @"TICKF" () nes nextEpochFirstSlot
+    -- TICKF rotates the mark snapshot into the set position, carrying its committee along
+    setCommittee ticked `shouldBe` markCommittee
+
+    passEpoch
+    -- TICK performs the same rotation once the next epoch actually starts
+    getsNES (to setCommittee) `shouldReturn` markCommittee
 
   it "SPO voting stake no longer lags DRep voting stake by the refunded deposit" $ do
     (pool, drep, _) <- setupExpiredRefundScenario

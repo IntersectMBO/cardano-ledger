@@ -806,15 +806,12 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
         (unActiveStake ssActiveStake)
 
 instance Arbitrary MarkSnapShot where
-  arbitrary = MarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = mkMarkSnapShot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 -- | Builds a consistent set snapshot: its pool distribution and committee are
 -- seated from the mark it rotates, never generated independently.
 instance Arbitrary SetSnapShot where
-  arbitrary = do
-    mark <- arbitrary
-    maxKeyAge <- arbitrary
-    pure $ mkSetSnapShot mark maxKeyAge
+  arbitrary = mkSetSnapShot <$> arbitrary
 
 instance Arbitrary GoSnapShot where
   arbitrary = mkGoSnapShot <$> arbitrary
@@ -825,7 +822,6 @@ instance Arbitrary (SnapShots era) where
     ssStakeSet <- arbitrary
     ssStakeGo <- arbitrary
     ssFee <- arbitrary
-    let ssStakeMarkPoolDistr = calculatePoolDistr (msSnapShot ssStakeMark)
     pure $ SnapShots {..}
 
 -- | In the system, Stake never contains more than the sum of all Ada (which is constant).

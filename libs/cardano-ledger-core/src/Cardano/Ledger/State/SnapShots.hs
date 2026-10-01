@@ -21,9 +21,10 @@ module Cardano.Ledger.State.SnapShots (
   mkSnapShot,
   leiosCandidates,
   MarkSnapShot (..),
+  mkMarkSnapShot,
   SetSnapShot (..),
-  GoSnapShot (..),
   mkSetSnapShot,
+  GoSnapShot (..),
   mkGoSnapShot,
   SnapShots (..),
   emptySnapShot,
@@ -36,7 +37,6 @@ module Cardano.Ledger.State.SnapShots (
   calculatePoolDistr',
   calculatePoolStake,
   ssStakeMarkL,
-  ssStakeMarkPoolDistrL,
   ssStakeSetL,
   ssStakeGoL,
   ssFeeL,
@@ -375,59 +375,105 @@ instance ToKeyValuePairs SnapShot where
         , "stakePoolsSnapShot" .= ssStakePoolsSnapShot
         ]
 
--- | The freshest snapshot, taken at the boundary into 'msEpochNo'. Alongside
--- the stake standing it records the inputs that the Leios committee will be
--- selected from when this snapshot rotates into 'SetSnapShot'.
+-- | The freshest snapshot, taken at the boundary into 'msEpochNo'.
+--
+-- It also memoizes, lazily, the pool distribution and the Leios committee it will provide as the
+-- 'SetSnapShot', so they are computed at most once (normally by 'TICK') and rotation only moves
+-- them. See ADR-7.
+--
+-- Construct it with 'mkMarkSnapShot' and change the snapshot with 'msSnapShotL'; record update
+-- syntax bypasses the memoization.
 data MarkSnapShot = MarkSnapShot
   { msSnapShot :: SnapShot
   -- ^ Lazy on purpose. See ADR-7.
+  , msStakePoolDistr :: PoolDistr
+  -- ^ Per-pool stake distribution computed from 'msSnapShot'. Lazy on purpose. See ADR-7.
   , msEpochNo :: !EpochNo
   -- ^ Epoch number at the beginning of which this snapshot was created.
   , msLeiosCommitteeSize :: !Word16
   -- ^ Size of the Leios voting committee as set by @ppLeiosCommitteeSize@ upon
   -- snapshot creation (CIP-0164). Zero before Dijkstra.
+  , msLeiosMaxKeyAge :: !EpochInterval
+  -- ^ How many epochs a pool's Leios voting key stays valid after registration (CIP-0164).
+  -- Stored so the committee can be recomputed after decoding. Zero before Dijkstra.
+  , msLeiosCommittee :: LeiosCommittee
+  -- ^ The Leios voting committee (CIP-0164) selected from 'msSnapShot' for the epoch following
+  -- 'msEpochNo', which is the epoch during which this snapshot is the set snapshot. Always empty
+  -- before Dijkstra. Lazy on purpose. See ADR-7.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs MarkSnapShot
 
 instance NFData MarkSnapShot
 
-deriving via AllowThunksIn '["msSnapShot"] MarkSnapShot instance NoThunks MarkSnapShot
+deriving via
+  AllowThunksIn '["msSnapShot", "msStakePoolDistr", "msLeiosCommittee"] MarkSnapShot
+  instance
+    NoThunks MarkSnapShot
 
 instance EncCBOR MarkSnapShot where
-  encCBOR ms@(MarkSnapShot _ _ _) =
+  encCBOR ms@(MarkSnapShot _ _ _ _ _ _) =
     let MarkSnapShot {..} = ms
-     in encodeListLen 3
+     in -- `msStakePoolDistr` and `msLeiosCommittee` are omitted on purpose, as they
+        -- are derived from the snapshot and the committee parameters
+        encodeListLen 4
           <> encCBOR msSnapShot
           <> encCBOR msEpochNo
           <> encCBOR msLeiosCommitteeSize
+          <> encCBOR msLeiosMaxKeyAge
 
 instance DecShareCBOR MarkSnapShot where
   type Share MarkSnapShot = Share SnapShot
-  decSharePlusCBOR = decodeRecordNamedT "MarkSnapShot" (const 3) $ do
-    msSnapShot <- decSharePlusCBOR
-    msEpochNo <- lift decCBOR
-    msLeiosCommitteeSize <- lift decCBOR
-    pure MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize}
+  decSharePlusCBOR = decodeRecordNamedT "MarkSnapShot" (const 4) $ do
+    snapShot <- decSharePlusCBOR
+    epochNo <- lift decCBOR
+    leiosCommitteeSize <- lift decCBOR
+    leiosMaxKeyAge <- lift decCBOR
+    pure $ mkMarkSnapShot snapShot epochNo leiosCommitteeSize leiosMaxKeyAge
 
 instance ToKeyValuePairs MarkSnapShot where
-  toKeyValuePairs ms@(MarkSnapShot _ _ _) =
+  toKeyValuePairs ms@(MarkSnapShot _ _ _ _ _ _) =
     let MarkSnapShot {..} = ms
      in [ "snapShot" .= msSnapShot
         , "epochNo" .= msEpochNo
         , "leiosCommitteeSize" .= msLeiosCommitteeSize
+        , "leiosMaxKeyAge" .= msLeiosMaxKeyAge
+        , "leiosCommittee" .= leiosCommitteeToJSON msLeiosCommittee
         ]
 
+mkMarkSnapShot ::
+  SnapShot ->
+  -- | Epoch at the beginning of which the snapshot is taken.
+  EpochNo ->
+  -- | Size of the Leios committee, as set by @ppLeiosCommitteeSize@. Zero before Dijkstra.
+  Word16 ->
+  -- | LeiosMaxKeyAgeEpochs. Zero before Dijkstra.
+  EpochInterval ->
+  MarkSnapShot
+mkMarkSnapShot snapShot epochNo leiosCommitteeSize leiosMaxKeyAge =
+  MarkSnapShot
+    { msSnapShot = snapShot
+    , msStakePoolDistr = calculatePoolDistr snapShot
+    , msEpochNo = epochNo
+    , msLeiosCommitteeSize = leiosCommitteeSize
+    , msLeiosMaxKeyAge = leiosMaxKeyAge
+    , msLeiosCommittee =
+        -- the committee governs the epoch after the one the snapshot is taken in
+        selectLeiosCommittee
+          (addEpochInterval epochNo (EpochInterval 1))
+          leiosMaxKeyAge
+          leiosCommitteeSize
+          (leiosCandidates (ssStakePoolsSnapShot snapShot))
+    }
+
 -- | The snapshot that drives leader election ('Cardano.Ledger.State.PoolDistr')
--- and Leios voting for the epoch after the one it was marked in. The Leios
--- committee is seated here, when the mark rotates into the set position.
+-- and Leios voting for the epoch after the one it was marked in.
 data SetSnapShot = SetSnapShot
   { ssSnapShot :: !SnapShot
-  , ssPoolDistr :: !PoolDistr
+  , ssStakePoolDistr :: !PoolDistr
   , ssLeiosCommittee :: !LeiosCommittee
   -- ^ The Leios voting committee governing the epoch this snapshot is the
-  -- leader-election distribution of (CIP-0164). Seated at rotation while
-  -- pre-Dijkstra eras leave it empty.
+  -- leader-election distribution of (CIP-0164). Always empty before Dijkstra.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs SetSnapShot
@@ -439,7 +485,7 @@ deriving via AllowThunksIn '["ssLeiosCommittee"] SetSnapShot instance NoThunks S
 instance EncCBOR SetSnapShot where
   encCBOR ss@(SetSnapShot _ _ _) =
     let SetSnapShot {..} = ss
-     in -- `ssPoolDistr` is omitted on purpose: it is derived from the snapshot.
+     in -- `ssStakePoolDistr` is omitted on purpose: it is derived from the snapshot.
         -- The committee is stored so it need not be re-selected on decode, which
         -- also frees us from recording the honoured key age it was seated with.
         encodeListLen 2
@@ -454,7 +500,7 @@ instance DecShareCBOR SetSnapShot where
     pure $
       SetSnapShot
         { ssSnapShot = snapShot
-        , ssPoolDistr = calculatePoolDistr snapShot
+        , ssStakePoolDistr = calculatePoolDistr snapShot
         , ssLeiosCommittee = committee
         }
 
@@ -493,26 +539,14 @@ instance ToKeyValuePairs GoSnapShot where
     let GoSnapShot {..} = gs
      in ["snapShot" .= gsSnapShot]
 
--- | Rotate a mark snapshot into the set position. This also computes the pool
--- distribution and selects the Leios committee using the mark snapshot and a
--- passed maxKeyAge.
-mkSetSnapShot ::
-  -- | The mark snapshot of which the 'PoolDistr' and 'LeiosCommittee' will be
-  -- computed and forced into the SetSnapShot.
-  MarkSnapShot ->
-  -- | Max key age for the leios committee.
-  EpochInterval ->
-  SetSnapShot
-mkSetSnapShot MarkSnapShot {msSnapShot, msEpochNo, msLeiosCommitteeSize} maxKeyAge =
+-- | Rotate a mark snapshot into the set position. The pool distribution and the Leios committee
+-- memoized in the mark snapshot are moved over, which forces them.
+mkSetSnapShot :: MarkSnapShot -> SetSnapShot
+mkSetSnapShot MarkSnapShot {msSnapShot, msStakePoolDistr, msLeiosCommittee} =
   SetSnapShot
     { ssSnapShot = msSnapShot
-    , ssPoolDistr = calculatePoolDistr msSnapShot
-    , ssLeiosCommittee =
-        selectLeiosCommittee
-          (addEpochInterval msEpochNo (EpochInterval 1))
-          maxKeyAge
-          msLeiosCommitteeSize
-          (leiosCandidates (ssStakePoolsSnapShot msSnapShot))
+    , ssStakePoolDistr = msStakePoolDistr
+    , ssLeiosCommittee = msLeiosCommittee
     }
 
 -- | Rotate a set snapshot into the go position.
@@ -522,29 +556,27 @@ mkGoSnapShot SetSnapShot {ssSnapShot} =
 
 -- | Snapshots of the stake distribution.
 --
--- Note that ssStakeMark and ssStakeMarkPoolDistr are lazy on
+-- Note that the snapshot in 'ssStakeMark', together with the values derived from it, is lazy on
 -- purpose since we only want to force the thunk after one stability window
 -- when we know that they are stable (so that we do not compute them if we do not have to).
 -- See more info in the [Optimize TICKF ADR](https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
 data SnapShots era = SnapShots
   { ssStakeMark :: !MarkSnapShot
-  , ssStakeMarkPoolDistr :: PoolDistr -- Lazy on purpose
   , ssStakeSet :: !SetSnapShot
   , ssStakeGo :: !GoSnapShot
   , ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (SnapShots era)
-  -- TODO: switch `AllowThunksIn` to `OnlyCheckWhnfNamed`
-  deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots era)
 
 instance NFData (SnapShots era)
+
+instance NoThunks (SnapShots era)
 
 instance EncCBOR (SnapShots era) where
   encCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
     encodeListLen 4
       <> encCBOR ssStakeMark
-      -- We intentionaly do not serialize the redundant ssStakeMarkPoolDistr
       <> encCBOR ssStakeSet
       <> encCBOR ssStakeGo
       <> encCBOR ssFee
@@ -559,15 +591,13 @@ instance DecShareCBOR (SnapShots era) where
     ssStakeSet <- decSharePlusCBOR
     ssStakeGo <- decSharePlusCBOR
     ssFee <- lift decCBOR
-    let ssStakeMarkPoolDistr = calculatePoolDistr (msSnapShot ssStakeMark)
-    pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}
+    pure SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}
 
 instance Default (SnapShots era) where
   def = emptySnapShots
 
 instance ToKeyValuePairs (SnapShots era) where
-  toKeyValuePairs ss@(SnapShots !_ _ _ _ _) =
-    -- ssStakeMarkPoolDistr is omitted on purpose
+  toKeyValuePairs ss@(SnapShots _ _ _ _) =
     let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss
      in [ "pstakeMark" .= ssStakeMark
         , "pstakeSet" .= ssStakeSet
@@ -580,10 +610,10 @@ emptySnapShot = SnapShot (ActiveStake VMap.empty) (knownNonZeroCoin @1) mempty
 
 emptySnapShots :: SnapShots era
 emptySnapShots =
-  SnapShots emptyMark (calculatePoolDistr emptySnapShot) emptySet emptyGo (Coin 0)
+  SnapShots emptyMark emptySet emptyGo (Coin 0)
   where
-    emptyMark = MarkSnapShot emptySnapShot (EpochNo 0) 0
-    emptySet = mkSetSnapShot emptyMark (EpochInterval 0)
+    emptyMark = mkMarkSnapShot emptySnapShot (EpochNo 0) 0 (EpochInterval 0)
+    emptySet = mkSetSnapShot emptyMark
     emptyGo = mkGoSnapShot emptySet
 
 mkSnapShot ::
@@ -617,7 +647,6 @@ resetStakePoolsSnapShot stakePoolsState ss@SnapShot {..} =
 {-# INLINE resetStakePoolsSnapShot #-}
 
 snapShotFromInstantStake ::
-  forall era.
   EraStake era =>
   InstantStake era ->
   DState era ->
@@ -675,9 +704,6 @@ calculatePoolDistr' includeHash (SnapShot _ activeStake stakePoolSnapShot) =
 ssStakeMarkL :: Lens' (SnapShots era) MarkSnapShot
 ssStakeMarkL = lens ssStakeMark (\ds u -> ds {ssStakeMark = u})
 
-ssStakeMarkPoolDistrL :: Lens' (SnapShots era) PoolDistr
-ssStakeMarkPoolDistrL = lens ssStakeMarkPoolDistr (\ds u -> ds {ssStakeMarkPoolDistr = u})
-
 ssStakeSetL :: Lens' (SnapShots era) SetSnapShot
 ssStakeSetL = lens ssStakeSet (\ds u -> ds {ssStakeSet = u})
 
@@ -690,7 +716,10 @@ ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
 -- MarkSnapShot / SetSnapShot / GoSnapShot
 
 msSnapShotL :: Lens' MarkSnapShot SnapShot
-msSnapShotL = lens msSnapShot (\ms u -> ms {msSnapShot = u})
+msSnapShotL =
+  lens
+    msSnapShot
+    (\ms u -> mkMarkSnapShot u (msEpochNo ms) (msLeiosCommitteeSize ms) (msLeiosMaxKeyAge ms))
 
 ssSnapShotL :: Lens' SetSnapShot SnapShot
 ssSnapShotL = lens ssSnapShot (\ss u -> ss {ssSnapShot = u})

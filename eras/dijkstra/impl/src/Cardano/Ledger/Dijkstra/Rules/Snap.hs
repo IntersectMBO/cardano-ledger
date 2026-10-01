@@ -1,20 +1,25 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Dijkstra's SNAP rule. Like Shelley's, but the fresh mark snapshot records
 -- the epoch, @leiosCommitteeSize@ protocol parameter, and the maximum honoured
--- voting key age, from which the Leios voting committee (CIP-0164) is seated
--- when the snapshot rotates into the set position, carrying whichever
--- registered BLS keys are still honoured.
+-- voting key age, from which the Leios voting committee (CIP-0164) is selected
+-- and memoized in the mark snapshot, carrying whichever registered BLS keys are
+-- still honoured. The committee is moved into the set position when the mark
+-- snapshot rotates.
 module Cardano.Ledger.Dijkstra.Rules.Snap (
   maxKeyAgeEpochs,
+  kesMaxKeyAgeEpochs,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -27,6 +32,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Conway.Rules (ConwayTickfEvent (..), TICKF)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (SNAP)
@@ -37,15 +43,14 @@ import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.State (
   EraCertState,
   EraStake,
-  MarkSnapShot (..),
   SnapShot (..),
   SnapShots (..),
-  calculatePoolDistr,
   certDStateL,
   certPStateL,
   emptySnapShots,
   instantStakeG,
   mkGoSnapShot,
+  mkMarkSnapShot,
   mkSetSnapShot,
   snapShotFromInstantStake,
   swdDelegation,
@@ -55,6 +60,7 @@ import Cardano.Ledger.State (
 import Cardano.Slotting.EpochInfo (epochInfoSize)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
+  Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -68,6 +74,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap
 import Data.Void (Void)
+import Data.Word (Word64)
 import Lens.Micro ((^.))
 
 instance
@@ -83,27 +90,40 @@ instance
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
+instance
+  ( EraTxOut era
+  , EraStake era
+  , EraCertState era
+  , DijkstraEraPParams era
+  , Event (EraRule "SNAP" era) ~ SnapEvent era
+  ) =>
+  Embed (SNAP era) (TICKF era)
+  where
+  wrapFailed = \case {}
+  wrapEvent = TickfSnapEvent
+
 snapTransition ::
   (EraTxOut era, EraStake era, EraCertState era, DijkstraEraPParams era) =>
   TransitionRule (SNAP era)
 snapTransition = do
   TRC (snapEnv, s, eNo) <- judgmentContext
 
-  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
-      instantStake = ls ^. instantStakeG
-      istakeSnap =
-        snapShotFromInstantStake
-          instantStake
-          (certState ^. certDStateL)
-          (certState ^. certPStateL)
-  -- 'maxKeyAge' is derived from 'Globals', which the pure snapshot rotation
-  -- cannot read, so compute it here and seat the committee for the mark that is
-  -- now rotating into the set position, judging keys for @eNo@. Measure against
+  -- 'maxKeyAge' is derived from 'Globals', which the pure snapshot construction
+  -- cannot read, so compute it here and memoize in the fresh mark snapshot the
+  -- committee it will seat once it rotates into the set position. Measure against
   -- @eNo@ (the epoch we are entering), not a later one: this only needs an epoch
   -- /length/ to turn the KES lifetime into a count of epochs, and a future
   -- epoch's length is past the forecast horizon whenever the stability window is
-  -- shorter than an epoch.
+  -- shorter than an epoch. Note that this measures the key age against the epoch
+  -- the mark is created in, rather than the one after it, which its committee
+  -- governs. The two agree unless the epoch length changes between them.
   maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
+
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
+      instantStake = ls ^. instantStakeG
+      istakeSnap =
+        snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+      markSnapShot = mkMarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL) maxKeyAge
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
@@ -115,12 +135,10 @@ snapTransition = do
 
   pure $
     SnapShots
-      { -- The mark records the committee size; the Leios committee is seated
-        -- from it when this snapshot rotates into the set position (CIP-0164).
-        ssStakeMark = MarkSnapShot istakeSnap eNo (pp ^. ppLeiosCommitteeSizeL)
-      , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
-      , ssStakeSet = mkSetSnapShot (ssStakeMark s) maxKeyAge
+      { -- The mark memoizes the Leios committee (CIP-0164), which is moved into
+        -- the 'set' position together with the snapshot upon rotation.
+        ssStakeMark = markSnapShot
+      , ssStakeSet = mkSetSnapShot (ssStakeMark s)
       , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }
@@ -135,13 +153,25 @@ snapTransition = do
 -- pass one that is already known -- asking for a future epoch's size can fall
 -- past the hard-fork forecast horizon and throw.
 maxKeyAgeEpochs :: Globals -> EpochNo -> EpochInterval
-maxKeyAgeEpochs globals e =
-  EpochInterval $
-    ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2
+maxKeyAgeEpochs globals e = kesMaxKeyAgeEpochs maxKESEvo slotsPerKESPeriod epochSize
   where
     -- Safe against the forecast horizon as long as @e@ is an already-known
     -- epoch (see the note above); 'epochInfoPure' is the only handle on the
     -- epoch length 'Globals' offers.
-    EpochSize slotsPerEpoch = runIdentity $ epochInfoSize (epochInfoPure globals) e
+    epochSize = runIdentity $ epochInfoSize (epochInfoPure globals) e
 
     Globals {maxKESEvo, slotsPerKESPeriod} = globals
+
+-- | Same as 'maxKeyAgeEpochs', but computed directly from the KES parameters and the epoch
+-- length, for when 'Globals' are not available, e.g. at genesis.
+kesMaxKeyAgeEpochs ::
+  -- | Maximum number of KES key evolutions
+  Word64 ->
+  -- | Number of slots per KES period
+  Word64 ->
+  -- | Epoch length
+  EpochSize ->
+  EpochInterval
+kesMaxKeyAgeEpochs maxKESEvo slotsPerKESPeriod (EpochSize slotsPerEpoch) =
+  EpochInterval $
+    ceiling ((maxKESEvo * slotsPerKESPeriod) % slotsPerEpoch) + 2

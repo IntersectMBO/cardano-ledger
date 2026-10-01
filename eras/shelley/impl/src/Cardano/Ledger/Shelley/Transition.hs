@@ -447,7 +447,6 @@ createInitialState tc =
               , esNonMyopic = def
               }
         , nesRu = SNothing
-        , nesPd = def
         , stashedAVVMAddresses = def
         }
     govState :: GovState era
@@ -589,8 +588,6 @@ shelleyRegisterInitialAccounts ShelleyGenesisStaking {sgsStake} nes =
       ]
 {-# DEPRECATED shelleyRegisterInitialAccounts "Use `injectStakeCredentials` instead" #-}
 
--- NOTE: it seems like this is only used for testing, so hardcoding `Testnet` as a Network for now
-
 -- | Having initial funds, stake pools and accounts with delegations, we need to reset the stake
 -- distribution, otherwise those initial stake pools will not be able to produce blocks
 resetStakeDistribution ::
@@ -599,19 +596,21 @@ resetStakeDistribution ::
   NewEpochState era
 resetStakeDistribution nes =
   nes
-    & nesEsL . esSnapshotsL . ssStakeMarkL . msSnapShotL .~ initSnapShot
-    & nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL .~ poolDistr
-    & nesPdL .~ poolDistr
+    & nesEsL . esSnapshotsL . ssStakeMarkL .~ markSnapShot
+    & nesEsL . esSnapshotsL . ssStakeSetL .~ setSnapShot
+    & nesEsL . esSnapshotsL . ssStakeGoL .~ mkGoSnapShot setSnapShot
   where
     dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
     pState = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
-    poolDistr = calculatePoolDistr initSnapShot
-    -- The new stake distribution is made on the basis of a snapshot taken
-    -- during the previous epoch. We create a "fake" snapshot in order to
-    -- establish an initial stake distribution.
+    -- we set the snapshots to the same seed snapshot to initialise stake distribution since
+    -- we don't have a previous epoch when starting out
     initSnapShot :: SnapShot
     initSnapShot =
       snapShotFromInstantStake (addInstantStake (nes ^. utxoL) mempty) dState pState
+    markSnapShot :: MarkSnapShot
+    markSnapShot = nes ^. nesEsL . esSnapshotsL . ssStakeMarkL & msSnapShotL .~ initSnapShot
+    setSnapShot :: SetSnapShot
+    setSnapShot = mkSetSnapShot markSnapShot
 
 -- | Register the initial funds in the 'NewEpochState'.
 --

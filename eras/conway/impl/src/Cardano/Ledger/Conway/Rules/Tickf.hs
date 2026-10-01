@@ -1,26 +1,51 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Like TICK, called only by consensus. But, ticks ledger state to a __future__ slot.
 module Cardano.Ledger.Conway.Rules.Tickf (
   TICKF,
-  ConwayTickfEvent,
+  ConwayTickfEvent (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, SlotNo)
 import Cardano.Ledger.Conway.Era
+import Cardano.Ledger.Core (Era, EraRule)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (SnapShots (ssStakeMarkPoolDistr))
+import Cardano.Ledger.State (SnapShots)
+import Control.DeepSeq (NFData)
 import Control.State.Transition
 import Data.Void (Void)
+import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 
-data ConwayTickfEvent era
+newtype ConwayTickfEvent era
+  = TickfSnapEvent (Event (EraRule "SNAP" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "SNAP" era)) => Eq (ConwayTickfEvent era)
+
+instance NFData (Event (EraRule "SNAP" era)) => NFData (ConwayTickfEvent era)
 
 instance
-  EraGov era =>
+  ( EraGov era
+  , State (EraRule "SNAP" era) ~ SnapShots era
+  , Environment (EraRule "SNAP" era) ~ Shelley.SnapEnv era
+  , Signal (EraRule "SNAP" era) ~ EpochNo
+  , Embed (EraRule "SNAP" era) (TICKF era)
+  ) =>
   STS (TICKF era)
   where
   type State (TICKF era) = NewEpochState era
@@ -35,32 +60,38 @@ instance
     TRC ((), nes0, slot) <- judgmentContext
     -- This whole function is a specialization of an inlined 'NEWEPOCH'.
     --
-    -- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and
-    -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
-    -- depends on getting these three fields correct.
+    -- The ledger view, 'LedgerView', is built entirely from the stake pool distribution in the
+    -- set snapshot, the current protocol parameters and 'dsGenDelegs', so the correctness of this
+    -- rule only depends on getting these three correct.
 
     (curEpochNo, nes) <- liftSTS $ Shelley.solidifyNextEpochPParams nes0 slot
 
     let es = nesEs nes
+        pp = es ^. curPParamsEpochStateL
+        ls = esLState es
         ss = esSnapshots es
-
-    -- the relevant 'NEWEPOCH' logic
-    let pd' = ssStakeMarkPoolDistr ss
 
     if curEpochNo /= succ (nesEL nes)
       then pure nes
       else do
         let govState = nes ^. newEpochStateGovStateL
-        -- We can skip 'SNAP'; we already have the equivalent pd'.
 
-        -- We can skip 'POOLREAP';
-        -- we don't need to do the checks:
-        -- if the checks would fail, then the node will fail in the 'TICK' rule
-        -- if it ever then node tries to validate blocks for which the
-        -- return value here was used to validate their headers.
+        ss' <-
+          trans @(EraRule "SNAP" era) $ TRC (Shelley.SnapEnv ls pp, ss, curEpochNo)
 
         pure $!
-          nes {nesPd = pd'}
+          nes
+            & nesEsL . esSnapshotsL .~ ss'
             & newEpochStateGovStateL . curPParamsGovStateL .~ nextEpochPParams govState
             & newEpochStateGovStateL . prevPParamsGovStateL .~ (govState ^. curPParamsGovStateL)
             & newEpochStateGovStateL . futurePParamsGovStateL .~ NoPParamsUpdate
+
+instance
+  ( Era era
+  , STS (Shelley.SNAP era)
+  , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
+  ) =>
+  Embed (Shelley.SNAP era) (TICKF era)
+  where
+  wrapFailed = \case {}
+  wrapEvent = TickfSnapEvent

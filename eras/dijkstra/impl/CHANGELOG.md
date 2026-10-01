@@ -2,6 +2,9 @@
 
 ## 0.4.0.0
 
+* Add `maxKeyAgeEpochs` and `kesMaxKeyAgeEpochs` to compute how many epochs a registered Leios voting key (CIP-0164) stays valid
+* Add `seatInitialLeiosCommittee`, which seats the Leios voting committee (CIP-0164) on the initial stake snapshots in `injectIntoTestState`
+* Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
   `POOL` rule, replacing `ShelleyPoolPredFailure`:
   - `EraRuleFailure "POOL" DijkstraEra` is now `DijkstraPoolPredFailure DijkstraEra`

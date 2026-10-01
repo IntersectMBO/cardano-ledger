@@ -2,6 +2,11 @@
 
 ## 1.24.0.0
 
+* Change `TICKF` to run the `SNAP` rule at the epoch boundary:
+  - Add `SNAP` related constraints to the `STS` instance of `TICKF`
+  - Add `Embed (SNAP era) (TICKF era)` instance for Shelley's `SNAP` rule
+  - Add `TickfSnapEvent` constructor to `ConwayTickfEvent` and export it
+  - Add `Generic`, `Eq` and `NFData` instances for `ConwayTickfEvent`
 * Export `transTxId`
 * Add `Semigroup` and `Monoid` instances for `VotingProcedures`
 * Replace `conwayBbodyTransition` with `bbodyTransition`
@@ -30,6 +35,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instance for `ConwayTickfEvent`
 * Add `Test.Cardano.Ledger.Conway.Imp.MempoolSpec`, holding the mempool tests that were in `Test.Cardano.Ledger.Conway.Imp.LedgerSpec`
 * Add `ToExpr (ApplyTxError era)` as a superclass of `ConwayEraImp`
 * Add `ToExpr` instance for `ApplyTxError ConwayEra`

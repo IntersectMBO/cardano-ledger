@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   lsCertStateL,
   nesEsL,
-  nesPdL,
+  nesStakePoolDistrG,
  )
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.State.CertState ()
@@ -74,7 +74,7 @@ mkShelleyForecast ::
   ShelleyForecast t era
 mkShelleyForecast nes =
   ShelleyForecast
-    { sfPoolDistr = nes ^. nesPdL
+    { sfPoolDistr = nes ^. nesStakePoolDistrG
     , sfMaxBlockHeaderSize = nes ^. nesEsL . curPParamsEpochStateL . ppMaxBHSizeL
     , sfMaxBlockBodySize = nes ^. nesEsL . curPParamsEpochStateL . ppMaxBBSizeL
     , sfProtocolVersion = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL

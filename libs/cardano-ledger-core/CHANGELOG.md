@@ -2,6 +2,14 @@
 
 ## 1.22.0.0
 
+* Select the Leios voting committee (CIP-0164) when the mark snapshot is created, instead of when it rotates into the set position:
+  - Add `msStakePoolDistr`, `msLeiosMaxKeyAge` and `msLeiosCommittee` fields to `MarkSnapShot`, memoizing lazily the stake pool distribution and the committee
+  - Add `mkMarkSnapShot`
+  - Change `mkSetSnapShot` to move the memoized values over from the `MarkSnapShot` and remove its `EpochInterval` argument
+  - Change `msSnapShotL` to recompute the memoized values
+  - Rename `ssPoolDistr` to `ssStakePoolDistr`
+  - `MarkSnapShot` now also encodes `msLeiosMaxKeyAge`, so the on-disk ledger state format changes and requires replay
+* Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
 * Add `assocMapToList`, `assocMapKeys` and `assocMapElems`
 * Add `ToPlutusData` instance for `SlotInterval`
 * Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`

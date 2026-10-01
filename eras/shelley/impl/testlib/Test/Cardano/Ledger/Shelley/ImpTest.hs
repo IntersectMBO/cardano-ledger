@@ -228,6 +228,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
+import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (
   ApplyTx (..),
   MempoolEnv,
@@ -534,6 +535,11 @@ class
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+  , EraForecast era
+  , Eq (Event (EraRule "TICKF" era))
+  , ToExpr (Event (EraRule "TICKF" era))
+  , NFData (Event (EraRule "TICKF" era))
+  , Typeable (Event (EraRule "TICKF" era))
   , EraRuleFailure "BBODY" era ~ PredicateFailure (EraRule "BBODY" era)
   , EraRuleFailure "LEDGER" era ~ PredicateFailure (EraRule "LEDGER" era)
   , InjectRuleFailure "LEDGER" AccountAlreadyRegistered era

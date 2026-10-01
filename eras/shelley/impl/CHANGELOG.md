@@ -2,6 +2,17 @@
 
 ## 1.20.0.0
 
+* Remove `nesPd` field from `NewEpochState` and `nesPdL`:
+  - Add `nesStakePoolDistrG`, which reads the stake pool distribution from the set snapshot instead
+  - Remove the re-export of `ssStakeMarkPoolDistrL` from `Cardano.Ledger.Shelley.LedgerState`
+  - `NewEpochState` no longer encodes `nesPd`, so the on-disk ledger state format changes and requires replay
+* Change `TICKF` to run the `SNAP` rule at the epoch boundary:
+  - Add `SNAP` related constraints to the `STS` instance of `TICKF` and to `validatingTickTransitionFORECAST`
+  - Add `Embed (SNAP era) (TICKF era)` instance
+* Export `ShelleyTickfEvent` from `Cardano.Ledger.Shelley.Rules`:
+  - Add the `TickfSnapEvent` constructor
+  - Add `Generic`, `Eq` and `NFData` instances for it
+* Change `resetStakeDistribution` to seed the set and go snapshots together with the mark snapshot, so stake from genesis staking now earns rewards in the first epochs
 * For `ApplyBlock`:
   - Remove default implementation for `wrapBlockSignal`
   - Add new type family constraint `ProtocolEraBlockHeader` as superclass
@@ -27,6 +38,8 @@
 
 ### `testlib`
 
+* Add `EraForecast` superclass to `ShelleyEraImp`, together with `Eq`, `ToExpr`, `NFData` and `Typeable` superclasses for the `TICKF` event
+* Add `ToExpr` instance for `ShelleyTickfEvent`
 * Add `freshStakePool` and `freshBlsKey` to `Test.Cardano.Ledger.Shelley.ImpTest`
 * Add `Test.Cardano.Ledger.Shelley.Imp.BbodySpec`
 * Compute the block body size in `tryTxsInBlock` with the current protocol version instead of `eraProtVerLow`
