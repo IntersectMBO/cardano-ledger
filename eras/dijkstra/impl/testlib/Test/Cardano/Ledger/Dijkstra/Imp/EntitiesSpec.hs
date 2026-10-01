@@ -147,7 +147,7 @@ spec = describe "ENTITIES" $ do
   it "Withdrawals from an unregistered staking address" $ do
     account1 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountX <- Coin . getPositive <$> arbitrary
+    amountX <- succ <$> arbitrary
     let
       txBody :: forall l. Typeable l => TxBody l era
       txBody =
@@ -160,7 +160,7 @@ spec = describe "ENTITIES" $ do
       ]
 
     account3 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountY <- Coin . getPositive <$> arbitrary
+    amountY <- succ <$> arbitrary
     let subTxOnlyWithdrawal =
           mkBasicTx $
             mkBasicTxBody
@@ -230,7 +230,7 @@ spec = describe "ENTITIES" $ do
 
   it "Direct deposits to an unregistered account" $ do
     account <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountX <- Coin . getPositive <$> arbitrary
+    amountX <- succ <$> arbitrary
     let
       txBody :: forall l. Typeable l => TxBody l era
       txBody = mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountX)]
@@ -241,8 +241,8 @@ spec = describe "ENTITIES" $ do
       ]
 
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountY <- Coin . getPositive <$> arbitrary
-    amountZ <- Coin . getPositive <$> arbitrary
+    amountY <- succ <$> arbitrary
+    amountZ <- succ <$> arbitrary
     let subTxOnlyDirectDeposit =
           mkBasicTx $
             mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
@@ -349,7 +349,8 @@ spec = describe "ENTITIES" $ do
   it "Individual withdrawal exceeds account balance" $ do
     (account, balance, _) <- setupAccountAddress
     atMostBalance <- Coin <$> choose (1, unCoin balance)
-    moreThanBalance <- (balance <+>) . Coin . getPositive <$> arbitrary
+    -- moreThanBalance <- ((balance <> Coin 1) <>) <$> arbitrary
+    moreThanBalance <- (balance <>) . succ <$> arbitrary
 
     -- A sub-transaction overdraws
     let subTxOverdraws =
@@ -397,7 +398,7 @@ spec = describe "ENTITIES" $ do
 
   it "Direct deposits cannot fund withdrawals in subsequent sub-transactions" $ do
     account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
-    depositAmount <- Coin . getPositive <$> arbitrary
+    depositAmount <- succ <$> arbitrary
     let subDeposit =
           mkBasicTx $
             mkBasicTxBody
@@ -434,7 +435,7 @@ spec = describe "ENTITIES" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash
     account <- getAccountAddressFor stakingCred
     keyDeposit <- getsPParams ppKeyDepositL
-    depositAmount <- Coin . getPositive <$> arbitrary
+    depositAmount <- succ <$> arbitrary
     let subRegisterAndDeposit =
           mkBasicTx $
             mkBasicTxBody
@@ -459,7 +460,7 @@ spec = describe "ENTITIES" $ do
 
   it "Top transaction can drain an account funded by a sub-transaction direct deposit, in legacy mode" $ do
     account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
-    depositAmount <- Coin . getPositive <$> arbitrary
+    depositAmount <- succ <$> arbitrary
     let subDeposit =
           mkBasicTx $
             mkBasicTxBody
@@ -514,7 +515,7 @@ spec = describe "ENTITIES" $ do
       -- withdrawing zero from an account the batch itself registered
       drainsInLegacyMode zero
       -- withdrawing exactly what the same sub-transaction direct-deposited
-      depositAmount <- Coin . getPositive <$> arbitrary
+      depositAmount <- succ <$> arbitrary
       drainsInLegacyMode depositAmount
 
   describe "Account balance intervals" $ do
