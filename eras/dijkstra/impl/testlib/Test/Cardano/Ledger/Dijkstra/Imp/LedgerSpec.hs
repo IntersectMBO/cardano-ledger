@@ -151,15 +151,17 @@ spec = describe "LEDGER" $ do
   describe "Accepted at the boundary" $ do
     it "the top level transaction declares the actual treasury value" $ do
       actualTreasury <- getsNES treasuryL
-      submitTx_ . mkBasicTx $
-        mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust actualTreasury
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . currentTreasuryValueTxBodyL .~ SJust actualTreasury
 
     it "the reference scripts of the batch total exactly the limit" $ do
       (size, refTxIn) <- refScriptInput
       modifyPParams $ ppMaxRefScriptSizePerTxL .~ fromIntegral size
 
-      submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
-        mkBasicTxBody & referenceInputsTxBodyL .~ Set.singleton refTxIn
+      submitTopTx_ . mkTopTxWithSubTxs . pure $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton refTxIn
 
   describe "Composite tests" $ do
     it "both levels are checked, and the top level failure is reported first" $ do
@@ -216,7 +218,7 @@ spec = describe "LEDGER" $ do
       topTx <-
         switchTxToPhase2InvalidLegacyMode . mkBasicTx $
           mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust (actualTreasury <> Coin 1)
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+      submitTopTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
 
     disableInConformanceIt "is not checked for the reference script size" $ do
       (size, refTxIn) <- refScriptInput
@@ -225,7 +227,7 @@ spec = describe "LEDGER" $ do
       topTx <-
         switchTxToPhase2InvalidLegacyMode . mkBasicTx $
           mkBasicTxBody & referenceInputsTxBodyL .~ Set.singleton refTxIn
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+      submitTopTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
 
 -- | The size in bytes of a reference script, and an input that carries it.
 refScriptInput :: forall era. DijkstraEraImp era => ImpTestM era (Int, TxIn)
