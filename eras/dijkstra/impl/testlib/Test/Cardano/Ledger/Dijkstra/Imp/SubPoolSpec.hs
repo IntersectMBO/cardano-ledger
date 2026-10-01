@@ -18,10 +18,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (DijkstraSubPoolPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules (DijkstraPoolPredFailure (..), DijkstraSubPoolPredFailure (..))
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Shelley.LedgerState (esLStateL, lsCertStateL, nesELL, nesEpochStateL)
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Lens.Micro ((&), (.~), (^.))
@@ -101,7 +101,7 @@ spec = describe "SUBPOOL" $ do
             ]
         )
         [ injectFailure . DijkstraSubPoolPredFailure $
-            VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
+            Dijkstra.VRFKeyHashAlreadyRegistered (stakePoolParams2 ^. sppIdL) vrfKey
         ]
     it "Fails when registering a pool with an invalid network ID" $ do
       stakePoolParams <- genValidStakePoolParams =<< freshKeyHash

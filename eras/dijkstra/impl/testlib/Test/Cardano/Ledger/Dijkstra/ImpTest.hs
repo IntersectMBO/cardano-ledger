@@ -212,6 +212,21 @@ instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra wh
 instance InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure DijkstraEra where
   injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
 
+instance InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubGovCertPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure
+
 -- | A top level transaction that nests the given sub-transactions and
 -- is otherwise empty.
 mkTopTxWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
@@ -304,36 +319,6 @@ voteSubTx vote voter govActionId =
 declareTreasurySubTx :: DijkstraEraImp era => Coin -> Tx SubTx era
 declareTreasurySubTx declaredTreasury =
   mkBasicTx $ mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
-
-instance InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure DijkstraEra where
-  injectFailure = DijkstraSubLedgersFailure . injectFailure
-
-instance InjectRuleFailure "SUBLEDGERS" DijkstraSubDelegPredFailure DijkstraEra where
-  injectFailure = SubLedgerFailure . injectFailure
-
-instance InjectRuleFailure "SUBLEDGER" DijkstraSubDelegPredFailure DijkstraEra where
-  injectFailure = SubEntitiesFailure . injectFailure
-
-instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra where
-  injectFailure = SubCertsFailure . injectFailure
-
-instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
-  injectFailure = SubCertFailure . injectFailure
-
-instance InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
-  injectFailure = DijkstraSubLedgersFailure . injectFailure
-
-instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovCertPredFailure DijkstraEra where
-  injectFailure = SubLedgerFailure . injectFailure
-
-instance InjectRuleFailure "SUBLEDGER" DijkstraSubGovCertPredFailure DijkstraEra where
-  injectFailure = SubEntitiesFailure . injectFailure
-
-instance InjectRuleFailure "SUBENTITIES" DijkstraSubGovCertPredFailure DijkstraEra where
-  injectFailure = SubCertsFailure . injectFailure
-
-instance InjectRuleFailure "SUBCERTS" DijkstraSubGovCertPredFailure DijkstraEra where
-  injectFailure = SubCertFailure . injectFailure
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
