@@ -893,6 +893,54 @@ votingSpec =
             & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 100)
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
+    it "voting stake for pools with zero delegations" $ do
+      -- Set a realistic value for the gov-action deposit
+      modifyNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 100_000_000_000
+
+      pParams <- getsNES $ nesEsL . curPParamsEpochStateL
+      let protVer = pParams ^. ppProtocolVersionL
+
+      -- Alice proposes an InfoAction with her account address for deposit return
+      infoProp <- mkProposal InfoAction
+      submitProposal_ infoProp
+
+      -- Bob registers a pool that has no delegations
+      bobPool <- freshKeyHash
+      registerPool bobPool
+
+      -- Chas and Dave register pools, each with reward stake equal to Alice's deposit
+      (chasPool, _, _) <- setupPoolWithStake $ pParams ^. ppGovActionDepositL
+      (davePool, _, _) <- setupPoolWithStake $ pParams ^. ppGovActionDepositL
+
+      -- Alice delegates her account to Bob's pool; she has no reward stake, just a deposit
+      let aliceStaking = unAccountId . aaId $ pProcReturnAddr infoProp
+      delegateStake aliceStaking bobPool
+
+      -- Erin proposes a HardForkInitiation
+      forkProp <- mkProposal $ HardForkInitiation SNothing (majorFollow protVer)
+      forkaction <- submitProposal forkProp
+
+      -- The pools vote on Erin's proposal
+      -- The ratio is 2/3 Yes if Alice's deposit is included in Bob's stake
+      submitVote_ VoteYes (StakePoolVoter bobPool) forkaction
+      submitVote_ VoteYes (StakePoolVoter chasPool) forkaction
+      submitVote_ VoteNo (StakePoolVoter davePool) forkaction
+
+      -- The committee and DReps vote Yes on Erin's proposal
+      committee <- registerInitialCommittee
+      submitYesVoteCCs_ committee forkaction
+      when (pvMajor protVer >= natVersion @10) $ do
+        (dRep, _, _) <- setupSingleDRep 1_000_000
+        submitYesVote_ (DRepVoter dRep) forkaction
+
+      -- Erin's proposal is enacted
+      passNEpochs 1
+      logAcceptedRatio forkaction
+      logRatificationChecks forkaction
+      passNEpochs 1
+      getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId forkaction)
+      getProtVer `shouldReturn` majorFollow protVer
+
 constitutionSpec ::
   forall era.
   ConwayEraImp era =>
