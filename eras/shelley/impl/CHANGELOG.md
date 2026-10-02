@@ -6,6 +6,8 @@
 
 ## 1.20.0.0
 
+* Add `poolReapAssertions`
+* Export `renderPoolReapViolation`
 * For `ApplyBlock`:
   - Remove default implementation for `wrapBlockSignal`
   - Add new type family constraint `ProtocolEraBlockHeader` as superclass
