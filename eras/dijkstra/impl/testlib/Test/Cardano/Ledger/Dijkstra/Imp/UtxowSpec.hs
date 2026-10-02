@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,9 +12,20 @@
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  TransactionScriptFailure (ContextError, RedeemerPointsToUnknownScriptHash),
+  evalTxExUnits,
+ )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  Inject (..),
+  Mismatch (..),
+  StrictMaybe (..),
+  strictMaybeToMaybe,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -31,18 +43,26 @@ import Cardano.Ledger.Plutus (
   Plutus,
   SLanguage (..),
   hashPlutusScript,
+  withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
+import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, alwaysSucceedsNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (
+  alwaysFailsNoDatum,
+  alwaysSucceedsNoDatum,
+  alwaysSucceedsWithDatum,
+ )
 
 spec ::
   forall era.
@@ -218,6 +238,40 @@ spec = describe "UTXOW" $ do
               ]
         ]
       submitTx_ tx
+
+  describe "ExUnits" $
+    forM_ (filter (>= PlutusV4) $ eraLanguages @era) $ \lang ->
+      describe (show lang) $ withSLanguage lang $ \slang ->
+        it "Attempt to calculate ExUnits with an invalid tx" $ do
+          txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum slang
+          txFixed <- (mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn]) &) =<< asks iteFixup
+          logToExpr txFixed
+
+          let txBody = txFixed ^. bodyTxL
+          goodPurpose <-
+            expectJust . strictMaybeToMaybe . redeemerPointer txBody $ mkSpendingPurpose (AsItem txIn)
+          -- Point the extra redeemer at the fee input, which is not locked by a script
+          feeTxIn <- expectJust . Set.lookupMin . Set.delete txIn $ txBody ^. inputsTxBodyL
+          badPurpose <-
+            expectJust . strictMaybeToMaybe . redeemerPointer txBody $ mkSpendingPurpose (AsItem feeTxIn)
+          redeemerData <- arbitrary @(Data era)
+          let txBorked =
+                txFixed
+                  & witsTxL . rdmrsTxWitsL . unRedeemersL
+                    %~ Map.insert badPurpose (redeemerData, ExUnits 5000 5000)
+          logToExpr txBorked
+
+          pp <- getsNES $ nesEsL . curPParamsEpochStateL
+          utxo <- getUTxO
+          Globals {epochInfo, systemStart} <- use impGlobalsL
+          let report = evalTxExUnits pp txBorked utxo epochInfo systemStart
+          logToExpr report
+          -- PlutusV4+ script purposes embed their script hash, so translating the dangling
+          -- redeemer also fails the context of the valid one
+          report
+            `shouldBe` [ (badPurpose, Left $ RedeemerPointsToUnknownScriptHash badPurpose)
+                       , (goodPurpose, Left . ContextError . inject $ ScriptHashNotFoundForPurpose badPurpose)
+                       ]
 
   describe "Sub-transaction Plutus evaluation" $ do
     it "Evaluates every sub-transaction script during phase 2" $ do
