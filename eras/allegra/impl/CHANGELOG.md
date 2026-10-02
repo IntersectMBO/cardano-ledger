@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.10.2.1
+
+*
+
 ## 1.10.2.0
 
 * Add `Semigroup` and `Monoid` instances for `ValidityInterval`

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.22.0.1
+
+*
+
 ## 1.22.0.0
 
 * Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug

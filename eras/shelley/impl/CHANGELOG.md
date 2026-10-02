@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.20.0.1
+
+*
+
 ## 1.20.0.0
 
 * For `ApplyBlock`:

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.15.0.1
+
+*
+
 ## 1.15.0.0
 
 * Add `BBODY` rule that reuses all of the logic from Alonzo era

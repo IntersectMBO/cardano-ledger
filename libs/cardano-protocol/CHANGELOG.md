@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol`
 
+## 0.2.0.1
+
+*
+
 ## 0.2.0.0
 
 * Remove the `Header` pattern synonym from `Cardano.Protocol.Leios.BlockHeader`

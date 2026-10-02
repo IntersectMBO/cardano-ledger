@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Add `Ord` instances for `NonEmptyMap`, `NonEmptySet`

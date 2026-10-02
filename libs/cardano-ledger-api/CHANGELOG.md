@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.15.0.1
+
+*
+
 ## 1.15.0.0
 
 * Add `queryNonMyopicMemberRewards` (`GetNonMyopicMemberRewards`) with the `QueryResultNonMyopicMemberRewards` result type
