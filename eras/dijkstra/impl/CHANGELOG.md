@@ -2,6 +2,8 @@
 
 ## 0.4.0.0
 
+* Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that a
+  top-level transaction can supply datums for the outputs and reference inputs of its sub-transactions
 * Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
   `POOL` rule, replacing `ShelleyPoolPredFailure`:
   - `EraRuleFailure "POOL" DijkstraEra` is now `DijkstraPoolPredFailure DijkstraEra`
