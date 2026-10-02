@@ -22,6 +22,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec as SUBLEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec as SUBUTXO
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec as SUBUTXOW
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxosSpec as UTXOS
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 
@@ -47,6 +48,7 @@ spec era = do
     POOL.spec
     SNAP.spec
     UTXOW.spec
+    UTXOS.spec
     UTXO.spec
     SUBUTXO.spec
     SUBUTXOW.spec
