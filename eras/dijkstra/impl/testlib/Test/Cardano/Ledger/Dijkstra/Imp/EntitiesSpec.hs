@@ -22,7 +22,6 @@ import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval (..), AccountBala
 import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.NonEmpty as NEM
 import Data.Maybe (fromJust)
-import qualified Data.OMap.Strict as OMap
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -30,7 +29,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
-  it "Batch with successful withdrawals and direct deposits" $ do
+  it "Balances adjusted by withdrawals and direct deposits on distinct accounts" $ do
     (acc1, balance1, kh1) <- setupAccountAddress
     (acc2, balance2, kh2) <- setupAccountAddress
     (acc3, balance3, kh3) <- setupAccountAddress
@@ -60,16 +59,64 @@ spec = describe "ENTITIES" $ do
     finalBalance2 `shouldBe` mempty
     finalBalanceD `shouldBe` (balance3 <-> partialWithdrawal)
 
+  it "Balances adjusted by withdrawals and direct deposits" $ do
+    impAnn "withdrawn from at the top level and by several sub-transactions" $ do
+      (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+      -- a third of the balance each, so the three withdrawals stay within it
+      let genWithdrawal = Coin <$> choose (1, unCoin balance `div` 3)
+      topWithdrawal <- genWithdrawal
+      subWithdrawal1 <- genWithdrawal
+      subWithdrawal2 <- genWithdrawal
+      topTx <-
+        mkTopTxWithDistinctSubTxs
+          [ subTx (withdrawsFrom acct subWithdrawal1)
+          , subTx (withdrawsFrom acct subWithdrawal2)
+          ]
+      submitTx_ $ topTx & bodyTxL %~ withdrawsFrom acct topWithdrawal
+      getBalance (KeyHashObj kh)
+        `shouldReturn` (balance <-> topWithdrawal <-> subWithdrawal1 <-> subWithdrawal2)
+
+    impAnn "deposited into at the top level and by several sub-transactions" $ do
+      (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+      topDeposit <- genDeposit
+      subDeposit1 <- genDeposit
+      subDeposit2 <- genDeposit
+      topTx <-
+        mkTopTxWithDistinctSubTxs
+          [ subTx (depositsTo acct subDeposit1)
+          , subTx (depositsTo acct subDeposit2)
+          ]
+      submitTx_ $ topTx & bodyTxL %~ depositsTo acct topDeposit
+      getBalance (KeyHashObj kh)
+        `shouldReturn` (balance <+> topDeposit <+> subDeposit1 <+> subDeposit2)
+
+    impAnn "one transaction both withdraws from and deposits into the account" $ do
+      (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+      withdrawal <- Coin <$> choose (1, unCoin balance)
+      deposit <- genDeposit
+      submitTx_ $
+        mkTopTxWithSubTxs [subTx (withdrawsFrom acct withdrawal . depositsTo acct deposit)]
+      getBalance (KeyHashObj kh) `shouldReturn` (balance <-> withdrawal <+> deposit)
+
+    impAnn "a sub-transaction deposits, the top withdraws within the original balance" $ do
+      (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+      deposit <- genDeposit
+      withdrawal <- Coin <$> choose (1, unCoin balance)
+      submitTx_ $
+        mkTopTxWithSubTxs [subTx (depositsTo acct deposit)]
+          & bodyTxL %~ withdrawsFrom acct withdrawal
+      getBalance (KeyHashObj kh) `shouldReturn` (balance <-> withdrawal <+> deposit)
+
   it "Partial withdrawals" $ do
     (account1, balance1, kh1) <- setupAccountAddress
     (account2, balance2, kh2) <- setupAccountAddress
     lessThanBalance1 <- Coin <$> choose (1, unCoin balance1 - 1)
     atMostBalance2 <- Coin <$> choose (1, unCoin balance2)
-    let tx =
+    let freshTx =
           mkTxWithBatchWithdrawals
             (Withdrawals [(account1, lessThanBalance1)])
             [Withdrawals [(account2, atMostBalance2)]]
-    submitTx_ tx
+    submitTx_ =<< freshTx
     getBalance (KeyHashObj kh1) `shouldReturn` (balance1 <-> lessThanBalance1)
     getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
 
@@ -78,7 +125,7 @@ spec = describe "ENTITIES" $ do
       mkBasicTx $
         mkBasicTxBody
           & directDepositsTxBodyL .~ DirectDeposits [(account1, lessThanBalance1), (account2, atMostBalance2)]
-    legacyTx <- switchTxToLegacyMode tx
+    legacyTx <- switchTxToLegacyMode =<< freshTx
     submitFailingTx
       legacyTx
       [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
@@ -89,17 +136,17 @@ spec = describe "ENTITIES" $ do
     -- drain top withdrawal
     submitTx_
       =<< switchTxToLegacyMode
-        ( mkTxWithBatchWithdrawals
-            (Withdrawals [(account1, balance1)])
-            [Withdrawals [(account2, atMostBalance2)]]
-        )
+      =<< mkTxWithBatchWithdrawals
+        (Withdrawals [(account1, balance1)])
+        [Withdrawals [(account2, atMostBalance2)]]
+
     getBalance (KeyHashObj kh1) `shouldReturn` zero
     getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
 
   it "Withdrawals from an unregistered staking address" $ do
     account1 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountX <- Coin . getPositive <$> arbitrary
+    amountX <- succ <$> arbitrary
     let
       txBody :: forall l. Typeable l => TxBody l era
       txBody =
@@ -112,7 +159,7 @@ spec = describe "ENTITIES" $ do
       ]
 
     account3 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountY <- Coin . getPositive <$> arbitrary
+    amountY <- succ <$> arbitrary
     let subTxOnlyWithdrawal =
           mkBasicTx $
             mkBasicTxBody
@@ -182,7 +229,7 @@ spec = describe "ENTITIES" $ do
 
   it "Direct deposits to an unregistered account" $ do
     account <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountX <- Coin . getPositive <$> arbitrary
+    amountX <- succ <$> arbitrary
     let
       txBody :: forall l. Typeable l => TxBody l era
       txBody = mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountX)]
@@ -193,8 +240,8 @@ spec = describe "ENTITIES" $ do
       ]
 
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
-    amountY <- Coin . getPositive <$> arbitrary
-    amountZ <- Coin . getPositive <$> arbitrary
+    amountY <- succ <$> arbitrary
+    amountZ <- succ <$> arbitrary
     let subTxOnlyDirectDeposit =
           mkBasicTx $
             mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
@@ -253,10 +300,10 @@ spec = describe "ENTITIES" $ do
   it "Aggregate of top and sub withdrawals exceeds account balance" $ do
     (account, balance, _) <- setupAccountAddress
     (topAmount, subAmount) <- genCoinPairExceeding balance
-    let tx =
-          mkTxWithBatchWithdrawals
-            (Withdrawals [(account, topAmount)])
-            [Withdrawals [(account, subAmount)]]
+    tx <-
+      mkTxWithBatchWithdrawals
+        (Withdrawals [(account, topAmount)])
+        [Withdrawals [(account, subAmount)]]
     submitFailingTx
       tx
       [ injectFailure $
@@ -278,10 +325,10 @@ spec = describe "ENTITIES" $ do
     (subAmount1, subAmount2) <- genCoinPairExceeding balance
     (subAmount1 <+> subAmount2) `shouldSatisfy` (> balance)
 
-    let tx =
-          mkTxWithBatchWithdrawals
-            (Withdrawals [(account, zero)])
-            [Withdrawals [(account, subAmount1)], Withdrawals [(account, subAmount2)]]
+    tx <-
+      mkTxWithBatchWithdrawals
+        (Withdrawals [(account, zero)])
+        [Withdrawals [(account, subAmount1)], Withdrawals [(account, subAmount2)]]
     submitFailingTx
       tx
       [ injectFailure $
@@ -301,13 +348,14 @@ spec = describe "ENTITIES" $ do
   it "Individual withdrawal exceeds account balance" $ do
     (account, balance, _) <- setupAccountAddress
     atMostBalance <- Coin <$> choose (1, unCoin balance)
-    moreThanBalance <- (balance <+>) . Coin . getPositive <$> arbitrary
+    -- moreThanBalance <- ((balance <> Coin 1) <>) <$> arbitrary
+    moreThanBalance <- (balance <>) . succ <$> arbitrary
 
     -- A sub-transaction overdraws
-    let subTxOverdraws =
-          mkTxWithBatchWithdrawals
-            (Withdrawals [(account, atMostBalance)])
-            [Withdrawals [(account, moreThanBalance)]]
+    subTxOverdraws <-
+      mkTxWithBatchWithdrawals
+        (Withdrawals [(account, atMostBalance)])
+        [Withdrawals [(account, moreThanBalance)]]
     submitFailingTx
       subTxOverdraws
       [ injectFailure $
@@ -327,10 +375,10 @@ spec = describe "ENTITIES" $ do
       ]
 
     -- The top transaction overdraws
-    let topTxOverdraws =
-          mkTxWithBatchWithdrawals
-            (Withdrawals [(account, moreThanBalance)])
-            [Withdrawals [(account, atMostBalance)]]
+    topTxOverdraws <-
+      mkTxWithBatchWithdrawals
+        (Withdrawals [(account, moreThanBalance)])
+        [Withdrawals [(account, atMostBalance)]]
     submitFailingTx
       topTxOverdraws
       [ injectFailure $
@@ -349,7 +397,7 @@ spec = describe "ENTITIES" $ do
 
   it "Direct deposits cannot fund withdrawals in subsequent sub-transactions" $ do
     account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
-    depositAmount <- Coin . getPositive <$> arbitrary
+    depositAmount <- succ <$> arbitrary
     let subDeposit =
           mkBasicTx $
             mkBasicTxBody
@@ -386,7 +434,7 @@ spec = describe "ENTITIES" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash
     account <- getAccountAddressFor stakingCred
     keyDeposit <- getsPParams ppKeyDepositL
-    depositAmount <- Coin . getPositive <$> arbitrary
+    depositAmount <- succ <$> arbitrary
     let subRegisterAndDeposit =
           mkBasicTx $
             mkBasicTxBody
@@ -411,7 +459,7 @@ spec = describe "ENTITIES" $ do
 
   it "Top transaction can drain an account funded by a sub-transaction direct deposit, in legacy mode" $ do
     account <- registerStakeCredential . KeyHashObj =<< freshKeyHash
-    depositAmount <- Coin . getPositive <$> arbitrary
+    depositAmount <- succ <$> arbitrary
     let subDeposit =
           mkBasicTx $
             mkBasicTxBody
@@ -466,7 +514,7 @@ spec = describe "ENTITIES" $ do
       -- withdrawing zero from an account the batch itself registered
       drainsInLegacyMode zero
       -- withdrawing exactly what the same sub-transaction direct-deposited
-      depositAmount <- Coin . getPositive <$> arbitrary
+      depositAmount <- succ <$> arbitrary
       drainsInLegacyMode depositAmount
 
   describe "Account balance intervals" $ do
@@ -616,25 +664,42 @@ spec = describe "ENTITIES" $ do
         submitTx_ $ txWithIntervals original drained
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
-    setupAccountAddress = do
+    setupAccountAddress = setupAccountAddressWith (Coin 1_000_000)
+
+    -- \| Register a fresh stake credential and fund it by direct deposit with the
+    -- given balance.
+    setupAccountAddressWith :: Coin -> ImpTestM era (AccountAddress, Coin, KeyHash Staking)
+    setupAccountAddressWith balance = do
       kh <- freshKeyHash
       let cred = KeyHashObj kh
-          balance = Coin 1_000_000
       ra <- registerStakeCredential cred
       submitTx_ $
         mkBasicTx $
           mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(ra, balance)]
       pure (ra, balance, kh)
 
-    mkTxWithBatchWithdrawals :: Withdrawals -> [Withdrawals] -> Tx TopTx era
-    mkTxWithBatchWithdrawals topWdrls subs =
-      mkBasicTx $
-        mkBasicTxBody
-          & withdrawalsTxBodyL .~ topWdrls
-          & subTransactionsTxBodyL .~ OMap.fromFoldable (fmap mkSubTx subs)
+    genAccountBalance :: ImpTestM era Coin
+    genAccountBalance = Coin <$> choose (1_000, 1_000_000)
+
+    genDeposit :: ImpTestM era Coin
+    genDeposit = (Coin 1 <>) <$> arbitrary
+
+    mkTxWithBatchWithdrawals :: Withdrawals -> [Withdrawals] -> ImpTestM era (Tx TopTx era)
+    mkTxWithBatchWithdrawals topWdrls subs = do
+      topTx <- mkTopTxWithDistinctSubTxs (fmap mkSubTx subs)
+      pure $ topTx & bodyTxL . withdrawalsTxBodyL .~ topWdrls
       where
         mkSubTx :: Withdrawals -> Tx SubTx era
         mkSubTx w = mkBasicTx (mkBasicTxBody & withdrawalsTxBodyL .~ w)
+
+    withdrawsFrom :: forall l. AccountAddress -> Coin -> TxBody l era -> TxBody l era
+    withdrawsFrom acct amount = withdrawalsTxBodyL .~ Withdrawals [(acct, amount)]
+
+    depositsTo :: forall l. AccountAddress -> Coin -> TxBody l era -> TxBody l era
+    depositsTo acct amount = directDepositsTxBodyL .~ DirectDeposits [(acct, amount)]
+
+    subTx :: (TxBody SubTx era -> TxBody SubTx era) -> Tx SubTx era
+    subTx modifyBody = mkBasicTx (mkBasicTxBody & modifyBody)
 
     genCoinPairExceeding (Coin maxSum) = do
       a <- choose (1, maxSum)
