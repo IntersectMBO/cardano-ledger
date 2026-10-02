@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.17.0.1
+
+*
+
 ## 1.17.0.0
 
 * Add `alonzoSpendableInputsTxBodyF`

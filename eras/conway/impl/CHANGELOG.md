@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.24.0.1
+
+*
+
 ## 1.24.0.0
 
 * Export `transTxId`

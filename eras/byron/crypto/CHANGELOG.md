@@ -1,5 +1,9 @@
 # Revision history for `cardano-crypto-wrapper`
 
+## 1.8.0.1
+
+*
+
 ## 1.8.0.0
 
 * Depend on `crypton ^>=1.1` and use the `ram` package instead of `memory`
