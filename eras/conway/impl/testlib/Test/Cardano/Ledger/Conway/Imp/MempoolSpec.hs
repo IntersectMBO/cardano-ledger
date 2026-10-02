@@ -40,8 +40,9 @@ spec = describe "MEMPOOL" $ do
     inputs2 <- replicateM 3 freshFundedTxIn
 
     txFinal <-
-      submitTx . mkBasicTx $
-        mkBasicTxBody & inputsTxBodyL .~ fromList (inputsCommon <> inputs1)
+      submitTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ fromList (inputsCommon <> inputs1)
 
     impAnn "Identical transaction" $
       withNoFixup $
@@ -94,7 +95,7 @@ spec = describe "MEMPOOL" $ do
                 "Unelected committee members are not allowed to cast votes: "
                   <> T.pack (show (pure @[] ccHot))
             ]
-          submitTx_ txFixed
+          submitTopTx_ txFixed
 
 submitFailingMempoolTx ::
   (HasCallStack, ConwayEraImp era) =>

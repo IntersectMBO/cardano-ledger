@@ -42,7 +42,7 @@ spec = describe "Valid" $ do
         mkBasicTxOut addr mempty
           & referenceScriptTxOutL .~ SJust script
     txInitial <-
-      submitTx $
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOutRef]
     submitTx_ $
@@ -59,7 +59,7 @@ spec = describe "Valid" $ do
         mkBasicTxOut addr mempty
           & referenceScriptTxOutL .~ SJust script
     txInitial <-
-      submitTx $
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
     submitTx_ $
@@ -79,7 +79,7 @@ spec = describe "Valid" $ do
         mkBasicTxOut addr mempty
           & datumTxOutL .~ DatumHash datumHash
     txInitial <-
-      submitTx $
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
     tx <-
@@ -101,11 +101,12 @@ spec = describe "Valid" $ do
         mkBasicTxOut addr mempty
           & datumTxOutL .~ DatumHash datumHash
     txInitial <-
-      submitTx $
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOut, txOutDatum]
     tx <-
-      submitTx $
+      -- TODO make this work with `submitTx`
+      submitTopTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
           & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
@@ -124,7 +125,7 @@ spec = describe "Valid" $ do
                 mkBasicTxOut (mkAddr scriptHash StakeRefNull) mempty
                   & datumTxOutL .~ mkInlineDatum (PV1.I 0)
             txInitial <-
-              submitTx $
+              submitTopTx $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . outputsTxBodyL .~ [txOut]
             submitTx_ $
@@ -142,7 +143,7 @@ spec = describe "Valid" $ do
                 mkBasicTxOut addr mempty
                   & referenceScriptTxOutL .~ SJust script
             txInitial <-
-              submitTx $
+              submitTopTx $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
             submitTx_ $
@@ -162,7 +163,7 @@ spec = describe "Valid" $ do
                 mkBasicTxOut addr mempty
                   & referenceScriptTxOutL .~ SJust script
             txInitial <-
-              submitTx $
+              submitTopTx $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
             submitTx_ $
@@ -181,7 +182,7 @@ spec = describe "Valid" $ do
               mkBasicTxOut addr mempty
                 & referenceScriptTxOutL .~ SJust script
           txInitial <-
-            submitTx $
+            submitTopTx $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
           cert <- genRegTxCert $ ScriptHashObj $ hashScript script

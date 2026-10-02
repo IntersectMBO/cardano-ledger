@@ -50,7 +50,7 @@ spec = describe "ENTITIES" $ do
             mkBasicTxBody
               & withdrawalsTxBodyL .~ Withdrawals [(acc3, partialWithdrawal)]
               & subTransactionsTxBodyL .~ [subDeposit, subWithdraw]
-    submitTx_ topTx
+    submitTopTx_ topTx
 
     finalBalance1 <- getBalance (KeyHashObj kh1)
     finalBalance2 <- getBalance (KeyHashObj kh2)
@@ -69,7 +69,7 @@ spec = describe "ENTITIES" $ do
           mkTxWithBatchWithdrawals
             (Withdrawals [(account1, lessThanBalance1)])
             [Withdrawals [(account2, atMostBalance2)]]
-    submitTx_ tx
+    submitTopTx_ tx
     getBalance (KeyHashObj kh1) `shouldReturn` (balance1 <-> lessThanBalance1)
     getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
 
@@ -87,7 +87,7 @@ spec = describe "ENTITIES" $ do
       ]
 
     -- drain top withdrawal
-    submitTx_
+    submitTopTx_
       =<< switchTxToLegacyMode
         ( mkTxWithBatchWithdrawals
             (Withdrawals [(account1, balance1)])
@@ -431,7 +431,7 @@ spec = describe "ENTITIES" $ do
       ]
 
     legacyTx <- switchTxToLegacyMode tx
-    submitTx_ legacyTx
+    submitTopTx_ legacyTx
     getBalance (account ^. accountAddressCredentialL) `shouldReturn` zero
 
   it
@@ -459,7 +459,7 @@ spec = describe "ENTITIES" $ do
                   Withdrawals [(account, amount)]
               ]
 
-            submitTx_ =<< switchTxToLegacyMode tx
+            submitTopTx_ =<< switchTxToLegacyMode tx
             expectStakeCredRegistered stakingCred
             getBalance stakingCred `shouldReturn` zero
 
@@ -495,8 +495,8 @@ spec = describe "ENTITIES" $ do
       (accountAddr, balance, _) <- setupAccountAddress
       let intervals = AccountBalanceIntervals [(accountAddr, AccountBalanceExact balance)]
       submitTx_ $ mkBasicTx $ mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ intervals
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & startingAccountBalanceIntervalsTxBodyL .~ intervals
-      submitTx_ $
+      submitTopTx_ $ mkBasicTx $ mkBasicTxBody & startingAccountBalanceIntervalsTxBodyL .~ intervals
+      submitTopTx_ $
         mkBasicTx $
           mkBasicTxBody
             & subTransactionsTxBodyL
@@ -566,11 +566,12 @@ spec = describe "ENTITIES" $ do
 
     it "Interval bounds are checked at their boundaries" $ do
       (accountAddr, balance, _) <- setupAccountAddress
-      let withInterval interval =
+      let withInterval :: Typeable l => AccountBalanceInterval era -> Tx l era
+          withInterval interval =
             mkBasicTx $
               mkBasicTxBody
                 & accountBalanceIntervalsTxBodyL .~ AccountBalanceIntervals [(accountAddr, interval)]
-          intervalHolds = submitTx_ . withInterval
+          intervalHolds interval = submitTx_ $ withInterval interval
           intervalViolated interval =
             submitFailingTx
               (withInterval interval)
@@ -613,7 +614,7 @@ spec = describe "ENTITIES" $ do
               BalancesOutsideStartingAccountBalanceIntervals @era
                 (NEM.singleton accountAddr (balance, drained))
           ]
-        submitTx_ $ txWithIntervals original drained
+        submitTopTx_ $ txWithIntervals original drained
   where
     setupAccountAddress :: ImpTestM era (AccountAddress, Coin, KeyHash Staking)
     setupAccountAddress = do

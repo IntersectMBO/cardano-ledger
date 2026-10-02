@@ -12,6 +12,7 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Core
 import Cardano.Slotting.Slot (SlotNo (..))
+import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -41,6 +42,7 @@ spec =
           test currentSlot d =
             forM_ (situations currentSlot d) $ \(lo, hi, expectedSuccess) -> do
               let validityInterval = ValidityInterval lo hi
+                  tx :: forall l. Typeable l => Tx l era
                   tx = mkBasicTx $ mkBasicTxBody & vldtTxBodyL .~ validityInterval
               if expectedSuccess
                 then

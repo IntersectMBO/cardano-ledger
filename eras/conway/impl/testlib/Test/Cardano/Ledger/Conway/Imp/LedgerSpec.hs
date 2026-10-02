@@ -19,6 +19,7 @@ import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -64,7 +65,9 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
+    let
+      tx :: forall l. Typeable l => Tx l era
+      tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
     pv <- getProtVer
     -- In bootstrap phase and in post-Conway eras (CIP-181), the DRep delegation check
@@ -96,12 +99,12 @@ spec = describe "LEDGER" $ do
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
-    let tx =
-          mkBasicTx $
-            mkBasicTxBody
-              & withdrawalsTxBodyL
-                .~ Withdrawals
-                  [(ra, balance)]
+    let
+      tx :: forall l. Typeable l => Tx l era
+      tx =
+        mkBasicTx $
+          mkBasicTxBody
+            & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
     pv <- getProtVer
     -- In bootstrap phase and post-Conway eras (CIP-181), the DRep delegation check
     -- does not apply, so the withdrawal succeeds.
@@ -125,12 +128,10 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    let tx =
-          mkBasicTx $
-            mkBasicTxBody
-              & certsTxBodyL .~ [UnRegDepositTxCert cred refund]
-              & (withdrawalsTxBodyL .~ Withdrawals [(ra, balance)])
-    submitTx_ tx
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred refund]
+        & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
   it "Withdraw from a key delegated to an expired DRep" $ do
     modifyPParams $ \pp ->

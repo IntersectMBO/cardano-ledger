@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -41,6 +42,7 @@ import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -69,7 +71,11 @@ spec = describe "UTXOS" $ do
             addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
         amount <- uniformRM (Coin 10_000_000, Coin 100_000_000)
         txIn <- sendCoinTo addr amount
-        let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+        let
+          tx :: forall l. Typeable l => Tx l era
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txIn]
         if lang >= PlutusV3
           then submitTx_ tx
           else
@@ -133,7 +139,8 @@ datumAndReferenceInputsSpec = do
           let shSpending = hashPlutusScript $ redeemerSameAsDatum slang
           refTxOut <- mkRefTxOut shSpending
           producingTxId <-
-            fmap txIdTx . submitTxAnn "Producing transaction" $
+            -- TODO make this work with `submitTxAnn`
+            fmap txIdTx . submitTopTxAnn "Producing transaction" $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL
                   .~ SSeq.fromList
@@ -142,6 +149,7 @@ datumAndReferenceInputsSpec = do
                     ]
           let
             lockedTxIn = mkTxInPartial producingTxId 1
+            consumingTx :: forall l. Typeable l => Tx l era
             consumingTx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
@@ -549,7 +557,7 @@ costModelsSpec =
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
 
-      mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
+      AnyLevelTx mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
         submitFailingTx mintingTokenTx [injectFailure $ Alonzo.CollectErrors [NoCostModel PlutusV3]]
@@ -615,7 +623,8 @@ setupRefTx ::
 setupRefTx lang = do
   let shSpending = hashPlutusScript (redeemerSameAsDatum lang)
   refTxOut <- mkRefTxOut shSpending
-  fmap txIdTx . submitTxAnn "Producing transaction" $
+  -- TODO make this work with `submitTxAnn`
+  fmap txIdTx . submitTopTxAnn "Producing transaction" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
         .~ SSeq.fromList

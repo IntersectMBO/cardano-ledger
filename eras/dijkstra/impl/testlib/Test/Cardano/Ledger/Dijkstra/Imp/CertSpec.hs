@@ -56,7 +56,7 @@ spec = describe "CERT" $ do
             RefundIncorrectDELEG (Mismatch newKeyDeposit initialKeyDeposit)
         ]
 
-      submitTx_ $ unregTxWithRefund initialKeyDeposit
+      submitTopTx_ $ unregTxWithRefund initialKeyDeposit
       expectStakeCredNotRegistered stakingCred
 
   it "Two sub-transactions cannot unregister the same credential" $ do

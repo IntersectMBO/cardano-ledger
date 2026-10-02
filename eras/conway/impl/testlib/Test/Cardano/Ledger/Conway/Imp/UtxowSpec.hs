@@ -142,10 +142,11 @@ setupBadPPViewHashTx = do
           )
           (inject $ Coin 1_000_000)
   scriptTxIn <-
-    impAnn "Submit a transaction that has a script output"
-      . submitTx
-      $ mkBasicTx mkBasicTxBody
-        & bodyTxL . outputsTxBodyL .~ [scriptTxOut]
+    impAnn "Submit a transaction that has a script output" $
+      -- TODO make this work with `submitTx`
+      submitTopTx $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ [scriptTxOut]
   pure $
     mkBasicTx mkBasicTxBody
       & bodyTxL . inputsTxBodyL .~ [TxIn (txIdTx scriptTxIn) (TxIx 0)]

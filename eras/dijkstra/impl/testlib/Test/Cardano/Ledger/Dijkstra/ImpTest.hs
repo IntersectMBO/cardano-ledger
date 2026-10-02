@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -37,6 +36,8 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -79,6 +80,7 @@ import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
@@ -86,6 +88,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (ScriptTestContext (..))
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
@@ -109,6 +112,31 @@ instance ShelleyEraImp DijkstraEra where
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
+  trySubmitTx tx = do
+    utxo <- getUTxO
+    let
+      AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo $ tx @SubTx ^. bodyTxL
+      ScriptsProvided scriptsProvided = getScriptsProvided utxo $ tx @SubTx
+      scriptSupportedInSubTx scriptHash =
+        case Map.lookup scriptHash scriptsProvided of
+          Just script ->
+            pure . maybe True ((> PlutusV3) . plutusScriptLanguage) $ toPlutusScript script
+          Nothing ->
+            case impLookupScriptContext @DijkstraEra scriptHash of
+              Just (ScriptTestContext script _) -> pure $ plutusLanguage script > PlutusV3
+              Nothing -> isJust <$> impLookupNativeScript scriptHash
+    supportedInSubTx <- traverse (scriptSupportedInSubTx . snd) scriptsNeeded
+    oneof $
+      [trySubmitTopTx tx]
+        <> [ trySubmitSubTx tx
+           | and supportedInSubTx
+           ]
+
+trySubmitSubTx ::
+  DijkstraEraImp era =>
+  Tx SubTx era ->
+  ImpTestM era (SubmitTxResult era)
+trySubmitSubTx subTx = trySubmitTopTx $ mkTopTxWithSubTxs [subTx]
 
 instance AllegraEraImp DijkstraEra
 
@@ -358,8 +386,8 @@ dijkstraGenUnRegTxCert stakingCredential = do
 
 switchTxToLegacyMode ::
   DijkstraEraImp era =>
-  Tx TopTx era ->
-  ImpTestM era (Tx TopTx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 switchTxToLegacyMode tx = do
   txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
   pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]
