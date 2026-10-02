@@ -118,7 +118,7 @@ spec = describe "UTXOW" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
         let tx =
               mkBasicTx mkBasicTxBody
-                & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
+                & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardKeyHash, SNothing)]
         submitFailingTx
           tx
           [injectFailure $ MissingRequiredGuards $ NES.singleton guardKeyHash]
@@ -128,7 +128,7 @@ spec = describe "UTXOW" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
         let subTx =
               mkBasicTx mkBasicTxBody
-                & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
+                & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardKeyHash, SNothing)]
             tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTx
@@ -143,11 +143,11 @@ spec = describe "UTXOW" $ do
         let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
-                & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SJust datum)]
+                & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardKeyHash, SJust datum)]
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardKeyHash]
-        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
+        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardKeyHash, SNothing)]
 
       it "A native-script guard carrying a datum is a predicate failure" $ do
         datum <- arbitrary @(Data era)
@@ -158,11 +158,11 @@ spec = describe "UTXOW" $ do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
                 & witsTxL . hashScriptTxWitsL .~ [fromNativeScript guardScript]
-                & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SJust datum)]
+                & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardCred, SJust datum)]
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardCred]
-        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
+        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardCred, SNothing)]
 
       it "A Plutus-script guard's datum presence is validated" $ do
         datum <- arbitrary @(Data era)
@@ -173,7 +173,7 @@ spec = describe "UTXOW" $ do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
                 & witsTxL . hashScriptTxWitsL .~ [guardScript]
-                & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, mDatum)]
+                & bodyTxL . requiredTopLevelGuardsTxBodyL .~ [(guardCred, mDatum)]
             -- TODO replace with `submitFailingTx` once we have fixup support for plutus scripts
             hasMalformed tx = do
               result <- trySubmitTx tx

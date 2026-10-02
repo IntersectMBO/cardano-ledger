@@ -495,7 +495,7 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
   let txBody = tx ^. bodyTxL
       directDeposits = txBody ^. directDepositsTxBodyL
       accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
-      requiredTopLevelGuards = txBody ^. requiredTopLevelGuardsL
+      requiredTopLevelGuards = txBody ^. requiredTopLevelGuardsTxBodyL
       scriptHashes = [sh | ScriptHashObj sh <- toList (txBody ^. guardsTxBodyL)]
   unless (null $ unDirectDeposits directDeposits) $
     Left $
@@ -733,7 +733,7 @@ transTxBodyRequiredTopLevelGuards ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential (Maybe PV4.Datum)
 transTxBodyRequiredTopLevelGuards txb = transMap transCred (fmap transDatum . strictMaybeToMaybe) requiredGuards
   where
-    requiredGuards = txb ^. requiredTopLevelGuardsL
+    requiredGuards = txb ^. requiredTopLevelGuardsTxBodyL
 
 transAccountAddressToAccountId :: AccountAddress -> PV4.AccountId
 transAccountAddressToAccountId (AccountAddress _ (AccountId c)) = PV4.AccountId $ transCred c
@@ -836,7 +836,7 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
     lookupRequiredTopLevelGuardDatum :: Tx level era -> Maybe (TxId, Data era)
     lookupRequiredTopLevelGuardDatum tx = do
       guardDatumMaybe <-
-        Map.lookup (ScriptHashObj guardingScriptHash) (tx ^. bodyTxL . requiredTopLevelGuardsL)
+        Map.lookup (ScriptHashObj guardingScriptHash) (tx ^. bodyTxL . requiredTopLevelGuardsTxBodyL)
       -- Datum is enforced to be present by `MalformedGuardDatums`, hence we can ignore
       -- here the case of it missing
       guardDatum <- strictMaybeToMaybe guardDatumMaybe
@@ -880,7 +880,7 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
     filterBatchMintsWith f = foldMapBatch (filterMultiAsset (\_ _ -> f) . (^. bodyTxL . mintTxBodyL))
     batchMints = filterBatchMintsWith (> 0)
     batchBurns = filterBatchMintsWith (< 0)
-    batchRequiredTopLevelGuards = foldMapBatch (Map.keysSet . (^. bodyTxL . requiredTopLevelGuardsL))
+    batchRequiredTopLevelGuards = foldMapBatch (Map.keysSet . (^. bodyTxL . requiredTopLevelGuardsTxBodyL))
     batchTreasuryDonations = foldMapBatch (^. bodyTxL . treasuryDonationTxBodyL)
 
   batchTimeRange <-
