@@ -356,7 +356,8 @@ spec = describe "SUBUTXOW" $ do
                           Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
                           (originalBytes <$> expectedIntegrity)
                     ]
-          it "the supplied hash is wrong" $ testHashMismatch . SJust =<< arbitrary
+          disableInConformanceIt "the supplied hash is wrong" $
+            testHashMismatch . SJust =<< arbitrary
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
