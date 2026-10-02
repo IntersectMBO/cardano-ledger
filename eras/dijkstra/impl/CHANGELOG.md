@@ -1,8 +1,8 @@
 # Revision history for `cardano-ledger-dijkstra`
 
-## 0.4.0.1
+## 0.4.1.0
 
-*
+* Change `eraMaxLanguage` to `PlutusV4`
 
 ## 0.4.0.0
 
@@ -24,7 +24,6 @@
   - `perasHealingFactor`
   - `perasQuorumThresholdSafetyMargin`
 * Add `HeaderProtVerTooLow` constructor to `DijkstraBbodyPredFailure`
-* Change `eraMaxLanguage` to `PlutusV4`
 * Change `BBODY` signal to `LeiosBbodySignal`
 * Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
 * Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.

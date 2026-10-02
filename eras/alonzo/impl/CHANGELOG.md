@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.17.0.1
+## 1.17.1.0
 
 *
+
+### `testlib`
+
+* Add `mkTokenMintingTx`
 
 ## 1.17.0.0
 
@@ -40,7 +44,6 @@
 
 ### `testlib`
 
-* Add `mkTokenMintingTx`
 * Export `makeCollateralInput` and `txWithMaxRedeemers`
 * Use annotated transaction script collection in `impPlutusWithContexts` so phase-2 test expectations include subtransactions.
 * Add `Inject (AlonzoContextError era) (ContextError era)` superclass constraint to the `AlonzoEraTest` type class

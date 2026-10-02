@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.11.1.1
+## 1.12.0.0
 
 *
+
+### `testlib`
+
+* Move `mkTokenMintingTx` to `cardano-ledger-alonzo:testlib`
 
 ## 1.11.1.0
 
@@ -17,7 +21,6 @@
 
 ### `testlib`
 
-* Move `mkTokenMintingTx` to `cardano-ledger-alonzo:testlib`
 * Add `DecCBOR` instance for `Block`
 
 ### `cddl`
