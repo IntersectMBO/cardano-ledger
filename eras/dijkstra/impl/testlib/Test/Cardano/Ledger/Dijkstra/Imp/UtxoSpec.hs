@@ -17,6 +17,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.State
+import Cardano.Ledger.Dijkstra.UTxO (dijkstraConsumed)
 import Cardano.Ledger.Mary.Value (
   AssetName,
   MaryValue (..),
@@ -224,6 +225,153 @@ spec = describe "UTXO" $ do
             expectProduced topTx expected
             pure topTx
       submitInAllModes genTx
+
+  describe "value consumed by a transaction" $ do
+    it "sums inputs, withdrawals and refunds across the batch" $ do
+      let genTx = do
+            keyDeposit <- getsPParams ppKeyDepositL
+            dRepDeposit <- getsPParams ppDRepDepositL
+
+            -- accounts and DReps that the batch unregisters, one of each in the top
+            -- transaction and one of each in the sub-transaction
+            topCred <- freshRegisteredStakeCred
+            subCred <- freshRegisteredStakeCred
+            topDRep <- KeyHashObj <$> registerDRep
+            subDRep <- KeyHashObj <$> registerDRep
+
+            -- accounts that the batch withdraws from. They are distinct from the ones
+            -- above, because an account with a non-zero balance cannot be unregistered.
+            (topAccount, topWithdrawal) <- freshFundedAccount
+            (subAccount, subWithdrawal) <- freshFundedAccount
+
+            topInAmount <- Coin <$> choose (1_000_000, 2_000_000)
+            topIn <- txInWithFunds topInAmount
+            subInAmount <- Coin <$> choose (1_000_000, 2_000_000)
+            subIn <- txInWithFunds subInAmount
+
+            let subTx :: Tx SubTx era
+                subTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & inputsTxBodyL .~ [subIn]
+                      & withdrawalsTxBodyL .~ Withdrawals [(subAccount, subWithdrawal)]
+                      & certsTxBodyL
+                        .~ [ UnRegDepositTxCert subCred keyDeposit
+                           , UnRegDRepTxCert subDRep dRepDeposit
+                           ]
+                topTx :: Tx TopTx era
+                topTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & inputsTxBodyL .~ [topIn]
+                      & withdrawalsTxBodyL .~ Withdrawals [(topAccount, topWithdrawal)]
+                      & certsTxBodyL
+                        .~ [ UnRegDepositTxCert topCred keyDeposit
+                           , UnRegDRepTxCert topDRep dRepDeposit
+                           ]
+                      & subTransactionsTxBodyL .~ [subTx]
+                batchRefunds = ((2 :: Int) <×> keyDeposit) <> ((2 :: Int) <×> dRepDeposit)
+                expectedCoin =
+                  topInAmount
+                    <> subInAmount
+                    <> topWithdrawal
+                    <> subWithdrawal
+                    <> batchRefunds
+            expectConsumed topTx $ inject expectedCoin
+            checkRefundCalculation (topTx ^. bodyTxL) batchRefunds (keyDeposit <> dRepDeposit)
+            pure topTx
+      submitInAllModes genTx
+
+    it "includes sub-tx cert refunds when top has no certs" $ do
+      let genTx = do
+            keyDeposit <- getsPParams ppKeyDepositL
+            dRepDeposit <- getsPParams ppDRepDepositL
+            subCred <- freshRegisteredStakeCred
+            subDRep <- KeyHashObj <$> registerDRep
+            let subTx :: Tx SubTx era
+                subTx =
+                  mkBasicTx $
+                    mkBasicTxBody
+                      & certsTxBodyL
+                        .~ [ UnRegDepositTxCert subCred keyDeposit
+                           , UnRegDRepTxCert subDRep dRepDeposit
+                           ]
+                topTx = mkTopTxWithSubTxs [subTx]
+            expectConsumed topTx $ inject (keyDeposit <> dRepDeposit)
+            checkRefundCalculation (topTx ^. bodyTxL) (keyDeposit <> dRepDeposit) mempty
+            pure topTx
+      submitInAllModes genTx
+
+    -- Refunds are collected from the values in the certificates, rather than from the
+    -- state, which is why a deposit that is only paid within the same batch can still be
+    -- refunded by it.
+    it "refunds deposits that are paid earlier in the same batch" $ do
+      keyDeposit <- getsPParams ppKeyDepositL
+      dRepDeposit <- getsPParams ppDRepDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      dRep <- KeyHashObj <$> freshKeyHash
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [ RegDepositTxCert cred keyDeposit
+                     , RegDRepTxCert dRep dRepDeposit SNothing
+                     ]
+          -- the batch can unregister what it has just registered
+          topTx :: Tx TopTx era
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [ UnRegDepositTxCert cred keyDeposit
+                     , UnRegDRepTxCert dRep dRepDeposit
+                     ]
+                & subTransactionsTxBodyL .~ [subTx]
+      expectConsumed topTx $ inject (keyDeposit <> dRepDeposit)
+      expectProduced topTx $ inject (keyDeposit <> dRepDeposit)
+      checkRefundCalculation (topTx ^. bodyTxL) (keyDeposit <> dRepDeposit) (keyDeposit <> dRepDeposit)
+
+      depositedBefore <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
+      submitTx_ topTx
+      expectStakeCredNotRegistered cred
+      depositedAfter <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
+      depositedAfter `shouldBe` depositedBefore
+
+    it "refunds the deposit in the certificate, not the one in the protocol parameters" $ do
+      keyDeposit <- getsPParams ppKeyDepositL
+      dRepDeposit <- getsPParams ppDRepDepositL
+      topCred <- freshRegisteredStakeCred
+      subCred <- freshRegisteredStakeCred
+      topDRep <- KeyHashObj <$> registerDRep
+      subDRep <- KeyHashObj <$> registerDRep
+      -- Overwrite the deposit protocol parameters in order to ensure they do not affect
+      -- the refunds that the batch collects
+      modifyPParams $ \pp ->
+        pp
+          & ppKeyDepositL .~ Coin 1
+          & ppDRepDepositL .~ Coin 2
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [ UnRegDepositTxCert subCred keyDeposit
+                     , UnRegDRepTxCert subDRep dRepDeposit
+                     ]
+          topTx :: Tx TopTx era
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [ UnRegDepositTxCert topCred keyDeposit
+                     , UnRegDRepTxCert topDRep dRepDeposit
+                     ]
+                & subTransactionsTxBodyL .~ [subTx]
+          batchRefunds = ((2 :: Int) <×> keyDeposit) <> ((2 :: Int) <×> dRepDeposit)
+      expectConsumed topTx $ inject batchRefunds
+      checkRefundCalculation (topTx ^. bodyTxL) batchRefunds (keyDeposit <> dRepDeposit)
+      submitTx_ topTx
 
   describe "Value preservation" $ do
     let mkSubTx :: BatchAmounts -> ImpTestM era (Tx SubTx era)
@@ -452,6 +600,12 @@ spec = describe "UTXO" $ do
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (tx ^. bodyTxL) `shouldBe` expected
 
+    expectConsumed :: Tx TopTx era -> Value era -> ImpTestM era ()
+    expectConsumed tx expected = do
+      pp <- getsPParams id
+      utxo <- getUTxO
+      dijkstraConsumed pp utxo (tx ^. bodyTxL) `shouldBe` expected
+
     -- Check that `certsTotalDepositsTxBody` (used to set deposits in `UTxOState` and `AdaPots` calculations)
     -- returns the batch deposits, while `getTotalDepositsTxBody` returns the top-level deposits
     checkDepositCalculation topBody batchDeposits topLevelDeposits = do
@@ -461,6 +615,30 @@ spec = describe "UTXO" $ do
         `shouldBe` batchDeposits
       let isPoolReg = (`Map.member` (certState ^. certPStateL . psStakePoolsL))
       getTotalDepositsTxBody pp isPoolReg topBody `shouldBe` topLevelDeposits
+
+    -- Check that `certsTotalRefundsTxBody` (used to update the deposits in `UTxOState` and in
+    -- `AdaPots` calculations) returns the batch refunds, while `getTotalRefundsTxBody` returns
+    -- the top-level refunds
+    checkRefundCalculation topBody batchRefunds topLevelRefunds = do
+      pp <- getsPParams id
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      utxo <- getUTxO
+      AdaPots.conRefunds (AdaPots.consumedTxBody topBody pp certState utxo)
+        `shouldBe` batchRefunds
+      -- refunds do not depend on the state, hence the deposit lookup is irrelevant
+      getTotalRefundsTxBody pp (const Nothing) topBody `shouldBe` topLevelRefunds
+
+    freshRegisteredStakeCred = do
+      cred <- KeyHashObj <$> freshKeyHash
+      cred <$ registerStakeCredential cred
+
+    -- An account with a freshly funded, non-zero balance
+    freshFundedAccount = do
+      account <- registerAccountAddress
+      amount <- (Coin 1 <>) <$> arbitrary
+      fundAccountBalance account amount
+      pure (account, amount)
+
     freshTxOut = do
       pp <- getsPParams id
       addr <- freshKeyAddr_
