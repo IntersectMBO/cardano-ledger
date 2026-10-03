@@ -35,7 +35,9 @@ import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec DijkstraEra where
-  eraImpSpec = Imp.spec
+  eraImpSpec era = do
+    Imp.dijkstraOnlySpec
+    Imp.spec era
 
 main :: IO ()
 main =
