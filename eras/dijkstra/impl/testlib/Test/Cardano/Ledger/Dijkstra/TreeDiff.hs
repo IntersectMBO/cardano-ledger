@@ -26,7 +26,7 @@ import Cardano.Crypto.Peras (
   perasSignatureToBytes,
   perasVRFOutputToBytes,
  )
-import Cardano.Crypto.Peras.Cert (PerasCert (..), PerasCertVoters (..))
+import Cardano.Crypto.Peras.Cert (PerasCert (..), PerasCertVoters (..), PerasVotersBitmap (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
@@ -65,7 +65,6 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 import Control.State.Transition (STS (..))
-import qualified Data.Bitmap as Bitmap
 import qualified Data.ByteString.Short as SBS
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
@@ -169,8 +168,8 @@ instance ToExpr PerasCertVoters where
   toExpr UnsafePerasCertVoters {perasCertVotersBitmap, perasCertNonPersistentVRFOutputs} =
     Rec "PerasCertVoters" $
       OMap.fromList
-        [ ("maxIndex", toExpr (Bitmap.logicalUpperBound perasCertVotersBitmap))
-        , ("bitmap", toExpr . HexBytes $ Bitmap.rawSerialise perasCertVotersBitmap)
+        [ ("maxIndex", toExpr (perasVotersMaxIndex perasCertVotersBitmap))
+        , ("bitmap", toExpr . HexBytes $ perasVotersBits perasCertVotersBitmap)
         , ("vrfOutputs", toExpr (HexBytes . perasVRFOutputToBytes <$> perasCertNonPersistentVRFOutputs))
         ]
 

@@ -26,7 +26,7 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
   decodeIPv6,
 ) where
 
-import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
+import qualified Cardano.Binary as Plain (Decoder)
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
   SigDSIGN,
@@ -92,11 +92,15 @@ import Cardano.Crypto.Peras (
   mkPerasBlockRef,
   perasBlockHashSize,
  )
-import Cardano.Crypto.Peras.Cert (PerasCert (..), PerasCertVoters, mkPerasCertVoters)
+import Cardano.Crypto.Peras.Cert (
+  PerasCert (..),
+  PerasCertVoters,
+  PerasVotersBitmap,
+  mkPerasCertVoters,
+  mkPerasVotersBitmap,
+ )
 import Control.Monad (when)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
-import Data.Bitmap (Bitmap)
-import qualified Data.Bitmap as Bitmap
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -787,12 +791,12 @@ instance DecCBOR PerasSignature where
 instance DecCBOR PerasVRFOutput where
   decCBOR = PerasVRFOutput <$> decCBOR
 
-instance (Integral a, DecCBOR a) => DecCBOR (Bitmap a) where
-  decCBOR = decodeRecordNamed "Bitmap" (const 2) $ do
+instance DecCBOR PerasVotersBitmap where
+  decCBOR = decodeRecordNamed "PerasVotersBitmap" (const 2) $ do
     maxIx <- decCBOR
     bs <- decodeBytes
-    case Bitmap.rawDeserialise maxIx bs of
-      Nothing -> fail "Bitmap: payload length does not match the upper bound, or bits set above it"
+    case mkPerasVotersBitmap maxIx bs of
+      Nothing -> fail "PerasVotersBitmap: payload length does not match the upper bound, or bits set above it"
       Just bitmap -> pure bitmap
 
 instance DecCBOR PerasCertVoters where
