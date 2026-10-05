@@ -2164,8 +2164,6 @@ sendCoinTo_ addr = void . sendCoinTo addr
 
 sendValueTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era TxIn
 sendValueTo addr amount = do
-  -- We only use TopTx here to make it easy to find the TxIn
-  -- TODO make this work with SubTx as well
   tx <-
     submitTopTxAnn
       ("Giving " <> show amount <> " to " <> show addr)
@@ -2514,7 +2512,6 @@ produceScript scriptHash = do
       mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
   logString $ "Produced script: " <> show scriptHash
-  -- TODO make this work with `submitTx`
   txInAt 0 <$> submitTopTx tx
 
 advanceToPointOfNoReturn :: ImpTestM era ()

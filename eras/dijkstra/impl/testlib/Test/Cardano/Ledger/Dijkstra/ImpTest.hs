@@ -126,11 +126,9 @@ instance ShelleyEraImp DijkstraEra where
               Just (ScriptTestContext script _) -> pure $ plutusLanguage script > PlutusV3
               Nothing -> isJust <$> impLookupNativeScript scriptHash
     supportedInSubTx <- traverse (scriptSupportedInSubTx . snd) scriptsNeeded
-    oneof $
-      [trySubmitTopTx tx]
-        <> [ trySubmitSubTx tx
-           | and supportedInSubTx
-           ]
+    if and supportedInSubTx
+      then oneof [trySubmitTopTx tx, trySubmitSubTx tx]
+      else trySubmitTopTx tx
 
 trySubmitSubTx ::
   DijkstraEraImp era =>

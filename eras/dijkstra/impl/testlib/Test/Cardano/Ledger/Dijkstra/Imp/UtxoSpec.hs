@@ -214,79 +214,75 @@ spec = describe "UTXO" $ do
 
   describe "value consumed by a transaction" $ do
     it "sums inputs, withdrawals and refunds across the batch" $ do
-      let genTx = do
-            keyDeposit <- getsPParams ppKeyDepositL
-            dRepDeposit <- getsPParams ppDRepDepositL
+      keyDeposit <- getsPParams ppKeyDepositL
+      dRepDeposit <- getsPParams ppDRepDepositL
 
-            -- accounts and DReps that the batch unregisters, one of each in the top
-            -- transaction and one of each in the sub-transaction
-            topCred <- freshRegisteredStakeCred
-            subCred <- freshRegisteredStakeCred
-            topDRep <- KeyHashObj <$> registerDRep
-            subDRep <- KeyHashObj <$> registerDRep
+      -- accounts and DReps that the batch unregisters, one of each in the top
+      -- transaction and one of each in the sub-transaction
+      topCred <- freshRegisteredStakeCred
+      subCred <- freshRegisteredStakeCred
+      topDRep <- KeyHashObj <$> registerDRep
+      subDRep <- KeyHashObj <$> registerDRep
 
-            -- accounts that the batch withdraws from. They are distinct from the ones
-            -- above, because an account with a non-zero balance cannot be unregistered.
-            (topAccount, topWithdrawal) <- freshFundedAccount
-            (subAccount, subWithdrawal) <- freshFundedAccount
+      -- accounts that the batch withdraws from. They are distinct from the ones
+      -- above, because an account with a non-zero balance cannot be unregistered.
+      (topAccount, topWithdrawal) <- freshFundedAccount
+      (subAccount, subWithdrawal) <- freshFundedAccount
 
-            topInAmount <- Coin <$> choose (1_000_000, 2_000_000)
-            topIn <- txInWithFunds topInAmount
-            subInAmount <- Coin <$> choose (1_000_000, 2_000_000)
-            subIn <- txInWithFunds subInAmount
+      topInAmount <- Coin <$> choose (1_000_000, 2_000_000)
+      topIn <- txInWithFunds topInAmount
+      subInAmount <- Coin <$> choose (1_000_000, 2_000_000)
+      subIn <- txInWithFunds subInAmount
 
-            let subTx :: Tx SubTx era
-                subTx =
-                  mkBasicTx $
-                    mkBasicTxBody
-                      & inputsTxBodyL .~ [subIn]
-                      & withdrawalsTxBodyL .~ Withdrawals [(subAccount, subWithdrawal)]
-                      & certsTxBodyL
-                        .~ [ UnRegDepositTxCert subCred keyDeposit
-                           , UnRegDRepTxCert subDRep dRepDeposit
-                           ]
-                topTx :: Tx TopTx era
-                topTx =
-                  mkBasicTx $
-                    mkBasicTxBody
-                      & inputsTxBodyL .~ [topIn]
-                      & withdrawalsTxBodyL .~ Withdrawals [(topAccount, topWithdrawal)]
-                      & certsTxBodyL
-                        .~ [ UnRegDepositTxCert topCred keyDeposit
-                           , UnRegDRepTxCert topDRep dRepDeposit
-                           ]
-                      & subTransactionsTxBodyL .~ [subTx]
-                batchRefunds = ((2 :: Int) <×> keyDeposit) <> ((2 :: Int) <×> dRepDeposit)
-                expectedCoin =
-                  topInAmount
-                    <> subInAmount
-                    <> topWithdrawal
-                    <> subWithdrawal
-                    <> batchRefunds
-            expectConsumed topTx $ inject expectedCoin
-            checkRefundCalculation (topTx ^. bodyTxL) batchRefunds (keyDeposit <> dRepDeposit)
-            pure topTx
-      submitInAllModes genTx
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [subIn]
+                & withdrawalsTxBodyL .~ Withdrawals [(subAccount, subWithdrawal)]
+                & certsTxBodyL
+                  .~ [ UnRegDepositTxCert subCred keyDeposit
+                     , UnRegDRepTxCert subDRep dRepDeposit
+                     ]
+          topTx :: Tx TopTx era
+          topTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [topIn]
+                & withdrawalsTxBodyL .~ Withdrawals [(topAccount, topWithdrawal)]
+                & certsTxBodyL
+                  .~ [ UnRegDepositTxCert topCred keyDeposit
+                     , UnRegDRepTxCert topDRep dRepDeposit
+                     ]
+                & subTransactionsTxBodyL .~ [subTx]
+          batchRefunds = ((2 :: Int) <×> keyDeposit) <> ((2 :: Int) <×> dRepDeposit)
+          expectedCoin =
+            topInAmount
+              <> subInAmount
+              <> topWithdrawal
+              <> subWithdrawal
+              <> batchRefunds
+      expectConsumed topTx $ inject expectedCoin
+      checkRefundCalculation (topTx ^. bodyTxL) batchRefunds (keyDeposit <> dRepDeposit)
+      submitInAllModes topTx
 
     it "includes sub-tx cert refunds when top has no certs" $ do
-      let genTx = do
-            keyDeposit <- getsPParams ppKeyDepositL
-            dRepDeposit <- getsPParams ppDRepDepositL
-            subCred <- freshRegisteredStakeCred
-            subDRep <- KeyHashObj <$> registerDRep
-            let subTx :: Tx SubTx era
-                subTx =
-                  mkBasicTx $
-                    mkBasicTxBody
-                      & certsTxBodyL
-                        .~ [ UnRegDepositTxCert subCred keyDeposit
-                           , UnRegDRepTxCert subDRep dRepDeposit
-                           ]
-                topTx = mkTopTxWithSubTxs [subTx]
-            expectConsumed topTx $ inject (keyDeposit <> dRepDeposit)
-            checkRefundCalculation (topTx ^. bodyTxL) (keyDeposit <> dRepDeposit) mempty
-            pure topTx
-      submitInAllModes genTx
+      keyDeposit <- getsPParams ppKeyDepositL
+      dRepDeposit <- getsPParams ppDRepDepositL
+      subCred <- freshRegisteredStakeCred
+      subDRep <- KeyHashObj <$> registerDRep
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & certsTxBodyL
+                  .~ [ UnRegDepositTxCert subCred keyDeposit
+                     , UnRegDRepTxCert subDRep dRepDeposit
+                     ]
+          topTx = mkTopTxWithSubTxs [subTx]
+      expectConsumed topTx $ inject (keyDeposit <> dRepDeposit)
+      checkRefundCalculation (topTx ^. bodyTxL) (keyDeposit <> dRepDeposit) mempty
+      submitInAllModes topTx
 
     -- Refunds are collected from the values in the certificates, rather than from the
     -- state, which is why a deposit that is only paid within the same batch can still be
@@ -319,7 +315,7 @@ spec = describe "UTXO" $ do
       checkRefundCalculation (topTx ^. bodyTxL) (keyDeposit <> dRepDeposit) (keyDeposit <> dRepDeposit)
 
       depositedBefore <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
-      submitTx_ topTx
+      submitTopTx_ topTx
       expectStakeCredNotRegistered cred
       depositedAfter <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
       depositedAfter `shouldBe` depositedBefore
@@ -357,7 +353,7 @@ spec = describe "UTXO" $ do
           batchRefunds = ((2 :: Int) <×> keyDeposit) <> ((2 :: Int) <×> dRepDeposit)
       expectConsumed topTx $ inject batchRefunds
       checkRefundCalculation (topTx ^. bodyTxL) batchRefunds (keyDeposit <> dRepDeposit)
-      submitTx_ topTx
+      submitTopTx_ topTx
 
   describe "Value preservation" $ do
     let mkSubTx :: BatchAmounts -> ImpTestM era (Tx SubTx era)
@@ -644,7 +640,6 @@ spec = describe "UTXO" $ do
     produceScriptAt scriptHash amount = do
       let addr = mkAddr scriptHash StakeRefNull
       let
-        tx :: forall l. Typeable l => Tx l era
         tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
