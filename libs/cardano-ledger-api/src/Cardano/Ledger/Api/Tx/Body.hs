@@ -96,7 +96,7 @@ import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
-import Cardano.Ledger.BaseTypes (Network, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (Network, StrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (Sized)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Governance (
@@ -106,6 +106,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (
+  EraTx (..),
   EraTxBody (..),
   PParams,
   TxAuxDataHash (..),
@@ -124,8 +125,10 @@ import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.UTxO (getProducedValue)
 import Cardano.Ledger.State (EraUTxO (getConsumedValue), UTxO)
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val ((<->))
+import Data.Map.Strict (Map)
+import Data.OMap.Strict (OMap)
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet (fromSet)
 import Data.Sequence.Strict (StrictSeq)
@@ -223,6 +226,36 @@ class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era whe
     SimpleGetter (TxBody l era) (Maybe (OSet (Credential Guard)))
   guardsTxBodyG = guardsTxBodyL . to Just
 
+  subTransactionsTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (OMap TxId (Tx SubTx era)))
+  default subTransactionsTxBodyG ::
+    DijkstraEraTxBody era =>
+    SimpleGetter (TxBody TopTx era) (Maybe (OMap TxId (Tx SubTx era)))
+  subTransactionsTxBodyG = subTransactionsTxBodyL . to Just
+
+  requiredTopLevelGuardsTxBodyG ::
+    SimpleGetter (TxBody l era) (Maybe (Map (Credential Guard) (StrictMaybe (Data era))))
+  default requiredTopLevelGuardsTxBodyG ::
+    DijkstraEraTxBody era =>
+    SimpleGetter (TxBody l era) (Maybe (Map (Credential Guard) (StrictMaybe (Data era))))
+  requiredTopLevelGuardsTxBodyG = requiredTopLevelGuardsL . to Just
+
+  directDepositsTxBodyG :: SimpleGetter (TxBody l era) (Maybe DirectDeposits)
+  default directDepositsTxBodyG ::
+    DijkstraEraTxBody era => SimpleGetter (TxBody l era) (Maybe DirectDeposits)
+  directDepositsTxBodyG = directDepositsTxBodyL . to Just
+
+  accountBalanceIntervalsTxBodyG ::
+    SimpleGetter (TxBody l era) (Maybe (AccountBalanceIntervals era))
+  default accountBalanceIntervalsTxBodyG ::
+    DijkstraEraTxBody era => SimpleGetter (TxBody l era) (Maybe (AccountBalanceIntervals era))
+  accountBalanceIntervalsTxBodyG = accountBalanceIntervalsTxBodyL . to Just
+
+  startingAccountBalanceIntervalsTxBodyG ::
+    SimpleGetter (TxBody TopTx era) (Maybe (AccountBalanceIntervals era))
+  default startingAccountBalanceIntervalsTxBodyG ::
+    DijkstraEraTxBody era => SimpleGetter (TxBody TopTx era) (Maybe (AccountBalanceIntervals era))
+  startingAccountBalanceIntervalsTxBodyG = startingAccountBalanceIntervalsTxBodyL . to Just
+
 instance AnyEraTxBody ShelleyEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
   vldtTxBodyG = ttlTxBodyL . to ttlToValidityInterval
@@ -240,6 +273,11 @@ instance AnyEraTxBody ShelleyEra where
   proposalProceduresTxBodyG = to (const Nothing)
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG = to (const Nothing)
+  subTransactionsTxBodyG = to (const Nothing)
+  requiredTopLevelGuardsTxBodyG = to (const Nothing)
+  directDepositsTxBodyG = to (const Nothing)
+  accountBalanceIntervalsTxBodyG = to (const Nothing)
+  startingAccountBalanceIntervalsTxBodyG = to (const Nothing)
 
 instance AnyEraTxBody AllegraEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
@@ -257,6 +295,11 @@ instance AnyEraTxBody AllegraEra where
   proposalProceduresTxBodyG = to (const Nothing)
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG = to (const Nothing)
+  subTransactionsTxBodyG = to (const Nothing)
+  requiredTopLevelGuardsTxBodyG = to (const Nothing)
+  directDepositsTxBodyG = to (const Nothing)
+  accountBalanceIntervalsTxBodyG = to (const Nothing)
+  startingAccountBalanceIntervalsTxBodyG = to (const Nothing)
 
 instance AnyEraTxBody MaryEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
@@ -273,6 +316,11 @@ instance AnyEraTxBody MaryEra where
   proposalProceduresTxBodyG = to (const Nothing)
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG = to (const Nothing)
+  subTransactionsTxBodyG = to (const Nothing)
+  requiredTopLevelGuardsTxBodyG = to (const Nothing)
+  directDepositsTxBodyG = to (const Nothing)
+  accountBalanceIntervalsTxBodyG = to (const Nothing)
+  startingAccountBalanceIntervalsTxBodyG = to (const Nothing)
 
 instance AnyEraTxBody AlonzoEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
@@ -287,6 +335,11 @@ instance AnyEraTxBody AlonzoEra where
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG =
     reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map KeyHashObj)
+  subTransactionsTxBodyG = to (const Nothing)
+  requiredTopLevelGuardsTxBodyG = to (const Nothing)
+  directDepositsTxBodyG = to (const Nothing)
+  accountBalanceIntervalsTxBodyG = to (const Nothing)
+  startingAccountBalanceIntervalsTxBodyG = to (const Nothing)
 
 instance AnyEraTxBody BabbageEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
@@ -296,10 +349,20 @@ instance AnyEraTxBody BabbageEra where
   treasuryDonationTxBodyG = to (const Nothing)
   guardsTxBodyG =
     reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map KeyHashObj)
+  subTransactionsTxBodyG = to (const Nothing)
+  requiredTopLevelGuardsTxBodyG = to (const Nothing)
+  directDepositsTxBodyG = to (const Nothing)
+  accountBalanceIntervalsTxBodyG = to (const Nothing)
+  startingAccountBalanceIntervalsTxBodyG = to (const Nothing)
 
 instance AnyEraTxBody ConwayEra where
   guardsTxBodyG =
     reqSignerHashesTxBodyG . to (Just . OSet.fromSet . Set.map KeyHashObj)
+  subTransactionsTxBodyG = to (const Nothing)
+  requiredTopLevelGuardsTxBodyG = to (const Nothing)
+  directDepositsTxBodyG = to (const Nothing)
+  accountBalanceIntervalsTxBodyG = to (const Nothing)
+  startingAccountBalanceIntervalsTxBodyG = to (const Nothing)
 
 instance AnyEraTxBody DijkstraEra
 
