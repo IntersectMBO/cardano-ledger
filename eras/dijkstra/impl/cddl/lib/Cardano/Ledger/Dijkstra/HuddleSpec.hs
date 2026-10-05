@@ -1130,7 +1130,7 @@ instance HuddleRule "peras_voters" DijkstraEra where
                 [ "max_index" ==> VUInt `sized` (2 :: Word64) //- "inclusive upper bound of the seat indices"
                 , "bits"
                     ==> VBytes
-                    //- "(max_index / 8) + 1 bytes, LSB-first: seat i is bit (i mod 8) of byte (i div 8)"
+                    //- "(max_index / 8) + 1 bytes, MSB-first: seat i is bit 7 - (i mod 8) of byte (i div 8)"
                 ]
           , "vrf_outputs" ==> arr [0 <+ a (huddleRule @"peras_vrf_output" era)]
           ]

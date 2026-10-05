@@ -954,7 +954,7 @@ peras_boosted_block = [// [slot : uint, hash : hash32]]
 
 peras_voters =
   [ bitmap      : [ max_index : uint .size 2 ; inclusive upper bound of the seat indices
-                  , bits : bytes ; (max_index / 8) + 1 bytes, LSB-first: seat i is bit (i mod 8) of byte (i div 8)
+                  , bits : bytes ; (max_index / 8) + 1 bytes, MSB-first: seat i is bit 7 - (i mod 8) of byte (i div 8)
                   ]
   , vrf_outputs : [* peras_vrf_output]
   ]
