@@ -9,16 +9,12 @@
 module Test.Cardano.Ledger.Mary.ImpTest (
   MaryEraImp,
   module Test.Cardano.Ledger.Allegra.ImpTest,
-  mkTokenMintingTx,
 ) where
 
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
-import Data.Typeable (Typeable)
-import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Allegra.ImpTest
-import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.Era
 import Test.Cardano.Ledger.Mary.TreeDiff ()
@@ -42,15 +38,3 @@ class
 instance AllegraEraImp MaryEra
 
 instance MaryEraImp MaryEra
-
-mkTokenMintingTx :: (MaryEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
-mkTokenMintingTx sh = do
-  name <- arbitrary
-  count <- choose (1, 10)
-  let policyId = PolicyID sh
-  let ma = multiAssetFromList [(policyId, name, count)]
-  addr <- freshKeyAddr_
-  pure $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]

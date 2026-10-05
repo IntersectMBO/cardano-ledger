@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.17.0.1
+## 1.17.1.0
 
 *
+
+### `testlib`
+
+* Add `mkTokenMintingTx`
 
 ## 1.17.0.0
 

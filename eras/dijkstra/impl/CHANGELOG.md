@@ -1,8 +1,8 @@
 # Revision history for `cardano-ledger-dijkstra`
 
-## 0.4.0.1
+## 0.4.1.0
 
-*
+* Change `eraMaxLanguage` to `PlutusV4`
 
 ## 0.4.0.0
 
