@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.22.0.1
+## 1.22.1.0
 
-*
+* Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
 
 ## 1.22.0.0
 

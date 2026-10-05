@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,19 +11,26 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary (genHeader) where
+module Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary (genHeader, genHeaderBody) where
 
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Binary (DecCBOR, Version, natVersion)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  Version,
+  decodeFixedSized,
+  decodeRecordNamed,
+  natVersion,
+ )
 import Cardano.Ledger.Block (Block (Block), EbReferencesAnnouncement (EbReferencesAnnouncement))
 import Cardano.Ledger.Core (BlockBody, EraBlockBody)
 import Cardano.Ledger.MemoBytes (mkMemoized)
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Leios.BlockHeader (
   Header (HeaderConstr),
-  HeaderBody (HeaderBody),
+  HeaderBody (HeaderBodyConstr),
+  HeaderBodyRaw (HeaderBodyRaw),
   HeaderRaw (HeaderRaw),
  )
 import Test.Cardano.Ledger.Binary.Arbitrary ()
@@ -34,12 +42,13 @@ import Test.Crypto.Instances ()
 instance Arbitrary EbReferencesAnnouncement where
   arbitrary = EbReferencesAnnouncement <$> arbitrary <*> arbitrary
 
-instance
+genHeaderBody ::
   (Crypto c, VRF.Signable (VRF c) ~ SignableRepresentation) =>
-  Arbitrary (HeaderBody c)
-  where
-  arbitrary =
-    HeaderBody
+  Version ->
+  Gen (HeaderBody c)
+genHeaderBody version =
+  fmap (mkMemoized version) $
+    HeaderBodyRaw
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -53,6 +62,12 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+instance
+  (Crypto c, VRF.Signable (VRF c) ~ SignableRepresentation) =>
+  Arbitrary (HeaderBody c)
+  where
+  arbitrary = genHeaderBody =<< elements [natVersion @12 .. maxBound]
+
 genHeader ::
   ( Crypto c
   , VRF.Signable (VRF c) ~ SignableRepresentation
@@ -61,7 +76,7 @@ genHeader ::
   Version ->
   Gen (Header c)
 genHeader version = do
-  hBody <- arbitrary
+  hBody <- genHeaderBody version
   period <- arbitrary
   sKey <- arbitrary
   let hSig = KES.unsoundPureSignedKES () period hBody sKey
@@ -75,6 +90,13 @@ instance
   Arbitrary (Header c)
   where
   arbitrary = genHeader =<< elements [natVersion @12 .. maxBound]
+
+deriving newtype instance Crypto c => DecCBOR (HeaderBody c)
+
+instance Crypto c => DecCBOR (HeaderRaw c) where
+  decCBOR =
+    decodeRecordNamed "HeaderRaw" (const 2) $
+      HeaderRaw <$> decCBOR <*> decodeFixedSized
 
 deriving newtype instance Crypto c => DecCBOR (Header c)
 
