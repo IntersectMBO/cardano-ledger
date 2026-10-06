@@ -143,6 +143,75 @@ spec = describe "ENTITIES" $ do
     getBalance (KeyHashObj kh1) `shouldReturn` zero
     getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
 
+  describe "Withdrawal amounts for one account" $ do
+    it "Top takes exactly the balance left by the sub-transaction" $ do
+      let drainsAfterSubTx legacyMode = do
+            (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+            subAmount <- Coin <$> choose (1, unCoin balance `div` 2)
+            tx <-
+              mkTxWithBatchWithdrawals
+                (Withdrawals [(acct, balance <-> subAmount)])
+                [Withdrawals [(acct, subAmount)]]
+            submitTx_ =<< if legacyMode then switchTxToLegacyMode tx else pure tx
+            getBalance (KeyHashObj kh) `shouldReturn` zero
+      drainsAfterSubTx False
+      drainsAfterSubTx True
+
+    it "Top takes less than the balance left by the sub-transaction" $ do
+      let doesNotDrainAfterSubTx legacyMode = do
+            (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+            subAmount <- Coin <$> choose (1, unCoin balance `div` 2)
+            let remainder = balance <-> subAmount
+            topAmount <- Coin <$> choose (1, unCoin remainder - 1)
+            tx <-
+              mkTxWithBatchWithdrawals
+                (Withdrawals [(acct, topAmount)])
+                [Withdrawals [(acct, subAmount)]]
+            if legacyMode
+              then do
+                legacyTx <- switchTxToLegacyMode tx
+                submitFailingTx
+                  legacyTx
+                  [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+                      NEM.singleton acct $
+                        Mismatch topAmount remainder
+                  ]
+              else do
+                submitTx_ tx
+                getBalance (KeyHashObj kh) `shouldReturn` (remainder <-> topAmount)
+      doesNotDrainAfterSubTx False
+      doesNotDrainAfterSubTx True
+
+    it "Only the sub-transaction withdraws, taking the whole balance, in legacy mode" $ do
+      (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+      submitTx_
+        =<< switchTxToLegacyMode
+        =<< mkTxWithBatchWithdrawals (Withdrawals mempty) [Withdrawals [(acct, balance)]]
+      getBalance (KeyHashObj kh) `shouldReturn` zero
+
+    it "Only the top level withdraws, taking more than the balance" $ do
+      let topOverdraws legacyMode = do
+            (acct, balance, _) <- setupAccountAddressWith =<< genAccountBalance
+            moreThanBalance <- (balance <>) . succ <$> arbitrary
+            tx <- mkTxWithBatchWithdrawals (Withdrawals [(acct, moreThanBalance)]) []
+            if legacyMode
+              then do
+                legacyTx <- switchTxToLegacyMode tx
+                submitFailingTx
+                  legacyTx
+                  [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+                      NEM.singleton acct $
+                        Mismatch moreThanBalance balance
+                  ]
+              else
+                submitFailingTx
+                  tx
+                  [ injectFailure . WithdrawalAmountsExceedingOriginalBalance @era . fromJust $
+                      NEM.fromMap [(acct, Mismatch moreThanBalance balance)]
+                  ]
+      topOverdraws False
+      topOverdraws True
+
   it "Withdrawals from an unregistered staking address" $ do
     account1 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
     account2 <- freshKeyHash >>= getAccountAddressFor . KeyHashObj
