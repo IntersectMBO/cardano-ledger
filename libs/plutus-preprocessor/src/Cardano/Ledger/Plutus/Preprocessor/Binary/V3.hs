@@ -4,7 +4,8 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 -- Builtin casing (enabled by the SumsOfProducts datatype style) is only supported starting
 -- with protocol version 11, while these scripts also need to run at protocol versions 9 and 10.
-{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:target-version=1.2.0 #-}
+{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:datatypes=ScottEncoding #-}
+{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:target-version=1.1.0 #-}
 
 module Cardano.Ledger.Plutus.Preprocessor.Binary.V3 where
 
