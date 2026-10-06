@@ -107,42 +107,6 @@ spec = describe "ENTITIES" $ do
           & bodyTxL %~ withdrawsFrom acct withdrawal
       getBalance (KeyHashObj kh) `shouldReturn` (balance <-> withdrawal <+> deposit)
 
-  it "Partial withdrawals" $ do
-    (account1, balance1, kh1) <- setupAccountAddress
-    (account2, balance2, kh2) <- setupAccountAddress
-    lessThanBalance1 <- Coin <$> choose (1, unCoin balance1 - 1)
-    atMostBalance2 <- Coin <$> choose (1, unCoin balance2)
-    let freshTx =
-          mkTxWithBatchWithdrawals
-            (Withdrawals [(account1, lessThanBalance1)])
-            [Withdrawals [(account2, atMostBalance2)]]
-    submitTx_ =<< freshTx
-    getBalance (KeyHashObj kh1) `shouldReturn` (balance1 <-> lessThanBalance1)
-    getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
-
-    -- restore balances, to test legacy mode
-    submitTx_ $
-      mkBasicTx $
-        mkBasicTxBody
-          & directDepositsTxBodyL .~ DirectDeposits [(account1, lessThanBalance1), (account2, atMostBalance2)]
-    legacyTx <- switchTxToLegacyMode =<< freshTx
-    submitFailingTx
-      legacyTx
-      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
-          NEM.singleton account1 $
-            Mismatch lessThanBalance1 balance1
-      ]
-
-    -- drain top withdrawal
-    submitTx_
-      =<< switchTxToLegacyMode
-      =<< mkTxWithBatchWithdrawals
-        (Withdrawals [(account1, balance1)])
-        [Withdrawals [(account2, atMostBalance2)]]
-
-    getBalance (KeyHashObj kh1) `shouldReturn` zero
-    getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> atMostBalance2)
-
   describe "Withdrawal amounts for one account" $ do
     it "Top takes exactly the balance left by the sub-transaction" $ do
       let drainsAfterSubTx legacyMode = do
@@ -188,6 +152,139 @@ spec = describe "ENTITIES" $ do
         =<< switchTxToLegacyMode
         =<< mkTxWithBatchWithdrawals (Withdrawals mempty) [Withdrawals [(acct, balance)]]
       getBalance (KeyHashObj kh) `shouldReturn` zero
+
+    it "Partial withdrawals" $ do
+      (account1, balance1, kh1) <- setupAccountAddress
+      (account2, balance2, kh2) <- setupAccountAddress
+      lessThanBalance1 <- Coin <$> choose (1, unCoin balance1 - 1)
+      lessThanBalance2 <- Coin <$> choose (1, unCoin balance2 - 1)
+      let freshTx =
+            mkTxWithBatchWithdrawals
+              (Withdrawals [(account1, lessThanBalance1)])
+              [Withdrawals [(account2, lessThanBalance2)]]
+      submitTx_ =<< freshTx
+      getBalance (KeyHashObj kh1) `shouldReturn` (balance1 <-> lessThanBalance1)
+      getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> lessThanBalance2)
+
+      -- restore balances, to test legacy mode
+      submitTx_ $
+        mkBasicTx $
+          mkBasicTxBody
+            & directDepositsTxBodyL .~ DirectDeposits [(account1, lessThanBalance1), (account2, lessThanBalance2)]
+      legacyTx <- switchTxToLegacyMode =<< freshTx
+      submitFailingTx
+        legacyTx
+        [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+            NEM.singleton account1 $
+              Mismatch lessThanBalance1 balance1
+        ]
+
+      -- drain top withdrawal
+      submitTx_
+        =<< switchTxToLegacyMode
+        =<< mkTxWithBatchWithdrawals
+          (Withdrawals [(account1, balance1)])
+          [Withdrawals [(account2, lessThanBalance2)]]
+
+      getBalance (KeyHashObj kh1) `shouldReturn` zero
+      getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> lessThanBalance2)
+
+    it "Aggregate of top and sub withdrawals exceeds account balance" $ do
+      (account, balance, _) <- setupAccountAddress
+      (topAmount, subAmount) <- genCoinPairExceeding balance
+      tx <-
+        mkTxWithBatchWithdrawals
+          (Withdrawals [(account, topAmount)])
+          [Withdrawals [(account, subAmount)]]
+      submitFailingTx
+        tx
+        [ injectFailure $
+            WithdrawalAmountsExceedingOriginalBalance @era $
+              fromJust $
+                NEM.fromMap [(account, Mismatch (topAmount <+> subAmount) balance)]
+        ]
+      -- legacy mode
+      legacyTx <- switchTxToLegacyMode tx
+      submitFailingTx
+        legacyTx
+        [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+            NEM.singleton account $
+              Mismatch topAmount (balance <-> subAmount)
+        ]
+
+    it "Aggregate of sub withdrawals exceeds account balance" $ do
+      (account, balance, _) <- setupAccountAddress
+      (subAmount1, subAmount2) <- genCoinPairExceeding balance
+      (subAmount1 <+> subAmount2) `shouldSatisfy` (> balance)
+
+      tx <-
+        mkTxWithBatchWithdrawals
+          (Withdrawals [(account, zero)])
+          [Withdrawals [(account, subAmount1)], Withdrawals [(account, subAmount2)]]
+      submitFailingTx
+        tx
+        [ injectFailure $
+            WithdrawalAmountsExceedingOriginalBalance @era $
+              fromJust $
+                NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) balance)]
+        ]
+      legacyTx <- switchTxToLegacyMode tx
+      submitFailingTx
+        legacyTx
+        [ injectFailure $
+            WithdrawalAmountsExceedingOriginalBalance @era $
+              fromJust $
+                NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) balance)]
+        ]
+
+    it "Individual withdrawal exceeds account balance" $ do
+      (account, balance, _) <- setupAccountAddress
+      atMostBalance <- Coin <$> choose (1, unCoin balance)
+      moreThanBalance <- (balance <>) . succ <$> arbitrary
+
+      -- A sub-transaction overdraws
+      subTxOverdraws <-
+        mkTxWithBatchWithdrawals
+          (Withdrawals [(account, atMostBalance)])
+          [Withdrawals [(account, moreThanBalance)]]
+      submitFailingTx
+        subTxOverdraws
+        [ injectFailure $
+            WithdrawalAmountsExceedingOriginalBalance @era $
+              fromJust $
+                NEM.fromMap [(account, Mismatch (atMostBalance <+> moreThanBalance) balance)]
+        ]
+
+      legacySubTxOverdraws <- switchTxToLegacyMode subTxOverdraws
+
+      submitFailingTx
+        legacySubTxOverdraws
+        [ injectFailure $
+            WithdrawalAmountsExceedingOriginalBalance @era $
+              fromJust $
+                NEM.fromMap [(account, Mismatch moreThanBalance balance)]
+        ]
+
+      -- The top transaction overdraws
+      topTxOverdraws <-
+        mkTxWithBatchWithdrawals
+          (Withdrawals [(account, moreThanBalance)])
+          [Withdrawals [(account, atMostBalance)]]
+      submitFailingTx
+        topTxOverdraws
+        [ injectFailure $
+            WithdrawalAmountsExceedingOriginalBalance @era $
+              fromJust $
+                NEM.fromMap
+                  [(account, Mismatch (atMostBalance <+> moreThanBalance) balance)]
+        ]
+      legacyTopTxOverdraws <- switchTxToLegacyMode topTxOverdraws
+      submitFailingTx
+        legacyTopTxOverdraws
+        [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
+            NEM.singleton account $
+              Mismatch moreThanBalance (balance <-> atMostBalance)
+        ]
 
     it "Only the top level withdraws, taking more than the balance" $ do
       let topOverdraws legacyMode = do
@@ -364,103 +461,6 @@ spec = describe "ENTITIES" $ do
       , injectFailure . SubWithdrawalAccountsMissing @era $
           Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . SubDirectDepositAccountsMissing @era $ dd
-      ]
-
-  it "Aggregate of top and sub withdrawals exceeds account balance" $ do
-    (account, balance, _) <- setupAccountAddress
-    (topAmount, subAmount) <- genCoinPairExceeding balance
-    tx <-
-      mkTxWithBatchWithdrawals
-        (Withdrawals [(account, topAmount)])
-        [Withdrawals [(account, subAmount)]]
-    submitFailingTx
-      tx
-      [ injectFailure $
-          WithdrawalAmountsExceedingOriginalBalance @era $
-            fromJust $
-              NEM.fromMap [(account, Mismatch (topAmount <+> subAmount) balance)]
-      ]
-    -- legacy mode
-    legacyTx <- switchTxToLegacyMode tx
-    submitFailingTx
-      legacyTx
-      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
-          NEM.singleton account $
-            Mismatch topAmount (balance <-> subAmount)
-      ]
-
-  it "Aggregate of sub withdrawals exceeds account balance" $ do
-    (account, balance, _) <- setupAccountAddress
-    (subAmount1, subAmount2) <- genCoinPairExceeding balance
-    (subAmount1 <+> subAmount2) `shouldSatisfy` (> balance)
-
-    tx <-
-      mkTxWithBatchWithdrawals
-        (Withdrawals [(account, zero)])
-        [Withdrawals [(account, subAmount1)], Withdrawals [(account, subAmount2)]]
-    submitFailingTx
-      tx
-      [ injectFailure $
-          WithdrawalAmountsExceedingOriginalBalance @era $
-            fromJust $
-              NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) balance)]
-      ]
-    legacyTx <- switchTxToLegacyMode tx
-    submitFailingTx
-      legacyTx
-      [ injectFailure $
-          WithdrawalAmountsExceedingOriginalBalance @era $
-            fromJust $
-              NEM.fromMap [(account, Mismatch (subAmount1 <+> subAmount2) balance)]
-      ]
-
-  it "Individual withdrawal exceeds account balance" $ do
-    (account, balance, _) <- setupAccountAddress
-    atMostBalance <- Coin <$> choose (1, unCoin balance)
-    moreThanBalance <- (balance <>) . succ <$> arbitrary
-
-    -- A sub-transaction overdraws
-    subTxOverdraws <-
-      mkTxWithBatchWithdrawals
-        (Withdrawals [(account, atMostBalance)])
-        [Withdrawals [(account, moreThanBalance)]]
-    submitFailingTx
-      subTxOverdraws
-      [ injectFailure $
-          WithdrawalAmountsExceedingOriginalBalance @era $
-            fromJust $
-              NEM.fromMap [(account, Mismatch (atMostBalance <+> moreThanBalance) balance)]
-      ]
-
-    legacySubTxOverdraws <- switchTxToLegacyMode subTxOverdraws
-
-    submitFailingTx
-      legacySubTxOverdraws
-      [ injectFailure $
-          WithdrawalAmountsExceedingOriginalBalance @era $
-            fromJust $
-              NEM.fromMap [(account, Mismatch moreThanBalance balance)]
-      ]
-
-    -- The top transaction overdraws
-    topTxOverdraws <-
-      mkTxWithBatchWithdrawals
-        (Withdrawals [(account, moreThanBalance)])
-        [Withdrawals [(account, atMostBalance)]]
-    submitFailingTx
-      topTxOverdraws
-      [ injectFailure $
-          WithdrawalAmountsExceedingOriginalBalance @era $
-            fromJust $
-              NEM.fromMap
-                [(account, Mismatch (atMostBalance <+> moreThanBalance) balance)]
-      ]
-    legacyTopTxOverdraws <- switchTxToLegacyMode topTxOverdraws
-    submitFailingTx
-      legacyTopTxOverdraws
-      [ injectFailure . WithdrawalAmountsInexactInLegacyMode @era $
-          NEM.singleton account $
-            Mismatch moreThanBalance (balance <-> atMostBalance)
       ]
 
   it "Direct deposits cannot fund withdrawals in subsequent sub-transactions" $ do
