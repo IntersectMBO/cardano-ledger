@@ -360,26 +360,18 @@ spec = describe "POOL" $ do
         mkPoolRegTxFromParams ppsWithBlsKey
       pStateBefore <- getPools
       invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
-      -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec includes BLS
-      -- proof of possession validation for pool registration.
-      -- See https://github.com/IntersectMBO/formal-ledger-specifications/pull/1300
-      withDisabledPostSubmitTxHook $
-        submitFailingTx
-          (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
-          [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
+      submitFailingTx
+        (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
+        [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
       passEpoch
       getPools `shouldReturn` pStateBefore
 
     it "fails to register a new pool with an invalid BLS proof of possession" $ do
       pps <- freshStakePool
       invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
-      -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec includes BLS
-      -- proof of possession validation for pool registration.
-      -- See https://github.com/IntersectMBO/formal-ledger-specifications/pull/1300
-      withDisabledPostSubmitTxHook $
-        submitFailingTx
-          (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
-          [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
+      submitFailingTx
+        (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
+        [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
       pools <- getPools
       expectNothing $ Map.lookup (sppId pps) pools
   where
