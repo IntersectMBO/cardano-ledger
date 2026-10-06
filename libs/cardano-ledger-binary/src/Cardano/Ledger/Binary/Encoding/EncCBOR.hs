@@ -91,6 +91,7 @@ import Cardano.Crypto.Peras (
   PerasVRFOutput (..),
  )
 import Cardano.Crypto.Peras.Cert (PerasCert (..), PerasCertVoters (..), PerasVotersBitmap (..))
+import Data.Bitmap (Bitmap (..))
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Int (Int16, Int32, Int64, Int8)
@@ -524,7 +525,7 @@ instance EncCBOR PerasVRFOutput where
   encCBOR = encCBOR . unPerasVRFOutput
 
 instance EncCBOR PerasVotersBitmap where
-  encCBOR (UnsafePerasVotersBitmap maxIx bs) = encodeListLen 2 <> encCBOR maxIx <> encCBOR bs
+  encCBOR (UnsafePerasVotersBitmap maxIx bs) = encodeListLen 2 <> encCBOR maxIx <> encCBOR (bitmapBytes bs)
 
 instance EncCBOR PerasCertVoters where
   encCBOR (UnsafePerasCertVoters bitmap vrfOutputs) =

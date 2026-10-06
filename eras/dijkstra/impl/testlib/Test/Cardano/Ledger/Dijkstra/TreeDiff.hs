@@ -65,6 +65,7 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
 import Control.State.Transition (STS (..))
+import Data.Bitmap (Bitmap (..))
 import qualified Data.ByteString.Short as SBS
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
@@ -169,7 +170,7 @@ instance ToExpr PerasCertVoters where
     Rec "PerasCertVoters" $
       OMap.fromList
         [ ("maxIndex", toExpr (perasVotersMaxIndex perasCertVotersBitmap))
-        , ("bitmap", toExpr . HexBytes $ perasVotersBits perasCertVotersBitmap)
+        , ("bitmap", toExpr . HexBytes $ bitmapBytes (perasVotersBits perasCertVotersBitmap))
         , ("vrfOutputs", toExpr (HexBytes . perasVRFOutputToBytes <$> perasCertNonPersistentVRFOutputs))
         ]
 

@@ -58,6 +58,7 @@ import Cardano.Ledger.State (
  )
 import Codec.CBOR.Term (Term (..))
 import Control.Monad (unless)
+import Data.Bitmap (Bitmap (..))
 import Data.Bits (finiteBitSize)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
@@ -1140,7 +1141,7 @@ instance HuddleRule "peras_voters" DijkstraEra where
         bitmapTerm <-
           genArrayTerm
             [ TInteger (toInteger (perasVotersMaxIndex bitmap))
-            , TBytes (perasVotersBits bitmap)
+            , TBytes (bitmapBytes (perasVotersBits bitmap))
             ]
         vrfTerm <-
           genArrayTerm (TBytes . perasVRFOutputToBytes <$> perasCertNonPersistentVRFOutputs voters)

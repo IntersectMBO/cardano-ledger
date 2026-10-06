@@ -101,6 +101,7 @@ import Cardano.Crypto.Peras.Cert (
  )
 import Control.Monad (when)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
+import Data.Bitmap (Bitmap (..))
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -795,7 +796,7 @@ instance DecCBOR PerasVotersBitmap where
   decCBOR = decodeRecordNamed "PerasVotersBitmap" (const 2) $ do
     maxIx <- decCBOR
     bs <- decodeBytes
-    case mkPerasVotersBitmap maxIx bs of
+    case mkPerasVotersBitmap maxIx (Bitmap bs) of
       Nothing -> fail "PerasVotersBitmap: payload length does not match the upper bound, or bits set above it"
       Just bitmap -> pure bitmap
 
