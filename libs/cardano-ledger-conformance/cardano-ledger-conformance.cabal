@@ -96,6 +96,7 @@ library
     base16-bytestring,
     bytestring,
     cardano-crypto-class >=2.3,
+    cardano-crypto-leios,
     cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
@@ -124,6 +125,7 @@ library
     text,
     tree-diff,
     unliftio,
+    vector,
     vector-map,
 
   if flag(asserts)

@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Base (
   SpecTranslate (..),
 ) where
 
+import Cardano.Crypto.Util (bytesToNatural)
 import Cardano.Ledger.Address (
   DirectDeposits (..),
   accountAddressCredentialL,
@@ -35,6 +36,7 @@ import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (FixedSizeCodec (rawEncodeFixedSized))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -82,7 +84,9 @@ import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.Orphans.Core ()
 import Test.Cardano.Ledger.Conformance.Orphans.Dijkstra ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (committeeCredentialToStrictMaybe)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
+  committeeCredentialToStrictMaybe,
+ )
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 
@@ -317,6 +321,16 @@ instance SpecTranslate DijkstraEra (DijkstraPParams Identity DijkstraEra) where
     ppMonetaryExpansion <- toSpecRep dppRho
     ppTreasuryCut <- toSpecRep dppTau
 
+    ppLeiosHeaderPeriod <- toSpecRep dppLeiosAnnouncementPeriodLength
+    ppLeiosVotingPeriod <- toSpecRep dppLeiosVotePeriodLength
+    ppLeiosDiffusionPeriod <- toSpecRep dppLeiosDiffusionPeriodLength
+    ppLeiosCommitteeSize <- toSpecRep dppLeiosCommitteeSize
+    ppLeiosQuorumStakeThreshold <- toSpecRep dppLeiosQuorumStakeThreshold
+    ppLeiosMaxEBSize <- toSpecRep dppMaxEndorserBlockReferencesSize
+    ppLeiosMaxEBTxsSize <- toSpecRep dppMaxEndorserBlockTxsSize
+    ppLeiosMaxEBExUnits <- toSpecRep dppMaxEndorserBlockExUnits
+    ppLeiosMaxRefScriptSizePerEB <- toSpecRep dppMaxRefScriptSizePerEndorserBlock
+
     pure Agda.MkPParams {..}
 
 instance SpecTranslate DijkstraEra ValidityInterval where
@@ -369,6 +383,20 @@ instance SpecTranslate DijkstraEra (AlonzoTxAuxData DijkstraEra) where
 
   toSpecRep = toSpecRep . hashAnnotated
 
+instance SpecTranslate DijkstraEra BlsKey where
+  type SpecRep DijkstraEra BlsKey = (Integer, Integer)
+
+  toSpecRep (BlsKey key pop) =
+    pure
+      ( toInteger . bytesToNatural . rawEncodeFixedSized $ key
+      , toInteger . bytesToNatural . rawEncodeFixedSized $ pop
+      )
+
+instance SpecTranslate DijkstraEra BlsKeyState where
+  type SpecRep DijkstraEra BlsKeyState = (Integer, SpecRep DijkstraEra EpochNo)
+
+  toSpecRep (BlsKeyState bls e) = ((,) . fst <$> toSpecRep bls) <*> toSpecRep e
+
 instance SpecTranslate DijkstraEra (StakePoolParams DijkstraEra) where
   type SpecRep DijkstraEra (StakePoolParams DijkstraEra) = Agda.StakePoolParams
 
@@ -380,6 +408,24 @@ instance SpecTranslate DijkstraEra (StakePoolParams DijkstraEra) where
       <*> toSpecRep sppPledge
       <*> toSpecRep sppAccountAddress
       <*> toSpecRep sppVrf
+      <*> toSpecRep sppBlsKey
+
+instance SpecTranslate DijkstraEra StakePoolState where
+  type SpecRep DijkstraEra StakePoolState = Agda.StakePoolState
+
+  type SpecContext DijkstraEra StakePoolState = Network
+
+  toSpecRep StakePoolState {..} = do
+    netId <- askSpecTransM >>= (withCtxSpecTransM () . toSpecRep)
+    withCtxSpecTransM () $
+      Agda.StakePoolState
+        <$> toSpecRep spsOwners
+        <*> toSpecRep spsCost
+        <*> toSpecRep spsMargin
+        <*> toSpecRep spsPledge
+        <*> (Agda.RewardAddress netId <$> toSpecRep (unAccountId spsAccountId))
+        <*> toSpecRep spsVrf
+        <*> toSpecRep spsBlsKey
 
 instance SpecTranslate DijkstraEra DRep where
   type SpecRep DijkstraEra DRep = Agda.VDeleg
@@ -534,6 +580,16 @@ instance SpecTranslate DijkstraEra (DijkstraPParams StrictMaybe DijkstraEra) whe
     ppuDrepActivity <- toSpecRep dppDRepActivity
     ppuMonetaryExpansion <- toSpecRep dppRho
     ppuTreasuryCut <- toSpecRep dppTau
+
+    ppuLeiosHeaderPeriod <- toSpecRep dppLeiosAnnouncementPeriodLength
+    ppuLeiosVotingPeriod <- toSpecRep dppLeiosVotePeriodLength
+    ppuLeiosDiffusionPeriod <- toSpecRep dppLeiosDiffusionPeriodLength
+    ppuLeiosCommitteeSize <- toSpecRep dppLeiosCommitteeSize
+    ppuLeiosQuorumStakeThreshold <- toSpecRep dppLeiosQuorumStakeThreshold
+    ppuLeiosMaxEBSize <- toSpecRep dppMaxEndorserBlockReferencesSize
+    ppuLeiosMaxEBTxsSize <- toSpecRep dppMaxEndorserBlockTxsSize
+    ppuLeiosMaxEBExUnits <- toSpecRep dppMaxEndorserBlockExUnits
+    ppuLeiosMaxRefScriptSizePerEB <- toSpecRep dppMaxRefScriptSizePerEndorserBlock
 
     pure Agda.MkPParamsUpdate {..}
 
@@ -706,6 +762,8 @@ instance SpecNormalize Agda.DState
 
 instance SpecNormalize Agda.StakePoolParams
 
+instance SpecNormalize Agda.StakePoolState
+
 instance SpecNormalize Agda.PState
 
 instance SpecNormalize Agda.GState
@@ -762,3 +820,6 @@ instance SpecNormalize Agda.NewEpochState
 instance SpecNormalize Agda.BalanceInterval
 
 instance SpecNormalize Agda.Anchor
+
+instance SpecNormalize Agda.LeiosSeat where
+  specNormalize (Agda.MkLeiosSeat {..}) = Agda.MkLeiosSeat 0 lsWeight lsKey

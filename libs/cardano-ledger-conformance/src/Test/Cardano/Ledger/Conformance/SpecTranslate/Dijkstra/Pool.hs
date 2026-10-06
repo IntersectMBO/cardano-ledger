@@ -15,11 +15,11 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.State
+import Data.Bitraversable (bimapM)
 import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   SpecTranslate (..),
-  askSpecTransM,
   toSpecRepMap,
   withCtxSpecTransM,
  )
@@ -31,11 +31,12 @@ instance SpecTranslate DijkstraEra (PState DijkstraEra) where
   type SpecContext DijkstraEra (PState DijkstraEra) = Network
 
   toSpecRep PState {..} = do
-    netId <- askSpecTransM
+    stakePools <-
+      fmap Agda.MkHSMap . traverse (bimapM (withCtxSpecTransM () . toSpecRep) toSpecRep) . Map.toList $
+        psStakePools
     withCtxSpecTransM () $
-      Agda.MkPState
-        <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams @DijkstraEra netId) psStakePools)
-        <*> toSpecRepMap psFutureStakePoolParams
+      Agda.MkPState stakePools
+        <$> toSpecRepMap psFutureStakePoolParams
         <*> toSpecRepMap psRetiring
         <*> toSpecRepMap (fromCompact . spsDeposit <$> psStakePools)
 
