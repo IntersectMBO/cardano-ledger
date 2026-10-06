@@ -1105,12 +1105,12 @@ instance HuddleRule "leios_certificate" DijkstraEra where
       =.= arr
         [ "signers" ==> VBytes `sized` (0 :: Word64, maxBytes)
             & comment (fromString $ "bitfield with up to " <> show (maxBytes * 8) <> " entries")
-        , "signature" ==> huddleRule @"leios_signature" era
+        , "aggregated_signature" ==> huddleRule @"leios_bls_signature" era
         ]
     where
       maxBytes = fromIntegral @Int @Word64 maxLeiosCertSignersBytes
 
-instance HuddleRule "leios_signature" DijkstraEra where
+instance HuddleRule "leios_bls_signature" DijkstraEra where
   huddleRuleNamed pname _era =
     withCBORGen leiosSignatureGen $
       pname =.= VBytes `sized` leiosSignatureSize

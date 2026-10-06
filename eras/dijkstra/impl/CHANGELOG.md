@@ -118,6 +118,7 @@
 
 ### `cddl`
 
+* Rename the `leios_certificate` field `signature` to `aggregated_signature`, and the `leios_signature` rule to `leios_bls_signature`
 * Add a field for `plutus_v4_script`s in `transaction_witness_set`
 * Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` entries (tags 55-56) in `protocol_param_update`
 * Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
