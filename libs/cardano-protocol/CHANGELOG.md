@@ -1,8 +1,19 @@
 # Version history for `cardano-protocol`
 
-## 0.2.0.1
+## 0.3.0.0
 
-*
+* Change the Leios `HeaderBody` in `Cardano.Protocol.Leios.BlockHeader` to a memoized type:
+  - Add `HeaderBodyRaw`, `HeaderBodyConstr` and `mkHeaderBody`
+  - Change `HeaderBody` from a record type to a newtype over `MemoBytes (HeaderBodyRaw crypto)` with a read-only `HeaderBody` pattern synonym
+  - Add `DecCBOR` instance for `Annotator (HeaderBody crypto)`
+  - Change `SignableRepresentation` for `HeaderBody` to use the original bytes instead of re-serializing
+  - Change `Eq` for `HeaderBody` to also compare the original bytes
+* Remove the non-annotator `DecCBOR` instances for the Leios `HeaderBody` and `HeaderRaw`
+
+### `testlib`
+
+* Add `genHeaderBody` to `Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary`
+* Add non-annotator `DecCBOR` instances for the Leios `HeaderBody` and `HeaderRaw`
 
 ## 0.2.0.0
 

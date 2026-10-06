@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-protocol
-version: 0.2.0.0
+version: 0.3.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -45,7 +45,7 @@ library
     cardano-crypto-class >=2.5 && <2.7,
     cardano-crypto-praos ^>=2.2,
     cardano-ledger-binary >=1.8,
-    cardano-ledger-core ^>=1.22,
+    cardano-ledger-core ^>=1.22.1,
     cardano-slotting,
     cardano-strict-containers,
     containers,
@@ -89,6 +89,9 @@ test-suite tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: test
+  other-modules:
+    Test.Cardano.Protocol.Leios.BlockHeaderSpec
+
   default-language: Haskell2010
   ghc-options:
     -Wall
@@ -103,6 +106,8 @@ test-suite tests
 
   build-depends:
     base,
-    cardano-ledger-binary:testlib,
+    bytestring,
+    cardano-crypto-class,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-protocol:{cardano-protocol, testlib},
