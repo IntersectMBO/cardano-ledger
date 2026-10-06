@@ -112,7 +112,6 @@ import Data.Maybe (catMaybes, isJust, isNothing, mapMaybe)
 import Data.Set ((\\))
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Data.Typeable (Typeable)
 import Lens.Micro
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
@@ -623,8 +622,7 @@ mkTxWithPlutusAndBootstrapAddress slang = do
         )
         & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
 
-mkTokenMintingTx ::
-  forall era l. (AlonzoEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
+mkTokenMintingTx :: forall era. AlonzoEraImp era => ScriptHash -> ImpTestM era (AnyLevelTx era)
 mkTokenMintingTx sh = do
   name <- arbitrary
   count <- choose (1, 10)
@@ -635,6 +633,7 @@ mkTokenMintingTx sh = do
       | plutusScriptLanguage plutusScript >= PlutusV4 -> freshKeyAddrNoPtr_
     _ -> freshKeyAddr_
   pure $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]
+    AnyLevelTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . mintTxBodyL .~ ma
+        & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]

@@ -14,10 +14,6 @@ module Test.Cardano.Ledger.Mary.ImpTest (
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
-<<<<<<< HEAD
-=======
-import Lens.Micro ((&), (.~))
->>>>>>> 4be6453a74 (Add AnyLevelTx)
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.Era
