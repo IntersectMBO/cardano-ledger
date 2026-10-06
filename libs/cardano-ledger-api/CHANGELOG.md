@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-api`
 
-## 1.15.0.1
+## 1.16.0.0
 
-*
+* Add methods to `AnyEraTxBody`:
+  - `subTransactionsTxBodyG`
+  - `requiredTopLevelGuardsTxBodyG`
+  - `directDepositsTxBodyG`
+  - `accountBalanceIntervalsTxBodyG`
+  - `startingAccountBalanceIntervalsTxBodyG`
 
 ## 1.15.0.0
 
