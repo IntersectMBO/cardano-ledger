@@ -29,6 +29,16 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
+  it "Direct deposit in a sub-transaction, with nothing withdrawn in the batch" $ do
+    let depositsOnly legacyMode = do
+          (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+          deposit <- genDeposit
+          let tx = mkTopTxWithSubTxs [subTx (depositsTo acct deposit)]
+          submitTx_ =<< if legacyMode then switchTxToLegacyMode tx else pure tx
+          getBalance (KeyHashObj kh) `shouldReturn` (balance <+> deposit)
+    depositsOnly False
+    depositsOnly True
+
   it "Balances adjusted by withdrawals and direct deposits on distinct accounts" $ do
     (acc1, balance1, kh1) <- setupAccountAddress
     (acc2, balance2, kh2) <- setupAccountAddress
@@ -90,13 +100,20 @@ spec = describe "ENTITIES" $ do
       getBalance (KeyHashObj kh)
         `shouldReturn` (balance <+> topDeposit <+> subDeposit1 <+> subDeposit2)
 
-    impAnn "one transaction both withdraws from and deposits into the account" $ do
-      (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
-      withdrawal <- Coin <$> choose (1, unCoin balance)
-      deposit <- genDeposit
-      submitTx_ $
-        mkTopTxWithSubTxs [subTx (withdrawsFrom acct withdrawal . depositsTo acct deposit)]
-      getBalance (KeyHashObj kh) `shouldReturn` (balance <-> withdrawal <+> deposit)
+    impAnn "one sub-transaction both withdraws from and deposits into the account" $ do
+      -- the account is not in the top-level withdrawals, so legacy mode imposes no
+      -- requirement on it either
+      let withdrawsAndDeposits legacyMode = do
+            (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
+            withdrawal <- Coin <$> choose (1, unCoin balance)
+            deposit <- genDeposit
+            let tx =
+                  mkTopTxWithSubTxs
+                    [subTx (withdrawsFrom acct withdrawal . depositsTo acct deposit)]
+            submitTx_ =<< if legacyMode then switchTxToLegacyMode tx else pure tx
+            getBalance (KeyHashObj kh) `shouldReturn` (balance <-> withdrawal <+> deposit)
+      withdrawsAndDeposits False
+      withdrawsAndDeposits True
 
     impAnn "a sub-transaction deposits, the top withdraws within the original balance" $ do
       (acct, balance, kh) <- setupAccountAddressWith =<< genAccountBalance
