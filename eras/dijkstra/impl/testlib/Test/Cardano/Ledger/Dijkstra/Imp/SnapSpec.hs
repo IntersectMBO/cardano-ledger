@@ -15,9 +15,11 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Dijkstra (DijkstraEraForecast (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.PParams (ppLeiosCommitteeSizeL)
 import Cardano.Ledger.Dijkstra.Rules (maxKeyAgeEpochs)
+import Cardano.Ledger.Shelley.API.Forecast (futureForecast)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, esSnapshotsL, nesELL, nesEsL)
 import Cardano.Ledger.Slot (epochInfoFirst)
 import Cardano.Ledger.State (
@@ -91,6 +93,9 @@ spec = describe "SNAP" $ do
     ticked <- runImpRule @"TICKF" () nes nextEpochFirstSlot
     -- TICKF rotates the mark snapshot into the set position, carrying its committee along
     (ticked ^. setCommitteeL) `shouldBe` markCommittee
+    -- the forecast for that slot exposes the same committee to consensus
+    (futureForecast globals nextEpochFirstSlot nes ^. leiosCommitteeForecastL)
+      `shouldBe` markCommittee
 
     passEpoch
     -- TICK performs the same rotation once the next epoch actually starts

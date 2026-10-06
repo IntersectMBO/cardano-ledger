@@ -2,6 +2,8 @@
 
 ## 0.5.0.0
 
+* Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
+* Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
 * Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that,
   outside legacy mode, a top-level transaction can supply datums for the outputs and reference
   inputs of its sub-transactions
@@ -9,6 +11,10 @@
 * Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Change `eraMaxLanguage` to `PlutusV4`
+
+### `testlib`
+
+* Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
 
 ## 0.4.0.0
 
