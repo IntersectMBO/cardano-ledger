@@ -2,10 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
--- Casing on values of built-in types (enabled by the SumsOfProducts datatype style) is not
--- supported by the PlutusV4 evaluator yet.
-{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:datatypes=ScottEncoding #-}
-{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:target-version=1.1.0 #-}
+{-# OPTIONS_GHC -fplugin-opt Plinth.Plugin:target-version=1.2.0 #-}
 
 module Cardano.Ledger.Plutus.Preprocessor.Binary.V4 where
 
