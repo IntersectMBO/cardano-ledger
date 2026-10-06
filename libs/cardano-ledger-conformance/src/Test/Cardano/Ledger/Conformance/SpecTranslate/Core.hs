@@ -15,13 +15,17 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   committeeCredentialToStrictMaybe,
-  vkeyToInteger,
+  verkeyToInteger,
   vkeyFromInteger,
+  verkeyFromInteger96,
+  popFromInteger,
+  popToInteger,
+  vkeyToInteger,
   signatureToInteger,
   signatureFromInteger,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
+import Cardano.Crypto.DSIGN (DSIGNAggregatable (..), DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Cardano.Ledger.Address (
   AccountAddress (..),
@@ -33,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochInterval (..),
   EpochNo (..),
+  Milliseconds32 (..),
   Network (..),
   ProtVer (..),
   SlotNo (..),
@@ -162,11 +167,23 @@ instance
 
   toSpecRep (PParamsUpdate ppu) = toSpecRep ppu
 
+verkeyToInteger :: DSIGNAlgorithm v => VerKeyDSIGN v -> Integer
+verkeyToInteger = toInteger . bytesToNatural . rawEncodeFixedSized
+
+verkeyFromInteger96 :: DSIGNAlgorithm v => Integer -> Maybe (VerKeyDSIGN v)
+verkeyFromInteger96 = rawDecodeFixedSized . naturalToBytes 96 . fromInteger
+
 vkeyToInteger :: VKey kd -> Integer
-vkeyToInteger = toInteger . bytesToNatural . rawEncodeFixedSized . unVKey
+vkeyToInteger = verkeyToInteger . unVKey
 
 vkeyFromInteger :: Integer -> Maybe (VKey kd)
 vkeyFromInteger = fmap VKey . rawDecodeFixedSized . naturalToBytes 32 . fromInteger
+
+popToInteger :: DSIGNAggregatable v => PossessionProofDSIGN v -> Integer
+popToInteger = toInteger . bytesToNatural . rawEncodeFixedSized
+
+popFromInteger :: DSIGNAggregatable v => Integer -> Maybe (PossessionProofDSIGN v)
+popFromInteger = rawDecodeFixedSized . naturalToBytes 48 . fromInteger
 
 signatureToInteger :: DSIGNAlgorithm v => SigDSIGN v -> Integer
 signatureToInteger = toInteger . bytesToNatural . rawEncodeFixedSized
@@ -251,3 +268,8 @@ instance SpecNormalize Agda.BootstrapAddr
 instance SpecNormalize Agda.Credential
 
 instance SpecNormalize Agda.RewardAddress
+
+instance SpecTranslate era Milliseconds32 where
+  type SpecRep era Milliseconds32 = Integer
+
+  toSpecRep = toSpecRep . unMilliseconds32
