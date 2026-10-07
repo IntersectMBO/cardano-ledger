@@ -9,7 +9,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network (..),

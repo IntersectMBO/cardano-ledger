@@ -7,14 +7,13 @@
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..), protectedAddressesSupported)
+import Cardano.Ledger.Address (protectedAddressesSupported)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Val (inject)
-import Control.Monad (unless)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
@@ -33,7 +32,10 @@ spec = describe "UTXO" $ do
               & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut ordinary (inject (Coin 2000000))]
           protectFirst :: Tx TopTx era -> Tx TopTx era
           protectFirst txToProtect =
-            txToProtect & bodyTxL . outputsTxBodyL . ix 0 . addrTxOutL @era .~ protected
+            txToProtect
+              & bodyTxL . outputsTxBodyL %~ \case
+                Empty -> Empty
+                firstOut :<| rest -> (firstOut & addrTxOutL @era .~ protected) :<| rest
       withPostFixup (rederiveAddrTxWits . protectFirst) $
         submitFailingTx tx [injectFailure $ UnsupportedOutputAddresses (NES.singleton 0)]
   describe "ShelleyUtxoPredFailure" $ do

@@ -92,6 +92,13 @@ spec = describe "CIP-160 output eligibility" $ do
     injectFailure @"SUBUTXO" alonzo `shouldBe` SubUnsupportedOutputAddresses bad
     injectFailure @"SUBUTXO" babbage `shouldBe` SubUnsupportedOutputAddresses bad
     injectFailure @"SUBUTXO" conway `shouldBe` SubUnsupportedOutputAddresses bad
+    let top = UnsupportedOutputAddresses bad :: DijkstraUtxoPredFailure DijkstraEra
+        nested = UtxoFailure top :: DijkstraUtxowPredFailure DijkstraEra
+    dijkstraUtxoToDijkstraSubUtxoPredFailure top `shouldBe` Just (SubUnsupportedOutputAddresses bad)
+    injectFailure @"SUBUTXOW" nested `shouldBe` SubUtxoFailure (SubUnsupportedOutputAddresses bad)
+    dijkstraUtxoToDijkstraSubUtxoPredFailure
+      (ProtectedCollateralReturn :: DijkstraUtxoPredFailure DijkstraEra)
+      `shouldBe` Nothing
   it "reports each invalid ordinary output at its authored body-local position" $ do
     let ordinary = mkCoinTxOut @DijkstraEra (Addr Testnet payment StakeRefNull) (Coin 20)
         bad = mkCoinTxOut @DijkstraEra protected (Coin 20)

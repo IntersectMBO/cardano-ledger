@@ -10,8 +10,9 @@ local-testnet migration evidence remain unavailable.
 ## Recipient authorization
 
 A protected address requires authorization when an ordinary transaction output is
-created at that address. A protected key recipient must sign the creating
-transaction. A protected native-script recipient supplies a satisfied native
+created at that address. A protected key recipient must sign the creating body.
+For a child output, the signature must cover that child's body hash; a signature
+over the enclosing body is insufficient. A protected native-script recipient supplies a satisfied native
 script. A protected Plutus recipient supplies the script, a body-local Receiving
 redeemer and execution budget. Subsequent spending uses the existing Spending
 purpose and payment credential; protection does not introduce a second spending
@@ -119,7 +120,8 @@ released 1.71 package does not contain this proposed interface. The exact source
 revision is pinned in [cabal.project](../cabal.project) at
 `3ddfba3e01998eb98e2c906c1caecebee242b609`. Its real V4 encoding/helper tests
 and compiled normal/data-backed selection tests passed under GHC 9.6.7. The
-preprocessor generated the fixture through the real Plutus compiler, preserving
-all 41 released V1-V3 fixture byte strings. Local fixture execution is distinct
+preprocessor generated the fixture through the real Plutus compiler at that pin.
+Two successive runs produced identical complete fixture files, preserving all 41
+released V1-V3 fixture byte strings. Local fixture execution is distinct
 from a supported CLI construction path or a testnet activation rehearsal. No
 cost or efficiency claim is made without measurements.

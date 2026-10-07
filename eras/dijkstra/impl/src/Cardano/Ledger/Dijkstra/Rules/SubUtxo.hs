@@ -20,6 +20,7 @@ module Cardano.Ledger.Dijkstra.Rules.SubUtxo (
   DijkstraSubUtxoPredFailure (..),
   DijkstraSubUtxoEvent (..),
   SubUtxoEnv (..),
+  dijkstraUtxoToDijkstraSubUtxoPredFailure,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
@@ -40,6 +41,7 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBUTXO,
  )
+import qualified Cardano.Ledger.Dijkstra.Rules.Utxo as Dijkstra
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
@@ -293,6 +295,39 @@ instance
     10 -> SumD SubBabbageOutputTooSmallUTxO <! From
     11 -> SumD SubUnsupportedOutputAddresses <! From
     n -> Invalid n
+
+-- | Preserve the shared subset of top-level failures when translating an
+-- embedded UTXOW diagnostic. Top-only checks have no child counterpart.
+-- Keeping this conversion explicit avoids an injection instance that would
+-- claim every Dijkstra UTXO failure has a SUBUTXO representation.
+dijkstraUtxoToDijkstraSubUtxoPredFailure ::
+  Dijkstra.DijkstraUtxoPredFailure era -> Maybe (DijkstraSubUtxoPredFailure era)
+dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
+  Dijkstra.BadInputsUTxO x -> Just (SubBadInputsUTxO x)
+  Dijkstra.OutsideValidityIntervalUTxO vi slotNo -> Just (SubOutsideValidityIntervalUTxO vi slotNo)
+  Dijkstra.MaxTxSizeUTxO m -> Just (SubMaxTxSizeUTxO m)
+  Dijkstra.InputSetEmptyUTxO -> Just SubInputSetEmptyUTxO
+  Dijkstra.WrongNetwork x y -> Just (SubWrongNetwork x y)
+  Dijkstra.OutputBootAddrAttrsTooBig xs -> Just (SubOutputBootAddrAttrsTooBig xs)
+  Dijkstra.OutputTooBigUTxO xs -> Just (SubOutputTooBigUTxO xs)
+  Dijkstra.WrongNetworkInTxBody m -> Just (SubWrongNetworkInTxBody m)
+  Dijkstra.OutsideForecast sno -> Just (SubOutsideForecast sno)
+  Dijkstra.BabbageOutputTooSmallUTxO outs -> Just (SubBabbageOutputTooSmallUTxO outs)
+  Dijkstra.UnsupportedOutputAddresses indexes -> Just (SubUnsupportedOutputAddresses indexes)
+  Dijkstra.UtxosFailure {} -> Nothing
+  Dijkstra.FeeTooSmallUTxO {} -> Nothing
+  Dijkstra.ValueNotConservedUTxO {} -> Nothing
+  Dijkstra.InsufficientCollateral {} -> Nothing
+  Dijkstra.ScriptsNotPaidUTxO {} -> Nothing
+  Dijkstra.ExUnitsTooBigUTxO {} -> Nothing
+  Dijkstra.CollateralContainsNonADA {} -> Nothing
+  Dijkstra.TooManyCollateralInputs {} -> Nothing
+  Dijkstra.NoCollateralInputs -> Nothing
+  Dijkstra.IncorrectTotalCollateralField {} -> Nothing
+  Dijkstra.BabbageNonDisjointRefInputs {} -> Nothing
+  Dijkstra.PtrPresentInCollateralReturn {} -> Nothing
+  Dijkstra.ValueNotConservedInLegacyMode {} -> Nothing
+  Dijkstra.ProtectedCollateralReturn -> Nothing
 
 -- | Map the shared checks directly, keeping top-only Dijkstra failures outside
 -- the child rule's injection domain.

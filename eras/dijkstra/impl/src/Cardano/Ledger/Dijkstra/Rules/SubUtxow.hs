@@ -336,12 +336,17 @@ instance
 
 dijkstraUtxowToDijkstraSubUtxowPredFailure ::
   forall era.
-  ( InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure era
-  , PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
+  ( PredicateFailure (EraRule "UTXO" era) ~ DijkstraUtxoPredFailure era
+  , PredicateFailure (EraRule "SUBUTXO" era) ~ DijkstraSubUtxoPredFailure era
   ) =>
   DijkstraUtxowPredFailure era -> DijkstraSubUtxowPredFailure era
 dijkstraUtxowToDijkstraSubUtxowPredFailure = \case
-  UtxoFailure f -> SubUtxoFailure (injectFailure @"SUBUTXO" f)
+  -- Shared witness validators never execute UTXO. The child UTXO transition
+  -- uses its separate Embed instance above, so a top-only nested diagnostic
+  -- cannot arise here. Preserve supported nested conversions explicitly.
+  UtxoFailure f -> case dijkstraUtxoToDijkstraSubUtxoPredFailure f of
+    Just childFailure -> SubUtxoFailure childFailure
+    Nothing -> error "Impossible: top-only embedded UTXO failure for SUBUTXOW"
   InvalidWitnessesUTXOW ks -> SubInvalidWitnessesUTXOW ks
   MissingVKeyWitnessesUTXOW ks -> SubMissingVKeyWitnessesUTXOW ks
   MissingScriptWitnessesUTXOW _ -> error "Impossible: `MissingScriptWitnessesUTXOW` for SUBUTXOW"

@@ -10,7 +10,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core

@@ -896,6 +896,7 @@ redeemer_tag =
   / 4 ; voting
   / 5 ; proposing
   / 6 ; guarding
+  / 7 ; receiving
 
 ; auxiliary_data supports three serialization formats:
 ;   1. metadata (raw) - Supported since Shelley
