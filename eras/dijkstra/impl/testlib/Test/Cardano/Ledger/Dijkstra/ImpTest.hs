@@ -24,6 +24,8 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   switchTxToLegacyMode,
   switchTxToPhase2InvalidLegacyMode,
   mkTopTxWithSubTxs,
+  mkTopTxWithDistinctSubTxs,
+  distinctSubTxs,
   traverseSubTxs,
   withPostFixupSubTxs,
   submitFailingSubTx,
@@ -213,6 +215,18 @@ instance InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure DijkstraEra whe
 mkTopTxWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
 mkTopTxWithSubTxs subTxs =
   mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
+
+mkTopTxWithDistinctSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> ImpTestM era (Tx TopTx era)
+mkTopTxWithDistinctSubTxs subTxs = mkTopTxWithSubTxs <$> distinctSubTxs subTxs
+
+-- | Give each sub-transaction a fresh input, so that otherwise identical
+-- sub-transactions get distinct transaction ids
+distinctSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> ImpTestM era [Tx SubTx era]
+distinctSubTxs = traverse addFreshInput
+  where
+    addFreshInput subTx = do
+      input <- freshFundedTxIn
+      pure $ subTx & bodyTxL . inputsTxBodyL <>~ [input]
 
 -- | Apply an effectful modification to every sub-transaction of a top
 -- level transaction.
