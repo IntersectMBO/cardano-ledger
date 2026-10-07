@@ -117,6 +117,31 @@ hashes, conformance results and the upstream source/artifact merge references
 must all be attached to the release input; a local pass does not remove the
 external merge requirement.
 
+## Integrated validation
+
+The actual GHC 9.6.7 conformance executable built at ledger commit
+`46f42314cde0d1d6eca82d08802acd9edfffc962`, with artifact `9f359b1` and seed
+2023. Its focused runs passed:
+
+| Selection | Examples | Failures |
+| --- | ---: | ---: |
+| `Receiving` | 23 | 0 |
+| `Structural validation and state transitions` | 13 | 0 |
+| `Foreign interface premises` | 5 | 0 |
+
+Nine structural cases also occur in the Receiving selection; these counts must
+not be added. All four generated interface properties ran 100 samples, including
+the explicit protected-pointer translation boundary. The fixup group has four
+checks: three compare Receiving/spending transitions through `LEDGER`, while
+one checks preservation of an authored child budget during fixup. Matching and
+wrong-key BLS proof properties each ran 100 samples. These focused results do
+not claim a passing full conformance suite; its broader run remains pending.
+
+Reproduce from `libs/cardano-ledger-conformance` by running its built `tests`
+executable with `--seed=2023 --match <selection> +RTS -N2 -RTS`, using the three
+selection strings above. The tested binary SHA-256 is
+`abaeaf9cd3a1d2fdffc89a3fc2ff7b7326db15fec6c7866cd141a89ec5d7c276`.
+
 ## Concrete evaluator coverage boundary
 
 The complete ledger ReceivingAdversarialSpec runs structuralSpec and

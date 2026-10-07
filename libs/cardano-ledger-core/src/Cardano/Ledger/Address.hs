@@ -725,38 +725,43 @@ decodeAddrWithPolicy ::
 decodeAddrWithPolicy policy isPtrLenient isLenient buf = do
   guardLength "Header" 1 buf
   let header = Header $ bufUnsafeIndex buf 0
-  addr <-
-    if isByronAddress header
-      then AddrBootstrap <$> decodeBootstrapAddress buf
-      else do
-        -- Ensure there are no unexpected bytes in the header
-        let allowedMask = case policy of
-              HistoricalAddress -> headerNonShelleyBits
-              CurrentAddress -> clearBit headerNonShelleyBits 3
-              TrustedCompactAddress -> clearBit headerNonShelleyBits 3
-            protected = header `testBit` 3
-        unless (header .&. allowedMask == 0)
-          $ failDecoding
-            "Shelley Address"
-          $ "Invalid header. Unused bits are not suppose to be set: " <> show header
-        let rejectProtectedPointer = case policy of
-              TrustedCompactAddress -> False
-              _ -> True
-        when
-          ( rejectProtectedPointer
-              && protected
-              && not (headerIsBaseAddress header || headerIsEnterpriseAddr header)
-          )
-          $ failDecoding "Shelley Address" "Protected pointer addresses are not supported"
-        -- Advance one byte for the consumed header
-        modify' (+ 1)
-        payment <- decodePaymentCredential header buf
-        staking <- decodeStakeReference isPtrLenient header buf
-        when protected $ ensureBufIsConsumed "Protected Addr" buf
-        pure $ (if protected then AddrProtected else Addr) (headerNetworkId header) payment staking
-  unless isLenient $
-    ensureBufIsConsumed "Addr" buf
-  pure addr
+  if isByronAddress header
+    then do
+      bootstrap <- decodeBootstrapAddress buf
+      unless isLenient $ ensureBufIsConsumed "Addr" buf
+      pure $ AddrBootstrap bootstrap
+    else do
+      -- Ensure there are no unexpected bytes in the header
+      let allowedMask = case policy of
+            HistoricalAddress -> headerNonShelleyBits
+            CurrentAddress -> clearBit headerNonShelleyBits 3
+            TrustedCompactAddress -> clearBit headerNonShelleyBits 3
+          protected = header `testBit` 3
+      if header .&. allowedMask /= 0
+        then
+          failDecoding "Shelley Address" $
+            "Invalid header. Unused bits are not suppose to be set: " <> show header
+        else do
+          let rejectProtectedPointer = case policy of
+                TrustedCompactAddress -> False
+                _ -> True
+          when
+            ( rejectProtectedPointer
+                && protected
+                && not (headerIsBaseAddress header || headerIsEnterpriseAddr header)
+            )
+            $ failDecoding "Shelley Address" "Protected pointer addresses are not supported"
+      -- Advance one byte for the consumed header
+      modify' (+ 1)
+      payment <- decodePaymentCredential header buf
+      staking <- decodeStakeReference isPtrLenient header buf
+      if protected
+        then do
+          ensureBufIsConsumed "Protected Addr" buf
+          pure $ AddrProtected (headerNetworkId header) payment staking
+        else do
+          unless isLenient $ ensureBufIsConsumed "Addr" buf
+          pure $ Addr (headerNetworkId header) payment staking
 {-# INLINE decodeAddrWithPolicy #-}
 
 -- | Checks that the current offset is exactly at the end of the buffer.
