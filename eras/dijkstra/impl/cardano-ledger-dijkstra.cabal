@@ -19,7 +19,9 @@ data-files:
 
 extra-source-files:
   CHANGELOG.md
-  golden/reference-encoders/*
+  golden/reference-encoders/README.md
+  golden/reference-encoders/receiving.py
+  golden/reference-encoders/requirements.txt
 
 source-repository head
   type: git

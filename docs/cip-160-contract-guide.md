@@ -4,8 +4,8 @@ This guide describes the local CIP-160 implementation for proposed Dijkstra
 activation at protocol major version 12. Its Plutus V4 interface is an unfrozen
 proposal. The [Plutus interface proposal](https://github.com/IntersectMBO/plutus/pull/7982)
 is published for review and is not yet agreed or released upstream. This is not a
-mainnet deployment guide. Supported cardano-api/CLI construction examples and
-local-testnet migration evidence remain unavailable.
+mainnet deployment guide. Proposed cardano-api/CLI construction examples and
+node/testnet migration workflows have not yet been validated end to end.
 
 ## Recipient authorization
 
@@ -51,9 +51,10 @@ The [ledger lifecycle example](../eras/dijkstra/impl/testlib/Test/Cardano/Ledger
 creates a protected output with inline integer datum 2 using this validator, then
 consumes that actual output with the same script's Spending branch. The creating
 body has a Receiving redeemer; the consuming body has a Spending redeemer. Both
-retain the same payment script hash. This is a ledger test example, and its
-integrated execution is still pending; it does not establish a supported CLI
-workflow.
+retain the same payment script hash. This ledger lifecycle and its three
+companion grouped-output/failure cases passed focused execution: four examples,
+zero failures. This ledger evidence does not validate the proposed CLI workflow
+or a node/testnet activation rehearsal.
 
 An inline datum exposes contents directly. A datum hash alone does not reveal its
 preimage or create an automatic phase-1 preimage requirement. A contract can
