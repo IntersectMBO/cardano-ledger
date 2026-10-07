@@ -147,6 +147,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.OMap.Strict as OMap
 import Data.Proxy (Proxy (..))
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -693,7 +694,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
 -- | Translate V4 redeemers, sharing the complete body-local Receiving target
 -- domain across all Receiving pointers. Native and unavailable script hashes
--- occupy their canonical positions even though they need not have a redeemer.
+-- retain their original output positions even though they need not have a redeemer.
 -- Other purposes retain the existing pointer translation and error ordering.
 transTxRedeemersV4 ::
   ( DijkstraEraScript era
@@ -710,13 +711,12 @@ transTxRedeemersV4 lti@LedgerTxInfo {ltiTx} =
     <$> mapM translate (Map.toList $ ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
   where
     targets =
-      Map.fromDistinctAscList
-        [(ix, target) | target@(AsIxItem ix _) <- receivingScriptTargets (ltiTx ^. bodyTxL)]
+      Map.fromDistinctAscList (receivingScriptTargets (ltiTx ^. bodyTxL))
     translate pair@(ptr, (datum, _)) = case ptr of
       ReceivingPurpose (AsIx ix) -> case Map.lookup ix targets of
         Nothing -> Left $ inject $ Babbage.RedeemerPointerPointsToNothing ptr
-        Just target -> do
-          purpose <- toPlutusScriptPurpose SPlutusV4 lti (ReceivingPurpose target)
+        Just _ -> do
+          purpose <- toPlutusScriptPurpose SPlutusV4 lti (ReceivingPurpose (AsIxItem ix ix))
           pure (purpose, Babbage.transRedeemer datum)
       _ -> Babbage.transRedeemerPointerV2V3 SPlutusV4 lti pair
 
@@ -869,12 +869,15 @@ scriptPurposeToScriptInfo ::
   forall proxy (l :: Language) level era.
   ( EraTx era
   , AlonzoEraTxWits era
+  , DijkstraEraScript era
   , DijkstraEraTxBody era
+  , Value era ~ MaryValue
   , EraPlutusTxInfo l era
   , PlutusTxInfo l ~ PV4.TxInfo
   , STxLevel level era ~ STxBothLevels level era
   , Inject (DijkstraContextError era) (ContextError era)
   , Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
   Maybe PV4.Datum ->
@@ -890,7 +893,15 @@ scriptPurposeToScriptInfo proxy datum lti txInfo ixPlutusPurpose = \case
   PV4.Certifying _ ix cert -> pure (PV4.CertifyingScript ix cert)
   PV4.Voting _ vote -> pure (PV4.VotingScript vote)
   PV4.Proposing _ ix proposal -> pure (PV4.ProposingScript ix proposal)
-  PV4.Receiving _ -> pure PV4.ReceivingScript
+  PV4.Receiving _ outputIndex -> case ixPlutusPurpose of
+    ReceivingPurpose (AsIx ix)
+      | outputIndex == toInteger ix ->
+          case StrictSeq.lookup (fromIntegral ix) (ltiTx lti ^. bodyTxL . outputsTxBodyL) of
+            Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPlutusPurpose
+            Just txOut ->
+              PV4.ReceivingScript outputIndex
+                <$> transTxOutV4 (TxOutFromOutput $ TxIx $ fromIntegral ix) txOut
+    _ -> Left $ inject $ ScriptHashNotFoundForPurpose ixPlutusPurpose
   PV4.Guarding _ ix -> do
     guardingScriptHash <- case Map.lookup ixPlutusPurpose (ltiScriptHashesUsed lti) of
       Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPlutusPurpose
@@ -911,7 +922,7 @@ scriptHashFromScriptPurpose = \case
   PV4.Voting sh _ -> sh
   PV4.Proposing sh _ _ -> sh
   PV4.Guarding sh _ -> sh
-  PV4.Receiving sh -> sh
+  PV4.Receiving sh _ -> sh
 
 transGuardingTopTxInfo ::
   forall proxy (l :: Language) era.
@@ -1024,11 +1035,14 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
 toPlutusV4Args ::
   ( AlonzoEraUTxO era
   , AlonzoEraTxWits era
+  , DijkstraEraScript era
   , DijkstraEraTxBody era
+  , Value era ~ MaryValue
   , EraPlutusTxInfo PlutusV4 era
   , STxLevel level era ~ STxBothLevels level era
   , Inject (DijkstraContextError era) (ContextError era)
   , Inject (Alonzo.AlonzoContextError era) (ContextError era)
+  , Inject (Babbage.BabbageContextError era) (ContextError era)
   ) =>
   proxy 'PlutusV4 ->
   LedgerTxInfo level era ->
@@ -1083,7 +1097,7 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
     ProposingPurpose (AsIxItem ix proc) ->
       pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
     GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
-    ReceivingPurpose (AsIxItem _ _) -> pure $ PV4.Receiving sh
+    ReceivingPurpose (AsIxItem _ outputIx) -> pure $ PV4.Receiving sh (toInteger outputIx)
     _ ->
       Left $ inject $ Alonzo.PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose
 

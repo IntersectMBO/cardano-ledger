@@ -7,10 +7,12 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra.NewEpoch () where
 
-import Cardano.Ledger.BaseTypes (Globals (networkId), Network)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Globals (networkId), Network, addEpochInterval)
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Rules.Snap (maxKeyAgeEpochs)
+import Cardano.Ledger.Shelley.LedgerState (NewEpochState (nesEL))
 import Control.State.Transition.Extended (TRC (..))
 import GHC.Generics (Generic)
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
@@ -30,9 +32,12 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra ()
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 
-newtype DijkstraNewEpochExecContext era
+data DijkstraNewEpochExecContext era
   = DijkstraNewEpochExecContext
-  {dneecNetworkId :: Network}
+  { dneecNetworkId :: Network
+  , dneecInputMaxKeyAge :: EpochInterval
+  , dneecOutputMaxKeyAge :: EpochInterval
+  }
   deriving (Generic)
 
 instance NFData (DijkstraNewEpochExecContext era)
@@ -44,6 +49,8 @@ instance EncCBOR (DijkstraNewEpochExecContext era) where
     encode $
       Rec DijkstraNewEpochExecContext
         !> To dneecNetworkId
+        !> To dneecInputMaxKeyAge
+        !> To dneecOutputMaxKeyAge
 
 instance ExecSpecRule "NEWEPOCH" DijkstraEra where
   type ExecContext "NEWEPOCH" DijkstraEra = DijkstraNewEpochExecContext DijkstraEra
@@ -51,16 +58,25 @@ instance ExecSpecRule "NEWEPOCH" DijkstraEra where
   translateInputs (TRC (env, st, sig)) = do
     DijkstraNewEpochExecContext {..} <- askSpecTransM
     agdaEnv <- withCtxSpecTransM () $ toSpecRep env
-    agdaSt <- withCtxSpecTransM dneecNetworkId $ toSpecRep st
+    agdaSt <- withCtxSpecTransM (dneecNetworkId, dneecInputMaxKeyAge) $ toSpecRep st
     agdaSig <- withCtxSpecTransM () $ toSpecRep sig
     pure $ SpecTRC agdaEnv agdaSt agdaSig
 
-  translateOutput _ = withSpecTransM dneecNetworkId . toSpecRep
+  translateOutput _ =
+    withSpecTransM (\DijkstraNewEpochExecContext {..} -> (dneecNetworkId, dneecOutputMaxKeyAge))
+      . toSpecRep
 
   runAgdaRule (SpecTRC env st sig) = unComputationResult_ $ Agda.newEpochStep env st sig
 
 instance ExecSpecTopLevelRule "NEWEPOCH" DijkstraEra where
-  mkRuleExecContext globals _ =
+  mkRuleExecContext globals (TRC (_, st, sig)) =
     DijkstraNewEpochExecContext
       { dneecNetworkId = networkId globals
+      , dneecInputMaxKeyAge = maxKeyAgeEpochs globals (nesEL st)
+      , dneecOutputMaxKeyAge =
+          -- A skipped signal leaves the state unchanged. Do not ask epochInfo
+          -- about an arbitrarily distant signal that the rule will ignore.
+          if sig == addEpochInterval (nesEL st) (EpochInterval 1)
+            then maxKeyAgeEpochs globals sig
+            else maxKeyAgeEpochs globals (nesEL st)
       }

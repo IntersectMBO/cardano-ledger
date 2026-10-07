@@ -10,7 +10,7 @@ import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (TxLevel (..), emptyPParams)
-import Cardano.Ledger.Dijkstra.Core (subTransactionsTxBodyL)
+import Cardano.Ledger.Dijkstra.Core (AsIxItem (..), subTransactionsTxBodyL)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Data.Aeson (object, toJSON, (.=))
 import qualified Data.Map.Strict as Map
@@ -36,6 +36,14 @@ spec = describe "Receiving purpose API" $ do
   it "returns absent for Conway rather than fabricating a purpose" $ do
     let purpose = SpendingPurpose (AsIx 4) :: PlutusPurpose AsIx ConwayEra
     anyEraToReceivingPurpose @ConwayEra purpose `shouldBe` Nothing
+  it "projects the original output index in the item and resolved views" $ do
+    let item = ReceivingPurpose (AsItem 4) :: PlutusPurpose AsItem DijkstraEra
+        resolved = ReceivingPurpose (AsIxItem 4 4) :: PlutusPurpose AsIxItem DijkstraEra
+    anyEraToReceivingPurpose @DijkstraEra item `shouldBe` Just (AsItem 4)
+    anyEraToReceivingPurpose @DijkstraEra resolved `shouldBe` Just (AsIxItem 4 4)
+    case item of
+      AnyEraReceivingPurpose outputIndex -> outputIndex `shouldBe` AsItem 4
+      _ -> expectationFailure "Public receiving item lost its original output index"
   it "uses existing public pointer interfaces for empty receiving domains" $ do
     let pointer = ReceivingPurpose (AsIx 0) :: PlutusPurpose AsIx DijkstraEra
     redeemerPointerInverse (mkBasicTxBody @DijkstraEra @TopTx) pointer `shouldBe` SNothing

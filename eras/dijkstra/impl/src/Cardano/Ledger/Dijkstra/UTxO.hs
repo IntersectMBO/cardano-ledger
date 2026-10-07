@@ -203,7 +203,7 @@ getDijkstraScriptsNeeded utxo txb =
 
     receivingScriptsNeeded =
       AlonzoScriptsNeeded $
-        [(ReceivingPurpose target, sh) | target@(AsIxItem _ sh) <- receivingScriptTargets txb]
+        [(ReceivingPurpose (AsIxItem ix ix), sh) | (ix, sh) <- receivingScriptTargets txb]
 
 -- | Body-local key witnesses, including authorization to create protected outputs.
 getDijkstraWitsVKeyNeeded ::

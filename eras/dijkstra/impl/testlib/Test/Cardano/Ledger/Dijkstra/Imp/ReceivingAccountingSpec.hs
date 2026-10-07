@@ -120,9 +120,22 @@ transactionBudgetSpec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (Le
 transactionBudgetSpec =
   it "includes Receiving in the transaction execution-unit limit" $ do
     tx <- receivingTx (alwaysSucceedsNoDatum SPlutusV4)
-    fixed <- fixupTx tx
+    let twoOutputs =
+          tx
+            & bodyTxL . outputsTxBodyL %~ \case
+              SSeq.Empty -> SSeq.Empty
+              firstOutput SSeq.:<| _ -> SSeq.fromList [firstOutput, firstOutput]
+        eachBudget = ExUnits 3_000_000 1_000_000_000
+        authored =
+          Map.fromList
+            [ (ReceivingPurpose (AsIx 0), (Data @era (P.I 2), eachBudget))
+            , (ReceivingPurpose (AsIx 1), (Data @era (P.I 4), eachBudget))
+            ]
+    fixed <- fixupTx (twoOutputs & witsTxL . rdmrsTxWitsL . unRedeemersL .~ authored)
+    fixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL `shouldBe` authored
     let limit = ExUnits 4_000_000 2_000_000_000
-        supplied = ExUnits 5_000_000 2_000_000_000
+        supplied = ExUnits 6_000_000 2_000_000_000
+    getTotalExUnits fixed `shouldBe` supplied
     modifyPParams $ ppMaxTxExUnitsL .~ limit
     withNoFixup $
       submitFailingTx

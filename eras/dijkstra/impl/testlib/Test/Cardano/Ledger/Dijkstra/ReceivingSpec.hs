@@ -35,6 +35,7 @@ import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Word (Word32)
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
@@ -46,15 +47,15 @@ spec = describe "Receiving" $ do
   describe "Purpose encoding" $ do
     let version = eraProtVerLow @DijkstraEra
         pointer = DijkstraReceiving (AsIx 3) :: DijkstraPlutusPurpose AsIx DijkstraEra
-        item = DijkstraReceiving (AsItem lowHash) :: DijkstraPlutusPurpose AsItem DijkstraEra
+        item = DijkstraReceiving (AsItem 3) :: DijkstraPlutusPurpose AsItem DijkstraEra
         pointerBytes = BSL.pack [0x82, 0x07, 0x03]
-        itemBytes = BSL.pack ([0x82, 0x07, 0x58, 0x1c] <> replicate 28 0)
+        itemBytes = pointerBytes
     it "uses tag 7 without changing Guarding tag 6" $ do
       serialize version pointer `shouldBe` pointerBytes
       serialize version (DijkstraGuarding (AsIx 3) :: DijkstraPlutusPurpose AsIx DijkstraEra)
         `shouldBe` BSL.pack [0x82, 0x06, 0x03]
       decodeFull version pointerBytes `shouldBe` Right pointer
-    it "encodes the hash item using fixed bytes" $ do
+    it "encodes the original output index item using fixed bytes" $ do
       serialize version item `shouldBe` itemBytes
       decodeFull version itemBytes `shouldBe` Right item
     it "rejects receiving in Conway and rejects adjacent unknown tags" $ do
@@ -63,7 +64,7 @@ spec = describe "Receiving" $ do
       decodeFull @(DijkstraPlutusPurpose AsIx DijkstraEra) version (BSL.pack [0x82, 0x08, 0x03])
         `shouldSatisfy` isLeft
     it "hoists the resolved view to the existing index and item views" $ do
-      let resolved = DijkstraReceiving (AsIxItem 3 lowHash) :: DijkstraPlutusPurpose AsIxItem DijkstraEra
+      let resolved = DijkstraReceiving (AsIxItem 3 3) :: DijkstraPlutusPurpose AsIxItem DijkstraEra
       hoistPlutusPurpose (\(AsIxItem purposeIndex _) -> AsIx purposeIndex) resolved `shouldBe` pointer
       hoistPlutusPurpose (\(AsIxItem _ sh) -> AsItem sh) resolved `shouldBe` item
     prop "preserves all upgraded Conway purpose bytes" $ \(purpose :: ConwayPlutusPurpose AsIx ConwayEra) ->
@@ -86,120 +87,63 @@ spec = describe "Receiving" $ do
             , protected lowHash StakeRefNull
             , protected highHash (StakeRefBase (KeyHashObj (mkKeyHash 9)))
             , ordinary otherHash
+            , protected highHash StakeRefNull
             ]
         body = mkBasicTxBody @DijkstraEra @TopTx & outputsTxBodyL .~ outputs
         child =
           mkBasicTxBody @DijkstraEra @SubTx
             & outputsTxBodyL .~ SSeq.singleton (protected highHash StakeRefNull)
-    it "sorts by canonical hash bytes, groups differing stakes and excludes keys/unprotected outputs" $ do
+    it "retains output order and duplicates while excluding keys and unprotected outputs" $ do
       lowHash `shouldSatisfy` (< highHash)
       Set.toAscList (receivingScriptHashes body) `shouldBe` [lowHash, highHash]
       receivingKeyHashes body `shouldBe` Set.singleton key
       body ^. outputsTxBodyL `shouldBe` outputs
-    it "uses one canonical domain for discovery and pointer inverses" $ do
-      receivingScriptTargets body `shouldBe` [AsIxItem 0 lowHash, AsIxItem 1 highHash]
+    it "uses original output indices for discovery and pointer inverses" $ do
+      receivingScriptTargets body `shouldBe` [(0, highHash), (2, lowHash), (3, highHash), (5, highHash)]
       getDijkstraScriptsNeeded mempty body
         `shouldBe` AlonzoScriptsNeeded
-          [ (ReceivingPurpose (AsIxItem 0 lowHash), lowHash)
-          , (ReceivingPurpose (AsIxItem 1 highHash), highHash)
+          [ (ReceivingPurpose (AsIxItem 0 0), highHash)
+          , (ReceivingPurpose (AsIxItem 2 2), lowHash)
+          , (ReceivingPurpose (AsIxItem 3 3), highHash)
+          , (ReceivingPurpose (AsIxItem 5 5), highHash)
           ]
-      redeemerPointer body (ReceivingPurpose (AsItem highHash))
-        `shouldBe` SJust (ReceivingPurpose (AsIx 1))
-      redeemerPointerInverse body (ReceivingPurpose (AsIx 1))
-        `shouldBe` SJust (ReceivingPurpose (AsIxItem 1 highHash))
-      redeemerPointer body (ReceivingPurpose (AsItem otherHash)) `shouldBe` SNothing
-      redeemerPointerInverse body (ReceivingPurpose (AsIx 2)) `shouldBe` SNothing
+      forM_ ([0, 2, 3, 5] :: [Word32]) $ \outputIndex -> do
+        redeemerPointer body (ReceivingPurpose (AsItem outputIndex))
+          `shouldBe` SJust (ReceivingPurpose (AsIx outputIndex))
+        redeemerPointerInverse body (ReceivingPurpose (AsIx outputIndex))
+          `shouldBe` SJust (ReceivingPurpose (AsIxItem outputIndex outputIndex))
+      forM_ ([1, 4, 6, maxBound] :: [Word32]) $ \outputIndex -> do
+        redeemerPointer body (ReceivingPurpose (AsItem outputIndex)) `shouldBe` SNothing
+        redeemerPointerInverse body (ReceivingPurpose (AsIx outputIndex)) `shouldBe` SNothing
       redeemerPointerInverse body (ReceivingPurpose (AsIx maxBound)) `shouldBe` SNothing
-    it "retains a native hash before the Plutus fixture hash in the Receiving domain" $ do
+    it "does not compress key, ordinary, native or duplicate output positions" $ do
       let nativeScript = RequireAllOf mempty :: NativeScript DijkstraEra
           nativeHash = hashScript @DijkstraEra (fromNativeScript nativeScript)
-          fixedNativeHash =
-            ScriptHash
-              ( fromJust
-                  ( Hash.hashFromBytes
-                      ( BS.pack
-                          [ 0xd4
-                          , 0x41
-                          , 0x22
-                          , 0x75
-                          , 0x53
-                          , 0xa0
-                          , 0xf1
-                          , 0xa9
-                          , 0x65
-                          , 0xfe
-                          , 0xe7
-                          , 0xd6
-                          , 0x0a
-                          , 0x0f
-                          , 0x72
-                          , 0x4b
-                          , 0x36
-                          , 0x8d
-                          , 0xd1
-                          , 0xbd
-                          , 0xdb
-                          , 0xc2
-                          , 0x08
-                          , 0x73
-                          , 0x0f
-                          , 0xcc
-                          , 0xeb
-                          , 0xcf
-                          ]
-                      )
-                  )
-              )
-          fixedPlutusHash =
-            ScriptHash
-              ( fromJust
-                  ( Hash.hashFromBytes
-                      ( BS.pack
-                          [ 0xdf
-                          , 0x3c
-                          , 0x23
-                          , 0x78
-                          , 0x6b
-                          , 0xd8
-                          , 0x47
-                          , 0x3d
-                          , 0xcf
-                          , 0x09
-                          , 0x9b
-                          , 0x4b
-                          , 0x34
-                          , 0xb9
-                          , 0xd0
-                          , 0x49
-                          , 0x44
-                          , 0x70
-                          , 0x1b
-                          , 0x65
-                          , 0xd3
-                          , 0x69
-                          , 0xa5
-                          , 0x30
-                          , 0x52
-                          , 0xa2
-                          , 0x81
-                          , 0x9c
-                          ]
-                      )
-                  )
-              )
           mixedBody =
             mkBasicTxBody @DijkstraEra @TopTx
               & outputsTxBodyL
-                .~ SSeq.fromList [protected fixedPlutusHash StakeRefNull, protected nativeHash StakeRefNull, keyOut]
+                .~ SSeq.fromList
+                  [ protected highHash StakeRefNull
+                  , keyOut
+                  , protected nativeHash StakeRefNull
+                  , ordinary lowHash
+                  , protected highHash StakeRefNull
+                  ]
       serialize (eraProtVerLow @DijkstraEra) nativeScript `shouldBe` BSL.pack [0x82, 0x01, 0x80]
-      nativeHash `shouldBe` fixedNativeHash
-      redeemerPointer mixedBody (ReceivingPurpose (AsItem fixedPlutusHash))
-        `shouldBe` SJust (ReceivingPurpose (AsIx 1))
-      redeemerPointerInverse mixedBody (ReceivingPurpose (AsIx 0))
-        `shouldBe` SJust (ReceivingPurpose (AsIxItem 0 nativeHash))
+      receivingScriptTargets mixedBody `shouldBe` [(0, highHash), (2, nativeHash), (4, highHash)]
+      forM_ ([0, 2, 4] :: [Word32]) $ \outputIndex -> do
+        redeemerPointer mixedBody (ReceivingPurpose (AsItem outputIndex))
+          `shouldBe` SJust (ReceivingPurpose (AsIx outputIndex))
+        redeemerPointerInverse mixedBody (ReceivingPurpose (AsIx outputIndex))
+          `shouldBe` SJust (ReceivingPurpose (AsIxItem outputIndex outputIndex))
+      forM_ ([1, 3] :: [Word32]) $ \outputIndex ->
+        redeemerPointer mixedBody (ReceivingPurpose (AsItem outputIndex)) `shouldBe` SNothing
     it "has independent parent and child domains" $ do
-      redeemerPointer child (ReceivingPurpose (AsItem highHash))
+      redeemerPointer child (ReceivingPurpose (AsItem 0))
         `shouldBe` SJust (ReceivingPurpose (AsIx 0))
+      receivingScriptTargets child `shouldBe` [(0, highHash)]
+      redeemerPointer body (ReceivingPurpose (AsItem 3)) `shouldBe` SJust (ReceivingPurpose (AsIx 3))
+      redeemerPointer child (ReceivingPurpose (AsItem 3)) `shouldBe` SNothing
       receivingScriptHashes (mkBasicTxBody @DijkstraEra @TopTx) `shouldBe` Set.empty
     it "excludes collateral returns" $ do
       receivingScriptHashes
@@ -211,18 +155,21 @@ spec = describe "Receiving" $ do
     it "requires protected payment keys once, without adding guards" $ do
       getDijkstraWitsVKeyNeeded mempty body `shouldBe` Set.singleton (asWitness key)
       body ^. guardsTxBodyL `shouldBe` mempty
-    prop "preserves canonical domains and inverse pairs under output permutations" $ \(hashes :: [ScriptHash]) -> do
+    prop "keeps pointers local to output positions under permutations and duplication" $ \(hashes :: [ScriptHash]) -> do
       let mkBody xs =
             mkBasicTxBody @DijkstraEra @TopTx
               & outputsTxBodyL .~ SSeq.fromList [protected sh StakeRefNull | sh <- xs]
           authored = mkBody hashes
           reversed = mkBody (reverse hashes)
       receivingScriptHashes authored `shouldBe` receivingScriptHashes reversed
-      forM_ (zip [0 ..] (Set.toAscList (receivingScriptHashes authored))) $ \(idx, sh) -> do
-        redeemerPointer authored (ReceivingPurpose (AsItem sh))
-          `shouldBe` SJust (ReceivingPurpose (AsIx idx))
-        redeemerPointerInverse reversed (ReceivingPurpose (AsIx idx))
-          `shouldBe` SJust (ReceivingPurpose (AsIxItem idx sh))
+      receivingScriptTargets authored `shouldBe` zip [0 ..] hashes
+      receivingScriptTargets reversed `shouldBe` zip [0 ..] (reverse hashes)
+      forM_ (zip ([0 ..] :: [Word32]) hashes) $ \(outputIndex, _) -> do
+        forM_ [authored, reversed] $ \localBody -> do
+          redeemerPointer localBody (ReceivingPurpose (AsItem outputIndex))
+            `shouldBe` SJust (ReceivingPurpose (AsIx outputIndex))
+          redeemerPointerInverse localBody (ReceivingPurpose (AsIx outputIndex))
+            `shouldBe` SJust (ReceivingPurpose (AsIxItem outputIndex outputIndex))
 
   prop "aggregates Receiving budgets over the parent and all children" $ \redeemerData -> do
     let pointer = ReceivingPurpose (AsIx 0)
@@ -234,12 +181,16 @@ spec = describe "Receiving" $ do
           attach (ExUnits 3 30) $
             mkBasicTx (mkBasicTxBody @DijkstraEra @SubTx & treasuryDonationTxBodyL .~ Coin 2)
         batch =
-          attach (ExUnits 1 10) $
-            mkBasicTx
-              (mkBasicTxBody @DijkstraEra @TopTx & subTransactionsTxBodyL .~ OMap.fromFoldable [child1, child2])
-    getTotalExUnits batch `shouldBe` ExUnits 6 60
+          mkBasicTx
+            (mkBasicTxBody @DijkstraEra @TopTx & subTransactionsTxBodyL .~ OMap.fromFoldable [child1, child2])
+            & witsTxL . rdmrsTxWitsL . unRedeemersL
+              .~ Map.fromList
+                [ (pointer, (redeemerData, ExUnits 1 10))
+                , (ReceivingPurpose (AsIx 2), (redeemerData, ExUnits 4 40))
+                ]
+    getTotalExUnits batch `shouldBe` ExUnits 10 100
 
--- Deliberately authored independently of the ledger encoder and Set ordering.
+-- Deliberately authored independently of the ledger encoder.
 lowHash, highHash, otherHash :: ScriptHash
 lowHash = ScriptHash (fromJust (Hash.hashFromBytes (BS.replicate 28 0)))
 highHash = ScriptHash (fromJust (Hash.hashFromBytes (BS.replicate 28 1)))

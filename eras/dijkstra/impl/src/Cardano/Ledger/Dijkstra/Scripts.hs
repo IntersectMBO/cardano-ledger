@@ -128,7 +128,7 @@ data DijkstraPlutusPurpose f era
   | DijkstraVoting !(f Word32 Voter)
   | DijkstraProposing !(f Word32 (ProposalProcedure era))
   | DijkstraGuarding !(f Word32 ScriptHash)
-  | DijkstraReceiving !(f Word32 ScriptHash)
+  | DijkstraReceiving !(f Word32 Word32)
   deriving (Generic)
 
 pattern DijkstraRewarding :: f Word32 AccountAddress -> DijkstraPlutusPurpose f era
@@ -575,8 +575,8 @@ class ConwayEraScript era => DijkstraEraScript era where
   mkGuardingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
   toGuardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
 
-  mkReceivingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
-  toReceivingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+  mkReceivingPurpose :: f Word32 Word32 -> PlutusPurpose f era
+  toReceivingPurpose :: PlutusPurpose f era -> Maybe (f Word32 Word32)
 
   mkRequireGuard :: Credential Guard -> NativeScript era
   getRequireGuard :: NativeScript era -> Maybe (Credential Guard)
@@ -601,9 +601,11 @@ pattern GuardingPurpose c <- (toGuardingPurpose -> Just c)
   where
     GuardingPurpose c = mkGuardingPurpose c
 
--- | Authorization of the protected outputs sharing a payment script hash.
+-- | Authorization of a protected script output at its original body-local index.
+-- Both 'AsItem' and 'AsIx' carry that index: the Word32 item distinguishes outputs
+-- even when their contents and payment script hashes are identical.
 pattern ReceivingPurpose ::
-  DijkstraEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
+  DijkstraEraScript era => f Word32 Word32 -> PlutusPurpose f era
 pattern ReceivingPurpose c <- (toReceivingPurpose -> Just c)
   where
     ReceivingPurpose c = mkReceivingPurpose c

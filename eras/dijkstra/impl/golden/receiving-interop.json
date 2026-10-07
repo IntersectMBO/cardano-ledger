@@ -10,12 +10,24 @@
       "body_hex": "a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018382581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf08020a",
       "transaction_hex": "83a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018382581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf08020aa200d901028282582003a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b858409ae719e33ad2e8e1c2597a6f5b691accc46f6f71632c84b1178ffa7884b00b4488b8d97346945c21a7b4cc63e2984195498ac99c06dcba59656af588e7b09a0082582029acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd75840a518a94023fb2f459cc3af1e087e228d1f3341c3946b6d82562a7b64a78f6c834fe1189eda4b3984d060e9d3489585fffe67d25704a83f64e76027ddc785fd0601d9010281820180f6",
       "txid": "0d47dc0d9f26c7bc356fcd733a34390edcfd83caf3c35f5b84c96918c8d49c1a",
-      "receiving_pointers": {
-        "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf": [
-          7,
-          0
-        ]
-      },
+      "receiving_pointers": [
+        {
+          "output_index": 0,
+          "script_hash": "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf",
+          "pointer": [
+            7,
+            0
+          ]
+        },
+        {
+          "output_index": 2,
+          "script_hash": "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf",
+          "pointer": [
+            7,
+            2
+          ]
+        }
+      ],
       "public_key_hex": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
       "signature_hex": "9ae719e33ad2e8e1c2597a6f5b691accc46f6f71632c84b1178ffa7884b00b4488b8d97346945c21a7b4cc63e2984195498ac99c06dcba59656af588e7b09a00",
       "payment_key_hash": "db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b",
@@ -25,19 +37,43 @@
     },
     {
       "name": "receiving-redeemer-map-codec-only",
-      "body_hex": "a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018482581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78000000000000000000000000000000000000000000000000000000000882581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff09020a",
-      "transaction_hex": "83a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018482581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78000000000000000000000000000000000000000000000000000000000882581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff09020aa105a2820700820182186418c882070182028219012c190190f6",
-      "txid": "52a800d2deb9a480275cb515f8048097e49636c3d6c9722a88d06798fbebd0b5",
-      "receiving_pointers": {
-        "00000000000000000000000000000000000000000000000000000000": [
-          7,
-          0
-        ],
-        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff": [
-          7,
-          1
-        ]
-      },
+      "body_hex": "a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018582581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78000000000000000000000000000000000000000000000000000000000882581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0982581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff05020a",
+      "transaction_hex": "83a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018582581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78000000000000000000000000000000000000000000000000000000000882581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0982581d78ffffffffffffffffffffffffffffffffffffffffffffffffffffffff05020aa105a4820700820182186418c882070282028219012c1901908207038203821901f41902588207048203821902bc190320f6",
+      "txid": "125af33a59e57df6b375bff105de1ab4384b1a0e890bd8882365b8413c79ee92",
+      "receiving_pointers": [
+        {
+          "output_index": 0,
+          "script_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "pointer": [
+            7,
+            0
+          ]
+        },
+        {
+          "output_index": 2,
+          "script_hash": "00000000000000000000000000000000000000000000000000000000",
+          "pointer": [
+            7,
+            2
+          ]
+        },
+        {
+          "output_index": 3,
+          "script_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "pointer": [
+            7,
+            3
+          ]
+        },
+        {
+          "output_index": 4,
+          "script_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "pointer": [
+            7,
+            4
+          ]
+        }
+      ],
       "admission": "not phase-1-valid: missing scripts/integrity hash/key witness"
     },
     {
@@ -45,22 +81,344 @@
       "body_hex": "a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018382581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf08020a",
       "transaction_hex": "83a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018382581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf08020aa0f6",
       "txid": "0d47dc0d9f26c7bc356fcd733a34390edcfd83caf3c35f5b84c96918c8d49c1a",
-      "receiving_pointers": {
-        "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf": [
-          7,
-          0
-        ]
-      }
+      "receiving_pointers": [
+        {
+          "output_index": 0,
+          "script_hash": "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf",
+          "pointer": [
+            7,
+            0
+          ]
+        },
+        {
+          "output_index": 2,
+          "script_hash": "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf",
+          "pointer": [
+            7,
+            2
+          ]
+        }
+      ]
     },
     {
       "name": "native-body-with-spending-signature",
       "body_hex": "a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018382581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf08020a",
       "transaction_hex": "83a300d9010281825820111111111111111111111111111111111111111111111111111111111111111100018382581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf0582581d68db68e5f0a3669a471726b7ab902b6e1b156faee53685a3170b5afb3b0782581d78d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf08020aa200d901028182582003a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b858409ae719e33ad2e8e1c2597a6f5b691accc46f6f71632c84b1178ffa7884b00b4488b8d97346945c21a7b4cc63e2984195498ac99c06dcba59656af588e7b09a0001d9010281820180f6",
       "txid": "0d47dc0d9f26c7bc356fcd733a34390edcfd83caf3c35f5b84c96918c8d49c1a",
-      "receiving_pointers": {
-        "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf": [
-          7,
-          0
+      "receiving_pointers": [
+        {
+          "output_index": 0,
+          "script_hash": "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf",
+          "pointer": [
+            7,
+            0
+          ]
+        },
+        {
+          "output_index": 2,
+          "script_hash": "d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf",
+          "pointer": [
+            7,
+            2
+          ]
+        }
+      ]
+    }
+  ],
+  "v4_data_vectors": [
+    {
+      "output_index": 0,
+      "script_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "output_coin": 5,
+      "receiving_purpose": {
+        "constructor": 7,
+        "fields": [
+          {
+            "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          },
+          {
+            "int": 0
+          }
+        ]
+      },
+      "receiving_script_info": {
+        "constructor": 7,
+        "fields": [
+          {
+            "int": 0
+          },
+          {
+            "list": [
+              {
+                "constructor": 1,
+                "fields": [
+                  {
+                    "constructor": 1,
+                    "fields": [
+                      {
+                        "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                      }
+                    ]
+                  },
+                  {
+                    "constructor": 1,
+                    "fields": []
+                  }
+                ]
+              },
+              {
+                "map": [
+                  {
+                    "k": {
+                      "bytes": ""
+                    },
+                    "v": {
+                      "map": [
+                        {
+                          "k": {
+                            "bytes": ""
+                          },
+                          "v": {
+                            "int": 5
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "constructor": 0,
+                "fields": []
+              },
+              {
+                "constructor": 1,
+                "fields": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "output_index": 2,
+      "script_hash": "00000000000000000000000000000000000000000000000000000000",
+      "output_coin": 8,
+      "receiving_purpose": {
+        "constructor": 7,
+        "fields": [
+          {
+            "bytes": "00000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "int": 2
+          }
+        ]
+      },
+      "receiving_script_info": {
+        "constructor": 7,
+        "fields": [
+          {
+            "int": 2
+          },
+          {
+            "list": [
+              {
+                "constructor": 1,
+                "fields": [
+                  {
+                    "constructor": 1,
+                    "fields": [
+                      {
+                        "bytes": "00000000000000000000000000000000000000000000000000000000"
+                      }
+                    ]
+                  },
+                  {
+                    "constructor": 1,
+                    "fields": []
+                  }
+                ]
+              },
+              {
+                "map": [
+                  {
+                    "k": {
+                      "bytes": ""
+                    },
+                    "v": {
+                      "map": [
+                        {
+                          "k": {
+                            "bytes": ""
+                          },
+                          "v": {
+                            "int": 8
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "constructor": 0,
+                "fields": []
+              },
+              {
+                "constructor": 1,
+                "fields": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "output_index": 3,
+      "script_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "output_coin": 9,
+      "receiving_purpose": {
+        "constructor": 7,
+        "fields": [
+          {
+            "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          },
+          {
+            "int": 3
+          }
+        ]
+      },
+      "receiving_script_info": {
+        "constructor": 7,
+        "fields": [
+          {
+            "int": 3
+          },
+          {
+            "list": [
+              {
+                "constructor": 1,
+                "fields": [
+                  {
+                    "constructor": 1,
+                    "fields": [
+                      {
+                        "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                      }
+                    ]
+                  },
+                  {
+                    "constructor": 1,
+                    "fields": []
+                  }
+                ]
+              },
+              {
+                "map": [
+                  {
+                    "k": {
+                      "bytes": ""
+                    },
+                    "v": {
+                      "map": [
+                        {
+                          "k": {
+                            "bytes": ""
+                          },
+                          "v": {
+                            "int": 9
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "constructor": 0,
+                "fields": []
+              },
+              {
+                "constructor": 1,
+                "fields": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "output_index": 4,
+      "script_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "output_coin": 5,
+      "receiving_purpose": {
+        "constructor": 7,
+        "fields": [
+          {
+            "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          },
+          {
+            "int": 4
+          }
+        ]
+      },
+      "receiving_script_info": {
+        "constructor": 7,
+        "fields": [
+          {
+            "int": 4
+          },
+          {
+            "list": [
+              {
+                "constructor": 1,
+                "fields": [
+                  {
+                    "constructor": 1,
+                    "fields": [
+                      {
+                        "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                      }
+                    ]
+                  },
+                  {
+                    "constructor": 1,
+                    "fields": []
+                  }
+                ]
+              },
+              {
+                "map": [
+                  {
+                    "k": {
+                      "bytes": ""
+                    },
+                    "v": {
+                      "map": [
+                        {
+                          "k": {
+                            "bytes": ""
+                          },
+                          "v": {
+                            "int": 5
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "constructor": 0,
+                "fields": []
+              },
+              {
+                "constructor": 1,
+                "fields": []
+              }
+            ]
+          }
         ]
       }
     }

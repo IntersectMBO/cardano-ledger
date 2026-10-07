@@ -7,18 +7,23 @@
 
 module Test.Cardano.Ledger.Conformance.Spec.Dijkstra.Receiving (spec) where
 
-import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (SJust))
+import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
-import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptHashes)
+import Cardano.Ledger.Dijkstra.TxBody (
+  receivingKeyHashes,
+  receivingScriptHashes,
+  receivingScriptTargets,
+ )
 import Cardano.Ledger.Val (inject)
 import Data.Either (isLeft)
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (^.))
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance (SpecTranslate (..), runSpecTransM)
@@ -50,7 +55,7 @@ spec = describe "Receiving executable specification" $ do
         isLeft $
           runSpecTransM () $
             toSpecRep @DijkstraEra (AddrProtected Testnet credential (StakeRefPtr pointer))
-  prop "body-local grouped domains and pointers agree with independently extracted Agda" $
+  prop "body-local output domains and raw pointers agree with independently extracted Agda" $
     \(targets :: [(Bool, Credential Payment, Maybe (Credential Staking))]) ->
       let
         outputs = fmap mkOutput (targetVariants targets)
@@ -64,27 +69,43 @@ spec = describe "Receiving executable specification" $ do
               Agda.MkHSSet specScripts = Agda.receivingScriptHashes specTx
               Agda.MkHSSet specKeys = Agda.receivingKeyHashes specTx
               scriptHashes = Set.toAscList $ receivingScriptHashes body
-              indexed = zip [0 ..] scriptHashes
+              indexed = indexedScriptOutputs outputs
+              Agda.MkHSSet specOutputs = Agda.receivingOutputs specTx
              in
               conjoin
                 [ Set.fromList specScripts === Set.fromList (fmap translate scriptHashes)
                 , Set.fromList specKeys === Set.fromList (fmap translate $ Set.toList $ receivingKeyHashes body)
+                , receivingScriptTargets body
+                    === [(i, h) | (i, output) <- indexed, AddrProtected _ (ScriptHashObj h) _ <- [output ^. addrTxOutL]]
+                , Map.fromList specOutputs === Map.fromList [(toInteger i, translate output) | (i, output) <- indexed]
                 , conjoin
-                    [ Agda.receivingPointer specTx (translate sh)
-                        === Just (Agda.Receive, toInteger ix)
-                        .&&. redeemerPointer @DijkstraEra body (DijkstraReceiving (AsItem sh))
-                        === SJust (DijkstraReceiving (AsIx ix))
-                        .&&. redeemerPointerInverse @DijkstraEra body (DijkstraReceiving (AsIx ix))
-                        === SJust (DijkstraReceiving (AsIxItem ix sh))
-                    | (ix, sh) <- indexed
+                    [ Agda.receivingPointer specTx (toInteger i)
+                        === Just (Agda.Receive, toInteger i)
+                        .&&. redeemerPointer @DijkstraEra body (DijkstraReceiving (AsItem i))
+                        === SJust (DijkstraReceiving (AsIx i))
+                        .&&. redeemerPointerInverse @DijkstraEra body (DijkstraReceiving (AsIx i))
+                        === SJust (DijkstraReceiving (AsIxItem i i))
+                    | (i, _) <- indexed
+                    ]
+                , Agda.receivingPointer specTx (toInteger $ length outputs) === Nothing
+                , redeemerPointerInverse @DijkstraEra body (DijkstraReceiving (AsIx (fromIntegral $ length outputs)))
+                    === SNothing
+                , conjoin
+                    [ Agda.receivingPointer specTx (toInteger i)
+                        === Nothing
+                        .&&. redeemerPointer @DijkstraEra body (DijkstraReceiving (AsItem i))
+                        === SNothing
+                    | (i, _) <- zip [0 ..] outputs
+                    , i `notElem` fmap fst indexed
                     ]
                 ]
   prop "child Receiving domains use the child's outputs" $
     \(targets :: [(Bool, Credential Payment, Maybe (Credential Staking))]) ->
       let
+        outputs = fmap mkOutput (targetVariants targets)
         body =
           mkBasicTxBody @DijkstraEra @SubTx
-            & outputsTxBodyL .~ StrictSeq.fromList (fmap mkOutput (targetVariants targets))
+            & outputsTxBodyL .~ StrictSeq.fromList outputs
         tx = mkBasicTx body
        in
         case runSpecTransM () (toSpecRep @DijkstraEra tx) of
@@ -94,16 +115,42 @@ spec = describe "Receiving executable specification" $ do
               Agda.MkHSSet specScripts = Agda.subReceivingScriptHashes specTx
               Agda.MkHSSet specKeys = Agda.subReceivingKeyHashes specTx
               scripts = Set.toAscList $ receivingScriptHashes body
+              indexed = indexedScriptOutputs outputs
+              Agda.MkHSSet specOutputs = Agda.subReceivingOutputs specTx
              in
               conjoin
                 [ Set.fromList specScripts === Set.fromList (fmap translate scripts)
                 , Set.fromList specKeys === Set.fromList (fmap translate $ Set.toList $ receivingKeyHashes body)
+                , receivingScriptTargets body
+                    === [(i, h) | (i, output) <- indexed, AddrProtected _ (ScriptHashObj h) _ <- [output ^. addrTxOutL]]
+                , Map.fromList specOutputs === Map.fromList [(toInteger i, translate output) | (i, output) <- indexed]
                 , conjoin
-                    [ Agda.subReceivingPointer specTx (translate sh) === Just (Agda.Receive, ix)
-                    | (ix, sh) <- zip [0 ..] scripts
+                    [ Agda.subReceivingPointer specTx (toInteger i)
+                        === Just (Agda.Receive, toInteger i)
+                        .&&. redeemerPointer @DijkstraEra body (DijkstraReceiving (AsItem i))
+                        === SJust (DijkstraReceiving (AsIx i))
+                        .&&. redeemerPointerInverse @DijkstraEra body (DijkstraReceiving (AsIx i))
+                        === SJust (DijkstraReceiving (AsIxItem i i))
+                    | (i, _) <- indexed
+                    ]
+                , Agda.subReceivingPointer specTx (toInteger $ length outputs) === Nothing
+                , redeemerPointerInverse @DijkstraEra body (DijkstraReceiving (AsIx (fromIntegral $ length outputs)))
+                    === SNothing
+                , conjoin
+                    [ Agda.subReceivingPointer specTx (toInteger i)
+                        === Nothing
+                        .&&. redeemerPointer @DijkstraEra body (DijkstraReceiving (AsItem i))
+                        === SNothing
+                    | (i, _) <- zip [0 ..] outputs
+                    , i `notElem` fmap fst indexed
                     ]
                 ]
   where
+    indexedScriptOutputs outputs =
+      [ (i, output)
+      | (i, output) <- zip [0 ..] outputs
+      , AddrProtected _ (ScriptHashObj _) _ <- [output ^. addrTxOutL]
+      ]
     targetVariants targets =
       targets
         <> reverse targets

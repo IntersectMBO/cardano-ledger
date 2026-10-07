@@ -23,6 +23,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.State (UTxO (..), utxoL)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
@@ -48,6 +49,36 @@ spec = describe "Receiving transaction fixups" $ do
       Map.keys (child ^. witsTxL . rdmrsTxWitsL . unRedeemersL) `shouldBe` [ReceivingPurpose (AsIx 0)]
       assertBool "Child is missing its integrity hash" $
         child ^. bodyTxL . scriptIntegrityHashTxBodyL /= SNothing
+
+  it "creates separate child redeemers for byte-identical protected outputs" $ do
+    child <- receivingChild
+    let duplicateOutputs =
+          child
+            & bodyTxL . outputsTxBodyL %~ \outputs ->
+              let halves = fmap (coinTxOutL @era %~ \(Coin amount) -> Coin (amount `div` 2)) outputs
+               in halves <> halves
+    fixed <- submitTx (mkTopTxWithSubTxs [duplicateOutputs])
+    case OMap.elems (fixed ^. bodyTxL . subTransactionsTxBodyL) of
+      [fixedChild] -> do
+        Map.keys (fixedChild ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+          `shouldBe` [ReceivingPurpose (AsIx 0), ReceivingPurpose (AsIx 1)]
+        case SSeq.lookup 0 (fixedChild ^. bodyTxL . outputsTxBodyL) of
+          Just firstOutput -> SSeq.lookup 1 (fixedChild ^. bodyTxL . outputsTxBodyL) `shouldBe` Just firstOutput
+          Nothing -> assertFailure "Missing duplicated child output"
+      _ -> assertFailure "Expected one child transaction"
+
+  it "keeps the same raw index in two child domains with independent authored redeemers and budgets" $ do
+    first <- receivingChild
+    second <- receivingChild
+    let pointer = ReceivingPurpose (AsIx 0)
+        firstValue = (Data (P.I 2), ExUnits 1_000_000 100_000_000)
+        secondValue = (Data (P.I 4), ExUnits 2_000_000 200_000_000)
+        authored child value = child & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.singleton pointer value
+    fixed <- submitTx (mkTopTxWithSubTxs [authored first firstValue, authored second secondValue])
+    [ Map.lookup pointer (child ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+      | child <- OMap.elems (fixed ^. bodyTxL . subTransactionsTxBodyL)
+      ]
+      `shouldMatchList` [Just firstValue, Just secondValue]
 
   it "allows a post-fixup missing-collateral test to stay invalid" $ do
     child <- receivingChild

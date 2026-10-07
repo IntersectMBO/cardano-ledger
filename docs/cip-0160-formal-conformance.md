@@ -1,22 +1,24 @@
 # CIP-160 executable model
 
 The ledger pins development artifact
-[`9f359b1e534419c24323a53181aa8e33ea17fbac`](https://github.com/colll78/formal-ledger-specifications/tree/9f359b1e534419c24323a53181aa8e33ea17fbac),
+[`68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b`](https://github.com/colll78/formal-ledger-specifications/tree/68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b),
 genuinely extracted from signed source
-[`06dbab86667ad6efd3151b460d63daeae74ca042`](https://github.com/colll78/formal-ledger-specifications/commit/06dbab86667ad6efd3151b460d63daeae74ca042)
+[`78ef3333bf5803cd76c9880d99b120f287f733c5`](https://github.com/colll78/formal-ledger-specifications/commit/78ef3333bf5803cd76c9880d99b120f287f733c5)
 in [formal source PR 1348](https://github.com/IntersectMBO/formal-ledger-specifications/pull/1348).
 That source includes upstream master through
 `f4f95d3349a26c8bfcc483dda58fbfab80e3d85c`. Cabal and Nix consume the same
 artifact revision. Its 789 generated files have SHA-256 manifest
-`11d34721c5ad304d6ed0f3109d758e6f3dee18c21f7bb29a244bed024be5fa1b`.
-Full Agda specification/proof checks, the example library and property dashboard
-passed; GHC compiled the actual public API and ran all 41 persistent model
-regressions. The formal Haskell artifact CI job now runs those regressions before
-upload. [Successful public Haskell CI](https://github.com/IntersectMBO/formal-ledger-specifications/actions/runs/37572929146/job/112635555193)
-also extracted and ran all 41 regressions on synthetic merge `7adffdf`, containing
-the documentation-only `b4b7923` followup. This is separate from the pinned
-artifact's exact `06dbab86` extraction provenance. Upstream source acceptance and
-generated artifact ancestry remain required by the ledger CI gate described below.
+`1d6e312a2710a93d32875c2b3bdcd1f798670d4d69483adbbf677d645b863b81`.
+
+Full Agda proof closure, examples, interface checks and the 39-entry property
+scanner pass. Genuine Shake extraction and GHC execution from the exact signed
+source pass all 69 persistent regressions: 56 Receiving checks, four complete
+hard-fork/epoch version-state checks and nine committee-selection checks.
+Receiving checks include separate duplicate-output arguments/budgets and paired
+valid/missing child-redeemer cases through composed `LEDGER`. The formal Haskell
+artifact CI workflow runs these regressions before upload. Integrated ledger
+comparisons against this new pin remain pending. Upstream source acceptance and
+artifact ancestry remain required by the existing ledger CI gate below.
 
 `BaseAddr.protected` is part of address equality. Bootstrap addresses have no
 protection flag. `protect` preserves the payment and staking credentials by
@@ -27,19 +29,29 @@ already excludes stake pointers. Protected pointer wire/phase-1 rejection is con
 the ledger's OutputValiditySpec, UtxoSpec and SubUtxoSpec rather than projected
 into this model and falsely described as a successful comparison.
 
-`receivingCredentials` traverses each body's ordinary outputs. It produces a
-set of protected payment credentials. `receivingScriptHashes` and
-`receivingKeyHashes` project that set. The Receive script purpose identifies a
-payment script hash, without staking credentials. Its foreign pointer index
-sorts the unique natural-number hash representations, independently of witness
-contents or native/Plutus script classification. Native hashes occupy slots.
-The ledger's fixed-length hash encoding as a big-endian natural number preserves
-lexicographic byte ordering. Duplicated output addresses or differing staking
-credentials never create duplicate execution purposes. Parent and child target
-domains are computed separately. The collector deduplicates purpose/credential
-identities before constructing evaluator arguments, using existing semantic
-proposal identity for Propose and exact tag/payload equality for other purposes.
-Different purposes remain separate even under identical foreign contexts.
+`receivingCredentials` traverses each body's ordinary outputs and collects
+protected payment credentials for key/native authorization and script lookup.
+Those credential/hash sets are not execution domains. `receivingOutputs` keeps
+indexed protected script outputs from the actual body-local output map. The
+Receive purpose contains the original output index and resolved `TxOut`; its
+redeemer pointer is `(Receive, originalIndex)`. Two identical protected Plutus
+outputs at different indices require two executions, redeemers and budgets.
+Ordinary, key and native outputs do not renumber Plutus output indices. Parent
+and child purposes, redeemers and contexts are resolved independently.
+
+The collector deduplicates semantic purpose/credential identities before
+constructing evaluator arguments. Receiving identity uses the output index,
+which uniquely identifies its resolved output in the body map; it never groups
+outputs by address or script hash. Existing semantic proposal identity remains
+in use for Propose. Distinct purposes remain separate even under identical
+foreign contexts.
+
+This per-output design replaces our earlier development choice of one execution
+per distinct script hash. The pinned [CIP-160 receiving rule](https://github.com/cardano-foundation/CIPs/blob/b4a593c960f2751fef2ddc8df28bec7b22c68eb5/CIP-0160/README.md#receiving-validation-rule)
+describes validation per transaction output, and [lehins's Ledger Working Group summary](https://github.com/cardano-foundation/CIPs/pull/1063#issuecomment-3222306948)
+calls for the resolved output in the purpose. These support our per-output
+implementation decision; they do not explicitly approve the exact raw-index,
+data-encoding or activation choices here.
 
 Receiving keys are required in each body's key-witness set. Receiving scripts
 join the existing batch witness/reference-script pool, native validation,
@@ -117,7 +129,7 @@ hashes, conformance results and the upstream source/artifact merge references
 must all be attached to the release input; a local pass does not remove the
 external merge requirement.
 
-## Integrated validation
+## Historical grouped validation
 
 The actual GHC 9.6.7 conformance executable built at ledger commit
 `46f42314cde0d1d6eca82d08802acd9edfffc962`, with artifact `9f359b1` and seed
@@ -135,7 +147,14 @@ the explicit protected-pointer translation boundary. The fixup group has four
 checks: three compare Receiving/spending transitions through `LEDGER`, while
 one checks preservation of an authored child budget during fixup. Matching and
 wrong-key BLS proof properties each ran 100 samples. These focused results do
-not claim a passing full conformance suite; its broader run remains pending.
+not validate per-output Receiving. The subsequent old-semantics full run was
+interrupted when the execution contract changed; its partial result is not a
+full-suite pass. Separately, [old-head broad CI](https://ci.iog.io/build/15017651)
+reported 1250 examples, 70 failures and 28 pending: 69 hit the former explicit
+committee translation boundary, and `futurePParams` exposed the model's stale
+stored protocol version. Revised snapshot translation, registered-zero-stake
+selection and hard-fork version synchronization address those diagnoses;
+revised focused and full runs remain pending.
 
 Reproduce from `libs/cardano-ledger-conformance` by running its built `tests`
 executable with `--seed=2023 --match <selection> +RTS -N2 -RTS`, using the three
@@ -146,21 +165,24 @@ selection strings above. The tested binary SHA-256 is
 
 The complete ledger ReceivingAdversarialSpec runs structuralSpec and
 concreteEvaluatorSpec. The formal runner registers the thirteen structural comparison
-cases, including a separate accepted-invalid grouped-output collateral
-transition. The following four concreteEvaluatorSpec tests run against actual
+cases, including a separate accepted-invalid multiple-output collateral
+transition. The following seven concreteEvaluatorSpec tests run against actual
 compiled validators in the ledger suite and are not formal comparisons:
 
 - rejects claimed-invalid Receiving when every script succeeds, with no state effect;
 - rejects claimed-valid Receiving when its script fails, with no state effect;
-- a valid first grouped output cannot hide an odd second output; failure creates no ordinary output;
+- a valid first output cannot hide an odd second output; failure creates no ordinary output;
 - creates a protected output under Receiving and spends it under the same validator.
+- evaluates duplicate-hash outputs with their own datum, redeemer and declared budget;
+- collects and evaluates two byte-identical outputs with separate redeemers and budgets;
+- a wrong second redeemer fails only its own evaluation and rejects the entire transaction.
 
-The grouped-output test checks grouped validator behavior and declared-validity rejection;
+The multiple-output test checks independent validator behavior and declared-validity rejection;
 its accepted-invalid state path also has the separate structural comparison.
 The registered Receiving domain, structural, fixup and transaction-budget
 comparisons have no skipped or pending cases. Protected-pointer rejection remains
 complementary ledger coverage under the explicit representation boundary above.
-These four concrete tests supply compiled evaluator and purpose-dispatch evidence
+These seven concrete tests supply compiled evaluator and purpose-dispatch evidence
 outside these formal comparisons. The foreign constant context and boolean
 evaluator cannot establish that compiled purpose dispatch is correct.
 
@@ -190,10 +212,16 @@ the ledger's retained proof bytes. Those crypto checks have matching-proof,
 wrong-key and malformed-encoding regression cases.
 
 Formal committee seats retain pool IDs, while ledger seats retain only key and
-weight. A nonempty committee has no direct faithful translation without an
-additional snapshot-origin premise identifying each pool; this adapter returns
-an explicit translation error. Empty committees translate normally. Receiving
-comparisons use disabled Leios. This is an inherited representation boundary,
-with explicit empty/nonempty regression cases, and adds no Receiving skips.
-The incoming foreign `ebSize` callback is zero, so this integration makes no
-endorser-block size-conformance claim.
+weight. The adapter recovers IDs by independently ranking all pools in the
+retained selection snapshot by descending stake and ascending pool ID. It
+validates every stored weight and honored key using actual runtime globals and
+real proof-of-possession verification, rejecting inconsistent seats. Zero-stake,
+keyless and duplicate-key seats retain their distinct pool identities. The old
+requested committee size is absent from the snapshot: its stored seat count
+provides the retained top-K bound, without proving that historical size setting.
+
+The model includes registered zero-stake pools, preserving its existing
+fractional weights and ranking. Its fixed foreign globals imply a four-epoch
+key age; arbitrary network-global agreement is outside that premise. Receiving
+comparisons use disabled Leios. The incoming foreign `ebSize` callback is zero,
+so this integration makes no endorser-block size-conformance claim.

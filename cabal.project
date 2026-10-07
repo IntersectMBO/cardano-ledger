@@ -16,7 +16,7 @@ source-repository-package
   subdir: hs
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
-  tag: 9f359b1e534419c24323a53181aa8e33ea17fbac
+  tag: 68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b
 
 source-repository-package
   type: git
@@ -159,6 +159,6 @@ if impl(ghc >=9.14)
 source-repository-package
   type: git
   location: https://github.com/colll78/plutus.git
-  --sha256: sha256-tedjxDJ5l4lomxRCMFgiHjt2rBOMzEmhHTu/Fk7Fp+Y=
-  tag: 14d7686b4bcb51dbf35c24269ec2cc999824cb3e
+  --sha256: sha256-6n+edByIhXRu9+ZfeMhIKLlfkcj/7aRJ1mrH29mn4nE=
+  tag: dcbb7e3232c3322557410fe341ec84f3cd78dc04
   subdir: plutus-ledger-api

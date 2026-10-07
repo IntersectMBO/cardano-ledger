@@ -96,6 +96,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsWithDatum,
   alwaysSucceedsWithDatum,
   receivingEvenDatum,
+  receivingRedeemerMatchesDatum,
  )
 
 instance ShelleyEraImp DijkstraEra where
@@ -133,6 +134,9 @@ instance AlonzoEraImp DijkstraEra where
       <> Map.singleton
         (hashPlutusScript (receivingEvenDatum SPlutusV4))
         (ScriptTestContext (receivingEvenDatum SPlutusV4) (PlutusArgs (P.I 0) (Just (P.I 2))))
+      <> Map.singleton
+        (hashPlutusScript (receivingRedeemerMatchesDatum SPlutusV4))
+        (ScriptTestContext (receivingRedeemerMatchesDatum SPlutusV4) (PlutusArgs (P.I 2) Nothing))
 
 instance BabbageEraImp DijkstraEra
 

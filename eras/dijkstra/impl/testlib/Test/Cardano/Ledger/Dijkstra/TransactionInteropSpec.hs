@@ -13,9 +13,13 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptHashes)
+import Cardano.Ledger.Dijkstra.TxBody (
+  receivingKeyHashes,
+  receivingScriptHashes,
+  receivingScriptTargets,
+ )
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
-import Cardano.Ledger.Plutus (Data (Data), ExUnits (..))
+import Cardano.Ledger.Plutus (Data (Data), ExUnits (..), PlutusData (..), transScriptHash)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Aeson (FromJSON (..), eitherDecodeFileStrict', withObject, (.:))
@@ -31,6 +35,7 @@ import Lens.Micro
 import Numeric (readHex)
 import Paths_cardano_ledger_dijkstra (getDataFileName)
 import qualified PlutusLedgerApi.Common as P
+import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkKeyPairWithSeed, mkWitnessVKey)
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
@@ -87,6 +92,7 @@ spec = describe "Independent full-transaction serialization" $ beforeAll loadVec
           , receivingOutput (KeyHashObj keyHash) 7
           , receivingOutput (ScriptHashObj lowHash) 8
           , receivingOutput (ScriptHashObj highHash) 9
+          , receivingOutput (ScriptHashObj highHash) 5
           ]
       redeemerTx =
         mkBasicTx redeemerBody
@@ -95,9 +101,11 @@ spec = describe "Independent full-transaction serialization" $ beforeAll loadVec
             . unRedeemersL
             .~ Map.fromList
               [ (ReceivingPurpose (AsIx 0), (Data (P.I 1), ExUnits 100 200))
-              , (ReceivingPurpose (AsIx 1), (Data (P.I 2), ExUnits 300 400))
+              , (ReceivingPurpose (AsIx 2), (Data (P.I 2), ExUnits 300 400))
+              , (ReceivingPurpose (AsIx 3), (Data (P.I 3), ExUnits 500 600))
+              , (ReceivingPurpose (AsIx 4), (Data (P.I 3), ExUnits 700 800))
               ]
-  it "agrees on the body bytes and body hash" $ \vectors -> do
+  it "agrees on the body bytes and body hash" $ \(vectors, _) -> do
     let nativeVector = getVector "signed-native-and-key-receiving" vectors
         redeemerVector = getVector "receiving-redeemer-map-codec-only" vectors
     serialize version nativeBody `shouldBe` hex (vectorBody nativeVector)
@@ -105,7 +113,7 @@ spec = describe "Independent full-transaction serialization" $ beforeAll loadVec
     serialize version redeemerBody `shouldBe` hex (vectorBody redeemerVector)
     Hash.hashToBytes (extractHash (unTxId (txIdTxBody redeemerBody)))
       `shouldBe` BSL.toStrict (hex (vectorTxId redeemerVector))
-  it "agrees on unsigned, partial and two-key signed transaction bytes" $ \vectors -> do
+  it "agrees on unsigned, partial and two-key signed transaction bytes" $ \(vectors, _) -> do
     hashKey (vKey sender) `shouldNotBe` keyHash
     serialize version unsigned
       `shouldBe` hex (vectorTransaction (getVector "native-body-before-witness-assembly" vectors))
@@ -115,28 +123,59 @@ spec = describe "Independent full-transaction serialization" $ beforeAll loadVec
       `shouldBe` hex (vectorTransaction (getVector "signed-native-and-key-receiving" vectors))
     txIdTxBody (signed ^. bodyTxL) `shouldBe` txIdTxBody (unsigned ^. bodyTxL)
     receivingKeyHashes nativeBody `shouldBe` Set.singleton keyHash
-  it "agrees on tag 7 redeemer bytes, sorted pointers and duplicate grouping" $ \vectors -> do
+  it "agrees on tag 7 bytes and raw pointers for differing and byte-identical outputs" $ \(vectors, _) -> do
     forM_
       [ (nativeBody, getVector "signed-native-and-key-receiving" vectors)
       , (redeemerBody, getVector "receiving-redeemer-map-codec-only" vectors)
       ]
-      $ \(body, referenceVector) ->
-        forM_ (Map.toList (vectorPointers referenceVector)) $ \(hashHex, pointer) ->
-          case pointer of
-            [7, index] -> do
-              let scriptHash = ScriptHash (fromJust (Hash.hashFromBytes (BSL.toStrict (hex hashHex))))
-              redeemerPointer body (ReceivingPurpose (AsItem scriptHash))
-                `shouldBe` SJust (ReceivingPurpose (AsIx index))
-            _ -> expectationFailure "Reference Receiving pointer must use tag 7 and one index"
+      $ \(body, referenceVector) -> do
+        receivingScriptTargets body
+          `shouldBe` [ (pointerOutputIndex pointer, scriptHashFromHex $ pointerScriptHash pointer)
+                     | pointer <- vectorPointers referenceVector
+                     ]
+        forM_ (vectorPointers referenceVector) $ \pointer -> do
+          let outputIndex = pointerOutputIndex pointer
+          pointerBytes pointer `shouldBe` [7, outputIndex]
+          redeemerPointer body (ReceivingPurpose (AsItem outputIndex))
+            `shouldBe` SJust (ReceivingPurpose (AsIx outputIndex))
+          redeemerPointerInverse body (ReceivingPurpose (AsIx outputIndex))
+            `shouldBe` SJust (ReceivingPurpose (AsIxItem outputIndex outputIndex))
     serialize version redeemerTx
       `shouldBe` hex (vectorTransaction (getVector "receiving-redeemer-map-codec-only" vectors))
     receivingScriptHashes redeemerBody `shouldBe` Set.fromList [lowHash, highHash]
-    redeemerPointer redeemerBody (ReceivingPurpose (AsItem lowHash))
-      `shouldBe` SJust (ReceivingPurpose (AsIx 0))
-    redeemerPointer redeemerBody (ReceivingPurpose (AsItem highHash))
-      `shouldBe` SJust (ReceivingPurpose (AsIx 1))
-    redeemerPointer nativeBody (ReceivingPurpose (AsItem nativeHash))
-      `shouldBe` SJust (ReceivingPurpose (AsIx 0))
+    receivingScriptTargets redeemerBody
+      `shouldBe` [(0, highHash), (2, lowHash), (3, highHash), (4, highHash)]
+    SSeq.lookup 0 (redeemerBody ^. outputsTxBodyL)
+      `shouldBe` SSeq.lookup 4 (redeemerBody ^. outputsTxBodyL)
+    redeemerPointer redeemerBody (ReceivingPurpose (AsItem 1)) `shouldBe` SNothing
+
+  it "agrees with independent V4 Data ASTs for two-field tag 7 purpose and exact resolved output" $ \(_, dataVectors) -> do
+    map dataOutputIndex dataVectors `shouldBe` [0, 2, 3, 4]
+    forM_ dataVectors $ \referenceVector -> do
+      let outputIndex = dataOutputIndex referenceVector
+          scriptHash = scriptHashFromHex (dataScriptHash referenceVector)
+          purpose = PV4.Receiving (transScriptHash scriptHash) (toInteger outputIndex)
+          resolvedOutput =
+            PV4.TxOut
+              (PV4.AddressProtected (PV4.ScriptCredential $ transScriptHash scriptHash) Nothing)
+              (PV4.lovelaceValue $ PV4.Lovelace $ dataOutputCoin referenceVector)
+              PV4.NoOutputDatum
+              Nothing
+          scriptInfo = PV4.ReceivingScript (toInteger outputIndex) resolvedOutput
+          PlutusData purposeData = dataPurpose referenceVector
+          PlutusData scriptInfoData = dataScriptInfo referenceVector
+      PV4.toData purpose `shouldBe` purposeData
+      PV4.fromData purposeData `shouldBe` Just purpose
+      PV4.toData scriptInfo `shouldBe` scriptInfoData
+      PV4.fromData scriptInfoData `shouldBe` Just scriptInfo
+      -- The old one-field purpose and zero-field Receiving context must not decode as the new schema.
+      PV4.fromData (P.Constr 7 [P.B $ BSL.toStrict $ hex $ dataScriptHash referenceVector])
+        `shouldBe` (Nothing :: Maybe PV4.ScriptPurpose)
+      PV4.fromData (P.Constr 7 [])
+        `shouldBe` (Nothing :: Maybe PV4.ScriptInfo)
+
+scriptHashFromHex :: String -> ScriptHash
+scriptHashFromHex hashHex = ScriptHash (fromJust (Hash.hashFromBytes (BSL.toStrict (hex hashHex))))
 
 hex :: String -> BSL.ByteString
 hex = BSL.pack . go
@@ -152,7 +191,7 @@ data Vector = Vector
   , vectorBody :: String
   , vectorTransaction :: String
   , vectorTxId :: String
-  , vectorPointers :: Map.Map String [Word32]
+  , vectorPointers :: [ReferencePointer]
   }
 
 instance FromJSON Vector where
@@ -164,18 +203,46 @@ instance FromJSON Vector where
       <*> o .: "txid"
       <*> o .: "receiving_pointers"
 
-newtype Vectors = Vectors [Vector]
+data ReferencePointer = ReferencePointer
+  { pointerOutputIndex :: Word32
+  , pointerScriptHash :: String
+  , pointerBytes :: [Word32]
+  }
+
+instance FromJSON ReferencePointer where
+  parseJSON = withObject "reference Receiving pointer" $ \o ->
+    ReferencePointer <$> o .: "output_index" <*> o .: "script_hash" <*> o .: "pointer"
+
+data DataVector = DataVector
+  { dataOutputIndex :: Word32
+  , dataScriptHash :: String
+  , dataOutputCoin :: Integer
+  , dataPurpose :: PlutusData DijkstraEra
+  , dataScriptInfo :: PlutusData DijkstraEra
+  }
+
+instance FromJSON DataVector where
+  parseJSON = withObject "reference V4 Data vector" $ \o ->
+    DataVector
+      <$> o .: "output_index"
+      <*> o .: "script_hash"
+      <*> o .: "output_coin"
+      <*> o .: "receiving_purpose"
+      <*> o .: "receiving_script_info"
+
+data Vectors = Vectors [Vector] [DataVector]
 
 instance FromJSON Vectors where
-  parseJSON = withObject "reference transaction vectors" $ \o -> Vectors <$> o .: "vectors"
+  parseJSON = withObject "reference transaction vectors" $ \o ->
+    Vectors <$> o .: "vectors" <*> o .: "v4_data_vectors"
 
-loadVectors :: IO [Vector]
+loadVectors :: IO ([Vector], [DataVector])
 loadVectors = do
   path <- getDataFileName "golden/receiving-interop.json"
   decoded <- eitherDecodeFileStrict' path
   case decoded of
     Left err -> fail err
-    Right (Vectors vectors) -> pure vectors
+    Right (Vectors vectors dataVectors) -> pure (vectors, dataVectors)
 
 getVector :: String -> [Vector] -> Vector
 getVector name vectors = case find ((== name) . vectorName) vectors of

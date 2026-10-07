@@ -39,7 +39,7 @@ import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
-  Data,
+  Data (Data),
   ExUnits (..),
   Language (..),
   OrdExUnits (..),
@@ -58,6 +58,7 @@ import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Lens.Micro.Mtl (use)
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -306,22 +307,33 @@ spec = describe "UTXOW" $ do
     it "estimates and evaluates receiving-only children independently" $ do
       child1 <- mkPlutusReceivingTx (alwaysSucceedsNoDatum SPlutusV4) (Coin 2_000_000)
       child2 <- mkPlutusReceivingTx (alwaysSucceedsNoDatum SPlutusV4) (Coin 3_000_000)
-      tx <- withSubTransactions [child1, child2]
-      -- Add the same hash to the parent too: all three bodies use pointer 0.
+      let receivingPointer = ReceivingPurpose (AsIx 0)
+          firstValue = (Data @era (P.I 2), ExUnits 2_000_000 200_000_000)
+          secondValue = (Data @era (P.I 4), ExUnits 3_000_000 300_000_000)
+          parentValue = (Data @era (P.I 6), ExUnits 1_000_000 100_000_000)
+          authored child value = child & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.singleton receivingPointer value
+      tx <- withSubTransactions [authored child1 firstValue, authored child2 secondValue]
+      -- The same hash and raw index in three bodies still name three executions.
       let sh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV4)
-      redeemer <- arbitrary @(Data era)
-      let parentReceiving =
+          parentReceiving =
             tx
               & bodyTxL . outputsTxBodyL
                 .~ [mkCoinTxOut (AddrProtected Testnet (ScriptHashObj sh) StakeRefNull) (Coin 2_000_000)]
               & witsTxL . rdmrsTxWitsL . unRedeemersL
-                .~ Map.singleton (ReceivingPurpose (AsIx 0)) (redeemer, ExUnits 1_000_000 100_000_000)
+                .~ Map.singleton receivingPointer parentValue
       fixed <- fixupTx parentReceiving
       pp <- getsPParams id
       utxo <- getUTxO
       Globals {epochInfo, systemStart} <- use impGlobalsL
       let report = evalDijkstraTxExUnits pp fixed utxo epochInfo systemStart
-      Map.size report `shouldBe` 3
+      let children = OMap.elems (fixed ^. bodyTxL . subTransactionsTxBodyL)
+      Map.lookup receivingPointer (fixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+        `shouldBe` Just parentValue
+      [Map.lookup receivingPointer (child ^. witsTxL . rdmrsTxWitsL . unRedeemersL) | child <- children]
+        `shouldMatchList` [Just firstValue, Just secondValue]
+      length children `shouldBe` 2
+      Map.keys report
+        `shouldMatchList` ((SNothing, receivingPointer) : [(SJust (txIdTx child), receivingPointer) | child <- children])
       forM_ (Map.elems report) $ \result -> result `shouldSatisfy` either (const False) (const True)
       withNoFixup (submitTx_ fixed)
 

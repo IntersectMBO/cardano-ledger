@@ -3,7 +3,7 @@
 ## 1.16.0.0
 
 * Re-export protected-address construction, inspection and decoder interfaces
-* Add `anyEraToReceivingPurpose` to `AnyEraScript` and export `ReceivingPurpose` and `AnyEraReceivingPurpose`
+* Add `anyEraToReceivingPurpose` to `AnyEraScript` and export `ReceivingPurpose` and `AnyEraReceivingPurpose`, with original body-local output indices in both `AsItem` and `AsIx`
 * Export Dijkstra batch execution-unit evaluation with separate reports for each body
 * Add methods to `AnyEraTxBody`:
   - `subTransactionsTxBodyG`

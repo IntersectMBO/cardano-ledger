@@ -31,7 +31,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as SSeq
-import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
@@ -56,17 +55,18 @@ receivingBenchmarks =
 workload ::
   String -> (Network -> Credential Payment -> StakeReference -> Addr) -> Bool -> Int -> Benchmark
 workload name address unique count =
-  env (pure (body, Set.toAscList (receivingScriptHashes body))) $ \ ~(txBody, scripts) ->
+  env (pure (body, map fst (receivingScriptTargets body))) $ \ ~(txBody, outputIndices) ->
     bgroup
       name
       [ bench "script-domain" $ nf receivingScriptHashes txBody
+      , bench "output-targets" $ nf receivingScriptTargets txBody
       , bench "key-domain" $ nf receivingKeyHashes txBody
       , bench "scripts-needed" $ nf (getDijkstraScriptsNeeded mempty) txBody
       , bench "key-witnesses-needed" $ nf (getDijkstraWitsVKeyNeeded mempty) txBody
       , bench "both-witness-callers" $
           nf (\b -> (getDijkstraScriptsNeeded mempty b, getDijkstraWitsVKeyNeeded mempty b)) txBody
       , bench "all-pointer-lookups" $
-          nf (\b -> map (redeemerPointer b . ReceivingPurpose . AsItem) scripts) txBody
+          nf (\b -> map (redeemerPointer b . ReceivingPurpose . AsItem) outputIndices) txBody
       ]
   where
     body =
@@ -82,8 +82,9 @@ workload name address unique count =
 
 -- These are the actual V4 context redeemer translators, with identical output
 -- fully demanded through Show because the Plutus map has no NFData instance.
--- Rendering is a common cost in both measurements. Even target indices model
--- native slots; only odd indices have Plutus redeemers and hash annotations.
+-- Rendering is a common cost in both measurements. Native script outputs are
+-- at raw indices divisible by four, Plutus outputs at indices two modulo four,
+-- and key outputs occupy all odd indices. Nothing compresses these positions.
 redeemerTranslationWorkload :: Int -> Benchmark
 redeemerTranslationWorkload count =
   env setup $ \ ~fixture ->
@@ -108,8 +109,8 @@ redeemerTranslationWorkload count =
        in if even i then ScriptHashObj (ScriptHash hash) else KeyHashObj (KeyHash (Hash.castHash hash))
     plutusTargets =
       [ (ReceivingPurpose (AsIx purposeIndex), hash)
-      | AsIxItem purposeIndex hash <- receivingScriptTargets body
-      , odd purposeIndex
+      | (purposeIndex, hash) <- receivingScriptTargets body
+      , purposeIndex `mod` 4 == 2
       ]
     datum :: Data DijkstraEra
     datum = either (error . show) id $ decodeFull (eraProtVerLow @DijkstraEra) (BSL.singleton 0)

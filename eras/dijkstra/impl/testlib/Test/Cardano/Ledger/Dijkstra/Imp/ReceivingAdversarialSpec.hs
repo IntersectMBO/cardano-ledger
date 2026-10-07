@@ -16,10 +16,12 @@ module Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAdversarialSpec (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (evalPlutusScriptsWithLogs)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..))
+import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
@@ -37,6 +39,7 @@ import Cardano.Ledger.Plutus (
   PlutusArgs (..),
   PlutusWithContext (..),
   SLanguage (..),
+  ScriptResult (..),
   dataToBinaryData,
   hashData,
   hashPlutusScript,
@@ -62,6 +65,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsNoDatum,
   alwaysSucceedsNoDatum,
   receivingEvenDatum,
+  receivingRedeemerMatchesDatum,
  )
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
@@ -178,18 +182,20 @@ structuralSpec = describe "Structural validation and state transitions" $ do
     fmap (^. addrTxOutL) (Map.lookup (txInAt 0 created) entries) `shouldBe` Just address
     created ^. witsTxL . rdmrsTxWitsL . unRedeemersL `shouldBe` mempty
 
-  it "checks every protected grouped output and ignores an ordinary destination with the same hash" $ do
-    let plutus = receivingEvenDatum SPlutusV4
-        sh = hashPlutusScript plutus
-        ordinaryOdd =
-          mkCoinTxOut (Addr Testnet (ScriptHashObj sh) StakeRefNull) (Coin 2_000_000)
-            & datumTxOutL
-              .~ inlineDatum 3
-    tx <- receivingTx plutus [inlineDatum 2, inlineDatum 4]
-    fixed <- fixupTx (tx & bodyTxL . outputsTxBodyL %~ (SSeq.|> ordinaryOdd))
-    length [() | ReceivingPurpose _ <- Map.keys (fixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL)]
-      `shouldBe` 1
-    withNoFixup (submitTx_ fixed)
+  it
+    "assigns each protected output its original index and ignores an ordinary destination with the same hash"
+    $ do
+      let plutus = receivingEvenDatum SPlutusV4
+          sh = hashPlutusScript plutus
+          ordinaryOdd =
+            mkCoinTxOut (Addr Testnet (ScriptHashObj sh) StakeRefNull) (Coin 2_000_000)
+              & datumTxOutL
+                .~ inlineDatum 3
+      tx <- receivingTx plutus [inlineDatum 2, inlineDatum 4]
+      fixed <- fixupTx (tx & bodyTxL . outputsTxBodyL %~ (SSeq.|> ordinaryOdd))
+      Map.keys (fixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+        `shouldBe` [ReceivingPurpose (AsIx 0), ReceivingPurpose (AsIx 1)]
+      withNoFixup (submitTx_ fixed)
 
   it "does not require a hashed output datum's preimage when Receiving deliberately ignores it" $ do
     let datum = Data @era (P.I 17)
@@ -208,12 +214,13 @@ structuralSpec = describe "Structural validation and state transitions" $ do
       )
       $ submitTx_ tx
 
-  it "reports the absent Receiving redeemer instead of repairing it" $ do
+  it "reports the missing second output redeemer while preserving the first" $ do
     let plutus = alwaysSucceedsNoDatum SPlutusV4
         sh = hashPlutusScript plutus
-        missing = ReceivingPurpose (AsItem sh)
-    tx <- receivingTx plutus [NoDatum]
-    withPostFixup (fixupPPHash . (witsTxL . rdmrsTxWitsL .~ mempty) >=> rederiveAddrTxWits) $
+        missing = ReceivingPurpose (AsItem 1)
+    tx <- receivingTx plutus [NoDatum, NoDatum]
+    let removeSecond = witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.delete (ReceivingPurpose (AsIx 1))
+    withPostFixup (fixupPPHash . removeSecond >=> rederiveAddrTxWits) $
       submitFailingTx
         tx
         [ injectFailure $ Alonzo.MissingRedeemers [(missing, sh)]
@@ -237,7 +244,7 @@ structuralSpec = describe "Structural validation and state transitions" $ do
     tx <- receivingTx (alwaysSucceedsNoDatum SPlutusV4) [NoDatum]
     let references = tx ^. bodyTxL . referenceInputsTxBodyL
     submitTx_ (tx & bodyTxL . inputsTxBodyL <>~ references & bodyTxL . referenceInputsTxBodyL .~ mempty)
-  it "applies only collateral effects for a grouped Receiving failure declared phase-2 invalid" $ do
+  it "applies only collateral effects for a per-output Receiving failure declared phase-2 invalid" $ do
     tx <- receivingTx (receivingEvenDatum SPlutusV4) [inlineDatum 2, inlineDatum 3]
     fixed <- fixupTx tx
     UTxO beforeUtxo <- getUTxO
@@ -259,7 +266,7 @@ structuralSpec = describe "Structural validation and state transitions" $ do
 -- | These cases require the concrete Plutus evaluator. The Dijkstra conformance
 -- adapter sets extValidPlutusScript from txtopIsValid (the transaction's declared
 -- flag); it does not evaluate UPLC and cannot independently detect a validity
--- mismatch or prove that a particular grouped output caused script failure.
+-- mismatch or prove that a particular output caused script failure.
 -- These cases remain enabled in the full ledger suite. Conformance executes
 -- structuralSpec instead, including the supported declared-invalid state path.
 concreteEvaluatorSpec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
@@ -299,10 +306,15 @@ concreteEvaluatorSpec = describe "Concrete Plutus evaluator outcomes" $ do
     Map.member input afterSpending `shouldBe` False
 
   it
-    "a valid first grouped output cannot hide an odd second output; failure creates no ordinary output"
+    "a valid first output cannot hide an odd second output; failure creates no ordinary output"
     $ do
       tx <- receivingTx (receivingEvenDatum SPlutusV4) [inlineDatum 2, inlineDatum 3]
       fixed <- fixupTx tx
+      contexts <- checkReceivingContexts fixed [(0, P.I 0), (1, P.I 0)]
+      forM_ contexts $ \pwc -> case receivingContextIndex pwc of
+        Just 0 -> assertEvaluation True pwc
+        Just 1 -> assertEvaluation False pwc
+        _ -> assertFailure "Unexpected Receiving output index"
       beforeUtxo <- getUTxO
       failure <- impScriptPredicateFailure fixed
       withNoFixup $ submitFailingTx fixed [injectFailure failure]
@@ -311,6 +323,56 @@ concreteEvaluatorSpec = describe "Concrete Plutus evaluator outcomes" $ do
       UTxO final <- getUTxO
       forM_ ([0 .. SSeq.length (failed ^. bodyTxL . outputsTxBodyL) - 1] :: [Int]) $ \outputIndex ->
         Map.member (txInAt outputIndex failed) final `shouldBe` False
+
+  it "evaluates duplicate-hash outputs with their own datum, redeemer and declared budget" $ do
+    tx <- receivingTx (receivingRedeemerMatchesDatum SPlutusV4) [inlineDatum 2, inlineDatum 4]
+    let authored =
+          Map.fromList
+            [ (ReceivingPurpose (AsIx 0), (Data (P.I 2), ExUnits 2_000_000 500_000_000))
+            , (ReceivingPurpose (AsIx 1), (Data (P.I 4), ExUnits 3_000_000 600_000_000))
+            ]
+    fixed <- fixupTx (tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ authored)
+    fixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL `shouldBe` authored
+    contexts <- checkReceivingContexts fixed [(0, P.I 2), (1, P.I 4)]
+    forM_ contexts (assertEvaluation True)
+    withNoFixup (submitTx_ fixed)
+
+  it "collects and evaluates two byte-identical outputs with separate redeemers and budgets" $ do
+    tx <- receivingTx (receivingRedeemerMatchesDatum SPlutusV4) [inlineDatum 2, inlineDatum 2]
+    let authored =
+          Map.fromList
+            [ (ReceivingPurpose (AsIx 0), (Data (P.I 2), ExUnits 2_000_000 500_000_000))
+            , (ReceivingPurpose (AsIx 1), (Data (P.I 2), ExUnits 3_000_000 600_000_000))
+            ]
+    fixed <- fixupTx (tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ authored)
+    fixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL `shouldBe` authored
+    case SSeq.lookup 0 (fixed ^. bodyTxL . outputsTxBodyL) of
+      Nothing -> assertFailure "Missing first identical output"
+      Just firstOutput -> case SSeq.lookup 1 (fixed ^. bodyTxL . outputsTxBodyL) of
+        Just secondOutput ->
+          serialize (eraProtVerLow @era) firstOutput `shouldBe` serialize (eraProtVerLow @era) secondOutput
+        Nothing -> assertFailure "Missing second identical output"
+    contexts <- checkReceivingContexts fixed [(0, P.I 2), (1, P.I 2)]
+    forM_ contexts (assertEvaluation True)
+    withNoFixup (submitTx_ fixed)
+
+  it "a wrong second redeemer fails only its own evaluation and rejects the entire transaction" $ do
+    tx <- receivingTx (receivingRedeemerMatchesDatum SPlutusV4) [inlineDatum 2, inlineDatum 4]
+    let authored =
+          Map.fromList
+            [ (ReceivingPurpose (AsIx 0), (Data (P.I 2), ExUnits 2_000_000 500_000_000))
+            , (ReceivingPurpose (AsIx 1), (Data (P.I 2), ExUnits 3_000_000 600_000_000))
+            ]
+    fixed <- fixupTx (tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ authored)
+    contexts <- checkReceivingContexts fixed [(0, P.I 2), (1, P.I 2)]
+    forM_ contexts $ \pwc -> case receivingContextIndex pwc of
+      Just 0 -> assertEvaluation True pwc
+      Just 1 -> assertEvaluation False pwc
+      _ -> assertFailure "Unexpected Receiving output index"
+    beforeUtxo <- getUTxO
+    failure <- impScriptPredicateFailure fixed
+    withNoFixup $ submitFailingTx fixed [injectFailure failure]
+    getUTxO >>= (`shouldBe` beforeUtxo)
 
   it "rejects claimed-invalid Receiving when every script succeeds, with no state effect" $ do
     tx <- receivingTx (alwaysSucceedsNoDatum SPlutusV4) [NoDatum]
@@ -371,4 +433,56 @@ receivingTx plutus datums = do
       & witsTxL
         . rdmrsTxWitsL
         . unRedeemersL
-        .~ Map.singleton (ReceivingPurpose (AsIx 0)) (Data (P.I 0), ExUnits 5_000_000 2_000_000_000)
+        .~ Map.fromList
+          [ ( ReceivingPurpose (AsIx (fromIntegral outputIndex))
+            , (Data (P.I 0), ExUnits 5_000_000 2_000_000_000)
+            )
+          | outputIndex <- [0 .. length datums - 1]
+          ]
+
+-- Check each collected purpose against its own translated output and authored
+-- redeemer/budget. Exact index equality proves duplicate outputs were not deduplicated.
+checkReceivingContexts ::
+  forall era.
+  DijkstraEraImp era => Tx TopTx era -> [(Integer, P.Data)] -> ImpTestM era [PlutusWithContext]
+checkReceivingContexts tx expected = do
+  contexts <- impPlutusWithContexts tx
+  map receivingContextIndex contexts `shouldMatchList` (Just . fst <$> expected)
+  let checkOne :: PlutusWithContext -> ImpTestM era ()
+      checkOne pwc@PlutusWithContext {pwcScript = script, pwcArgs = args} =
+        case plutusSLanguage script of
+          SPlutusV4 ->
+            let PlutusV4Args v4Context = args
+             in case PV4.scriptContextScriptInfo v4Context of
+                  PV4.ReceivingScript outputIndex resolvedOutput -> do
+                    let pointer = ReceivingPurpose (AsIx (fromInteger outputIndex))
+                    case Map.lookup pointer (tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) of
+                      Just (Data redeemer, budget) -> do
+                        PV4.scriptContextRedeemer v4Context `shouldBe` PV4.Redeemer (PV4.dataToBuiltinData redeemer)
+                        pwcExUnits pwc `shouldBe` budget
+                      Nothing -> assertFailure "Collected purpose has no authored redeemer"
+                    lookup outputIndex expected
+                      `shouldBe` Just (PV4.builtinDataToData $ PV4.getRedeemer $ PV4.scriptContextRedeemer v4Context)
+                    case drop (fromInteger outputIndex) (PV4.txInfoOutputs $ PV4.scriptContextTxInfo v4Context) of
+                      ownOutput : _ -> resolvedOutput `shouldBe` ownOutput
+                      [] -> assertFailure "Collected output index lies outside its body"
+                  _ -> assertFailure "Expected a Receiving context"
+          _ -> assertFailure "Expected a V4 Receiving script"
+  forM_ contexts checkOne
+  pure contexts
+
+receivingContextIndex :: PlutusWithContext -> Maybe Integer
+receivingContextIndex PlutusWithContext {pwcScript = script, pwcArgs = args} =
+  case plutusSLanguage script of
+    SPlutusV4 ->
+      let PlutusV4Args v4Context = args
+       in case PV4.scriptContextScriptInfo v4Context of
+            PV4.ReceivingScript outputIndex _ -> Just outputIndex
+            _ -> Nothing
+    _ -> Nothing
+
+assertEvaluation :: Bool -> PlutusWithContext -> ImpTestM era ()
+assertEvaluation expectedSuccess pwc =
+  case snd (evalPlutusScriptsWithLogs [pwc]) of
+    Passes _ -> expectedSuccess `shouldBe` True
+    Fails _ _ -> expectedSuccess `shouldBe` False

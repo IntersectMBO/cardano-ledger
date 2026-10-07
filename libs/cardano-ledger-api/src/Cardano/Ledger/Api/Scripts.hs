@@ -156,9 +156,9 @@ class EraScript era => AnyEraScript era where
     DijkstraEraScript era => PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
   anyEraToGuardingPurpose = toGuardingPurpose
 
-  anyEraToReceivingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+  anyEraToReceivingPurpose :: PlutusPurpose f era -> Maybe (f Word32 Word32)
   default anyEraToReceivingPurpose ::
-    DijkstraEraScript era => PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+    DijkstraEraScript era => PlutusPurpose f era -> Maybe (f Word32 Word32)
   anyEraToReceivingPurpose = toReceivingPurpose
 
 {-# DEPRECATED anyEraToRewardingPurpose "In favor of `anyEraToWithdrawingPurpose`" #-}
@@ -251,7 +251,7 @@ pattern AnyEraGuardingPurpose ::
 pattern AnyEraGuardingPurpose c <- (anyEraToGuardingPurpose -> Just c)
 
 pattern AnyEraReceivingPurpose ::
-  AnyEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
+  AnyEraScript era => f Word32 Word32 -> PlutusPurpose f era
 pattern AnyEraReceivingPurpose c <- (anyEraToReceivingPurpose -> Just c)
 
 {-# COMPLETE

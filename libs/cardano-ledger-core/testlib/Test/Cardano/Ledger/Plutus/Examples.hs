@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Plutus.Examples (
   inputsOutputsAreNotEmptyWithDatum,
   inputsOverlapsWithRefInputs,
   receivingEvenDatum,
+  receivingRedeemerMatchesDatum,
 ) where
 
 import Cardano.Ledger.Plutus.Language (Plutus (..), PlutusBinary (..), SLanguage (..))
@@ -764,7 +765,7 @@ purposeIsWellformedNoDatum =
       , "013001301600140402440026ea8c038c04401cc040004c03c004c038c038c038004c028dd5001980400098039b"
       , "aa00222330023007001300a0018a4d132633003491035054350049900701"
       ]
-    -- ScriptHash "9b92e8b8f897125eb3ef865540e0f53d6845dfa6f1d0f107373105bb"
+    -- ScriptHash "2ef7c36c3b4aaf0265dc8a7825d2777cba16e1ce696168cb0674e278"
     -- Preprocessed PlutusV4 Script:
     -- @@@
     -- purposeIsWellformedNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -781,42 +782,43 @@ purposeIsWellformedNoDatum =
     --                                                                                                                         _redeemer_10
     --                                                                                                                         scriptInfo_11
     --                                                                                                                         sh_12 -> case scriptInfo_11 of
-    --                                                                                                                                  {PlutusLedgerApi.V4.Data.Contexts.ReceivingScript -> PlutusTx.Data.List.any (\output_13 -> case PlutusLedgerApi.V4.Data.Tx.txOutAddress output_13 of
-    --                                                                                                                                                                                                                             {PlutusLedgerApi.V4.Data.Address.AddressProtected (PlutusLedgerApi.V1.Data.Credential.ScriptCredential recipient_14)
-    --                                                                                                                                                                                                                                                                               _ -> recipient_14 PlutusTx.Eq.Class.== sh_12;
-    --                                                                                                                                                                                                                              _ -> GHC.Types.False}) infoOutputs_9;
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.MintingScript cs_15 -> PlutusTx.Data.AssocMap.member cs_15 GHC.Base.$ (PlutusLedgerApi.V1.Data.Value.getValue GHC.Base.$ PlutusLedgerApi.V3.Data.MintValue.mintValueMinted infoMint_2);
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.SpendingScript txOutRef_16
-    --                                                                                                                                                                                   mDatum_17 -> case mDatum_17 of
+    --                                                                                                                                  {PlutusLedgerApi.V4.Data.Contexts.ReceivingScript ix_13
+    --                                                                                                                                                                                    output_14 -> (ix_13 PlutusTx.Ord.Class.>= 0) PlutusTx.Bool.&& ((PlutusTx.IsData.Class.toBuiltinData output_14 PlutusTx.Eq.Class.== PlutusTx.IsData.Class.toBuiltinData (infoOutputs_9 PlutusTx.Data.List.!! ix_13)) PlutusTx.Bool.&& (case PlutusLedgerApi.V4.Data.Tx.txOutAddress output_14 of
+    --                                                                                                                                                                                                                                                                                                                                                                                                                          {PlutusLedgerApi.V4.Data.Address.AddressProtected (PlutusLedgerApi.V1.Data.Credential.ScriptCredential recipient_15)
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                            _ -> recipient_15 PlutusTx.Eq.Class.== sh_12;
+    --                                                                                                                                                                                                                                                                                                                                                                                                                           _ -> GHC.Types.False}));
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.MintingScript cs_16 -> PlutusTx.Data.AssocMap.member cs_16 GHC.Base.$ (PlutusLedgerApi.V1.Data.Value.getValue GHC.Base.$ PlutusLedgerApi.V3.Data.MintValue.mintValueMinted infoMint_2);
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.SpendingScript txOutRef_17
+    --                                                                                                                                                                                   mDatum_18 -> case mDatum_18 of
     --                                                                                                                                                                                                {GHC.Maybe.Just _ -> GHC.Types.False;
-    --                                                                                                                                                                                                 GHC.Maybe.Nothing -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter ((txOutRef_16 PlutusTx.Eq.Class.==) GHC.Base.. PlutusLedgerApi.V4.Data.Contexts.txInInfoOutRef) infoInputs_3};
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.CertifyingScript _idx_18
-    --                                                                                                                                                                                     txCert_19 -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter (txCert_19 PlutusTx.Eq.Class.==) infoTxCerts_4;
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.VotingScript voter_20 -> PlutusTx.Data.AssocMap.member voter_20 infoVotes_5;
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.ProposingScript _idx_21
-    --                                                                                                                                                                                    _propProc_22 -> GHC.Types.True;
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.WithdrawingScript (PlutusLedgerApi.V4.Data.Address.AccountId cred_23) -> PlutusTx.Data.AssocMap.member cred_23 infoWithdrawals_6;
-    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.GuardingScript ix_24
-    --                                                                                                                                                                                   topTxInfo_25 -> (PlutusLedgerApi.V1.Data.Credential.ScriptCredential sh_12 PlutusTx.Eq.Class.== (infoGuards_7 PlutusTx.Data.List.!! ix_24)) PlutusTx.Bool.&& (PlutusTx.Maybe.isJust infoSubTxIx_8 PlutusTx.Eq.Class.== PlutusTx.Maybe.isNothing topTxInfo_25)}})
+    --                                                                                                                                                                                                 GHC.Maybe.Nothing -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter ((txOutRef_17 PlutusTx.Eq.Class.==) GHC.Base.. PlutusLedgerApi.V4.Data.Contexts.txInInfoOutRef) infoInputs_3};
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.CertifyingScript _idx_19
+    --                                                                                                                                                                                     txCert_20 -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter (txCert_20 PlutusTx.Eq.Class.==) infoTxCerts_4;
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.VotingScript voter_21 -> PlutusTx.Data.AssocMap.member voter_21 infoVotes_5;
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.ProposingScript _idx_22
+    --                                                                                                                                                                                    _propProc_23 -> GHC.Types.True;
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.WithdrawingScript (PlutusLedgerApi.V4.Data.Address.AccountId cred_24) -> PlutusTx.Data.AssocMap.member cred_24 infoWithdrawals_6;
+    --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.GuardingScript ix_25
+    --                                                                                                                                                                                   topTxInfo_26 -> (PlutusLedgerApi.V1.Data.Credential.ScriptCredential sh_12 PlutusTx.Eq.Class.== (infoGuards_7 PlutusTx.Data.List.!! ix_25)) PlutusTx.Bool.&& (PlutusTx.Maybe.isJust infoSubTxIx_8 PlutusTx.Eq.Class.== PlutusTx.Maybe.isNothing topTxInfo_26)}})
     -- @@@
     SPlutusV4 ->
-      [ "5902cf0102009800aba3aba0aba1ab9cabd8488888c8a64dd6000c8a4006452003223232323232329375801922"
-      , "9001914800c8a4006452003229001914800c8a40064526603e9003000c8a4cc08520060019119499b874803a40"
-      , "0644004c99b8748002400644004c99b874800a400644004c99b874801a400644004c99b8748022400644004c99"
-      , "b874802a400644004c99b8748012400644004c99b8748032400644004994800c004d9900191000a4465266ebcc"
-      , "dd2a4004660546ea40792f5c1266e200052000998130009bac0089931981424903505436004994a132993301e7"
-      , "5a02f24a34a0c800d28d28200293301d200130290029250a510dd6801198009000cc09a4006440029bab007406"
-      , "0a516600240033026900191000a6eac00d01833200322001488c0aa600240032001919baf30290020019bac00b"
-      , "4064664006440029149980e10009814000c9284c0aa600240032001919baf00393758003220024dd6009a03219"
-      , "800ba99bae3026900191000b3001237560032374c0032329302a001c00400580126002eb646ea00065266e2120"
-      , "00001c00b001001200280d26eac02d01920304c058dd60068dd500e0006460020024520032232993370e900148"
-      , "00c880094a19900191000a4465266e1d2002900191001294266e3cdd7180c4800c8800401a37540044cc014014"
-      , "00a9446eaa4dd60014880094a02223223002001323001001229001911949803000ccc01401400a646603260100"
-      , "040026600a00a0043007002a5eb80446446004002646002002452003293375e600a00920032200248cc0100100"
-      , "0649454a022232300100122900194980218034800c88005223301633761200722002180380119802802800c8cc"
-      , "0100100054bd6f7b63008a400650013003300f0014a004375c6016002264c660089201035054350049a930c8c0"
-      , "04004888e4006445266e1d2000005994c00401e003003401c66e040152002801a464c6600c9201035054370049"
-      , "8931"
+      [ "5902ea0102009800aba3aba0aba1ab9cabd8488888a64dd6000c8a400645200322329375800f229001914800c8"
+      , "a4006452003229001914800c8a4006452660329003000c8a4cc06d2006001911919499b874803a400a44004994"
+      , "99b8748002400e440049919499b874800a401644004c99b874801a401644004c99b8748022401644004c99b874"
+      , "802a401644004c99b8748012401644004c99b8748032401644004994800c004d9900591000a45266ebccdd2a40"
+      , "046604e6ea40712f5c1300120019bac00b9bad00240194a132993300575a03524a34a0c800d28d282002933004"
+      , "200130260019250a510cc00480066049200b220014dd5805a006528b3001200198124802c88005375600e80199"
+      , "900591000a446051300120019000c8cdd79813801000cdd6007a00633200b2200148a4cc0108004c0980064942"
+      , "6051300120019000c8cdd7801c9bac0019100126eb005d00302223223002001323001001229001911949803000"
+      , "ccc01401400a646605a60100040026600a00a0043007002a5eb80452003280098019812800a500266002ea66eb"
+      , "8c08a400e44002994c0048dd5800c8dd3000c8ca4c09c00700100160049800bad91ba80019499b884800000700"
+      , "2c004004800a0049bab00e40044446460020024520032930043006900191000a446605666ec2400e4400430070"
+      , "0233005005001919802002000a97adef6c602002111911801000991800800914800ca4cdd798028024800c8800"
+      , "9233004004001925152833200522001488c8ca4cdc4a40000054a193375e003300120019bac012801200aa5099"
+      , "499b874800a400644004a50cc800c88005223293370e90014800c880094a13371e6eb8c0a640064400201f1baa"
+      , "0020dd549bac0019100103024002375a00411911499b8800148002660060020053263302349103505436004986"
+      , "460020024447200322293370e9000002cca600200f001801a00e3370200a90014c01c00d232633024491035054"
+      , "3700498931baa017000dd71805000899319801a481035054350049a931"
       ]
 
 -- | Script that succeeds when datum is expected and purpose arguments are validated against txInfo
@@ -1262,7 +1264,7 @@ inputsOverlapsWithRefInputs =
       , "800801cdd69816001204e2900194004dd69816800a50020000099319801249035054350049a9315d0ab9c1"
       ]
 
--- | V4 validator that checks every protected Receiving output for an even inline datum.
+-- | V4 validator that checks its resolved Receiving output for an even inline datum.
 -- Also supports Spending with an even datum; all other purposes fail.
 receivingEvenDatum :: SLanguage l -> Plutus l
 receivingEvenDatum =
@@ -1270,39 +1272,77 @@ receivingEvenDatum =
     SPlutusV1 -> error "Script not available in PlutusV1"
     SPlutusV2 -> error "Script not available in PlutusV2"
     SPlutusV3 -> error "Script not available in PlutusV3"
-    -- ScriptHash "86016b1378d4090890d47e9099c2cd4072ac43e689a12f5a7de32496"
+    -- ScriptHash "28d467557081773a051b5f83982574abfccceb079bc8012f192505e2"
     -- Preprocessed PlutusV4 Script:
     -- @@@
     -- receivingEvenDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
     --                         PlutusTx.Builtins.Internal.BuiltinUnit
-    -- receivingEvenDatum_0 arg_1 = let {PlutusLedgerApi.V4.Data.Contexts.ScriptContext txInfo_2
+    -- receivingEvenDatum_0 arg_1 = let {PlutusLedgerApi.V4.Data.Contexts.ScriptContext _txInfo_2
     --                                                                                  _redeemer_3
     --                                                                                  scriptInfo_4
-    --                                                                                  scriptHash_5 = PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1;
+    --                                                                                  _scriptHash_5 = PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1;
     --                                   evenDatum_6 datum_7 = case PlutusTx.IsData.Class.fromBuiltinData datum_7 of
     --                                                         {GHC.Maybe.Just i_8 -> PlutusTx.Builtins.modInteger i_8 2 PlutusTx.Eq.Class.== 0;
     --                                                          GHC.Maybe.Nothing -> GHC.Types.False};
-    --                                   validOutput_9 (_index_10,
-    --                                                  output_11) = case PlutusLedgerApi.V4.Data.Tx.txOutDatum output_11 of
-    --                                                               {PlutusLedgerApi.V2.Data.Tx.OutputDatum (PlutusLedgerApi.V1.Scripts.Datum datum_12) -> evenDatum_6 datum_12;
-    --                                                                _ -> GHC.Types.False}}
+    --                                   validOutput_9 output_10 = case PlutusLedgerApi.V4.Data.Tx.txOutDatum output_10 of
+    --                                                             {PlutusLedgerApi.V2.Data.Tx.OutputDatum (PlutusLedgerApi.V1.Scripts.Datum datum_11) -> evenDatum_6 datum_11;
+    --                                                              _ -> GHC.Types.False}}
     --                               in PlutusTx.Prelude.check GHC.Base.$ (case scriptInfo_4 of
-    --                                                                     {PlutusLedgerApi.V4.Data.Contexts.ReceivingScript -> let outputs_13 = PlutusLedgerApi.V4.Data.Contexts.protectedOutputsAt scriptHash_5 txInfo_2
-    --                                                                                                                           in PlutusTx.Bool.not (PlutusTx.List.null outputs_13) PlutusTx.Bool.&& PlutusTx.List.all validOutput_9 outputs_13;
+    --                                                                     {PlutusLedgerApi.V4.Data.Contexts.ReceivingScript _index_12
+    --                                                                                                                       output_13 -> validOutput_9 output_13;
     --                                                                      PlutusLedgerApi.V4.Data.Contexts.SpendingScript _
     --                                                                                                                      (GHC.Maybe.Just (PlutusLedgerApi.V1.Scripts.Datum datum_14)) -> evenDatum_6 datum_14;
     --                                                                      _ -> GHC.Types.False})
     -- @@@
     SPlutusV4 ->
-      [ "5901ec0102009800aba4aba1ab9c4888c88c8c8c8c8ca64cdc3a401d20032200264cdc3a400520032200252866"
-      , "4006440029149980310009805800c8c0280069404ca64006946449413233001001002229001a51914c801488ca"
-      , "4cdc3a40092003220025284c03cc0464006440021baa9800800c888800a4c80514a13300400400129406600490"
-      , "001919800800c9bac900691110022452003229001914800c8a4006452003229001914800c8a400645200322900"
-      , "1914800c8a4006452003229001914800c8a40064520032237580380000114800c8a0060053300400400160004c"
-      , "98cc021241035054350049a930dd5480248888008646002002464452003800488ca4cdc3a40052003220024cc0"
-      , "18cdc02400400a0059900191000a4465266e1d200290019100126601266e012002008005c99b8f375c60232003"
-      , "220014806c888800533009337009001004002e00700100880326601266e01200200800506ea800837553001002"
-      , "911100249900708cc00800800488a4dd6001c8a40064520032298008034dd5802400a66014eb8c03c005008022"
-      , "900194004c00cc020005280124dd6000c8a4006452003228008034012005375c60140020533001001949baa002"
-      , "9140092328011bab0029194008dd60014a0026eb40092328011bae002a4c8022466e1d20003370c00290025281"
+      [ "58ce0102009800aba4aba1ab9cabd8488888c8ca64cdc3a401d20052200264cdc3a400520052200252866400a4"
+      , "4002914c9804000ca00260120029400923004001a5019900291000a4465266e1d2004900191001294260086013"
+      , "2003220010dd5499803240086eb0c02000644004264c6600a921035054350049a930a660020032937540052280"
+      , "1246500237560052328011bac00294004dd68012465002375c00549900748cdc3a400066e180052004a501baa9"
+      , "93758003229001914800c8a00200d0048014dd718050008488880081"
+      ]
+
+-- | V4 Receiving validator that matches its own redeemer to its inline integer datum.
+-- Checks the original body output index and protected recipient; other purposes fail.
+receivingRedeemerMatchesDatum :: SLanguage l -> Plutus l
+receivingRedeemerMatchesDatum =
+  decodeHexPlutus . mconcat . \case
+    SPlutusV1 -> error "Script not available in PlutusV1"
+    SPlutusV2 -> error "Script not available in PlutusV2"
+    SPlutusV3 -> error "Script not available in PlutusV3"
+    -- ScriptHash "4698ecb2f771339e0675ffdad1a473c53d2ff3dd1fe6298db8d3851c"
+    -- Preprocessed PlutusV4 Script:
+    -- @@@
+    -- receivingRedeemerMatchesDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                    PlutusTx.Builtins.Internal.BuiltinUnit
+    -- receivingRedeemerMatchesDatum_0 arg_1 = let PlutusLedgerApi.V4.Data.Contexts.ScriptContext txInfo_2
+    --                                                                                            (PlutusLedgerApi.V1.Scripts.Redeemer redeemer_3)
+    --                                                                                            scriptInfo_4
+    --                                                                                            scriptHash_5 = PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1
+    --                                          in PlutusTx.Prelude.check GHC.Base.$ (case scriptInfo_4 of
+    --                                                                                {PlutusLedgerApi.V4.Data.Contexts.ReceivingScript index_6
+    --                                                                                                                                  output_7 -> (index_6 PlutusTx.Ord.Class.>= 0) PlutusTx.Bool.&& ((PlutusTx.IsData.Class.toBuiltinData output_7 PlutusTx.Eq.Class.== PlutusTx.IsData.Class.toBuiltinData (PlutusLedgerApi.V4.Data.Contexts.txInfoOutputs txInfo_2 PlutusTx.Data.List.!! index_6)) PlutusTx.Bool.&& ((case PlutusLedgerApi.V4.Data.Tx.txOutAddress output_7 of
+    --                                                                                                                                                                                                                                                                                                                                                                                                                     {PlutusLedgerApi.V4.Data.Address.AddressProtected (PlutusLedgerApi.V1.Data.Credential.ScriptCredential recipient_8)
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                       _ -> recipient_8 PlutusTx.Eq.Class.== scriptHash_5;
+    --                                                                                                                                                                                                                                                                                                                                                                                                                      _ -> GHC.Types.False}) PlutusTx.Bool.&& (case PlutusLedgerApi.V4.Data.Tx.txOutDatum output_7 of
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                               {PlutusLedgerApi.V2.Data.Tx.OutputDatum (PlutusLedgerApi.V1.Scripts.Datum datum_9) -> case (PlutusTx.IsData.Class.fromBuiltinData datum_9,
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           PlutusTx.IsData.Class.fromBuiltinData redeemer_3) of
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     {(GHC.Maybe.Just actual_10,
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       GHC.Maybe.Just expected_11) -> PlutusTx.Builtins.equalsInteger actual_10 expected_11;
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      _ -> GHC.Types.False};
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                                                _ -> GHC.Types.False})));
+    --                                                                                 _ -> GHC.Types.False})
+    -- @@@
+    SPlutusV4 ->
+      [ "5901d70102009800aba4aba1ab9c4888c88c8ca64cdc3a401d20032200252866400644002911919499b8948000"
+      , "00a943266ebc0064cdc4001240013300800293759200d222200448a4006452003229001914800c8a4006452003"
+      , "229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006446eb0070000099319804"
+      , "a48103505436004994a13232993370e90014800c880094a19900191000a4465266e1d2002900191001294266e3"
+      , "cdd71807c800c88005201722220010dd500114a13293370e90024800c880094a13299800800ca4dd500148a004"
+      , "9194008dd580148ca0046eb000a5001375a0049194008dd7001526403d23299800800ca4dd500148a004919400"
+      , "8dd580148ca0046eb000a5001375a0049194008dd7001526404523370e0060034a0900b9111001a940601b2003"
+      , "220010dd5198011111001130dd5198009111002131149bac003914800c8a40064530010069bab00480164c0480"
+      , "065001375c6026002940088040060120046eb400899319802a49035054350049a930dd54800c888800926eb000"
+      , "645200322900191400401a0090029bae300a001032300100122239001911499b8748000016653001007800c00d"
+      , "00719b810054800a006919319802a4810350543700498931"
       ]

@@ -18,7 +18,8 @@
 
 ### `testlib`
 
-* Add `receivingEvenDatum`, a Plutus V4 fixture that checks grouped Receiving output datums
+* Add `receivingEvenDatum`, a Plutus V4 fixture that checks the Receiving purpose's resolved output datum
+* Add `receivingRedeemerMatchesDatum`, a Plutus V4 fixture that validates the raw output index and matches its redeemer to that output's inline datum
 
 ## 1.22.0.0
 
