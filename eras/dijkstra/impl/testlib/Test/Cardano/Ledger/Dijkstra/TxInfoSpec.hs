@@ -256,7 +256,10 @@ spec = describe "TxInfo" $ do
                    ]
           targets = receivingScriptTargets body
           receivingPtr hash =
-            head [ReceivingPurpose (AsIx ix) | AsIxItem ix targetHash <- targets, hash == targetHash]
+            case [ReceivingPurpose (AsIx ix) | AsIxItem ix targetHash <- targets, hash == targetHash] of
+              [pointer] -> pointer
+              [] -> error $ "Receiving oracle has no canonical target for " <> show hash
+              _ -> error $ "Receiving oracle has duplicate canonical targets for " <> show hash
           redeemers =
             Map.fromList
               [ (SpendingPurpose $ AsIx 0, (redeemer, exUnits))

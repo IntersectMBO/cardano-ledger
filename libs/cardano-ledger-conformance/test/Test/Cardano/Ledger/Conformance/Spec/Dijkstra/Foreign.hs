@@ -9,15 +9,21 @@ import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (..))
 import Cardano.Ledger.Binary (FixedSizeCodec (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, esSnapshotsL, nesEsL)
-import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  BlsKey (..),
+  LeiosCommittee (..),
+  LeiosSeat (..),
+  ssLeiosCommitteeL,
+  ssStakeSetL,
+ )
+import Data.Default (def)
 import Data.Either (isLeft)
 import GHC.Exts (fromList)
-import Lens.Micro
+import Lens.Micro ((&), (.~))
 import qualified MAlonzo.Code.Ledger.Core.Foreign.API as Agda
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Dijkstra
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conformance (SpecTranslate (..), runSpecTransM)
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (externalFunctions)
+import Test.Cardano.Ledger.Conformance (SpecTranslate (..), externalFunctions, runSpecTransM)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 

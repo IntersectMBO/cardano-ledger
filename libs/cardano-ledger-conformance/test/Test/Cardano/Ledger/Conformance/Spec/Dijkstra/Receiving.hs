@@ -3,11 +3,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conformance.Spec.Dijkstra.Receiving (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (SJust))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -18,7 +18,7 @@ import Cardano.Ledger.Val (inject)
 import Data.Either (isLeft)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Lens.Micro
+import Lens.Micro ((&), (.~))
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance (SpecTranslate (..), runSpecTransM)
@@ -72,10 +72,10 @@ spec = describe "Receiving executable specification" $ do
                 , conjoin
                     [ Agda.receivingPointer specTx (translate sh)
                         === Just (Agda.Receive, toInteger ix)
-                        .&&. redeemerPointer body (DijkstraReceiving (AsItem sh))
-                        === Just (DijkstraReceiving (AsIx ix))
-                        .&&. redeemerPointerInverse body (DijkstraReceiving (AsIx ix))
-                        === Just (DijkstraReceiving (AsItem sh))
+                        .&&. redeemerPointer @DijkstraEra body (DijkstraReceiving (AsItem sh))
+                        === SJust (DijkstraReceiving (AsIx ix))
+                        .&&. redeemerPointerInverse @DijkstraEra body (DijkstraReceiving (AsIx ix))
+                        === SJust (DijkstraReceiving (AsIxItem ix sh))
                     | (ix, sh) <- indexed
                     ]
                 ]

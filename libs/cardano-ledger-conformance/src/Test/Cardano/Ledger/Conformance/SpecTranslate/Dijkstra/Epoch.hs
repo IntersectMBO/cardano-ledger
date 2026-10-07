@@ -22,6 +22,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad.Except (throwError)
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
@@ -144,6 +145,7 @@ instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
       translateCommittee (UnsafeLeiosCommittee seats)
         | null seats = pure []
         | otherwise =
-            throwError "The executable committee model retains pool IDs absent from ledger committee seats"
+            throwError $
+              Text.pack "The executable committee model retains pool IDs absent from ledger committee seats"
       filterZeroEntries (Agda.MkHSMap lst) =
         Agda.MkHSMap $ filter ((/= 0) . snd) lst
