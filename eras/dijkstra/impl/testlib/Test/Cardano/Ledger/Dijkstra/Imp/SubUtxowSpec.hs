@@ -13,7 +13,7 @@ import Cardano.Ledger.Address (bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
+import Cardano.Ledger.Alonzo.TxWits (hashDataTxWitsL, unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway.Governance (
@@ -240,6 +240,34 @@ spec = describe "SUBUTXOW" $ do
         submitFailingTx
           topTx
           [injectFailure . SubMalformedGuardDatums @era $ NES.singleton guardCred]
+
+  describe "SupplementalDatums" $ do
+    let datum = Data @era $ P.I 30
+        datumHash = hashData datum
+
+    it "Datum of the output of a sub-transaction" $ do
+      addr <- freshKeyAddr_
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL
+                .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+              & witsTxL . hashDataTxWitsL .~ [datum]
+      submitTx_ $ mkTopTxWithSubTxs [subTx]
+
+    it "Datum of the reference input of a sub-transaction" $ do
+      addr <- freshKeyAddr_
+      referencedTx <-
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL
+              .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 referencedTx]
+              & witsTxL . hashDataTxWitsL .~ [datum]
+      submitTx_ $ mkTopTxWithSubTxs [subTx]
 
   -- The filter mirrors the rule: `getInputDataHashesTxBody` records
   -- an input as unspendable only when its spending script is below

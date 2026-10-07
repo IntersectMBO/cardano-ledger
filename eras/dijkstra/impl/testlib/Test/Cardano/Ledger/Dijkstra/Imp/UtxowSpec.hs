@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.TxWits (hashDataTxWitsL, unRedeemersL)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Inject (..),
@@ -36,17 +36,19 @@ import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxowPredFailure (..))
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Plutus (
-  Data,
+  Data (..),
   ExUnits (..),
   Language (..),
   OrdExUnits (..),
   Plutus,
   SLanguage (..),
+  hashData,
   hashPlutusScript,
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -54,6 +56,7 @@ import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Lens.Micro.Mtl (use)
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -203,6 +206,91 @@ spec = describe "UTXOW" $ do
         hasMalformed (mkTx SNothing) `shouldReturn` True
         hasMalformed (mkTx (SJust datum)) `shouldReturn` False
 
+  describe "SupplementalDatums" $ do
+    let datum = Data @era $ P.I 30
+        datumHash = hashData datum
+
+    disableInConformanceIt "Datum of a sub-transaction output" $ do
+      addr <- freshKeyAddr_
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+          ]
+          & witsTxL . hashDataTxWitsL .~ [datum]
+
+    disableInConformanceIt "Datum of a sub-transaction reference input spent by another sub-transaction" $ do
+      txIn <- produceDatumHashOutput datumHash
+      submitTx_ $
+        mkTopTxWithSubTxs
+          [ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
+          , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [txIn]
+          ]
+          & witsTxL . hashDataTxWitsL .~ [datum]
+
+    it "NotAllowedSupplementalDatums reports only the datum unrelated to the batch" $ do
+      addr <- freshKeyAddr_
+      let secondDatum = Data @era $ P.I 32
+          secondDatumHash = hashData secondDatum
+          referencedDatum = Data @era $ P.I 33
+          referencedDatumHash = hashData referencedDatum
+          extraDatum = Data @era $ P.I 31
+          extraDatumHash = hashData extraDatum
+          outputSubTx outputDatumHash =
+            mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL
+                  .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust outputDatumHash]
+      txIn <- produceDatumHashOutput referencedDatumHash
+      let tx =
+            mkTopTxWithSubTxs
+              [ outputSubTx datumHash
+              , outputSubTx secondDatumHash
+              , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [txIn]
+              ]
+              & witsTxL . hashDataTxWitsL .~ [datum, secondDatum, referencedDatum, extraDatum]
+      submitFailingTx
+        tx
+        [ injectFailure $
+            NotAllowedSupplementalDatums
+              (NES.singleton extraDatumHash)
+              [datumHash, secondDatumHash, referencedDatumHash]
+        ]
+
+    it "NotAllowedSupplementalDatums reports only the datums of the sub-transactions, in legacy mode" $ do
+      addr <- freshKeyAddr_
+      let topLevelDatum = Data @era $ P.I 31
+          topLevelDatumHash = hashData topLevelDatum
+          referencedDatum = Data @era $ P.I 33
+          referencedDatumHash = hashData referencedDatum
+      txIn <- produceDatumHashOutput referencedDatumHash
+      tx <-
+        switchTxToLegacyMode $
+          mkTopTxWithSubTxs
+            [ mkBasicTx $
+                mkBasicTxBody
+                  & outputsTxBodyL .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+            , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [txIn]
+            ]
+            & bodyTxL . outputsTxBodyL
+              .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust topLevelDatumHash]
+            & witsTxL . hashDataTxWitsL .~ [datum, topLevelDatum, referencedDatum]
+      submitFailingTx
+        tx
+        [ injectFailure $
+            NotAllowedSupplementalDatums
+              (NES.singleton datumHash <> NES.singleton referencedDatumHash)
+              [topLevelDatumHash]
+        ]
+
+    it "NotAllowedSupplementalDatums for the datum of an input spent by a sub-transaction" $ do
+      txIn <- produceDatumHashOutput datumHash
+      let tx =
+            mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]]
+              & witsTxL . hashDataTxWitsL .~ [datum]
+      submitFailingTx tx [injectFailure $ NotAllowedSupplementalDatums (NES.singleton datumHash) []]
+
   describe "PlutusV4" $ do
     it "Extra redeemer for a key-locked certificate fails" $ do
       let plutus = alwaysSucceedsNoDatum SPlutusV4
@@ -329,3 +417,13 @@ withSubTransactions subTxs = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
       & bodyTxL . collateralInputsTxBodyL .~ [collateral]
+
+produceDatumHashOutput :: DijkstraEraImp era => DataHash -> ImpTestM era TxIn
+produceDatumHashOutput datumHash = do
+  addr <- freshKeyAddr_
+  referencedTx <-
+    submitTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL
+          .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+  pure $ txInAt 0 referencedTx

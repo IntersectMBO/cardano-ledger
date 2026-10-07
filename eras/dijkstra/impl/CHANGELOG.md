@@ -2,6 +2,9 @@
 
 ## 0.5.0.0
 
+* Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that,
+  outside legacy mode, a top-level transaction can supply datums for the outputs and reference
+  inputs of its sub-transactions
 * Add `kesMaxKeyAgeEpochs` to compute how many epochs a registered Leios voting key (CIP-0164) stays valid from the KES parameters
 * Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule

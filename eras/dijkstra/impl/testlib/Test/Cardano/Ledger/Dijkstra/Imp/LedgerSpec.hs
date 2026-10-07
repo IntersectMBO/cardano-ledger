@@ -77,6 +77,16 @@ spec = describe "LEDGER" $ do
         , injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
         ]
 
+    it "Fails when top-level transaction spends an input its sub-transaction spends" $ do
+      txIn <- freshFundedTxIn
+      let subTx :: Tx SubTx era
+          subTx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ [txIn]
+              & bodyTxL . subTransactionsTxBodyL .~ [subTx]
+      submitFailingTx tx [injectFailure $ BadInputsUTxO $ NES.singleton txIn]
+
     it "Succeeds when inputs don't reference sub-transaction outputs" $ do
       (_, addr1) <- freshKeyAddr
       txIn1 <- sendCoinTo addr1 (Coin 10_000_000)
