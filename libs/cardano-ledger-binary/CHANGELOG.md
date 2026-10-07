@@ -1,13 +1,16 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.10.0.1
+## 1.10.1.0
 
-*
+* Add `EncCBOR` and `DecCBOR` instances for `PerasCert` and its component types from `cardano-crypto-peras`
+
+### `testlib`
+
+* Add `Arbitrary` instance for `PerasCert`
 
 ## 1.10.0.0
 
 * Add `EncCBOR` and `DecCBOR` instances to `SlotInterval`
-* Add `EncCBOR` and `DecCBOR` instances for `PerasCert` and its component types from `cardano-crypto-peras`, and for `Bitmap` from `cardano-strict-containers`
 * Change `CertifiedVRF` decoder to accept indefinite-length encodings starting with PV12
 * Move `decodeIPv4` and `decodeIPv6` into `Cardano.Ledger.Binary.Decoding.DecCBOR`
 * Add `decodeStringIndefLen`, `decodeStringDefOrIndef`, `decodeBytesIndefLen`, `decodeBytesDefOrIndef`, `decodeByteArrayIndefLen` and `decodeByteArrayDefOrIndef`
@@ -21,7 +24,6 @@
 
 * Add golden CBOR tests for `LeiosCert`, `LeiosSeat`, and `LeiosCommittee`
 * Add `goldenForHashHex` to `Test.Cardano.Ledger.Binary.Golden`.
-* Add `Arbitrary` instance for `PerasCert`
 
 ## 1.9.0.0
 
