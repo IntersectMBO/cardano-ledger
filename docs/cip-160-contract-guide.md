@@ -6,8 +6,9 @@ protocol major version 12 and receiving-aware Plutus V4. The
 [Plutus interface](https://github.com/IntersectMBO/plutus/pull/7982) are published
 for review; upstream format agreement and network activation remain outstanding.
 Focused per-output ledger runtime checks and the full ledger API suite pass.
-Full Dijkstra, shared-test and conformance runtime suites, downstream API tests,
-CLI construction and node/testnet migration workflows remain pending. This is
+Focused conformance checks also pass. Full Dijkstra and conformance suites,
+downstream API tests, CLI construction and node/testnet migration workflows
+remain pending. This is
 not a mainnet deployment guide.
 
 Execution per output is this implementation's proposed reconciliation of
@@ -160,9 +161,12 @@ runtime assertions pass. Published artifact
 [`68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b`](https://github.com/colll78/formal-ledger-specifications/commit/68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b)
 matches all 789 generated files (manifest SHA-256
 `1d6e312a2710a93d32875c2b3bdcd1f798670d4d69483adbbf677d645b863b81`)
-and is pinned by Cabal and Nix. Integrated ledger conformance and the full
-Dijkstra/shared suites remain pending. The existing CI gate still requires the
-formal artifact to become an ancestor of upstream `master-artifacts`; publication
+and is pinned by Cabal and Nix. Strict conformance compilation passes, with
+24 Receiving and 16 Foreign tests passing against this artifact. The full
+conformance and Dijkstra suites remain pending. The shared suite completed
+58 examples with zero failures and five inherited pending cases. The existing
+CI gate still requires the formal artifact to become an ancestor of upstream
+`master-artifacts`; publication
 on the development fork does not satisfy that upstream condition.
 
 Two fresh CDDL generations match the tracked files and two fresh `hie.yaml`

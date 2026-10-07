@@ -16,9 +16,10 @@ source pass all 69 persistent regressions: 56 Receiving checks, four complete
 hard-fork/epoch version-state checks and nine committee-selection checks.
 Receiving checks include separate duplicate-output arguments/budgets and paired
 valid/missing child-redeemer cases through composed `LEDGER`. The formal Haskell
-artifact CI workflow runs these regressions before upload. Integrated ledger
-comparisons against this new pin remain pending. Upstream source acceptance and
-artifact ancestry remain required by the existing ledger CI gate below.
+artifact CI workflow runs these regressions before upload. Focused integrated
+ledger comparisons against this pin pass; the full suite remains pending.
+Upstream source acceptance and artifact ancestry remain required by the existing
+ledger CI gate below.
 
 `BaseAddr.protected` is part of address equality. Bootstrap addresses have no
 protection flag. `protect` preserves the payment and staking credentials by
@@ -129,37 +130,31 @@ hashes, conformance results and the upstream source/artifact merge references
 must all be attached to the release input; a local pass does not remove the
 external merge requirement.
 
-## Historical grouped validation
+## Integrated validation
 
-The actual GHC 9.6.7 conformance executable built at ledger commit
-`46f42314cde0d1d6eca82d08802acd9edfffc962`, with artifact `9f359b1` and seed
-2023. Its focused runs passed:
+The GHC 9.6.7 conformance executable builds against artifact `68ed72e9`.
+Its focused runs with seed 2023 and `+RTS -N2 -RTS` pass:
 
 | Selection | Examples | Failures |
 | --- | ---: | ---: |
-| `Receiving` | 23 | 0 |
-| `Structural validation and state transitions` | 13 | 0 |
-| `Foreign interface premises` | 5 | 0 |
+| `Receiving` | 24 | 0 |
+| `Foreign interface premises` | 16 | 0 |
 
-Nine structural cases also occur in the Receiving selection; these counts must
-not be added. All four generated interface properties ran 100 samples, including
-the explicit protected-pointer translation boundary. The fixup group has four
-checks: three compare Receiving/spending transitions through `LEDGER`, while
-one checks preservation of an authored child budget during fixup. Matching and
-wrong-key BLS proof properties each ran 100 samples. These focused results do
-not validate per-output Receiving. The subsequent old-semantics full run was
-interrupted when the execution contract changed; its partial result is not a
-full-suite pass. Separately, [old-head broad CI](https://ci.iog.io/build/15017651)
-reported 1250 examples, 70 failures and 28 pending: 69 hit the former explicit
-committee translation boundary, and `futurePParams` exposed the model's stale
-stored protocol version. Revised snapshot translation, registered-zero-stake
-selection and hard-fork version synchronization address those diagnoses;
-revised focused and full runs remain pending.
+All four generated Receiving interface properties ran 100 samples, including
+duplicate outputs, body-local indices and the explicit protected-pointer
+translation boundary. The Receiving selection also covers six fixup checks and
+the aggregate duplicate-output execution-budget limit. Foreign checks exercise
+BLS proof verification and complete new-epoch-state translation, including
+ranked committee identities, zero-stake seats, key expiry and inconsistent
+snapshot rejection. Selection counts are not a combined suite total.
+
+The full conformance suite is running. The thirteen registered adversarial
+structural comparisons have not yet been rerun as a separate complete selection;
+the Receiving name filter covers only some of those cases.
 
 Reproduce from `libs/cardano-ledger-conformance` by running its built `tests`
-executable with `--seed=2023 --match <selection> +RTS -N2 -RTS`, using the three
-selection strings above. The tested binary SHA-256 is
-`abaeaf9cd3a1d2fdffc89a3fc2ff7b7326db15fec6c7866cd141a89ec5d7c276`.
+executable with `--seed=2023 --match <selection> +RTS -N2 -RTS`, using either
+selection string above.
 
 ## Concrete evaluator coverage boundary
 

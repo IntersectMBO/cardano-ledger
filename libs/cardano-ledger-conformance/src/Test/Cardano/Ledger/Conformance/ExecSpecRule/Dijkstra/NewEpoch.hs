@@ -11,7 +11,7 @@ import Cardano.Ledger.BaseTypes (EpochInterval (..), Globals (networkId), Networ
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Rules.Snap (maxKeyAgeEpochs)
+import Cardano.Ledger.Dijkstra.Rules (maxKeyAgeEpochs)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState (nesEL))
 import Control.State.Transition.Extended (TRC (..))
 import GHC.Generics (Generic)

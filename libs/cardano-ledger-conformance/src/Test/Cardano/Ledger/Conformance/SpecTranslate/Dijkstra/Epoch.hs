@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Epoch (translateLeiosCommittee) where
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Epoch () where
 
 import Cardano.Crypto.DSIGN (verifyPossessionProofDSIGN)
 import Cardano.Crypto.DSIGN.BLS12381 (minSigPoPDST)

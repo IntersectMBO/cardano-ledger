@@ -16,7 +16,7 @@ import Cardano.Ledger.Binary (FixedSizeCodec (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Core (KeyHash, StakePool)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState, esSnapshotsL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (NewEpochState, esSnapshotsL, nesELL, nesEsL)
 import Cardano.Ledger.State (
   ActiveStake (..),
   BlsKey (..),
@@ -44,7 +44,6 @@ import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Dijkstra
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance (SpecTranslate (..), externalFunctions, runSpecTransM)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Epoch (translateLeiosCommittee)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
 
@@ -201,7 +200,13 @@ snapshotWith pools seats =
         }
 
 translateAt :: Word64 -> SetSnapShot -> Either Text [Dijkstra.LeiosSeat]
-translateAt epoch = runSpecTransM () . translateLeiosCommittee (EpochNo epoch) (EpochInterval 10)
+translateAt epoch snapshot =
+  let state =
+        (def :: NewEpochState DijkstraEra)
+          & nesELL .~ EpochNo epoch
+          & nesEsL . esSnapshotsL . ssStakeSetL .~ snapshot
+   in Dijkstra.nesLeiosCommittee
+        <$> runSpecTransM (Testnet, EpochInterval 10) (toSpecRep @DijkstraEra state)
 
 encodeInteger :: FixedSizeCodec a => a -> Integer
 encodeInteger = toInteger . bytesToNatural . rawEncodeFixedSized

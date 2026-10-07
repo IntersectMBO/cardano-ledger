@@ -76,8 +76,12 @@ spec = describe "Receiving executable specification" $ do
                 [ Set.fromList specScripts === Set.fromList (fmap translate scriptHashes)
                 , Set.fromList specKeys === Set.fromList (fmap translate $ Set.toList $ receivingKeyHashes body)
                 , receivingScriptTargets body
-                    === [(i, h) | (i, output) <- indexed, AddrProtected _ (ScriptHashObj h) _ <- [output ^. addrTxOutL]]
-                , Map.fromList specOutputs === Map.fromList [(toInteger i, translate output) | (i, output) <- indexed]
+                    === [ (i, h)
+                        | (i, receivingOutput) <- indexed
+                        , AddrProtected _ (ScriptHashObj h) _ <- [receivingOutput ^. addrTxOutL]
+                        ]
+                , Map.fromList specOutputs
+                    === Map.fromList [(toInteger i, translate receivingOutput) | (i, receivingOutput) <- indexed]
                 , conjoin
                     [ Agda.receivingPointer specTx (toInteger i)
                         === Just (Agda.Receive, toInteger i)
@@ -122,8 +126,12 @@ spec = describe "Receiving executable specification" $ do
                 [ Set.fromList specScripts === Set.fromList (fmap translate scripts)
                 , Set.fromList specKeys === Set.fromList (fmap translate $ Set.toList $ receivingKeyHashes body)
                 , receivingScriptTargets body
-                    === [(i, h) | (i, output) <- indexed, AddrProtected _ (ScriptHashObj h) _ <- [output ^. addrTxOutL]]
-                , Map.fromList specOutputs === Map.fromList [(toInteger i, translate output) | (i, output) <- indexed]
+                    === [ (i, h)
+                        | (i, receivingOutput) <- indexed
+                        , AddrProtected _ (ScriptHashObj h) _ <- [receivingOutput ^. addrTxOutL]
+                        ]
+                , Map.fromList specOutputs
+                    === Map.fromList [(toInteger i, translate receivingOutput) | (i, receivingOutput) <- indexed]
                 , conjoin
                     [ Agda.subReceivingPointer specTx (toInteger i)
                         === Just (Agda.Receive, toInteger i)
@@ -147,9 +155,9 @@ spec = describe "Receiving executable specification" $ do
                 ]
   where
     indexedScriptOutputs outputs =
-      [ (i, output)
-      | (i, output) <- zip [0 ..] outputs
-      , AddrProtected _ (ScriptHashObj _) _ <- [output ^. addrTxOutL]
+      [ (i, receivingOutput)
+      | (i, receivingOutput) <- zip [0 ..] outputs
+      , AddrProtected _ (ScriptHashObj _) _ <- [receivingOutput ^. addrTxOutL]
       ]
     targetVariants targets =
       targets
