@@ -48,6 +48,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   completeRupd,
   curPParamsEpochStateL,
+  esSnapshotsL,
+  nesEsL,
+  nesStakePoolDistrG,
   prevPParamsEpochStateL,
   smartUTxOState,
  )
@@ -63,7 +66,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.TreeDiff (Expr, ToExpr (toExpr))
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
@@ -205,7 +208,6 @@ newEpochStateZero =
     blocksMadeZero
     epochStateZero
     SNothing
-    poolDistrZero
     (stashedAVVMAddressesZero (reify :: Proof era))
 
 stashedAVVMAddressesZero :: Proof era -> StashedAVVMAddresses era
@@ -314,8 +316,10 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (BlocksMade (mBcur x))
       (extract x)
       (Complete <$> mRu x)
-      (PoolDistr (mPoolDistr x) (knownNonZeroCoin @1))
       (stashedAVVMAddressesZero (reify :: Proof era))
+      -- pool distribution is not serialised so it needs to be computed separately
+      & nesEsL . esSnapshotsL . ssStakeSetL
+        %~ (\ss -> ss {ssStakePoolDistr = PoolDistr (mPoolDistr x) (knownNonZeroCoin @1)})
 
 abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpochState era
 abstract x =
@@ -332,7 +336,7 @@ abstract x =
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
     , mMutFee = Map.empty
     , mChainAccountState = (esChainAccountState . nesEs) x
-    , mPoolDistr = (unPoolDistr . nesPd) x
+    , mPoolDistr = (unPoolDistr . view nesStakePoolDistrG) x
     , mPParams = (view curPParamsEpochStateL . nesEs) x
     , mDeposited = (utxosDeposited . lsUTxOState . esLState . nesEs) x
     , mFees = (utxosFees . lsUTxOState . esLState . nesEs) x

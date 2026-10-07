@@ -14,6 +14,7 @@ import Cardano.Ledger.Babbage (
 import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Governance ()
+import Cardano.Ledger.Dijkstra.Rules.Snap ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Shelley.API.Forecast (EraForecast (..))
 

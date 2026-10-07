@@ -294,7 +294,7 @@ epochTransition = do
       TRC ((), Shelley.PoolreapState utxoState0 chainAccountState0 certState0, eNo)
 
   let
-    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
+    stakePoolDistr = msStakePoolDistr (ssStakeMark snapshots1)
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
     ratifyState@RatifyState {rsEnactState, rsEnacted, rsExpired} =

@@ -121,7 +121,7 @@ instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
   type SpecRep DijkstraEra (NewEpochState DijkstraEra) = Agda.NewEpochState
 
   type SpecContext DijkstraEra (NewEpochState DijkstraEra) = Network
-  toSpecRep (NewEpochState {..}) = do
+  toSpecRep nes@(NewEpochState {..}) = do
     netId <- askSpecTransM
     withCtxSpecTransM () $
       Agda.MkNewEpochState
@@ -130,7 +130,7 @@ instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
         <*> toSpecRep nesBcur
         <*> withCtxSpecTransM netId (toSpecRep nesEs)
         <*> toSpecRep nesRu
-        <*> (filterZeroEntries <$> toSpecRep nesPd)
+        <*> (filterZeroEntries <$> toSpecRep (nes ^. nesStakePoolDistrG))
     where
       filterZeroEntries (Agda.MkHSMap lst) =
         Agda.MkHSMap $ filter ((/= 0) . snd) lst

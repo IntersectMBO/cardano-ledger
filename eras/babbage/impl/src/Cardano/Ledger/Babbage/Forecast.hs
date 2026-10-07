@@ -15,6 +15,8 @@ module Cardano.Ledger.Babbage.Forecast (
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.State.CertState ()
+import Cardano.Ledger.Babbage.State.Stake ()
+import Cardano.Ledger.Babbage.TxOut ()
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Forecast (
@@ -25,7 +27,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   curPParamsEpochStateL,
   nesEsL,
-  nesPdL,
+  nesStakePoolDistrG,
  )
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.State (EraGov, PoolDistr (..))
@@ -57,7 +59,7 @@ mkBabbageForecast ::
   BabbageForecast t era
 mkBabbageForecast nes =
   BabbageForecast
-    { bfPoolDistr = nes ^. nesPdL
+    { bfPoolDistr = nes ^. nesStakePoolDistrG
     , bfMaxBlockHeaderSize = nes ^. nesEsL . curPParamsEpochStateL . ppMaxBHSizeL
     , bfMaxBlockBodySize = nes ^. nesEsL . curPParamsEpochStateL . ppMaxBBSizeL
     , bfProtocolVersion = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL

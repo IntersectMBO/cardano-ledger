@@ -238,7 +238,7 @@ epochTransition = do
         , eNo
         )
   let
-    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
+    stakePoolDistr = msStakePoolDistr (ssStakeMark snapshots1)
     epochState3 = epochState2 & esSnapshotsL .~ snapshots1
   liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState3
 

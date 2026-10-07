@@ -64,7 +64,6 @@ instance TranslateEra AllegraEra NewEpochState where
         , nesBcur = nesBcur nes
         , nesEs = translateEra' ctxt $ returnRedeemAddrsToReserves $ nesEs nes
         , nesRu = nesRu nes
-        , nesPd = nesPd nes
         , -- At this point, the consensus layer has passed in our stashed AVVM
           -- addresses as our UTxO, and we have deleted them above (with
           -- 'returnRedeemAddrsToReserves'), so we may safely discard this map.

@@ -28,7 +28,6 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   rewardUpdate,
   pulserUpdate,
   applyRewardUpdate,
-  setPoolDistr,
   setOCertCounter,
   newSnapshot,
   incrBlockCount,
@@ -530,26 +529,13 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
         { -- 'newSnapshot' is applied before 'newEpoch', so the epoch being
           -- entered -- the one the SNAP rule stamps on the fresh mark -- is the
           -- successor of the state's current epoch.
-          ssStakeMark = MarkSnapShot snap (succ (nesEL nes)) 0
-        , ssStakeMarkPoolDistr = calculatePoolDistr snap
-        , ssStakeSet = mkSetSnapShot ssMark (EpochInterval 0)
+          ssStakeMark = mkMarkSnapShot snap (succ (nesEL nes)) 0 (EpochInterval 0)
+        , ssStakeSet = mkSetSnapShot ssMark
         , ssStakeGo = mkGoSnapShot ssSet
         , ssFee = fee
         }
     es' = es {esSnapshots = snaps}
     nes' = nes {nesEs = es'}
-
--- | = Set Pool Distribution
---
--- Set the stake pool distribution to the given one.
-setPoolDistr ::
-  forall era.
-  PoolDistr ->
-  ChainState era ->
-  ChainState era
-setPoolDistr pd cs = cs {chainNes = nes'}
-  where
-    nes' = (chainNes cs) {nesPd = pd}
 
 -- | = Set Operation Certificate Counter
 --
