@@ -2,7 +2,7 @@
 
 ## 1.12.0.0
 
-*
+* Re-export the protected-output rejection failure from `AllegraUtxoPredFailure`
 
 ### `testlib`
 

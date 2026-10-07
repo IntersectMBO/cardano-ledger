@@ -9,6 +9,7 @@ import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Data.AssocMap as PAMD
 import qualified PlutusTx.Data.List as PLD
+import qualified PlutusTx.List as PL
 import qualified PlutusTx.Prelude as P
 
 alwaysSucceedsNoDatumQ :: Q [Dec]
@@ -141,10 +142,18 @@ purposeIsWellformedNoDatumQ =
               , PV4D.txInfoWithdrawals = infoWithdrawals
               , PV4D.txInfoGuards = infoGuards
               , PV4D.txInfoSubTxIx = infoSubTxIx
+              , PV4D.txInfoOutputs = infoOutputs
               }
             _redeemer
             scriptInfo
             sh -> case scriptInfo of
+              PV4D.ReceivingScript ->
+                PLD.any
+                  ( \output -> case PV4D.txOutAddress output of
+                      PV4D.AddressProtected (PV4D.ScriptCredential recipient) _ -> recipient P.== sh
+                      _ -> False
+                  )
+                  infoOutputs
               PV4D.MintingScript cs ->
                 PAMD.member cs $ PV4D.getValue $ PV4D.mintValueMinted infoMint
               -- Expecting No Datum, therefore should fail when it is supplied
@@ -252,4 +261,26 @@ ensureTreasuryReserveQ =
                   Just treasury -> treasury P.- totalWithdrawal P.>= 100_000_000
                   _ -> False
           _ -> False
+    |]
+
+-- | The same validator authorizes creation and later spending. Receiving checks
+-- every protected output for its own hash; no datum is supplied implicitly.
+receivingEvenDatumQ :: Q [Dec]
+receivingEvenDatumQ =
+  [d|
+    receivingEvenDatum :: P.BuiltinData -> P.BuiltinUnit
+    receivingEvenDatum arg =
+      let PV4D.ScriptContext txInfo _redeemer scriptInfo scriptHash = unsafeFromBuiltinData arg
+          evenDatum datum = case fromBuiltinData datum of
+            Just i -> P.modInteger i 2 P.== 0
+            Nothing -> False
+          validOutput (_index, output) = case PV4D.txOutDatum output of
+            PV4D.OutputDatum (PV4D.Datum datum) -> evenDatum datum
+            _ -> False
+       in P.check $ case scriptInfo of
+            PV4D.ReceivingScript ->
+              let outputs = PV4D.protectedOutputsAt scriptHash txInfo
+               in P.not (PL.null outputs) P.&& PL.all validOutput outputs
+            PV4D.SpendingScript _ (Just (PV4D.Datum datum)) -> evenDatum datum
+            _ -> False
     |]

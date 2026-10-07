@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.10.2.1
+## 1.11.0.0
 
-*
+* Add `UnsupportedOutputAddresses` to `AllegraUtxoPredFailure` and preserve it when converting Shelley failures
 
 ## 1.10.2.0
 

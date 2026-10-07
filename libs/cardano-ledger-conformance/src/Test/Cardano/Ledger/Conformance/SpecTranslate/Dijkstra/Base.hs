@@ -340,6 +340,7 @@ instance SpecTranslate DijkstraEra (DijkstraPlutusPurpose AsIx DijkstraEra) wher
     DijkstraVoting (AsIx i) -> pure (Agda.Vote, toInteger i)
     DijkstraProposing (AsIx i) -> pure (Agda.Propose, toInteger i)
     DijkstraGuarding (AsIx i) -> pure (Agda.Guard, toInteger i)
+    DijkstraReceiving (AsIx i) -> pure (Agda.Receive, toInteger i)
 
 instance SpecTranslate DijkstraEra (Redeemers DijkstraEra) where
   type

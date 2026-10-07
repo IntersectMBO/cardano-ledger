@@ -112,8 +112,8 @@ applyUTxOConwayInstantStake f (UTxO u) instantInstantStake =
           final -> Just final
     accum ans@(ConwayInstantStake {cisCredentialStake}) out =
       let cc = out ^. compactCoinTxOutL
-       in case out ^. addrTxOutL of
-            Addr _ _ (StakeRefBase stakingKeyHash) ->
+       in case shelleyAddressView (out ^. addrTxOutL) of
+            Just (_, _, _, StakeRefBase stakingKeyHash) ->
               ConwayInstantStake
                 { cisCredentialStake = Map.alter (keepOrDeleteCompact cc) stakingKeyHash cisCredentialStake
                 }

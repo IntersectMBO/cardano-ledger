@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.17.1.0
+## 1.18.0.0
 
-*
+* Add `UnsupportedOutputAddresses` to `AlonzoUtxoPredFailure` and preserve it when converting Allegra failures
+* Add `evalTxExUnitsWithLogsFromLedgerTxInfo` for evaluating scripts with an explicit ledger context
 
 ### `testlib`
 

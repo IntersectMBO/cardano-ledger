@@ -40,10 +40,6 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBUTXO,
  )
-import Cardano.Ledger.Dijkstra.Rules.Utxo (
-  DijkstraUtxoPredFailure (..),
-  conwayToDijkstraUtxoPredFailure,
- )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
@@ -95,6 +91,7 @@ data DijkstraSubUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     SubBabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
+  | SubUnsupportedOutputAddresses (NonEmptySet Word32)
   deriving (Generic)
 
 deriving stock instance
@@ -137,34 +134,27 @@ type instance EraRuleEvent "SUBUTXO" DijkstraEra = DijkstraSubUtxoEvent Dijkstra
 
 instance InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure DijkstraEra
 
-instance InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra where
-  injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure
-
 instance InjectRuleFailure "SUBUTXO" Conway.ConwayUtxoPredFailure DijkstraEra where
-  injectFailure = dijkstraUtxoToDijkstraSubUtxoPredFailure . conwayToDijkstraUtxoPredFailure
+  injectFailure = conwayUtxoToDijkstraSubUtxoPredFailure
 
 instance InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure DijkstraEra where
   injectFailure =
-    dijkstraUtxoToDijkstraSubUtxoPredFailure
-      . conwayToDijkstraUtxoPredFailure
+    conwayUtxoToDijkstraSubUtxoPredFailure
       . Conway.alonzoToConwayUtxoPredFailure
 
 instance InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure DijkstraEra where
   injectFailure =
-    dijkstraUtxoToDijkstraSubUtxoPredFailure
-      . conwayToDijkstraUtxoPredFailure
+    conwayUtxoToDijkstraSubUtxoPredFailure
       . Conway.babbageToConwayUtxoPredFailure
 
 instance InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure DijkstraEra where
   injectFailure =
-    dijkstraUtxoToDijkstraSubUtxoPredFailure
-      . conwayToDijkstraUtxoPredFailure
+    conwayUtxoToDijkstraSubUtxoPredFailure
       . Conway.allegraToConwayUtxoPredFailure
 
 instance InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure DijkstraEra where
   injectFailure =
-    dijkstraUtxoToDijkstraSubUtxoPredFailure
-      . conwayToDijkstraUtxoPredFailure
+    conwayUtxoToDijkstraSubUtxoPredFailure
       . Conway.allegraToConwayUtxoPredFailure
       . Allegra.shelleyToAllegraUtxoPredFailure
 
@@ -245,6 +235,7 @@ dijkstraSubUtxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxoState) inputs
 
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
+  runTestOnSignal $ Shelley.validateSupportedAddresses pp allOutputs
 
   runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
 
@@ -279,6 +270,7 @@ instance
       SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
       SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
+      SubUnsupportedOutputAddresses addrs -> Sum SubUnsupportedOutputAddresses 11 !> To addrs
 
 instance
   ( Era era
@@ -299,31 +291,35 @@ instance
     8 -> SumD SubWrongNetworkInTxBody <! From
     9 -> SumD SubOutsideForecast <! From
     10 -> SumD SubBabbageOutputTooSmallUTxO <! From
+    11 -> SumD SubUnsupportedOutputAddresses <! From
     n -> Invalid n
 
-dijkstraUtxoToDijkstraSubUtxoPredFailure ::
-  DijkstraUtxoPredFailure era -> DijkstraSubUtxoPredFailure era
-dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
-  UtxosFailure _ -> error "Impossible: `UtxosFailure` for SUBUTXO"
-  BadInputsUTxO x -> SubBadInputsUTxO x
-  OutsideValidityIntervalUTxO vi slotNo -> SubOutsideValidityIntervalUTxO vi slotNo
-  MaxTxSizeUTxO m -> SubMaxTxSizeUTxO m
-  InputSetEmptyUTxO -> SubInputSetEmptyUTxO
-  FeeTooSmallUTxO _ -> error "Impossible: `FeeTooSmallUTxO` for SUBUTXO"
-  ValueNotConservedUTxO _ -> error "Impossible: `ValueNotConservedUTxO` for SUBUTXO"
-  WrongNetwork x y -> SubWrongNetwork x y
-  OutputBootAddrAttrsTooBig xs -> SubOutputBootAddrAttrsTooBig xs
-  OutputTooBigUTxO xs -> SubOutputTooBigUTxO xs
-  InsufficientCollateral _ _ -> error "Impossible: `InsufficientCollateral` for SUBUTXO"
-  ScriptsNotPaidUTxO _ -> error "Impossible: `ScriptsNotPaidUTxO` for SUBUTXO"
-  ExUnitsTooBigUTxO _ -> error "Impossible: `ExUnitsTooBigUTxO` for SUBUTXO"
-  CollateralContainsNonADA _ -> error "Impossible: `CollateralContainsNonADA` for SUBUTXO"
-  WrongNetworkInTxBody m -> SubWrongNetworkInTxBody m
-  OutsideForecast sno -> SubOutsideForecast sno
-  TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
-  NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
-  IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
-  BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
-  BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
-  PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
-  ValueNotConservedInLegacyMode _ -> error "Impossible: `ValueNotConservedInLegacyMode` for SUBUTXO"
+-- | Map the shared checks directly, keeping top-only Dijkstra failures outside
+-- the child rule's injection domain.
+conwayUtxoToDijkstraSubUtxoPredFailure ::
+  Conway.ConwayUtxoPredFailure era -> DijkstraSubUtxoPredFailure era
+conwayUtxoToDijkstraSubUtxoPredFailure = \case
+  Conway.UtxosFailure _ -> error "Impossible: `UtxosFailure` for SUBUTXO"
+  Conway.BadInputsUTxO x -> SubBadInputsUTxO x
+  Conway.OutsideValidityIntervalUTxO vi slotNo -> SubOutsideValidityIntervalUTxO vi slotNo
+  Conway.MaxTxSizeUTxO m -> SubMaxTxSizeUTxO m
+  Conway.InputSetEmptyUTxO -> SubInputSetEmptyUTxO
+  Conway.FeeTooSmallUTxO _ -> error "Impossible: `FeeTooSmallUTxO` for SUBUTXO"
+  Conway.ValueNotConservedUTxO _ -> error "Impossible: `ValueNotConservedUTxO` for SUBUTXO"
+  Conway.WrongNetwork x y -> SubWrongNetwork x y
+  Conway.WrongNetworkWithdrawal _ _ -> error "Impossible: `WrongNetworkWithdrawal` for SUBUTXO"
+  Conway.OutputTooSmallUTxO _ -> error "Impossible: `OutputTooSmallUTxO` for SUBUTXO"
+  Conway.OutputBootAddrAttrsTooBig xs -> SubOutputBootAddrAttrsTooBig xs
+  Conway.UnsupportedOutputAddresses indexes -> SubUnsupportedOutputAddresses indexes
+  Conway.OutputTooBigUTxO xs -> SubOutputTooBigUTxO xs
+  Conway.InsufficientCollateral _ _ -> error "Impossible: `InsufficientCollateral` for SUBUTXO"
+  Conway.ScriptsNotPaidUTxO _ -> error "Impossible: `ScriptsNotPaidUTxO` for SUBUTXO"
+  Conway.ExUnitsTooBigUTxO _ -> error "Impossible: `ExUnitsTooBigUTxO` for SUBUTXO"
+  Conway.CollateralContainsNonADA _ -> error "Impossible: `CollateralContainsNonADA` for SUBUTXO"
+  Conway.WrongNetworkInTxBody m -> SubWrongNetworkInTxBody m
+  Conway.OutsideForecast sno -> SubOutsideForecast sno
+  Conway.TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
+  Conway.NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
+  Conway.IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
+  Conway.BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
+  Conway.BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"

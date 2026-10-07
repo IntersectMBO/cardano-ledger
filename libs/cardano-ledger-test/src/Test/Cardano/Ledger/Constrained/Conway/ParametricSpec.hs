@@ -175,6 +175,8 @@ txOutSpec univ delegs txOut =
         )
         -- BootstrapAddress -> Addr
         (branchW 1 $ \bootstrapAddr -> satisfies bootstrapAddr (witBootstrapAddress univ))
+        -- These specifications describe valid Shelley through Conway outputs.
+        (branch $ \_network _payCred _stakeRef -> False)
     ]
 
 -- | Generate random Stake references that have a high probability of being delegated.

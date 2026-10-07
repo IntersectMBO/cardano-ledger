@@ -2,6 +2,7 @@
 
 ## 0.3.0.0
 
+* Widen the `cardano-ledger-core` upper bound to `<1.24` to support its protected-address release.
 * Change the Leios `HeaderBody` in `Cardano.Protocol.Leios.BlockHeader` to a memoized type:
   - Add `HeaderBodyRaw`, `HeaderBodyConstr` and `mkHeaderBody`
   - Change `HeaderBody` from a record type to a newtype over `MemoBytes (HeaderBodyRaw crypto)` with a read-only `HeaderBody` pattern synonym

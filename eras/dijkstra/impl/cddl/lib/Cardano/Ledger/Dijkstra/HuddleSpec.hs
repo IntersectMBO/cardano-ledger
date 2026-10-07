@@ -383,6 +383,7 @@ dijkstraRedeemerTagRule pname =
     / (int 4 //- "voting")
     / (int 5 //- "proposing")
     / (int 6 //- "guarding")
+    / (int 7 //- "receiving")
 
 auxiliaryDataMapRule ::
   forall era.

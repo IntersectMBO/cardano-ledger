@@ -239,4 +239,12 @@ allTestScripts =
         PlutusV4 -> Just V4.inputsOverlapsWithRefInputsBytes
     , "Script that succeeds only if any the inputs also appears in the reference inputs" :| []
     )
+  ,
+    ( "receivingEvenDatum"
+    , \case
+        PlutusV4 -> Just V4.receivingEvenDatumBytes
+        _ -> Nothing
+    , "V4 validator that checks every protected Receiving output for an even inline datum."
+        :| ["Also supports Spending with an even datum; all other purposes fail."]
+    )
   ]

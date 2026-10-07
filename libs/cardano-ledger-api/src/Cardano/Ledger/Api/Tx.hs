@@ -72,6 +72,10 @@ module Cardano.Ledger.Api.Tx (
   RedeemerReport,
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
+  evalDijkstraTxExUnits,
+  evalDijkstraTxExUnitsWithLogs,
+  DijkstraRedeemerReport,
+  DijkstraRedeemerReportWithLogs,
   TransactionScriptFailure (..),
 
   -- * Upgrade
@@ -94,9 +98,13 @@ import Cardano.Ledger.Alonzo.Tx (
  )
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Scripts.ExUnits (
+  DijkstraRedeemerReport,
+  DijkstraRedeemerReportWithLogs,
   RedeemerReport,
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
+  evalDijkstraTxExUnits,
+  evalDijkstraTxExUnitsWithLogs,
   evalTxExUnits,
   evalTxExUnitsWithLogs,
  )

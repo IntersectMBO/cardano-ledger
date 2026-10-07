@@ -85,6 +85,8 @@ data AllegraUtxoPredFailure era
       (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
   | OutputTooBigUTxO
       (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
+  | -- | Body-local output indexes whose addresses are unsupported, including protected pointers.
+    UnsupportedOutputAddresses (NonEmptySet Word32)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" AllegraEra = AllegraUtxoPredFailure AllegraEra
@@ -219,6 +221,8 @@ utxoTransition = do
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTest $ Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
+
+  runTest $ Shelley.validateSupportedAddresses pp (Map.elems (unUTxO outputs))
 
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
@@ -356,6 +360,7 @@ instance
       WrongNetworkWithdrawal right wrongs -> Sum WrongNetworkWithdrawal 9 !> To right !> To wrongs
       OutputBootAddrAttrsTooBig outs -> Sum OutputBootAddrAttrsTooBig 10 !> To outs
       OutputTooBigUTxO outs -> Sum OutputTooBigUTxO 12 !> To outs
+      UnsupportedOutputAddresses indexes -> Sum UnsupportedOutputAddresses 13 !> To indexes
 
 instance
   ( EraTxOut era
@@ -376,6 +381,7 @@ instance
     9 -> SumD WrongNetworkWithdrawal <! From <! From
     10 -> SumD OutputBootAddrAttrsTooBig <! From
     12 -> SumD OutputTooBigUTxO <! From
+    13 -> SumD UnsupportedOutputAddresses <! From
     k -> Invalid k
 
 shelleyToAllegraUtxoPredFailure :: Shelley.ShelleyUtxoPredFailure era -> AllegraUtxoPredFailure era
@@ -392,3 +398,4 @@ shelleyToAllegraUtxoPredFailure = \case
   Shelley.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Shelley.UpdateFailure x -> UpdateFailure x
   Shelley.OutputBootAddrAttrsTooBig outs -> OutputBootAddrAttrsTooBig outs
+  Shelley.UnsupportedOutputAddresses indexes -> UnsupportedOutputAddresses indexes

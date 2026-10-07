@@ -90,6 +90,8 @@ instance SpecTranslate DijkstraEra (TxBody TopTx DijkstraEra) where
         <$> toSpecRep (txb ^. inputsTxBodyL)
         <*> toSpecRep (txb ^. referenceInputsTxBodyL)
         <*> toSpecRep (txb ^. collateralInputsTxBodyL)
+        <*> toSpecRep (txb ^. collateralReturnTxBodyL)
+        <*> toSpecRep (txb ^. totalCollateralTxBodyL)
         <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
         <*> toSpecRep txId
         <*> toSpecRep (txb ^. certsTxBodyL)

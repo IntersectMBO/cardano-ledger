@@ -200,9 +200,6 @@ instance InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure Dijkstra
 instance InjectRuleFailure "SUBENTITIES" EntitiesPredFailure DijkstraEra where
   injectFailure = entitiesToSubEntitiesPredFailure
 
-instance InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure DijkstraEra where
-  injectFailure = injectFailure @"SUBENTITIES" @EntitiesPredFailure . injectFailure @"ENTITIES"
-
 instance
   ( EraTx era
   , DijkstraEraTxBody era
@@ -214,7 +211,6 @@ instance
   , EraRule "SUBENTITIES" era ~ SUBENTITIES era
   , InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure era
   , InjectRuleFailure "SUBENTITIES" EntitiesPredFailure era
-  , InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   STS (SUBENTITIES era)
@@ -241,7 +237,6 @@ dijkstraSubEntitiesTransition ::
   , EraRule "SUBENTITIES" era ~ SUBENTITIES era
   , InjectRuleFailure "SUBENTITIES" SubEntitiesPredFailure era
   , InjectRuleFailure "SUBENTITIES" EntitiesPredFailure era
-  , InjectRuleFailure "SUBENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   TransitionRule (SUBENTITIES era)
@@ -255,7 +250,11 @@ dijkstraSubEntitiesTransition = do
 
   network <- liftSTS $ asks networkId
 
-  runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
+  runTest $
+    Shelley.validateWrongNetworkWithdrawalWith
+      SubWithdrawalAddressesWithWrongNetwork
+      network
+      (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
   runTest $ validateAccountBalanceIntervals network accounts (tx ^. bodyTxL)
   runTest $ validateMissingOriginalAccountsInWithdrawals withdrawals network originalAccounts

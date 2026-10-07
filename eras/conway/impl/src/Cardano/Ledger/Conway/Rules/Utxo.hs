@@ -146,6 +146,8 @@ data ConwayUtxoPredFailure era
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
       (NonEmpty TxIn)
+  | -- | Body-local output indexes whose addresses are unsupported, including protected pointers.
+    UnsupportedOutputAddresses (NonEmptySet Word32)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" ConwayEra = ConwayUtxoPredFailure ConwayEra
@@ -346,6 +348,7 @@ instance
       IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 20 !> To c1 !> To c2
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
+      UnsupportedOutputAddresses indexes -> Sum UnsupportedOutputAddresses 23 !> To indexes
 
 instance
   ( Era era
@@ -380,6 +383,7 @@ instance
     20 -> SumD IncorrectTotalCollateralField <! From <! From
     21 -> SumD BabbageOutputTooSmallUTxO <! From
     22 -> SumD BabbageNonDisjointRefInputs <! From
+    23 -> SumD UnsupportedOutputAddresses <! From
     n -> Invalid n
 
 -- =====================================================
@@ -411,6 +415,7 @@ alonzoToConwayUtxoPredFailure = \case
   Alonzo.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Alonzo.UtxosFailure x -> UtxosFailure x
   Alonzo.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
+  Alonzo.UnsupportedOutputAddresses indexes -> UnsupportedOutputAddresses indexes
   Alonzo.OutputTooBigUTxO xs -> OutputTooBigUTxO xs
   Alonzo.InsufficientCollateral c1 c2 -> InsufficientCollateral c1 c2
   Alonzo.ScriptsNotPaidUTxO u -> ScriptsNotPaidUTxO u
@@ -438,6 +443,7 @@ allegraToConwayUtxoPredFailure = \case
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> absurdEraRule @"PPUP" @era x
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
+  Allegra.UnsupportedOutputAddresses indexes -> UnsupportedOutputAddresses indexes
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)
 
 instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where

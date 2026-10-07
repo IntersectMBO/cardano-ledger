@@ -9,13 +9,20 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec (spec) where
 
-import Cardano.Ledger.Address (bootstrapKeyHash)
+import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
-import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (
+  Inject (..),
+  Mismatch (..),
+  Network (..),
+  SlotNo (..),
+  StrictMaybe (..),
+ )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   Vote (..),
@@ -170,6 +177,24 @@ spec = describe "SUBUTXOW" $ do
         [injectFailure . SubMissingTxBodyMetadataHash @era $ hashTxAuxData auxData]
 
   describe "SubExtraRedeemers" $ do
+    it "for native Receiving, which takes no redeemer" $ do
+      scriptHash <- impAddNativeScript $ RequireAllOf []
+      collateralInput <- makeCollateralInput
+      redeemerData <- arbitrary
+      let extraPurpose = mkReceivingPurpose $ AsIx 0
+          subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL
+                  .~ [mkCoinTxOut (AddrProtected Testnet (ScriptHashObj scriptHash) StakeRefNull) (Coin 2_000_000)]
+          topTx = mkTopTxWithSubTxs [subTx] & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
+          addExtraRedeemer =
+            (fixupPPHash >=> rederiveAddrTxWits)
+              . (witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0))
+      withPostFixupSubTxs addExtraRedeemer $
+        submitFailingTx topTx [injectFailure $ SubExtraRedeemers @era [extraPurpose]]
+
     it "for a native script, which takes no redeemer" $ do
       scriptHash <- impAddNativeScript $ RequireAllOf []
       txIn <- produceScript scriptHash
@@ -440,6 +465,18 @@ missingVKeyWitnessSources =
         pure (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn], asWitness keyHash)
     )
   ,
+    ( "creating a protected payment key output"
+    , do
+        keyHash <- freshKeyHash @Payment
+        pure
+          ( mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL
+                  .~ [mkCoinTxOut (AddrProtected Testnet (KeyHashObj keyHash) StakeRefNull) (Coin 2_000_000)]
+          , asWitness keyHash
+          )
+    )
+  ,
     ( "unregistering a staking credential"
     , do
         keyHash <- freshKeyHash
@@ -512,6 +549,18 @@ failingNativeScriptPurposes =
         scriptHash <- unsatisfiableTimeLock
         txIn <- produceScript scriptHash
         pure (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn], scriptHash)
+    )
+  ,
+    ( "receiving"
+    , do
+        scriptHash <- unsatisfiableTimeLock
+        pure
+          ( mkBasicTx $
+              mkBasicTxBody
+                & outputsTxBodyL
+                  .~ [mkCoinTxOut (AddrProtected Testnet (ScriptHashObj scriptHash) StakeRefNull) (Coin 2_000_000)]
+          , scriptHash
+          )
     )
   ,
     ( "certifying"

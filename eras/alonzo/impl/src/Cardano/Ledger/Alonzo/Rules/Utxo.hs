@@ -42,6 +42,7 @@ import Cardano.Ledger.Address (
   CompactAddr,
   isBootstrapCompactAddr,
   isPayCredScriptCompactAddr,
+  shelleyAddressView,
  )
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -176,6 +177,8 @@ data AlonzoUtxoPredFailure era
   | -- | There are too many collateral inputs
     TooManyCollateralInputs (Mismatch RelLTEQ Word16)
   | NoCollateralInputs
+  | -- | Body-local output indexes whose addresses are unsupported, including protected pointers.
+    UnsupportedOutputAddresses (NonEmptySet Word32)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" AlonzoEra = AlonzoUtxoPredFailure AlonzoEra
@@ -264,8 +267,9 @@ instance
 -- script-locked address.
 isKeyHashAddr :: Addr -> Bool
 isKeyHashAddr (AddrBootstrap _) = True
-isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
-isKeyHashAddr _ = False
+isKeyHashAddr addr = case shelleyAddressView addr of
+  Just (_, _, KeyHashObj _, _) -> True
+  _ -> False
 
 -- | This is equivalent to `isKeyHashAddr`, but for compacted version of an address.
 isKeyHashCompactAddr :: CompactAddr -> Bool
@@ -561,6 +565,8 @@ utxoTransition = do
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig outputs
 
+  runTestOnSignal $ Shelley.validateSupportedAddresses pp outputs
+
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
@@ -694,6 +700,8 @@ encFail (TooManyCollateralInputs m) =
   Sum TooManyCollateralInputs 19 !> To m
 encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
+encFail (UnsupportedOutputAddresses indexes) =
+  Sum UnsupportedOutputAddresses 21 !> To indexes
 
 decFail ::
   ( DecCBOR (TxOut era)
@@ -722,6 +730,7 @@ decFail 17 = SumD WrongNetworkInTxBody <! From
 decFail 18 = SumD OutsideForecast <! From
 decFail 19 = SumD TooManyCollateralInputs <! From
 decFail 20 = SumD NoCollateralInputs
+decFail 21 = SumD UnsupportedOutputAddresses <! From
 decFail n = Invalid n
 
 instance
@@ -757,6 +766,7 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
   Allegra.UpdateFailure x -> UtxosFailure (injectFailure @"UTXOS" @t x)
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
+  Allegra.UnsupportedOutputAddresses indexes -> UnsupportedOutputAddresses indexes
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (fmap (0,0,) xs)
 
 updateUTxOState ::

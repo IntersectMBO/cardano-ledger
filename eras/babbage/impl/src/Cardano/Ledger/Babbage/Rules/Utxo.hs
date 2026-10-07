@@ -406,6 +406,8 @@ babbageUtxoValidation = do
   {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
+  runTestOnSignal $ Shelley.validateSupportedAddresses pp allOutputs
+
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}

@@ -92,7 +92,12 @@ instance SpecTranslate era Addr where
 
   toSpecRep (Addr nw pc sr) =
     Left
-      <$> (Agda.BaseAddr <$> toSpecRep nw <*> toSpecRep pc <*> toSpecRep sr)
+      <$> (Agda.BaseAddr <$> toSpecRep nw <*> toSpecRep pc <*> toSpecRep sr <*> pure False)
+  toSpecRep (AddrProtected _ _ (StakeRefPtr _)) =
+    throwError "The executable specification does not represent protected stake pointers"
+  toSpecRep (AddrProtected nw pc sr) =
+    Left
+      <$> (Agda.BaseAddr <$> toSpecRep nw <*> toSpecRep pc <*> toSpecRep sr <*> pure True)
   toSpecRep (AddrBootstrap ba) = Right <$> toSpecRep ba
 
 instance SpecTranslate era (Hash a b) where

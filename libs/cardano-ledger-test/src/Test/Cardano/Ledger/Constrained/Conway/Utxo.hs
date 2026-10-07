@@ -230,6 +230,7 @@ correctAddrAndWFCoin txOut =
                 (branch $ \_ -> False)
                 (branch $ \_ -> True)
         )
+        (branch $ \_network _payCred _stakeRef -> False)
     ]
 
 genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)

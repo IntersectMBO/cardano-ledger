@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,7 +20,7 @@ module Cardano.Ledger.CanonicalState.Namespace.UTxO.V0 (
   mkUtxo,
 ) where
 
-import Cardano.Ledger.Binary (decodeFull', encCBOR, serialize')
+import Cardano.Ledger.Binary (decNoShareCBOR, decodeFullDecoder', encCBOR, serialize')
 import Cardano.Ledger.CanonicalState.BasicTypes
 import Cardano.Ledger.Core (EraScript, EraTxOut, TxOut, eraProtVerLow)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -81,4 +82,6 @@ mkUtxo txOut =
   UtxoOut $ OnChain txOut $ serialize' (eraProtVerLow @era) (encCBOR txOut)
 
 instance (EraTxOut era, EraScript era, TxOut era ~ x) => DecodeOnChain "utxo/v0" x where
-  decodeOnChain = either (fail . show) pure . decodeFull' (eraProtVerLow @era)
+  -- Canonical state restores persisted outputs. In particular, addresses must
+  -- use the stored-state policy rather than transaction-era admission.
+  decodeOnChain = either (fail . show) pure . decodeFullDecoder' (eraProtVerLow @era) "stored TxOut" decNoShareCBOR

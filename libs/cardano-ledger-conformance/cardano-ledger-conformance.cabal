@@ -142,6 +142,7 @@ test-suite tests
     Test.Cardano.Ledger.Conformance.Spec.Conway
     Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify
     Test.Cardano.Ledger.Conformance.Spec.Core
+    Test.Cardano.Ledger.Conformance.Spec.Dijkstra.Receiving
 
   default-language: Haskell2010
   ghc-options:

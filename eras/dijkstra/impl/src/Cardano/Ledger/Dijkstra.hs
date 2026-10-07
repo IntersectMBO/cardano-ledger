@@ -16,6 +16,10 @@ module Cardano.Ledger.Dijkstra (
   DijkstraEra,
   ApplyTxError (..),
   mkDijkstraStAnnTopTx,
+  evalDijkstraTxExUnits,
+  evalDijkstraTxExUnitsWithLogs,
+  DijkstraRedeemerReport,
+  DijkstraRedeemerReportWithLogs,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -26,6 +30,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   toScriptHashByPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  TransactionScriptFailure,
+  evalTxExUnitsWithLogsFromLedgerTxInfo,
   scriptsWithContextFromLedgerTxInfo,
   scriptsWithContextFromLedgerTxInfoWithResult,
  )
@@ -34,7 +40,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
  )
-import Cardano.Ledger.BaseTypes (Inject (inject), TxIx (..))
+import Cardano.Ledger.BaseTypes (Inject (inject), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader, LeiosBbodySignal (..), LeiosEraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
@@ -59,7 +65,7 @@ import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Dijkstra.UTxO ()
-import Cardano.Ledger.Plutus (Language (..), plutusLanguage)
+import Cardano.Ledger.Plutus (ExUnits, Language (..), plutusLanguage)
 import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
   ApplyTick (..),
@@ -68,6 +74,7 @@ import Cardano.Ledger.Shelley.API (
   defaultReapplyValidatedTx,
  )
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO)
+import Cardano.Ledger.TxIn (TxId)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Foldable (toList)
@@ -211,3 +218,94 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache txIx
             txInfoResult
             (pp ^. ppCostModelsL)
       }
+
+-- | Execution estimates indexed by body identity and body-local redeemer
+-- pointer. 'SNothing' identifies the top-level body; 'SJust' contains a child's
+-- transaction id, so identical pointers in distinct bodies remain distinct.
+type DijkstraRedeemerReport era =
+  Map.Map
+    (StrictMaybe TxId, PlutusPurpose AsIx era)
+    (Either (TransactionScriptFailure era) ExUnits)
+
+type DijkstraRedeemerReportWithLogs era =
+  Map.Map
+    (StrictMaybe TxId, PlutusPurpose AsIx era)
+    (Either (TransactionScriptFailure era) ([Text], ExUnits))
+
+-- | Estimate every body in a Dijkstra batch using its actual context.
+evalDijkstraTxExUnits ::
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , DijkstraEraTxBody era
+  , EraPlutusContext era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  ) =>
+  PParams era ->
+  Tx TopTx era ->
+  UTxO era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  DijkstraRedeemerReport era
+evalDijkstraTxExUnits pp tx utxo ei sysStart =
+  Map.map (fmap snd) $ evalDijkstraTxExUnitsWithLogs pp tx utxo ei sysStart
+
+-- | Batch execution estimates with logs. Witness/reference scripts are shared
+-- exactly as in validation. Each child's index and the parent's Guarding child
+-- views are supplied through the existing ledger context interface.
+evalDijkstraTxExUnitsWithLogs ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , DijkstraEraTxBody era
+  , EraPlutusContext era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  ) =>
+  PParams era ->
+  Tx TopTx era ->
+  UTxO era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  DijkstraRedeemerReportWithLogs era
+evalDijkstraTxExUnitsWithLogs pp tx utxo ei sysStart =
+  Map.unions $
+    estimate SNothing topInfo
+      : [estimate (SJust childId) childInfo | (childId, childInfo) <- childInfos]
+  where
+    protVer = pp ^. ppProtocolVersionL
+    provided = getScriptsProvided utxo tx
+    -- Reuse the existing resolver cache across all bodies in this estimation.
+    (scriptsCache, _) =
+      resolveNeededPlutusScriptsWithPurpose
+        protVer
+        provided
+        (getScriptsNeeded utxo (tx ^. bodyTxL))
+        mempty
+    childInfos =
+      [ (txIdTx child, mkInfo (LedgerSubTxInfo txIx) child)
+      | (txIx, child) <- zip [TxIx 0 ..] (toList (tx ^. bodyTxL . subTransactionsTxBodyL))
+      ]
+    topInfo =
+      mkInfo
+        (LedgerTopTxInfo (Map.fromList [(childId, mkTxInfoResult info) | (childId, info) <- childInfos]))
+        tx
+    mkInfo :: forall level. LedgerLevelTxInfo level era -> Tx level era -> LedgerTxInfo level era
+    mkInfo levelInfo bodyTx =
+      let
+        needed = getScriptsNeeded utxo (bodyTx ^. bodyTxL)
+        (_, scriptsUsed) = resolveNeededPlutusScriptsWithPurpose protVer provided needed scriptsCache
+       in
+        LedgerTxInfo
+          { ltiProtVer = protVer
+          , ltiEpochInfo = ei
+          , ltiSystemStart = sysStart
+          , ltiUTxO = utxo
+          , ltiTx = bodyTx
+          , ltiScriptsUsed = scriptsUsed
+          , ltiScriptHashesUsed = toScriptHashByPurpose scriptsUsed
+          , ltiLevelTxInfo = levelInfo
+          }
+    estimate ::
+      forall level. StrictMaybe TxId -> LedgerTxInfo level era -> DijkstraRedeemerReportWithLogs era
+    estimate bodyId =
+      Map.mapKeysMonotonic (\pointer -> (bodyId, pointer))
+        . evalTxExUnitsWithLogsFromLedgerTxInfo pp provided

@@ -18,8 +18,12 @@ module Test.Cardano.Ledger.Dijkstra.Arbitrary (
   genNonEmptyAccountBalanceIntervals,
   genSmallDijkstraTxsBlockBody,
   genSmallDijkstraCertBlockBody,
+  genProtectedAddr,
+  genProtectedCompactAddr,
+  shrinkProtectedAddr,
 ) where
 
+import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr)
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -27,6 +31,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
 import Cardano.Ledger.Dijkstra.Core
@@ -56,6 +61,33 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
+
+-- | Opt-in generation for Receiving tests. The shared 'Arbitrary Addr' remains
+-- unprotected so historical-era transaction generators retain their domain.
+-- Callers shrink transactions around these addresses, preserving payment hashes
+-- and protection rather than applying a generic constructor-changing shrink.
+genProtectedAddr :: Gen Addr
+genProtectedAddr =
+  AddrProtected
+    <$> arbitrary
+    <*> arbitrary
+    <*> oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
+
+genProtectedCompactAddr :: Gen CompactAddr
+genProtectedCompactAddr = compactAddr <$> genProtectedAddr
+
+-- | Keep the protected payment destination fixed while simplifying staking.
+-- In particular, shrinking must not remove Receiving or change its hash/index
+-- relationship with the witnesses and redeemers supplied by a test.
+shrinkProtectedAddr :: Addr -> [Addr]
+shrinkProtectedAddr (AddrProtected network payment stakeRef) =
+  [ AddrProtected network payment smallerStake
+  | smallerStake <- shrink stakeRef
+  , case smallerStake of
+      StakeRefPtr _ -> False
+      _ -> True
+  ]
+shrinkProtectedAddr _ = []
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU

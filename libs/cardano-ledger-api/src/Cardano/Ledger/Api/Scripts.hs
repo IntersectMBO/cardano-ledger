@@ -28,6 +28,7 @@ module Cardano.Ledger.Api.Scripts (
   pattern AnyEraVotingPurpose,
   pattern AnyEraProposingPurpose,
   pattern AnyEraGuardingPurpose,
+  pattern AnyEraReceivingPurpose,
 
   -- * Alonzo
   AlonzoEraScript (
@@ -57,9 +58,11 @@ module Cardano.Ledger.Api.Scripts (
 
   -- * Dijkstra
   DijkstraEraScript (
-    toGuardingPurpose
+    toGuardingPurpose,
+    toReceivingPurpose
   ),
   pattern GuardingPurpose,
+  pattern ReceivingPurpose,
   AccountBalanceInterval (..),
   AccountBalanceIntervals (..),
 ) where
@@ -96,6 +99,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
   DijkstraEraScript (..),
   pattern GuardingPurpose,
+  pattern ReceivingPurpose,
  )
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Mary.Value (PolicyID)
@@ -152,6 +156,11 @@ class EraScript era => AnyEraScript era where
     DijkstraEraScript era => PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
   anyEraToGuardingPurpose = toGuardingPurpose
 
+  anyEraToReceivingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+  default anyEraToReceivingPurpose ::
+    DijkstraEraScript era => PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+  anyEraToReceivingPurpose = toReceivingPurpose
+
 {-# DEPRECATED anyEraToRewardingPurpose "In favor of `anyEraToWithdrawingPurpose`" #-}
 
 instance AnyEraScript ShelleyEra where
@@ -164,6 +173,7 @@ instance AnyEraScript ShelleyEra where
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
+  anyEraToReceivingPurpose = const Nothing
 
 instance AnyEraScript AllegraEra where
   anyEraMaxLanguage = Nothing
@@ -175,6 +185,7 @@ instance AnyEraScript AllegraEra where
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
+  anyEraToReceivingPurpose = const Nothing
 
 instance AnyEraScript MaryEra where
   anyEraMaxLanguage = Nothing
@@ -186,19 +197,23 @@ instance AnyEraScript MaryEra where
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
+  anyEraToReceivingPurpose = const Nothing
 
 instance AnyEraScript AlonzoEra where
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
+  anyEraToReceivingPurpose = const Nothing
 
 instance AnyEraScript BabbageEra where
   anyEraToVotingPurpose = const Nothing
   anyEraToProposingPurpose = const Nothing
   anyEraToGuardingPurpose = const Nothing
+  anyEraToReceivingPurpose = const Nothing
 
 instance AnyEraScript ConwayEra where
   anyEraToGuardingPurpose = const Nothing
+  anyEraToReceivingPurpose = const Nothing
 
 instance AnyEraScript DijkstraEra
 
@@ -235,6 +250,10 @@ pattern AnyEraGuardingPurpose ::
   AnyEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
 pattern AnyEraGuardingPurpose c <- (anyEraToGuardingPurpose -> Just c)
 
+pattern AnyEraReceivingPurpose ::
+  AnyEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
+pattern AnyEraReceivingPurpose c <- (anyEraToReceivingPurpose -> Just c)
+
 {-# COMPLETE
   AnyEraSpendingPurpose
   , AnyEraMintingPurpose
@@ -243,4 +262,5 @@ pattern AnyEraGuardingPurpose c <- (anyEraToGuardingPurpose -> Just c)
   , AnyEraVotingPurpose
   , AnyEraProposingPurpose
   , AnyEraGuardingPurpose
+  , AnyEraReceivingPurpose
   #-}

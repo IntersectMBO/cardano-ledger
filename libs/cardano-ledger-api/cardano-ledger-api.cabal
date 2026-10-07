@@ -70,14 +70,14 @@ library
     base >=4.18 && <5,
     bytestring,
     cardano-data,
-    cardano-ledger-allegra ^>=1.10,
-    cardano-ledger-alonzo >=1.16,
-    cardano-ledger-babbage >=1.13,
+    cardano-ledger-allegra ^>=1.11,
+    cardano-ledger-alonzo >=1.18,
+    cardano-ledger-babbage >=1.16,
     cardano-ledger-binary >=1.4,
-    cardano-ledger-conway >=1.24,
-    cardano-ledger-core:{cardano-ledger-core, internal} >=1.20,
-    cardano-ledger-dijkstra >=0.3,
-    cardano-ledger-mary >=1.10.1 && <1.13,
+    cardano-ledger-conway >=1.25,
+    cardano-ledger-core:{cardano-ledger-core, internal} >=1.23,
+    cardano-ledger-dijkstra >=0.5,
+    cardano-ledger-mary >=1.12 && <1.13,
     cardano-ledger-shelley ^>=1.21,
     cardano-strict-containers,
     containers,
@@ -128,6 +128,8 @@ test-suite cardano-ledger-api-test
   hs-source-dirs: test
   other-modules:
     Paths_cardano_ledger_api
+    Test.Cardano.Ledger.Api.Address
+    Test.Cardano.Ledger.Api.Scripts
     Test.Cardano.Ledger.Api.State.Imp.QuerySpec
     Test.Cardano.Ledger.Api.State.QuerySpec
     Test.Cardano.Ledger.Api.Tx

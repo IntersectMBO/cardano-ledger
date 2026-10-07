@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -101,10 +102,12 @@ module Cardano.Ledger.Dijkstra.TxBody (
   accountBalanceIntervalsDijkstraTxBodyRawL,
   startingAccountBalanceIntervalsDijkstraTxBodyRawL,
   dijkstraAllInputsTxBodyF,
+  receivingScriptHashes,
+  receivingKeyHashes,
 ) where
 
 import Cardano.Base.Typeable (TypeName (TypeName))
-import Cardano.Ledger.Address (DirectDeposits (..))
+import Cardano.Ledger.Address (AddressProtection (..), DirectDeposits (..), shelleyAddressView)
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..), alonzoSpendableInputsTxBodyF)
 import Cardano.Ledger.Babbage.TxBody (
@@ -1258,6 +1261,29 @@ dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
     <+> conwayProposalsDeposits pp txBody
 
+-- | Unique protected payment script hashes in canonical hash order. Native
+-- hashes occupy positions too; key credentials do not. Only this body's ordinary
+-- outputs contribute: collateral returns and child bodies are excluded.
+--
+-- The existing 'Indexable' instance supplies Word32 pointers. A valid body cannot
+-- approach its index bound: transaction size limits bound the number of outputs.
+receivingScriptHashes :: EraTxBody era => TxBody l era -> Set ScriptHash
+receivingScriptHashes = snd . receivingCredentials
+
+-- | Payment signatures required to create this body's protected outputs.
+receivingKeyHashes :: EraTxBody era => TxBody l era -> Set (KeyHash Payment)
+receivingKeyHashes = fst . receivingCredentials
+
+receivingCredentials ::
+  EraTxBody era => TxBody l era -> (Set (KeyHash Payment), Set ScriptHash)
+receivingCredentials txBody = Foldable.foldl' collect (Set.empty, Set.empty) (txBody ^. outputsTxBodyL)
+  where
+    collect (!keys, !scripts) txOut =
+      case shelleyAddressView (txOut ^. addrTxOutL) of
+        Just (Protected, _, KeyHashObj key, _) -> (Set.insert key keys, scripts)
+        Just (Protected, _, ScriptHashObj script, _) -> (keys, Set.insert script scripts)
+        _ -> (keys, scripts)
+
 -- | This newtype wrapper lets us index into the guards with a ScriptHash. It
 -- will return the index of the credential when using `indexOf` and the `fromIndex`
 -- method returns a `Nothing` if the credential at the index being looked up is
@@ -1294,6 +1320,8 @@ dijkstraRedeemerPointer txBody = \case
   DijkstraGuarding scriptHash ->
     DijkstraGuarding
       <$> indexOf scriptHash (GuardsScriptHashView $ txBody ^. guardsTxBodyL)
+  DijkstraReceiving scriptHash ->
+    DijkstraReceiving <$> indexOf scriptHash (receivingScriptHashes txBody)
 
 dijkstraRedeemerPointerInverse ::
   DijkstraEraTxBody era =>
@@ -1315,6 +1343,8 @@ dijkstraRedeemerPointerInverse txBody = \case
     DijkstraProposing <$> fromIndex idx (txBody ^. proposalProceduresTxBodyL)
   DijkstraGuarding idx ->
     DijkstraGuarding <$> fromIndex idx (GuardsScriptHashView $ txBody ^. guardsTxBodyL)
+  DijkstraReceiving idx ->
+    DijkstraReceiving <$> fromIndex idx (receivingScriptHashes txBody)
 
 vldtDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw l era) ValidityInterval
 vldtDijkstraTxBodyRawL =

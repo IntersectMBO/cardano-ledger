@@ -2,6 +2,10 @@
 
 ## 1.23.0.0
 
+* Add `AddrProtected` to `Addr`, preserving protection in address identity, serialization and compact storage
+* Add `AddressProtection`, `shelleyAddressView`, `protectAddress`, `protectedAddressesSupported` and `isProtectedCompactAddr`
+* Add `fromCborStoredBothAddr` for stored-state decoding, and preserve protocol-version admission in transaction decoding
+* Preserve protected payment credentials in `getScriptHash` and reject unrepresentable protected addresses in legacy Plutus contexts
 * Select the Leios voting committee (CIP-0164) when the mark snapshot is created, instead of when it rotates into the set position:
   - Add `msStakePoolDistr`, `msLeiosMaxKeyAge` and `msLeiosCommittee` fields to `MarkSnapShot`, memoizing lazily the stake pool distribution and the committee
   - Add `mkMarkSnapShot`

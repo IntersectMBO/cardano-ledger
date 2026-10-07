@@ -28,6 +28,7 @@ module Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScript (MkDijkstraNativeScript),
   DijkstraNativeScriptRaw (..),
   pattern GuardingPurpose,
+  pattern ReceivingPurpose,
   pattern RequireGuard,
   evalDijkstraNativeScript,
   upgradeTimelock,
@@ -127,6 +128,7 @@ data DijkstraPlutusPurpose f era
   | DijkstraVoting !(f Word32 Voter)
   | DijkstraProposing !(f Word32 (ProposalProcedure era))
   | DijkstraGuarding !(f Word32 ScriptHash)
+  | DijkstraReceiving !(f Word32 ScriptHash)
   deriving (Generic)
 
 pattern DijkstraRewarding :: f Word32 AccountAddress -> DijkstraPlutusPurpose f era
@@ -179,6 +181,7 @@ instance
       4 -> DijkstraVoting <$> decCBOR
       5 -> DijkstraProposing <$> decCBOR
       6 -> DijkstraGuarding <$> decCBOR
+      7 -> DijkstraReceiving <$> decCBOR
       n -> fail $ "Unexpected tag for DijkstraPlutusPurpose: " <> show n
 
 instance
@@ -197,6 +200,7 @@ instance
     DijkstraVoting p -> encodeWord8 4 <> encCBOR p
     DijkstraProposing p -> encodeWord8 5 <> encCBOR p
     DijkstraGuarding p -> encodeWord8 6 <> encCBOR p
+    DijkstraReceiving p -> encodeWord8 7 <> encCBOR p
 
 instance
   ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
@@ -213,6 +217,7 @@ instance
     DijkstraVoting n -> kindObjectWithValue "DijkstraVoting" n
     DijkstraProposing n -> kindObjectWithValue "DijkstraProposing" n
     DijkstraGuarding n -> kindObjectWithValue "DijkstraGuarding" n
+    DijkstraReceiving n -> kindObjectWithValue "DijkstraReceiving" n
     where
       kindObjectWithValue name n = kindObjectValue name ["value" .= n]
 
@@ -235,6 +240,7 @@ instance
       "DijkstraVoting" -> DijkstraVoting <$> parseJSON value
       "DijkstraProposing" -> DijkstraProposing <$> parseJSON value
       "DijkstraGuarding" -> DijkstraGuarding <$> parseJSON value
+      "DijkstraReceiving" -> DijkstraReceiving <$> parseJSON value
       _ -> fail $ "Unknown DijkstraPlutusPurpose kind: " <> kind
 
 deriving instance (EraTxCert era, EraPParams era) => Eq (DijkstraPlutusPurpose AsItem era)
@@ -504,6 +510,7 @@ instance AlonzoEraScript DijkstraEra where
     DijkstraVoting x -> DijkstraVoting $ f x
     DijkstraProposing x -> DijkstraProposing $ f x
     DijkstraGuarding x -> DijkstraGuarding $ f x
+    DijkstraReceiving x -> DijkstraReceiving $ f x
 
   mkSpendingPurpose = DijkstraSpending
 
@@ -568,6 +575,9 @@ class ConwayEraScript era => DijkstraEraScript era where
   mkGuardingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
   toGuardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
 
+  mkReceivingPurpose :: f Word32 ScriptHash -> PlutusPurpose f era
+  toReceivingPurpose :: PlutusPurpose f era -> Maybe (f Word32 ScriptHash)
+
   mkRequireGuard :: Credential Guard -> NativeScript era
   getRequireGuard :: NativeScript era -> Maybe (Credential Guard)
 
@@ -577,6 +587,11 @@ instance DijkstraEraScript DijkstraEra where
   toGuardingPurpose (DijkstraGuarding i) = Just i
   toGuardingPurpose _ = Nothing
 
+  mkReceivingPurpose = DijkstraReceiving
+
+  toReceivingPurpose (DijkstraReceiving i) = Just i
+  toReceivingPurpose _ = Nothing
+
   mkRequireGuard = mkDijkstraRequireGuard
   getRequireGuard = getDijkstraRequireGuard
 
@@ -585,6 +600,13 @@ pattern GuardingPurpose ::
 pattern GuardingPurpose c <- (toGuardingPurpose -> Just c)
   where
     GuardingPurpose c = mkGuardingPurpose c
+
+-- | Authorization of the protected outputs sharing a payment script hash.
+pattern ReceivingPurpose ::
+  DijkstraEraScript era => f Word32 ScriptHash -> PlutusPurpose f era
+pattern ReceivingPurpose c <- (toReceivingPurpose -> Just c)
+  where
+    ReceivingPurpose c = mkReceivingPurpose c
 
 pattern RequireGuard :: DijkstraEraScript era => Credential Guard -> NativeScript era
 pattern RequireGuard cred <- (getRequireGuard -> Just cred)

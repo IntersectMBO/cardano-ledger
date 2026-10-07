@@ -49,6 +49,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   alonzoFixupFees,
 ) where
 
+import Cardano.Ledger.Address (shelleyAddressView)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
@@ -314,7 +315,7 @@ fixupDatums tx = impAnn "fixupDatums" $ do
             _ -> pure Nothing
 
     txOutScriptHash txOut
-      | Addr _ (ScriptHashObj sh) _ <- txOut ^. addrTxOutL = sh
+      | Just (_, _, ScriptHashObj sh, _) <- shelleyAddressView (txOut ^. addrTxOutL) = sh
       | otherwise = error "TxOut does not have a payment script"
 
     spendDatum (ScriptTestContext _ (PlutusArgs _ (Just d))) = Data d
@@ -339,8 +340,8 @@ fixupOutputDatums ::
 fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
   let
     addDatum txOut =
-      case txOut ^. addrTxOutL of
-        Addr _ (ScriptHashObj sh) _
+      case shelleyAddressView (txOut ^. addrTxOutL) of
+        Just (_, _, ScriptHashObj sh, _)
           | Just (ScriptTestContext _ (PlutusArgs _ (Just spendDatum))) <- impLookupScriptContext @era sh
           , NoDatum <- txOut ^. datumTxOutF ->
               txOut & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)

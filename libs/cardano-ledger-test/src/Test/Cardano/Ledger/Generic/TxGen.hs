@@ -29,7 +29,7 @@ module Test.Cardano.Ledger.Generic.TxGen (
   genUTxO,
 ) where
 
-import Cardano.Ledger.Address (accountAddressCredentialL)
+import Cardano.Ledger.Address (accountAddressCredentialL, shelleyAddressView)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -288,10 +288,10 @@ genTxOutKeyWitness ::
   TxOut era ->
   GenRS era (SafeHash EraIndependentTxBody -> TxWits era -> TxWits era)
 genTxOutKeyWitness mTag txOut =
-  case txOut ^. addrTxOutL of
-    AddrBootstrap baddr ->
-      error $ "Can't authorize bootstrap address: " ++ show baddr
-    Addr _ payCred _ ->
+  case shelleyAddressView (txOut ^. addrTxOutL) of
+    Nothing ->
+      error $ "Can't authorize bootstrap address: " ++ show (txOut ^. addrTxOutL)
+    Just (_, _, payCred, _) ->
       case getTxOutRefScript reify txOut of
         SNothing -> mkWitVKey mTag payCred
         SJust script -> do
@@ -652,8 +652,8 @@ genTxCerts slot = do
   pure $ reverse dcs
 
 spendOnly :: EraTxOut era => TxOut era -> Bool
-spendOnly txOut = case txOut ^. addrTxOutL of
-  Addr _ (ScriptHashObj _) _ -> False
+spendOnly txOut = case shelleyAddressView (txOut ^. addrTxOutL) of
+  Just (_, _, ScriptHashObj _, _) -> False
   _ -> True
 
 -- | Generate a set of Collateral inputs sufficient to pay the minimum fee ('minCollTotal') computed

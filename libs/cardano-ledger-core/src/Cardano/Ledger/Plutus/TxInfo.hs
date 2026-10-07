@@ -144,10 +144,11 @@ transCred (ScriptHashObj (ScriptHash sh)) =
   PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
 -- | Translate an address. `Cardano.Ledger.BaseTypes.NetworkId` is discarded and Byron
--- Addresses will result in Nothing.
+-- Addresses and protected addresses unsupported by PlutusV1-V3 result in Nothing.
 transAddr :: Addr -> Maybe PV1.Address
 transAddr = \case
   AddrBootstrap {} -> Nothing
+  AddrProtected {} -> Nothing
   Addr _networkId paymentCred stakeReference ->
     Just (PV1.Address (transCred paymentCred) (transStakeReference stakeReference))
 

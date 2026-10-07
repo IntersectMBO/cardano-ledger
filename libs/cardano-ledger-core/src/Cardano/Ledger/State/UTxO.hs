@@ -39,6 +39,7 @@ module Cardano.Ledger.State.UTxO (
   getScriptHash,
 ) where
 
+import Cardano.Ledger.Address (shelleyAddressView)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (Share, decShareCBOR),
@@ -220,8 +221,9 @@ areAllAdaOnly = all (^. isAdaOnlyTxOutF)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr -> Maybe ScriptHash
-getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
-getScriptHash _ = Nothing
+getScriptHash addr = case shelleyAddressView addr of
+  Just (_, _, ScriptHashObj hs, _) -> Just hs
+  _ -> Nothing
 
 -- | The only reason it is a newtype instead of just a Map is because for later eras it is
 -- expensive to compute the actual map, so we want to use the type safety guidance to

@@ -2,6 +2,8 @@
 
 ## 1.25.0.0
 
+* Add `UnsupportedOutputAddresses` to `ConwayUtxoPredFailure` and preserve it when converting earlier-era failures
+* Preserve protected-address staking credentials in stake accounting
 * Change `TICKF` to run the `SNAP` rule at the epoch boundary:
   - Add `SNAP` related constraints to the `STS` instance of `TICKF`
   - Add `Embed (SNAP era) (TICKF era)` instance for Shelley's `SNAP` rule

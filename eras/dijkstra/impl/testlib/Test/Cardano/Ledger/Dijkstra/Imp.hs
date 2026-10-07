@@ -16,6 +16,9 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAccountingSpec as RECEIVINGACCOUNTING
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAdversarialSpec as RECEIVINGADVERSARIAL
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.ReceivingFixupSpec as RECEIVINGFIXUP
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec as SUBGOV
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec as SUBLEDGER
@@ -45,6 +48,9 @@ spec era = do
     ENTITIES.spec
     SUBGOV.spec
     POOL.spec
+    RECEIVINGFIXUP.spec
+    RECEIVINGADVERSARIAL.spec
+    RECEIVINGACCOUNTING.spec
     SNAP.spec
     UTXOW.spec
     UTXO.spec

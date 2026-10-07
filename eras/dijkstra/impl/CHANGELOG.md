@@ -2,6 +2,11 @@
 
 ## 0.5.0.0
 
+* Add `DijkstraReceiving` with redeemer tag 7 and canonical protected-output target sets
+* Require body-local key, native-script and Plutus witnesses for protected outputs
+* Translate protected addresses and Receiving purposes into the receiving-aware Plutus V4 context
+* Add `UnsupportedOutputAddresses`, `ProtectedCollateralReturn` and `SubUnsupportedOutputAddresses` predicate failures
+* Add `evalDijkstraTxExUnits` and `evalDijkstraTxExUnitsWithLogs` for body-local batch redeemer reports
 * Add `kesMaxKeyAgeEpochs` to compute how many epochs a registered Leios voting key (CIP-0164) stays valid from the KES parameters
 * Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule

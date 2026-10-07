@@ -27,6 +27,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   conwayToDijkstraUtxoPredFailure,
 ) where
 
+import Cardano.Ledger.Address (AddressProtection (..), shelleyAddressView)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
@@ -165,9 +166,12 @@ data DijkstraUtxoPredFailure era
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
   | PtrPresentInCollateralReturn (TxOut era)
+  | ProtectedCollateralReturn
   | -- | Legacy-mode top-level transaction does not self-balance
     ValueNotConservedInLegacyMode
       (Mismatch RelEQ (Value era))
+  | -- | Body-local output indexes whose addresses are unsupported, including protected pointers.
+    UnsupportedOutputAddresses (NonEmptySet Word32)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -254,6 +258,24 @@ validateNoPtrInCollateralReturn txBody = do
         Addr _ _ (StakeRefPtr {}) <- pure $ collateralReturn ^. addrTxOutL
         Just collateralReturn
   failOnJustStatic hasCollateralTxOut (injectFailure . PtrPresentInCollateralReturn)
+
+-- | Collateral return is never a Receiving target and may be created after phase-2
+-- failure, so its address must remain unprotected regardless of claimed validity.
+validateUnprotectedCollateralReturn ::
+  forall era.
+  ( BabbageEraTxBody era
+  , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
+  ) =>
+  TxBody TopTx era ->
+  Rule (EraRule "UTXO" era) ctx ()
+validateUnprotectedCollateralReturn txBody = do
+  let protectedReturn = do
+        SJust out <- pure $ txBody ^. collateralReturnTxBodyL
+        Just (Protected, _, _, _) <- pure $ shelleyAddressView (out ^. addrTxOutL)
+        Just out
+  failOnJustStatic
+    protectedReturn
+    (const $ injectFailure @"UTXO" @DijkstraUtxoPredFailure @era ProtectedCollateralReturn)
 
 -- | Validate collateral if any transaction in the batch has redeemers.
 validateBatchCollateral ::
@@ -379,8 +401,8 @@ dijkstraUtxoTransition = do
     {- legacyMode ≡ true → consumedLegacy ≡ producedLegacy -}
     when (stAnnTx ^. plutusLegacyModeStAnnTxG) $
       runTest $
-        first (fmap ValueNotConservedInLegacyMode) $
-          validateValueNotConservedUTxO
+        first (fmap (ValueNotConservedInLegacyMode @era)) $
+          validateValueNotConservedUTxO @era
             pp
             originalUtxo
             postSubsPState
@@ -397,6 +419,8 @@ dijkstraUtxoTransition = do
   {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb, a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
+  runTestOnSignal $ Shelley.validateSupportedAddresses pp (txBody ^. outputsTxBodyL)
+
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
@@ -407,6 +431,7 @@ dijkstraUtxoTransition = do
 
   {- no Ptr in collateral return -}
   validateNoPtrInCollateralReturn txBody
+  validateUnprotectedCollateralReturn txBody
 
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
@@ -518,6 +543,8 @@ instance
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
       ValueNotConservedInLegacyMode mm -> Sum ValueNotConservedInLegacyMode 23 !> To mm
+      UnsupportedOutputAddresses indexes -> Sum UnsupportedOutputAddresses 24 !> To indexes
+      ProtectedCollateralReturn -> Sum ProtectedCollateralReturn 25
 
 instance
   ( Era era
@@ -552,6 +579,8 @@ instance
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
     23 -> SumD ValueNotConservedInLegacyMode <! From
+    24 -> SumD UnsupportedOutputAddresses <! From
+    25 -> SumD ProtectedCollateralReturn
     n -> Invalid n
 
 -- =====================================================
@@ -573,6 +602,7 @@ conwayToDijkstraUtxoPredFailure = \case
   Conway.OutputTooSmallUTxO _ -> error "Impossible: `OutputTooSmallUTxO` for UTXO"
   Conway.UtxosFailure x -> UtxosFailure x
   Conway.OutputBootAddrAttrsTooBig xs -> OutputBootAddrAttrsTooBig xs
+  Conway.UnsupportedOutputAddresses indexes -> UnsupportedOutputAddresses indexes
   Conway.OutputTooBigUTxO xs -> OutputTooBigUTxO xs
   Conway.InsufficientCollateral c1 c2 -> InsufficientCollateral c1 c2
   Conway.ScriptsNotPaidUTxO u -> ScriptsNotPaidUTxO u

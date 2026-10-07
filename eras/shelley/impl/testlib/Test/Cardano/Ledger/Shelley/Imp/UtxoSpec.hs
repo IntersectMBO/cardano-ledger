@@ -3,21 +3,39 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (Mismatch (..))
+import Cardano.Ledger.Address (Addr (..), protectedAddressesSupported)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Val (inject)
+import Control.Monad (unless)
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec :: ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
+  unless (protectedAddressesSupported (eraProtVerHigh @era)) $ do
+    it "rejects protected ordinary outputs submitted directly in an unsupported era" $ do
+      payment <- KeyHashObj <$> freshKeyHash
+      let ordinary = Addr Testnet payment StakeRefNull
+          protected = AddrProtected Testnet payment StakeRefNull
+          tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut ordinary (inject (Coin 2000000))]
+          protectFirst :: Tx TopTx era -> Tx TopTx era
+          protectFirst txToProtect =
+            txToProtect & bodyTxL . outputsTxBodyL . ix 0 . addrTxOutL .~ protected
+      withPostFixup (rederiveAddrTxWits . protectFirst) $
+        submitFailingTx tx [injectFailure $ UnsupportedOutputAddresses (NES.singleton 0)]
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do
       addr1 <- freshKeyAddr_

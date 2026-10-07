@@ -47,8 +47,8 @@ import Cardano.Ledger.Address (
   CompactAddr,
   compactAddr,
   decompactAddr,
-  fromCborBackwardsBothAddr,
   fromCborBothAddr,
+  fromCborStoredBothAddr,
  )
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -536,7 +536,7 @@ instance
       peekTokenType >>= \case
         TypeBytes -> decodeMemPack
         TypeBytesIndef -> decodeMemPack
-        _ -> decodeBabbageTxOut fromCborBackwardsBothAddr
+        _ -> decodeBabbageTxOut fromCborStoredBothAddr
     pure $! internBabbageTxOut (interns credsInterns) txOut
   {-# INLINEABLE decShareCBOR #-}
 

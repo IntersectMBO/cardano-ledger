@@ -27,6 +27,7 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalTxExUnits,
   RedeemerReport,
   evalTxExUnitsWithLogs,
+  evalTxExUnitsWithLogsFromLedgerTxInfo,
   RedeemerReportWithLogs,
 ) where
 
@@ -328,10 +329,9 @@ evalTxExUnitsWithLogs ::
   --  Unlike `evalTxExUnits`, this function also returns evaluation logs, useful for
   --  debugging.
   RedeemerReportWithLogs era
-evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndCount rdmrs
+evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart =
+  evalTxExUnitsWithLogsFromLedgerTxInfo pp provided ledgerTxInfo
   where
-    keyedByPurpose (plutusPurpose, _) = hoistPlutusPurpose toAsIx plutusPurpose
-    purposeToScriptHash = fromElems keyedByPurpose scriptsNeeded
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -343,16 +343,39 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
         , ltiLevelTxInfo = LedgerTopTxInfo mempty
         }
+    protVer = pp ^. ppProtocolVersionL
+    provided = getScriptsProvided utxo tx
+    needed = getScriptsNeeded utxo (tx ^. bodyTxL)
+    (_, plutusScriptsUsed) = resolveNeededPlutusScriptsWithPurpose protVer provided needed mempty
+
+-- | Estimate one body's redeemers with the supplied script availability and
+-- level-specific context. Batch callers supply child contexts and the parent's
+-- child result map; the legacy estimator retains its original top-level view.
+-- The supplied budgets are ignored in favor of the protocol maximum.
+evalTxExUnitsWithLogsFromLedgerTxInfo ::
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  ) =>
+  PParams era ->
+  ScriptsProvided era ->
+  LedgerTxInfo level era ->
+  RedeemerReportWithLogs era
+evalTxExUnitsWithLogsFromLedgerTxInfo pp (ScriptsProvided scriptsProvided) ledgerTxInfo =
+  Map.mapWithKey findAndCount rdmrs
+  where
+    keyedByPurpose (plutusPurpose, _) = hoistPlutusPurpose toAsIx plutusPurpose
+    purposeToScriptHash = fromElems keyedByPurpose scriptsNeeded
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
+    tx = ltiTx ledgerTxInfo
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
     rdmrs = wits ^. rdmrsTxWitsL . unRedeemersL
     protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
-    provided@(ScriptsProvided scriptsProvided) = getScriptsProvided utxo tx
-    needed@(AlonzoScriptsNeeded scriptsNeeded) = getScriptsNeeded utxo txBody
-    (_, plutusScriptsUsed) = resolveNeededPlutusScriptsWithPurpose protVer provided needed mempty
+    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded (ltiUTxO ledgerTxInfo) txBody
     findAndCount pointer (redeemerData, exUnits) = do
       (plutusPurpose, plutusScriptHash) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $

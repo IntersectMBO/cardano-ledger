@@ -45,7 +45,7 @@
     };
 
     formal-ledger-specifications = {
-      url = "github:IntersectMBO/formal-ledger-specifications";
+      url = "github:colll78/formal-ledger-specifications/f46fca6a5123bb6b7f1ebf9e6df11b84689a09bf";
       flake = false;
     };
   };
@@ -94,7 +94,7 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
-            "https://github.com/IntersectMBO/formal-ledger-specifications.git" =
+            "https://github.com/colll78/formal-ledger-specifications.git" =
               inputs.formal-ledger-specifications;
           };
           cabalProjectLocal = ''

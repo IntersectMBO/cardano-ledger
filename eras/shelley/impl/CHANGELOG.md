@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Add `UnsupportedOutputAddresses` to `ShelleyUtxoPredFailure` and export `validateSupportedAddresses`
+* Preserve protected-address payment and stake credentials in witness collection and stake accounting
+* Reject protected addresses in production initial-fund injection
 * Remove `nesPd` field from `NewEpochState` and `nesPdL`:
   - Add `nesStakePoolDistrG`, which reads the stake pool distribution from the set snapshot instead
   - Remove the re-export of `ssStakeMarkPoolDistrL` from `Cardano.Ledger.Shelley.LedgerState`

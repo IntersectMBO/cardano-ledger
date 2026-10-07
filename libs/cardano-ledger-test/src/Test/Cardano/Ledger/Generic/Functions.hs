@@ -13,6 +13,7 @@
 --   parameter and do something potentially different in each Era.
 module Test.Cardano.Ledger.Generic.Functions where
 
+import Cardano.Ledger.Address (shelleyAddressView)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext, mkSupportedLanguageM)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
@@ -184,12 +185,12 @@ addrCredentials :: Addr -> [Credential Payment]
 addrCredentials addr = maybeToList (paymentCredAddr addr)
 
 paymentCredAddr :: Addr -> Maybe (Credential Payment)
-paymentCredAddr (Addr _ cred _) = Just cred
-paymentCredAddr _ = Nothing
+paymentCredAddr addr = (\(_, _, cred, _) -> cred) <$> shelleyAddressView addr
 
 stakeCredAddr :: Addr -> Maybe (Credential Staking)
-stakeCredAddr (Addr _ _ (StakeRefBase cred)) = Just cred
-stakeCredAddr _ = Nothing
+stakeCredAddr addr = case shelleyAddressView addr of
+  Just (_, _, _, StakeRefBase cred) -> Just cred
+  _ -> Nothing
 
 getBody :: EraTx era => Proof era -> Tx TopTx era -> TxBody TopTx era
 getBody _ tx = tx ^. bodyTxL

@@ -33,7 +33,9 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   validateBadInputsUTxO,
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
+  validateWrongNetworkWithdrawalWith,
   validateOutputBootAddrAttrsTooBig,
+  validateSupportedAddresses,
   validateMaxTxSizeUTxO,
   validateValueNotConservedUTxO,
   utxoEnvSlotL,
@@ -41,7 +43,13 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   utxoEnvCertStateL,
 ) where
 
-import Cardano.Ledger.Address (bootstrapAddressAttrsSize, getNetwork)
+import Cardano.Ledger.Address (
+  AddressProtection (..),
+  bootstrapAddressAttrsSize,
+  getNetwork,
+  protectedAddressesSupported,
+  shelleyAddressView,
+ )
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
@@ -49,10 +57,12 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe,
   networkId,
+  pvMajor,
  )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
@@ -186,6 +196,8 @@ data ShelleyUtxoPredFailure era
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       (NonEmpty (TxOut era)) -- list of supplied bad transaction outputs
+  | -- | Body-local output indexes whose addresses are unsupported, including protected pointers.
+    UnsupportedOutputAddresses (NonEmptySet Word32)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" ShelleyEra = ShelleyUtxoPredFailure ShelleyEra
@@ -245,6 +257,7 @@ instance
       WrongNetwork right wrongs -> Sum WrongNetwork 8 !> To right !> To wrongs
       WrongNetworkWithdrawal right wrongs -> Sum WrongNetworkWithdrawal 9 !> To right !> To wrongs
       OutputBootAddrAttrsTooBig outs -> Sum OutputBootAddrAttrsTooBig 10 !> To outs
+      UnsupportedOutputAddresses indexes -> Sum UnsupportedOutputAddresses 11 !> To indexes
 
 instance
   ( EraTxOut era
@@ -264,6 +277,7 @@ instance
     8 -> SumD WrongNetwork <! From <! From
     9 -> SumD WrongNetworkWithdrawal <! From <! From
     10 -> SumD OutputBootAddrAttrsTooBig <! From
+    11 -> SumD UnsupportedOutputAddresses <! From
     k -> Invalid k
 
 instance
@@ -403,6 +417,8 @@ utxoInductive = do
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTest $ validateOutputBootAddrAttrsTooBig outputs
 
+  runTest $ validateSupportedAddresses pp outputs
+
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
@@ -499,8 +515,17 @@ validateWrongNetworkWithdrawal ::
   Network ->
   TxBody t era ->
   Test (ShelleyUtxoPredFailure era)
-validateWrongNetworkWithdrawal netId txb =
-  failureOnNonEmptySet withdrawalsWrongNetwork (WrongNetworkWithdrawal netId)
+validateWrongNetworkWithdrawal = validateWrongNetworkWithdrawalWith WrongNetworkWithdrawal
+
+-- | The withdrawal-network check with the caller's own predicate failure.
+validateWrongNetworkWithdrawalWith ::
+  EraTxBody era =>
+  (Network -> NonEmptySet AccountAddress -> failure) ->
+  Network ->
+  TxBody t era ->
+  Test failure
+validateWrongNetworkWithdrawalWith mkFailure netId txb =
+  failureOnNonEmptySet withdrawalsWrongNetwork (mkFailure netId)
   where
     withdrawalsWrongNetwork =
       filter
@@ -543,6 +568,31 @@ validateOutputTooSmallUTxO pp outputs =
       filter
         (\txOut -> txOut ^. coinTxOutL < getMinCoinTxOut pp txOut)
         (toList outputs)
+
+-- | Address eligibility is a phase-1 condition even when phase 2 is claimed invalid.
+-- Era bounds prevent an old-era in-memory transaction from enabling protection by
+-- supplying future protocol parameters. Protected pointers are never supported.
+-- Indexes follow the supplied body-local sequence: authored ordinary outputs, then
+-- the collateral return when present in historical-era allOutputs checks.
+validateSupportedAddresses ::
+  forall era f.
+  (EraTxOut era, Foldable f) =>
+  PParams era ->
+  f (TxOut era) ->
+  Test (ShelleyUtxoPredFailure era)
+validateSupportedAddresses pp outputs =
+  failureOnNonEmptySet unsupported UnsupportedOutputAddresses
+  where
+    enabled =
+      protectedAddressesSupported (eraProtVerHigh @era)
+        && protectedAddressesSupported (pvMajor (pp ^. ppProtocolVersionL))
+    unsupported =
+      Set.fromList
+        [outputIndex | (outputIndex, out) <- zip [0 ..] (toList outputs), invalid (out ^. addrTxOutL)]
+    invalid addr = case shelleyAddressView addr of
+      Just (Protected, _, _, StakeRefPtr {}) -> True
+      Just (Protected, _, _, _) -> not enabled
+      _ -> False
 
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
 -- It is important to limit their overall size.

@@ -12,11 +12,11 @@ repository cardano-haskell-packages
 
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/formal-ledger-specifications.git
+  location: https://github.com/colll78/formal-ledger-specifications.git
   subdir: hs
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
-  tag: f6cf156dc204ff8a12c02bde9794080b9296e17d
+  tag: f46fca6a5123bb6b7f1ebf9e6df11b84689a09bf
 
 source-repository-package
   type: git
@@ -152,4 +152,13 @@ if impl(ghc >=9.14)
     , serialise:base
     , serialise:containers
     , serialise:time
+
 -- cabal-allow-newer end
+-- Proposed Receiving interface for unfrozen PlutusV4. Development fork pending
+-- upstream agreement/package release: https://github.com/IntersectMBO/plutus/pull/7982
+source-repository-package
+  type: git
+  location: https://github.com/colll78/plutus.git
+  --sha256: sha256-7JIUtozLMVYUYkWyWy1AGI05RMfBXm6JC1MmzkHEebQ=
+  tag: 3ddfba3e01998eb98e2c906c1caecebee242b609
+  subdir: plutus-ledger-api

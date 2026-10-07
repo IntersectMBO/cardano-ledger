@@ -39,6 +39,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -54,7 +55,7 @@ import Cardano.Ledger.Conway.Governance (
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra)
+import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra, evalDijkstraTxExUnits)
 import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules
@@ -77,6 +78,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
+import Control.Monad (zipWithM)
 import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
@@ -84,11 +86,13 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
 import Lens.Micro
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..))
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum, receivingEvenDatum)
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -122,6 +126,9 @@ instance AlonzoEraImp DijkstraEra where
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
       <> plutusTestScripts SPlutusV4
+      <> Map.singleton
+        (hashPlutusScript (receivingEvenDatum SPlutusV4))
+        (ScriptTestContext (receivingEvenDatum SPlutusV4) (PlutusArgs (P.I 0) (Just (P.I 2))))
 
 instance BabbageEraImp DijkstraEra
 
@@ -441,11 +448,29 @@ fixupSubTransactions ::
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
+  let originalSubTxs = OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)
   fixedup <-
     traverse
       fixupSubTransaction
-      (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
-  pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable fixedup
+      originalSubTxs
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getUTxO
+  Globals {systemStart, epochInfo} <- gets (^. impGlobalsL)
+  let withMaxRedeemers = tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable fixedup
+      reports = evalDijkstraTxExUnits pp withMaxRedeemers utxo epochInfo systemStart
+      -- Estimate against this snapshot before changing a child's integrity hash
+      -- and hence its transaction id. Supplied data/budgets remain test inputs.
+      estimateMissing original child = do
+        let supplied = original ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+            bodyId = SJust (txIdTx child)
+            useEstimate pointer redeemer@(dat, _) =
+              case Map.lookup (bodyId, pointer) reports of
+                Just (Right exUnits) | Map.notMember pointer supplied -> (dat, exUnits)
+                _ -> redeemer
+        updateAddrTxWits =<< fixupPPHash
+          (child & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.mapWithKey useEstimate)
+  estimated <- zipWithM estimateMissing originalSubTxs fixedup
+  pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable estimated
   where
     fixupSubTransaction =
       addSubTxIn
@@ -457,7 +482,6 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
         >=> fixupTxOuts
         >=> addMissingRedeemers
         >=> fixupPPHash
-        >=> updateAddrTxWits
     addMissingRedeemers subTx = do
       let originalRedeemers = subTx ^. witsTxL . rdmrsTxWitsL
       withMaxRedeemers <- txWithMaxRedeemers subTx

@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.15.0.1
+## 1.16.0.0
 
-*
+* Re-export `AddrProtected` through `Cardano.Ledger.Babbage.Core`
+* Report unsupported protected outputs through `AlonzoInBabbageUtxoPredFailure`
+* Preserve protected addresses through `BabbageTxOut` compact storage, lenses and shared-state decoding
 
 ## 1.15.0.0
 

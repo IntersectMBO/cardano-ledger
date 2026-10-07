@@ -14,7 +14,16 @@ import Cardano.Base.Bytes (byteArrayFromByteString)
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (Version, byronProtVer, decodeFull', natVersion, serialize')
+import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.Binary (
+  DecoderError,
+  Version,
+  byronProtVer,
+  decodeFull',
+  decodeFullDecoder,
+  natVersion,
+  serialize',
+ )
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes (ADDRHASH)
 import Cardano.Ledger.Keys (
@@ -23,7 +32,10 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
   unpackByronVKey,
  )
+import Cardano.Ledger.State (getScriptHash)
 import Control.Monad.Trans.Fail.String (errorFail)
+import Control.Monad.Trans.State.Strict (evalStateT)
+import qualified Data.Aeson as Aeson
 import qualified Data.Binary.Put as B
 import Data.Bits
 import qualified Data.ByteString as BS
@@ -31,6 +43,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Either
+import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import Data.Proxy
 import Data.Word
@@ -56,6 +69,7 @@ spec :: Spec
 spec =
   describe "Address" $ do
     roundTripAddressSpec
+    protectedAddressSpec
     prop "rebuild the 'addr root' using a bootstrap witness" $ do
       (byronVKey, byronAddr) <- genByronVKeyAddr
       sig <- arbitrary
@@ -199,7 +213,8 @@ propDecompactErrors addr = do
           Nothing -> error "Impossible: CompactAddr can't be empty"
       mingleHeader = do
         b <- elements $ case addr of
-          Addr {} -> [1, 2, 3, 7]
+          Addr {} -> [1, 2, 7]
+          AddrProtected {} -> [1, 2, 7]
           AddrBootstrap {} -> [0 .. 7]
         pure ("Header", flipHeaderBit b)
       mingleAddLength = do
@@ -221,8 +236,8 @@ propDecompactErrors addr = do
             genGood16 =
               putVariableLengthWord64 . (fromIntegral :: Word16 -> Word64) <$> arbitrary
             serializeSuffix xs = BSL.toStrict . B.runPut . mconcat <$> sequence xs
-        case addr of
-          Addr _ _ StakeRefPtr {} -> do
+        case shelleyAddressView addr of
+          Just (_, _, _, StakeRefPtr {}) -> do
             newSuffix <-
               oneof
                 [ serializeSuffix [genBad32, genGood16, genGood16]
@@ -237,14 +252,14 @@ propDecompactErrors addr = do
                   (\x -> BS.singleton (x .&. 0b01111111) <> suffix) <$> arbitrary
                 ]
             pure ("Mingle Ptr", prefix <> newSuffix)
-          Addr _ _ StakeRefNull {} -> do
+          Just (_, _, _, StakeRefNull {}) -> do
             NonEmpty xs <- arbitrary
             pure ("Bogus Null Ptr", prefix <> BS.pack xs)
-          Addr _ _ StakeRefBase {} -> do
+          Just (_, _, _, StakeRefBase {}) -> do
             xs <- arbitrary
             let xs' = if length xs == hashLen then 0 : xs else xs
             pure ("Bogus Staking", prefix <> BS.pack xs')
-          AddrBootstrap {} -> pure ("Bogus Bootstrap", BS.singleton 0b10000000 <> bs)
+          Nothing -> pure ("Bogus Bootstrap", BS.singleton 0b10000000 <> bs)
   (mingler, badAddr) <-
     oneof
       [ mingleHeader
@@ -295,3 +310,194 @@ addressWithExtraneousBytes = bs
     hs =
       "01AA5C8B35A934ED83436ABB56CDB44878DAC627529D2DA0B59CDA794405931B9359\
       \46E9391CABDFFDED07EB727F94E9E0F23739FF85978905BD460158907C589B9F1A62"
+
+-- Fixed wire vectors keep the oracle independent of the address encoder.
+protectedAddressSpec :: Spec
+protectedAddressSpec = describe "Protected addresses" $ do
+  let fixed header size = BS.cons header (BS.replicate size 0)
+      validHeader h = h .&. 0x86 == 0 && (not (testBit h 3) || not (testBit h 6) || testBit h 5)
+      payloadSize h
+        | not (testBit h 6) = 56
+        | testBit h 5 = 28
+        | otherwise = 31
+      versions = [natVersion @2, natVersion @6, natVersion @7, natVersion @9, natVersion @11]
+      protectedBytes =
+        [ fixed h (payloadSize h)
+        | h <- [0x08, 0x09, 0x18, 0x19, 0x28, 0x29, 0x38, 0x39, 0x68, 0x69, 0x78, 0x79]
+        ]
+  it "classifies all 256 headers for independently constructed payloads" $
+    forM_ [0 .. 255] $ \h -> do
+      let bytes = fixed h (payloadSize h)
+      isRight (decodeAddrEither bytes) `shouldBe` validHeader h
+  it "preserves protected full and compact identity and JSON keys" $
+    forM_ protectedBytes $ \bytes -> do
+      addr <- either error pure (decodeAddrEither bytes)
+      serialiseAddr addr `shouldBe` bytes
+      decompactAddr (compactAddr addr) `shouldBe` addr
+      isProtectedCompactAddr (compactAddr addr) `shouldBe` True
+      fmap (\(protection, _, _, _) -> protection) (shelleyAddressView addr) `shouldBe` Just Protected
+      let ordinaryBytes = BS.cons (clearBit (BS.head bytes) 3) (BS.tail bytes)
+      ordinary <- either error pure (decodeAddrEither ordinaryBytes)
+      addr `shouldNotBe` ordinary
+      Aeson.encode addr `shouldNotBe` Aeson.encode ordinary
+      Aeson.decode (Aeson.encode (Map.singleton addr (1 :: Int)))
+        `shouldBe` Just (Map.singleton addr (1 :: Int))
+      protectAddress ordinary `shouldBe` Right addr
+  it "matches the CIP-19 payload-derived protected vectors and the historical address oracle" $ do
+    -- Original CIP-19 vectors at CIPs b4a593c960f2751fef2ddc8df28bec7b22c68eb5.
+    -- The CIP-160 amendment uses these payloads unchanged and adds only bit 3.
+    -- Use the established old parser to supply an independent credential/family oracle.
+    let originalMainnetHex =
+          [ "019493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c47251"
+          , "11c37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542f337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c47251"
+          , "219493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8ec37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542f"
+          , "31c37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542fc37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542f"
+          , "619493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e"
+          , "71c37b1b5dc0669f1d3c61a6fddb2e8fde96be87b881c60bce8e8d542f"
+          ]
+    forM_ originalMainnetHex $ \hex -> do
+      mainnetBytes <- either error pure (B16.decode hex)
+      forM_ [(Mainnet, BS.head mainnetBytes), (Testnet, clearBit (BS.head mainnetBytes) 0)] $ \(network, header) -> do
+        let ordinaryBytes = BS.cons header (BS.tail mainnetBytes)
+            protectedVectorBytes = BS.cons (setBit header 3) (BS.tail mainnetBytes)
+        ordinary <- deserialiseAddrOld ordinaryBytes
+        expected <- case ordinary of
+          Addr n payment stake -> do
+            n `shouldBe` network
+            pure (AddrProtected n payment stake)
+          _ -> expectationFailure "CIP-19 base/enterprise vector decoded as bootstrap" >> pure ordinary
+        decodeAddrEither protectedVectorBytes `shouldBe` Right expected
+        serialiseAddr expected `shouldBe` protectedVectorBytes
+        BS.tail (serialiseAddr expected) `shouldBe` BS.tail ordinaryBytes
+        decompactAddr (compactAddr expected) `shouldBe` expected
+        decodeFull' (natVersion @12) (serialize' (natVersion @12) protectedVectorBytes)
+          `shouldBe` Right expected
+        decodeFullDecoder
+          (natVersion @7)
+          "stored CIP-19-derived address"
+          fromCborStoredBothAddr
+          (BSL.fromStrict (serialize' (natVersion @7) protectedVectorBytes))
+          `shouldBe` Right (expected, compactAddr expected)
+  it "keeps protected transaction decoding gated while permitting stored state" $
+    forM_ protectedBytes $ \bytes -> do
+      addr <- either error pure (decodeAddrEither bytes)
+      forM_ versions $ \version -> do
+        let encoded = serialize' version bytes
+        (decodeFull' version encoded :: Either DecoderError Addr) `shouldSatisfy` isLeft
+        decodeFullDecoder version "stored address" fromCborStoredBothAddr (BSL.fromStrict encoded)
+          `shouldBe` Right (addr, compactAddr addr)
+        decodeFullDecoder version "backwards address" fromCborBackwardsBothAddr (BSL.fromStrict encoded)
+          `shouldSatisfy` isLeft
+        decodeFullDecoder
+          version
+          "rigorous address"
+          (fromCborRigorousBothAddr True)
+          (BSL.fromStrict encoded)
+          `shouldSatisfy` isLeft
+      decodeFull' (natVersion @12) (serialize' (natVersion @12) bytes) `shouldBe` Right addr
+  it "preserves version-12 indefinite byte-string support and old rejection" $
+    forM_ [fixed 0x00 56, fixed 0x08 56] $ \bytes -> do
+      addr <- either error pure (decodeAddrEither bytes)
+      let encoded =
+            BSL.singleton 0x5f
+              <> BSL.fromStrict (serialize' (natVersion @12) (BS.take 15 bytes))
+              <> BSL.fromStrict (serialize' (natVersion @12) (BS.drop 15 bytes))
+              <> BSL.singleton 0xff
+      decodeFullDecoder (natVersion @12) "indefinite address" fromCborBothAddr encoded
+        `shouldBe` Right (addr, compactAddr addr)
+      decodeFullDecoder (natVersion @12) "indefinite state address" fromCborStoredBothAddr encoded
+        `shouldBe` Right (addr, compactAddr addr)
+      forM_ [natVersion @2, natVersion @7, natVersion @9, natVersion @11] $ \version -> do
+        decodeFullDecoder version "indefinite address" fromCborBothAddr encoded `shouldSatisfy` isLeft
+        decodeFullDecoder version "indefinite state address" fromCborStoredBothAddr encoded
+          `shouldSatisfy` isLeft
+  it "preserves historical trailing-byte and pointer normalization policies" $ do
+    let ordinaryBase = fixed 0x00 56
+        baseWithJunk = ordinaryBase <> BS.pack [0xff, 0x00]
+        oversizedPointer = fixed 0x40 28 <> BS.pack [0x90, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00]
+        normalizedPointer = fixed 0x40 31
+        decodePair version bytes =
+          decodeFullDecoder
+            version
+            "address pair"
+            fromCborBothAddr
+            (BSL.fromStrict (serialize' version bytes))
+    baseAddr <- either error pure (decodeAddrEither ordinaryBase)
+    pointerAddr <- either error pure (decodeAddrEither normalizedPointer)
+    forM_ [natVersion @2, natVersion @6] $ \version -> do
+      decodePair version baseWithJunk `shouldBe` Right (baseAddr, compactAddr baseAddr)
+      case decodePair version oversizedPointer of
+        Left err -> expectationFailure (show err)
+        Right (addr, cAddr) -> do
+          addr `shouldBe` pointerAddr
+          cAddr `shouldBe` compactAddr pointerAddr
+    forM_ [natVersion @7, natVersion @9, natVersion @12] $ \version ->
+      decodePair version baseWithJunk `shouldSatisfy` isLeft
+    decodePair (natVersion @7) oversizedPointer `shouldBe` Right (pointerAddr, compactAddr pointerAddr)
+    forM_ [natVersion @9, natVersion @12] $ \version ->
+      decodePair version oversizedPointer `shouldSatisfy` isLeft
+    decodeAddrEither oversizedPointer `shouldSatisfy` isLeft
+    -- The stored-state wrapper recovers both historical cases at every version.
+    forM_ [natVersion @2, natVersion @7, natVersion @9, natVersion @12] $ \version -> do
+      decodeFullDecoder
+        version
+        "stored address"
+        fromCborStoredBothAddr
+        (BSL.fromStrict (serialize' version baseWithJunk))
+        `shouldBe` Right (baseAddr, compactAddr baseAddr)
+      case decodeFullDecoder
+        version
+        "stored pointer"
+        fromCborStoredBothAddr
+        (BSL.fromStrict (serialize' version oversizedPointer)) of
+        Left err -> expectationFailure (show err)
+        Right (addr, cAddr) -> do
+          addr `shouldBe` pointerAddr
+          decompactAddr cAddr `shouldBe` pointerAddr
+  it "rejects protected pointers and trailing bytes through lenient entry points" $
+    forM_ [fixed 0x48 31, fixed 0x59 31, fixed 0x08 57, fixed 0x69 29] $ \bytes -> do
+      decodeAddrEither bytes `shouldSatisfy` isLeft
+      decodeFullDecoder
+        (natVersion @2)
+        "stored address"
+        fromCborStoredBothAddr
+        (BSL.fromStrict (serialize' (natVersion @2) bytes))
+        `shouldSatisfy` isLeft
+  prop "retains unsupported constructor combinations for phase-1 validation" $ \network payment pointer -> do
+    let addr = AddrProtected network payment (StakeRefPtr pointer)
+    decompactAddr (compactAddr addr) `shouldBe` addr
+    let bytes = serialiseAddr addr
+        shortBytes = SBS.toShort bytes
+    decodeAddrEither bytes `shouldSatisfy` isLeft
+    (decodeAddr bytes :: Maybe Addr) `shouldBe` Nothing
+    (evalStateT (decodeAddrStateT shortBytes) 0 :: Maybe Addr) `shouldBe` Nothing
+    (evalStateT (decodeAddrStateLenientT True True shortBytes) 0 :: Maybe Addr) `shouldBe` Nothing
+    forM_ [natVersion @2, natVersion @7, natVersion @9, natVersion @12] $ \version -> do
+      let encoded = BSL.fromStrict (serialize' version bytes)
+      decodeFullDecoder version "address" fromCborAddr encoded `shouldSatisfy` isLeft
+      decodeFullDecoder version "compact address" fromCborCompactAddr encoded `shouldSatisfy` isLeft
+      decodeFullDecoder version "address pair" fromCborBothAddr encoded `shouldSatisfy` isLeft
+      decodeFullDecoder version "stored address" fromCborStoredBothAddr encoded `shouldSatisfy` isLeft
+      decodeFullDecoder version "backwards address" fromCborBackwardsBothAddr encoded
+        `shouldSatisfy` isLeft
+      forM_ [False, True] $ \lenient ->
+        decodeFullDecoder version "rigorous address" (fromCborRigorousBothAddr lenient) encoded
+          `shouldSatisfy` isLeft
+  it "does not force credential fields to inspect network or protection" $ do
+    let addr = AddrProtected Mainnet (error "payment forced") (error "stake forced")
+    getNetwork addr `shouldBe` Mainnet
+    fmap (\(protection, _, _, _) -> protection) (shelleyAddressView addr) `shouldBe` Just Protected
+    fmap (\(_, network, _, _) -> network) (shelleyAddressView addr) `shouldBe` Just Mainnet
+  prop "payment-only and stake-only inspection retain laziness" $ \payment stake -> do
+    let paymentAddr = AddrProtected (error "network forced") payment (error "stake forced")
+        stakeAddr = AddrProtected (error "network forced") (error "payment forced") stake
+    fmap (\(_, _, pc, _) -> pc) (shelleyAddressView paymentAddr) `shouldBe` Just payment
+    fmap (\(_, _, _, sr) -> sr) (shelleyAddressView stakeAddr) `shouldBe` Just stake
+    getScriptHash paymentAddr `shouldBe` case payment of
+      ScriptHashObj h -> Just h
+      KeyHashObj _ -> Nothing
+  prop "rejects protecting pointer and bootstrap addresses" $ \addr ->
+    case addr of
+      Addr _ _ (StakeRefPtr _) -> protectAddress addr `shouldSatisfy` isLeft
+      AddrBootstrap _ -> protectAddress addr `shouldSatisfy` isLeft
+      _ -> pure ()

@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 -- =========================================================================
 
+import Cardano.Ledger.Address (shelleyAddressView)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochInterval (..), Globals)
@@ -271,8 +272,8 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
     getw _ _ = Set.empty
 
 shortTxOut :: EraTxOut era => TxOut era -> Expr
-shortTxOut out = case out ^. addrTxOutL of
-  Addr _ pay _ -> toExpr (pay, out ^. coinTxOutL)
+shortTxOut out = case shelleyAddressView (out ^. addrTxOutL) of
+  Just (_, _, pay, _) -> toExpr (pay, out ^. coinTxOutL)
   _ -> error "Bootstrap Address in shortTxOut"
 
 smartTxBody :: EraTest era => MUtxo era -> TxBody TopTx era -> Expr

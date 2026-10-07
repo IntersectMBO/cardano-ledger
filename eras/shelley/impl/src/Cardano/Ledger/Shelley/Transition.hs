@@ -648,16 +648,21 @@ registerInitialFunds hasFS tc newEpochState = do
   when (tc ^. tcNetworkIDG == Mainnet) $
     throwIO InjectionNotAllowedOnMainnet
   let sg = tc ^. tcShelleyGenesisL
-      addInitialFund (!acc, !coins) (addr, amount) =
-        let txIn = initialFundsPseudoTxIn addr
-            txOut = mkBasicTxOut addr (inject amount)
-         in (Map.insert txIn txOut acc, coins <> amount)
+      addInitialFund result (addr, amount) = do
+        (!acc, !coins) <- result
+        case shelleyAddressView addr of
+          Just (Protected, _, _, _) -> Left (InjectionProtectedInitialFunds addr)
+          _ ->
+            let txIn = initialFundsPseudoTxIn addr
+                txOut = mkBasicTxOut addr (inject amount)
+             in Right (Map.insert txIn txOut acc, coins <> amount)
   source <-
     resolveInjectionSource "initialFunds" (sgExtraConfig sg) secInitialFunds (sgInitialFunds sg)
 
   -- fold over the stream of initial funds, accumulating state changes
-  (newUtxoEntries, totalCoins) <-
-    foldInjectionData hasFS source addInitialFund (Map.empty, mempty)
+  fundsResult <-
+    foldInjectionData hasFS source addInitialFund (Right (Map.empty, mempty))
+  (newUtxoEntries, totalCoins) <- either throwIO pure fundsResult
 
   -- Forced: left lazy, this thunk retains both inputs of `mergeUtxoNoOverlap`.
   pure $! applyFunds newUtxoEntries totalCoins

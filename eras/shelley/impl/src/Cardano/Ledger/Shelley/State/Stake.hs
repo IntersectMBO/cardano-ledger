@@ -133,12 +133,12 @@ applyUTxOShelleyInstantStake f (UTxO u) instantStake =
           final -> Just final
     accum ans@(ShelleyInstantStake {sisCredentialStake, sisPtrStake}) out =
       let cc = out ^. compactCoinTxOutL
-       in case out ^. addrTxOutL of
-            Addr _ _ (StakeRefPtr stakingPtr) ->
+       in case shelleyAddressView (out ^. addrTxOutL) of
+            Just (_, _, _, StakeRefPtr stakingPtr) ->
               ans
                 { sisPtrStake = Map.alter (keepOrDeleteCompact cc) stakingPtr sisPtrStake
                 }
-            Addr _ _ (StakeRefBase stakingKeyHash) ->
+            Just (_, _, _, StakeRefBase stakingKeyHash) ->
               ans
                 { sisCredentialStake = Map.alter (keepOrDeleteCompact cc) stakingKeyHash sisCredentialStake
                 }

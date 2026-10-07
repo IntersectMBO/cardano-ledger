@@ -4,6 +4,10 @@ module Cardano.Ledger.Api.Scripts.ExUnits (
   RedeemerReport,
   evalTxExUnitsWithLogs,
   RedeemerReportWithLogs,
+  evalDijkstraTxExUnits,
+  evalDijkstraTxExUnitsWithLogs,
+  DijkstraRedeemerReport,
+  DijkstraRedeemerReportWithLogs,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
@@ -12,4 +16,10 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   TransactionScriptFailure (..),
   evalTxExUnits,
   evalTxExUnitsWithLogs,
+ )
+import Cardano.Ledger.Dijkstra (
+  DijkstraRedeemerReport,
+  DijkstraRedeemerReportWithLogs,
+  evalDijkstraTxExUnits,
+  evalDijkstraTxExUnitsWithLogs,
  )

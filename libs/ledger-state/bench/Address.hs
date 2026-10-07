@@ -35,12 +35,12 @@ main = do
       seqUnit :: a -> StrictUnit
       seqUnit x = x `seq` mempty
       forcePaymentCred :: Addr -> StrictUnit
-      forcePaymentCred = \case
-        Addr _ p _ -> p `seq` mempty
+      forcePaymentCred addr = case shelleyAddressView addr of
+        Just (_, _, p, _) -> p `seq` mempty
         _ -> mempty
       forceStakingCred :: Addr -> StrictUnit
-      forceStakingCred = \case
-        Addr _ _ s -> s `deepseq` mempty
+      forceStakingCred addr = case shelleyAddressView addr of
+        Just (_, _, _, s) -> s `deepseq` mempty
         _ -> mempty
       addrs :: (Int -> StakeReference) -> [Addr]
       addrs mkStake = mkAddr mkStake <$> [1 .. count]
@@ -50,6 +50,15 @@ main = do
       version = maxBound :: Version
   defaultMain
     [ bgroup
+        "protection"
+        [ protectionBench "ordinary/base" (addrs stakeRefBase)
+        , protectionBench "protected/base" (map (either error id . protectAddress) (addrs stakeRefBase))
+        , protectionBench "ordinary/enterprise" (addrs (const StakeRefNull))
+        , protectionBench
+            "protected/enterprise"
+            (map (either error id . protectAddress) (addrs (const StakeRefNull)))
+        ]
+    , bgroup
         "encode"
         [ bgroup "StakeRefNull" $
             [ env (pure (addrs (const StakeRefNull))) $
@@ -154,6 +163,27 @@ main = do
                 partialDeserializeAddr
             ]
         ]
+    ]
+
+-- Current-format workloads are identical apart from protection. Historical
+-- old/new decoder comparisons above remain ordinary-only and retain their names.
+protectionBench :: String -> [Addr] -> Benchmark
+protectionBench name addresses = env (pure addresses) $ \as ->
+  bgroup
+    name
+    [ bench "encode-raw" $ nf (map serialiseAddr) as
+    , bench "compact" $ nf (map compactAddr) as
+    , env (pure (map serialiseAddr as)) $ \bytes ->
+        bench "decode-raw" $ nf (map (either error id . decodeAddrEither)) bytes
+    , env (pure (map compactAddr as)) $ \compact ->
+        bgroup
+          "decompact"
+          [ bench "full" $ nf (map decompactAddr) compact
+          , bench "network" $ nf (map (getNetwork . decompactAddr)) compact
+          , bench "payment" $
+              nf (map (fmap (\(_, _, pc, _) -> pc) . shelleyAddressView . decompactAddr)) compact
+          , bench "stake" $ nf (map (fmap (\(_, _, _, sr) -> sr) . shelleyAddressView . decompactAddr)) compact
+          ]
     ]
 
 benchDecode ::

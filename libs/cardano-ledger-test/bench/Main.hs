@@ -4,6 +4,7 @@ import qualified Bench.Cardano.Ledger.ApplyTx as ApplyTx
 -- TODO: re-enable, once the benchmark is fixed
 -- import qualified Bench.Cardano.Ledger.Balance as Balance
 import qualified Bench.Cardano.Ledger.EpochBoundary as Epoch
+import qualified Bench.Cardano.Ledger.Receiving as Receiving
 import qualified Bench.Cardano.Ledger.Serialisation.Generators as SerGen
 import qualified Bench.Cardano.Ledger.StakeDistr as StakeDistr (tickfRuleBench)
 import qualified Bench.Cardano.Ledger.SumStake as SumStake
@@ -16,6 +17,7 @@ main =
   defaultMain
     [ StakeDistr.tickfRuleBench
     , TxOut.benchTxOut
+    , Receiving.receivingBenchmarks
     , SerGen.benchTxGeneration
     , ApplyTx.applyTxBenchmarks
     , Epoch.aggregateUtxoBench

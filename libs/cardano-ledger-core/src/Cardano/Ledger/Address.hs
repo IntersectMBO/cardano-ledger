@@ -16,6 +16,10 @@
 module Cardano.Ledger.Address (
   serialiseAddr,
   Addr (..),
+  AddressProtection (..),
+  shelleyAddressView,
+  protectAddress,
+  protectedAddressesSupported,
   BootstrapAddress (..),
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
@@ -58,6 +62,7 @@ module Cardano.Ledger.Address (
   unCompactAddr,
   isPayCredScriptCompactAddr,
   isBootstrapCompactAddr,
+  isProtectedCompactAddr,
   decodeAddr,
   decodeAddrEither,
   decodeAddrStateT,
@@ -67,6 +72,7 @@ module Cardano.Ledger.Address (
   fromCborCompactAddr,
   fromCborRigorousBothAddr,
   fromCborBackwardsBothAddr,
+  fromCborStoredBothAddr,
   Withdrawals (..),
   DirectDeposits (..),
 ) where
@@ -86,7 +92,9 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
+  Version,
   decodeFull',
+  getDecoderVersion,
   ifDecoderVersionAtLeast,
   serialize,
  )
@@ -167,11 +175,38 @@ deserialiseRewardAccount = deserialiseAccountAddress
 data Addr
   = Addr Network (Credential Payment) StakeReference
   | AddrBootstrap BootstrapAddress
+  | -- | Receiving authorization is required when creating outputs at this address.
+    -- Protection is part of address identity. Pointer addresses are not supported.
+    AddrProtected Network (Credential Payment) StakeReference
   deriving (Show, Eq, Generic, NFData, Ord)
+
+-- | Protection is independent of payment and staking credential kinds.
+data AddressProtection = Unprotected | Protected
+  deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
+
+-- | Read-only inspection of Shelley addresses. The tuple fields remain lazy,
+-- so inspecting payment does not evaluate the network or stake reference.
+shelleyAddressView :: Addr -> Maybe (AddressProtection, Network, Credential Payment, StakeReference)
+shelleyAddressView (Addr n pc sr) = Just (Unprotected, n, pc, sr)
+shelleyAddressView (AddrProtected n pc sr) = Just (Protected, n, pc, sr)
+shelleyAddressView (AddrBootstrap _) = Nothing
+
+-- | Opt in to Receiving authorization. This checks the address family; parsing
+-- a protected address does not establish that a particular era admits it.
+protectAddress :: Addr -> Either String Addr
+protectAddress addr = case shelleyAddressView addr of
+  Just (_, _, _, StakeRefPtr _) -> Left "Pointer addresses cannot be protected"
+  Just (_, n, pc, sr) -> Right (AddrProtected n pc sr)
+  Nothing -> Left "Bootstrap addresses cannot be protected"
+
+-- | Locally proposed activation version for protected transaction addresses.
+protectedAddressesSupported :: Version -> Bool
+protectedAddressesSupported = (>= natVersion @12)
 
 -- | Lookup a Network Id for an Address
 getNetwork :: Addr -> Network
 getNetwork (Addr n _ _) = n
+getNetwork (AddrProtected n _ _) = n
 getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
   case Byron.aaNetworkMagic . Byron.attrData . Byron.addrAttributes $ byronAddr of
     Byron.NetworkMainOrStage -> Mainnet
@@ -278,11 +313,18 @@ payCredIsScript = 4
 putAddr :: Addr -> Put
 putAddr (AddrBootstrap (BootstrapAddress byronAddr)) =
   B.putLazyByteString (serialize byronProtVer byronAddr)
-putAddr (Addr network pc sr) =
+putAddr (Addr network pc sr) = putShelleyAddr Unprotected network pc sr
+putAddr (AddrProtected network pc sr) = putShelleyAddr Protected network pc sr
+{-# INLINE putAddr #-}
+
+putShelleyAddr :: AddressProtection -> Network -> Credential Payment -> StakeReference -> Put
+putShelleyAddr protection network pc sr =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
-      netId = networkToWord8 network
+      netId = case protection of
+        Unprotected -> networkToWord8 network
+        Protected -> networkToWord8 network `setBit` 3
    in case sr of
         StakeRefBase sc -> do
           let setStakeCredBit = case sc of
@@ -301,7 +343,7 @@ putAddr (Addr network pc sr) =
           let header = setPayCredBit $ netId `setBit` isEnterpriseAddr `setBit` notBaseAddr
           B.putWord8 header
           putCredential pc
-{-# INLINE putAddr #-}
+{-# INLINE putShelleyAddr #-}
 
 putAccountAddress :: AccountAddress -> Put
 putAccountAddress (AccountAddress network (AccountId cred)) = do
@@ -430,7 +472,7 @@ compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 
 decompactAddr :: HasCallStack => CompactAddr -> Addr
 decompactAddr (UnsafeCompactAddr sbs) =
-  case runFail $ evalStateT (decodeAddrStateLenientT True True sbs) 0 of
+  case runFail $ evalStateT (decodeAddrWithPolicy TrustedCompactAddress True True sbs) 0 of
     Right addr -> addr
     Left err ->
       error $
@@ -481,10 +523,9 @@ fromCborRigorousBothAddr ::
   Bool ->
   Decoder s (Addr, CompactAddr)
 fromCborRigorousBothAddr isPtrLenient = do
-  sbs <- decCBOR
-  flip evalStateT 0 $ do
-    addr <- decodeAddrStateLenientT isPtrLenient False sbs
-    pure (addr, UnsafeCompactAddr sbs)
+  version <- getDecoderVersion
+  let policy = if protectedAddressesSupported version then CurrentAddress else HistoricalAddress
+  fromCborAddressWithPolicy policy isPtrLenient False
 {-# INLINE fromCborRigorousBothAddr #-}
 
 -- | Prior to Babbage era we did not check if a binary blob representing an address was
@@ -493,14 +534,31 @@ fromCborRigorousBothAddr isPtrLenient = do
 -- garbage after we successfully decoded the malformed address. We also need to allow
 -- bogus pointer address to be deserializeable prior to Babbage era.
 fromCborBackwardsBothAddr :: Decoder s (Addr, CompactAddr)
-fromCborBackwardsBothAddr = do
+fromCborBackwardsBothAddr = fromCborAddressWithPolicy HistoricalAddress True True
+{-# INLINE fromCborBackwardsBothAddr #-}
+
+-- | Recover stored addresses, including historical malformed ordinary addresses,
+-- independently of the transaction protocol version. This must only be used for
+-- persisted state; transaction decoding uses 'fromCborBothAddr'.
+fromCborStoredBothAddr :: Decoder s (Addr, CompactAddr)
+fromCborStoredBothAddr = fromCborAddressWithPolicy CurrentAddress True True
+
+-- The protection policy is kept private so transaction callers cannot accidentally
+-- widen historical decoding by choosing individual format flags.
+data AddressDecodePolicy = HistoricalAddress | CurrentAddress | TrustedCompactAddress
+
+-- TrustedCompactAddress is used only by decompactAddr. Internal constructors can
+-- represent protected pointers for phase-1 validity checks, while every external
+-- address decoder rejects that unsupported combination.
+
+fromCborAddressWithPolicy :: AddressDecodePolicy -> Bool -> Bool -> Decoder s (Addr, CompactAddr)
+fromCborAddressWithPolicy policy isPtrLenient isLenient = do
   sbs <- decCBOR
   flip evalStateT 0 $ do
-    addr <- decodeAddrStateLenientT True True sbs
+    addr <- decodeAddrWithPolicy policy isPtrLenient isLenient sbs
     bytesConsumed <- get
-    let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
-    pure (addr, UnsafeCompactAddr sbsCropped)
-{-# INLINE fromCborBackwardsBothAddr #-}
+    let bytes = if isLenient then SBS.toShort (BS.take bytesConsumed (SBS.fromShort sbs)) else sbs
+    pure (addr, UnsafeCompactAddr bytes)
 
 -- | Class specialized for decoding of addresses
 class AddressBuffer b where
@@ -614,7 +672,7 @@ decodeAddrStateT = decodeAddrStateLenientT False False
 -- ┏━━━━━━━━━━━━━━━━━┳━┯━┯━┯━┯━┯━┯━┯━┓
 -- ┃  Byron Address  ┃1┊0┊0┊0┊0┊0┊1┊0┃
 -- ┣━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━┫
--- ┃ Shelley Address ┃0┊x┊x┊x┊0┊0┊0┊x┃
+-- ┃ Shelley Address ┃0┊x┊x┊x┊p┊0┊0┊x┃
 -- ┗━━━━━━━━━━━━━━━━━╋━┿━┿━┿━┿━┿━┿━┿━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 --                   ┃0┊0┊0┊0┊0┊0┊0┊0┃ Testnet PaymentKey    StakingKey    ┃
 --                   ┃0┊0┊0┊0┊0┊0┊0┊1┃ Mainnet PaymentKey    StakingKey    ┃
@@ -639,6 +697,10 @@ decodeAddrStateT = decodeAddrStateLenientT False False
 --                      | `Staking Credential is a Script / No Staking Credential
 --                      `Not a Base Address
 --
+-- Bit 3 (@p@) opts base and enterprise addresses in to Receiving authorization.
+-- It is unavailable for pointer and account addresses. Raw parsing accepts the
+-- current format; transaction CBOR decoding additionally checks activation.
+--
 -- @
 decodeAddrStateLenientT ::
   (MonadFail m, AddressBuffer b) =>
@@ -652,7 +714,13 @@ decodeAddrStateLenientT ::
   Bool ->
   b ->
   StateT Int m Addr
-decodeAddrStateLenientT isPtrLenient isLenient buf = do
+decodeAddrStateLenientT = decodeAddrWithPolicy CurrentAddress
+{-# INLINE decodeAddrStateLenientT #-}
+
+decodeAddrWithPolicy ::
+  (MonadFail m, AddressBuffer b) =>
+  AddressDecodePolicy -> Bool -> Bool -> b -> StateT Int m Addr
+decodeAddrWithPolicy policy isPtrLenient isLenient buf = do
   guardLength "Header" 1 buf
   let header = Header $ bufUnsafeIndex buf 0
   addr <-
@@ -660,19 +728,34 @@ decodeAddrStateLenientT isPtrLenient isLenient buf = do
       then AddrBootstrap <$> decodeBootstrapAddress buf
       else do
         -- Ensure there are no unexpected bytes in the header
-        unless (header .&. headerNonShelleyBits == 0)
+        let allowedMask = case policy of
+              HistoricalAddress -> headerNonShelleyBits
+              CurrentAddress -> clearBit headerNonShelleyBits 3
+              TrustedCompactAddress -> clearBit headerNonShelleyBits 3
+            protected = header `testBit` 3
+        unless (header .&. allowedMask == 0)
           $ failDecoding
             "Shelley Address"
           $ "Invalid header. Unused bits are not suppose to be set: " <> show header
+        let rejectProtectedPointer = case policy of
+              TrustedCompactAddress -> False
+              _ -> True
+        when
+          ( rejectProtectedPointer
+              && protected
+              && not (headerIsBaseAddress header || headerIsEnterpriseAddr header)
+          ) $
+          failDecoding "Shelley Address" "Protected pointer addresses are not supported"
         -- Advance one byte for the consumed header
         modify' (+ 1)
         payment <- decodePaymentCredential header buf
         staking <- decodeStakeReference isPtrLenient header buf
-        pure $ Addr (headerNetworkId header) payment staking
+        when protected $ ensureBufIsConsumed "Protected Addr" buf
+        pure $ (if protected then AddrProtected else Addr) (headerNetworkId header) payment staking
   unless isLenient $
     ensureBufIsConsumed "Addr" buf
   pure addr
-{-# INLINE decodeAddrStateLenientT #-}
+{-# INLINE decodeAddrWithPolicy #-}
 
 -- | Checks that the current offset is exactly at the end of the buffer.
 ensureBufIsConsumed ::
@@ -967,6 +1050,12 @@ instance DecCBOR CompactAddr where
 isPayCredScriptCompactAddr :: CompactAddr -> Bool
 isPayCredScriptCompactAddr (UnsafeCompactAddr bytes) =
   testBit (SBS.index bytes 0) payCredIsScript
+
+-- | Inspect protection without decoding credentials. Compact addresses must have
+-- been validated; bootstrap addresses never carry protection.
+isProtectedCompactAddr :: CompactAddr -> Bool
+isProtectedCompactAddr cAddr@(UnsafeCompactAddr bytes) =
+  not (isBootstrapCompactAddr cAddr) && testBit (SBS.index bytes 0) 3
 
 -- | Efficiently check whether compated adddress is a Byron address.
 isBootstrapCompactAddr :: CompactAddr -> Bool

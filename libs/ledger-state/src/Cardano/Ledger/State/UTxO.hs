@@ -632,10 +632,11 @@ countTxOutStats = foldMap countTxOutStat
               , tosAssetValue = foldMap statFoldable vmElems
               }
           !networkStat = valueStat {tosNetwork = statSingleton (getNetwork addr)}
-       in case addr of
-            AddrBootstrap addrBootstrap ->
-              networkStat {tosBootstrap = statSingleton addrBootstrap}
-            Addr _ pc sr ->
+       in case shelleyAddressView addr of
+            Nothing -> case addr of
+              AddrBootstrap addrBootstrap -> networkStat {tosBootstrap = statSingleton addrBootstrap}
+              _ -> networkStat
+            Just (_, _, pc, sr) ->
               let stakeStat =
                     case sr of
                       StakeRefNull -> networkStat
@@ -771,10 +772,10 @@ collectStats = do
                     ( su {stakeScripts = Set.insert sh stakeScripts}
                     , ss {statsTotalStakeScripts = statsTotalStakeScripts + 1}
                     )
-       in case addr of
-            AddrBootstrap _ ->
+       in case shelleyAddressView addr of
+            Nothing ->
               (u', s' {statsByronTxOuts = statsByronTxOuts + 1})
-            Addr _ni pc sr
+            Just (_, _, pc, sr)
               | KeyHashObj kh <- pc ->
                   updateStakingStats
                     sr

@@ -163,6 +163,7 @@ benchmark bench
     Bench.Cardano.Ledger.ApplyTx
     Bench.Cardano.Ledger.ApplyTx.Gen
     Bench.Cardano.Ledger.EpochBoundary
+    Bench.Cardano.Ledger.Receiving
     Bench.Cardano.Ledger.Serialisation.Generators
     Bench.Cardano.Ledger.StakeDistr
     Bench.Cardano.Ledger.SumStake
@@ -194,6 +195,7 @@ benchmark bench
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra,
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-ma-test,

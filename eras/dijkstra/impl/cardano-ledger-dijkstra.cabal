@@ -116,8 +116,8 @@ library
     cardano-crypto-leios >=0.3,
     cardano-data ^>=1.4,
     cardano-ledger-allegra,
-    cardano-ledger-alonzo ^>=1.17,
-    cardano-ledger-babbage ^>=1.15,
+    cardano-ledger-alonzo ^>=1.18,
+    cardano-ledger-babbage ^>=1.16,
     cardano-ledger-binary ^>=1.10,
     cardano-ledger-conway ^>=1.25,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.23,
@@ -161,6 +161,9 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
     Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAccountingSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAdversarialSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.ReceivingFixupSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec
@@ -169,6 +172,9 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
+    Test.Cardano.Ledger.Dijkstra.OutputValiditySpec
+    Test.Cardano.Ledger.Dijkstra.ProtectedAddressSpec
+    Test.Cardano.Ledger.Dijkstra.ReceivingSpec
     Test.Cardano.Ledger.Dijkstra.TreeDiff
     Test.Cardano.Ledger.Dijkstra.TxInfoSpec
 
@@ -194,6 +200,7 @@ library testlib
       -Wno-pattern-namespace-specifier
   build-depends:
     FailT,
+    aeson,
     base,
     bytestring,
     cardano-base,
@@ -212,13 +219,16 @@ library testlib
     cardano-slotting,
     cardano-strict-containers,
     containers,
+    fs-api,
     generic-random,
     microlens,
     microlens-mtl,
     mtl,
     plutus-ledger-api >=1.71,
     small-steps,
+    temporary,
     tree-diff,
+    validation-selective,
 
   -- ghc-9.8 doesn't support the `-fno-spec-eval` option, and unless this is used on some
   -- modules in this component, ghc generates code that loops during dictionary evaluation

@@ -12,6 +12,8 @@ import Cardano.Ledger.Mary (MaryEra)
 import Data.Default (def)
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
+import qualified Test.Cardano.Ledger.Api.Address as Address (spec)
+import qualified Test.Cardano.Ledger.Api.Scripts as Scripts (spec)
 import qualified Test.Cardano.Ledger.Api.State.Imp.QuerySpec as ImpQuery (spec)
 import qualified Test.Cardano.Ledger.Api.State.QuerySpec as StateQuery (spec)
 import qualified Test.Cardano.Ledger.Api.Tx as Tx (spec)
@@ -31,6 +33,8 @@ import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 apiSpec :: Spec
 apiSpec =
   describe "cardano-ledger-api" $ do
+    Address.spec
+    Scripts.spec
     describe "Tx" $ do
       Tx.spec
       TxOut.spec

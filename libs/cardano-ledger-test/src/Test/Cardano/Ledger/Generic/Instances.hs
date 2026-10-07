@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Generic.Instances () where
 
+import Cardano.Ledger.Address (shelleyAddressView)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript)
@@ -150,8 +151,8 @@ allegraSetValidity ::
 allegraSetValidity vi = vldtTxBodyL .~ vi
 
 allegraValidTxOut :: EraTxOut era => Map ScriptHash (Script era) -> TxOut era -> Bool
-allegraValidTxOut _ txOut = case txOut ^. addrTxOutL of
-  Addr _ KeyHashObj {} _ -> True
+allegraValidTxOut _ txOut = case shelleyAddressView (txOut ^. addrTxOutL) of
+  Just (_, _, KeyHashObj {}, _) -> True
   _ -> False
 
 alonzoValidTxOut ::
@@ -159,13 +160,13 @@ alonzoValidTxOut ::
   , AlonzoEraScript era
   ) =>
   Map ScriptHash (Script era) -> TxOut era -> Bool
-alonzoValidTxOut scripts txOut = case txOut ^. addrTxOutL of
-  Addr _ KeyHashObj {} _ -> True
-  Addr _ (ScriptHashObj sh) _ ->
+alonzoValidTxOut scripts txOut = case shelleyAddressView (txOut ^. addrTxOutL) of
+  Just (_, _, KeyHashObj {}, _) -> True
+  Just (_, _, ScriptHashObj sh, _) ->
     case Map.lookup sh scripts of
       Just s -> isPlutusScript s
       _ -> False
-  AddrBootstrap {} -> False
+  Nothing -> False
 
 alonzoGenPParams :: forall era. AlonzoEraTest era => GenSize -> Gen (PParams era)
 alonzoGenPParams gsize = do
@@ -189,10 +190,10 @@ instance EraModel ShelleyEra where
   never _ = fromNativeScript $ RequireAnyOf []
   collateralReturnTxBodyT = dummyLens SNothing
   validTxOut scripts txOut =
-    case txOut ^. addrTxOutL of
-      Addr _ (KeyHashObj _) _ -> True
-      Addr _ (ScriptHashObj sh) _ -> Map.member sh scripts
-      AddrBootstrap {} -> False
+    case shelleyAddressView (txOut ^. addrTxOutL) of
+      Just (_, _, KeyHashObj _, _) -> True
+      Just (_, _, ScriptHashObj sh, _) -> Map.member sh scripts
+      Nothing -> False
 
 instance EraModel AllegraEra where
   applyTx = shelleyApplyTx

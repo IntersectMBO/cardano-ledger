@@ -29,7 +29,7 @@ module Cardano.Ledger.Shelley.UTxO (
   module UTxO,
 ) where
 
-import Cardano.Ledger.Address (accountAddressCredentialL, bootstrapKeyHash)
+import Cardano.Ledger.Address (accountAddressCredentialL, bootstrapKeyHash, shelleyAddressView)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
@@ -83,9 +83,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
     -- to get subset, start with empty, and only insert those inputs in txInps
     -- that are locked in u
     add input ans = case Map.lookup input u of
-      Just txOut -> case txOut ^. addrTxOutL of
-        Addr _ (ScriptHashObj h) _ -> Set.insert h ans
-        _ -> ans
+      Just txOut -> maybe ans (`Set.insert` ans) (getScriptHash (txOut ^. addrTxOutL))
       Nothing -> ans
 
 getShelleyScriptsNeeded ::
@@ -220,10 +218,11 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
           case txinLookup txin utxo' of
             Just txOut ->
               case txOut ^. addrTxOutL of
-                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
                 AddrBootstrap bootAddr ->
                   Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
-                _ -> ans
+                addr -> case shelleyAddressView addr of
+                  Just (_, _, KeyHashObj pay, _) -> Set.insert (asWitness pay) ans
+                  _ -> ans
             Nothing -> ans
 
     wdrlAuthors :: Set (KeyHash Witness)

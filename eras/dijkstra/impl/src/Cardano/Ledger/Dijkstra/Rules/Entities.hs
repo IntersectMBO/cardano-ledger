@@ -228,9 +228,6 @@ instance InjectRuleFailure "ENTITIES" DijkstraGovCertPredFailure DijkstraEra whe
 instance InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraEntitiesPredFailure
 
-instance InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure DijkstraEra where
-  injectFailure = shelleyUtxoToDijkstraEntitiesPredFailure
-
 instance
   ( EraTx era
   , DijkstraEraTxBody era
@@ -243,7 +240,6 @@ instance
   , Environment (EraRule "CERTS" era) ~ Conway.CertsEnv era
   , EraRule "ENTITIES" era ~ ENTITIES era
   , InjectRuleFailure "ENTITIES" EntitiesPredFailure era
-  , InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   STS (ENTITIES era)
@@ -269,7 +265,6 @@ dijkstraEntitiesTransition ::
   , Environment (EraRule "CERTS" era) ~ Conway.CertsEnv era
   , EraRule "ENTITIES" era ~ ENTITIES era
   , InjectRuleFailure "ENTITIES" EntitiesPredFailure era
-  , InjectRuleFailure "ENTITIES" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "ENTITIES" Conway.ConwayLedgerPredFailure era
   ) =>
   TransitionRule (ENTITIES era)
@@ -282,7 +277,11 @@ dijkstraEntitiesTransition = do
       topTxWithdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
   network <- liftSTS $ asks networkId
 
-  runTest $ Shelley.validateWrongNetworkWithdrawal network (tx ^. bodyTxL)
+  runTest $
+    Shelley.validateWrongNetworkWithdrawalWith
+      WithdrawalAddressesWithWrongNetwork
+      network
+      (tx ^. bodyTxL)
   runTest $ validateWrongNetworkInDirectDeposit network (tx ^. bodyTxL)
   runTest $ validateAccountBalanceIntervals network accounts (tx ^. bodyTxL)
   runTest $ validateStartingAccountBalanceIntervals network originalAccounts (tx ^. bodyTxL)
@@ -422,23 +421,6 @@ conwayToDijkstraEntitiesPredFailure = \case
   Conway.ConwayMempoolFailure _ -> impossible "ConwayMempoolFailure"
   Conway.ConwayWithdrawalsMissingAccounts _ -> impossible "ConwayWithdrawalsMissingAccounts"
   Conway.ConwayIncompleteWithdrawals _ -> impossible "ConwayIncompleteWithdrawals"
-  where
-    impossible name = error $ "Impossible: `" <> name <> "` for ENTITIES"
-
-shelleyUtxoToDijkstraEntitiesPredFailure ::
-  Shelley.ShelleyUtxoPredFailure era -> EntitiesPredFailure era
-shelleyUtxoToDijkstraEntitiesPredFailure = \case
-  Shelley.WrongNetworkWithdrawal net addrs -> WithdrawalAddressesWithWrongNetwork net addrs
-  Shelley.BadInputsUTxO _ -> impossible "BadInputsUTxO"
-  Shelley.ExpiredUTxO _ -> impossible "ExpiredUTxO"
-  Shelley.MaxTxSizeUTxO _ -> impossible "MaxTxSizeUTxO"
-  Shelley.InputSetEmptyUTxO -> impossible "InputSetEmptyUTxO"
-  Shelley.FeeTooSmallUTxO _ -> impossible "FeeTooSmallUTxO"
-  Shelley.ValueNotConservedUTxO _ -> impossible "ValueNotConservedUTxO"
-  Shelley.WrongNetwork _ _ -> impossible "WrongNetwork"
-  Shelley.OutputTooSmallUTxO _ -> impossible "OutputTooSmallUTxO"
-  Shelley.UpdateFailure _ -> impossible "UpdateFailure"
-  Shelley.OutputBootAddrAttrsTooBig _ -> impossible "OutputBootAddrAttrsTooBig"
   where
     impossible name = error $ "Impossible: `" <> name <> "` for ENTITIES"
 

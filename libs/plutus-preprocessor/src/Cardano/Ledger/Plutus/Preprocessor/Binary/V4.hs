@@ -30,6 +30,7 @@ $inputsOutputsAreNotEmptyNoDatumQ
 $inputsOutputsAreNotEmptyWithDatumQ
 $inputsOverlapsWithRefInputsQ
 $ensureTreasuryReserveQ
+$receivingEvenDatumQ
 
 -- ================================================================
 -- Compile and serialize the real functions as Plutus scripts.
@@ -123,4 +124,10 @@ ensureTreasuryReserveBytes :: (Q [Dec], PlutusBinary)
 ensureTreasuryReserveBytes =
   ( ensureTreasuryReserveQ
   , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||ensureTreasuryReserve||])
+  )
+
+receivingEvenDatumBytes :: (Q [Dec], PlutusBinary)
+receivingEvenDatumBytes =
+  ( receivingEvenDatumQ
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||receivingEvenDatum||])
   )

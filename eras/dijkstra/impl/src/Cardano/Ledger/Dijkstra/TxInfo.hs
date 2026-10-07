@@ -29,6 +29,7 @@ module Cardano.Ledger.Dijkstra.TxInfo (
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
+import Cardano.Ledger.Address (AddressProtection (..), shelleyAddressView)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
@@ -125,13 +126,13 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
-import Cardano.Ledger.State (StakePoolParams (..), UTxO)
+import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), txIdToHex)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM, unless, zipWithM)
+import Control.Monad (forM, unless, zipWithM, zipWithM_)
 import Data.Aeson (KeyValue (..), ToJSON (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
@@ -168,6 +169,8 @@ data DijkstraContextError era
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
     RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
+  | -- | A protected address cannot be represented in a PlutusV1-V3 context.
+    ProtectedAddressNotSupported TxOutSource
   | -- | Attempt to use PlutusV4 script with an invalid redeemer pointer will result in this failure
     ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
   deriving (Generic)
@@ -237,6 +240,8 @@ instance
       kindObjectValue "GuardScriptHashesNotSupported" ["script_hashes" .= toJSON scriptHashes]
     RequiredTopLevelGuardsNotSupported rtlg ->
       kindObjectValue "RequiredTopLevelGuardsNotSupported" ["required_top_level_guards" .= show rtlg]
+    ProtectedAddressNotSupported source ->
+      kindObjectValue "ProtectedAddressNotSupported" ["txOut" .= toJSON source]
     ScriptHashNotFoundForPurpose purpose ->
       kindObjectValue "ScriptHashNotFoundForPurpose" ["purpose" .= toJSON purpose]
 
@@ -260,6 +265,7 @@ instance
     22 -> SumD GuardScriptHashesNotSupported <! From
     23 -> SumD RequiredTopLevelGuardsNotSupported <! From
     24 -> SumD ScriptHashNotFoundForPurpose <! From
+    25 -> SumD ProtectedAddressNotSupported <! From
     k -> Invalid k
 
 instance
@@ -286,6 +292,8 @@ instance
         Sum RequiredTopLevelGuardsNotSupported 23 !> To rtlg
       ScriptHashNotFoundForPurpose purpose ->
         Sum ScriptHashNotFoundForPurpose 24 !> To purpose
+      ProtectedAddressNotSupported source ->
+        Sum ProtectedAddressNotSupported 25 !> To source
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -340,6 +348,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
       guardDijkstraFeaturesForPlutusV1toV3 tx
+      guardLegacyProtectedAddresses ltiUTxO tx
       timeRange <- Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
       mapM_ (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
@@ -399,6 +408,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
       let txBody = tx ^. bodyTxL
       Conway.guardConwayFeaturesForPlutusV1V2 tx
       guardDijkstraFeaturesForPlutusV1toV3 tx
+      guardLegacyProtectedAddresses ltiUTxO tx
       timeRange <-
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
@@ -442,6 +452,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
         txInputs = txBody ^. inputsTxBodyL
         refInputs = txBody ^. referenceInputsTxBodyL
       guardDijkstraFeaturesForPlutusV1toV3 tx
+      guardLegacyProtectedAddresses ltiUTxO tx
       timeRange <-
         Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
       inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
@@ -517,6 +528,30 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
       Left $
         inject $
           GuardScriptHashesNotSupported @era neScriptHashes
+
+-- | Inspect the body used by this legacy context. Sibling bodies are not visible here.
+guardLegacyProtectedAddresses ::
+  forall era.
+  ( EraTx era
+  , BabbageEraTxBody era
+  , Inject (DijkstraContextError era) (ContextError era)
+  ) =>
+  UTxO era ->
+  Tx TopTx era ->
+  Either (ContextError era) ()
+guardLegacyProtectedAddresses utxo tx = do
+  let body = tx ^. bodyTxL
+      check source output =
+        case shelleyAddressView (output ^. addrTxOutL) of
+          Just (Protected, _, _, _) -> Left . inject $ ProtectedAddressNotSupported @era source
+          _ -> Right ()
+      -- Missing-input errors remain owned by the language's existing translation,
+      -- preserving historical error order when protection is absent.
+      checkInput input = case Map.lookup input (unUTxO utxo) of
+        Nothing -> Right ()
+        Just output -> check (TxOutFromInput input) output
+  mapM_ checkInput . Set.toList $ (body ^. inputsTxBodyL) <> (body ^. referenceInputsTxBodyL)
+  zipWithM_ check (map TxOutFromOutput [minBound ..]) (F.toList (body ^. outputsTxBodyL))
 
 transFailUnsupportedScriptInSubTx ::
   forall l era.
@@ -674,13 +709,16 @@ transTxOutV4 txOutSource txOut = do
             $ binaryData
 
   addr <-
-    case txOut ^. addrTxOutL of
-      Addr _ pCred stakeRef ->
-        PV4.Address (transCred pCred) <$> case stakeRef of
-          StakeRefBase sCred -> Right . Just $ transCredToAccountId sCred
-          StakeRefNull -> Right Nothing
-          StakeRefPtr _ -> Left . inject $ PointerPresentInOutput @era txOutSource
-      AddrBootstrap _ -> Left . inject $ Babbage.ByronTxOutInContext @era txOutSource
+    case shelleyAddressView (txOut ^. addrTxOutL) of
+      Just (protection, _, pCred, stakeRef) ->
+        let addressConstructor = case protection of
+              Unprotected -> PV4.Address
+              Protected -> PV4.AddressProtected
+         in addressConstructor (transCred pCred) <$> case stakeRef of
+              StakeRefBase sCred -> Right . Just $ transCredToAccountId sCred
+              StakeRefNull -> Right Nothing
+              StakeRefPtr _ -> Left . inject $ PointerPresentInOutput @era txOutSource
+      Nothing -> Left . inject $ Babbage.ByronTxOutInContext @era txOutSource
   pure $
     PV4.TxOut
       { txOutReferenceScript = referenceScript
@@ -795,6 +833,7 @@ scriptPurposeToScriptInfo proxy datum lti txInfo ixPlutusPurpose = \case
   PV4.Certifying _ ix cert -> pure (PV4.CertifyingScript ix cert)
   PV4.Voting _ vote -> pure (PV4.VotingScript vote)
   PV4.Proposing _ ix proposal -> pure (PV4.ProposingScript ix proposal)
+  PV4.Receiving _ -> pure PV4.ReceivingScript
   PV4.Guarding _ ix -> do
     guardingScriptHash <- case Map.lookup ixPlutusPurpose (ltiScriptHashesUsed lti) of
       Nothing -> Left $ inject $ ScriptHashNotFoundForPurpose ixPlutusPurpose
@@ -815,6 +854,7 @@ scriptHashFromScriptPurpose = \case
   PV4.Voting sh _ -> sh
   PV4.Proposing sh _ _ -> sh
   PV4.Guarding sh _ -> sh
+  PV4.Receiving sh -> sh
 
 transGuardingTopTxInfo ::
   forall proxy (l :: Language) era.
@@ -986,6 +1026,7 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
     ProposingPurpose (AsIxItem ix proc) ->
       pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
     GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
+    ReceivingPurpose (AsIxItem _ _) -> pure $ PV4.Receiving sh
     _ ->
       Left $ inject $ Alonzo.PlutusPurposeNotSupported @era $ hoistPlutusPurpose toAsItem plutusPurpose
 

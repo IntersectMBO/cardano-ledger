@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-babbage
-version: 1.15.0.1
+version: 1.16.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -91,11 +91,11 @@ library
     bytestring,
     cardano-base >=0.1.4,
     cardano-data >=1.2,
-    cardano-ledger-allegra ^>=1.10,
-    cardano-ledger-alonzo ^>=1.17,
+    cardano-ledger-allegra ^>=1.11,
+    cardano-ledger-alonzo ^>=1.18,
     cardano-ledger-binary >=1.9,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.23,
-    cardano-ledger-mary >=1.11 && <1.13,
+    cardano-ledger-mary >=1.12 && <1.13,
     cardano-ledger-shelley ^>=1.21,
     cardano-strict-containers,
     containers,

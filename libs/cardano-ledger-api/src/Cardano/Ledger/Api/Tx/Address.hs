@@ -3,14 +3,18 @@
 module Cardano.Ledger.Api.Tx.Address (
   -- * Address
   Addr (..),
+  AddressProtection (..),
+  shelleyAddressView,
+  protectAddress,
+  protectedAddressesSupported,
   getNetwork,
   BootstrapAddress (..),
   serialiseAddr,
 
   -- ** Strict decoders
 
-  -- | Decoders below will only decode addresses that are allowed to be placed on chain
-  -- today. Historically there were a few bugs in the decoder which allowed a few
+  -- | Decoders below parse the current address format. Parsing success does not
+  -- establish admission by a particular ledger era. Historically there were a few bugs in the decoder which allowed a few
   -- malformed addressed to be placed on chain. If you need backwards compatibility, reach
   -- out for `decodeAddrLenient`.
   decodeAddr,

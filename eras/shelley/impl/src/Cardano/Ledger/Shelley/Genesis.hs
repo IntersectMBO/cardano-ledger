@@ -28,6 +28,7 @@ module Cardano.Ledger.Shelley.Genesis (
   sgActiveSlotCoeff,
   genesisUTxO,
   initialFundsPseudoTxIn,
+  validateInitialFundAddresses,
   validateGenesis,
   describeValidationErr,
   mkShelleyGlobals,
@@ -52,7 +53,7 @@ import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Blake2b_256)
 import qualified Cardano.Crypto.Hash.Class as H
 import Cardano.Crypto.KES (Sum6KES, totalPeriodsKES)
-import Cardano.Ledger.Address (serialiseAddr)
+import Cardano.Ledger.Address (AddressProtection (..), serialiseAddr, shelleyAddressView)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BoundedRational (boundRational, unboundRational),
@@ -101,7 +102,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Control.DeepSeq (NFData)
-import Control.Exception (Exception (..))
+import Control.Exception (Exception (..), throw)
 import Control.Monad (unless, when)
 import Control.Monad.Class.MonadST (MonadST)
 import Control.Monad.Class.MonadThrow (MonadThrow (throwIO))
@@ -255,9 +256,15 @@ instance ToKeyValuePairs ShelleyExtraConfig where
 instance FromJSON ShelleyExtraConfig where
   parseJSON = Aeson.withObject "ShelleyExtraConfig" $ \obj ->
     ShelleyExtraConfig
-      <$> obj .:? "initialFunds" .!= NoInjection
+      <$> (obj .:? "initialFunds" .!= NoInjection >>= validateInjectionFunds)
       <*> obj .:? "stakePools" .!= NoInjection
       <*> obj .:? "stakeCredentials" .!= NoInjection
+    where
+      validateInjectionFunds funds = case funds of
+        EmbeddedInjection entries -> case validateInitialFundAddresses entries of
+          Left _ -> fail "Protected addresses are not permitted in initial funds"
+          Right () -> pure funds
+        _ -> pure funds
 
 -- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
 -- only supports @'Micro'@ precision.
@@ -508,7 +515,10 @@ instance FromJSON ShelleyGenesis where
         <*> obj .: "maxLovelaceSupply"
         <*> (legacyFromJSONPParams <$> obj .: "protocolParams")
         <*> (forceElemsToWHNF <$> obj .: "genDelegs")
-        <*> (forceElemsToWHNF <$> obj .: "initialFunds") -- TODO: disable. Move to EraTransition
+        <*> ( obj .: "initialFunds" >>= \funds -> case validateInitialFundAddresses funds of
+                Left _ -> fail "Protected addresses are not permitted in initial funds"
+                Right () -> pure (forceElemsToWHNF funds) -- TODO: disable. Move to EraTransition
+            )
         <*> obj .:? "staking" .!= emptyGenesisStaking -- TODO: remove. Move to EraTransition
         <*> (maybeToStrictMaybe <$> obj .:? "extraConfig")
     where
@@ -634,19 +644,32 @@ activeSlotsCoeffDecCBOR = do
   Genesis UTxO
 -------------------------------------------------------------------------------}
 
+-- | Initial funds have no transaction or Receiving authorization. Network
+-- initialization must reject protected addresses, including in-memory configs.
+validateInitialFundAddresses :: LM.ListMap Addr a -> Either Addr ()
+validateInitialFundAddresses funds =
+  case [addr | (addr, _) <- LM.unListMap funds, Just (Protected, _, _, _) <- [shelleyAddressView addr]] of
+    addr : _ -> Left addr
+    [] -> Right ()
+
 genesisUTxO ::
   forall era.
   EraTxOut era =>
   ShelleyGenesis ->
   UTxO era
 genesisUTxO genesis =
-  UTxO $
-    Map.fromList
-      [ (txIn, txOut)
-      | (addr, amount) <- LM.unListMap (sgInitialFunds genesis)
-      , let txIn = initialFundsPseudoTxIn addr
-            txOut = mkBasicTxOut addr (Val.inject amount)
-      ]
+  case validateInitialFundAddresses (sgInitialFunds genesis) of
+    Left protectedAddr -> throw (InjectionProtectedInitialFunds protectedAddr)
+    Right () -> genesisUnprotectedUTxO
+  where
+    genesisUnprotectedUTxO =
+      UTxO $
+        Map.fromList
+          [ (txIn, txOut)
+          | (addr, amount) <- LM.unListMap (sgInitialFunds genesis)
+          , let txIn = initialFundsPseudoTxIn addr
+                txOut = mkBasicTxOut addr (Val.inject amount)
+          ]
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
 -- to the given address in the genesis initial funds.
@@ -851,6 +874,7 @@ data InjectionError
   | InjectionParseError !FsPath !String
   | InjectionNotAllowedOnMainnet
   | InjectionConflictingSources !String
+  | InjectionProtectedInitialFunds !Addr
   deriving (Show, Eq)
 
 instance Exception InjectionError where
@@ -867,6 +891,8 @@ instance Exception InjectionError where
     "Injection of initial data is not allowed on Mainnet"
   displayException (InjectionConflictingSources msg) =
     "Conflicting injection sources: " <> msg
+  displayException (InjectionProtectedInitialFunds addr) =
+    "Protected addresses are not permitted in initial funds: " <> show addr
 
 -- | Fold over a source of injected data: for EmbeddedInjection the data is
 -- folded in memory, while for InjectionFromFile the data is streamed, hashed,

@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec (spec) where
 
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network (..),
@@ -19,6 +20,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (
   DijkstraSubUtxoPredFailure (..),
@@ -32,7 +34,7 @@ import Cardano.Ledger.Mary.Value (
   multiAssetFromList,
  )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Tools (setMinCoinTxOut)
+import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Control.Monad.State (gets)
@@ -51,6 +53,19 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SUBUTXO" $ do
+  describe "CIP-160 phase-1 address rejection" $ do
+    disableInConformanceIt
+      "[outside model: stake pointers] rejects a protected pointer in child ordinary outputs"
+      $ do
+        payment <- KeyHashObj <$> freshKeyHash
+        ptr <- arbitrary
+        pp <- getsPParams id
+        let out =
+              ensureMinCoinTxOut pp $
+                mkBasicTxOut (AddrProtected Testnet payment (StakeRefPtr ptr)) (inject (Coin 100))
+            subTx = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [out]
+        submitFailingSubTx subTx [injectFailure $ SubUnsupportedOutputAddresses (NES.singleton 0)]
+
   describe "SubOutsideValidityIntervalUTxO" $ do
     it "the validity interval starts after the current slot" $ do
       currentSlot <- gets (^. impCurSlotNoG)

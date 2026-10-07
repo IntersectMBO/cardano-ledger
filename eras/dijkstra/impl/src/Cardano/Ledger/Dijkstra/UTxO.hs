@@ -13,6 +13,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   DijkstraEraUTxO (..),
   dijkstraConsumed,
   getDijkstraScriptsNeeded,
+  getDijkstraWitsVKeyNeeded,
   getDijkstraScriptsProvided,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
@@ -46,6 +47,8 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..))
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
+import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptHashes)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
@@ -56,6 +59,7 @@ import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro (SimpleGetter, to, (^.))
 import Lens.Micro.Extras (view)
 
@@ -157,7 +161,7 @@ instance EraUTxO DijkstraEra where
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
-  getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
+  getWitsVKeyNeeded _ = getDijkstraWitsVKeyNeeded
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
 
@@ -190,11 +194,24 @@ getDijkstraScriptsNeeded ::
 getDijkstraScriptsNeeded utxo txb =
   getConwayScriptsNeeded utxo txb
     <> guardingScriptsNeeded
+    <> receivingScriptsNeeded
   where
     guardingScriptsNeeded = AlonzoScriptsNeeded $
       catMaybes $
         zipAsIxItem (txb ^. guardsTxBodyL) $
           \(AsIxItem idx cred) -> (\sh -> (GuardingPurpose (AsIxItem idx sh), sh)) <$> credScriptHash cred
+
+    receivingScriptsNeeded = AlonzoScriptsNeeded $
+      zipAsIxItem (receivingScriptHashes txb) $ \target@(AsIxItem _ sh) ->
+        (ReceivingPurpose target, sh)
+
+-- | Body-local key witnesses, including authorization to create protected outputs.
+getDijkstraWitsVKeyNeeded ::
+  (EraTx era, DijkstraEraTxBody era) =>
+  UTxO era -> TxBody l era -> Set (KeyHash Witness)
+getDijkstraWitsVKeyNeeded utxo txBody =
+  getConwayWitsVKeyNeeded utxo txBody
+    `Set.union` Set.map asWitness (receivingKeyHashes txBody)
 
 instance AlonzoEraUTxO DijkstraEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
