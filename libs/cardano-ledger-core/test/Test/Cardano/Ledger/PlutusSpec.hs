@@ -22,11 +22,15 @@ import Cardano.Ledger.Coin (Coin, CoinPerByte, CompactForm)
 import Cardano.Ledger.Core (MaxPledgeLeverage)
 import Cardano.Ledger.Plutus
 import Cardano.Slotting.Slot (SlotInterval (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Word
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Plutus (testingCostModel)
 import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec)
 
 spec :: Spec
@@ -39,6 +43,23 @@ spec = do
 costModelsSpec :: Spec
 costModelsSpec = do
   describe "CostModels" $ do
+    forM_ [(PlutusV1, 166), (PlutusV2, 175), (PlutusV3, 251), (PlutusV4, 369)] $ \(language, initialCount) ->
+      it ("preserves strict genesis parameter counts for " <> show language) $ do
+        costModelInitParamCount language `shouldBe` initialCount
+        let params = take initialCount (getCostModelParams (testingCostModel language))
+            parseArray = Aeson.parseEither (Aeson.withArray "CostModel" (parseCostModelAsArray False language))
+            parseMap = Aeson.parseEither (Aeson.withObject "CostModel" (parseCostModelAsMap False language))
+            namedParams = Map.fromList $ zip (costModelInitParamNames language) params
+        expected <- expectRight $ mkCostModel language params
+        parseArray (Aeson.toJSON params) `shouldBe` Right expected
+        parseMap (Aeson.toJSON namedParams) `shouldBe` Right expected
+        forM_ [take (initialCount - 1) params, params <> [0]] $ \malformed -> do
+          case parseArray (Aeson.toJSON malformed) of
+            Left _ -> pure ()
+            Right _ -> assertFailure "Accepted a malformed genesis cost-model array"
+        case parseMap (Aeson.toJSON (Map.insert "unknown-genesis-parameter" 0 namedParams)) of
+          Left _ -> pure ()
+          Right _ -> assertFailure "Accepted an extra genesis cost-model parameter"
     prop "flattenCostModels . mkCostModelsLenient" $ \valid unknown -> do
       let cms1Flat = flattenCostModels valid <> unknown
           cms2Flat = unknown <> flattenCostModels valid

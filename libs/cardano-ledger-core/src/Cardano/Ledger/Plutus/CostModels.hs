@@ -237,8 +237,9 @@ costModelInitParamCount lang =
     PlutusV2 -> 175
     PlutusV3 -> 251
     PlutusV4 ->
-      -- This number will continue to change until we are ready to hard fork into Dijkstra era
-      251
+      -- Current proposed initial V4 count, independent of Plutus library updates.
+      -- This may change before the hard fork into Dijkstra is finalized.
+      369
 
 -- | There is a difference in 6 parameter names between the ones appearing alonzo genesis
 -- files and the values returned by plutus via `P.showParamName` on the `ParamName` enum.

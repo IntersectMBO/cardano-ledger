@@ -17,6 +17,7 @@
 
 ### `testlib`
 
+* Check complete Dijkstra genesis JSON roundtrips and reject malformed initial V4 cost-model lengths
 * Generate and shrink protected addresses while retaining protection and valid address forms
 * Add Receiving witness, redeemer and datum fixups for top-level and child transactions, retaining each output invocation's budget and aggregating execution units across the batch
 

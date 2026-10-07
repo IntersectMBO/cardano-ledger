@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Set the proposed initial Plutus V4 genesis cost-model parameter count to 369, retaining the historical V1–V3 counts and strict genesis JSON parsing
 * Add `AddrProtected` to `Addr`, preserving protection in address identity, serialization and compact storage
 * Add `AddressProtection`, `shelleyAddressView`, `protectAddress`, `protectedAddressesSupported` and `isProtectedCompactAddr`
 * Add `fromCborStoredBothAddr` for stored-state decoding, and preserve protocol-version admission in transaction decoding
