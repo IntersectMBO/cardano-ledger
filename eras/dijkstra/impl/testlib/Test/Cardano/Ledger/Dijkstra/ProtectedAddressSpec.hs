@@ -17,19 +17,22 @@ import Cardano.Ledger.Binary (
   natVersion,
   serialize,
  )
-import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.State (
   ConwayInstantStake,
   addConwayInstantStake,
   deleteConwayInstantStake,
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptHashes)
 import Cardano.Ledger.Plutus (Datum (..))
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, txinsScriptHashes)
+import Cardano.Ledger.Shelley.UTxO (
+  ShelleyScriptsNeeded (..),
+  getShelleyScriptsNeeded,
+  getShelleyWitsVKeyNeededNoGov,
+ )
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import qualified Data.ByteString.Lazy as BSL
@@ -73,7 +76,7 @@ spec = describe "Protected address storage and consumers" $ do
     forAll genProtectedAddr $ \address -> do
       let body destination =
             mkBasicTxBody @DijkstraEra @TopTx
-              & outputsTxBodyL .~ pure (mkCoinTxOut destination (Coin 20))
+              & outputsTxBodyL .~ SSeq.singleton (mkCoinTxOut destination (Coin 20))
       forM_ (shrinkProtectedAddr address) $ \smaller -> do
         receivingKeyHashes (body smaller) `shouldBe` receivingKeyHashes (body address)
         receivingScriptHashes (body smaller) `shouldBe` receivingScriptHashes (body address)
@@ -85,7 +88,7 @@ spec = describe "Protected address storage and consumers" $ do
     protectedOut ^. addrEitherTxOutL `shouldBe` Right (compactAddr protected)
     (protectedOut & coinTxOutL .~ Coin 21) ^. addrTxOutL `shouldBe` protected
   it "accounts for actual bytes in minimum coin and transaction identity" $ do
-    let pp = mkBasicPParams @DijkstraEra & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 4310)
+    let pp = emptyPParams @DijkstraEra & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 4310)
         body out = mkBasicTxBody @DijkstraEra @TopTx & outputsTxBodyL .~ SSeq.singleton out
     BSL.length (serialize version protectedOut) `shouldBe` BSL.length (serialize version ordinaryOut)
     getMinCoinTxOut pp protectedOut `shouldBe` getMinCoinTxOut pp ordinaryOut
@@ -139,10 +142,10 @@ spec = describe "Protected address storage and consumers" $ do
           singleton out = UTxO (Map.singleton input out)
           body = mkBasicTxBody @DijkstraEra @TopTx & inputsTxBodyL .~ Set.singleton input
           collateralBody = mkBasicTxBody @DijkstraEra @TopTx & collateralInputsTxBodyL .~ Set.singleton input
-      txinsScriptHashes (Set.singleton input) (singleton (scriptOut AddrProtected))
-        `shouldBe` Set.singleton scriptHash
-      txinsScriptHashes (Set.singleton input) (singleton (scriptOut Addr))
-        `shouldBe` Set.singleton scriptHash
+      getShelleyScriptsNeeded (singleton (scriptOut AddrProtected)) body
+        `shouldBe` ShelleyScriptsNeeded (Set.singleton scriptHash)
+      getShelleyScriptsNeeded (singleton (scriptOut Addr)) body
+        `shouldBe` ShelleyScriptsNeeded (Set.singleton scriptHash)
       getShelleyWitsVKeyNeededNoGov (singleton protectedOut) body
         `shouldBe` getShelleyWitsVKeyNeededNoGov (singleton ordinaryOut) body
       getShelleyWitsVKeyNeededNoGov (singleton protectedOut) collateralBody

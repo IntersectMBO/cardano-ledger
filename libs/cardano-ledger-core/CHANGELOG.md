@@ -16,6 +16,10 @@
 * Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
 * Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
 
+### `testlib`
+
+* Add `receivingEvenDatum`, a Plutus V4 fixture that checks grouped Receiving output datums
+
 ## 1.22.0.0
 
 * Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug

@@ -2,7 +2,10 @@
 
 ## 0.5.0.0
 
+* Remove `InjectRuleFailure "SUBUTXO" DijkstraUtxoPredFailure DijkstraEra`; add `dijkstraUtxoToDijkstraSubUtxoPredFailure`, which returns `Nothing` for top-only failures
+* Remove `InjectRuleFailure "ENTITIES" ShelleyUtxoPredFailure DijkstraEra` and `InjectRuleFailure "SUBENTITIES" ShelleyUtxoPredFailure DijkstraEra`; validate withdrawal networks directly with each rule's own failure constructor
 * Add `DijkstraReceiving` with redeemer tag 7 and canonical protected-output target sets
+* Add `receivingScriptTargets` and `transTxRedeemersV4` to share canonical indexed targets across bulk Receiving consumers and V4 redeemer translation
 * Require body-local key, native-script and Plutus witnesses for protected outputs
 * Translate protected addresses and Receiving purposes into the receiving-aware Plutus V4 context
 * Add `UnsupportedOutputAddresses`, `ProtectedCollateralReturn` and `SubUnsupportedOutputAddresses` predicate failures
@@ -11,6 +14,11 @@
 * Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Change `eraMaxLanguage` to `PlutusV4`
+
+### `testlib`
+
+* Generate and shrink protected addresses while retaining protection and valid address forms
+* Add Receiving witness, redeemer and datum fixups for top-level and child transactions, sharing execution budgets across the batch
 
 ## 0.4.0.0
 

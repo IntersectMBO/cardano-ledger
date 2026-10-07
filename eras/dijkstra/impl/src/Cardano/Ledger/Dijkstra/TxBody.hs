@@ -103,6 +103,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   startingAccountBalanceIntervalsDijkstraTxBodyRawL,
   dijkstraAllInputsTxBodyF,
   receivingScriptHashes,
+  receivingScriptTargets,
   receivingKeyHashes,
 ) where
 
@@ -110,6 +111,7 @@ import Cardano.Base.Typeable (TypeName (TypeName))
 import Cardano.Ledger.Address (AddressProtection (..), DirectDeposits (..), shelleyAddressView)
 import Cardano.Ledger.Allegra.Scripts (invalidBeforeL, invalidHereAfterL)
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..), alonzoSpendableInputsTxBodyF)
+import Cardano.Ledger.Alonzo.UTxO (zipAsIxItem)
 import Cardano.Ledger.Babbage.TxBody (
   allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
@@ -168,6 +170,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import Data.Typeable (Typeable, typeRep)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (.~), (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
@@ -1269,6 +1272,11 @@ dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
 -- approach its index bound: transaction size limits bound the number of outputs.
 receivingScriptHashes :: EraTxBody era => TxBody l era -> Set ScriptHash
 receivingScriptHashes = snd . receivingCredentials
+
+-- | Canonical indexed Receiving targets for bulk consumers. Construct this list
+-- once per immutable body; native hashes retain their positions in the domain.
+receivingScriptTargets :: EraTxBody era => TxBody l era -> [AsIxItem Word32 ScriptHash]
+receivingScriptTargets txBody = zipAsIxItem (receivingScriptHashes txBody) id
 
 -- | Payment signatures required to create this body's protected outputs.
 receivingKeyHashes :: EraTxBody era => TxBody l era -> Set (KeyHash Payment)

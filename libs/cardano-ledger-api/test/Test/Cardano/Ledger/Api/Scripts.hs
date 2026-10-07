@@ -5,15 +5,12 @@
 
 module Test.Cardano.Ledger.Api.Scripts (spec) where
 
-import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Api.Era
-import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (TxLevel (..), mkBasicPParams)
-import Cardano.Ledger.Dijkstra.Core (subTransactionsTxBodyL, treasuryDonationTxBodyL)
+import Cardano.Ledger.Core (TxLevel (..), emptyPParams)
+import Cardano.Ledger.Dijkstra.Core (subTransactionsTxBodyL)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Data.Aeson (object, toJSON, (.=))
 import qualified Data.Map.Strict as Map
@@ -45,6 +42,7 @@ spec = describe "Receiving purpose API" $ do
 
   prop "retains equal redeemer pointers from the parent and distinct children" $ \redeemerData -> do
     let pointer = ReceivingPurpose (AsIx 0) :: PlutusPurpose AsIx DijkstraEra
+        attachRedeemer :: Tx l DijkstraEra -> Tx l DijkstraEra
         attachRedeemer tx = tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.singleton pointer (redeemerData, ExUnits 0 0)
         child1 =
           attachRedeemer $ mkBasicTx (mkBasicTxBody @DijkstraEra @SubTx & treasuryDonationTxBodyL .~ Coin 1)
@@ -56,7 +54,7 @@ spec = describe "Receiving purpose API" $ do
               (mkBasicTxBody @DijkstraEra @TopTx & subTransactionsTxBodyL .~ OMap.fromFoldable [child1, child2])
         report =
           evalDijkstraTxExUnits
-            (mkBasicPParams @DijkstraEra)
+            (emptyPParams @DijkstraEra)
             batch
             mempty
             (epochInfo testGlobals)

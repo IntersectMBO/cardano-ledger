@@ -47,7 +47,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..))
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
-import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptHashes)
+import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptTargets)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -201,9 +201,9 @@ getDijkstraScriptsNeeded utxo txb =
         zipAsIxItem (txb ^. guardsTxBodyL) $
           \(AsIxItem idx cred) -> (\sh -> (GuardingPurpose (AsIxItem idx sh), sh)) <$> credScriptHash cred
 
-    receivingScriptsNeeded = AlonzoScriptsNeeded $
-      zipAsIxItem (receivingScriptHashes txb) $ \target@(AsIxItem _ sh) ->
-        (ReceivingPurpose target, sh)
+    receivingScriptsNeeded =
+      AlonzoScriptsNeeded $
+        [(ReceivingPurpose target, sh) | target@(AsIxItem _ sh) <- receivingScriptTargets txb]
 
 -- | Body-local key witnesses, including authorization to create protected outputs.
 getDijkstraWitsVKeyNeeded ::

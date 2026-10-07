@@ -17,7 +17,9 @@ data-files:
   golden/*.hex
   golden/*.json
 
-extra-source-files: CHANGELOG.md
+extra-source-files:
+  CHANGELOG.md
+  golden/reference-encoders/*
 
 source-repository head
   type: git
@@ -174,7 +176,9 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.ImpTest
     Test.Cardano.Ledger.Dijkstra.OutputValiditySpec
     Test.Cardano.Ledger.Dijkstra.ProtectedAddressSpec
+    Test.Cardano.Ledger.Dijkstra.ReceivingActivationSpec
     Test.Cardano.Ledger.Dijkstra.ReceivingSpec
+    Test.Cardano.Ledger.Dijkstra.TransactionInteropSpec
     Test.Cardano.Ledger.Dijkstra.TreeDiff
     Test.Cardano.Ledger.Dijkstra.TxInfoSpec
 

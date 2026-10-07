@@ -7,7 +7,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.ReceivingFixupSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -21,7 +20,7 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   pointWiseExUnits,
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (UTxO (..), utxoL)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set

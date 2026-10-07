@@ -7,6 +7,7 @@
 
 ### `testlib`
 
+* Preserve protected script addresses in input and output datum fixups
 * Add `mkTokenMintingTx`
 
 ## 1.17.0.0

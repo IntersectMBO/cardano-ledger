@@ -32,7 +32,9 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import qualified Test.Cardano.Ledger.Dijkstra.OutputValiditySpec as OutputValiditySpec
 import qualified Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Dijkstra.ProtectedAddressSpec as ProtectedAddressSpec
+import qualified Test.Cardano.Ledger.Dijkstra.ReceivingActivationSpec as ReceivingActivationSpec
 import qualified Test.Cardano.Ledger.Dijkstra.ReceivingSpec as ReceivingSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TransactionInteropSpec as TransactionInteropSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxInfoSpec as DijkstraTxInfoSpec
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
@@ -68,5 +70,7 @@ main =
     GoldenBinary.spec @DijkstraEra
     PlutusSpec.spec
     ReceivingSpec.spec
+    ReceivingActivationSpec.spec
     ProtectedAddressSpec.spec
+    TransactionInteropSpec.spec
     OutputValiditySpec.spec

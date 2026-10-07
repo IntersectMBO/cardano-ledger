@@ -85,7 +85,10 @@ rejected when its Plutus scripts fail.
 
 V1-V3 contexts cannot represent protected addresses or Receiving purposes.
 Collection fails in phase 1 when the required legacy view includes protected
-outputs, inputs or reference inputs, including key or native-script recipients.
+outputs or consumed inputs, including key or native-script recipients. V2 and V3
+also expose reference inputs and reject protection there. V1 hides reference
+inputs, so their protection alone does not prevent collection; its existing
+missing-input, Byron-address and inline-datum validation still applies.
 Dijkstra already rejects legacy languages in subtransactions. These restrictions
 are applied to actual context visibility and do not imply a blanket ban on all
 mixed-language batches.
@@ -118,9 +121,15 @@ This generates the public test fixture module
 The command requires the patched receiving-aware Plutus dependency; an ordinary
 released 1.71 package does not contain this proposed interface. The exact source
 revision is pinned in [cabal.project](../cabal.project) at
-`3ddfba3e01998eb98e2c906c1caecebee242b609`. Its real V4 encoding/helper tests
-and compiled normal/data-backed selection tests passed under GHC 9.6.7. The
-preprocessor generated the fixture through the real Plutus compiler at that pin.
+`14d7686b4bcb51dbf35c24269ec2cc999824cb3e`. Its Haskell library/test sources match
+`9d927c19a756cb15c7eba9e331d1a87878215fd1`, whose API package suite passed all 446 tests with
+strict warnings under GHC 9.6.7; its compiled normal/data-backed selection tests
+also passed. The preprocessor generated the fixture through the real Plutus
+compiler at revision `3ddfba3e01998eb98e2c906c1caecebee242b609`; the current pin only adds a
+test-import correction and a Receiving case in the off-chain analyser, preserving
+the compiler and production API sources. The latest pin additionally fixes
+Windows CI flags and guards fork documentation deployment; those CI changes
+require no fixture regeneration.
 Two successive runs produced identical complete fixture files, preserving all 41
 released V1-V3 fixture byte strings. Local fixture execution is distinct
 from a supported CLI construction path or a testnet activation rehearsal. No

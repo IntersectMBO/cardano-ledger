@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   TransactionScriptFailure (ContextError, RedeemerPointsToUnknownScriptHash),
@@ -51,6 +50,7 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.State (accountsL, accountsMapL)
 import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -335,7 +335,7 @@ spec = describe "UTXOW" $ do
       UTxO finalUtxo <- getUTxO
       let expectNoOutputs :: forall level. Tx level era -> ImpTestM era ()
           expectNoOutputs bodyTx =
-            forM_ [0 .. length (bodyTx ^. bodyTxL . outputsTxBodyL) - 1] $ \index ->
+            forM_ ([0 .. length (bodyTx ^. bodyTxL . outputsTxBodyL) - 1] :: [Int]) $ \index ->
               Map.member (txInAt index bodyTx) finalUtxo `shouldBe` False
       expectNoOutputs failed
       forM_ (OMap.elems (failed ^. bodyTxL . subTransactionsTxBodyL)) expectNoOutputs

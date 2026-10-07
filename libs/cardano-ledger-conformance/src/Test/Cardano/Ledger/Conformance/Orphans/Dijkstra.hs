@@ -75,6 +75,8 @@ instance NFData GovEnv
 
 instance NFData VDeleg
 
+instance NFData StakePoolState
+
 instance NFData StakePoolParams
 
 instance NFData DCert
@@ -123,6 +125,8 @@ instance NFData LedgerEnv
 
 instance NFData RewardUpdate
 
+instance NFData LeiosSeat
+
 instance NFData NewEpochState
 
 instance NFData BalanceInterval
@@ -154,6 +158,8 @@ instance ToExpr GovEnv
 instance ToExpr EnactState
 
 instance ToExpr VDeleg
+
+instance ToExpr StakePoolState
 
 instance ToExpr StakePoolParams
 
@@ -216,6 +222,8 @@ instance ToExpr LedgerEnv
 instance ToExpr Acnt
 
 instance ToExpr RewardUpdate
+
+instance ToExpr LeiosSeat
 
 instance ToExpr NewEpochState
 

@@ -192,6 +192,7 @@ benchmark bench
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-alonzo-test,
+    cardano-ledger-babbage,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},

@@ -1,9 +1,22 @@
 # CIP-160 executable model
 
-Development source base: a0869c88f3a053f5f65c8e2ee34d63ba74ce6942. This is
-exactly the source identified by the ledger's pinned artifact commit
-f6cf156dc204ff8a12c02bde9794080b9296e17d. The development patch must be reviewed
-and merged before ledger CI may consume its generated artifact.
+The ledger pins development artifact
+[`9f359b1e534419c24323a53181aa8e33ea17fbac`](https://github.com/colll78/formal-ledger-specifications/tree/9f359b1e534419c24323a53181aa8e33ea17fbac),
+genuinely extracted from signed source
+[`06dbab86667ad6efd3151b460d63daeae74ca042`](https://github.com/colll78/formal-ledger-specifications/commit/06dbab86667ad6efd3151b460d63daeae74ca042)
+in [formal source PR 1348](https://github.com/IntersectMBO/formal-ledger-specifications/pull/1348).
+That source includes upstream master through
+`f4f95d3349a26c8bfcc483dda58fbfab80e3d85c`. Cabal and Nix consume the same
+artifact revision. Its 789 generated files have SHA-256 manifest
+`11d34721c5ad304d6ed0f3109d758e6f3dee18c21f7bb29a244bed024be5fa1b`.
+Full Agda specification/proof checks, the example library and property dashboard
+passed; GHC compiled the actual public API and ran all 41 persistent model
+regressions. The formal Haskell artifact CI job now runs those regressions before
+upload. [Successful public Haskell CI](https://github.com/IntersectMBO/formal-ledger-specifications/actions/runs/37572929146/job/112635555193)
+also extracted and ran all 41 regressions on synthetic merge `7adffdf`, containing
+the documentation-only `b4b7923` followup. This is separate from the pinned
+artifact's exact `06dbab86` extraction provenance. Upstream source acceptance and
+generated artifact ancestry remain required by the ledger CI gate described below.
 
 `BaseAddr.protected` is part of address equality. Bootstrap addresses have no
 protection flag. `protect` preserves the payment and staking credentials by
@@ -23,14 +36,21 @@ contents or native/Plutus script classification. Native hashes occupy slots.
 The ledger's fixed-length hash encoding as a big-endian natural number preserves
 lexicographic byte ordering. Duplicated output addresses or differing staking
 credentials never create duplicate execution purposes. Parent and child target
-domains are computed separately.
+domains are computed separately. The collector deduplicates purpose/credential
+identities before constructing evaluator arguments, using existing semantic
+proposal identity for Propose and exact tag/payload equality for other purposes.
+Different purposes remain separate even under identical foreign contexts.
 
 Receiving keys are required in each body's key-witness set. Receiving scripts
 join the existing batch witness/reference-script pool, native validation,
 non-native exact-redeemer domain and integrity/language-view rules. Newly created
 outputs contribute no scripts to that pool: a reference script attached only to
 a new protected output cannot authorize its own creation. Receiving introduces
-no implicit datum; existing optional output datum rules apply.
+no implicit datum; existing optional output datum rules apply. Legacy V1–V3
+contexts reject protection on consumed inputs and ordinary outputs. V2/V3 also
+reject protected reference inputs, which they expose; V1 has no reference-input
+context field, so protection alone on a hidden reference input adds no rejection.
+Its inherited bootstrap and inline-datum reference checks remain in force.
 
 The top-level transaction alone carries collateral inputs, collateral return and
 total collateral. The model rejects a protected return unconditionally in phase
@@ -79,7 +99,8 @@ sparse foreign output maps are outside that translation premise.
 The Receiving generated properties live in
 `libs/cardano-ledger-conformance/test/Test/Cardano/Ledger/Conformance/Spec/Dijkstra/Receiving.hs`.
 Dijkstra `Imp.UtxowSpec`, `Imp.SubUtxowSpec`, `Imp.UtxoSpec`, `Imp.SubUtxoSpec`
-and `Imp.ReceivingFixupSpec`, plus `Imp.ReceivingAdversarialSpec.structuralSpec`,
+and `Imp.ReceivingFixupSpec`, plus `Imp.ReceivingAdversarialSpec.structuralSpec`
+and `Imp.ReceivingAccountingSpec.transactionBudgetSpec`,
 run beneath the existing
 `submitTxConformanceHook` with the composed executable `LEDGER` rule. The hook
 compares success/failure and translated resulting ledger states. It does not
@@ -111,7 +132,43 @@ compiled validators in the ledger suite and are not formal comparisons:
 
 The grouped-output test checks grouped validator behavior and declared-validity rejection;
 its accepted-invalid state path also has the separate structural comparison.
-The formal suite has no Receiving-specific skipped or pending tests. These
-four concrete tests supply compiled evaluator and purpose-dispatch evidence
+The registered Receiving domain, structural, fixup and transaction-budget
+comparisons have no skipped or pending cases. Protected-pointer rejection remains
+complementary ledger coverage under the explicit representation boundary above.
+These four concrete tests supply compiled evaluator and purpose-dispatch evidence
 outside these formal comparisons. The foreign constant context and boolean
 evaluator cannot establish that compiled purpose dispatch is correct.
+
+## Accounting coverage boundary
+
+The transaction execution-budget comparison is registered separately from the
+thirteen adversarial structural comparisons. The extracted foreign budget
+ordering compares memory and steps componentwise, with independently chosen
+below-limit, equal-limit and each-dimension-over-limit fixtures. The ledger
+PParams translation retains the actual protocol version for activation checks.
+
+ReceivingAccountingSpec's concrete ledger suite additionally checks actual
+script prices, removal of a balanced fee, script-integrity mutation, the BBODY
+execution-budget limit and both full-return/omitted-asset collateral outcomes.
+The fee and integrity callbacks and Coin projection cannot establish those
+properties; the LEDGER hook also does not compare BBODY. These remain enabled
+concrete tests with the boundaries stated in the test module. Mempool admission
+cases run the actual mempool ledger transition independently of confirmed state.
+
+## Upstream Leios representation boundary
+
+The upstream formal API retains a registered pool's BLS key and registration
+epoch, and drops the proof after its registration check. The ledger adapter
+serializes the actual key/proof bytes and calls the real BLS proof verifier for
+registration. State comparison consequently does not establish preservation of
+the ledger's retained proof bytes. Those crypto checks have matching-proof,
+wrong-key and malformed-encoding regression cases.
+
+Formal committee seats retain pool IDs, while ledger seats retain only key and
+weight. A nonempty committee has no direct faithful translation without an
+additional snapshot-origin premise identifying each pool; this adapter returns
+an explicit translation error. Empty committees translate normally. Receiving
+comparisons use disabled Leios. This is an inherited representation boundary,
+with explicit empty/nonempty regression cases, and adds no Receiving skips.
+The incoming foreign `ebSize` callback is zero, so this integration makes no
+endorser-block size-conformance claim.

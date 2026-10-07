@@ -84,9 +84,9 @@ spec = describe "UTXO" $ do
               mkBasicTxOut (AddrProtected Testnet payment StakeRefNull) (inject (Coin 100))
           tx = mkBasicTx mkBasicTxBody & bodyTxL . collateralReturnTxBodyL .~ SJust out
       fixed <- fixupTx tx
-      before <- getUTxO
+      beforeUtxo <- getUTxO
       withNoFixup $ submitFailingTx fixed [injectFailure ProtectedCollateralReturn]
-      getUTxO >>= (`shouldBe` before)
+      getUTxO >>= (`shouldBe` beforeUtxo)
     it "rejects a protected collateral return even when its Plutus script succeeds" $ do
       payment <- KeyHashObj <$> freshKeyHash
       pp <- getsPParams id
@@ -96,9 +96,9 @@ spec = describe "UTXO" $ do
           tx = mkBasicTx mkBasicTxBody & bodyTxL . collateralReturnTxBodyL .~ SJust out
       successfulTx <- switchTxToLegacyMode tx
       fixed <- fixupTx successfulTx
-      before <- getUTxO
+      beforeUtxo <- getUTxO
       withNoFixup $ submitFailingTx fixed [injectFailure ProtectedCollateralReturn]
-      getUTxO >>= (`shouldBe` before)
+      getUTxO >>= (`shouldBe` beforeUtxo)
     it "rejects a protected collateral return when a failing script is claimed phase-2 invalid" $ do
       payment <- KeyHashObj <$> freshKeyHash
       pp <- getsPParams id
@@ -108,12 +108,12 @@ spec = describe "UTXO" $ do
           tx = mkBasicTx mkBasicTxBody & bodyTxL . collateralReturnTxBodyL .~ SJust out
       failingTx <- switchTxToPhase2InvalidLegacyMode tx
       fixed <- fixupTx failingTx
-      before <- getUTxO
+      beforeUtxo <- getUTxO
       withNoFixup $
         submitFailingTx
           (fixed & isPhase2ValidTxL .~ Phase2Invalid)
           [injectFailure ProtectedCollateralReturn]
-      getUTxO >>= (`shouldBe` before)
+      getUTxO >>= (`shouldBe` beforeUtxo)
 
   describe "value produced by a transaction" $ do
     it "counts each new pool deposit at most once across the batch" $ do

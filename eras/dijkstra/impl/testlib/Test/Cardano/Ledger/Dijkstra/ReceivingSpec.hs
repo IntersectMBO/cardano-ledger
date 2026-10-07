@@ -1,11 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.ReceivingSpec (spec) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -18,11 +18,15 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
-import Cardano.Ledger.Dijkstra.TxBody (receivingKeyHashes, receivingScriptHashes)
+import Cardano.Ledger.Dijkstra.TxBody (
+  receivingKeyHashes,
+  receivingScriptHashes,
+  receivingScriptTargets,
+ )
 import Cardano.Ledger.Dijkstra.UTxO (getDijkstraScriptsNeeded, getDijkstraWitsVKeyNeeded)
-import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Plutus (ExUnits (..))
+import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Either (isLeft)
@@ -60,7 +64,7 @@ spec = describe "Receiving" $ do
         `shouldSatisfy` isLeft
     it "hoists the resolved view to the existing index and item views" $ do
       let resolved = DijkstraReceiving (AsIxItem 3 lowHash) :: DijkstraPlutusPurpose AsIxItem DijkstraEra
-      hoistPlutusPurpose (\(AsIxItem ix _) -> AsIx ix) resolved `shouldBe` pointer
+      hoistPlutusPurpose (\(AsIxItem purposeIndex _) -> AsIx purposeIndex) resolved `shouldBe` pointer
       hoistPlutusPurpose (\(AsIxItem _ sh) -> AsItem sh) resolved `shouldBe` item
     prop "preserves all upgraded Conway purpose bytes" $ \(purpose :: ConwayPlutusPurpose AsIx ConwayEra) ->
       serialize version (upgradePlutusPurposeAsIx @DijkstraEra purpose)
@@ -93,6 +97,7 @@ spec = describe "Receiving" $ do
       receivingKeyHashes body `shouldBe` Set.singleton key
       body ^. outputsTxBodyL `shouldBe` outputs
     it "uses one canonical domain for discovery and pointer inverses" $ do
+      receivingScriptTargets body `shouldBe` [AsIxItem 0 lowHash, AsIxItem 1 highHash]
       getDijkstraScriptsNeeded mempty body
         `shouldBe` AlonzoScriptsNeeded
           [ (ReceivingPurpose (AsIxItem 0 lowHash), lowHash)

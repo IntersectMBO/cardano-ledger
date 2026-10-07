@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Dijkstra.Arbitrary (
   shrinkProtectedAddr,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr)
+import Cardano.Ledger.Address (CompactAddr, compactAddr)
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,

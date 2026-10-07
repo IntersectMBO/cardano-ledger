@@ -76,6 +76,8 @@ instance Terse Addr where
   terse (Addr _net cred (StakeRefPtr ptr)) = "Addr (" ++ terse cred ++ ") (" ++ terse ptr ++ ")"
   terse (Addr _net cred StakeRefNull) = "Addr (" ++ terse cred ++ ") Null"
   terse (AddrBootstrap x) = "BootStrap " ++ show x
+  terse (AddrProtected network payment stake) =
+    "Protected " ++ terse (Addr network payment stake)
 
 instance Terse (Credential r) where
   terse (ScriptHashObj (ScriptHash hash)) = "Script " ++ show hash

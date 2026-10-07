@@ -9,7 +9,9 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Epoch () where
 
+import Cardano.Crypto.Util (bytesToNatural)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (FixedSizeCodec (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -17,6 +19,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Rewards (rewardAmount)
 import Cardano.Ledger.Shelley.LedgerState
+import Control.Monad.Except (throwError)
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
@@ -75,16 +78,20 @@ instance SpecTranslate DijkstraEra SnapShot where
       activeStakeMap = VMap.toMap $ unActiveStake ssActiveStake
 
 instance SpecTranslate DijkstraEra StakePoolSnapShot where
-  type SpecRep DijkstraEra StakePoolSnapShot = Agda.StakePoolParams
+  type SpecRep DijkstraEra StakePoolSnapShot = Agda.StakePoolState
 
   toSpecRep StakePoolSnapShot {..} =
-    Agda.StakePoolParams
+    Agda.StakePoolState
       <$> toSpecRep spssSelfDelegatedOwners
       <*> toSpecRep spssCost
       <*> toSpecRep spssMargin
       <*> toSpecRep spssPledge
       <*> (Agda.RewardAddress <$> pure 0 <*> toSpecRep (unAccountId spssAccountId))
       <*> toSpecRep spssVrf
+      <*> traverse
+        ( \BlsKeyState {bksKey = BlsKey {..}, ..} -> (,) (toInteger (bytesToNatural (rawEncodeFixedSized blsPubKey))) <$> toSpecRep bksRegisteredIn
+        )
+        (strictMaybeToMaybe spssBlsKey)
 
 instance SpecTranslate DijkstraEra Stake where
   type SpecRep DijkstraEra Stake = Agda.HSMap Agda.Credential Agda.Coin
@@ -123,6 +130,7 @@ instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
   type SpecContext DijkstraEra (NewEpochState DijkstraEra) = Network
   toSpecRep nes@(NewEpochState {..}) = do
     netId <- askSpecTransM
+    committee <- translateCommittee (ssLeiosCommittee (ssStakeSet (esSnapshots nesEs)))
     withCtxSpecTransM () $
       Agda.MkNewEpochState
         <$> toSpecRep nesEL
@@ -131,6 +139,11 @@ instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
         <*> withCtxSpecTransM netId (toSpecRep nesEs)
         <*> toSpecRep nesRu
         <*> (filterZeroEntries <$> toSpecRep (nes ^. nesStakePoolDistrG))
+        <*> pure committee
     where
+      translateCommittee (UnsafeLeiosCommittee seats)
+        | null seats = pure []
+        | otherwise =
+            throwError "The executable committee model retains pool IDs absent from ledger committee seats"
       filterZeroEntries (Agda.MkHSMap lst) =
         Agda.MkHSMap $ filter ((/= 0) . snd) lst

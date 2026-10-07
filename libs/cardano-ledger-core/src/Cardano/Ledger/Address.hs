@@ -524,8 +524,9 @@ fromCborRigorousBothAddr ::
   Decoder s (Addr, CompactAddr)
 fromCborRigorousBothAddr isPtrLenient = do
   version <- getDecoderVersion
-  let policy = if protectedAddressesSupported version then CurrentAddress else HistoricalAddress
-  fromCborAddressWithPolicy policy isPtrLenient False
+  if protectedAddressesSupported version
+    then fromCborAddressWithPolicy CurrentAddress isPtrLenient False
+    else fromCborAddressWithPolicy HistoricalAddress isPtrLenient False
 {-# INLINE fromCborRigorousBothAddr #-}
 
 -- | Prior to Babbage era we did not check if a binary blob representing an address was
@@ -559,6 +560,7 @@ fromCborAddressWithPolicy policy isPtrLenient isLenient = do
     bytesConsumed <- get
     let bytes = if isLenient then SBS.toShort (BS.take bytesConsumed (SBS.fromShort sbs)) else sbs
     pure (addr, UnsafeCompactAddr bytes)
+{-# INLINE fromCborAddressWithPolicy #-}
 
 -- | Class specialized for decoding of addresses
 class AddressBuffer b where

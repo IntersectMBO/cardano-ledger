@@ -9,7 +9,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec (spec) where
 
-import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
+import Cardano.Ledger.Address (bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
@@ -181,7 +181,7 @@ spec = describe "SUBUTXOW" $ do
       scriptHash <- impAddNativeScript $ RequireAllOf []
       collateralInput <- makeCollateralInput
       redeemerData <- arbitrary
-      let extraPurpose = mkReceivingPurpose $ AsIx 0
+      let extraPurpose = ReceivingPurpose $ AsIx 0
           subTx :: Tx SubTx era
           subTx =
             mkBasicTx $

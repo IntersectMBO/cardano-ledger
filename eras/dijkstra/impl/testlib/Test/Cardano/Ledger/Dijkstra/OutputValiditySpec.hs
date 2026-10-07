@@ -43,7 +43,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash)
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Examples (testShelleyGenesis)
-import Validation (Validation (..))
+import qualified Validation
 
 spec :: Spec
 spec = describe "CIP-160 output eligibility" $ do
@@ -66,7 +66,7 @@ spec = describe "CIP-160 output eligibility" $ do
         Shelley.validateSupportedAddresses
           pp12
           [mkCoinTxOut @DijkstraEra (AddrProtected network payment stakeRef) (Coin 20)]
-          `shouldBe` Success ()
+          `shouldBe` Validation.Success ()
   prop "rejects internally constructed protected pointers after activation" $ \ptr ->
     expectRejected pp12 (AddrProtected Testnet payment (StakeRefPtr ptr))
   prop "keeps ordinary pointer outputs eligible before and after activation" $ \ptr ->
@@ -74,7 +74,7 @@ spec = describe "CIP-160 output eligibility" $ do
       Shelley.validateSupportedAddresses
         pp
         [mkCoinTxOut @DijkstraEra (Addr Testnet payment (StakeRefPtr ptr)) (Coin 20)]
-        `shouldBe` Success ()
+        `shouldBe` Validation.Success ()
   it "maps all newly reachable shared failures to top-level and child failures" $ do
     let bad = NES.singleton 0
         shared = Shelley.UnsupportedOutputAddresses bad :: Shelley.ShelleyUtxoPredFailure DijkstraEra
@@ -103,7 +103,7 @@ spec = describe "CIP-160 output eligibility" $ do
     let ordinary = mkCoinTxOut @DijkstraEra (Addr Testnet payment StakeRefNull) (Coin 20)
         bad = mkCoinTxOut @DijkstraEra protected (Coin 20)
     case Shelley.validateSupportedAddresses pp11 [ordinary, bad, ordinary, bad] of
-      Failure (Shelley.UnsupportedOutputAddresses indexes NE.:| []) ->
+      Validation.Failure (Shelley.UnsupportedOutputAddresses indexes NE.:| []) ->
         NES.toList indexes `shouldBe` [1, 3]
       _ -> expectationFailure "Expected exactly the two unsupported output positions"
   it "roundtrips the appended top/child failures and a payload-free collateral rejection" $ do
@@ -164,5 +164,5 @@ rejects = expectRejected (emptyPParams @era & ppProtocolVersionL .~ ProtVer (nat
 expectRejected :: forall era. EraTxOut era => PParams era -> Addr -> Expectation
 expectRejected pp addr =
   case Shelley.validateSupportedAddresses pp [mkCoinTxOut @era addr (Coin 20)] of
-    Failure (Shelley.UnsupportedOutputAddresses bad NE.:| []) -> bad `shouldBe` NES.singleton 0
+    Validation.Failure (Shelley.UnsupportedOutputAddresses bad NE.:| []) -> bad `shouldBe` NES.singleton 0
     _ -> expectationFailure "Expected exactly the unsupported address failure"

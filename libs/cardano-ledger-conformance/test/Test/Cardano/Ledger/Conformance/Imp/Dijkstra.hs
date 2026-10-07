@@ -35,6 +35,7 @@ import Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec qualified as ENTITIES
 import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
 import Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec qualified as MEMPOOL
 import Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec qualified as POOL
+import Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAccountingSpec qualified as RECEIVINGACCOUNTING
 import Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAdversarialSpec qualified as RECEIVINGADVERSARIAL
 import Test.Cardano.Ledger.Dijkstra.Imp.ReceivingFixupSpec qualified as RECEIVINGFIXUP
 import Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec qualified as SUBGOV
@@ -113,6 +114,7 @@ spec = do
             UTXOW.spec
             RECEIVINGFIXUP.spec
             RECEIVINGADVERSARIAL.structuralSpec
+            RECEIVINGACCOUNTING.transactionBudgetSpec
             SUBUTXOW.spec
 
             AlonzoUTXOS.spec

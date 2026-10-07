@@ -95,7 +95,7 @@ library
     base >=4.18 && <5,
     base16-bytestring,
     bytestring,
-    cardano-crypto-class >=2.3,
+    cardano-crypto-class >=2.5.1,
     cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,
@@ -142,6 +142,7 @@ test-suite tests
     Test.Cardano.Ledger.Conformance.Spec.Conway
     Test.Cardano.Ledger.Conformance.Spec.Conway.Ratify
     Test.Cardano.Ledger.Conformance.Spec.Core
+    Test.Cardano.Ledger.Conformance.Spec.Dijkstra.Foreign
     Test.Cardano.Ledger.Conformance.Spec.Dijkstra.Receiving
 
   default-language: Haskell2010
@@ -159,9 +160,11 @@ test-suite tests
 
   build-depends:
     base >=4.18 && <5,
+    cardano-crypto-class >=2.5.1,
     cardano-ledger-allegra:testlib,
     cardano-ledger-alonzo:testlib,
     cardano-ledger-babbage:testlib,
+    cardano-ledger-binary,
     cardano-ledger-conformance,
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},

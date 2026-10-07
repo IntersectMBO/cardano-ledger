@@ -1,8 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -10,7 +12,9 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Pool () where
 
-import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Crypto.Util (bytesToNatural)
+import Cardano.Ledger.BaseTypes (Network, strictMaybeToMaybe)
+import Cardano.Ledger.Binary (FixedSizeCodec (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -18,6 +22,7 @@ import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
+  SpecTransM,
   SpecTranslate (..),
   askSpecTransM,
   toSpecRepMap,
@@ -32,9 +37,10 @@ instance SpecTranslate DijkstraEra (PState DijkstraEra) where
 
   toSpecRep PState {..} = do
     netId <- askSpecTransM
+    pools <- Map.traverseWithKey (stakePoolStateToSpec netId) psStakePools
     withCtxSpecTransM () $
       Agda.MkPState
-        <$> toSpecRepMap (Map.mapWithKey (stakePoolStateToStakePoolParams @DijkstraEra netId) psStakePools)
+        <$> (Agda.MkHSMap <$> traverse (\(key, value) -> (,value) <$> toSpecRep key) (Map.toList pools))
         <*> toSpecRepMap psFutureStakePoolParams
         <*> toSpecRepMap psRetiring
         <*> toSpecRepMap (fromCompact . spsDeposit <$> psStakePools)
@@ -50,3 +56,22 @@ instance SpecTranslate DijkstraEra (PoolCert DijkstraEra) where
     Agda.Retirepool
       <$> toSpecRep ppHash
       <*> toSpecRep e
+
+stakePoolStateToSpec ::
+  Network -> KeyHash StakePool -> StakePoolState -> SpecTransM DijkstraEra Network Agda.StakePoolState
+stakePoolStateToSpec netId poolId sps =
+  withCtxSpecTransM () $ do
+    let StakePoolParams {..} = stakePoolStateToStakePoolParams @DijkstraEra netId poolId sps
+    bls <-
+      traverse
+        ( \BlsKeyState {bksKey = BlsKey {..}, ..} -> (,) (toInteger (bytesToNatural (rawEncodeFixedSized blsPubKey))) <$> toSpecRep bksRegisteredIn
+        )
+        (strictMaybeToMaybe (spsBlsKey sps))
+    Agda.StakePoolState
+      <$> toSpecRep sppOwners
+      <*> toSpecRep sppCost
+      <*> toSpecRep sppMargin
+      <*> toSpecRep sppPledge
+      <*> toSpecRep sppAccountAddress
+      <*> toSpecRep sppVrf
+      <*> pure bls

@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,7 +15,6 @@ module Test.Cardano.Ledger.Dijkstra.Imp.ReceivingAdversarialSpec (
   concreteEvaluatorSpec,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
@@ -25,22 +26,26 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraSubUtxowPredFailure (..))
-import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Keys (WitVKey (WitVKey), asWitness, witVKeyHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus (
   Data (..),
   Datum (..),
   ExUnits (..),
+  Language (..),
   Plutus,
+  PlutusArgs (..),
+  PlutusWithContext (..),
   SLanguage (..),
   dataToBinaryData,
   hashData,
   hashPlutusScript,
+  plutusSLanguage,
+  transScriptHash,
  )
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Cardano.Ledger.State (UTxO (..))
-import Control.Monad ((>=>))
+import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
@@ -48,6 +53,7 @@ import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P
+import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -115,9 +121,9 @@ structuralSpec = describe "Structural validation and state transitions" $ do
                 <>~ mkWitnessesVKey (hashAnnotated (fixed ^. bodyTxL)) [pair]
               & bodyTxL
                 . outputsTxBodyL
-                . ix 0
-                . addrTxOutL
-                .~ protected
+                %~ \case
+                  SSeq.Empty -> SSeq.Empty
+                  firstOut SSeq.:<| rest -> (firstOut & addrTxOutL @era .~ protected) SSeq.:<| rest
     withPostFixup toggleProtection $
       submitFailingTxM tx $ \fixed -> do
         invalid <-
@@ -196,7 +202,8 @@ structuralSpec = describe "Structural validation and state transitions" $ do
     let datum = Data @era (P.I 18)
     tx <- receivingTx (alwaysSucceedsNoDatum SPlutusV4) [DatumHash (hashData datum)]
     withPostFixup
-      ( fixupPPHash . (witsTxL . datsTxWitsL . unTxDatsL .~ Map.singleton (hashData datum) datum)
+      ( fixupPPHash
+          . (witsTxL . datsTxWitsL . unTxDatsL .~ Map.singleton (hashData datum) datum)
           >=> rederiveAddrTxWits
       )
       $ submitTx_ tx
@@ -209,8 +216,8 @@ structuralSpec = describe "Structural validation and state transitions" $ do
     withPostFixup (fixupPPHash . (witsTxL . rdmrsTxWitsL .~ mempty) >=> rederiveAddrTxWits) $
       submitFailingTx
         tx
-        [ injectFailure $ Conway.CollectErrors [NoRedeemer missing]
-        , injectFailure $ Alonzo.MissingRedeemers [(missing, sh)]
+        [ injectFailure $ Alonzo.MissingRedeemers [(missing, sh)]
+        , injectFailure $ Conway.CollectErrors [NoRedeemer missing]
         ]
 
   it "rejects an out-of-range Receiving redeemer alongside the valid one" $ do
@@ -233,17 +240,17 @@ structuralSpec = describe "Structural validation and state transitions" $ do
   it "applies only collateral effects for a grouped Receiving failure declared phase-2 invalid" $ do
     tx <- receivingTx (receivingEvenDatum SPlutusV4) [inlineDatum 2, inlineDatum 3]
     fixed <- fixupTx tx
-    UTxO before <- getUTxO
+    UTxO beforeUtxo <- getUTxO
     failed <- withNoFixup $ submitTx (fixed & isPhase2ValidTxL .~ Phase2Invalid)
     UTxO final <- getUTxO
     let ordinaryCount = SSeq.length (failed ^. bodyTxL . outputsTxBodyL)
-    forM_ [0 .. ordinaryCount - 1] $ \outputIndex ->
+    forM_ ([0 .. ordinaryCount - 1] :: [Int]) $ \outputIndex ->
       Map.member (txInAt outputIndex failed) final `shouldBe` False
     forM_ (Set.toList (failed ^. bodyTxL . inputsTxBodyL)) $ \input -> do
-      Map.member input before `shouldBe` True
-      Map.lookup input final `shouldBe` Map.lookup input before
+      Map.member input beforeUtxo `shouldBe` True
+      Map.lookup input final `shouldBe` Map.lookup input beforeUtxo
     forM_ (Set.toList (failed ^. bodyTxL . collateralInputsTxBodyL)) $ \input -> do
-      Map.member input before `shouldBe` True
+      Map.member input beforeUtxo `shouldBe` True
       Map.member input final `shouldBe` False
     case failed ^. bodyTxL . collateralReturnTxBodyL of
       SJust returned -> Map.lookup (txInAt ordinaryCount failed) final `shouldBe` Just returned
@@ -265,7 +272,26 @@ concreteEvaluatorSpec = describe "Concrete Plutus evaluator outcomes" $ do
     let input = txInAt 0 created
     UTxO afterCreation <- getUTxO
     fmap (^. addrTxOutL) (Map.lookup input afterCreation) `shouldBe` Just protected
-    spent <- submitTx $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [input]
+    spending <- fixupTx $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [input]
+    contexts <- impPlutusWithContexts spending
+    let checkSpendingContext :: PlutusWithContext -> ImpTestM era ()
+        checkSpendingContext PlutusWithContext {pwcScript = script, pwcArgs = args} =
+          case plutusSLanguage script of
+            SPlutusV4 ->
+              let PlutusV4Args v4Context = args
+               in case PV4.scriptContextScriptInfo v4Context of
+                    PV4.SpendingScript ref _ ->
+                      [ PV4.txOutAddress $ PV4.txInInfoResolved txInput
+                      | txInput <- PV4.txInfoInputs $ PV4.scriptContextTxInfo v4Context
+                      , PV4.txInInfoOutRef txInput == ref
+                      ]
+                        `shouldBe` [PV4.AddressProtected (PV4.ScriptCredential $ transScriptHash sh) Nothing]
+                    _ -> assertFailure "Expected the protected input's Spending context"
+            _ -> assertFailure "Expected a V4 Spending script"
+    case contexts of
+      [plutusContext] -> checkSpendingContext plutusContext
+      _ -> assertFailure "Expected exactly one V4 Spending script"
+    spent <- withNoFixup $ submitTx spending
     let pointers = Map.keys (spent ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
     length [() | SpendingPurpose _ <- pointers] `shouldBe` 1
     [() | ReceivingPurpose _ <- pointers] `shouldBe` []
@@ -277,32 +303,32 @@ concreteEvaluatorSpec = describe "Concrete Plutus evaluator outcomes" $ do
     $ do
       tx <- receivingTx (receivingEvenDatum SPlutusV4) [inlineDatum 2, inlineDatum 3]
       fixed <- fixupTx tx
-      before <- getUTxO
+      beforeUtxo <- getUTxO
       failure <- impScriptPredicateFailure fixed
       withNoFixup $ submitFailingTx fixed [injectFailure failure]
-      getUTxO >>= (`shouldBe` before)
+      getUTxO >>= (`shouldBe` beforeUtxo)
       failed <- withNoFixup $ submitTx (fixed & isPhase2ValidTxL .~ Phase2Invalid)
       UTxO final <- getUTxO
-      forM_ [0 .. SSeq.length (failed ^. bodyTxL . outputsTxBodyL) - 1] $ \outputIndex ->
+      forM_ ([0 .. SSeq.length (failed ^. bodyTxL . outputsTxBodyL) - 1] :: [Int]) $ \outputIndex ->
         Map.member (txInAt outputIndex failed) final `shouldBe` False
 
   it "rejects claimed-invalid Receiving when every script succeeds, with no state effect" $ do
     tx <- receivingTx (alwaysSucceedsNoDatum SPlutusV4) [NoDatum]
     fixed <- fixupTx tx
-    before <- getUTxO
+    beforeUtxo <- getUTxO
     withNoFixup $
       submitFailingTx
         (fixed & isPhase2ValidTxL .~ Phase2Invalid)
         [injectFailure $ Alonzo.ValidationTagMismatch Phase2Invalid Alonzo.PassedUnexpectedly]
-    getUTxO >>= (`shouldBe` before)
+    getUTxO >>= (`shouldBe` beforeUtxo)
 
   it "rejects claimed-valid Receiving when its script fails, with no state effect" $ do
     tx <- receivingTx (alwaysFailsNoDatum SPlutusV4) [NoDatum]
     fixed <- fixupTx tx
-    before <- getUTxO
+    beforeUtxo <- getUTxO
     failure <- impScriptPredicateFailure fixed
     withNoFixup $ submitFailingTx fixed [injectFailure failure]
-    getUTxO >>= (`shouldBe` before)
+    getUTxO >>= (`shouldBe` beforeUtxo)
 
 inlineDatum :: Era era => Integer -> Datum era
 inlineDatum = Datum . dataToBinaryData . Data . P.I
@@ -315,12 +341,16 @@ receivingTx ::
 receivingTx plutus datums = do
   script <- fromPlutusScript <$> mkPlutusScript plutus
   referenceAddress <- freshKeyAddrNoPtr_
+  pp <- getsPParams id
+  let referenceOutput =
+        ensureMinCoinTxOut pp $
+          mkCoinTxOut referenceAddress (Coin 3_000_000) & referenceScriptTxOutL .~ SJust script
   referenceTx <-
     submitTx $
       mkBasicTx mkBasicTxBody
         & bodyTxL
           . outputsTxBodyL
-          .~ [mkCoinTxOut referenceAddress (Coin 3_000_000) & referenceScriptTxOutL .~ SJust script]
+          .~ [referenceOutput]
   collateral <- makeCollateralInput
   let sh = hashPlutusScript plutus
       protected datum =
