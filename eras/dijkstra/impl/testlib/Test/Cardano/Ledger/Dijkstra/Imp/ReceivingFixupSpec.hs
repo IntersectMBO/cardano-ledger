@@ -14,7 +14,13 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxoPredFailure (NoCollateralInputs))
-import Cardano.Ledger.Plutus (Data (..), ExUnits (..), SLanguage (..), hashPlutusScript, pointWiseExUnits)
+import Cardano.Ledger.Plutus (
+  Data (..),
+  ExUnits (..),
+  SLanguage (..),
+  hashPlutusScript,
+  pointWiseExUnits,
+ )
 import Cardano.Ledger.State (UTxO (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -51,8 +57,9 @@ spec = describe "Receiving transaction fixups" $ do
             . (bodyTxL . collateralInputsTxBodyL .~ mempty)
             . (bodyTxL . collateralReturnTxBodyL .~ SNothing)
             . (bodyTxL . totalCollateralTxBodyL .~ SNothing)
-    (failures, _) <- withPostFixup removeCollateral $
-      expectLeftDeepExpr =<< trySubmitTx (mkTopTxWithSubTxs [child])
+    (failures, _) <-
+      withPostFixup removeCollateral $
+        expectLeftDeepExpr =<< trySubmitTx (mkTopTxWithSubTxs [child])
     assertBool "Removing batch collateral did not report NoCollateralInputs" $
       injectFailure (NoCollateralInputs @era) `elem` failures
 
@@ -63,7 +70,8 @@ spec = describe "Receiving transaction fixups" $ do
         authored = child & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.singleton pointer supplied
     fixed <- fixupSubTransactions (mkTopTxWithSubTxs [authored])
     case OMap.elems (fixed ^. bodyTxL . subTransactionsTxBodyL) of
-      [fixedChild] -> Map.lookup pointer (fixedChild ^. witsTxL . rdmrsTxWitsL . unRedeemersL) `shouldBe` Just supplied
+      [fixedChild] ->
+        Map.lookup pointer (fixedChild ^. witsTxL . rdmrsTxWitsL . unRedeemersL) `shouldBe` Just supplied
       _ -> assertFailure "Expected one child transaction"
 
   it "discovers spending datums at a protected script destination" $ do
@@ -71,8 +79,13 @@ spec = describe "Receiving transaction fixups" $ do
     input <- produceScript scriptHash
     -- Trusted fixture construction isolates spending datum discovery from the
     -- separate Receiving authorization needed for production output creation.
-    modifyNES $ utxoL %~ \(UTxO entries) ->
-      UTxO $ Map.adjust (addrTxOutL .~ AddrProtected Testnet (ScriptHashObj scriptHash) StakeRefNull) input entries
+    modifyNES $
+      utxoL %~ \(UTxO entries) ->
+        UTxO $
+          Map.adjust
+            (addrTxOutL .~ AddrProtected Testnet (ScriptHashObj scriptHash) StakeRefNull)
+            input
+            entries
     fixed <- submitTx (mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [input]))
     assertBool "Protected spending input lost its required datum witness" $
       not (Map.null (fixed ^. witsTxL . datsTxWitsL . unTxDatsL))
@@ -84,6 +97,8 @@ receivingChild = do
   input <- sendCoinTo fundingAddr amount
   let scriptHash = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV4)
       protected = AddrProtected Testnet (ScriptHashObj scriptHash) StakeRefNull
-  pure $ mkBasicTx $ mkBasicTxBody
-    & inputsTxBodyL .~ [input]
-    & outputsTxBodyL .~ [mkCoinTxOut protected amount]
+  pure $
+    mkBasicTx $
+      mkBasicTxBody
+        & inputsTxBodyL .~ [input]
+        & outputsTxBodyL .~ [mkCoinTxOut protected amount]

@@ -744,8 +744,8 @@ decodeAddrWithPolicy policy isPtrLenient isLenient buf = do
           ( rejectProtectedPointer
               && protected
               && not (headerIsBaseAddress header || headerIsEnterpriseAddr header)
-          ) $
-          failDecoding "Shelley Address" "Protected pointer addresses are not supported"
+          )
+          $ failDecoding "Shelley Address" "Protected pointer addresses are not supported"
         -- Advance one byte for the consumed header
         modify' (+ 1)
         payment <- decodePaymentCredential header buf

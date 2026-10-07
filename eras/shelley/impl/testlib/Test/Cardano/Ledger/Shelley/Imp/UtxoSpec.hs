@@ -33,7 +33,7 @@ spec = describe "UTXO" $ do
               & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut ordinary (inject (Coin 2000000))]
           protectFirst :: Tx TopTx era -> Tx TopTx era
           protectFirst txToProtect =
-            txToProtect & bodyTxL . outputsTxBodyL . ix 0 . addrTxOutL .~ protected
+            txToProtect & bodyTxL . outputsTxBodyL . ix 0 . addrTxOutL @era .~ protected
       withPostFixup (rederiveAddrTxWits . protectFirst) $
         submitFailingTx tx [injectFailure $ UnsupportedOutputAddresses (NES.singleton 0)]
   describe "ShelleyUtxoPredFailure" $ do

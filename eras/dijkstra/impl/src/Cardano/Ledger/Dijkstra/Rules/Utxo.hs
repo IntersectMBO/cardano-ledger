@@ -262,7 +262,7 @@ validateNoPtrInCollateralReturn txBody = do
 -- | Collateral return is never a Receiving target and may be created after phase-2
 -- failure, so its address must remain unprotected regardless of claimed validity.
 validateUnprotectedCollateralReturn ::
-  forall era.
+  forall era ctx.
   ( BabbageEraTxBody era
   , InjectRuleFailure "UTXO" DijkstraUtxoPredFailure era
   ) =>

@@ -318,6 +318,9 @@ cradle:
     - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/EpochBoundary.hs"
       component: "cardano-ledger-test:bench:bench"
 
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/Receiving.hs"
+      component: "cardano-ledger-test:bench:bench"
+
     - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/Serialisation/Generators.hs"
       component: "cardano-ledger-test:bench:bench"
 

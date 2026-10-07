@@ -92,7 +92,11 @@ import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..))
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum, receivingEvenDatum)
+import Test.Cardano.Ledger.Plutus.Examples (
+  alwaysFailsWithDatum,
+  alwaysSucceedsWithDatum,
+  receivingEvenDatum,
+ )
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -467,8 +471,9 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
               case Map.lookup (bodyId, pointer) reports of
                 Just (Right exUnits) | Map.notMember pointer supplied -> (dat, exUnits)
                 _ -> redeemer
-        updateAddrTxWits =<< fixupPPHash
-          (child & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.mapWithKey useEstimate)
+        updateAddrTxWits
+          =<< fixupPPHash
+            (child & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.mapWithKey useEstimate)
   estimated <- zipWithM estimateMissing originalSubTxs fixedup
   pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable estimated
   where
