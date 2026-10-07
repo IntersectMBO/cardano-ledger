@@ -5,11 +5,9 @@ protocol major version 12 and receiving-aware Plutus V4. The
 [CIP amendment](https://github.com/cardano-foundation/CIPs/pull/1286) and
 [Plutus interface](https://github.com/IntersectMBO/plutus/pull/7982) are published
 for review; upstream format agreement and network activation remain outstanding.
-Focused per-output ledger runtime checks and the full ledger API suite pass.
-Focused conformance checks also pass. Full Dijkstra and conformance suites,
-downstream API tests, CLI construction and node/testnet migration workflows
-remain pending. This is
-not a mainnet deployment guide.
+Integration and activation require coordinated ledger, Plutus, formal, API, CLI
+and node releases. Review evidence and release requirements are linked below;
+this is not a mainnet deployment guide.
 
 Execution per output is this implementation's proposed reconciliation of
 [CIP-160's per-output validation rule](https://github.com/cardano-foundation/CIPs/blob/b4a593c960f2751fef2ddc8df28bec7b22c68eb5/CIP-0160/README.md#receiving-validation-rule)
@@ -67,9 +65,9 @@ allows separate same-hash outputs to receive different instructions.
 The [ledger lifecycle tests](../eras/dijkstra/impl/testlib/Test/Cardano/Ledger/Dijkstra/Imp/ReceivingAdversarialSpec.hs)
 define creation and subsequent Spending with the same validator, independent
 same-hash/identical-output purposes and malformed-output rejection. The creating
-body uses Receiving; the consuming body uses Spending. The focused Receiving
-suite passes 63 tests, including these compiled fixtures and lifecycle cases;
-independent transaction interoperability passes four tests.
+body uses Receiving; the consuming body uses Spending. These cases exercise
+compiled validators and distinct output contexts, rather than abstract evaluator
+results alone.
 
 An inline datum exposes contents directly. A datum hash alone does not reveal its
 preimage or create an automatic phase-1 preimage requirement. A contract can
@@ -144,33 +142,62 @@ The command requires the patched receiving-aware Plutus dependency pinned in
 [cabal.project](../cabal.project). A released Plutus 1.71 package does not contain
 this proposed interface. The current proposal is
 [`dcbb7e3232c3322557410fe341ec84f3cd78dc04`](https://github.com/colll78/plutus/tree/dcbb7e3232c3322557410fe341ec84f3cd78dc04).
-Its public API suite passed 450 tests and its compiled-plugin suite passed six
-cases under GHC 9.6.7. Two genuine fixture generations are identical and preserve
-all 41 existing V1-V3 fixture byte strings. The full ledger API suite passes 291
-tests (seed 2023, `-N2`), including five Receiving cases. Receiving benchmark smoke
-runs pass all configured groups at 16, 256 and 4096 outputs, including paired
-translation setup equality; this is not a statistical timing result. Downstream
-cardano-api production compilation passes all 147 modules under strict checks;
-its tests and CLI/node runtime validation remain pending.
+Two genuine fixture generations at this dependency revision produced identical
+bytes and preserved all 41 existing V1-V3 fixture byte strings.
 
-The formal model at signed source
-[`78ef3333bf5803cd76c9880d99b120f287f733c5`](https://github.com/IntersectMBO/formal-ledger-specifications/commit/78ef3333bf5803cd76c9880d99b120f287f733c5)
-passes its complete Agda proof closure, examples, interface checks and 39-entry
-property scanner. Genuine signed-source Shake extraction and all 69 extracted
-runtime assertions pass. Published artifact
-[`68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b`](https://github.com/colll78/formal-ledger-specifications/commit/68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b)
-matches all 789 generated files (manifest SHA-256
-`1d6e312a2710a93d32875c2b3bdcd1f798670d4d69483adbbf677d645b863b81`)
-and is pinned by Cabal and Nix. Strict conformance compilation passes, with
-24 Receiving and 16 Foreign tests passing against this artifact. The full
-conformance and Dijkstra suites remain pending. The shared suite completed
-58 examples with zero failures and five inherited pending cases. The existing
-CI gate still requires the formal artifact to become an ancestor of upstream
-`master-artifacts`; publication
-on the development fork does not satisfy that upstream condition.
+The matching formal source is
+[`87072fed43a085bbbaaeb5888a7792ec5f8a164a`](https://github.com/IntersectMBO/formal-ledger-specifications/commit/87072fed43a085bbbaaeb5888a7792ec5f8a164a),
+with generated artifact
+[`b747be78f6e001d41395974251cf0b42f45b68c4`](https://github.com/colll78/formal-ledger-specifications/commit/b747be78f6e001d41395974251cf0b42f45b68c4)
+pinned by Cabal and Nix. Its 789 generated files were matched byte-for-byte to
+genuine signed-source Shake extraction; manifest SHA-256 is
+`8d0d123d8eb3728884ad272c00f18169c1244fe43563df18af28d813c41ff535`.
+Model execution has documented foreign-evaluator and context abstractions;
+concrete ledger validator tests and integrated conformance provide complementary
+checks. See the [formal conformance guide](cip-0160-formal-conformance.md).
 
-Two fresh CDDL generations match the tracked files and two fresh `hie.yaml`
-generations are unchanged. Current Haskell, Cabal and changelog formatting checks
-pass. These results describe the current source checkpoint, without claiming
-complete CI or final merge readiness. No cost or efficiency claim is made
-without measurements.
+## Validation checkpoints and release requirements
+
+The 2026-10-07 ledger checkpoint passed 1152 Dijkstra examples with zero failures
+and two inherited pending cases, 291 ledger API tests, 63 focused Receiving tests
+and four independent interoperability tests. Shared tests completed 58 examples
+with zero failures and five inherited pending cases. Receiving benchmark smoke
+checks covered every 16/256/4096-output group and paired translation setup
+equality; those checks do not establish statistical performance. Two fresh CDDL
+generations matched the tracked files and two fresh `hie.yaml` generations were
+unchanged. The [ledger review](https://github.com/IntersectMBO/cardano-ledger/pull/6153)
+records source applicability, integrated conformance and subsequent validation
+results.
+
+At the same dated checkpoint, Plutus `dcbb7e3` passed 450 public API tests, six
+compiled-plugin cases and five remote checks. Formal source `87072fed` passed the
+complete Agda proof closure, examples, interfaces, the 39-entry property scanner
+and all 73 genuinely extracted runtime assertions. These results support the
+proposed interfaces; they do not establish upstream format approval or network
+activation. Review evidence is maintained in the
+[Plutus proposal](https://github.com/IntersectMBO/plutus/pull/7982) and
+[formal proposal](https://github.com/IntersectMBO/formal-ledger-specifications/pull/1348).
+
+Downstream API source `7164f6d7d4a02d49164d7fbf33d10f80b4b50efe` passed strict
+compilation of 147 production modules, 293 unit tests, 125 golden tests and 171
+RPC tests. The native WASM golden check passed one case; it does not validate
+browser execution or the JavaScript binding boundary. CLI checks passed strict
+compilation of 186 production modules, 81 unit tests and 820 goldens. Consensus
+release checks passed 11 admission/capacity tests, 240 tracing tests and two
+encoding goldens in the scoped combined local dependency graph. Those scoped
+results do not replace complete CDDL compliance or node integration. Current
+coordinated evidence is tracked by the
+[API review](https://github.com/IntersectMBO/cardano-api/pull/1370),
+[consensus release review](https://github.com/IntersectMBO/ouroboros-consensus/pull/2373)
+and ledger review, including CLI delivery.
+
+Release requires upstream agreement on the address/language formats and
+activation version, compatible published dependencies, full integrated
+conformance and remote CI. The existing CI gate requires the formal artifact to
+become an ancestor of upstream `master-artifacts`; development-fork publication
+does not satisfy that condition. Browser WASM execution and binding compatibility
+need their own checks. Node coverage must establish legacy-contract migration,
+activation, persisted-state restart and restoration, rollback, and Leios
+endorser-block Receiving accounting and validation. Ledger translation and
+snapshot tests alone do not establish those node workflows. No mainnet readiness
+or cost/efficiency claim follows from the checkpoints above.

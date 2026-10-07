@@ -46,7 +46,7 @@
 
     formal-ledger-specifications = {
       url =
-        "github:colll78/formal-ledger-specifications/68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b";
+        "github:colll78/formal-ledger-specifications/b747be78f6e001d41395974251cf0b42f45b68c4";
       flake = false;
     };
   };

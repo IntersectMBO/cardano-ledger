@@ -1,25 +1,27 @@
 # CIP-160 executable model
 
 The ledger pins development artifact
-[`68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b`](https://github.com/colll78/formal-ledger-specifications/tree/68ed72e91b519f065cc0df0a5e7f7bfdf5d39b5b),
+[`b747be78f6e001d41395974251cf0b42f45b68c4`](https://github.com/colll78/formal-ledger-specifications/tree/b747be78f6e001d41395974251cf0b42f45b68c4),
 genuinely extracted from signed source
-[`78ef3333bf5803cd76c9880d99b120f287f733c5`](https://github.com/colll78/formal-ledger-specifications/commit/78ef3333bf5803cd76c9880d99b120f287f733c5)
+[`87072fed43a085bbbaaeb5888a7792ec5f8a164a`](https://github.com/colll78/formal-ledger-specifications/commit/87072fed43a085bbbaaeb5888a7792ec5f8a164a)
 in [formal source PR 1348](https://github.com/IntersectMBO/formal-ledger-specifications/pull/1348).
 That source includes upstream master through
 `f4f95d3349a26c8bfcc483dda58fbfab80e3d85c`. Cabal and Nix consume the same
 artifact revision. Its 789 generated files have SHA-256 manifest
-`1d6e312a2710a93d32875c2b3bdcd1f798670d4d69483adbbf677d645b863b81`.
+`8d0d123d8eb3728884ad272c00f18169c1244fe43563df18af28d813c41ff535`.
 
 Full Agda proof closure, examples, interface checks and the 39-entry property
 scanner pass. Genuine Shake extraction and GHC execution from the exact signed
-source pass all 69 persistent regressions: 56 Receiving checks, four complete
-hard-fork/epoch version-state checks and nine committee-selection checks.
+source pass all 73 persistent regressions: 56 Receiving checks, four complete
+hard-fork/epoch version-state checks and thirteen committee-selection checks.
 Receiving checks include separate duplicate-output arguments/budgets and paired
 valid/missing child-redeemer cases through composed `LEDGER`. The formal Haskell
-artifact CI workflow runs these regressions before upload. Focused integrated
-ledger comparisons against this pin pass; the full suite remains pending.
-Upstream source acceptance and artifact ancestry remain required by the existing
-ledger CI gate below.
+artifact CI workflow runs these regressions before upload. The committee checks
+include four composed epoch cases requiring one seat per pool when several
+credentials delegate to that pool, including an exact top-K boundary.
+Integrated comparison coverage and current validation evidence are described
+below. Upstream source acceptance and artifact ancestry remain required by the
+existing ledger CI gate.
 
 `BaseAddr.protected` is part of address equality. Bootstrap addresses have no
 protection flag. `protect` preserves the payment and staking credentials by
@@ -132,29 +134,24 @@ external merge requirement.
 
 ## Integrated validation
 
-The GHC 9.6.7 conformance executable builds against artifact `68ed72e9`.
-Its focused runs with seed 2023 and `+RTS -N2 -RTS` pass:
+Composed epoch comparison exposed duplicate model committee seats when multiple
+credentials delegated to one pool. Committee construction now enumerates unique
+semantic pool identities before creating and ranking seats. A regression
+reproduced the failure before the fix; four extracted checks cover single,
+split, equal and top-K cases and pass after it. Committee lists remain exact
+comparisons, with the strict ledger adapter unchanged.
 
-| Selection | Examples | Failures |
-| --- | ---: | ---: |
-| `Receiving` | 24 | 0 |
-| `Foreign interface premises` | 16 | 0 |
-
-All four generated Receiving interface properties ran 100 samples, including
-duplicate outputs, body-local indices and the explicit protected-pointer
-translation boundary. The Receiving selection also covers six fixup checks and
-the aggregate duplicate-output execution-budget limit. Foreign checks exercise
-BLS proof verification and complete new-epoch-state translation, including
-ranked committee identities, zero-stake seats, key expiry and inconsistent
-snapshot rejection. Selection counts are not a combined suite total.
-
-The full conformance suite is running. The thirteen registered adversarial
-structural comparisons have not yet been rerun as a separate complete selection;
-the Receiving name filter covers only some of those cases.
+The runner registers thirteen adversarial structural comparisons, six Receiving
+fixup checks, four generated Receiving interface properties and the aggregate
+duplicate-output budget comparison. Those compare the independently extracted
+model under the premises below. The model's persistent runtime assertions and
+integrated ledger comparisons are separate evidence: the former do not imply
+that the complete ledger conformance suite passes. Current run outcomes and
+validation receipts are tracked in [formal source PR 1348](https://github.com/IntersectMBO/formal-ledger-specifications/pull/1348).
 
 Reproduce from `libs/cardano-ledger-conformance` by running its built `tests`
-executable with `--seed=2023 --match <selection> +RTS -N2 -RTS`, using either
-selection string above.
+executable with `--seed=2023 +RTS -N2 -RTS`; a focused selection additionally
+uses `--match <selection>`.
 
 ## Concrete evaluator coverage boundary
 
@@ -216,7 +213,9 @@ requested committee size is absent from the snapshot: its stored seat count
 provides the retained top-K bound, without proving that historical size setting.
 
 The model includes registered zero-stake pools, preserving its existing
-fractional weights and ranking. Its fixed foreign globals imply a four-epoch
+fractional weights and ranking. It creates one seat per unique pool identity,
+including when aggregated stake relations have repeated list presentation.
+Its fixed foreign globals imply a four-epoch
 key age; arbitrary network-global agreement is outside that premise. Receiving
 comparisons use disabled Leios. The incoming foreign `ebSize` callback is zero,
 so this integration makes no endorser-block size-conformance claim.
