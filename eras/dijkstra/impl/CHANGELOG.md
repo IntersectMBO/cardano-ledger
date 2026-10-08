@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `BlsKeyAlreadyRegistered` constructor to `DijkstraPoolPredFailure`
 * Add `POOLREAP` rule for Dijkstra:
   - Add `Cardano.Ledger.Dijkstra.Rules.PoolReap` module
   - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP` to `POOLREAP`
