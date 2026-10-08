@@ -75,6 +75,13 @@ module Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult (..),
   mkQueryPoolStateResult,
 
+  -- * @GetStakePoolState@
+
+  -- TODO: add the @GetStakePoolState@ query to ouroboros-consensus
+  queryStakePoolState,
+  QueryResultStakePoolState (..),
+  QueryResultStakePoolStateDelegatorsInclusion (..),
+
   -- * @GetPoolDistr2@
   querySetSnapshotStakePoolDistr,
   QueryResultPoolDistr (..),
@@ -109,6 +116,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   ToKeyValuePairs (..),
+  UnitInterval,
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary
@@ -146,6 +154,7 @@ import Control.DeepSeq
 import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
+import Data.Bool (bool)
 import Data.Foldable (fold, foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -533,6 +542,130 @@ queryPoolParameters ::
 queryPoolParameters network nes poolKeys =
   let pools = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
    in Map.mapWithKey (stakePoolStateToStakePoolParams network) $ Map.restrictKeys pools poolKeys
+
+data QueryResultStakePoolStateDelegatorsInclusion = ExcludeDelegators | IncludeDelegators
+  deriving (Eq, Ord, Show, Enum, Bounded)
+
+instance EncCBOR QueryResultStakePoolStateDelegatorsInclusion where
+  encCBOR = encCBOR . (== IncludeDelegators)
+
+instance DecCBOR QueryResultStakePoolStateDelegatorsInclusion where
+  decCBOR = bool ExcludeDelegators IncludeDelegators <$> decCBOR
+
+-- | State of a registered stake pool, as reported by `queryStakePoolState`.
+--
+-- NOTE: `BlsKeyState` is assumed to be a stable type here, because its CBOR
+-- and JSON encodings are part of the encodings of this stable type.
+data QueryResultStakePoolState era = QueryResultStakePoolState
+  { qrspsVrf :: !(VRFVerKeyHash StakePoolVRF)
+  , qrspsBlsKey :: !(Maybe BlsKeyState)
+  , qrspsPledge :: !Coin
+  , qrspsCost :: !Coin
+  , qrspsMargin :: !UnitInterval
+  , qrspsAccountId :: !AccountId
+  , qrspsOwners :: !(Set (KeyHash Staking))
+  , qrspsRelays :: !(Seq StakePoolRelay)
+  , qrspsMetadata :: !(Maybe PoolMetadata)
+  , qrspsDeposit :: !Coin
+  , qrspsNumDelegators :: !Int
+  , qrspsDelegators :: !(Maybe (Set (Credential Staking)))
+  , qrspsRetiring :: !(Maybe EpochNo)
+  , qrspsFutureStakePoolParams :: !(Maybe (StakePoolParams era))
+  }
+  deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs (QueryResultStakePoolState era)
+
+instance EncCBOR (QueryResultStakePoolState era) where
+  encCBOR x@(QueryResultStakePoolState _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+    let QueryResultStakePoolState {..} = x
+     in encodeListLen 14
+          <> encCBOR qrspsVrf
+          <> encodeNullMaybe encCBOR qrspsBlsKey
+          <> encCBOR qrspsPledge
+          <> encCBOR qrspsCost
+          <> encCBOR qrspsMargin
+          <> encCBOR qrspsAccountId
+          <> encCBOR qrspsOwners
+          <> encCBOR qrspsRelays
+          <> encodeNullMaybe encCBOR qrspsMetadata
+          <> encCBOR qrspsDeposit
+          <> encCBOR qrspsNumDelegators
+          <> encodeNullMaybe encCBOR qrspsDelegators
+          <> encodeNullMaybe encCBOR qrspsRetiring
+          <> encodeNullMaybe encCBOR qrspsFutureStakePoolParams
+
+instance Era era => DecCBOR (QueryResultStakePoolState era) where
+  decCBOR =
+    decodeRecordNamed "QueryResultStakePoolState" (const 14) $
+      QueryResultStakePoolState
+        <$> decCBOR
+        <*> decodeNullMaybe decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decodeNullMaybe decCBOR
+        <*> decCBOR
+        <*> decCBOR
+        <*> decodeNullMaybe decCBOR
+        <*> decodeNullMaybe decCBOR
+        <*> decodeNullMaybe decCBOR
+
+instance ToKeyValuePairs (QueryResultStakePoolState era) where
+  toKeyValuePairs x@(QueryResultStakePoolState _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
+    let QueryResultStakePoolState {..} = x
+     in [ "vrf" .= qrspsVrf
+        , "blsKey" .= qrspsBlsKey
+        , "pledge" .= qrspsPledge
+        , "cost" .= qrspsCost
+        , "margin" .= qrspsMargin
+        , "accountId" .= qrspsAccountId
+        , "owners" .= qrspsOwners
+        , "relays" .= qrspsRelays
+        , "metadata" .= qrspsMetadata
+        , "deposit" .= qrspsDeposit
+        , "numDelegators" .= qrspsNumDelegators
+        , "delegators" .= qrspsDelegators
+        , "retiring" .= qrspsRetiring
+        , "futureStakePoolParams" .= qrspsFutureStakePoolParams
+        ]
+
+-- | Query the state of all registered stake pools, or only of the requested ones when
+-- pool ids are supplied, in which case requested pools that are not registered are left
+-- out. The delegators of each pool are only included with `IncludeDelegators`.
+queryStakePoolState ::
+  EraCertState era =>
+  NewEpochState era ->
+  Maybe (Set (KeyHash StakePool)) ->
+  QueryResultStakePoolStateDelegatorsInclusion ->
+  Map (KeyHash StakePool) (QueryResultStakePoolState era)
+queryStakePoolState nes mPoolKeys delegatorsInclusion =
+  Map.mapWithKey toQueryResultStakePoolState $
+    maybe stakePools (Map.restrictKeys stakePools) mPoolKeys
+  where
+    pState = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
+    stakePools = psStakePools pState
+    toQueryResultStakePoolState poolId stakePoolState =
+      QueryResultStakePoolState
+        { qrspsVrf = spsVrf stakePoolState
+        , qrspsBlsKey = strictMaybeToMaybe $ spsBlsKey stakePoolState
+        , qrspsPledge = spsPledge stakePoolState
+        , qrspsCost = spsCost stakePoolState
+        , qrspsMargin = spsMargin stakePoolState
+        , qrspsAccountId = spsAccountId stakePoolState
+        , qrspsOwners = spsOwners stakePoolState
+        , qrspsRelays = fromStrict $ spsRelays stakePoolState
+        , qrspsMetadata = strictMaybeToMaybe $ spsMetadata stakePoolState
+        , qrspsDeposit = fromCompact $ spsDeposit stakePoolState
+        , qrspsNumDelegators = Set.size $ spsDelegators stakePoolState
+        , qrspsDelegators = case delegatorsInclusion of
+            ExcludeDelegators -> Nothing
+            IncludeDelegators -> Just $ spsDelegators stakePoolState
+        , qrspsRetiring = Map.lookup poolId $ psRetiring pState
+        , qrspsFutureStakePoolParams = Map.lookup poolId $ psFutureStakePoolParams pState
+        }
 
 -- | The stake snapshot returns information about the mark, set, go ledger snapshots for a pool,
 -- plus the total active stake for each snapshot that can be used in a 'sigma' calculation.

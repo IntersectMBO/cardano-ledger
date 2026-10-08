@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, decodeFull', serialize')
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -39,6 +39,7 @@ import Data.Default (Default (..))
 import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
@@ -70,6 +71,7 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
+  queryStakePoolStateExamples,
   queryStakeSnapshotsExamples,
  )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
@@ -148,6 +150,7 @@ latestErasSpec =
         "queryStakePoolDelegsAndRewards"
         queryStakePoolDelegsAndRewardsExamples
       eraLedgerStateQueryGoldenSpec @era "queryStakePoolRelays" queryStakePoolRelaysExamples
+      eraLedgerStateQueryGoldenSpec @era "queryStakePoolState" (queryStakePoolStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @(QueryPoolStateResult era)
@@ -157,6 +160,7 @@ latestErasSpec =
     describe "Queries" $ do
       committeeMembersStateSpec @era
       queryStakeSnapshotsSpec @era
+      queryStakePoolStateSpec @era
 
 committeeMembersStateSpec ::
   forall era.
@@ -591,3 +595,58 @@ queryStakeSnapshotsSpec =
           , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal goSnap
           , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
           ]
+
+queryStakePoolStateSpec ::
+  forall era.
+  ( EraCertState era
+  , EraGov era
+  , EraStake era
+  , Default (StashedAVVMAddresses era)
+  ) =>
+  Spec
+queryStakePoolStateSpec =
+  describe "GetStakePoolState" $ do
+    it "encodes delegators inclusion as a CBOR bool" $ do
+      let version = eraProtVerHigh @era
+      map (serialize' version) [ExcludeDelegators, IncludeDelegators]
+        `shouldBe` map (serialize' version) [False, True]
+      traverse (decodeFull' version . serialize' version) [False, True]
+        `shouldBe` Right [ExcludeDelegators, IncludeDelegators]
+    prop "reports each requested pool state when it is registered" $
+      \arbitraryPState network -> do
+        delegatorsInclusion <- arbitraryBoundedEnum
+        pState <- (psStakePoolsL . traverse . spsBlsKeyL) (const arbitrary) arbitraryPState
+        let stakePools = psStakePools pState
+        mPoolKeys <-
+          oneof
+            [ pure Nothing
+            , Just <$> ((<>) <$> uniformSubSet Nothing (Map.keysSet stakePools) QC <*> arbitrary)
+            ]
+        let
+          nes =
+            def @(NewEpochState era) & nesEsL . esLStateL . lsCertStateL . certPStateL .~ pState
+          result = queryStakePoolState nes mPoolKeys delegatorsInclusion
+          poolStateResult = queryPoolState nes mPoolKeys network
+          expected = Map.mapWithKey toExpected $ qpsrStakePoolParams poolStateResult
+          toExpected poolId stakePoolParams =
+            let stakePoolState = stakePools Map.! poolId
+             in QueryResultStakePoolState
+                  { qrspsVrf = sppVrf stakePoolParams
+                  , qrspsBlsKey = strictMaybeToMaybe $ spsBlsKey stakePoolState
+                  , qrspsPledge = sppPledge stakePoolParams
+                  , qrspsCost = sppCost stakePoolParams
+                  , qrspsMargin = sppMargin stakePoolParams
+                  , qrspsAccountId = aaId $ sppAccountAddress stakePoolParams
+                  , qrspsOwners = sppOwners stakePoolParams
+                  , qrspsRelays = StrictSeq.fromStrict $ sppRelays stakePoolParams
+                  , qrspsMetadata = strictMaybeToMaybe $ sppMetadata stakePoolParams
+                  , qrspsDeposit = qpsrDeposits poolStateResult Map.! poolId
+                  , qrspsNumDelegators = Set.size $ spsDelegators stakePoolState
+                  , qrspsDelegators = case delegatorsInclusion of
+                      ExcludeDelegators -> Nothing
+                      IncludeDelegators -> Just $ spsDelegators stakePoolState
+                  , qrspsRetiring = Map.lookup poolId $ qpsrRetiring poolStateResult
+                  , qrspsFutureStakePoolParams =
+                      Map.lookup poolId $ qpsrFutureStakePoolParams poolStateResult
+                  }
+        pure @Gen $ result === expected

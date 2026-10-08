@@ -2,12 +2,17 @@
 
 ## 1.16.0.0
 
+* Add `queryStakePoolState` with the `QueryResultStakePoolState` result type and the `QueryResultStakePoolStateDelegatorsInclusion` argument type
 * Add methods to `AnyEraTxBody`:
   - `subTransactionsTxBodyG`
   - `requiredTopLevelGuardsTxBodyG`
   - `directDepositsTxBodyG`
   - `accountBalanceIntervalsTxBodyG`
   - `startingAccountBalanceIntervalsTxBodyG`
+
+### `testlib`
+
+* Add `queryStakePoolStateExamples`
 
 ## 1.15.0.0
 
