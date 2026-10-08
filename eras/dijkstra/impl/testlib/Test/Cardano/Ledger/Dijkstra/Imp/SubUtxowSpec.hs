@@ -233,7 +233,7 @@ spec = describe "SUBUTXOW" $ do
       it caseName $ do
         (guardCred, requiredGuards) <- mkGuard
         let subTx :: Tx SubTx era
-            subTx = mkBasicTx $ mkBasicTxBody & requiredTopLevelGuardsL .~ requiredGuards
+            subTx = mkBasicTx $ mkBasicTxBody & requiredTopLevelGuardsTxBodyL .~ requiredGuards
             topTx =
               mkTopTxWithSubTxs [subTx]
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
