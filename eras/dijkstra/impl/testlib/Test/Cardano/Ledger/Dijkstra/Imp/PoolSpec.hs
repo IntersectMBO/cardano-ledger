@@ -382,6 +382,145 @@ spec = describe "POOL" $ do
           [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
       pools <- getPools
       expectNothing $ Map.lookup (sppId pps) pools
+
+  describe "BLS key uniqueness" $ do
+    it "a new pool cannot take the active key of another pool" $ do
+      key <- freshBlsKey
+      _ <- registerBlsPool (SJust key)
+      expectBlsKeys [(key, 1)]
+      expectBlsKeyTakenByNewPool key
+      -- the key stays taken across the epoch boundary
+      passEpoch
+      expectBlsKeys [(key, 1)]
+      expectBlsKeyTakenByNewPool key
+
+    it "a registered pool cannot take the active key of another pool" $ do
+      key1 <- freshBlsKey
+      key2 <- freshBlsKey
+      _ <- registerBlsPool (SJust key1)
+      withKey <- registerBlsPool (SJust key2)
+      withoutKey <- registerBlsPool SNothing
+      expectBlsKeys [(key1, 1), (key2, 1)]
+      -- neither a pool with a key of its own nor one without any may take it
+      expectBlsKeyTaken withKey key1
+      expectBlsKeyTaken withoutKey key1
+      expectBlsKeys [(key1, 1), (key2, 1)]
+
+    it "a pending future key cannot be claimed by another pool" $ do
+      key1 <- freshBlsKey
+      kh1 <- registerBlsPool (SJust key1)
+      kh2 <- registerBlsPool SNothing
+      newKey <- freshBlsKey
+      reregisterBlsPool kh1 (SJust newKey)
+      expectActiveBlsKey kh1 (SJust key1)
+      expectFutureBlsKey kh1 (SJust newKey)
+      expectBlsKeys [(key1, 1), (newKey, 1)]
+      -- a key is taken as soon as a re-registration requests it, so neither a new pool ...
+      expectBlsKeyTakenByNewPool newKey
+      -- ... nor another registered pool may claim it
+      expectBlsKeyTaken kh2 newKey
+      expectBlsKeys [(key1, 1), (newKey, 1)]
+
+    it "re-registering with the active key keeps a single reference to it" $ do
+      key <- freshBlsKey
+      kh <- registerBlsPool (SJust key)
+      reregisterBlsPool kh (SJust key)
+      expectFutureBlsKey kh (SJust key)
+      expectBlsKeys [(key, 1)]
+      passEpoch
+      expectActiveBlsKey kh (SJust key)
+      expectBlsKeys [(key, 1)]
+
+    it "a pool can re-register with its own pending future key" $ do
+      key <- freshBlsKey
+      kh <- registerBlsPool (SJust key)
+      newKey <- freshBlsKey
+      reregisterBlsPool kh (SJust newKey)
+      -- registering with the key in the pool's own future params should succeed
+      reregisterBlsPool kh (SJust newKey)
+      expectActiveBlsKey kh (SJust key)
+      expectFutureBlsKey kh (SJust newKey)
+      expectBlsKeys [(key, 1), (newKey, 1)]
+      passEpoch
+      expectActiveBlsKey kh (SJust newKey)
+      expectBlsKeys [(newKey, 1)]
+
+    it "a key is released when its holder switches to a fresh one" $ do
+      key <- freshBlsKey
+      kh <- registerBlsPool (SJust key)
+      newKey <- freshBlsKey
+      reregisterBlsPool kh (SJust newKey)
+      -- the pool keeps using the key until the epoch boundary, so it stays taken
+      expectBlsKeyTakenByNewPool key
+      passEpoch
+      expectActiveBlsKey kh (SJust newKey)
+      expectBlsKeys [(newKey, 1)]
+      -- now another pool can take it over ...
+      other <- registerBlsPool (SJust key)
+      expectActiveBlsKey other (SJust key)
+      expectBlsKeys [(key, 1), (newKey, 1)]
+      -- ... but only a single one
+      expectBlsKeyTakenByNewPool key
+
+    it "a key is released when its holder drops it" $ do
+      key <- freshBlsKey
+      kh <- registerBlsPool (SJust key)
+      reregisterBlsPool kh SNothing
+      expectActiveBlsKey kh (SJust key)
+      expectBlsKeys [(key, 1)]
+      expectBlsKeyTakenByNewPool key
+      passEpoch
+      expectActiveBlsKey kh SNothing
+      expectBlsKeys []
+      other <- registerBlsPool (SJust key)
+      expectActiveBlsKey other (SJust key)
+      expectBlsKeys [(key, 1)]
+
+    it "a key is released when its holder retires" $ do
+      key <- freshBlsKey
+      kh <- registerBlsPool (SJust key)
+      retirePoolTx kh (EpochInterval 1) >>= submitTx_
+      expectBlsKeys [(key, 1)]
+      expectBlsKeyTakenByNewPool key
+      passEpoch
+      expectPool kh Nothing
+      expectBlsKeys []
+      other <- registerBlsPool (SJust key)
+      expectActiveBlsKey other (SJust key)
+      expectBlsKeys [(key, 1)]
+
+    it "retiring with a pending future key releases both keys" $ do
+      key <- freshBlsKey
+      kh <- registerBlsPool (SJust key)
+      newKey <- freshBlsKey
+      reregisterBlsPool kh (SJust newKey)
+      retirePoolTx kh (EpochInterval 1) >>= submitTx_
+      expectBlsKeys [(key, 1), (newKey, 1)]
+      passEpoch
+      expectPool kh Nothing
+      expectBlsKeys []
+      _ <- registerBlsPool (SJust key)
+      _ <- registerBlsPool (SJust newKey)
+      expectBlsKeys [(key, 1), (newKey, 1)]
+
+    it "only the public key counts, not the proof of possession" $ do
+      key <- freshBlsKey
+      _ <- registerBlsPool (SJust key)
+      bogusProof <- arbitrary
+      let bogusKey = key {blsPossessionProof = bogusProof}
+      kh <- freshKeyHash
+      pps <- blsPoolParams kh (SJust bogusKey)
+      -- the key is rejected twice: its public key is taken and its proof is not valid
+      -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec pinned by
+      -- cardano-ledger requires BLS keys to be unique.
+      -- See https://github.com/IntersectMBO/cardano-ledger/pull/6149
+      withDisabledPostSubmitTxHook $
+        submitFailingTx
+          (registerPoolTx pps)
+          [ injectFailure $ BlsKeyAlreadyRegistered kh bogusKey
+          , injectFailure $ BlsKeyInvalidProofOfPossession kh bogusKey
+          ]
+      expectBlsKeys [(key, 1)]
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
@@ -420,6 +559,50 @@ spec = describe "POOL" $ do
       psVRFKeyHashes
         <$> getPState
           `shouldReturn` Map.fromList [(vrf, unsafeNonZero n) | (vrf, n) <- vrfs]
+    blsPoolParams ::
+      KeyHash StakePool ->
+      StrictMaybe BlsKey ->
+      ImpTestM era (StakePoolParams era)
+    blsPoolParams kh mbBlsKey = do
+      pps <- registerAccountAddress >>= freshPoolParams kh
+      pure pps {sppBlsKey = mbBlsKey}
+    registerBlsPool :: StrictMaybe BlsKey -> ImpTestM era (KeyHash StakePool)
+    registerBlsPool mbBlsKey = do
+      kh <- freshKeyHash
+      reregisterBlsPool kh mbBlsKey
+      expectActiveBlsKey kh mbBlsKey
+      pure kh
+    -- Registers the pool, or re-registers it if it already is one
+    reregisterBlsPool :: KeyHash StakePool -> StrictMaybe BlsKey -> ImpTestM era ()
+    reregisterBlsPool kh mbBlsKey = blsPoolParams kh mbBlsKey >>= submitTx_ . registerPoolTx
+    expectActiveBlsKey :: KeyHash StakePool -> StrictMaybe BlsKey -> ImpTestM era ()
+    expectActiveBlsKey kh mbBlsKey = do
+      pools <- psStakePools <$> getPState
+      sps <- expectJust $ Map.lookup kh pools
+      bksKey <$> spsBlsKey sps `shouldBe` mbBlsKey
+    expectFutureBlsKey :: KeyHash StakePool -> StrictMaybe BlsKey -> ImpTestM era ()
+    expectFutureBlsKey kh mbBlsKey = do
+      fps <- psFutureStakePoolParams <$> getPState
+      spp <- expectJust $ Map.lookup kh fps
+      sppBlsKey spp `shouldBe` mbBlsKey
+    expectBlsKeys :: [(BlsKey, Word64)] -> ImpTestM era ()
+    expectBlsKeys keys =
+      psBlsKeyHashes
+        <$> getPState
+          `shouldReturn` Map.fromList [(hashBlsKey key, unsafeNonZero n) | (key, n) <- keys]
+    -- Registering the pool with the BLS key fails, because another pool is using it
+    expectBlsKeyTaken :: KeyHash StakePool -> BlsKey -> ImpTestM era ()
+    expectBlsKeyTaken kh key = do
+      tx <- registerPoolTx <$> blsPoolParams kh (SJust key)
+      -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec pinned by
+      -- cardano-ledger requires BLS keys to be unique.
+      -- See https://github.com/IntersectMBO/cardano-ledger/pull/6149
+      withDisabledPostSubmitTxHook $
+        submitFailingTx tx [injectFailure $ BlsKeyAlreadyRegistered kh key]
+    expectBlsKeyTakenByNewPool :: BlsKey -> ImpTestM era ()
+    expectBlsKeyTakenByNewPool key = do
+      kh <- freshKeyHash
+      expectBlsKeyTaken kh key
     poolParams ::
       KeyHash StakePool ->
       VRFVerKeyHash StakePoolVRF ->
@@ -446,6 +629,20 @@ dijkstraOnlySpec = describe "POOL" $ do
       -- ... which also keeps any other pool from registering with it
       runPool (RegPool newStakePoolParams {sppVrf = vrf})
         `shouldReturn` Left [VRFKeyHashAlreadyRegistered (sppId newStakePoolParams) vrf]
+
+    it "re-register a pool from the genesis with its own BLS key" $ do
+      blsKey <- freshBlsKey
+      stakePoolParams <- (\pps -> pps {sppBlsKey = SJust blsKey}) <$> freshStakePool
+      -- set up before the injection, since no transaction can follow it (see `runPool`)
+      newStakePoolParams <- freshStakePool
+      injectGenesisStakePools [stakePoolParams]
+      -- the pool can re-register with the BLS key it is already using ...
+      runPool (RegPool stakePoolParams) >>= expectRightDeep_
+      -- ... because its BLS key is tracked just like that of a pool registered through POOL ...
+      psBlsKeyHashes <$> getPState `shouldReturn` [(hashBlsKey blsKey, knownNonZeroBounded @1)]
+      -- ... which also keeps any other pool from registering with it
+      runPool (RegPool newStakePoolParams {sppBlsKey = SJust blsKey})
+        `shouldReturn` Left [BlsKeyAlreadyRegistered (sppId newStakePoolParams) blsKey]
   where
     -- The deposits of stake pools from the genesis never make it into the deposit pot,
     -- which the assertions of LEDGER reject, so POOL is run on its own.

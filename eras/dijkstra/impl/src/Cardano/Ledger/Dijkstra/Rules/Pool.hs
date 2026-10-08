@@ -36,6 +36,7 @@ import Cardano.Ledger.BaseTypes (
   invalidKey,
   knownNonZeroBounded,
   networkId,
+  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -46,11 +47,11 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
-import Cardano.Ledger.Rules.ValidationMode (checkFailOnJustStatic)
+import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust, checkFailOnJustStatic)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_)
+import Control.Monad (forM_, guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -95,6 +96,11 @@ data DijkstraPoolPredFailure era
       (KeyHash StakePool)
       -- | BLS key set
       BlsKey
+  | BlsKeyAlreadyRegistered
+      -- | Stake Pool ID
+      (KeyHash StakePool)
+      -- | BLS key attempted to use, whose public key has already been registered
+      BlsKey
   deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Era era => EncCBOR (DijkstraPoolPredFailure era) where
@@ -116,6 +122,8 @@ instance Era era => EncCBOR (DijkstraPoolPredFailure era) where
       encodeListLen 3 <> encCBOR (6 :: Word8) <> encCBOR a <> encCBOR b
     BlsKeyInvalidProofOfPossession a b ->
       encodeListLen 3 <> encCBOR (7 :: Word8) <> encCBOR a <> encCBOR b
+    BlsKeyAlreadyRegistered a b ->
+      encodeListLen 3 <> encCBOR (8 :: Word8) <> encCBOR a <> encCBOR b
 
 instance Era era => DecCBOR (DijkstraPoolPredFailure era) where
   decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
@@ -146,6 +154,10 @@ instance Era era => DecCBOR (DijkstraPoolPredFailure era) where
         poolID <- decCBOR
         blsKey <- decCBOR
         pure (3, BlsKeyInvalidProofOfPossession poolID blsKey)
+      8 -> do
+        poolID <- decCBOR
+        blsKey <- decCBOR
+        pure (3, BlsKeyAlreadyRegistered poolID blsKey)
       k -> invalidKey k
 
 type instance EraRuleFailure "POOL" DijkstraEra = DijkstraPoolPredFailure DijkstraEra
@@ -186,17 +198,22 @@ instance
 
   transitionRules = [poolTransition]
 
--- Invariant of `psVRFKeyHashes`: a VRF key hash maps to the number of
--- references held by registered stake pools, where a pool holds one reference
--- through its active parameters (`psStakePools`) and one more through its
--- future parameters (`psFutureStakePoolParams`) whenever the future VRF key
--- hash differs from the active one. A future VRF key hash that coincides with
--- the pool's active one is not counted separately.
+-- Invariant of `psVRFKeyHashes` and `psBlsKeyHashes`: a key hash maps to the
+-- number of references held by registered stake pools, where a pool holds one
+-- reference through its active parameters (`psStakePools`) and one more through
+-- its future parameters (`psFutureStakePoolParams`) whenever the future key
+-- hash differs from the active one. A future key hash that coincides with the
+-- pool's active one is not counted separately. A pool without a BLS key holds
+-- no reference in `psBlsKeyHashes`.
+--
+-- Only the BLS public key is hashed, so the proof of possession does not matter
+-- for the uniqueness. A BLS key that has aged out stays in the state and still
+-- counts, as in `IsBLSUnique` of the Agda specification.
 --
 -- The Dijkstra POOLREAP rule keeps this invariant at the epoch boundary: a
--- pool whose future VRF key hash differs from its active one releases the
+-- pool whose future key hash differs from its active one releases the
 -- reference to the active one once the future parameters are adopted, and a
--- retired pool releases the reference to the VRF key hash it uses.
+-- retired pool releases the references to the key hashes it uses.
 poolTransition ::
   forall rule era.
   ( EraPParams era
@@ -212,7 +229,7 @@ poolTransition ::
 poolTransition = do
   TRC
     ( Shelley.PoolEnv cEpoch pp
-      , ps@PState {psStakePools, psFutureStakePoolParams, psVRFKeyHashes}
+      , ps@PState {psStakePools, psFutureStakePoolParams, psVRFKeyHashes, psBlsKeyHashes}
       , poolCert
       ) <-
     judgmentContext
@@ -261,17 +278,28 @@ poolTransition = do
             pure (sppId, blsKey)
       checkFailOnJustStatic invalidBlsKey $ uncurry BlsKeyInvalidProofOfPossession
 
+      let newBlsKeyHash = hashBlsKey <$> strictMaybeToMaybe sppBlsKey
+          -- Returns the BLS key if its public key is held by a number of references other
+          -- than the expected one. A registration without a BLS key never clashes.
+          blsKeyAlreadyRegistered expected = do
+            SJust blsKey <- pure sppBlsKey
+            blsKeyHash <- newBlsKeyHash
+            guard (Map.lookup blsKeyHash psBlsKeyHashes /= expected)
+            pure blsKey
+
       case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
         Nothing -> do
           Map.notMember sppVrf psVRFKeyHashes
             ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
+          checkFailOnJust (blsKeyAlreadyRegistered Nothing) $ BlsKeyAlreadyRegistered sppId
           tellEvent $ injectEvent $ Shelley.RegisterPool sppId
           pure $
             ps
               & psStakePoolsL
                 %~ Map.insert sppId (mkStakePoolState cEpoch (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
               & psVRFKeyHashesL %~ addVRFKeyHashOccurrence sppVrf
+              & psBlsKeyHashesL %~ maybe id addBlsKeyHashOccurrence newBlsKeyHash
         -- re-register Pool
         Just stakePoolState -> do
           let activeVrf = stakePoolState ^. spsVrfL
@@ -299,6 +327,33 @@ poolTransition = do
                           | otherwise = id
                      in addNewOccurrence . removeOldOccurrence
                 | otherwise = id
+              activeBlsKeyHash = hashBlsKey . bksKey <$> strictMaybeToMaybe (stakePoolState ^. spsBlsKeyL)
+              futureBlsKeyHash =
+                Map.lookup sppId psFutureStakePoolParams >>= \StakePoolParams {sppBlsKey = futureBlsKey} ->
+                  hashBlsKey <$> strictMaybeToMaybe futureBlsKey
+              -- The only reference to this BLS key hash, if any, must be the
+              -- pool's own, held through its active or its future parameters.
+              expectedBlsKeyOccurrences
+                | Just _ <- newBlsKeyHash
+                , newBlsKeyHash `elem` [activeBlsKeyHash, futureBlsKeyHash] =
+                    Just (knownNonZeroBounded @1)
+                | otherwise = Nothing
+          checkFailOnJust (blsKeyAlreadyRegistered expectedBlsKeyOccurrences) $ BlsKeyAlreadyRegistered sppId
+          let updateFutureBlsKeyHash
+                | futureBlsKeyHash /= newBlsKeyHash =
+                    -- Same as for the VRF key hash: the reference held by the
+                    -- future parameters moves from `futureBlsKeyHash` to
+                    -- `newBlsKeyHash`, unless it coincides with the active one.
+                    let removeOldOccurrence = case futureBlsKeyHash of
+                          Just oldFutureBlsKeyHash
+                            | futureBlsKeyHash /= activeBlsKeyHash -> removeBlsKeyHashOccurrence oldFutureBlsKeyHash
+                          _ -> id
+                        addNewOccurrence = case newBlsKeyHash of
+                          Just blsKeyHash
+                            | newBlsKeyHash /= activeBlsKeyHash -> addBlsKeyHashOccurrence blsKeyHash
+                          _ -> id
+                     in addNewOccurrence . removeOldOccurrence
+                | otherwise = id
           tellEvent $ injectEvent $ Shelley.ReregisterPool sppId
           -- This `sppId` is already registered, so we want to reregister it.
           -- That means adding it to the futureStakePoolParams or overriding it  with the new 'poolParams'.
@@ -310,6 +365,7 @@ poolTransition = do
                 %~ Map.insert sppId stakePoolParams
               & psRetiringL %~ Map.delete sppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
+              & psBlsKeyHashesL %~ updateFutureBlsKeyHash
     RetirePool sppId e -> do
       Map.member sppId psStakePools ?! injectFailure (StakePoolNotRegisteredOnKeyPOOL sppId)
       let maxEpoch = pp ^. ppEMaxL

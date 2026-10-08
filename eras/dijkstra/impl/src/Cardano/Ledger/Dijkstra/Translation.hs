@@ -112,8 +112,9 @@ instance TranslateEra DijkstraEra DState where
 
 instance TranslateEra DijkstraEra PState where
   -- The VRF key hashes are recomputed from the registered pools, since the bookkeeping
-  -- of the Conway era does not maintain them reliably.
-  translateEra _ PState {..} = pure $ populateVRFKeyHashes $ coerce PState {..}
+  -- of the Conway era does not maintain them reliably. The same goes for the BLS key
+  -- hashes: Conway does not track them, but its genesis pools can carry BLS keys.
+  translateEra _ PState {..} = pure $ populateBlsKeyHashes $ populateVRFKeyHashes $ coerce PState {..}
 
 instance TranslateEra DijkstraEra VState where
   translateEra _ vState = pure $ coerce vState

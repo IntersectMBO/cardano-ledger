@@ -36,6 +36,7 @@ import Cardano.Ledger.State (
   mkMarkSnapShot,
   mkSetSnapShot,
   msSnapShotL,
+  populateBlsKeyHashes,
   populateVRFKeyHashes,
   ssStakeGoL,
   ssStakeMarkL,
@@ -55,10 +56,10 @@ instance EraTransition DijkstraEra where
   mkTransitionConfig = DijkstraTransitionConfig
 
   -- Stake pools from the genesis are registered without going through POOL, so the VRF
-  -- key hashes that POOL tracks have to be recomputed once those pools are in place.
+  -- and BLS key hashes that POOL tracks have to be recomputed once those pools are in place.
   injectIntoTestState hasFS cfg nes =
     seatInitialLeiosCommittee cfg
-      . (nesEsL . esLStateL . lsCertStateL . certPStateL %~ populateVRFKeyHashes)
+      . (nesEsL . esLStateL . lsCertStateL . certPStateL %~ populateBlsKeyHashes . populateVRFKeyHashes)
       <$> conwayInjectIntoTestState hasFS cfg nes
 
   tcPreviousEraConfigL =
