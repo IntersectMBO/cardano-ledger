@@ -47,10 +47,15 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psVRFKeyHashesL,
+  psBlsKeyHashesL,
   -- Helpers for `psVRFKeyHashes`
   addVRFKeyHashOccurrence,
   removeVRFKeyHashOccurrence,
   populateVRFKeyHashes,
+  -- Helpers for `psBlsKeyHashes`
+  addBlsKeyHashOccurrence,
+  removeBlsKeyHashOccurrence,
+  populateBlsKeyHashes,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -58,10 +63,11 @@ import Cardano.Ledger.BaseTypes (
   AnchorData,
   KeyValuePairs (..),
   NonZero,
-  StrictMaybe,
+  StrictMaybe (..),
   ToKeyValuePairs (..),
   knownNonZeroBounded,
   mapNonZero,
+  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -72,6 +78,8 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
   decSharePlusCBOR,
   decSharePlusLensCBOR,
+  decodeBreakOr,
+  decodeListLenOrIndef,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
@@ -87,8 +95,15 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolParams (..), StakePoolState (..), spsDelegatorsL)
+import Cardano.Ledger.State.StakePool (
+  BlsKeyState (..),
+  StakePoolParams (..),
+  StakePoolState (..),
+  hashBlsKey,
+  spsDelegatorsL,
+ )
 import Control.DeepSeq (NFData (..))
+import Control.Monad (unless)
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Default (Default (def))
@@ -248,6 +263,9 @@ data PState era = PState
   -- of the Shelley Ledger Specification for a sequence diagram.
   , psRetiring :: !(Map (KeyHash StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
+  , psBlsKeyHashes :: !(Map BlsVerKeyHash (NonZero Word64))
+  -- ^ BLS public key hashes that have been registered via PoolParams. Only maintained
+  -- from Dijkstra onwards, it is empty in earlier eras.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (PState era)
@@ -257,18 +275,48 @@ instance NoThunks (PState era)
 instance NFData (PState era)
 
 instance Era era => EncCBOR (PState era) where
-  encCBOR (PState a b c d) =
-    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+  -- The BLS key hashes are only tracked from Dijkstra onwards, so they are left out while
+  -- there are none. This keeps the encoding of the earlier eras unchanged, which matters
+  -- because ledger snapshots and query results are not reliably versioned (#6006).
+  encCBOR (PState vrfKeyHashes stakePools futureStakePoolParams retiring blsKeyHashes) =
+    mconcat $
+      [ encodeListLen $ if Map.null blsKeyHashes then 4 else 5
+      , encCBOR vrfKeyHashes
+      , encCBOR stakePools
+      , encCBOR futureStakePoolParams
+      , encCBOR retiring
+      ]
+        <> [encCBOR blsKeyHashes | not (Map.null blsKeyHashes)]
 
 instance Era era => DecShareCBOR (PState era) where
   type Share (PState era) = (Interns (VRFVerKeyHash StakePoolVRF), Interns (KeyHash StakePool))
 
-  decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
+  -- Not 'decodeRecordNamedT': it checks the size of the list after decoding its
+  -- body, whereas the BLS key hashes are only decoded when the list has 5 elements.
+  decSharePlusCBOR = do
+    lenOrIndef <- lift decodeListLenOrIndef
+    case lenOrIndef of
+      Just len
+        | len /= 4 && len /= 5 ->
+            fail $ "PState: expected a list of 4 or 5 elements, but got " <> show len
+      _ -> pure ()
     psVRFKeyHashes <- decSharePlusLensCBOR (toMemptyLens _1 _1)
     psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 _2)
-    pure PState {psVRFKeyHashes, psStakePools, psFutureStakePoolParams, psRetiring}
+    psBlsKeyHashes <- lift $ case lenOrIndef of
+      Just 4 -> pure Map.empty
+      Just _ -> decCBOR
+      Nothing -> do
+        isBreak <- decodeBreakOr
+        if isBreak
+          then pure Map.empty
+          else do
+            blsKeyHashes <- decCBOR
+            isBreakAfter <- decodeBreakOr
+            unless isBreakAfter $ fail "PState: expected the end of the list after the BLS key hashes"
+            pure blsKeyHashes
+    pure PState {..}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
@@ -280,6 +328,8 @@ instance ToKeyValuePairs (PState era) where
     , "futureStakePoolParams" .= psFutureStakePoolParams
     , "retiring" .= psRetiring
     ]
+      -- Like in the CBOR encoding, the BLS key hashes are left out while there are none.
+      <> ["blsKeyHashes" .= psBlsKeyHashes | not (Map.null psBlsKeyHashes)]
 
 -- | Reverses stake pool delegation.
 -- To be called when a stake credential is unregistered or its delegation target changes.
@@ -427,7 +477,7 @@ instance Default (Accounts era) => Default (DState era) where
   def = DState def Map.empty (GenDelegs Map.empty) def
 
 instance Default (PState era) where
-  def = PState Map.empty Map.empty Map.empty Map.empty
+  def = PState Map.empty Map.empty Map.empty Map.empty Map.empty
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
@@ -499,16 +549,29 @@ psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})
 
+psBlsKeyHashesL :: Lens' (PState era) (Map BlsVerKeyHash (NonZero Word64))
+psBlsKeyHashesL = lens psBlsKeyHashes (\ps u -> ps {psBlsKeyHashes = u})
+
+-- | Record one more reference to a key hash in a reference-counting map. The count
+-- saturates at 'maxBound' instead of overflowing.
+addKeyHashOccurrence :: Ord k => k -> Map k (NonZero Word64) -> Map k (NonZero Word64)
+addKeyHashOccurrence keyHash = Map.insertWith combine keyHash (knownNonZeroBounded @1)
+  where
+    -- Saturates at maxBound: if (+1) would overflow to 0, keep the existing value
+    combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
+
+-- | Drop one reference to a key hash from a reference-counting map. The key is
+-- removed once no references remain.
+removeKeyHashOccurrence :: Ord k => k -> Map k (NonZero Word64) -> Map k (NonZero Word64)
+removeKeyHashOccurrence = Map.update (mapNonZero (subtract 1))
+
 -- | Record one more reference to a VRF key hash in 'psVRFKeyHashes'. The count
 -- saturates at 'maxBound' instead of overflowing.
 addVRFKeyHashOccurrence ::
   VRFVerKeyHash StakePoolVRF ->
   Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
   Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-addVRFKeyHashOccurrence vrfKeyHash = Map.insertWith combine vrfKeyHash (knownNonZeroBounded @1)
-  where
-    -- Saturates at maxBound: if (+1) would overflow to 0, keep the existing value
-    combine _ oldVal = fromMaybe oldVal $ mapNonZero (+ 1) oldVal
+addVRFKeyHashOccurrence = addKeyHashOccurrence
 
 -- | Drop one reference to a VRF key hash from 'psVRFKeyHashes'. The key is
 -- removed once no references remain.
@@ -516,7 +579,7 @@ removeVRFKeyHashOccurrence ::
   VRFVerKeyHash StakePoolVRF ->
   Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
   Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-removeVRFKeyHashOccurrence = Map.update (mapNonZero (subtract 1))
+removeVRFKeyHashOccurrence = removeKeyHashOccurrence
 
 -- | Recompute 'psVRFKeyHashes' from scratch out of the registered stake pools: a pool
 -- holds one reference through its active parameters and one more through its future
@@ -535,4 +598,42 @@ populateVRFKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
       | (poolId, futureParams) <- Map.toList psFutureStakePoolParams
       , let futureVrf = sppVrf futureParams
       , (spsVrf <$> Map.lookup poolId psStakePools) /= Just futureVrf
+      ]
+
+-- | Record one more reference to a BLS key hash in 'psBlsKeyHashes'. The count
+-- saturates at 'maxBound' instead of overflowing.
+addBlsKeyHashOccurrence ::
+  BlsVerKeyHash ->
+  Map BlsVerKeyHash (NonZero Word64) ->
+  Map BlsVerKeyHash (NonZero Word64)
+addBlsKeyHashOccurrence = addKeyHashOccurrence
+
+-- | Drop one reference to a BLS key hash from 'psBlsKeyHashes'. The key is
+-- removed once no references remain.
+removeBlsKeyHashOccurrence ::
+  BlsVerKeyHash ->
+  Map BlsVerKeyHash (NonZero Word64) ->
+  Map BlsVerKeyHash (NonZero Word64)
+removeBlsKeyHashOccurrence = removeKeyHashOccurrence
+
+-- | Recompute 'psBlsKeyHashes' from scratch out of the registered stake pools: a pool
+-- holds one reference through its active BLS key and one more through its future
+-- parameters whenever those carry a different BLS key. Pools without a BLS key hold no
+-- references. Keys that have aged out still count. Only Dijkstra maintains the map, so
+-- this is meant for the translation into Dijkstra, for the injection of genesis stake
+-- pools, and for the post-condition of the Dijkstra @POOLREAP@ rule that checks the
+-- incremental updates against it.
+populateBlsKeyHashes :: PState era -> PState era
+populateBlsKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
+  ps {psBlsKeyHashes = F.foldl' (flip addBlsKeyHashOccurrence) activeBlsKeyHashes futureBlsKeyHashes}
+  where
+    activeBlsKeyHash sps = hashBlsKey . bksKey <$> strictMaybeToMaybe (spsBlsKey sps)
+    activeBlsKeyHashes =
+      Map.foldr' (maybe id addBlsKeyHashOccurrence . activeBlsKeyHash) Map.empty psStakePools
+    futureBlsKeyHashes =
+      [ futureBlsKeyHash
+      | (poolId, futureParams) <- Map.toList psFutureStakePoolParams
+      , SJust futureBlsKey <- [sppBlsKey futureParams]
+      , let futureBlsKeyHash = hashBlsKey futureBlsKey
+      , (activeBlsKeyHash =<< Map.lookup poolId psStakePools) /= Just futureBlsKeyHash
       ]

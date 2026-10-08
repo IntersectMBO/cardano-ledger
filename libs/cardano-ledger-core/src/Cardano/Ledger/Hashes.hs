@@ -63,6 +63,9 @@ module Cardano.Ledger.Hashes (
   toVRFVerKeyHash,
   fromVRFVerKeyHash,
 
+  -- ** @BLS@ Verification Key Hashes
+  BlsVerKeyHash (..),
+
   -- ** Genesis @DSIGN@ and @VRF@ Verification Key Hashes
   GenDelegPair (..),
   GenDelegs (..),
@@ -223,6 +226,26 @@ toVRFVerKeyHash = VRFVerKeyHash . Hash.castHash
 
 fromVRFVerKeyHash :: VRFVerKeyHash (r :: KeyRoleVRF) -> Hash.Hash HASH (VRF.VerKeyVRF v)
 fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash
+
+--------------------------------------------------------------------------------
+-- BLS Key Hashes
+--------------------------------------------------------------------------------
+
+-- | Hash of a BLS verification key. The hash stands in for the key where an 'Ord'
+-- instance is needed, which 'DSIGN.VerKeyDSIGN' does not have.
+newtype BlsVerKeyHash = BlsVerKeyHash
+  {unBlsVerKeyHash :: Hash.Hash HASH (DSIGN.VerKeyDSIGN DSIGN.BLS12381MinSigDSIGN)}
+  deriving (Show, Eq, Ord, Generic)
+  deriving newtype
+    ( NFData
+    , NoThunks
+    , EncCBOR
+    , DecCBOR
+    , ToJSONKey
+    , FromJSONKey
+    , ToJSON
+    , FromJSON
+    )
 
 --------------------------------------------------------------------------------
 -- Auxiliary Data Hashes

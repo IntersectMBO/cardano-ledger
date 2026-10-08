@@ -72,6 +72,7 @@ module Cardano.Ledger.State.StakePool (
   decodeStakePoolParamsFlat,
   PoolMetadata (..),
   BlsKey (..),
+  hashBlsKey,
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
@@ -85,6 +86,7 @@ import Cardano.Crypto.DSIGN (
   BLS12381MinSigDSIGN,
   DSIGNAggregatable (PossessionProofDSIGN),
   DSIGNAlgorithm (VerKeyDSIGN),
+  hashVerKeyDSIGN,
  )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
@@ -132,6 +134,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Core.Era (Era)
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Hashes (BlsVerKeyHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.Applicative ((<|>))
@@ -486,6 +489,12 @@ instance Ord BlsKey where
       <> compare
         (rawEncodeFixedSized (blsPossessionProof a))
         (rawEncodeFixedSized (blsPossessionProof b))
+
+-- | Hash of the public key of a 'BlsKey'. The proof of possession is not part of the
+-- hash, so two keys with the same public key but different proofs of possession hash
+-- to the same value.
+hashBlsKey :: BlsKey -> BlsVerKeyHash
+hashBlsKey = BlsVerKeyHash . hashVerKeyDSIGN . blsPubKey
 
 instance ToJSON BlsKey where
   toJSON blsKey =

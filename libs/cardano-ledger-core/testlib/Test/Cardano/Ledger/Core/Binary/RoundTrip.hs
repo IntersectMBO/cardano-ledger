@@ -28,6 +28,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
+import qualified Data.Map.Strict as Map
 import Data.Typeable
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
@@ -229,3 +230,37 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
     roundTripShareEraTypeSpec @era @UTxO
+  describe "PState encoding" $ do
+    let version = eraProtVerLow @era
+        -- The 4 elements that a 'PState' consisted of before 'psBlsKeyHashes' was added
+        legacyFields :: PState era -> [Encoding]
+        legacyFields ps =
+          [ encCBOR (psVRFKeyHashes ps)
+          , encCBOR (psStakePools ps)
+          , encCBOR (psFutureStakePoolParams ps)
+          , encCBOR (psRetiring ps)
+          ]
+        indefiniteLengthEncoding :: PState era -> Encoding
+        indefiniteLengthEncoding ps =
+          mconcat $
+            [encodeListLenIndef]
+              <> legacyFields ps
+              <> [encCBOR (psBlsKeyHashes ps) | not (null (psBlsKeyHashes ps))]
+              <> [encodeBreak]
+    -- Eras before Dijkstra never have BLS key hashes, so their encoding must not change
+    prop "without BLS key hashes is the legacy 4-element list" $
+      forAll (arbitrary @(PState era)) $ \ps ->
+        serialize' version (ps {psBlsKeyHashes = mempty})
+          `shouldBe` serialize' version (mconcat (encodeListLen 4 : legacyFields ps))
+    prop "with BLS key hashes is a 5-element list" $
+      forAll (arbitrary @(PState era)) $ \ps blsKeyHash blsKeyHashCount ->
+        let blsKeyHashes = Map.singleton blsKeyHash blsKeyHashCount
+         in serialize' version (ps {psBlsKeyHashes = blsKeyHashes})
+              `shouldBe` serialize' version (mconcat (encodeListLen 5 : legacyFields ps <> [encCBOR blsKeyHashes]))
+    prop "decodes an indefinite-length list, with or without BLS key hashes" $
+      forAll (arbitrary @(PState era)) $ \ps ->
+        forM_ [ps, ps {psBlsKeyHashes = mempty}] $
+          roundTripRangeExpectation
+            (mkTrip indefiniteLengthEncoding decNoShareCBOR)
+            (eraProtVerLow @era)
+            (eraProtVerHigh @era)

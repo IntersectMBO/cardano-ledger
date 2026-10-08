@@ -166,6 +166,7 @@ pStateZero =
     , psStakePools = Map.empty
     , psFutureStakePoolParams = Map.empty
     , psRetiring = Map.empty
+    , psBlsKeyHashes = Map.empty
     }
 
 dPStateZero :: EraCertState era => CertState era
@@ -268,6 +269,7 @@ instance Extract (PState era) era where
       (mStakePools x)
       (mFStakePools x)
       (mRetiring x)
+      Map.empty
 
 instance Extract (VState era) era where
   extract _ = VState def def (EpochNo 0)
