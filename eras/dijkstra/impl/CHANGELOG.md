@@ -2,6 +2,10 @@
 
 ## 0.5.0.0
 
+* Add `POOLREAP` rule for Dijkstra:
+  - Add `Cardano.Ledger.Dijkstra.Rules.PoolReap` module
+  - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP` to `POOLREAP`
+  - Add `EraRuleEvent "POOLREAP" DijkstraEra` type instance
 * Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
 * Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
 * Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that,
