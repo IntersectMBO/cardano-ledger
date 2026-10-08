@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Validate the treasury value and the reference scripts size in `LEDGER`, and the treasury value in `SUBLEDGER`, regardless of phase-2 validity
 * Add `POOLREAP` rule for Dijkstra:
   - Add `Cardano.Ledger.Dijkstra.Rules.PoolReap` module
   - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP` to `POOLREAP`

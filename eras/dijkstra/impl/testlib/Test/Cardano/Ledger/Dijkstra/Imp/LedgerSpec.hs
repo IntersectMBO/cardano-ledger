@@ -221,21 +221,37 @@ spec = describe "LEDGER" $ do
     it "is accepted when it exercises neither check" $
       submitPhase2Invalid_ =<< switchTxToPhase2InvalidLegacyMode (mkBasicTx mkBasicTxBody)
 
-    disableInConformanceIt "is not checked for the treasury value" $ do
+    it "is rejected when it declares a treasury value other than the actual one" $ do
       actualTreasury <- getsNES treasuryL
+      let declaredTreasury = actualTreasury <> Coin 1
       topTx <-
         switchTxToPhase2InvalidLegacyMode . mkBasicTx $
-          mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust (actualTreasury <> Coin 1)
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+          mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure . DijkstraTreasuryValueMismatch $
+            Mismatch
+              { mismatchSupplied = declaredTreasury
+              , mismatchExpected = actualTreasury
+              }
+        ]
 
-    disableInConformanceIt "is not checked for the reference script size" $ do
+    it "is rejected when its reference scripts exceed the limit" $ do
       (size, refTxIn) <- refScriptInput
       modifyPParams $ ppMaxRefScriptSizePerTxL .~ fromIntegral (size - 1)
 
       topTx <-
         switchTxToPhase2InvalidLegacyMode . mkBasicTx $
           mkBasicTxBody & referenceInputsTxBodyL .~ Set.singleton refTxIn
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure $
+            DijkstraTxRefScriptsSizeTooBig
+              Mismatch
+                { mismatchSupplied = size
+                , mismatchExpected = size - 1
+                }
+        ]
 
 -- | The size in bytes of a reference script, and an input that carries it.
 refScriptInput :: forall era. DijkstraEraImp era => ImpTestM era (Int, TxIn)
