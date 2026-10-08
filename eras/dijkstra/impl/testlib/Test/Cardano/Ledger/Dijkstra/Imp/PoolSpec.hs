@@ -5,23 +5,35 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec) where
+module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec, dijkstraOnlySpec) where
 
+import Cardano.Ledger.Alonzo
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Dijkstra
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.PParams (ppMaxPledgeLeverageL)
 import Cardano.Ledger.Dijkstra.Rules
+import Cardano.Ledger.Genesis
+import Cardano.Ledger.Shelley
+import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.Transition
 import Cardano.Ledger.State
+import Control.Monad.IO.Class
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
+import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Word
 import Lens.Micro ((%~), (&), (.~))
+import qualified System.FS.Sim.MockFS as MockFS
+import System.FS.Sim.STM
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -327,7 +339,7 @@ spec = describe "POOL" $ do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
 
-      getPools = getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+      getPools = getsNES $ nesEsL . epochStateStakePoolsL
 
     it "registers a pool with a valid BLS key and proof of possession" $ do
       pps <- freshStakePool
@@ -415,4 +427,54 @@ spec = describe "POOL" $ do
     poolParams kh vrf = do
       pps <- registerAccountAddress >>= freshPoolParams kh
       pure $ pps & sppVrfL .~ vrf
-    getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL
+
+-- | Tests that need the `TransitionConfig` of Dijkstra, which the era-polymorphic tests
+-- above cannot construct.
+dijkstraOnlySpec :: SpecWith (ImpInit (LedgerSpec DijkstraEra))
+dijkstraOnlySpec = describe "POOL" $ do
+  describe "Register and re-register pools" $ do
+    it "re-register a pool from the genesis with its own VRF" $ do
+      stakePoolParams <- freshStakePool
+      -- set up before the injection, since no transaction can follow it (see `runPool`)
+      newStakePoolParams <- freshStakePool
+      let vrf = sppVrf stakePoolParams
+      injectGenesisStakePools [stakePoolParams]
+      -- the pool can re-register with the VRF it is already using ...
+      runPool (RegPool stakePoolParams) >>= expectRightDeep_
+      -- ... because its VRF is tracked just like that of a pool registered through POOL ...
+      psVRFKeyHashes <$> getPState `shouldReturn` [(vrf, knownNonZeroBounded @1)]
+      -- ... which also keeps any other pool from registering with it
+      runPool (RegPool newStakePoolParams {sppVrf = vrf})
+        `shouldReturn` Left [VRFKeyHashAlreadyRegistered (sppId newStakePoolParams) vrf]
+  where
+    -- The deposits of stake pools from the genesis never make it into the deposit pot,
+    -- which the assertions of LEDGER reject, so POOL is run on its own.
+    runPool poolCert = do
+      poolEnv <- Shelley.PoolEnv <$> getsNES nesELL <*> getsPParams id
+      pState <- getPState
+      fmap fst <$> tryRunImpRule @"POOL" poolEnv pState poolCert
+    -- Register the stake pools the way a network that starts in Dijkstra does: by
+    -- injecting them from the genesis rather than through POOL.
+    injectGenesisStakePools stakePools = do
+      shelleyGenesis <- initGenesis @ShelleyEra
+      alonzoGenesis <- initGenesis @AlonzoEra
+      conwayGenesis <- initGenesis @ConwayEra
+      dijkstraGenesis <- initGenesis @DijkstraEra
+      let staking =
+            ShelleyGenesisStaking
+              { sgsPools = ListMap.fromList [(sppId spp, coerce spp) | spp <- stakePools]
+              , sgsStake = mempty
+              }
+          transitionConfig =
+            mkShelleyTransitionConfig shelleyGenesis {sgStaking = staking}
+              & mkTransitionConfig NoGenesis
+              & mkTransitionConfig NoGenesis
+              & mkTransitionConfig alonzoGenesis
+              & mkTransitionConfig NoGenesis
+              & mkTransitionConfig conwayGenesis
+              & mkTransitionConfig dijkstraGenesis
+      nes <- getsNES id
+      injectedNes <- liftIO $ do
+        fs <- simHasFS' MockFS.empty
+        injectIntoTestState fs transitionConfig nes
+      modifyNES $ const injectedNes

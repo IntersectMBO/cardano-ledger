@@ -213,6 +213,7 @@ library testlib
     cardano-slotting,
     cardano-strict-containers,
     containers,
+    fs-sim,
     generic-random,
     microlens,
     microlens-mtl,
