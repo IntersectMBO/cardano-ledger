@@ -30,6 +30,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
+  queryStakePoolStateExamples,
   queryStakeSnapshotsExamples,
 ) where
 
@@ -58,6 +59,7 @@ import Cardano.Ledger.Api.State.Query (
   QueryPoolStateResult (..),
   QueryResultLeiosCommittee (..),
   QueryResultPoolDistr,
+  QueryResultStakePoolState (..),
   StakeSnapshot (..),
   StakeSnapshots (..),
   toQueryResultPoolDistr,
@@ -73,13 +75,14 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (natVersion)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
-import Cardano.Ledger.Core (Era, eraProtVerHigh)
+import Cardano.Ledger.Core (AccountAddress (..), AccountId (..), Era, eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), VRFVerKeyHash (..))
 import Cardano.Ledger.State (
   BlsKey (..),
+  BlsKeyState (..),
   ChainAccountState (..),
   FuturePParams (..),
   IndividualPoolStake (..),
@@ -101,6 +104,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Vector.Strict as VS
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -516,6 +520,70 @@ queryPoolStateExamples =
             ]
       }
   ]
+
+queryStakePoolStateExamples ::
+  forall era. Era era => [Map (KeyHash StakePool) (QueryResultStakePoolState era)]
+queryStakePoolStateExamples =
+  [ Map.empty
+  , stakePoolStates
+  , Map.map (\stakePoolState -> stakePoolState {qrspsDelegators = SNothing}) stakePoolStates
+  ]
+  where
+    stakePoolParams =
+      exampleStakePoolParams
+        { sppBlsKey = exampleIndividualPoolStakeBls @era
+        , sppPledge = Coin 100_000_000_000
+        , sppCost = Coin 170_000_000
+        }
+    stakePoolStates =
+      Map.fromList
+        [
+          ( sppId stakePoolParams
+          , QueryResultStakePoolState
+              { qrspsVrf = sppVrf stakePoolParams
+              , qrspsBlsKey = (`BlsKeyState` EpochNo 200) <$> sppBlsKey stakePoolParams
+              , qrspsPledge = sppPledge stakePoolParams
+              , qrspsCost = sppCost stakePoolParams
+              , qrspsMargin = sppMargin stakePoolParams
+              , qrspsAccountId = aaId $ sppAccountAddress stakePoolParams
+              , qrspsOwners = sppOwners stakePoolParams
+              , qrspsRelays = sppRelays stakePoolParams
+              , qrspsMetadata = sppMetadata stakePoolParams
+              , qrspsDeposit = Coin 500_000_000
+              , qrspsNumDelegators = 2
+              , qrspsDelegators =
+                  SJust $ Set.fromList [KeyHashObj (mkKeyHash 10), ScriptHashObj (mkScriptHash 11)]
+              , qrspsRetiring = SJust $ EpochNo 250
+              , qrspsFutureStakePoolParams =
+                  SJust $ stakePoolParams {sppPledge = Coin 150_000_000_000}
+              }
+          )
+        ,
+          ( mkKeyHash 99
+          , QueryResultStakePoolState
+              { qrspsVrf = VRFVerKeyHash $ mkDummyHash (99 :: Int)
+              , qrspsBlsKey = SNothing
+              , qrspsPledge = Coin 50_000_000_000
+              , qrspsCost = Coin 170_000_000
+              , qrspsMargin = unsafeBoundRational (1 % 100)
+              , qrspsAccountId = AccountId $ KeyHashObj (mkKeyHash 98)
+              , qrspsOwners = Set.singleton $ mkKeyHash 98
+              , qrspsRelays = StrictSeq.empty
+              , qrspsMetadata = SNothing
+              , qrspsDeposit = Coin 500_000_000
+              , qrspsNumDelegators = 3
+              , qrspsDelegators =
+                  SJust $
+                    Set.fromList
+                      [ KeyHashObj (mkKeyHash 12)
+                      , KeyHashObj (mkKeyHash 13)
+                      , ScriptHashObj (mkScriptHash 14)
+                      ]
+              , qrspsRetiring = SNothing
+              , qrspsFutureStakePoolParams = SNothing
+              }
+          )
+        ]
 
 queryFuturePParamsExamples :: EraTest era => [Maybe (PParams era)]
 queryFuturePParamsExamples = [Nothing, Just def, Just examplePParams]
