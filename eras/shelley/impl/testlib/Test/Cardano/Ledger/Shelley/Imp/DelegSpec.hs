@@ -131,7 +131,7 @@ shelleyToBabbageSpec = describe "DELEG" $ do
     getDelegs kh nes = do
       let accounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
       pure $ Map.lookup (KeyHashObj kh) accounts >>= (^. stakePoolDelegationAccountStateL)
-    getPoolsState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+    getPoolsState nes = nes ^. nesEsL . epochStateStakePoolsL
 
 spec ::
   ShelleyEraImp era =>

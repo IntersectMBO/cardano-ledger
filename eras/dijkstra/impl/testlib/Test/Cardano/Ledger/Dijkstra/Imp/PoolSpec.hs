@@ -86,9 +86,6 @@ registerPoolWithPledge pledge = do
 poolRewards :: (HasCallStack, EraCertState era) => [Credential Staking] -> ImpTestM era Coin
 poolRewards = fmap fold . traverse getBalance
 
-getPState :: EraCertState era => ImpTestM era (PState era)
-getPState = getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
-
 -- | Register two pools that are identical, except that the second one declares a pledge
 -- that is a thousandth of the pledge of the first one, then have both of them mint the
 -- same number of blocks, and report the rewards that each of them earned.
@@ -342,7 +339,7 @@ spec = describe "POOL" $ do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
 
-      getPools = getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+      getPools = getsNES $ nesEsL . epochStateStakePoolsL
 
     it "registers a pool with a valid BLS key and proof of possession" $ do
       pps <- freshStakePool

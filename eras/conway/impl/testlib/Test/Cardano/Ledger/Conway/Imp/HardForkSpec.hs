@@ -112,4 +112,3 @@ spec = describe "HARDFORK" $ do
       psVRFKeyHashes
         <$> getPState
           `shouldReturn` Map.fromList [(k, unsafeNonZero v) | (k, v) <- vrfs]
-    getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL

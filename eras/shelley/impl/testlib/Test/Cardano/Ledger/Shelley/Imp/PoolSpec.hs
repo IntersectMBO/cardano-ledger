@@ -601,4 +601,3 @@ spec = describe "POOL" $ do
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RegPoolTxCert pps {sppPledge = Coin 0}]
-    getPState = getsNES @era $ nesEsL . esLStateL . lsCertStateL . certPStateL

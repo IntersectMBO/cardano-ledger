@@ -478,7 +478,7 @@ balanceSubTransactions ::
   ImpTestM era (Tx TopTx era)
 balanceSubTransactions topTx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  pools <- Map.keysSet <$> getsNES (nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL)
+  pools <- Map.keysSet <$> getsNES (nesEsL . epochStateStakePoolsL)
   utxo <- getUTxO
   let
     subTransactions = topTx ^. bodyTxL . subTransactionsTxBodyL

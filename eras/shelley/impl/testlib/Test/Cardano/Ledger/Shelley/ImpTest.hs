@@ -95,6 +95,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getProtVer,
   getsNES,
   getUTxO,
+  getPState,
   getCurSlotNo,
   impAddNativeScript,
   impAnn,
@@ -2134,6 +2135,9 @@ getsNES l = gets . view $ impNESL . l
 
 getUTxO :: ImpTestM era (UTxO era)
 getUTxO = getsNES utxoL
+
+getPState :: EraCertState era => ImpTestM era (PState era)
+getPState = getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
 
 getProtVer :: EraGov era => ImpTestM era ProtVer
 getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
