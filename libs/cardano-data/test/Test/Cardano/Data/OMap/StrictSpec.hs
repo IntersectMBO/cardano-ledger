@@ -145,6 +145,7 @@ spec =
       roundTripCborSpec @(OMap Int Int)
     context "Typeclass laws" $ do
       it "Type" $
+        -- TODO Replace with 'testLawsGroup' from cardano-base once we update it
         lawsCheckOne
           (Proxy :: Proxy (OMap Int Int))
           [ eqLaws

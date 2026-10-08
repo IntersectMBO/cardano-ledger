@@ -47,7 +47,6 @@ import Test.QuickCheck.Classes (
   commutativeMonoidLaws,
   commutativeSemigroupLaws,
   exponentialSemigroupLaws,
-  lawsCheckOne,
   monoidLaws,
   semigroupLaws,
  )
@@ -107,9 +106,8 @@ roundTripAddressSpec = do
   describe "AccountAddress" $ do
     roundTripCborSpec @AccountAddress
   describe "Withdrawals" $ do
-    it "Semigroup and Monoid" $
-      lawsCheckOne
-        (Proxy :: Proxy Withdrawals)
+    describe "Semigroup and Monoid" $
+      testLawsGroup @Withdrawals
         [ semigroupLaws
         , commutativeSemigroupLaws
         , exponentialSemigroupLaws
@@ -117,9 +115,8 @@ roundTripAddressSpec = do
         , commutativeMonoidLaws
         ]
   describe "DirectDeposits" $ do
-    it "Semigroup and Monoid" $
-      lawsCheckOne
-        (Proxy :: Proxy DirectDeposits)
+    describe "Semigroup and Monoid" $
+      testLawsGroup @DirectDeposits
         [ semigroupLaws
         , commutativeSemigroupLaws
         , exponentialSemigroupLaws

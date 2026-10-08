@@ -444,6 +444,9 @@ instance Monoid (VotingProcedures era) where
 
 deriving newtype instance Era era => NFData (VotingProcedures era)
 
+-- TODO Since VotingProcedures requires at least one vote per voter, should we
+-- change the inner type of `VotingProcedures` to use `NonEmptyMap instead of
+-- Map?
 instance Era era => DecCBOR (VotingProcedures era) where
   decCBOR =
     fmap VotingProcedures $ decodeMapByKey decCBOR $ \voter -> do

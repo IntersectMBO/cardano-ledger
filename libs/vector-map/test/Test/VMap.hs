@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -9,7 +8,16 @@ import Control.Exception
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.VMap as VMap
-import Test.Common
+import Test.Common.QuickCheck
+import Test.Hspec
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck
+import Test.QuickCheck.Classes (
+  eqLaws,
+  isListLaws,
+  monoidLaws,
+  semigroupLaws,
+ )
 
 type MapT = Map.Map Char Int
 
@@ -127,9 +135,9 @@ vMapTests =
             unfound = error $ "the expected key " <> show k <> " was not found"
          in (VMap.findWithDefault unfound k (VMap.fromList xs' :: VMapT) === v)
               .&&. (Map.findWithDefault unfound k (Map.fromList xs' :: MapT) === v)
-    testLawsGroup "classes" $
-      [ eqLaws (Proxy @VMapT)
-      , semigroupLaws (Proxy @VMapT)
-      , monoidLaws (Proxy @VMapT)
-      , isListLaws (Proxy @VMapT)
+    testLawsGroup @VMapT
+      [ eqLaws
+      , semigroupLaws
+      , monoidLaws
+      , isListLaws
       ]

@@ -4,6 +4,10 @@
 
 *
 
+### testlib
+
+* Add `testLawsGroup`, `withMaxTimesSuccess` and `testPropertyN` as QuickCheck utility functions
+
 ## 1.2.1.0
 
 * Add `lookupIndex`

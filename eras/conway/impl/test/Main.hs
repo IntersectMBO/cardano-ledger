@@ -16,6 +16,7 @@ import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
+import qualified Test.Cardano.Ledger.Conway.Governance.ProceduresSpec as ProceduresSpec
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
@@ -40,6 +41,7 @@ main = ledgerEraTestMain @ConwayEra $ do
     GoldenTranslation.spec
     Genesis.spec
     GovActionReorder.spec
+    ProceduresSpec.spec
     describe "Plutus" $ do
       PlutusSpec.spec
     Cddl.spec
