@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
 ) where
 
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Mismatch (..),
@@ -31,10 +32,7 @@ import Cardano.Ledger.Conway.Transition (injectStakeCredentials)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Plutus (
-  SLanguage (..),
-  hashPlutusScript,
- )
+import Cardano.Ledger.Plutus (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.Genesis (InjectionData (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (Val (..))
@@ -106,7 +104,8 @@ spec = describe "DELEG" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
-      let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
+      lang <- elements $ eraLanguages @era
+      let cred = ScriptHashObj $ withSLanguage lang $ hashPlutusScript . evenRedeemerNoDatum
 
       submitAnyTx_ $
         mkBasicTx mkBasicTxBody

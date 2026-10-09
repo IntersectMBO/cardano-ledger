@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -23,7 +22,7 @@ import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import Cardano.Ledger.Plutus.Language (withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
@@ -32,6 +31,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.State
 import Cardano.Ledger.Val
+import Control.Monad (forM)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro
@@ -166,9 +166,10 @@ spec = describe "UTXO" $ do
             )
       distinctScripts = do
         nativeScripts <- replicateM 3 (fromNativeScript <$> nativeScript)
-        Just plutusScriptV2 <- pure $ mkPlutusScript @era $ alwaysSucceedsNoDatum SPlutusV2
-        Just plutusScriptV3 <- pure $ mkPlutusScript @era $ alwaysSucceedsNoDatum SPlutusV3
-        pure $ nativeScripts ++ [fromPlutusScript plutusScriptV2, fromPlutusScript plutusScriptV3]
+        plutusScripts <- forM (eraLanguages @era) $ \lang -> withSLanguage lang $ \slang -> do
+          Just plutusScript <- pure $ mkPlutusScript @era $ alwaysSucceedsNoDatum slang
+          pure $ fromPlutusScript plutusScript
+        pure $ nativeScripts ++ plutusScripts
 
     it "required reference script counts towards the minFee calculation" $ do
       spendingScript <- nativeScript
