@@ -58,8 +58,11 @@ spec = describe "UTXO" $ do
       dRepCred <- KeyHashObj <$> freshKeyHash @DRepRole
       let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
       anchor <- arbitrary
+      -- TODO: Switch to `submitAnyTx` once `addSubTxIn` no longer submits a separate transaction
+      -- during fixup. Its fee is not part of `txRegister`'s fee, so the UTxO difference check
+      -- below fails
       txRegister <-
-        submitAnyTx $
+        submitTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.fromList
@@ -91,7 +94,7 @@ spec = describe "UTXO" $ do
           )
       curEpochNo <- getsNES nesELL
       txUnRegister <-
-        submitAnyTx $
+        submitTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.fromList

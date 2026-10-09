@@ -143,14 +143,15 @@ spec = describe "UTXOW" $ do
     describe "MissingRequiredGuards" $ do
       it "A top-level required guard absent from the guards set is a predicate failure" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
-        let tx :: forall l. Typeable l => Tx l era
-            tx =
+        let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
         submitFailingTx
           tx
           [injectFailure $ MissingRequiredGuards $ NES.singleton guardKeyHash]
-        submitAnyTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
+        -- TODO: Switch to `submitAnyTx_` once the wrapping top-level transaction in
+        -- `dijkstraTopTxFromAnyLevel` includes the required top-level guards of the sub-transaction
+        submitTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
       it "A guard required by a sub-transaction must be present in the top-level guards" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
@@ -168,22 +169,22 @@ spec = describe "UTXOW" $ do
       it "A key-hash guard carrying a datum is a predicate failure" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
         datum <- arbitrary @(Data era)
-        let tx :: forall l. Typeable l => Tx l era
-            tx =
+        let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
                 & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SJust datum)]
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardKeyHash]
-        submitAnyTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
+        -- TODO: Switch to `submitAnyTx_` once the wrapping top-level transaction in
+        -- `dijkstraTopTxFromAnyLevel` includes the required top-level guards of the sub-transaction
+        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
 
       it "A native-script guard carrying a datum is a predicate failure" $ do
         datum <- arbitrary @(Data era)
         let guardScript = RequireAllOf []
             guardScriptHash = hashScript @era $ fromNativeScript guardScript
             guardCred = ScriptHashObj guardScriptHash
-            tx :: forall l. Typeable l => Tx l era
             tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
@@ -192,7 +193,9 @@ spec = describe "UTXOW" $ do
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardCred]
-        submitAnyTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
+        -- TODO: Switch to `submitAnyTx_` once the wrapping top-level transaction in
+        -- `dijkstraTopTxFromAnyLevel` includes the required top-level guards of the sub-transaction
+        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
 
       it "A Plutus-script guard's datum presence is validated" $ do
         datum <- arbitrary @(Data era)
