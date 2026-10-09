@@ -111,6 +111,15 @@ instance ShelleyEraImp DijkstraEra where
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
+  topTxFromAnyLevel = dijkstraTopTxFromAnyLevel
+
+dijkstraTopTxFromAnyLevel ::
+  forall era. DijkstraEraImp era => (forall l. Tx l era) -> ImpTestM era (Tx TopTx era)
+dijkstraTopTxFromAnyLevel atx =
+  elements
+    [ mkTopTxWithSubTxs @era [atx]
+    , atx @TopTx
+    ]
 
 instance AllegraEraImp DijkstraEra
 

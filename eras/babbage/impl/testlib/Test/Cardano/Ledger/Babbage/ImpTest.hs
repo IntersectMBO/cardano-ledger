@@ -67,6 +67,7 @@ instance ShelleyEraImp BabbageEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
 
 babbageFixupTx ::
   ( HasCallStack
