@@ -20,6 +20,7 @@ import Data.Data (Proxy (..))
 import Data.List.NonEmpty as NE
 import Data.Text qualified as T
 import GHC.TypeLits (symbolVal)
+import Lens.Micro.Mtl (view, (.=))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   ExecSpecTopLevelRule (..),
@@ -35,7 +36,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
 conformanceHook ::
-  forall rule era t.
+  forall rule era.
   ( ExecSpecRule rule era
   , ToExpr (Event (EraRule rule era))
   ) =>
@@ -45,73 +46,82 @@ conformanceHook ::
   Either
     (NonEmpty (PredicateFailure (EraRule rule era)))
     (State (EraRule rule era), [Event (EraRule rule era)]) ->
-  ImpM t ()
-conformanceHook globals trc@(TRC (env, state, signal)) ctx impRuleResult =
+  ImpTestM era ()
+conformanceHook globals trc@(TRC (env, state, signal)) ctx impRuleResult = do
   impAnn ("Conformance hook (" <> symbolVal (Proxy @rule) <> ")") $ do
-    -- translate inputs
-    specTRC@(SpecTRC specEnv specState specSignal) <-
-      impAnn "Translating inputs" . expectRightDeepExpr $ runSpecTransM ctx $ translateInputs trc
-    -- get agda response
-    agdaResponse' <-
-      fmap (second $ first specNormalize) . evaluateDeep $ runAgdaRuleWithDebug @rule @era specTRC
-    -- translate imp response
-    let
-      agdaResponse = fmap fst agdaResponse'
-      agdaDebug = either (const "") snd agdaResponse'
-      impRuleResult' = bimap (T.pack . show) fst impRuleResult
-      impResponse = first (T.pack . show) . runSpecTransM @era ctx . translateOutput trc =<< impRuleResult'
+    logString "Translating inputs"
+    case runSpecTransM ctx (translateInputs trc) of
+      Left _ -> impConformanceFailureL .= True
+      Right strc -> do
+        specTRC@(SpecTRC specEnv specState specSignal) <- evaluateDeep strc
 
-    logString "implEnv"
-    logToExpr env
-    logString "implState"
-    logToExpr state
-    logString "implSignal"
-    logToExpr signal
-    logString "implStateOut"
-    logToExpr impRuleResult
-    logString "specEnv"
-    logToExpr specEnv
-    logString "specState"
-    logToExpr specState
-    logString "specSignal"
-    logToExpr specSignal
-    logString "specDebug"
-    logToExpr agdaDebug
-    logString "Extra info:"
-    logDoc $
-      extraInfo @rule @era
-        globals
-        ctx
-        (TRC (env, state, signal))
-        (first (T.pack . show) impRuleResult)
-    logString "diffConformance:"
-    logDoc $ diffConformance impResponse agdaResponse
-    case (impResponse, agdaResponse) of
-      (Right impRes, Right agdaRes)
-        | impRes == agdaRes -> pure ()
-      (Left _, Left _) -> pure ()
-      _ -> assertFailure "Conformance failure"
+        logString "Evaluating Agda rule"
+        agdaResponse' <-
+          fmap (second $ first specNormalize) . evaluateDeep $ runAgdaRuleWithDebug @rule @era specTRC
+        -- translate imp response
+        let
+          agdaResponse = fmap fst agdaResponse'
+          agdaDebug = either (const "") snd agdaResponse'
+          impRuleResult' = bimap (T.pack . show) fst impRuleResult
+          impResponse = first (T.pack . show) . runSpecTransM @era ctx . translateOutput trc =<< impRuleResult'
+
+        logString "implEnv"
+        logToExpr env
+        logString "implState"
+        logToExpr state
+        logString "implSignal"
+        logToExpr signal
+        logString "implStateOut"
+        logToExpr impRuleResult
+        logString "specEnv"
+        logToExpr specEnv
+        logString "specState"
+        logToExpr specState
+        logString "specSignal"
+        logToExpr specSignal
+        logString "specDebug"
+        logToExpr agdaDebug
+        logString "Extra info:"
+        logDoc $
+          extraInfo @rule @era
+            globals
+            ctx
+            (TRC (env, state, signal))
+            (first (T.pack . show) impRuleResult)
+        logString "diffConformance:"
+        logDoc $ diffConformance impResponse agdaResponse
+        case (impResponse, agdaResponse) of
+          (Right impRes, Right agdaRes)
+            | impRes == agdaRes -> pure ()
+          (Left _, Left _) -> pure ()
+          _ -> do
+            ecd <- view iteExpectedConformanceFailureL
+            if ecd
+              then
+                impConformanceFailureL .= True
+              else
+                assertFailure "Conformance failure"
 
 submitTxConformanceHook ::
-  forall era t.
+  forall era.
   (HasCallStack, ExecSpecTopLevelRule "LEDGER" era) =>
   Globals ->
   TRC (EraRule "LEDGER" era) ->
   Either
     (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-  ImpM t ()
+  ImpTestM era ()
 submitTxConformanceHook globals trc =
   conformanceHook globals trc (mkRuleExecContext globals trc)
 
 epochBoundaryConformanceHook ::
-  forall era t.
+  forall era.
   ( ExecSpecTopLevelRule "NEWEPOCH" era
   , ToExpr (Event (EraRule "NEWEPOCH" era))
   ) =>
   Globals ->
   TRC (EraRule "NEWEPOCH" era) ->
   State (EraRule "NEWEPOCH" era) ->
-  ImpM t ()
+  ImpTestM era ()
 epochBoundaryConformanceHook globals trc implRes =
   conformanceHook @"NEWEPOCH" @era globals trc (mkRuleExecContext globals trc) $ Right (implRes, [])
