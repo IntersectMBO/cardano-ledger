@@ -476,7 +476,7 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
   replicateM_ 5 passEpoch
   expectTreasury initialTreasury
   expectRegisteredAccountAddress returnAddr
-  submitTx_ $
+  submitAnyTx_ $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton
@@ -543,7 +543,7 @@ eventsSpec = describe "Events" $ do
       gasA <- getGovActionState proposalA
       gasB <- getGovActionState proposalB
       gasC <- getGovActionState proposalC
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ SSeq.singleton (UnRegDepositTxCert accountCred keyDeposit)

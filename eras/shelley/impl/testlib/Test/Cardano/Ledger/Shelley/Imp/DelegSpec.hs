@@ -142,7 +142,7 @@ spec = describe "DELEG" $ do
       cred <- KeyHashObj <$> freshKeyHash
       -- NOTE: This will always generate certs with deposits post-Conway
       regTxCert <- genRegTxCert cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [regTxCert]
       expectStakeCredRegistered cred
@@ -165,13 +165,13 @@ spec = describe "DELEG" $ do
     it "When registered" $ do
       cred <- ScriptHashObj <$> impAddNativeScript (RequireAllOf [])
       regTxCert <- genRegTxCert cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [regTxCert]
       expectStakeCredRegistered cred
 
       unRegTxCert <- genUnRegTxCert cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [unRegTxCert]
@@ -191,7 +191,7 @@ spec = describe "DELEG" $ do
       cred <- KeyHashObj <$> freshKeyHash
       regTxCert <- genRegTxCert cred
 
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [regTxCert]
 
@@ -210,7 +210,7 @@ spec = describe "DELEG" $ do
       freshKeyHash >>= \kh -> do
         regTxCert <- genRegTxCert (KeyHashObj kh)
         unRegTxCert <- genUnRegTxCert (KeyHashObj kh)
-        submitTx_ $
+        submitAnyTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL .~ [regTxCert, unRegTxCert]
         expectStakeCredNotRegistered (KeyHashObj kh)
@@ -219,14 +219,14 @@ spec = describe "DELEG" $ do
     it "Delegate registered stake credentials to registered pool" $ do
       cred <- KeyHashObj <$> freshKeyHash
       regTxCert <- genRegTxCert cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [regTxCert]
 
       poolKh <- freshKeyHash
       registerPool poolKh
 
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [delegStakeTxCert cred poolKh]
       expectDelegatedToPool cred poolKh
@@ -236,7 +236,7 @@ spec = describe "DELEG" $ do
       registerPool poolKh
       cred <- KeyHashObj <$> freshKeyHash
       regTxCert <- genRegTxCert cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [regTxCert, delegStakeTxCert cred poolKh]
@@ -266,18 +266,18 @@ spec = describe "DELEG" $ do
       registerPool poolKh
       regTxCert <- genRegTxCert cred
       let delegTxCert = delegStakeTxCert cred poolKh
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [regTxCert, delegTxCert]
       expectDelegatedToPool cred poolKh
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [delegTxCert]
       expectDelegatedToPool cred poolKh
 
       poolKh1 <- freshKeyHash
       registerPool poolKh1
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [delegStakeTxCert cred poolKh1]
@@ -289,7 +289,7 @@ spec = describe "DELEG" $ do
       poolKh3 <- freshKeyHash
       registerPool poolKh3
 
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [ delegStakeTxCert cred poolKh2
@@ -306,7 +306,7 @@ spec = describe "DELEG" $ do
       registerPool poolKh
       regTxCert <- genRegTxCert cred
       unRegTxCert <- genUnRegTxCert cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [regTxCert, delegStakeTxCert cred poolKh, unRegTxCert]

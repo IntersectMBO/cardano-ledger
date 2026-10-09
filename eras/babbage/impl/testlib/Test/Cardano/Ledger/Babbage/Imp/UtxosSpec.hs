@@ -118,7 +118,7 @@ spec = describe "UTXOS" $ do
     forM_ (eraLanguages @era) $ \lang ->
       withSLanguage lang $ \slang ->
         it (show lang) $ do
-          tx <- mkTxWithPlutusAndBootstrapAddress slang
+          AnyLevelTx tx <- mkTxWithPlutusAndBootstrapAddress slang
           submitFailingTx
             tx
             [ injectFailure $
@@ -142,7 +142,7 @@ spec = describe "UTXOS" $ do
       let txIn = txInAt 0 tx
       majorVer <- pvMajor <$> getProtVer
       when (majorVer <= natVersion @(ProtVerHigh BabbageEra) || majorVer >= natVersion @11) $
-        submitTx_ $
+        submitAnyTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . inputsTxBodyL .~ [txIn]
             & bodyTxL . referenceInputsTxBodyL .~ [txIn]

@@ -646,7 +646,7 @@ spec = describe "UTXO" $ do
       pure $ ensureMinCoinTxOut pp (mkBasicTxOut addr (inject amount))
     fundAccountBalance :: AccountAddress -> Coin -> ImpTestM era ()
     fundAccountBalance account amount = do
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx $
           mkBasicTxBody
             & directDepositsTxBodyL .~ DirectDeposits [(account, amount)]

@@ -218,7 +218,8 @@ spec = describe "UTXOS" $ do
 
         it "Scripts with bootstrap addresses pass" $
           when (eraProtVerLow @era <= eraProtVerHigh @AlonzoEra) $ do
-            mkTxWithPlutusAndBootstrapAddress slang >>= submitTx_
+            AnyLevelTx tx <- mkTxWithPlutusAndBootstrapAddress slang
+            submitAnyTx_ tx
         describe "purposeIsWellformedNoDatum" $ do
           -- This test is disabled in PlutusV1 and V2 because the datum is
           -- mandatory before PlutusV3 and the "NoDatum" script would fail if we
@@ -242,7 +243,7 @@ spec = describe "UTXOS" $ do
           -- TODO: Re-enable after issue is resolved, by removing this override
           disableInConformanceIt "Passes with minting purpose" $ do
             let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
-            tx <- mkTokenMintingTx sh
+            AnyLevelTx tx <- mkTokenMintingTx sh
             submitTxAnn_ "Mint tokens with script policy" tx
           it "Passes with certifying purpose" $ do
             let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
