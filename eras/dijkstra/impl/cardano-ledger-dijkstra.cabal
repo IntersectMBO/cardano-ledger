@@ -117,7 +117,7 @@ library
     cardano-crypto-leios >=0.3,
     cardano-data ^>=1.4,
     cardano-ledger-allegra,
-    cardano-ledger-alonzo ^>=1.17,
+    cardano-ledger-alonzo ^>=1.18,
     cardano-ledger-babbage ^>=1.15,
     cardano-ledger-binary ^>=1.10,
     cardano-ledger-conway ^>=1.25,
