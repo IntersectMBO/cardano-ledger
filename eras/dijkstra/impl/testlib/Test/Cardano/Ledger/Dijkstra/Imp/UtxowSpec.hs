@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 
+import Cardano.Base.Typeable (Typeable)
 import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   TransactionScriptFailure (ContextError, RedeemerPointsToUnknownScriptHash),
@@ -77,27 +78,30 @@ spec = describe "UTXOW" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash
       scriptHash <- impAddNativeScript (RequireGuard guardKeyHash)
       txIn <- produceScript scriptHash
-      let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+      let tx :: forall l. Typeable l => Tx l era
+          tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
       submitFailingTx
         tx
         [injectFailure $ Conway.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
-      submitTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
+      submitAnyTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
     it "A native script required as guard needs to be witnessed " $ do
       let guardScript = RequireAllOf []
       let guardScriptHash = hashScript @era $ fromNativeScript guardScript
       scriptHash <- impAddNativeScript $ RequireGuard (ScriptHashObj guardScriptHash)
       txIn <- produceScript scriptHash
-      let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+      let tx :: forall l. Typeable l => Tx l era
+          tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
       submitFailingTx
         tx
         [injectFailure $ Conway.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
-      let txWithGuards = tx & bodyTxL . guardsTxBodyL .~ [ScriptHashObj guardScriptHash]
+      let txWithGuards :: forall l. Typeable l => Tx l era
+          txWithGuards = tx & bodyTxL . guardsTxBodyL .~ [ScriptHashObj guardScriptHash]
       submitFailingTx
         txWithGuards
         [injectFailure $ Conway.MissingScriptWitnessesUTXOW $ NES.singleton guardScriptHash]
-      submitTx_ $ txWithGuards & witsTxL . hashScriptTxWitsL .~ [fromNativeScript guardScript]
+      submitAnyTx_ $ txWithGuards & witsTxL . hashScriptTxWitsL .~ [fromNativeScript guardScript]
 
     it "A failing native script required as guard results in a predicate failure" $ do
       let guardScriptFailing = RequireAnyOf []
@@ -115,10 +119,9 @@ spec = describe "UTXOW" $ do
 
     it "A redundant guard is ignored" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash
-      let tx =
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
-      submitTx_ tx
+      submitAnyTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
     it "Nested RequiredGuard scripts" $ do
       guardKeyHash <- KeyHashObj <$> freshKeyHash
@@ -126,11 +129,12 @@ spec = describe "UTXOW" $ do
       let guardScriptHash = hashScript @era $ fromNativeScript guardScript
       scriptHash <- impAddNativeScript $ RequireGuard (ScriptHashObj guardScriptHash)
       txIn <- produceScript scriptHash
-      let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+      let tx :: forall l. Typeable l => Tx l era
+          tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
       submitFailingTx
         tx
         [injectFailure $ Conway.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
-      submitTx_ $
+      submitAnyTx_ $
         tx
           & bodyTxL . guardsTxBodyL .~ [ScriptHashObj guardScriptHash, guardKeyHash]
           & witsTxL . hashScriptTxWitsL .~ [fromNativeScript guardScript]
@@ -139,13 +143,14 @@ spec = describe "UTXOW" $ do
     describe "MissingRequiredGuards" $ do
       it "A top-level required guard absent from the guards set is a predicate failure" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
-        let tx =
+        let tx :: forall l. Typeable l => Tx l era
+            tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
         submitFailingTx
           tx
           [injectFailure $ MissingRequiredGuards $ NES.singleton guardKeyHash]
-        submitTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
+        submitAnyTx_ $ tx & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
 
       it "A guard required by a sub-transaction must be present in the top-level guards" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
@@ -163,20 +168,22 @@ spec = describe "UTXOW" $ do
       it "A key-hash guard carrying a datum is a predicate failure" $ do
         guardKeyHash <- KeyHashObj <$> freshKeyHash
         datum <- arbitrary @(Data era)
-        let tx =
+        let tx :: forall l. Typeable l => Tx l era
+            tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardKeyHash]
                 & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SJust datum)]
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardKeyHash]
-        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
+        submitAnyTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardKeyHash, SNothing)]
 
       it "A native-script guard carrying a datum is a predicate failure" $ do
         datum <- arbitrary @(Data era)
         let guardScript = RequireAllOf []
             guardScriptHash = hashScript @era $ fromNativeScript guardScript
             guardCred = ScriptHashObj guardScriptHash
+            tx :: forall l. Typeable l => Tx l era
             tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
@@ -185,7 +192,7 @@ spec = describe "UTXOW" $ do
         submitFailingTx
           tx
           [injectFailure $ MalformedGuardDatums $ NES.singleton guardCred]
-        submitTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
+        submitAnyTx_ $ tx & bodyTxL . requiredTopLevelGuardsL .~ [(guardCred, SNothing)]
 
       it "A Plutus-script guard's datum presence is validated" $ do
         datum <- arbitrary @(Data era)
@@ -308,6 +315,7 @@ spec = describe "UTXOW" $ do
       deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       redeemerData <- arbitrary @(Data era)
       let prp = mkCertifyingPurpose $ AsIx 0
+          tx :: forall l. Typeable l => Tx l era
           tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
@@ -324,7 +332,7 @@ spec = describe "UTXOW" $ do
               [ BadTranslation . inject $ ScriptHashNotFoundForPurpose prp
               ]
         ]
-      submitTx_ tx
+      submitAnyTx_ tx
 
   describe "ExUnits" $
     forM_ (filter (>= PlutusV4) $ eraLanguages @era) $ \lang ->

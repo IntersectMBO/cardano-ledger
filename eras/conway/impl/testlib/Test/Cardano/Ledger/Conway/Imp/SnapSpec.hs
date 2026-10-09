@@ -99,7 +99,7 @@ setupWithdrawalScenario = do
   committeeCs <- registerInitialCommittee
   (pool, drep, cred) <- setupDelegatorAndPool
   returnAddr <- getAccountAddressFor cred
-  submitTx_ $ mkBasicTx mkBasicTxBody & bodyTxL . treasuryDonationTxBodyL .~ Coin 1_000_000
+  submitAnyTx_ $ mkBasicTx mkBasicTxBody & bodyTxL . treasuryDonationTxBodyL .~ Coin 1_000_000
   govActionId <- submitTreasuryWithdrawals [(returnAddr, Coin 1_000_000)]
   submitYesVote_ (DRepVoter drep) govActionId
   submitYesVoteCCs_ committeeCs govActionId
@@ -117,7 +117,7 @@ setupCombinedScenario = do
   committeeCs <- registerInitialCommittee
   (poolActive, drep, cred) <- setupDelegatorAndPool
   returnAddr <- getAccountAddressFor cred
-  submitTx_ $ mkBasicTx mkBasicTxBody & bodyTxL . treasuryDonationTxBodyL .~ Coin 1_000_000
+  submitAnyTx_ $ mkBasicTx mkBasicTxBody & bodyTxL . treasuryDonationTxBodyL .~ Coin 1_000_000
   infoActionId <- submitProposal =<< mkProposalWithAccountAddress InfoAction returnAddr
   poolToRetire <- freshKeyHash
   registerPoolWithAccountAddress poolToRetire returnAddr

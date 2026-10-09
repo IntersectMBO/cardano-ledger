@@ -56,12 +56,14 @@ spec = describe "BBODY" $ do
               submitPhase2Invalid_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
             impAnn "validatingTx" $ do
               txIn <- produceScript alwaysSucceedsWithDatumHash
-              submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
+              submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
             impAnn "notValidatingTxWithMint" $ do
-              submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
+              AnyLevelTx tx <- mkTokenMintingTx alwaysFailsNoDatumHash
+              submitPhase2Invalid_ tx
             impAnn "validatingTxWithMint" $ do
-              submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
+              AnyLevelTx tx <- mkTokenMintingTx alwaysSucceedsNoDatumHash
+              submitAnyTx_ tx
 
             maxExUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
 
@@ -75,7 +77,7 @@ spec = describe "BBODY" $ do
                   & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(accountAddress, mempty)]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert rPurpose (dex 1)
             impAnn "validatingTxWithWithdrawal" $ do
-              submitTx_ $
+              submitAnyTx_ $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . withdrawalsTxBodyL .~ Withdrawals [(accountAddress, mempty)]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert rPurpose (dex 0)
@@ -86,7 +88,7 @@ spec = describe "BBODY" $ do
                   & bodyTxL . certsTxBodyL .~ [txCert]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert cPurpose (dex 1)
             impAnn "validatingTxWithCert" $ do
-              submitTx_ $
+              submitAnyTx_ $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . certsTxBodyL .~ [txCert]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert cPurpose (dex 0)

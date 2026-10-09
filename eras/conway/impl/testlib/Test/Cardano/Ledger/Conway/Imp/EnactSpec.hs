@@ -119,10 +119,9 @@ treasuryWithdrawalsSpec =
       let sumRequested = foldMap snd withdrawals
 
       impAnn "Submit a treasury donation that can cover the withdrawals" $ do
-        let tx =
-              mkBasicTx mkBasicTxBody
-                & bodyTxL . treasuryDonationTxBodyL .~ (sumRequested <-> initialTreasury)
-        submitTx_ tx
+        submitAnyTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . treasuryDonationTxBodyL .~ (sumRequested <-> initialTreasury)
       passNEpochs 2
       getsNES treasuryL `shouldReturn` zero
       sumAccountBalances withdrawals `shouldReturn` sumRequested
@@ -632,7 +631,7 @@ committeeSpec =
         initialCommittee `shouldSatisfy` not . Set.null
         forM_ (Set.toList initialCommittee) $ \kh -> do
           ccHotCred <- KeyHashObj <$> freshKeyHash
-          submitTx_ $
+          submitAnyTx_ $
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
                 .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)

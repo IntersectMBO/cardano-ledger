@@ -59,7 +59,7 @@ spec = describe "UTXO" $ do
       let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
       anchor <- arbitrary
       txRegister <-
-        submitTx $
+        submitAnyTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.fromList
@@ -91,7 +91,7 @@ spec = describe "UTXO" $ do
           )
       curEpochNo <- getsNES nesELL
       txUnRegister <-
-        submitTx $
+        submitAnyTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.fromList
@@ -208,7 +208,7 @@ conwayOnlySpec = describe "UTXO" $ do
       let delegatee = DelegStakeVote poolId (DRepCredential dRepCred)
       anchor <- arbitrary
       txRegister <-
-        submitTx $
+        submitAnyTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.fromList
@@ -240,7 +240,7 @@ conwayOnlySpec = describe "UTXO" $ do
           )
       curEpochNo <- getsNES nesELL
       txUnRegister <-
-        submitTx $
+        submitAnyTx $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.fromList

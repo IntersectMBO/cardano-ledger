@@ -30,8 +30,8 @@ spec = describe "MEMPOOL" $ do
     it "a transaction whose inputs were each spent by a different transaction" $ do
       firstTxIn <- freshFundedTxIn
       secondTxIn <- freshFundedTxIn
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [firstTxIn]
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [secondTxIn]
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [firstTxIn]
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [secondTxIn]
       withNoFixup $
         submitFailingMempoolTx
           (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [firstTxIn, secondTxIn])
@@ -43,7 +43,7 @@ spec = describe "MEMPOOL" $ do
 
     it "a batch whose sub-transaction inputs are unspent, but whose own are not" $ do
       spentTxIn <- freshFundedTxIn
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
       unspentTxIn <- freshFundedTxIn
       let subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [unspentTxIn]
@@ -55,7 +55,7 @@ spec = describe "MEMPOOL" $ do
   describe "LedgerFailure" $ do
     it "an input that is already spent, alongside one that is not" $ do
       spentTxIn <- freshFundedTxIn
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
       unspentTxIn <- freshFundedTxIn
       submitFailingMempoolTx
         (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn, unspentTxIn])
@@ -65,7 +65,7 @@ spec = describe "MEMPOOL" $ do
 
     it "an input of a sub-transaction that is already spent" $ do
       spentTxIn <- freshFundedTxIn
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
       let subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
       submitFailingMempoolTx
@@ -90,7 +90,7 @@ spec = describe "MEMPOOL" $ do
   describe "Composite tests" $ do
     it "no ledger check runs when all inputs are spent" $ do
       spentTxIn <- freshFundedTxIn
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [spentTxIn]
       let subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & networkIdTxBodyL .~ SJust Mainnet
       withNoFixup $

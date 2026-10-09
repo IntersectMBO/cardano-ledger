@@ -35,6 +35,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   declareTreasurySubTx,
 ) where
 
+import Cardano.Base.Typeable (Typeable)
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -114,7 +115,7 @@ instance ShelleyEraImp DijkstraEra where
   topTxFromAnyLevel = dijkstraTopTxFromAnyLevel
 
 dijkstraTopTxFromAnyLevel ::
-  forall era. DijkstraEraImp era => (forall l. Tx l era) -> ImpTestM era (Tx TopTx era)
+  forall era. DijkstraEraImp era => (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
 dijkstraTopTxFromAnyLevel atx =
   elements
     [ mkTopTxWithSubTxs @era [atx]

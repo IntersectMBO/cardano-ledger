@@ -781,7 +781,7 @@ votingSpec =
       gas <- getGovActionState gaId
       gasDRepVotes gas `shouldBe` [(dRepCred, VoteNo)]
       let deposit = pp ^. ppDRepDepositL
-      submitTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
+      submitAnyTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
       gasAfterRemoval <- getGovActionState gaId
       gasDRepVotes gasAfterRemoval `shouldBe` []
 
