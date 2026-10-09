@@ -77,6 +77,8 @@ instance NFData VDeleg
 
 instance NFData StakePoolParams
 
+instance NFData StakePoolState
+
 instance NFData DCert
 
 instance NFData TxBodyTop
@@ -127,6 +129,8 @@ instance NFData NewEpochState
 
 instance NFData BalanceInterval
 
+instance NFData LeiosSeat
+
 instance ToExpr PParamsUpdate
 
 instance ToExpr GovAction
@@ -156,6 +160,8 @@ instance ToExpr EnactState
 instance ToExpr VDeleg
 
 instance ToExpr StakePoolParams
+
+instance ToExpr StakePoolState
 
 instance ToExpr DCert
 
@@ -220,3 +226,5 @@ instance ToExpr RewardUpdate
 instance ToExpr NewEpochState
 
 instance ToExpr BalanceInterval
+
+instance ToExpr LeiosSeat

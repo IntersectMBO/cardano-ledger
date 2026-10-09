@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Epoch () where
 
+import Cardano.Crypto.Leios
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -20,6 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
+import qualified Data.Vector.Strict as V
 import Lens.Micro
 import qualified MAlonzo.Code.Ledger.Dijkstra.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
@@ -28,6 +30,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   toSpecRepMap,
   withCtxSpecTransM,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (verkeyToInteger)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Ledger ()
@@ -75,16 +78,17 @@ instance SpecTranslate DijkstraEra SnapShot where
       activeStakeMap = VMap.toMap $ unActiveStake ssActiveStake
 
 instance SpecTranslate DijkstraEra StakePoolSnapShot where
-  type SpecRep DijkstraEra StakePoolSnapShot = Agda.StakePoolParams
+  type SpecRep DijkstraEra StakePoolSnapShot = Agda.StakePoolState
 
   toSpecRep StakePoolSnapShot {..} =
-    Agda.StakePoolParams
+    Agda.StakePoolState
       <$> toSpecRep spssSelfDelegatedOwners
       <*> toSpecRep spssCost
       <*> toSpecRep spssMargin
       <*> toSpecRep spssPledge
       <*> (Agda.RewardAddress <$> pure 0 <*> toSpecRep (unAccountId spssAccountId))
       <*> toSpecRep spssVrf
+      <*> toSpecRep spssBlsKey
 
 instance SpecTranslate DijkstraEra Stake where
   type SpecRep DijkstraEra Stake = Agda.HSMap Agda.Credential Agda.Coin
@@ -117,6 +121,26 @@ instance SpecTranslate DijkstraEra PulsingRewUpdate where
       (RewardUpdate {..}, _) = runShelleyBase $ completeRupd x
       rwds = foldMap rewardAmount <$> rs
 
+instance SpecTranslate DijkstraEra Weight where
+  type SpecRep DijkstraEra Weight = Agda.Rational
+
+  toSpecRep = pure
+
+instance SpecTranslate DijkstraEra LeiosVerificationKey where
+  type SpecRep DijkstraEra LeiosVerificationKey = Integer
+
+  toSpecRep = pure . verkeyToInteger
+
+instance SpecTranslate DijkstraEra LeiosSeat where
+  type SpecRep DijkstraEra LeiosSeat = Agda.LeiosSeat
+
+  toSpecRep (LeiosSeat {..}) = Agda.MkLeiosSeat 0 <$> toSpecRep seatWeight <*> toSpecRep seatVKey
+
+instance SpecTranslate DijkstraEra LeiosCommittee where
+  type SpecRep DijkstraEra LeiosCommittee = [Agda.LeiosSeat]
+
+  toSpecRep = mapM toSpecRep . V.toList . leiosCommitteeSeats
+
 instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
   type SpecRep DijkstraEra (NewEpochState DijkstraEra) = Agda.NewEpochState
 
@@ -131,6 +155,14 @@ instance SpecTranslate DijkstraEra (NewEpochState DijkstraEra) where
         <*> withCtxSpecTransM netId (toSpecRep nesEs)
         <*> toSpecRep nesRu
         <*> (filterZeroEntries <$> toSpecRep (nes ^. nesStakePoolDistrG))
+        <*> toSpecRep go
     where
+      go = ssLeiosCommittee . ssStakeSet . esSnapshots $ nesEs
+      -- The specification does not include zero entries in general
+      -- while the implementation might. So we filter them out here for the sake
+      -- of comparing results.
+      --
+      -- The discrepancy is discussed here:
+      -- https://github.com/IntersectMBO/cardano-ledger/issues/5306
       filterZeroEntries (Agda.MkHSMap lst) =
         Agda.MkHSMap $ filter ((/= 0) . snd) lst
