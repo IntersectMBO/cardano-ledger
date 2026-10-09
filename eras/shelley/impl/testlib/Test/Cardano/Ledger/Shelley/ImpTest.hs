@@ -1392,10 +1392,15 @@ submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (T
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
 
 submitAnyTx ::
-  ShelleyEraImp era => (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era (Tx TopTx era)
 submitAnyTx = submitTx <=< topTxFromAnyLevel
 
-submitAnyTx_ :: ShelleyEraImp era => (forall l. Typeable l => Tx l era) -> ImpTestM era ()
+submitAnyTx_ ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era ()
 submitAnyTx_ = void . submitAnyTx
 
 trySubmitTx ::
