@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.22.1.0
+
+* Add `maxKeyAgeEpochs` accessor in `Cardano.Ledger.State.SnapShots` module
+
 ## 1.22.0.0
 
 * Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug

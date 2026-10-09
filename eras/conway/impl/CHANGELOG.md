@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.24.0.1
+
+* Augment the `TICKF` rule to also rotate the stake snapshots, set := mark and go := set (mark is left as-is, since it's unused by forecasts)
+
 ## 1.24.0.0
 
 * Export `transTxId`

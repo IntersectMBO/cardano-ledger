@@ -1,5 +1,10 @@
 # Revision history for `cardano-ledger-dijkstra`
 
+## 0.5.0.0
+
+* Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
+* Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
+
 ## 0.4.0.0
 
 * Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
