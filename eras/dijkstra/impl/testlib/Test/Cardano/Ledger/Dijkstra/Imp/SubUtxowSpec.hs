@@ -32,7 +32,6 @@ import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
   Language (..),
-  SLanguage (..),
   hashData,
   hashPlutusScript,
   plutusBinary,
@@ -660,10 +659,8 @@ malformedGuardDatumCases =
   ,
     ( "a Plutus script guard without a datum"
     , do
-        -- TODO: Plutus guards require PlutusV4, which `eraLanguages`
-        -- does not reach while `eraMaxLanguage` is PlutusV3, so this
-        -- row names the language directly instead of iterating.
-        plutusScript <- mkPlutusScript $ alwaysSucceedsNoDatum SPlutusV4
+        lang <- elements $ eraLanguages @era
+        plutusScript <- withSLanguage lang $ mkPlutusScript . alwaysSucceedsNoDatum
         let guardScript = fromPlutusScript plutusScript :: Script era
             guardCred = ScriptHashObj $ hashScript guardScript
         pure (guardCred, Map.singleton guardCred SNothing)
