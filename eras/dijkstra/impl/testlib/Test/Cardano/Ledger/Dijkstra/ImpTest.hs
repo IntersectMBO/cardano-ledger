@@ -89,6 +89,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (ScriptTestContext (..))
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
@@ -116,11 +117,17 @@ instance ShelleyEraImp DijkstraEra where
 
 dijkstraTopTxFromAnyLevel ::
   forall era. DijkstraEraImp era => (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
-dijkstraTopTxFromAnyLevel atx =
-  elements
-    [ mkTopTxWithSubTxs @era [atx]
-    , atx @TopTx
-    ]
+dijkstraTopTxFromAnyLevel atx = do
+  let topTx = atx @TopTx
+      isLegacy (_, _, ScriptTestContext plutus _) = plutusLanguage plutus < PlutusV4
+  contexts <- impGetPlutusContexts topTx
+  if any isLegacy contexts
+    then pure topTx
+    else
+      elements
+        [ mkTopTxWithSubTxs @era [atx]
+        , topTx
+        ]
 
 instance AllegraEraImp DijkstraEra
 
