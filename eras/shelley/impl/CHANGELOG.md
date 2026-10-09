@@ -20,6 +20,8 @@
 
 * Add `initTransitionConfig` to `ShelleyEraImp`
 * Add `injectGenesisStaking` and `injectFreshGenesisStakePools`
+* Add `topTxFromAnyLevel` method to `ShelleyEraImp`
+* Add `AnyLevelTx`, `submitAnyTx`, `submitAnyTx_` and `shelleyTopTxFromAnyLevel`
 * Add `getPState`
 * Add `EraForecast` superclass to `ShelleyEraImp`, together with `Eq`, `ToExpr`, `NFData` and `Typeable` superclasses for the `TICKF` event
 * Add `ToExpr` instance for `ShelleyTickfEvent`
