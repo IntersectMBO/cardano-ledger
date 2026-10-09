@@ -27,6 +27,7 @@ instance ShelleyEraImp MaryEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
 
 class
   ( AllegraEraImp era

@@ -174,6 +174,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   shelleyGenRegTxCert,
   shelleyGenUnRegTxCert,
   shelleyDelegStakeTxCert,
+  shelleyTopTxFromAnyLevel,
 
   -- * Logging
   Doc,
@@ -652,6 +653,8 @@ class
 
   delegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
 
+  topTxFromAnyLevel :: (forall l. Tx l era) -> ImpTestM era (Tx TopTx era)
+
 impSatisfySignature ::
   KeyHash Witness ->
   Set.Set (KeyHash Witness) ->
@@ -979,6 +982,10 @@ instance
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
+
+shelleyTopTxFromAnyLevel :: (forall l. Tx l era) -> ImpTestM era (Tx TopTx era)
+shelleyTopTxFromAnyLevel atx = pure $ atx @TopTx
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
