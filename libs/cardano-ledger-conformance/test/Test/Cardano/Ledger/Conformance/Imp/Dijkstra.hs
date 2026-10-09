@@ -6,7 +6,6 @@ module Test.Cardano.Ledger.Conformance.Imp.Dijkstra (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Test.Cardano.Ledger.Allegra.Imp.UtxoSpec qualified as AllegraUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
@@ -59,64 +58,65 @@ spec = do
   describe "Imp" $ do
     withImpInit @(LedgerSpec DijkstraEra) $
       modifyImpInitProtVer @DijkstraEra (natVersion @12) $
-        modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
-          modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-            ConwayBBODY.spec
+        enableImpInitRunningInConformance $ do
+          modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
+            modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
+              ConwayBBODY.spec
 
-            CERT.spec
+              CERT.spec
 
-            xdescribe "disabled" ConwayCERTS.spec
+              xdescribe "disabled" ConwayCERTS.spec
 
-            ENTITIES.spec
+              ENTITIES.spec
 
-            ShelleyDELEG.spec
-            ConwayDELEG.spec
-            SUBDELEG.spec
+              ShelleyDELEG.spec
+              ConwayDELEG.spec
+              SUBDELEG.spec
 
-            ConwayENACT.spec
+              ConwayENACT.spec
 
-            ShelleyEPOCH.spec
-            ConwayEPOCH.spec
+              ShelleyEPOCH.spec
+              ConwayEPOCH.spec
 
-            ConwayGOV.spec
+              ConwayGOV.spec
 
-            ConwayGOVCERT.spec
-            SUBGOVCERT.spec
+              ConwayGOVCERT.spec
+              SUBGOVCERT.spec
 
-            ShelleyLEDGER.spec
-            ConwayLEDGER.spec
-            LEDGER.spec
-            SUBLEDGER.spec
+              ShelleyLEDGER.spec
+              ConwayLEDGER.spec
+              LEDGER.spec
+              SUBLEDGER.spec
 
-            ConwayMEMPOOL.spec
-            MEMPOOL.spec
+              ConwayMEMPOOL.spec
+              MEMPOOL.spec
 
-            ShelleyPOOL.spec
-            POOL.spec
-            SUBPOOL.spec
+              ShelleyPOOL.spec
+              POOL.spec
+              SUBPOOL.spec
 
-            ConwayRATIFY.spec
+              ConwayRATIFY.spec
 
-            ConwaySNAP.spec
+              ConwaySNAP.spec
 
-            SUBGOV.spec
+              SUBGOV.spec
 
-            ShelleyUTXO.spec
-            AllegraUTXO.spec
-            MaryUTXO.spec
-            AlonzoUTXO.spec
-            BabbageUTXO.spec
-            ConwayUTXO.spec
-            UTXO.spec
-            SUBUTXO.spec
+              ShelleyUTXO.spec
+              AllegraUTXO.spec
+              MaryUTXO.spec
+              AlonzoUTXO.spec
+              BabbageUTXO.spec
+              ConwayUTXO.spec
+              UTXO.spec
+              SUBUTXO.spec
 
-            ShelleyUTXOW.spec
-            AlonzoUTXOW.spec
-            BabbageUTXOW.spec
-            ConwayUTXOW.spec
-            UTXOW.spec
-            SUBUTXOW.spec
+              ShelleyUTXOW.spec
+              AlonzoUTXOW.spec
+              BabbageUTXOW.spec
+              ConwayUTXOW.spec
+              UTXOW.spec
+              SUBUTXOW.spec
 
-            AlonzoUTXOS.spec
-            BabbageUTXOS.spec
-            ConwayUTXOS.spec
+              AlonzoUTXOS.spec
+              BabbageUTXOS.spec
+              ConwayUTXOS.spec
