@@ -613,3 +613,6 @@ jobs:
     - name: Check if changelogs need a bump
       if: ${{ !startsWith(github.base_ref, 'release/') && !startsWith(github.ref, 'refs/heads/release/') }}
       run: scripts/bump-changelogs.sh || (git diff; false)
+
+    - name: Check cabal versions against changelogs
+      run: scripts/check-versions.sh
