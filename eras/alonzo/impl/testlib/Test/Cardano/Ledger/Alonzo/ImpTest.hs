@@ -111,7 +111,6 @@ import Data.Maybe (catMaybes, isJust, isNothing, mapMaybe)
 import Data.Set ((\\))
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Data.Typeable (Typeable)
 import Lens.Micro
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
@@ -457,6 +456,7 @@ instance ShelleyEraImp AlonzoEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
 
 instance AllegraEraImp AlonzoEra
 
@@ -595,7 +595,7 @@ mkTxWithPlutusAndBootstrapAddress ::
   forall era l.
   (AlonzoEraImp era, PlutusLanguage l) =>
   SLanguage l ->
-  ImpTestM era (Tx TopTx era)
+  ImpTestM era (AnyLevelTx era)
 mkTxWithPlutusAndBootstrapAddress slang = do
   ba <- freshBootstrapAddress
   datum <- arbitrary
@@ -611,15 +611,15 @@ mkTxWithPlutusAndBootstrapAddress slang = do
   let txIn = txInAt 0 tx
       txOutBootstrapAddr = mkBasicTxOut @era (AddrBootstrap ba) mempty
   return $
-    mkBasicTx
-      ( mkBasicTxBody @era
-          & inputsTxBodyL .~ [txIn]
-          & outputsTxBodyL .~ [txOutBootstrapAddr]
-      )
-      & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
+    AnyLevelTx $
+      mkBasicTx
+        ( mkBasicTxBody @era
+            & inputsTxBodyL .~ [txIn]
+            & outputsTxBodyL .~ [txOutBootstrapAddr]
+        )
+        & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
 
-mkTokenMintingTx ::
-  forall era l. (AlonzoEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
+mkTokenMintingTx :: forall era. AlonzoEraImp era => ScriptHash -> ImpTestM era (AnyLevelTx era)
 mkTokenMintingTx sh = do
   name <- arbitrary
   count <- choose (1, 10)
@@ -630,6 +630,7 @@ mkTokenMintingTx sh = do
       | plutusScriptLanguage plutusScript >= PlutusV4 -> freshKeyAddrNoPtr_
     _ -> freshKeyAddr_
   pure $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]
+    AnyLevelTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . mintTxBodyL .~ ma
+        & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]

@@ -316,6 +316,7 @@ instance ShelleyEraImp ConwayEra where
   genRegTxCert = conwayGenRegTxCert
   genUnRegTxCert = conwayGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
 
 conwayModifyImpInitProtVer ::
   forall era.

@@ -45,7 +45,7 @@ spec = describe "Valid" $ do
       submitTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOutRef]
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx mkBasicTxBody
         & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 txInitial]
 
@@ -62,7 +62,7 @@ spec = describe "Valid" $ do
       submitTx $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx $
         mkBasicTxBody
           & inputsTxBodyL .~ [txInAt 0 txInitial]
@@ -127,7 +127,7 @@ spec = describe "Valid" $ do
               submitTx $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . outputsTxBodyL .~ [txOut]
-            submitTx_ $
+            submitAnyTx_ $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 txInitial]
 
@@ -148,7 +148,7 @@ spec = describe "Valid" $ do
               submitTx $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
-            submitTx_ $
+            submitAnyTx_ $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
@@ -171,7 +171,7 @@ spec = describe "Valid" $ do
               submitTx $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
-            submitTx_ $
+            submitAnyTx_ $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
                 & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
@@ -194,7 +194,7 @@ spec = describe "Valid" $ do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . outputsTxBodyL .~ [txOut, txOutRef]
           cert <- genRegTxCert $ ScriptHashObj $ hashScript script
-          submitTx_ $
+          submitAnyTx_ $
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
               & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]

@@ -184,7 +184,7 @@ spec = describe "ENTITIES" $ do
       getBalance (KeyHashObj kh2) `shouldReturn` (balance2 <-> lessThanBalance2)
 
       -- restore balances, to test legacy mode
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx $
           mkBasicTxBody
             & directDepositsTxBodyL .~ DirectDeposits [(account1, lessThanBalance1), (account2, lessThanBalance2)]
@@ -627,7 +627,7 @@ spec = describe "ENTITIES" $ do
     it "Satisfied intervals are accepted at every level" $ do
       (accountAddr, balance, _) <- setupAccountAddress
       let intervals = AccountBalanceIntervals [(accountAddr, AccountBalanceExact balance)]
-      submitTx_ $ mkBasicTx $ mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ intervals
+      submitAnyTx_ $ mkBasicTx $ mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ intervals
       submitTx_ $ mkBasicTx $ mkBasicTxBody & startingAccountBalanceIntervalsTxBodyL .~ intervals
       submitTx_ $
         mkBasicTx $
@@ -695,7 +695,7 @@ spec = describe "ENTITIES" $ do
               SubBalancesOutsideAccountBalanceIntervals @era
                 (NEM.singleton accountAddr (balance, AccountBalanceExact zero))
           ]
-        submitTx_ $ txWith drains (AccountBalanceExact balance)
+        submitAnyTx_ $ txWith drains (AccountBalanceExact balance)
 
     it "Interval bounds are checked at their boundaries" $ do
       (accountAddr, balance, _) <- setupAccountAddress
@@ -703,7 +703,7 @@ spec = describe "ENTITIES" $ do
             mkBasicTx $
               mkBasicTxBody
                 & accountBalanceIntervalsTxBodyL .~ AccountBalanceIntervals [(accountAddr, interval)]
-          intervalHolds = submitTx_ . withInterval
+          intervalHolds interval = submitAnyTx_ $ withInterval interval
           intervalViolated interval =
             submitFailingTx
               (withInterval interval)
@@ -758,7 +758,7 @@ spec = describe "ENTITIES" $ do
       kh <- freshKeyHash
       let cred = KeyHashObj kh
       ra <- registerStakeCredential cred
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx $
           mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(ra, balance)]
       pure (ra, balance, kh)

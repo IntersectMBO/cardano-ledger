@@ -21,6 +21,7 @@ import Cardano.Ledger.Val (Val (..))
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -39,7 +40,7 @@ spec = describe "GOVCERT" $ do
       submitBootstrapAwareFailingProposal proposal $
         FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
     forM_ mbGovId $ \_ ->
-      submitTx_
+      submitAnyTx_
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
@@ -49,11 +50,11 @@ spec = describe "GOVCERT" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepCred <- KeyHashObj <$> freshKeyHash
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ SSeq.singleton (RegDRepTxCert drepCred drepDeposit SNothing)
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
@@ -71,7 +72,7 @@ spec = describe "GOVCERT" $ do
       forM_ initialCommittee $ \kh ->
         replicateM_ 10 $ do
           ccHotCred <- KeyHashObj <$> freshKeyHash
-          submitTx_ $
+          submitAnyTx_ $
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
                 .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)
@@ -100,7 +101,7 @@ spec = describe "GOVCERT" $ do
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
       let refund = drepDeposit <+> Coin 10
       drepCred <- KeyHashObj <$> freshKeyHash
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ SSeq.singleton
@@ -123,12 +124,13 @@ spec = describe "GOVCERT" $ do
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
       drepCred <- KeyHashObj <$> freshKeyHash
       let
+        regTx :: forall l. Typeable l => Tx l era
         regTx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton
                 (RegDRepTxCert drepCred drepDeposit SNothing)
-      submitTx_ regTx
+      submitAnyTx_ regTx
       submitFailingTx
         regTx
         (pure . injectFailure $ ConwayDRepAlreadyRegistered drepCred)
@@ -148,12 +150,13 @@ spec = describe "GOVCERT" $ do
       forM_ initialCommittee $ \ccCred -> do
         ccHotCred <- KeyHashObj <$> freshKeyHash
         let
+          registerHotKeyTx :: forall l. Typeable l => Tx l era
           registerHotKeyTx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
                 .~ SSeq.singleton (AuthCommitteeHotKeyTxCert ccCred ccHotCred)
-        submitTx_ registerHotKeyTx
-        submitTx_ $
+        submitAnyTx_ registerHotKeyTx
+        submitAnyTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
@@ -198,6 +201,7 @@ spec = describe "GOVCERT" $ do
         unknownColdCred <- KeyHashObj <$> freshKeyHash
         unknownHotCred <- KeyHashObj <$> freshKeyHash
         let
+          tx :: forall l. Typeable l => Tx l era
           tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
@@ -206,7 +210,7 @@ spec = describe "GOVCERT" $ do
           tx
           [injectFailure $ ConwayCommitteeIsUnknown unknownColdCred]
         void $ submitUpdateCommittee Nothing mempty [(unknownColdCred, EpochInterval 20)] (1 %! 2)
-        submitTx_ tx
+        submitAnyTx_ tx
     it "at protocol version 10, the vote is counted once the committee update is enacted" $
       whenMajorVersion @10 $ do
         (drep, spo) <- setupGovEnv

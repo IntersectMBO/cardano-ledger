@@ -92,7 +92,7 @@ library
     cardano-base >=0.1.4,
     cardano-data >=1.2,
     cardano-ledger-allegra ^>=1.10,
-    cardano-ledger-alonzo ^>=1.17,
+    cardano-ledger-alonzo ^>=1.18,
     cardano-ledger-binary >=1.9,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.23,
     cardano-ledger-mary >=1.11 && <1.13,

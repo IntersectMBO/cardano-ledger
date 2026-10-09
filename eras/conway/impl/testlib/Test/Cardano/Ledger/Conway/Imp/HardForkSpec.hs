@@ -72,10 +72,10 @@ spec = describe "HARDFORK" $ do
 
       -- registration of the same vrf should be disallowed
       kh4 <- freshKeyHash
-      registerStakePoolTx kh4 vrf >>= \tx ->
-        submitFailingTx
-          tx
-          [injectFailure $ Shelley.VRFKeyHashAlreadyRegistered kh4 vrf]
+      AnyLevelTx tx <- registerStakePoolTx kh4 vrf
+      submitFailingTx
+        tx
+        [injectFailure $ Shelley.VRFKeyHashAlreadyRegistered kh4 vrf]
 
       retireStakePool kh3 (EpochInterval 1)
       passEpoch
@@ -98,14 +98,16 @@ spec = describe "HARDFORK" $ do
     registerStakePoolTx kh vrf = do
       pps <- registerAccountAddress >>= freshPoolParams kh
       pure $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & sppVrfL .~ vrf]
-    registerStakePool kh vrf =
-      registerStakePoolTx kh vrf >>= submitTx_
+        AnyLevelTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RegPoolTxCert $ pps & sppVrfL .~ vrf]
+    registerStakePool kh vrf = do
+      AnyLevelTx tx <- registerStakePoolTx kh vrf
+      submitAnyTx_ tx
     retireStakePool kh retirementInterval = do
       curEpochNo <- getsNES nesELL
       let retirement = addEpochInterval curEpochNo retirementInterval
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert kh retirement]
     expectVRFs vrfs =

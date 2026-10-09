@@ -41,6 +41,7 @@ import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -69,9 +70,10 @@ spec = describe "UTXOS" $ do
             addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
         amount <- uniformRM (Coin 10_000_000, Coin 100_000_000)
         txIn <- sendCoinTo addr amount
-        let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+        let tx :: forall l. Typeable l => Tx l era
+            tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
         if lang >= PlutusV3
-          then submitTx_ tx
+          then submitAnyTx_ tx
           else
             submitFailingTx
               tx
@@ -167,7 +169,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "CurrentTreasuryValue" $ do
         it "V1" $ do
           donation <- arbitrary
-          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+          submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
           passEpoch
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
@@ -176,7 +178,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ inject (CurrentTreasuryFieldNotSupported @era donation)
         it "V2" $ do
           donation <- arbitrary
-          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+          submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
           passEpoch
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
@@ -257,7 +259,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
     describe "Certificates" $ do
       describe "Translated" $ do
         let testCertificateTranslated okCert txIn = do
-              submitTx_
+              submitAnyTx_
                 ( mkBasicTx mkBasicTxBody
                     & bodyTxL . inputsTxBodyL
                       .~ Set.singleton txIn
@@ -549,7 +551,7 @@ costModelsSpec =
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
 
-      mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
+      AnyLevelTx mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
         submitFailingTx mintingTokenTx [injectFailure $ Alonzo.CollectErrors [NoCostModel PlutusV3]]
@@ -570,7 +572,7 @@ costModelsSpec =
           committeeMembers'
 
       impAnn "Minting token succeeds" $ do
-        submitTx_ mintingTokenTx
+        submitAnyTx_ mintingTokenTx
 
       impAnn "Updating CostModels succeeds" $ do
         void $
