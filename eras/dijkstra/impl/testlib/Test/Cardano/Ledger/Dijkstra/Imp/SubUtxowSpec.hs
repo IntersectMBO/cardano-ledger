@@ -124,9 +124,7 @@ spec = describe "SUBUTXOW" $ do
     forM_ (failingNativeScriptPurposes @era) $ \(purposeName, mkSubTx) ->
       it purposeName $ failingScriptFails mkSubTx
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "minting" $
+    it "minting" $
       failingScriptFails $ do
         scriptHash <- unsatisfiableTimeLock
         subTx <- mkTokenMintingTx scriptHash
