@@ -50,6 +50,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsNoDatum,
   alwaysSucceedsNoDatum,
   evenRedeemerNoDatum,
+  purposeIsWellformedNoDatum,
   redeemerSameAsDatum,
  )
 
@@ -77,6 +78,26 @@ spec = describe "UTXOS" $ do
               tx
               [ injectFailure $ Alonzo.UnspendableUTxONoDatumHash $ NES.singleton txIn
               ]
+  describe "purposeIsWellformedNoDatum" $
+    for_ [l | l <- eraLanguages @era, l >= PlutusV3] $ \lang -> do
+      withSLanguage lang $ \slang -> describe (show slang) $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1349
+        -- TODO: Re-enable this after issue is resolved, by removing this override
+        disableInConformanceIt "Passes with voting purpose" $ do
+          let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+          coldCred : _ <- Set.toList <$> getCommitteeMembers
+          hotCred :| _ <- registerCommitteeHotKeys (pure $ ScriptHashObj sh) (coldCred :| [])
+          gaId <- submitGovAction InfoAction
+          submitYesVote_ (CommitteeVoter hotCred) gaId
+        it "Passes with proposing purpose" $ do
+          let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+          committee <- registerInitialCommittee
+          (dRep, _, _) <- setupSingleDRep 1_000_000
+          anchor <- arbitrary
+          void $ enactConstitution SNothing (Constitution anchor (SJust sh)) dRep committee
+          account <- registerAccountAddress
+          proposal <- mkProposal $ TreasuryWithdrawals (Map.singleton account (Coin 1000)) (SJust sh)
+          submitProposal_ proposal
 
 datumAndReferenceInputsSpec ::
   forall era.
