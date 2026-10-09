@@ -66,6 +66,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshBlsKey,
   submitTx,
   submitTx_,
+  submitAnyTx,
+  submitAnyTx_,
   submitTxAnn,
   submitTxAnn_,
   submitFailingTx,
@@ -1354,6 +1356,12 @@ submitTx_ = void . submitTx
 
 submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
+
+submitAnyTx :: ShelleyEraImp era => (forall l. Tx l era) -> ImpTestM era (Tx TopTx era)
+submitAnyTx = submitTx <=< topTxFromAnyLevel
+
+submitAnyTx_ :: ShelleyEraImp era => (forall l. Tx l era) -> ImpTestM era ()
+submitAnyTx_ = void . submitAnyTx
 
 trySubmitTx ::
   forall era.
