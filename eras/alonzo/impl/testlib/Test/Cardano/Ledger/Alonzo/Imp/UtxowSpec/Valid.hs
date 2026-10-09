@@ -84,7 +84,10 @@ spec = describe "Valid transactions" $ do
         it "Validating CERT script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
           txCert <- genRegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
-          submitAnyTx_ $
+          -- TODO: Switch to `submitAnyTx_` once the Dijkstra sub-transaction fixup estimates
+          -- execution units instead of assigning the maximum to every redeemer. With two scripts
+          -- in a sub-transaction the total exceeds the maximum execution units of a transaction
+          submitTx_ $
             mkBasicTx $
               mkBasicTxBody
                 & inputsTxBodyL .~ [txIn]
