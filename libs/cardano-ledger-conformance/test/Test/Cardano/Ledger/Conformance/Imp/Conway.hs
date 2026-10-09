@@ -45,50 +45,51 @@ spec = do
   describe "Imp" $ do
     withImpInit @(LedgerSpec ConwayEra) $
       modifyImpInitProtVer @ConwayEra (natVersion @11) $
-        modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
-          modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-            AlonzoBBODY.spec
-            BBODY.spec
+        enableImpInitRunningInConformance $ do
+          modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
+            modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
+              AlonzoBBODY.spec
+              BBODY.spec
 
-            CERTS.spec
+              CERTS.spec
 
-            ShelleyDELEG.spec
-            DELEG.spec
+              ShelleyDELEG.spec
+              DELEG.spec
 
-            ENACT.spec
+              ENACT.spec
 
-            ShelleyEPOCH.spec
-            EPOCH.spec
+              ShelleyEPOCH.spec
+              EPOCH.spec
 
-            GOV.spec
+              GOV.spec
 
-            GOVCERT.spec
+              GOVCERT.spec
 
-            ShelleyLEDGER.spec
-            LEDGER.spec
+              ShelleyLEDGER.spec
+              LEDGER.spec
 
-            MEMPOOL.spec
+              MEMPOOL.spec
 
-            xdescribe "disabled" ShelleyPOOL.spec
+              xdescribe "disabled" ShelleyPOOL.spec
 
-            RATIFY.spec
+              RATIFY.spec
 
-            SNAP.spec
+              SNAP.spec
 
-            ShelleyUTXO.spec
-            AllegraUTXO.spec
-            MaryUTXO.spec
-            AlonzoUTXO.spec
-            BabbageUTXO.spec
-            UTXO.spec
+              ShelleyUTXO.spec
+              AllegraUTXO.spec
+              MaryUTXO.spec
+              AlonzoUTXO.spec
+              BabbageUTXO.spec
+              UTXO.spec
 
-            ShelleyUTXOW.spec
-            AlonzoUTXOW.spec
-            BabbageUTXOW.spec
-            UTXOW.spec
+              ShelleyUTXOW.spec
+              AlonzoUTXOW.spec
+              BabbageUTXOW.spec
+              UTXOW.spec
 
-            AlonzoUTXOS.spec
-            BabbageUTXOS.spec
-            UTXOS.spec
+              AlonzoUTXOS.spec
+              BabbageUTXOS.spec
+              UTXOS.spec
   describe "Imp (only spec)" $ do
     RatifySpec.spec
