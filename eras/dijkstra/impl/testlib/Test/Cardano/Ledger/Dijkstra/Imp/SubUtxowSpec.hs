@@ -124,9 +124,7 @@ spec = describe "SUBUTXOW" $ do
     forM_ (failingNativeScriptPurposes @era) $ \(purposeName, mkSubTx) ->
       it purposeName $ failingScriptFails mkSubTx
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "minting" $
+    it "minting" $
       failingScriptFails $ do
         scriptHash <- unsatisfiableTimeLock
         subTx <- mkTokenMintingTx scriptHash
@@ -384,19 +382,30 @@ spec = describe "SUBUTXOW" $ do
                           Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
                           (originalBytes <$> expectedIntegrity)
                     ]
-          disableInConformanceIt "the supplied hash is wrong" $
-            testHashMismatch . SJust =<< arbitrary
+
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1086
+          -- TODO: Re-enable after issue is resolved, by removing this override
+          let s = "the supplied hash is wrong"
+              test = testHashMismatch . SJust =<< arbitrary
+          if lang < PlutusV4
+            then it s test
+            else disableInConformanceIt s test
+
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
         -- TODO: Re-enable after issue is resolved, by removing this override
-        disableInConformanceIt "SubMalformedScriptWitnesses" $ do
-          let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
-          txIn <- produceScript scriptHash
-          submitFailingLegacySubTx
-            lang
-            (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-            [injectFailure . SubMalformedScriptWitnesses @era $ NES.singleton scriptHash]
+        let s = "SubMalformedScriptWitnesses"
+            test = do
+              let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
+              txIn <- produceScript scriptHash
+              submitFailingLegacySubTx
+                lang
+                (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
+                [injectFailure . SubMalformedScriptWitnesses @era $ NES.singleton scriptHash]
+        if lang < PlutusV4
+          then it s test
+          else disableInConformanceIt s test
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
         -- TODO: Re-enable after issue is resolved, by removing this override
