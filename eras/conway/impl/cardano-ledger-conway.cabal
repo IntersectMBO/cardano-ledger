@@ -271,6 +271,8 @@ library testlib
     fs-sim,
     generic-random,
     microlens,
+    microlens-mtl,
+    mtl,
     plutus-ledger-api,
     prettyprinter,
     small-steps >=1.2,

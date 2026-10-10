@@ -512,10 +512,7 @@ instance Arbitrary BlsKey where
     pure $
       BlsKey
         (deriveVerKeyDSIGN signingKey)
-        ( createPossessionProofDSIGN
-            minSigPoPDST
-            signingKey
-        )
+        (createPossessionProofDSIGN signingKey)
 
 instance Arbitrary BlsKeyState where
   arbitrary = BlsKeyState <$> arbitrary <*> arbitrary
