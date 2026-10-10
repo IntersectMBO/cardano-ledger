@@ -277,6 +277,12 @@ instance
   ) =>
   ToExpr (ShelleyTickEvent era)
 
+instance
+  ( ToExpr (Event (EraRule "UPEC" era))
+  , ToExpr (Event (EraRule "SNAP" era))
+  ) =>
+  ToExpr (ShelleyTickfEvent era)
+
 instance ToExpr RewardType
 
 instance ToExpr Reward

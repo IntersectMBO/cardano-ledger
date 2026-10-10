@@ -218,7 +218,6 @@ exampleNewEpochState value ppp pp =
     , nesBcur = BlocksMade (Map.singleton (mkKeyHash 2) 3)
     , nesEs = epochState
     , nesRu = SJust rewardUpdate
-    , nesPd = examplePoolDistr
     , stashedAVVMAddresses = def
     }
   where

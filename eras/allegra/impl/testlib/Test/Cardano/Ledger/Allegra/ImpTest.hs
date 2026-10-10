@@ -5,15 +5,18 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Allegra.ImpTest (
   impAllegraSatisfyNativeScript,
   module Test.Cardano.Ledger.Shelley.ImpTest,
+  AllegraEraImp,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
+import Cardano.Ledger.Allegra.Rules
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock,
@@ -30,7 +33,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
-import Test.Cardano.Ledger.Allegra.Era ()
+import Test.Cardano.Ledger.Allegra.Era
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Imp.Common (KeyPair (..), choose, frequency)
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -44,6 +47,15 @@ instance ShelleyEraImp AllegraEra where
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+
+class
+  ( ShelleyEraImp era
+  , AllegraEraTest era
+  , InjectRuleFailure "LEDGER" AllegraUtxoPredFailure era
+  ) =>
+  AllegraEraImp era
+
+instance AllegraEraImp AllegraEra
 
 impAllegraSatisfyNativeScript ::
   ( ShelleyEraImp era

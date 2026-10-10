@@ -22,10 +22,17 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   fixupSubTransactions,
   balanceSubTransactions,
   switchTxToLegacyMode,
+  switchTxToPhase2InvalidLegacyMode,
   mkTopTxWithSubTxs,
+  mkTopTxWithDistinctSubTxs,
+  distinctSubTxs,
   traverseSubTxs,
   withPostFixupSubTxs,
   submitFailingSubTx,
+  submitFailingMempoolTx,
+  expectMempoolRejection,
+  voteSubTx,
+  declareTreasurySubTx,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (
@@ -35,11 +42,20 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Conway.Governance (ConwayEraGov (..), committeeMembersL)
+import Cardano.Ledger.Conway.Governance (
+  ConwayEraGov (..),
+  GovActionId,
+  Vote,
+  Voter,
+  VotingProcedure (..),
+  VotingProcedures (..),
+  committeeMembersL,
+ )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra)
+import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra, DijkstraEraForecast)
+import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts (
@@ -72,7 +88,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 instance ShelleyEraImp DijkstraEra where
   initGenesis = pure exampleDijkstraGenesis
@@ -96,6 +112,8 @@ instance ShelleyEraImp DijkstraEra where
   genUnRegTxCert = dijkstraGenUnRegTxCert
   delegStakeTxCert = conwayDelegStakeTxCert
 
+instance AllegraEraImp DijkstraEra
+
 instance MaryEraImp DijkstraEra
 
 instance AlonzoEraImp DijkstraEra where
@@ -112,7 +130,11 @@ instance ConwayEraImp DijkstraEra
 class
   ( ConwayEraImp era
   , DijkstraEraTest era
+  , DijkstraEraForecast era
+  , DijkstraEraBlockBody era
+  , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraPoolPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
   , InjectRuleFailure "LEDGER" SubEntitiesPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraUtxoPredFailure era
@@ -120,7 +142,11 @@ class
   , InjectRuleFailure "MEMPOOL" DijkstraMempoolPredFailure era
   , InjectRuleFailure "MEMPOOL" DijkstraUtxoPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraGovPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
+  , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   ) =>
   DijkstraEraImp era
@@ -161,11 +187,47 @@ instance InjectRuleFailure "SUBLEDGERS" DijkstraSubUtxoPredFailure DijkstraEra w
 instance InjectRuleFailure "SUBLEDGER" DijkstraSubUtxoPredFailure DijkstraEra where
   injectFailure = SubUtxowFailure . injectFailure @"SUBUTXOW"
 
+instance InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubGovPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
+instance InjectRuleFailure "SUBLEDGERS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubLedgerFailure . injectFailure @"SUBLEDGER"
+
+instance InjectRuleFailure "SUBLEDGER" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubEntitiesFailure . injectFailure @"SUBENTITIES"
+
+instance InjectRuleFailure "SUBENTITIES" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertsFailure . injectFailure @"SUBCERTS"
+
+instance InjectRuleFailure "SUBCERTS" DijkstraSubDelegPredFailure DijkstraEra where
+  injectFailure = SubCertFailure . injectFailure @"SUBCERT"
+
+instance InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure DijkstraEra where
+  injectFailure = DijkstraSubLedgersFailure . injectFailure @"SUBLEDGERS"
+
 -- | A top level transaction that nests the given sub-transactions and
 -- is otherwise empty.
 mkTopTxWithSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> Tx TopTx era
 mkTopTxWithSubTxs subTxs =
   mkBasicTx mkBasicTxBody & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable subTxs
+
+mkTopTxWithDistinctSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> ImpTestM era (Tx TopTx era)
+mkTopTxWithDistinctSubTxs subTxs = mkTopTxWithSubTxs <$> distinctSubTxs subTxs
+
+-- | Give each sub-transaction a fresh input, so that otherwise identical
+-- sub-transactions get distinct transaction ids
+distinctSubTxs :: DijkstraEraImp era => [Tx SubTx era] -> ImpTestM era [Tx SubTx era]
+distinctSubTxs = traverse addFreshInput
+  where
+    addFreshInput subTx = do
+      input <- freshFundedTxIn
+      pure $ subTx & bodyTxL . inputsTxBodyL <>~ [input]
 
 -- | Apply an effectful modification to every sub-transaction of a top
 -- level transaction.
@@ -213,6 +275,46 @@ submitFailingSubTx ::
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingSubTx subTx = submitFailingTx $ mkTopTxWithSubTxs [subTx]
+
+-- | Submit a transaction through the mempool that is expected to be rejected
+-- with exactly the given predicate failures.
+submitFailingMempoolTx ::
+  (HasCallStack, DijkstraEraImp era) =>
+  Tx TopTx era ->
+  NonEmpty (DijkstraMempoolPredFailure era) ->
+  ImpTestM era ()
+submitFailingMempoolTx tx expectedFailures = do
+  result <- trySubmitMempoolTx tx
+  expectMempoolRejection result expectedFailures
+
+-- | Expect the result of a mempool submission to be a rejection with exactly
+-- the given predicate failures.
+expectMempoolRejection ::
+  (HasCallStack, DijkstraEraImp era) =>
+  Either (ApplyTxError era) a ->
+  NonEmpty (DijkstraMempoolPredFailure era) ->
+  ImpTestM era ()
+expectMempoolRejection result expectedFailures = case result of
+  Left applyTxError ->
+    applyTxError `shouldBeExpr` inject (injectFailure @"MEMPOOL" <$> expectedFailures)
+  Right _ ->
+    assertFailure $ "Expected a mempool rejection with: " <> show expectedFailures
+
+-- | A sub-transaction that casts a single vote.
+voteSubTx :: DijkstraEraImp era => Vote -> Voter -> GovActionId -> Tx SubTx era
+voteSubTx vote voter govActionId =
+  mkBasicTx $
+    mkBasicTxBody
+      & votingProceduresTxBodyL
+        .~ VotingProcedures
+          ( Map.singleton voter . Map.singleton govActionId $
+              VotingProcedure {vProcVote = vote, vProcAnchor = SNothing}
+          )
+
+-- | A sub-transaction that declares the given value as the current treasury value.
+declareTreasurySubTx :: DijkstraEraImp era => Coin -> Tx SubTx era
+declareTreasurySubTx declaredTreasury =
+  mkBasicTx $ mkBasicTxBody & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
 
 impDijkstraSatisfyNativeScript ::
   ( DijkstraEraImp era
@@ -275,6 +377,14 @@ switchTxToLegacyMode ::
   ImpTestM era (Tx TopTx era)
 switchTxToLegacyMode tx = do
   txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
+  pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]
+
+switchTxToPhase2InvalidLegacyMode ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+switchTxToPhase2InvalidLegacyMode tx = do
+  txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
   pure $ tx & bodyTxL . inputsTxBodyL <>~ [txIn]
 
 dijkstraFixupTx ::
@@ -352,7 +462,7 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
     addSubTxIn subTx
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
       | otherwise = do
-          addr <- freshKeyAddr_
+          addr <- freshKeyAddrNoPtr_
           -- restore default fixup behaviour temporarily,
           -- to make sure it isn't affected by any higher-level fixup modifications
           newTxIn <- withFixup fixupTx $ sendCoinTo addr (Coin 1_000_000)
@@ -390,7 +500,7 @@ mkBalancerSubTx consumed produced = do
   case consumed `compare` produced of
     EQ -> pure Nothing
     ord -> do
-      addr <- freshKeyAddr_
+      addr <- freshKeyAddrNoPtr_
       let
         (surplus, shortfall) = case ord of
           GT -> (consumed <-> produced, mempty)

@@ -14,6 +14,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
+  getDijkstraSupplementalDataHashes,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
   localProducedValue,
@@ -197,7 +198,7 @@ getDijkstraScriptsNeeded utxo txb =
           \(AsIxItem idx cred) -> (\sh -> (GuardingPurpose (AsIxItem idx sh), sh)) <$> credScriptHash cred
 
 instance AlonzoEraUTxO DijkstraEra where
-  getSupplementalDataHashes = getBabbageSupplementalDataHashes
+  getSupplementalDataHashes = getDijkstraSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
 
@@ -208,6 +209,25 @@ instance AlonzoEraUTxO DijkstraEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextDijkstraStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedDijkstraStAnnTx
+
+getDijkstraSupplementalDataHashes ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  UTxO era ->
+  TxBody l era ->
+  Set DataHash
+getDijkstraSupplementalDataHashes utxo txBody =
+  withBothTxLevels
+    txBody
+    ( \topTxBody ->
+        getBabbageSupplementalDataHashes utxo topTxBody
+          <> foldMap'
+            (getBabbageSupplementalDataHashes utxo . view bodyTxL)
+            (topTxBody ^. subTransactionsTxBodyL)
+    )
+    (getBabbageSupplementalDataHashes utxo)
 
 scriptsProvidedDijkstraStAnnTx ::
   ( EraTxLevel era

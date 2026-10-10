@@ -11,21 +11,22 @@ module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec (spec) where
 
 import Cardano.Ledger.Address (bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
-import Cardano.Ledger.BaseTypes (Mismatch (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.Alonzo.TxWits (hashDataTxWitsL, unRedeemersL, unTxDatsL)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
+import Cardano.Ledger.BaseTypes (Inject (..), Mismatch (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
-  GovActionId,
   Vote (..),
   Voter (..),
-  VotingProcedure (..),
-  VotingProcedures (..),
  )
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credKeyHashWitness)
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (DijkstraSubUtxowPredFailure (..))
+import Cardano.Ledger.Dijkstra.Rules (DijkstraSubUtxowPredFailure (..), STS (..))
+import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -88,7 +89,8 @@ spec = describe "SUBUTXOW" $ do
     forM_ (missingVKeyWitnessSources @era) $ \(sourceName, mkSubTx) ->
       it sourceName $ withheldWitnessFails mkSubTx
 
-    -- The conformance translation has no representation for bootstrap addresses.
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "spending a bootstrap address input" $
       withheldWitnessFails $ do
         bootAddr <- freshBootstrapAddress
@@ -98,8 +100,7 @@ spec = describe "SUBUTXOW" $ do
           , asWitness $ bootstrapKeyHash bootAddr
           )
 
-    -- The spec accepts a pool registration whose owner witness is missing.
-    disableInConformanceIt "registering a stake pool with an owner" $
+    it "registering a stake pool with an owner" $
       withheldWitnessFails $ do
         poolKeyHash <- freshKeyHash
         ownerKeyHash <- freshKeyHash
@@ -123,7 +124,8 @@ spec = describe "SUBUTXOW" $ do
     forM_ (failingNativeScriptPurposes @era) $ \(purposeName, mkSubTx) ->
       it purposeName $ failingScriptFails mkSubTx
 
-    -- The spec attributes a failing minting script to UTXOW, not SUBUTXOW.
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "minting" $
       failingScriptFails $ do
         scriptHash <- unsatisfiableTimeLock
@@ -239,6 +241,34 @@ spec = describe "SUBUTXOW" $ do
           topTx
           [injectFailure . SubMalformedGuardDatums @era $ NES.singleton guardCred]
 
+  describe "SupplementalDatums" $ do
+    let datum = Data @era $ P.I 30
+        datumHash = hashData datum
+
+    it "Datum of the output of a sub-transaction" $ do
+      addr <- freshKeyAddr_
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL
+                .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+              & witsTxL . hashDataTxWitsL .~ [datum]
+      submitTx_ $ mkTopTxWithSubTxs [subTx]
+
+    it "Datum of the reference input of a sub-transaction" $ do
+      addr <- freshKeyAddr_
+      referencedTx <-
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL
+              .~ [mkBasicTxOut addr mempty & dataHashTxOutL .~ SJust datumHash]
+      let subTx :: Tx SubTx era
+          subTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 0 referencedTx]
+              & witsTxL . hashDataTxWitsL .~ [datum]
+      submitTx_ $ mkTopTxWithSubTxs [subTx]
+
   -- The filter mirrors the rule: `getInputDataHashesTxBody` records
   -- an input as unspendable only when its spending script is below
   -- PlutusV3, since CIP-0069 made spending datums optional from V3 on.
@@ -260,7 +290,8 @@ spec = describe "SUBUTXOW" $ do
                        )
             txInAt 0
               <$> withPostFixup (rederiveAddrTxWits . resetTxOutDataHash) (submitTx tx)
-          submitFailingTx
+          submitFailingLegacySubTx
+            lang
             (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])
             [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
 
@@ -275,7 +306,8 @@ spec = describe "SUBUTXOW" $ do
           txIn <- produceScript redeemerSameAsDatumHash
           let missingDatum = hashData @era (Data (P.I 3))
           withPostFixupSubTxs (fixupResetAddrWits . (witsTxL . datsTxWitsL .~ mempty)) $
-            submitFailingTx
+            submitFailingLegacySubTx
+              lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
               [injectFailure $ SubMissingRequiredDatums @era (NES.singleton missingDatum) []]
 
@@ -289,11 +321,10 @@ spec = describe "SUBUTXOW" $ do
                         %~ Map.insert extraDatumHash extraDatum
                     )
           withPostFixupSubTxs addExtraDatum $
-            submitFailingTx
+            submitFailingLegacySubTx
+              lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              [ injectFailure $
-                  SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) []
-              ]
+              [injectFailure $ SubNotAllowedSupplementalDatums @era (NES.singleton extraDatumHash) []]
 
         it "SubMissingRedeemers" $ do
           txIn <- produceScript redeemerSameAsDatumHash
@@ -301,7 +332,8 @@ spec = describe "SUBUTXOW" $ do
           withPostFixupSubTxs (fixupResetAddrWits . (witsTxL . rdmrsTxWitsL .~ mempty)) $
             submitFailingTx
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
-              [ injectFailure $
+              [ injectFailure $ Conway.CollectErrors [NoRedeemer missingRedeemer]
+              , injectFailure $
                   SubMissingRedeemers @era [(missingRedeemer, redeemerSameAsDatumHash)]
               ]
 
@@ -314,9 +346,16 @@ spec = describe "SUBUTXOW" $ do
                   . ( witsTxL . rdmrsTxWitsL . unRedeemersL
                         %~ Map.insert extraPurpose (redeemerData, ExUnits 0 0)
                     )
-          withPostFixupSubTxs addExtraRedeemer $
-            submitFailingTx
+          withPostFixupSubTxs addExtraRedeemer
+            $ submitFailingLegacySubTx
+              lang
               (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
+            $ NE.prependList
+              [ injectFailure $
+                  Conway.CollectErrors
+                    [BadTranslation . inject $ RedeemerPointerPointsToNothing extraPurpose]
+              | lang >= PlutusV4
+              ]
               [injectFailure $ SubExtraRedeemers @era [extraPurpose]]
 
         describe "SubScriptIntegrityHashMismatch" $ do
@@ -337,26 +376,33 @@ spec = describe "SUBUTXOW" $ do
                   rederiveAddrTxWits $
                     fixedUpTx & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton badSubTx
                 withNoFixup $
-                  submitFailingTx
+                  submitFailingLegacySubTx
+                    lang
                     badTopTx
                     [ injectFailure $
                         SubScriptIntegrityHashMismatch @era
                           Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
                           (originalBytes <$> expectedIntegrity)
                     ]
-          it "the supplied hash is wrong" $ testHashMismatch . SJust =<< arbitrary
+          disableInConformanceIt "the supplied hash is wrong" $
+            testHashMismatch . SJust =<< arbitrary
           it "the supplied hash is missing" $ testHashMismatch SNothing
 
-        it "SubMalformedScriptWitnesses" $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "SubMalformedScriptWitnesses" $ do
           let scriptHash = hashPlutusScript $ asSLanguage slang malformedPlutus
           txIn <- produceScript scriptHash
-          submitFailingTx
+          submitFailingLegacySubTx
+            lang
             (mkTopTxWithSubTxs [scriptSpendingSubTx txIn])
             [injectFailure . SubMalformedScriptWitnesses @era $ NES.singleton scriptHash]
 
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1287
+        -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt "SubMalformedReferenceScripts" $ do
           script <- fromPlutusScript <$> mkPlutusScript (asSLanguage slang malformedPlutus)
-          addr <- freshKeyAddr_
+          addr <- freshKeyAddrNoPtr_
           let subTx :: Tx SubTx era
               subTx =
                 mkBasicTx $
@@ -369,6 +415,8 @@ spec = describe "SUBUTXOW" $ do
                 hashScript script
             ]
 
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1323
+        -- TODO: Re-enable after issue is resolved, by removing this override
         disableInConformanceIt "SubInvalidMetadata" $ do
           let auxData :: TxAuxData era
               auxData =
@@ -380,6 +428,29 @@ spec = describe "SUBUTXOW" $ do
           submitFailingTx
             (mkTopTxWithSubTxs [subTx])
             [injectFailure $ SubInvalidMetadata @era]
+
+-- Legacy sub-transaction scripts also fail context translation, independently
+-- of the SUBUTXOW predicate under test. Fixup can change the sub-transaction id.
+submitFailingLegacySubTx ::
+  forall era.
+  DijkstraEraImp era =>
+  Language ->
+  Tx TopTx era ->
+  NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
+  ImpTestM era ()
+submitFailingLegacySubTx lang tx expectedFailures =
+  submitFailingTxM tx $ \fixedUpTx ->
+    case OMap.elems $ fixedUpTx ^. bodyTxL . subTransactionsTxBodyL of
+      [subTx] ->
+        pure $
+          NE.prependList
+            [ injectFailure $
+                Conway.CollectErrors
+                  [BadTranslation . inject $ UnsupportedScriptInSubTx @era lang (txIdTx subTx)]
+            | lang < PlutusV4
+            ]
+            expectedFailures
+      _ -> assertFailure "Expected exactly one sub-transaction"
 
 -- | Every distinct reason a sub-transaction requires a key witness,
 -- paired with a sub-transaction that requires it and the key hash whose
@@ -435,7 +506,7 @@ missingVKeyWitnessSources =
         (drepCredential, _, _) <- setupSingleDRep 1_000_000
         govActionId <- submitGovAction InfoAction
         keyHash <- expectJust $ credKeyHashWitness drepCredential
-        pure (voteSubTx (DRepVoter drepCredential) govActionId, keyHash)
+        pure (voteSubTx VoteYes (DRepVoter drepCredential) govActionId, keyHash)
     )
   ,
     ( "voting as a committee member"
@@ -443,7 +514,7 @@ missingVKeyWitnessSources =
         hotCredential <- NE.head <$> registerInitialCommittee
         govActionId <- submitGovAction InfoAction
         keyHash <- expectJust $ credKeyHashWitness hotCredential
-        pure (voteSubTx (CommitteeVoter hotCredential) govActionId, keyHash)
+        pure (voteSubTx VoteYes (CommitteeVoter hotCredential) govActionId, keyHash)
     )
   ,
     ( "voting as a stake pool"
@@ -451,20 +522,9 @@ missingVKeyWitnessSources =
         poolKeyHash <- freshKeyHash
         registerPool poolKeyHash
         govActionId <- submitGovAction InfoAction
-        pure (voteSubTx (StakePoolVoter poolKeyHash) govActionId, asWitness poolKeyHash)
+        pure (voteSubTx VoteYes (StakePoolVoter poolKeyHash) govActionId, asWitness poolKeyHash)
     )
   ]
-
--- | A sub-transaction that casts a single yes vote.
-voteSubTx :: DijkstraEraImp era => Voter -> GovActionId -> Tx SubTx era
-voteSubTx voter govActionId =
-  mkBasicTx $
-    mkBasicTxBody
-      & votingProceduresTxBodyL
-        .~ VotingProcedures
-          ( Map.singleton voter . Map.singleton govActionId $
-              VotingProcedure {vProcVote = VoteYes, vProcAnchor = SNothing}
-          )
 
 -- | Every script purpose at which a sub-transaction can require a
 -- native script, paired with a sub-transaction that needs a failing
@@ -517,7 +577,7 @@ failingNativeScriptPurposes =
     , do
         scriptHash <- registerLowerBoundTimeLockDRep
         govActionId <- submitGovAction InfoAction
-        pure (voteSubTx (DRepVoter (ScriptHashObj scriptHash)) govActionId, scriptHash)
+        pure (voteSubTx VoteYes (DRepVoter (ScriptHashObj scriptHash)) govActionId, scriptHash)
     )
   ]
 

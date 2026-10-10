@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages, plutusScriptLanguage)
 import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
@@ -598,8 +598,11 @@ mkRefTxOut ::
   ScriptHash ->
   ImpTestM era (TxOut era)
 mkRefTxOut sh = do
-  addr <- freshKeyAddr_
   let mbyPlutusScript = impLookupPlutusScript sh
+  addr <- case mbyPlutusScript of
+    Just plutusScript
+      | plutusScriptLanguage plutusScript >= PlutusV4 -> freshKeyAddrNoPtr_
+    _ -> freshKeyAddr_
   pure $
     mkBasicTxOut addr mempty
       & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)

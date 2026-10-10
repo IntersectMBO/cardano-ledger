@@ -96,6 +96,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   ScriptIntegrityHash,
   TxBody (AlonzoTxBody),
+  alonzoSpendableInputsTxBodyF,
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
@@ -247,6 +248,9 @@ instance EraTx AlonzoEra where
 
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
   {-# INLINE getMinFeeTx #-}
+
+  allInputsTxBodyF = alonzoSpendableInputsTxBodyF
+  {-# INLINEABLE allInputsTxBodyF #-}
 
 alonzoTxEqRaw ::
   ( AlonzoEraTx era

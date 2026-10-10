@@ -104,9 +104,11 @@ import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
   MemoBytes,
+  MemoHashIndex,
   Memoized (..),
   eqRawType,
   getMemoRawType,
+  getMemoSafeHash,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -272,6 +274,11 @@ newtype AlonzoTxWits era = MkAlonzoTxWits (MemoBytes (AlonzoTxWitsRaw era))
 
 instance Memoized (AlonzoTxWits era) where
   type RawType (AlonzoTxWits era) = AlonzoTxWitsRaw era
+
+type instance MemoHashIndex (AlonzoTxWitsRaw era) = EraIndependentTxWits
+
+instance HashAnnotated (AlonzoTxWits era) EraIndependentTxWits where
+  hashAnnotated = getMemoSafeHash
 
 instance AlonzoEraScript era => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
@@ -515,8 +522,14 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
   encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
       Keyed
-        ( \a b c d e f g h ->
-            let ps = toScript @'PlutusV1 d <> toScript @'PlutusV2 e <> toScript @'PlutusV3 f
+        ( \a b c pv1 pv2 pv3 pv4 g h ->
+            let ps =
+                  mconcat
+                    [ toScript @'PlutusV1 pv1
+                    , toScript @'PlutusV2 pv2
+                    , toScript @'PlutusV3 pv3
+                    , toScript @'PlutusV4 pv4
+                    ]
              in AlonzoTxWitsRaw a b (c <> ps) g h
         )
         !> Omit null (Key 0 $ To vkeys)
@@ -531,6 +544,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit null (Key 3 $ encodePlutus SPlutusV1)
         !> Omit null (Key 6 $ encodePlutus SPlutusV2)
         !> Omit null (Key 7 $ encodePlutus SPlutusV3)
+        !> Omit null (Key 8 $ encodePlutus SPlutusV4)
         !> Omit (null . unTxDats) (Key 4 $ To dats)
         !> Omit (null . unRedeemers) (Key 5 $ To rdmrs)
     where
@@ -647,6 +661,7 @@ instance
         5 -> Just $ decodeAccA acc (\x w -> w {atwrRdmrsTxWits = x}) decCBOR
         6 -> Just $ decodeAccA acc addScriptsTxWitsRaw (pure <$> alonzoPlutusScriptDecoder SPlutusV2)
         7 -> Just $ decodeAccA acc addScriptsTxWitsRaw (pure <$> alonzoPlutusScriptDecoder SPlutusV3)
+        8 -> Just $ decodeAccA acc addScriptsTxWitsRaw (pure <$> alonzoPlutusScriptDecoder SPlutusV4)
         _ -> Nothing
       {-# INLINE decoderByKey #-}
 

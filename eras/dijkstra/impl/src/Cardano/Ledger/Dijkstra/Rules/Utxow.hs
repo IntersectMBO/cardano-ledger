@@ -85,7 +85,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 
 -- ================================
 
@@ -278,7 +278,11 @@ dijkstraUtxowTransition = do
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
   -- Per-level: datum check for top-level tx's own spend inputs
-  runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx
+  runTest $
+    Alonzo.missingRequiredDatums scriptsProvided originalUtxo $
+      if stAnnTx ^. plutusLegacyModeStAnnTxG
+        then tx & bodyTxL . subTransactionsTxBodyL .~ mempty
+        else tx
 
   {- dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                           h ↦ s ∈ txscripts txw, s ∈ Scriptph2} -}

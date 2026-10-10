@@ -42,10 +42,18 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
+  getVersion32,
+  pvMajor,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Block (Block (..), EraBlockHeader (..))
+import Cardano.Ledger.Block (
+  Block (..),
+  BlockHeaderVersionInfo (..),
+  EraBlockHeader (..),
+  LeiosBbodySignal (..),
+  LeiosEraBlockHeader (..),
+ )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
@@ -57,9 +65,7 @@ import Cardano.Ledger.Dijkstra.BlockBody (
  )
 import Cardano.Ledger.Dijkstra.Era (
   BBODY,
-  DijkstraBbodySignal (..),
   DijkstraEra,
-  DijkstraEraBlockHeader (..),
  )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
@@ -75,6 +81,7 @@ import Control.DeepSeq (NFData)
 import Control.State.Transition
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (fromStrict)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
@@ -86,6 +93,7 @@ data DijkstraBbodyPredFailure era
   | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | PerasCertValidationFailed PerasCert Nonce
+  | HeaderProtVerTooLow (Mismatch RelGTEQ Word32)
   deriving (Generic)
 
 instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (DijkstraBbodyPredFailure era)
@@ -117,6 +125,7 @@ instance
       BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> To mm
       PerasCertValidationFailed cert nonce ->
         Sum PerasCertValidationFailed 5 !> To cert !> To nonce
+      HeaderProtVerTooLow mm -> Sum HeaderProtVerTooLow 6 !> To mm
 
 instance
   ( Era era
@@ -131,6 +140,7 @@ instance
     3 -> SumD TooManyExUnits <! From
     4 -> SumD BodyRefScriptsSizeTooBig <! From
     5 -> SumD PerasCertValidationFailed <! From <! From
+    6 -> SumD HeaderProtVerTooLow <! From
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -307,7 +317,7 @@ instance
   where
   type State (BBODY era) = Shelley.ShelleyBbodyState era
 
-  type Signal (BBODY era) = DijkstraBbodySignal era
+  type Signal (BBODY era) = LeiosBbodySignal era
 
   type Environment (BBODY era) = Shelley.BbodyEnv era
 
@@ -322,7 +332,7 @@ instance
 
 dijkstraBbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ DijkstraBbodySignal era
+  ( Signal (EraRule "BBODY" era) ~ LeiosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
@@ -345,13 +355,25 @@ dijkstraBbodyTransition = do
   TRC
     ( Shelley.BbodyEnv pp account
       , Shelley.BbodyState ls blocksMade
-      , DijkstraBbodySignal block@Block {blockBody}
+      , LeiosBbodySignal block@Block {blockBody}
       ) <-
     judgmentContext
 
   Shelley.validateBlockBodySize block (pp ^. ppProtocolVersionL)
 
   Shelley.validateBlockBodyHash block
+
+  let curProtVerMajor = getVersion32 . pvMajor $ pp ^. ppProtocolVersionL
+      BlockHeaderVersionInfo {bhviHighestSupportedMajorVersion} = block ^. versionInfoBlockHeaderL
+  bhviHighestSupportedMajorVersion
+    >= curProtVerMajor
+      ?! injectFailure
+        ( HeaderProtVerTooLow $
+            Mismatch
+              { mismatchSupplied = bhviHighestSupportedMajorVersion
+              , mismatchExpected = curProtVerMajor
+              }
+        )
 
   let bhSlot = block ^. slotNoBlockHeaderL
 

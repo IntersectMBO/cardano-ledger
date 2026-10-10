@@ -148,7 +148,10 @@ spec = describe "Invalid" $ do
         -- Spend a UTxO that has an inline datum, using a reference script,
         -- and also redundantly supply the script witness.
         it "Inline datum and ref script and redundant script witness" $ do
-          addr <- freshKeyAddr_
+          addr <-
+            if slang >= PlutusV4
+              then freshKeyAddrNoPtr_
+              else freshKeyAddr_
           plutus <- mkPlutusScript $ alwaysSucceedsWithDatum lang
           let script = fromPlutusScript plutus
               scriptHash = hashScript script
@@ -196,7 +199,10 @@ spec = describe "Invalid" $ do
         -- include a reference input that contains an inline datum and have it count
         -- for the datum witness where ever it is needed.
         it "No such thing as a reference datum" $ do
-          addr <- freshKeyAddr_
+          addr <-
+            if slang >= PlutusV4
+              then freshKeyAddrNoPtr_
+              else freshKeyAddr_
 
           let scriptHash = hashPlutusScript $ alwaysFailsWithDatum lang
               datum = PV1.B "abcde"

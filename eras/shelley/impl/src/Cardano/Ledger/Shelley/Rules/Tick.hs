@@ -23,6 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Tick (
   ShelleyTickEvent (..),
   adoptGenesisDelegs,
   TICKF,
+  ShelleyTickfEvent (..),
   validatingTickTransition,
   validatingTickTransitionFORECAST,
   solidifyNextEpochPParams,
@@ -42,6 +43,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
+  esSnapshotsL,
   lsCertStateL,
   newEpochStateGovStateL,
  )
@@ -51,9 +53,10 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
   RupdEnv (..),
   RupdEvent,
  )
+import Cardano.Ledger.Shelley.Rules.Snap (SNAP, SnapEnv (..), SnapEvent)
 import Cardano.Ledger.Shelley.Rules.Upec (UPEC, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
-import Cardano.Ledger.State (EraCertState (..), SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
+import Cardano.Ledger.State (EraCertState (..), MarkSnapShot (..), SnapShots (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -190,6 +193,10 @@ validatingTickTransitionFORECAST ::
   , Signal (EraRule "UPEC" era) ~ ()
   , Environment (EraRule "UPEC" era) ~ LedgerState era
   , Embed (EraRule "UPEC" era) (tick era)
+  , State (EraRule "SNAP" era) ~ SnapShots era
+  , Environment (EraRule "SNAP" era) ~ SnapEnv era
+  , Signal (EraRule "SNAP" era) ~ EpochNo
+  , Embed (EraRule "SNAP" era) (tick era)
   , STS (tick era)
   , GovState era ~ ShelleyGovState era
   , EraGov era
@@ -201,24 +208,19 @@ validatingTickTransitionFORECAST ::
 validatingTickTransitionFORECAST nes0 slot = do
   -- This whole function is a specialization of an inlined 'NEWEPOCH'.
   --
-  -- The forecast is built entirely from the 'nesPd' and 'esPp' and
-  -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST'
-  -- only depends on getting these three fields correct.
+  -- The forecast is built entirely from the stake pool distribution in the set snapshot, the
+  -- current protocol parameters and 'dsGenDelegs', so the correctness of
+  -- 'validatingTickTransitionFORECAST' only depends on getting these three correct.
 
   (curEpochNo, nes) <- liftSTS $ solidifyNextEpochPParams nes0 slot
 
   let es = nesEs nes
       ss = esSnapshots es
 
-  -- the relevant 'NEWEPOCH' logic
-  let pd' = ssStakeMarkPoolDistr ss
-
   -- note that the genesis delegates are updated not only on the epoch boundary.
   if curEpochNo /= succ (nesEL nes)
     then pure $ nes {nesEs = adoptGenesisDelegs es slot}
     else do
-      -- We can skip 'SNAP'; we already have the equivalent pd'.
-
       -- We can skip 'MIR' and 'POOLREAP';
       -- we don't need to do the checks:
       -- if the checks would fail, then the node will fail in the 'TICK' rule
@@ -228,18 +230,18 @@ validatingTickTransitionFORECAST nes0 slot = do
       let pp = es ^. curPParamsEpochStateL
           ls = esLState es
           updates = utxosGovState $ lsUTxOState ls
+      ss' <-
+        trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, curEpochNo)
+
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
           TRC (ls, UpecState pp updates, ())
       let es' =
             adoptGenesisDelegs es slot
               & curPParamsEpochStateL .~ pp'
+              & esSnapshotsL .~ ss'
 
-      pure $!
-        nes
-          { nesPd = pd'
-          , nesEs = es'
-          }
+      pure $! nes {nesEs = es'}
 
 bheadTransition ::
   forall era.
@@ -257,18 +259,17 @@ bheadTransition ::
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do
-  TRC ((), nes0@(NewEpochState _ bprev _ es _ _ _), slot) <-
+  TRC ((), nes0@(NewEpochState _ bprev _ es _ _), slot) <-
     judgmentContext
 
   nes1 <- validatingTickTransition @TICK nes0 slot
 
-  -- Here we force the evaluation of the mark snapshot
-  -- and the per-pool stake distribution.
+  -- Here we force the evaluation of parts of the Mark snapshot
+  -- that will be needed an epoch later in the Set snapshot
   -- We do NOT force it in the TICKF and TICKN rule
   -- so that it can remain a thunk when the consensus
-  -- layer computes the ledger view across the epoch boundary.
-  let !_ = ssStakeMark . esSnapshots . nesEs $ nes1
-      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes1
+  -- layer computes the ledger forecast across the epoch boundary.
+  let !MarkSnapShot {msStakePoolDistr = !_, msLeiosCommittee = !_} = ssStakeMark . esSnapshots $ nesEs nes1
 
   ru'' <-
     trans @(EraRule "RUPD" era) $
@@ -303,8 +304,22 @@ instance
 to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
 
-newtype ShelleyTickfEvent era
-  = TickfUpecEvent (Event (EraRule "UPEC" era)) -- Subtransition Events
+data ShelleyTickfEvent era
+  = TickfUpecEvent (Event (EraRule "UPEC" era))
+  | TickfSnapEvent (Event (EraRule "SNAP" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "UPEC" era))
+  , Eq (Event (EraRule "SNAP" era))
+  ) =>
+  Eq (ShelleyTickfEvent era)
+
+instance
+  ( NFData (Event (EraRule "UPEC" era))
+  , NFData (Event (EraRule "SNAP" era))
+  ) =>
+  NFData (ShelleyTickfEvent era)
 
 instance
   ( EraGov era
@@ -315,6 +330,10 @@ instance
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ LedgerState era
   , Embed (EraRule "UPEC" era) (TICKF era)
+  , State (EraRule "SNAP" era) ~ SnapShots era
+  , Environment (EraRule "SNAP" era) ~ SnapEnv era
+  , Signal (EraRule "SNAP" era) ~ EpochNo
+  , Embed (EraRule "SNAP" era) (TICKF era)
   ) =>
   STS (TICKF era)
   where
@@ -341,3 +360,13 @@ instance
   where
   wrapFailed = \case {}
   wrapEvent = TickfUpecEvent
+
+instance
+  ( Era era
+  , STS (SNAP era)
+  , Event (EraRule "SNAP" era) ~ SnapEvent era
+  ) =>
+  Embed (SNAP era) (TICKF era)
+  where
+  wrapFailed = \case {}
+  wrapEvent = TickfSnapEvent

@@ -1,8 +1,30 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.25.0.0
+
+* Change `TICKF` to run the `SNAP` rule at the epoch boundary:
+  - Add `SNAP` related constraints to the `STS` instance of `TICKF`
+  - Add `Embed (SNAP era) (TICKF era)` instance for Shelley's `SNAP` rule
+  - Add `TickfSnapEvent` constructor to `ConwayTickfEvent` and export it
+  - Add `Generic`, `Eq` and `NFData` instances for `ConwayTickfEvent`
+
+### `testlib`
+
+* Add `ToExpr` instance for `ConwayTickfEvent`
+
 ## 1.24.0.0
 
 * Augment the `TICKF` rule to also rotate the stake snapshots, set := mark and go := set (mark is left as-is, since it's unused by forecasts)
+* Export `transTxId`
+* Add `Semigroup` and `Monoid` instances for `VotingProcedures`
+* Replace `conwayBbodyTransition` with `bbodyTransition`
+* Change the type of `computeDRepDistr` to take and return a `VotingStakePoolDistr` instead of a `PoolDistr`
+* Rename `reStakePoolDistrL` to `reVotingStakePoolDistrL` and change its type to use `VotingStakePoolDistr`
+* Rename `DRepPulser {dpStakePoolDistr}` to `dpVotingStakePoolDistr` and change the type to `VotingStakePoolDistr`
+* Rename `RatifyEnv {reStakePoolDistr}` to `reVotingStakePoolDistr` and change the type to `VotingStakePoolDistr`
+* Add `toVotingStakePoolDistr`
+* Add `VotingStakePoolDistr` with lenses `vspdIndividualStakeL`, `vspdTotalVotingStakeL`
+* Require `AlonzoEraTx` in `getConwayMinFeeTx` so script fees use the era's total execution units.
 * Remove `transPlutusPurposeV1V2`, superseded by `Alonzo.transPlutusPurpose`
 * No longer export the `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors of `ConwayContextError`, in favor of the same cases defined in Alonzo.
 * Add `conwayInjectIntoTestState`
@@ -21,6 +43,9 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Conway.Imp.MempoolSpec`, holding the mempool tests that were in `Test.Cardano.Ledger.Conway.Imp.LedgerSpec`
+* Add `ToExpr (ApplyTxError era)` as a superclass of `ConwayEraImp`
+* Add `ToExpr` instance for `ApplyTxError ConwayEra`
 * Add reusable `SNAP` voting-stake test helpers (shared with the Dijkstra testlib) to `Test.Cardano.Ledger.Conway.Imp.SnapSpec`: `getSpoVotingStake`, `getDRepVotingStake`, `getLeaderElectionStake`, `isPoolInLeaderDistr`, `isPoolInRewardSnapshot`, `setupExpiredRefundScenario`, `setupReapedPoolScenario`, `setupWithdrawalScenario`, `setupCombinedScenario`, `setupRetiredPoolInLeaderDistr`
 * Add `DecCBOR` instance for `Block`
 

@@ -1,7 +1,29 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.21.0.0
+
+* Remove `nesPd` field from `NewEpochState` and `nesPdL`:
+  - Add `nesStakePoolDistrG`, which reads the stake pool distribution from the set snapshot instead
+  - Remove the re-export of `ssStakeMarkPoolDistrL` from `Cardano.Ledger.Shelley.LedgerState`
+  - `NewEpochState` no longer encodes `nesPd`, so the on-disk ledger state format changes and requires replay
+* Change `TICKF` to run the `SNAP` rule at the epoch boundary:
+  - Add `SNAP` related constraints to the `STS` instance of `TICKF` and to `validatingTickTransitionFORECAST`
+  - Add `Embed (SNAP era) (TICKF era)` instance
+* Export `ShelleyTickfEvent` from `Cardano.Ledger.Shelley.Rules`:
+  - Add the `TickfSnapEvent` constructor
+  - Add `Generic`, `Eq` and `NFData` instances for it
+* Change `resetStakeDistribution` to seed the set and go snapshots together with the mark snapshot, so stake from genesis staking now earns rewards in the first epochs
+
+### `testlib`
+
+* Add `EraForecast` superclass to `ShelleyEraImp`, together with `Eq`, `ToExpr`, `NFData` and `Typeable` superclasses for the `TICKF` event
+* Add `ToExpr` instance for `ShelleyTickfEvent`
+
 ## 1.20.0.0
 
+* For `ApplyBlock`:
+  - Remove default implementation for `wrapBlockSignal`
+  - Add new type family constraint `ProtocolEraBlockHeader` as superclass
 * Add `era` parameter to `PoolCert`s and `StakePoolParams`
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
@@ -24,6 +46,16 @@
 
 ### `testlib`
 
+* Add `freshStakePool` and `freshBlsKey` to `Test.Cardano.Ledger.Shelley.ImpTest`
+* Add `Test.Cardano.Ledger.Shelley.Imp.BbodySpec`
+* Compute the block body size in `tryTxsInBlock` with the current protocol version instead of `eraProtVerLow`
+* Add `withTxsInModifiedFailingBlockM` and `withTxsInModifiedFailingSubsetBlockM`, which resubmit the gathered transactions in a block modified by the supplied function
+* Add `modifyBlockBody`, which modifies the block body and updates the claimed body size and hash in the block header to match
+* Add a `Block` modifying function as the first argument of `withTxsInBlockEither` and `tryTxsInBlock`
+* Change `tryTxsInBlock` to accept a `KeyHash BlockIssuer` instead of generating a fresh one
+* Add `InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era`, `InjectRuleFailure "BBODY" ShelleyUtxoPredFailure era` and `Ord (PredicateFailure (EraRule "BBODY" era))` superclasses to `ShelleyEraImp`
+* Add `trySubmitMempoolTx` and `tryReapplyMempoolTx`
+* Add `freshUnregisteredAccount`
 * Rename `freshBootstapAddress` to `freshBootstrapAddress` and express it in terms of the new `freshBootstrapAddressWithPayloadSize`, which takes the HD payload size, or `Nothing` for a plain Byron address.
 * Add `freshBootstrapAddressOversizedPayload` and `largestBootstrapAddressAttrsSize`
 * Add `rederiveAddrTxWits`, which re-derives key witnesses for a modified transaction body

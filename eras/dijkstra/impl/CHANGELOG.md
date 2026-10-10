@@ -1,9 +1,52 @@
 # Revision history for `cardano-ledger-dijkstra`
 
+## 0.5.0.0
+
+* Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
+* Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
+* Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that,
+  outside legacy mode, a top-level transaction can supply datums for the outputs and reference
+  inputs of its sub-transactions
+* Add `kesMaxKeyAgeEpochs` to compute how many epochs a registered Leios voting key (CIP-0164) stays valid from the KES parameters
+* Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
+* Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
+* Change `eraMaxLanguage` to `PlutusV4`
+
+### `testlib`
+
+* Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
+
 ## 0.4.0.0
 
 * Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
 * Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
+* Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's
+  `POOL` rule, replacing `ShelleyPoolPredFailure`:
+  - `EraRuleFailure "POOL" DijkstraEra` is now `DijkstraPoolPredFailure DijkstraEra`
+  - Add `BLSKeyInvalidProofOfPossession` constructor to `DijkstraPoolPredFailure`
+  - Verify BLS proof of possession when (re-)registering a pool with a BLS key set
+* Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` protocol parameters:
+  - Add `dppRefInputsCostPerMultiAssetPolicy` and `dppRefInputsCostPerDatumByte` fields to `DijkstraPParams`
+  - Add `udppRefInputsCostPerMultiAssetPolicy` and `udppRefInputsCostPerDatumByte` fields to `UpgradeDijkstraPParams`
+  - Add `hkdRefInputsCostPerMultiAssetPolicyL` and `hkdRefInputsCostPerDatumByteL` to `DijkstraEraPParams`
+  - Add `ppRefInputsCostPerMultiAssetPolicyL`, `ppRefInputsCostPerDatumByteL`, `ppuRefInputsCostPerMultiAssetPolicyL` and `ppuRefInputsCostPerDatumByteL`
+* Add the Peras protocol parameters:
+  - `perasMinCandidateBlockAge`
+  - `perasCertBoost`
+  - `perasTargetCommitteeSize`
+  - `perasBootstrapRound`
+  - `perasHealingFactor`
+  - `perasQuorumThresholdSafetyMargin`
+* Add `HeaderProtVerTooLow` constructor to `DijkstraBbodyPredFailure`
+* Change `BBODY` signal to `LeiosBbodySignal`
+* Remove `DijkstraBbodySignal` in favor of new `LeiosBbodySignal`
+* Remove `DijkstraEraBlockHeader` in favor of new `LeiosEraBlockHeader` type class.
+* Make sure `validatePerasCert` always returns `False`, thus effectively disabling unimplemented
+  `Peras` specific certificate in the block body.
+* Add `DijkstraEraTx` type class with `hashTx` function.
+* Add `ConwayEraPParams` as a superclass `DijkstraEraPParams`.
+* Evaluate Plutus scripts and propagate script collection errors across the full transaction batch.
+* Include subtransaction execution units in transaction and block limits and minimum script fees.
 * Remove `WithdrawalsExceedAccountBalance` constructor from `DijkstraUtxoPredFailure`
 * Add `WithdrawalAccountsMissingFromOriginal` constructor to `EntitiesPredFailure`
 * Rename `EntitiesPredFailure` constructors:
@@ -89,6 +132,11 @@
 
 ### `cddl`
 
+* Add a field for `plutus_v4_script`s in `transaction_witness_set`
+* Add `refInputsCostPerMultiAssetPolicy` and `refInputsCostPerDatumByte` entries (tags 55-56) in `protocol_param_update`
+* Add Peras protocol parameter entries (tags 49-54) in `protocol_param_update`
+* Rename the `eb_announcement` rule to `eb_references_announcement`
+* Add `header_version_info` rule and use it in `header_body` in place of `protocol_version`
 * Key `account_balance_intervals` and `starting_account_balance_intervals` by `reward_account` instead of `credential`
 * Replace the `transaction` and `transaction_mempool` rules with `block_transaction` and `mempool_transaction`
 * Remove the `invalid_transactions` rule and drop the field from `block_body`
@@ -98,6 +146,24 @@
 
 ### `testlib`
 
+* Fix `Arbitrary` instance for `DijkstraPoolPredFailure` to preserve the CBOR round-trip
+  invariant of `StakePoolRetirementWrongEpochPOOL`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec`
+* Add `declareTreasurySubTx`
+* Add `InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era` as a superclass of `DijkstraEraImp`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec`
+* Add `DijkstraEraBlockBody era` and `InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era` superclasses to `DijkstraEraImp`
+* Add `switchTxToPhase2InvalidLegacyMode`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec`
+* Add `submitFailingMempoolTx` and `expectMempoolRejection`
+* Add `ToExpr` instance for `ApplyTxError DijkstraEra`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec`
+* Add `voteSubTx`
+* Add `InjectRuleFailure "LEDGER" DijkstraGovPredFailure era` and
+  `InjectRuleFailure "LEDGER" DijkstraSubGovPredFailure era` as superclasses of `DijkstraEraImp`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec`
+* Add `submitFailingSubTx`
+* Preserve explicitly supplied redeemers when fixing up subtransactions.
 * Add `InjectRuleFailure "LEDGER" DijkstraSubUtxowPredFailure era` as a superclass of `DijkstraEraImp`
 * Add `mkTopTxWithSubTxs`, `traverseSubTxs` and `withPostFixupSubTxs`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec`

@@ -59,6 +59,7 @@ import Cardano.Slotting.Slot (
   EpochInterval (..),
   EpochNo (..),
   EpochSize (..),
+  SlotInterval (..),
   SlotNo (..),
   WithOrigin (..),
  )
@@ -435,6 +436,8 @@ instance EncCBOR SlotNo where
 
 instance Serialise.Serialise t => EncCBOR (WithOrigin t) where
   encCBOR = fromPlainEncoding . Serialise.encode
+
+deriving instance EncCBOR SlotInterval
 
 deriving instance EncCBOR EpochNo
 

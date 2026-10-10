@@ -231,6 +231,9 @@ instance EraTx ShelleyEra where
 
   getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
+  allInputsTxBodyF = inputsTxBodyL
+  {-# INLINE allInputsTxBodyF #-}
+
 shelleyTxEqRaw :: EraTx era => Tx l era -> Tx l era -> Bool
 shelleyTxEqRaw tx1 tx2 =
   eqRaw (tx1 ^. bodyTxL) (tx2 ^. bodyTxL)

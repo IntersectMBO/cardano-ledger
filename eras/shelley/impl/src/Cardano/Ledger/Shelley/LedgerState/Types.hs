@@ -313,8 +313,6 @@ data NewEpochState era = NewEpochState
   -- ^ Epoch state
   , nesRu :: !(StrictMaybe PulsingRewUpdate)
   -- ^ Possible reward update
-  , nesPd :: !PoolDistr
-  -- ^ Stake distribution within the stake pool
   , stashedAVVMAddresses :: !(StashedAVVMAddresses era)
   -- ^ AVVM addresses to be removed at the end of the Shelley era. Note that
   -- the existence of this field is a hack, related to the transition of UTxO
@@ -352,7 +350,7 @@ instance
   (EraStake era, EraGov era, EraCertState era, Default (StashedAVVMAddresses era)) =>
   Default (NewEpochState era)
   where
-  def = NewEpochState (EpochNo 0) def def def def def def
+  def = NewEpochState (EpochNo 0) def def def def def
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -394,14 +392,13 @@ instance
   ) =>
   EncCBOR (NewEpochState era)
   where
-  encCBOR (NewEpochState e bp bc es ru pd av) =
-    encodeListLen 7
+  encCBOR (NewEpochState e bp bc es ru av) =
+    encodeListLen 6
       <> encCBOR e
       <> encCBOR bp
       <> encCBOR bc
       <> encCBOR es
       <> encCBOR ru
-      <> encCBOR pd
       <> encCBOR av
 
 instance
@@ -416,7 +413,6 @@ instance
   decCBOR = do
     decode $
       RecD NewEpochState
-        <! From
         <! From
         <! From
         <! From
@@ -572,9 +568,6 @@ instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerSt
 -- ==========================================
 -- NewEpochState
 
-nesPdL :: Lens' (NewEpochState era) PoolDistr
-nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
-
 {- Called nesEpochStateL elsewhere -}
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
@@ -646,6 +639,9 @@ utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
 
 newEpochStateGovStateL :: Lens' (NewEpochState era) (GovState era)
 newEpochStateGovStateL = nesEsL . epochStateGovStateL
+
+nesStakePoolDistrG :: SimpleGetter (NewEpochState era) PoolDistr
+nesStakePoolDistrG = nesEsL . esSnapshotsL . ssStakeSetL . to ssStakePoolDistr
 
 epochStateGovStateL :: Lens' (EpochState era) (GovState era)
 epochStateGovStateL = esLStateL . lsUTxOStateL . utxosGovStateL

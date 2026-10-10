@@ -21,6 +21,7 @@ import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.Coin (Coin, CoinPerByte, CompactForm)
 import Cardano.Ledger.Core (MaxPledgeLeverage)
 import Cardano.Ledger.Plutus
+import Cardano.Slotting.Slot (SlotInterval (..))
 import Data.Map.Strict (Map)
 import Data.Word
 import Numeric.Natural (Natural)
@@ -100,6 +101,7 @@ dataSpec = do
     roundTripPlutusDataSpec @Word16
     roundTripPlutusDataSpec @Word8
     roundTripPlutusDataSpec @EpochInterval
+    roundTripPlutusDataSpec @SlotInterval
     roundTripPlutusDataSpec @Natural
     roundTripPlutusDataSpec @Integer
     roundTripPlutusDataSpec @Word

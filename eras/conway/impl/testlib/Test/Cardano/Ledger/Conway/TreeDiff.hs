@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ApplyTxError (..), ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
@@ -246,6 +246,9 @@ instance
   ) =>
   ToExpr (ConwayLedgerPredFailure era)
 
+instance ToExpr (ApplyTxError ConwayEra) where
+  toExpr (ConwayApplyTxError failures) = toExpr failures
+
 instance ToExpr (Constitution era)
 
 instance
@@ -253,6 +256,8 @@ instance
   , ToExpr (Event (EraRule "RUPD" era))
   ) =>
   ToExpr (ConwayNewEpochEvent era)
+
+instance ToExpr (Event (EraRule "SNAP" era)) => ToExpr (ConwayTickfEvent era)
 
 instance ToExpr (ConwayHardForkEvent era)
 

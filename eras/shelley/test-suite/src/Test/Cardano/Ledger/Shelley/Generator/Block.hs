@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Block (EraBlockHeader (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL, nesStakePoolDistrG)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.Crypto (VRF)
 import Cardano.Protocol.TPraos.API
@@ -131,7 +131,7 @@ genBlockWithTxGen
             $ selectNextSlotWithLeader ge origChainState firstConsideredSlot
 
     -- Now we need to compute the KES period and get the set of hot keys.
-    let NewEpochState _ _ _ es _ _ _ = chainNes chainSt
+    let NewEpochState _ _ _ es _ _ = chainNes chainSt
         EpochState acnt ls _ _ = es
         pp = es ^. curPParamsEpochStateL
         kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
@@ -258,7 +258,7 @@ selectNextSlotWithLeader
         where
           chainSt = tickChainState slotNo origChainState
           epochNonce = chainEpochNonce chainSt
-          poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
+          poolDistr = unPoolDistr $ chainNes chainSt ^. nesStakePoolDistrG
           dpstate = (lsCertState . esLState . nesEs . chainNes) chainSt
           (GenDelegs cores) = dpstate ^. certDStateL . dsGenDelegsL
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)

@@ -1,7 +1,12 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.10.0.1
+
+*
+
 ## 1.10.0.0
 
+* Add `EncCBOR` and `DecCBOR` instances to `SlotInterval`
 * Change `CertifiedVRF` decoder to accept indefinite-length encodings starting with PV12
 * Move `decodeIPv4` and `decodeIPv6` into `Cardano.Ledger.Binary.Decoding.DecCBOR`
 * Add `decodeStringIndefLen`, `decodeStringDefOrIndef`, `decodeBytesIndefLen`, `decodeBytesDefOrIndef`, `decodeByteArrayIndefLen` and `decodeByteArrayDefOrIndef`
@@ -13,7 +18,8 @@
 
 ### `testlib`
 
-*
+* Add golden CBOR tests for `LeiosCert`, `LeiosSeat`, and `LeiosCommittee`
+* Add `goldenForHashHex` to `Test.Cardano.Ledger.Binary.Golden`.
 
 ## 1.9.0.0
 

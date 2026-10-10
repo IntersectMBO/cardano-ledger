@@ -199,7 +199,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEpochStateL,
   nesEsL,
-  nesPdL,
+  nesStakePoolDistrG,
   newEpochStateGovStateL,
   utxosGovStateL,
  )
@@ -334,6 +334,8 @@ conwayModifyImpInitProtVer ver =
   where
     ratifyState es = def & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
 
+instance AllegraEraImp ConwayEra
+
 instance MaryEraImp ConwayEra
 
 instance AlonzoEraImp ConwayEra where
@@ -369,6 +371,7 @@ class
   , InjectRuleEvent "TICK" ConwayHardForkEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Inject (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (ApplyTxError era)
+  , ToExpr (ApplyTxError era)
   ) =>
   ConwayEraImp era
 
@@ -1028,7 +1031,7 @@ getRatifyEnv :: (ConwayEraGov era, ConwayEraCertState era) => ImpTestM era (Rati
 getRatifyEnv = do
   eNo <- getsNES nesELL
   instantStake <- getsNES instantStakeG
-  poolDistr <- getsNES nesPdL
+  poolDistr <- getsNES nesStakePoolDistrG
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL

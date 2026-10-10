@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-core
-version: 1.22.0.0
+version: 1.23.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -123,7 +123,7 @@ library
     cardano-crypto-class >=2.4 && <2.7,
     cardano-crypto-leios ^>=0.3,
     cardano-crypto-wrapper,
-    cardano-data >=1.3,
+    cardano-data >=1.4,
     cardano-ledger-binary ^>=1.10,
     cardano-ledger-byron,
     cardano-ledger-core:internal,
@@ -143,6 +143,7 @@ library
     partial-order,
     plutus-core,
     plutus-ledger-api >=1.68,
+    plutus-tx,
     prettyprinter,
     primitive,
     quiet,
@@ -259,7 +260,7 @@ library testlib
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.5,
     cardano-ledger-byron:{cardano-ledger-byron, testlib},
     cardano-ledger-core,
-    cardano-slotting:{cardano-slotting, testlib},
+    cardano-slotting:{cardano-slotting, testlib} ^>=0.2.2,
     cardano-strict-containers:testlib,
     containers,
     deepseq,
@@ -344,6 +345,7 @@ test-suite tests
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
     cardano-ledger-core,
+    cardano-slotting,
     containers,
     genvalidity,
     genvalidity-scientific,

@@ -56,7 +56,6 @@ instance TranslateEra MaryEra NewEpochState where
         , nesBcur = nesBcur nes
         , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
-        , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
         }
 

@@ -27,8 +27,11 @@ module Cardano.Ledger.Hashes (
   -- the actual transaction type. As such, we define a number of these hashes
   -- here.
   -- $eraIndep
+  EraIndependentTx,
   EraIndependentTxBody,
+  EraIndependentTxWits,
   EraIndependentBlockHeader,
+  EraIndependentBlockHeaderBody,
   EraIndependentBlockBody,
   EraIndependentMetadata,
   EraIndependentScript,
@@ -37,7 +40,7 @@ module Cardano.Ledger.Hashes (
   EraIndependentTxAuxData,
   EraIndependentPParamView,
   EraIndependentScriptIntegrity,
-  EraIndependentEb,
+  EraIndependentEbReferences,
 
   -- * Hashes
 
@@ -127,9 +130,15 @@ type HASH = Hash.Blake2b_256
 --   still want to share the same namespace for the identifiers. Consequently we
 --   define some era-independent indices here.
 
+data EraIndependentTx
+
 data EraIndependentTxBody
 
+data EraIndependentTxWits
+
 data EraIndependentBlockHeader
+
+data EraIndependentBlockHeaderBody
 
 data EraIndependentBlockBody
 
@@ -149,7 +158,7 @@ data EraIndependentPParamView
 
 data EraIndependentScriptIntegrity
 
-data EraIndependentEb
+data EraIndependentEbReferences
 
 --------------------------------------------------------------------------------
 -- Signature Hashes

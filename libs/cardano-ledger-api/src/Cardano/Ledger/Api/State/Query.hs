@@ -91,6 +91,10 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetLedgerPeerSnapshot@
   queryStakePoolRelays,
 
+  -- * @GetNonMyopicMemberRewards@
+  queryNonMyopicMemberRewards,
+  QueryResultNonMyopicMemberRewards (..),
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -100,6 +104,7 @@ import Cardano.Ledger.Api.State.Query.Account as Account
 import Cardano.Ledger.Api.State.Query.Governance as Governance
 import Cardano.Ledger.BaseTypes (
   EpochNo,
+  Globals,
   KeyValuePairs (..),
   Network,
   NonZero,
@@ -137,6 +142,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (credToDRep, dRepToCred)
+import qualified Cardano.Ledger.Shelley.API.Wallet as Wallet
 import Cardano.Ledger.Shelley.LedgerState
 import Control.DeepSeq
 import Control.Monad (guard)
@@ -816,7 +822,7 @@ queryStakePoolRelays ::
   NewEpochState era ->
   Map (KeyHash StakePool) (Rational, StrictSeq StakePoolRelay)
 queryStakePoolRelays nes =
-  Map.mapMaybeWithKey getRelays (unPoolDistr (nesPd nes))
+  Map.mapMaybeWithKey getRelays (unPoolDistr (nes ^. nesStakePoolDistrG))
   where
     pstate = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL
     pools = psStakePools pstate
@@ -908,15 +914,39 @@ instance DecCBOR QueryResultPoolDistr where
 
 -- | Query the pool distribution derived from the set-snapshot.
 --
--- Returns the pre-computed 'PoolDistr' stored in 'NewEpochState'
--- (@nesPd@), optionally filtered to the given set of pools. Empty set
+-- Returns the pre-computed 'PoolDistr' stored in the set snapshot
+-- (@nesStakePoolDistrG@), optionally filtered to the given set of pools. Empty set
 -- returns all pools.
 querySetSnapshotStakePoolDistr ::
   NewEpochState era ->
   Set (KeyHash StakePool) ->
   QueryResultPoolDistr
 querySetSnapshotStakePoolDistr nes poolIds
-  | Set.null poolIds = toQueryResultPoolDistr (nesPd nes)
+  | Set.null poolIds = toQueryResultPoolDistr pd
   | otherwise =
-      let pd = nesPd nes
-       in toQueryResultPoolDistr (pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds})
+      toQueryResultPoolDistr (pd {unPoolDistr = Map.restrictKeys (unPoolDistr pd) poolIds})
+  where
+    pd = nes ^. nesStakePoolDistrG
+
+data QueryResultNonMyopicMemberRewards = QueryResultNonMyopicMemberRewards
+  { unNonMyopicMemberRewards ::
+      !(Map (Either Coin (Credential Staking)) (Map (KeyHash StakePool) Coin))
+  }
+  deriving (Eq, Show, Generic)
+
+instance NFData QueryResultNonMyopicMemberRewards
+
+instance EncCBOR QueryResultNonMyopicMemberRewards where
+  encCBOR (QueryResultNonMyopicMemberRewards m) = encCBOR m
+
+instance DecCBOR QueryResultNonMyopicMemberRewards where
+  decCBOR = QueryResultNonMyopicMemberRewards <$> decCBOR
+
+queryNonMyopicMemberRewards ::
+  (EraGov era, EraStake era, EraCertState era) =>
+  Globals ->
+  NewEpochState era ->
+  Set (Either Coin (Credential Staking)) ->
+  QueryResultNonMyopicMemberRewards
+queryNonMyopicMemberRewards g st s =
+  QueryResultNonMyopicMemberRewards $ Wallet.getNonMyopicMemberRewards g st s

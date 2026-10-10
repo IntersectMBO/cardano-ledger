@@ -12,6 +12,7 @@ import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary ()
+import qualified Test.Cardano.Protocol.Leios.BlockHeaderSpec as LeiosBlockHeaderSpec
 import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.BlockHeader.Arbitrary ()
 
@@ -29,3 +30,4 @@ main =
       decoderEquivalenceSpec @(TPraos.BHeader StandardCrypto) (natVersion @2) (natVersion @6)
       decoderEquivalenceSpec @(Praos.Header StandardCrypto) (natVersion @7) (natVersion @11)
       decoderEquivalenceSpec @(Leios.Header StandardCrypto) (natVersion @12) maxBound
+    LeiosBlockHeaderSpec.spec

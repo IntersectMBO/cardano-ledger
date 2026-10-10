@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-dijkstra
-version: 0.4.0.0
+version: 0.5.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -14,6 +14,7 @@ build-type: Simple
 data-files:
   cddl/data/dijkstra.cddl
   golden/*.cbor
+  golden/*.hex
   golden/*.json
 
 extra-source-files: CHANGELOG.md
@@ -113,15 +114,15 @@ library
     cardano-base >=0.1.4,
     cardano-crypto-class,
     cardano-crypto-leios >=0.3,
-    cardano-data ^>=1.3.2,
+    cardano-data ^>=1.4,
     cardano-ledger-allegra,
     cardano-ledger-alonzo ^>=1.17,
     cardano-ledger-babbage ^>=1.15,
     cardano-ledger-binary ^>=1.10,
-    cardano-ledger-conway ^>=1.24,
-    cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.22,
+    cardano-ledger-conway ^>=1.25,
+    cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.23,
     cardano-ledger-mary,
-    cardano-ledger-shelley ^>=1.20,
+    cardano-ledger-shelley ^>=1.21,
     cardano-slotting,
     cardano-strict-containers,
     containers,
@@ -154,11 +155,15 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Examples
     Test.Cardano.Ledger.Dijkstra.GenesisSpec
     Test.Cardano.Ledger.Dijkstra.Imp
+    Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec
@@ -211,7 +216,7 @@ library testlib
     microlens,
     microlens-mtl,
     mtl,
-    plutus-ledger-api,
+    plutus-ledger-api >=1.71,
     small-steps,
     tree-diff,
 

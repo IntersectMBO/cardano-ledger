@@ -1,7 +1,29 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.17.1.0
+
+*
+
+### `testlib`
+
+* Add `mkTokenMintingTx`
+
 ## 1.17.0.0
 
+* Add `alonzoSpendableInputsTxBodyF`
+* Add an `ImpossibleContextError` case to `AlonzoContextError`
+* Remove nested `Either` in `PlutusTxInfoResult` and remove `PlutusPurpose` argument
+* Deprecate `mkPlutusTxInfoFromResult` as no longer needed
+* Make `LedgerTxInfo` level aware
+* Add `HasEraTxLevel` for `LedgerTxInfo`
+* Add `LedgerLevelTxInfo`
+* Replace optional `ltiMemoizedSubTransactions` field with required `ltiLevelTxInfo`
+* Make `collectPlutusScriptsWithContext` restricted to `TopTx` level only
+* Change `BBODY` signal to `TPraosBbodySignal`
+* Replace `alonzoBbodyTransition` with `bbodyTransition`
+* Add `HashAnnotated (AlonzoTxWits era) EraIndependentTxWits` instance.
+* Add `getTotalExUnits` to `AlonzoEraTx`, with the existing own-redeemer total as its default.
+* Deprecate `totExUnits` in favor of `getTotalExUnits`; require `AlonzoEraTx` in `totExUnits`, `alonzoMinFeeTx` and `validateExUnitsTooBigUTxO`.
 * Add `CertificateNotSupported` and `PlutusPurposeNotSupported` constructors to `AlonzoContextError`
 * Stop re-exporting `TxOutSource` from `Cardano.Ledger.Alonzo.Plutus.TxInfo` (it remains available from `Cardano.Ledger.Plutus.TxInfo`)
 * Change `transTxCert` to return `Either (ContextError era) PV1.DCert` instead of `PV1.DCert` and add an `Inject (AlonzoContextError era) (ContextError era)` constraint; unsupported certificates now produce `CertificateNotSupported` instead of a partial `error`

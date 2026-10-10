@@ -1,8 +1,35 @@
 # Version history for `cardano-ledger-core`
 
+## 1.23.0.0
+
+* Select the Leios voting committee (CIP-0164) when the mark snapshot is created, instead of when it rotates into the set position:
+  - Add `msStakePoolDistr`, `msLeiosMaxKeyAge` and `msLeiosCommittee` fields to `MarkSnapShot`, memoizing lazily the stake pool distribution and the committee
+  - Add `mkMarkSnapShot`
+  - Change `mkSetSnapShot` to move the memoized values over from the `MarkSnapShot` and remove its `EpochInterval` argument
+  - Change `msSnapShotL` to recompute the memoized values
+  - Rename `ssPoolDistr` to `ssStakePoolDistr`
+  - `MarkSnapShot` now also encodes `msLeiosMaxKeyAge`, so the on-disk ledger state format changes and requires replay
+* Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
+* Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
+
 ## 1.22.0.0
 
 * Add `maxKeyAgeEpochs` accessor in `Cardano.Ledger.State.SnapShots` module
+* Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug
+* Add `assocMapToList`, `assocMapKeys` and `assocMapElems`
+* Add `ToPlutusData` instance for `SlotInterval`
+* Add `ebReferencesAnnouncementBlockHeaderL` to `LeiosEraBlockHeader`
+* Rename `EraIndependentEb` to `EraIndependentEbReferences`
+* Add `EbReferencesAnnouncement` (moved and renamed from `EbAnnouncement` in `cardano-protocol`)
+* Add `blockHeaderL`, `blockBodyL`
+* Add `BlockHeaderVersionInfo` to `Cardano.Ledger.Block`
+* Add `versionInfoBlockHeaderL` to `LeiosEraBlockHeader`
+* Add `ProtocolEraBlockHeader` type family constraint to `EraBlockBody`
+* Move `protVerBlockHeaderL` from `EraBlockHeader` to `PraosEraBlockHeader`
+* Add `TPraosEraBlockHeader`, `PraosEraBlockHeader` and `LeiosEraBlockHeader`
+* Remove `BbodySignal`
+* Add `TPraosBbodySignal`, `PraosBbodySignal` and `LeiosBbodySignal` instead of `BbodySignal`
+* Add `EraIndependentTx` and `EraIndependentTxWits` phantom types to `Cardano.Ledger.Hashes`.
 * Add `addVRFKeyHashOccurrence`, `removeVRFKeyHashOccurrence` and `populateVRFKeyHashes` to `Cardano.Ledger.State.CertState`
 * Remove `poolDistrDistrL`, `poolDistrTotalL`
 * Remove `EraDecoder` and add `EraCodec` to be used in its place
@@ -66,10 +93,19 @@
 
 ### `testlib`
 
+* Add `Arbitrary` and `ToExpr` instances for `SlotInterval`
+* Add `tbhEbRefsAnn` to `TestBlockHeader`
+* Regenerate the compiled scripts in `Test.Cardano.Ledger.Plutus.Examples` with `plutus-tx-1.70`.
+  All `PlutusV3` and `PlutusV4` script hashes change, and the `PlutusV4` scripts now expect the
+  list-encoded `ScriptContext` introduced in `plutus-ledger-api-1.69`
+* Replace the `tbhProtVer` field of `TestBlockHeader` with `tbhVersionInfo :: BlockHeaderVersionInfo`
+* Add `Arbitrary` and `ToExpr` instances for `BlockHeaderVersionInfo`
+* Remove `tbhPrevNonce` from `TestBlockHeader`
 * Add `era` parameter to `StakePoolParams`, `PoolCert`
 * Add a lifted version of `expectExprEqualWithMessage` to `Test.Cardano.Ledger.Imp.Common`
 * Add `Arbitrary` and `ToExpr` instances for `MaxPledgeLeverage`
 * Add `Arbitrary` and `ToExpr` instances for `Milliseconds32`
+* Fix `Arbitrary` instance for `BlsKey` to generate a valid key pair where the proof of possession matches the verification key
 
 ### `cddl`
 
@@ -100,7 +136,7 @@
 * Add `EraIndependentEb`
 * Change `pvMinor` type to `Word32`
 * Add `lookupAccountDeposit`
-* Remove `consumed ` from `EraUTxO`
+* Remove `consumed` from `EraUTxO`
 * Remove no longer needed `(Credential DRepRole -> Maybe Coin)` argument from:
   - `getTotalRefundsTxCerts`
   - `getTotalRefundsTxBody`
