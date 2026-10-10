@@ -28,7 +28,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (epochInfoFirst)
 import Cardano.Ledger.Val ((<->))
@@ -170,7 +169,7 @@ setupRetiredPoolInLeaderDistr = do
 
 spec ::
   forall era.
-  (ConwayEraImp era, EraForecast era) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SNAP" $ do
   -- 'TICKF' skips 'SNAP', because a forecast never needs the new mark snapshot

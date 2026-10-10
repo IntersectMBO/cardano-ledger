@@ -20,7 +20,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayHardForkEvent,
   ConwayNewEpochEvent,
  )
-import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
 import Data.Proxy
@@ -45,7 +44,6 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   ( ConwayEraImp era
-  , EraForecast era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
