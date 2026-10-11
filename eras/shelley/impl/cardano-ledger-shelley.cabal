@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley
-version: 1.20.0.0
+version: 1.21.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -121,10 +121,10 @@ library
     cardano-base >=0.1.1.0,
     cardano-crypto-class >=2.3 && <2.7,
     cardano-crypto-wrapper,
-    cardano-data ^>=1.3.2,
+    cardano-data ^>=1.4,
     cardano-ledger-binary ^>=1.10,
     cardano-ledger-byron,
-    cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.22,
+    cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.23,
     cardano-slotting,
     cardano-strict-containers >=0.1.5,
     containers,
@@ -209,6 +209,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.Era
     Test.Cardano.Ledger.Shelley.Examples
     Test.Cardano.Ledger.Shelley.Imp
+    Test.Cardano.Ledger.Shelley.Imp.BbodySpec
     Test.Cardano.Ledger.Shelley.Imp.DelegSpec
     Test.Cardano.Ledger.Shelley.Imp.EpochSpec
     Test.Cardano.Ledger.Shelley.Imp.LedgerSpec

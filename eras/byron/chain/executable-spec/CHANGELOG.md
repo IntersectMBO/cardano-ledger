@@ -1,5 +1,9 @@
 # Version history for `byron-spec-chain`
 
+## 1.0.2.1
+
+*
+
 ## 1.0.2.0
 
 * Add `Ord` instances for `BbodyPredicateFailure`, `BlockHeader`, `BupiPredicateFailure`,

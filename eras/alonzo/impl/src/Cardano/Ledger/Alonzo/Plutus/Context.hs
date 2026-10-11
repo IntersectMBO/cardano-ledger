@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -28,6 +29,7 @@
 module Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   LedgerTxInfo (..),
+  LedgerLevelTxInfo (..),
   toScriptHashByPurpose,
   EraPlutusTxInfo (..),
   PlutusTxInfoResult (..),
@@ -62,7 +64,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   hoistPlutusPurpose,
   toAsIx,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), Version, kindObjectValue)
+import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, Version, kindObjectValue)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -84,7 +86,6 @@ import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..))
-import Control.Monad (join)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Kind (Type)
@@ -99,8 +100,20 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
 
+-- | Information needed for TxInfo construction that is level specific.
+data LedgerLevelTxInfo level era where
+  LedgerTopTxInfo ::
+    -- | This is a field that is only used starting with Dijkstra era and only by top level
+    -- transactions.
+    Map TxId (TxInfoResult era) ->
+    LedgerLevelTxInfo TopTx era
+  LedgerSubTxInfo ::
+    -- | Index of this sub-transaction in the `subTransactionTxBodyL` list
+    TxIx ->
+    LedgerLevelTxInfo SubTx era
+
 -- | All information that is necessary from the ledger to construct Plutus' TxInfo.
-data LedgerTxInfo era where
+data LedgerTxInfo level era where
   LedgerTxInfo ::
     { ltiProtVer :: !ProtVer
     , ltiEpochInfo :: !(EpochInfo (Either Text))
@@ -110,11 +123,12 @@ data LedgerTxInfo era where
     , ltiScriptsUsed :: [(PlutusPurpose AsIxItem era, SupportedPlutusRunnable era)]
     , ltiScriptHashesUsed :: Map.Map (PlutusPurpose AsIx era) ScriptHash
     -- ^ Map that will be used for looking up `ScriptHash`. Currently unused until Dijkstra era, hence is lazy.
-    , ltiMemoizedSubTransactions :: Map TxId (TxInfoResult era)
-    -- ^ This is a tricky field that is only used starting with Dijkstra era and only by top level
-    -- transactions. It is always safe to leave it as `mempty` upon construction, even for Dijkstra
+    , ltiLevelTxInfo :: LedgerLevelTxInfo level era
     } ->
-    LedgerTxInfo era
+    LedgerTxInfo level era
+
+instance (HasEraTxLevel Tx era, EraTxLevel era) => HasEraTxLevel LedgerTxInfo era where
+  toSTxLevel = toSTxLevel . ltiTx
 
 toScriptHashByPurpose ::
   Ord (PlutusPurpose AsIx era) =>
@@ -143,18 +157,18 @@ class
 
   toPlutusScriptPurpose ::
     proxy l ->
-    LedgerTxInfo era ->
+    LedgerTxInfo level era ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
   toPlutusTxInfo ::
     proxy l ->
-    LedgerTxInfo era ->
+    LedgerTxInfo level era ->
     PlutusTxInfoResult l era
 
   toPlutusArgs ::
     proxy l ->
-    LedgerTxInfo era ->
+    LedgerTxInfo level era ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Data era ->
@@ -178,12 +192,7 @@ class
 -- nested `Either`
 newtype PlutusTxInfoResult l era
   = PlutusTxInfoResult
-  { unPlutusTxInfoResult ::
-      Either
-        (ContextError era)
-        ( PlutusPurpose AsPurpose era ->
-          Either (ContextError era) (PlutusTxInfo l)
-        )
+  { unPlutusTxInfoResult :: Either (ContextError era) (PlutusTxInfo l)
   }
 
 -- | Given the prepared `PlutusTxInfoResult` and the purpose this function allows constructing the `PlutusTxInfo`, while memoizing the computation from  `PlutusTxInfoResult` for its subsequent uses.
@@ -191,8 +200,8 @@ mkPlutusTxInfoFromResult ::
   PlutusPurpose AsPurpose era ->
   PlutusTxInfoResult l era ->
   Either (ContextError era) (PlutusTxInfo l)
-mkPlutusTxInfoFromResult sp (PlutusTxInfoResult txInfoResult) =
-  join $ ($ sp) <$> txInfoResult
+mkPlutusTxInfoFromResult _sp (PlutusTxInfoResult txInfoResult) = txInfoResult
+{-# DEPRECATED mkPlutusTxInfoFromResult "In favor of `unPlutusTxInfoResult`" #-}
 
 -- | This is what `toPlutusTxInfo` would be without the intermediate `PlutusTxInfoResult`.
 --
@@ -201,7 +210,7 @@ mkPlutusTxInfoFromResult sp (PlutusTxInfoResult txInfoResult) =
 toPlutusTxInfoForPurpose ::
   EraPlutusTxInfo l era =>
   proxy l ->
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   PlutusPurpose AsPurpose era ->
   Either (ContextError era) (PlutusTxInfo l)
 toPlutusTxInfoForPurpose proxy lti sp =
@@ -229,7 +238,7 @@ class
   mkSupportedPlutusRunnable :: Version -> PlutusScript era -> SupportedPlutusRunnable era
 
   -- | Construct `PlutusTxInfo` for all supported languages in this era.
-  mkTxInfoResult :: LedgerTxInfo era -> TxInfoResult era
+  mkTxInfoResult :: LedgerTxInfo level era -> TxInfoResult era
 
   -- | `TxInfo` for the same language can be shared between executions of every script of the same
   -- version in a single transaction.

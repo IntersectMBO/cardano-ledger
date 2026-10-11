@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo (mkAlonzoStAnnTx)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EraBlockHeader)
+import Cardano.Ledger.Block (EraBlockHeader, PraosBbodySignal (..), PraosEraBlockHeader)
 import Cardano.Ledger.Conway.BlockBody ()
 import Cardano.Ledger.Conway.Era (
   ConwayEra,
@@ -58,7 +58,8 @@ instance ApplyTx ConwayEra where
 
 instance ApplyTick ConwayEra
 
-instance EraBlockHeader h ConwayEra => ApplyBlock h ConwayEra
+instance (EraBlockHeader h ConwayEra, PraosEraBlockHeader h ConwayEra) => ApplyBlock h ConwayEra where
+  wrapBlockSignal = PraosBbodySignal
 
 instance RunConwayRatify ConwayEra
 

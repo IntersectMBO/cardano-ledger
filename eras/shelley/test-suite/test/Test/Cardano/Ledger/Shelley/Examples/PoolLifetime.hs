@@ -31,10 +31,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (blockHeader))
 import Cardano.Ledger.Coin (
   Coin (..),
-  CompactForm (CompactCoin),
   DeltaCoin (..),
   addDeltaCoin,
-  knownNonZeroCoin,
   toDeltaCoin,
  )
 import Cardano.Ledger.Compactible
@@ -74,7 +72,6 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (def)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (SNothing))
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -521,26 +518,11 @@ snapEx5 =
 poolParamsEx5 :: [StakePoolParams era]
 poolParamsEx5 = [Cast.aliceStakePoolParams]
 
-pdEx5 :: PoolDistr
-pdEx5 =
-  PoolDistr
-    ( Map.singleton
-        (aikColdKeyHash Cast.alicePoolKeys)
-        ( IndividualPoolStake
-            1
-            (CompactCoin 1)
-            Cast.aliceVRFKeyHash
-            SNothing
-        )
-    )
-    (knownNonZeroCoin @1)
-
 expectedStEx5 :: ChainState ShelleyEra
 expectedStEx5 =
   C.newEpoch blockEx5
     . C.newSnapshot snapEx5 feeTx4
     . C.applyRewardUpdate rewardUpdateEx4
-    . C.setPoolDistr pdEx5
     . C.setOCertCounter coreNodeHK 1
     $ expectedStEx4
   where

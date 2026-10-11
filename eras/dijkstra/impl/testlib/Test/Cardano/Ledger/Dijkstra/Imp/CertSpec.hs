@@ -1,16 +1,18 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.CertSpec (spec) where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance (Voter (..))
+import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
-import qualified Data.List.NonEmpty as NE
-import Data.Maybe.Strict (StrictMaybe (..))
-import qualified Data.OMap.Strict as OMap
+import Cardano.Ledger.Dijkstra.Rules
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
@@ -19,15 +21,15 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "CERT" $ do
-  xit "Subtransaction consumes correct refund after keyDeposit is changed" $ do
+  it "Subtransaction consumes correct refund after keyDeposit is changed" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash
     _ <- registerStakeCredential stakingCred
 
     initialKeyDeposit <- getsPParams ppKeyDepositL
+    let newKeyDeposit = initialKeyDeposit <> initialKeyDeposit
     impAnn "Change key deposit" $ do
       (dRep, _, _) <- setupSingleDRep 100_000_000
       ccHotCreds <- registerInitialCommittee
-      let newKeyDeposit = initialKeyDeposit <> initialKeyDeposit
       ppChangeId <-
         submitParameterChange SNothing $
           emptyPParamsUpdate
@@ -39,37 +41,41 @@ spec = describe "CERT" $ do
       getsPParams ppKeyDepositL `shouldReturn` newKeyDeposit
 
     impAnn "Unregister staking credential" $ do
-      expectStakeCredRegistered stakingCred
       let
-        deRegCert = UnRegDepositTxCert stakingCred initialKeyDeposit
-        subTransaction =
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ SSeq.singleton deRegCert
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . subTransactionsTxBodyL .~ OMap.singleton subTransaction
+        unregTxWithRefund refund =
+          mkTopTxWithSubTxs
+            [ mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ SSeq.singleton (UnRegDepositTxCert stakingCred refund)
+            ]
+
+      -- the refund has to match the deposit that was actually paid at registration,
+      -- not the key deposit currently in the protocol parameters
+      submitFailingTx
+        (unregTxWithRefund newKeyDeposit)
+        [ injectFailure . DijkstraSubDelegPredFailure $
+            RefundIncorrectDELEG (Mismatch newKeyDeposit initialKeyDeposit)
+        ]
+
+      submitTx_ $ unregTxWithRefund initialKeyDeposit
       expectStakeCredNotRegistered stakingCred
 
-  xit "Multiple subtransactions cannot get the same refund" $ do
+  it "Two sub-transactions cannot unregister the same credential" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash
     _ <- registerStakeCredential stakingCred
     keyDeposit <- getsPParams ppKeyDepositL
-    value1 <- arbitrary
     (_, addr1) <- freshKeyAddr
-    input1 <- sendCoinTo addr1 value1
-    value2 <- arbitrary
+    input1 <- sendCoinTo addr1 mempty
     (_, addr2) <- freshKeyAddr
-    input2 <- sendCoinTo addr2 value2
+    input2 <- sendCoinTo addr2 mempty
     let
       subTx1 =
         mkBasicTx mkBasicTxBody
           & bodyTxL . inputsTxBodyL .~ Set.singleton input1
-          & bodyTxL . certsTxBodyL .~ SSeq.singleton (UnRegDepositTxCert stakingCred keyDeposit)
+          & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert stakingCred keyDeposit]
       subTx2 =
         mkBasicTx mkBasicTxBody
           & bodyTxL . inputsTxBodyL .~ Set.singleton input2
-          & bodyTxL . certsTxBodyL .~ SSeq.singleton (UnRegDepositTxCert stakingCred keyDeposit)
-      tx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable [subTx1, subTx2]
-    submitFailingTx tx . NE.singleton $ error "TODO: predicate failure not yet implemented"
+          & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert stakingCred keyDeposit]
+    submitFailingTx
+      (mkTopTxWithSubTxs [subTx1, subTx2])
+      [injectFailure $ DijkstraSubDelegPredFailure $ StakeKeyNotRegisteredDELEG stakingCred]

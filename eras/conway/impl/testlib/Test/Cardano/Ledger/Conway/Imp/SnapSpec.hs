@@ -28,7 +28,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (epochInfoFirst)
 import Cardano.Ledger.Val ((<->))
@@ -55,7 +54,7 @@ getDRepVotingStake drep = do
 
 getLeaderElectionStake :: KeyHash StakePool -> ImpTestM era Coin
 getLeaderElectionStake pool =
-  fromCompact . individualTotalPoolStake . (Map.! pool) . unPoolDistr <$> getsNES nesPdL
+  fromCompact . individualTotalPoolStake . (Map.! pool) . unPoolDistr <$> getsNES nesStakePoolDistrG
 
 getActiveProposalDeposits :: ConwayEraImp era => KeyHash StakePool -> ImpTestM era Coin
 getActiveProposalDeposits pool = do
@@ -147,7 +146,7 @@ setupCombinedScenario = do
   pure (poolActive, drep, govActionDeposit <> poolDeposit <> Coin 1_000_000)
 
 isPoolInLeaderDistr :: KeyHash StakePool -> ImpTestM era Bool
-isPoolInLeaderDistr pool = Map.member pool . unPoolDistr <$> getsNES nesPdL
+isPoolInLeaderDistr pool = Map.member pool . unPoolDistr <$> getsNES nesStakePoolDistrG
 
 isPoolInRewardSnapshot :: KeyHash StakePool -> ImpTestM era Bool
 isPoolInRewardSnapshot pool =
@@ -170,7 +169,7 @@ setupRetiredPoolInLeaderDistr = do
 
 spec ::
   forall era.
-  (ConwayEraImp era, EraForecast era) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SNAP" $ do
   -- 'TICKF' skips 'SNAP', because a forecast never needs the new mark snapshot

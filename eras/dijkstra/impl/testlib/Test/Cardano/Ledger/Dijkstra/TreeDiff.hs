@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
 import Cardano.Ledger.Dijkstra.Core (
@@ -242,6 +242,9 @@ instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolPredFailure era)
 
+instance ToExpr (ApplyTxError DijkstraEra) where
+  toExpr (DijkstraApplyTxError failures) = toExpr failures
+
 instance
   ToExpr (Event (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolEvent era)
@@ -304,6 +307,8 @@ instance
 instance ToExpr (Conway.ConwayGovEvent era) => ToExpr (DijkstraSubGovEvent era)
 
 instance ToExpr (DijkstraSubGovCertPredFailure era)
+
+instance ToExpr (DijkstraPoolPredFailure era)
 
 instance ToExpr (DijkstraSubPoolPredFailure era)
 

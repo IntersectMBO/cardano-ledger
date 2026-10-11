@@ -89,7 +89,7 @@ goldenNewEpochStateExpectation
     } =
     expectGoldenToCBOR DiffHex nes $
       mconcat
-        [ E (TkListLen 7)
+        [ E (TkListLen 6)
         , E (TkWord64 (unEpochNo nesEL))
         , mapEnc (unBlocksMade nesBprev)
         , mapEnc (unBlocksMade nesBcur)
@@ -111,7 +111,6 @@ goldenNewEpochStateExpectation
             , Ev ver esNonMyopic
             ]
         , Ev ver nesRu
-        , Ev ver nesPd
         , E stashedAVVMAddresses
         ]
     where
@@ -129,14 +128,16 @@ goldenNewEpochStateExpectation
           , Ev ver ssActiveStake
           , Ev ver ssStakePoolsSnapShot
           ]
+      -- msStakePoolDistr and msLeiosCommittee are derived, so not serialized.
       markSnapShotEnc MarkSnapShot {..} =
         Em
-          [ E (TkListLen 3)
+          [ E (TkListLen 4)
           , snapShotEnc msSnapShot
           , Ev ver msEpochNo
           , Ev ver msLeiosCommitteeSize
+          , Ev ver msLeiosMaxKeyAge
           ]
-      -- ssPoolDistr is derived, so not serialized; the committee is stored.
+      -- ssStakePoolDistr is derived, so not serialized; the committee is stored.
       setSnapShotEnc SetSnapShot {..} =
         Em
           [ E (TkListLen 2)

@@ -181,6 +181,8 @@ instance Cborg.Serialise PV4.Address
 
 instance Cborg.Serialise PV4.TxOut
 
+instance Cborg.Serialise PV4.TxOutRef
+
 instance Cborg.Serialise PV4.TxInInfo
 
 instance Cborg.Serialise PV4.POSIXTimeRange
@@ -188,6 +190,18 @@ instance Cborg.Serialise PV4.POSIXTimeRange
 instance Cborg.Serialise PV4.TxInfo
 
 instance Cborg.Serialise VersionedTxInfo
+
+instance Cborg.Serialise PV4.ProposalProcedure
+
+instance Cborg.Serialise PV4.GovernanceActionId
+
+instance Cborg.Serialise PV4.GovernanceAction
+
+instance Cborg.Serialise PV4.ProtocolVersion
+
+instance Cborg.Serialise PV4.Rational
+
+instance Cborg.Serialise PV4.Constitution
 
 instance EncCBOR VersionedTxInfo where
   encCBOR = fromPlainEncoding . Cborg.encode

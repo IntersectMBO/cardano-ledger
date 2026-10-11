@@ -1,5 +1,13 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.12.0.0
+
+*
+
+### `testlib`
+
+* Move `mkTokenMintingTx` to `cardano-ledger-alonzo:testlib`
+
 ## 1.11.1.0
 
 * Widen `cardano-crypto-class` upper bound to `<2.7`

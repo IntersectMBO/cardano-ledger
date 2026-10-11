@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (SupportedPlutusRunnable)
 import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
-import Cardano.Ledger.Babbage.TxBody (TxBody (..))
+import Cardano.Ledger.Babbage.TxBody (TxBody (..), babbageAllInputsTxBodyF)
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
 import Cardano.Ledger.Core
@@ -68,6 +68,9 @@ instance EraTx BabbageEra where
   {-# INLINE validateNativeScript #-}
 
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
+
+  allInputsTxBodyF = babbageAllInputsTxBodyF
+  {-# INLINE allInputsTxBodyF #-}
 
 instance EqRaw (Tx l BabbageEra) where
   eqRaw = alonzoTxEqRaw

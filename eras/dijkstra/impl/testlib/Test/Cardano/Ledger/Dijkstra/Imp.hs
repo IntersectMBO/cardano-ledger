@@ -6,16 +6,19 @@ module Test.Cardano.Ledger.Dijkstra.Imp where
 
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec as SUBGOV
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec as SUBLEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec as SUBUTXO
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec as SUBUTXOW
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
@@ -24,7 +27,6 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
   ( DijkstraEraImp era
-  , EraForecast era
   , Event (EraRule "EPOCH" era) ~ Conway.ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ Conway.ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ Conway.ConwayHardForkEvent era
@@ -35,9 +37,13 @@ spec ::
 spec era = do
   ConwayImp.spec era
   describe "DijkstraEra Onwards" $ withImpInitEachEraVersion era $ do
+    BBODY.spec
     LEDGER.spec
+    MEMPOOL.spec
+    SUBLEDGER.spec
     CERT.spec
     ENTITIES.spec
+    SUBGOV.spec
     POOL.spec
     SNAP.spec
     UTXOW.spec

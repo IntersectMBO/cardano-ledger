@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Conformance.Imp.Dijkstra (spec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
+import Test.Cardano.Ledger.Allegra.Imp.UtxoSpec qualified as AllegraUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
 import Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec qualified as AlonzoUTXOW
@@ -23,6 +24,7 @@ import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as ConwayEPOCH
 import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as ConwayGOVCERT
 import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as ConwayGOV
 import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as ConwayLEDGER
+import Test.Cardano.Ledger.Conway.Imp.MempoolSpec qualified as ConwayMEMPOOL
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as ConwayRATIFY
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec qualified as ConwaySNAP
 import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as ConwayUTXO
@@ -31,7 +33,10 @@ import Test.Cardano.Ledger.Conway.Imp.UtxowSpec qualified as ConwayUTXOW
 import Test.Cardano.Ledger.Dijkstra.Imp.CertSpec qualified as CERT
 import Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec qualified as ENTITIES
 import Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec qualified as LEDGER
+import Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec qualified as MEMPOOL
 import Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec qualified as POOL
+import Test.Cardano.Ledger.Dijkstra.Imp.SubGovSpec qualified as SUBGOV
+import Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec qualified as SUBLEDGER
 import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec qualified as SUBUTXO
 import Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec qualified as SUBUTXOW
 import Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec qualified as UTXO
@@ -76,6 +81,10 @@ spec = do
             ShelleyLEDGER.spec
             ConwayLEDGER.spec
             LEDGER.spec
+            SUBLEDGER.spec
+
+            ConwayMEMPOOL.spec
+            MEMPOOL.spec
 
             ShelleyPOOL.spec
             POOL.spec
@@ -84,7 +93,10 @@ spec = do
 
             ConwaySNAP.spec
 
+            SUBGOV.spec
+
             ShelleyUTXO.spec
+            AllegraUTXO.spec
             MaryUTXO.spec
             AlonzoUTXO.spec
             BabbageUTXO.spec

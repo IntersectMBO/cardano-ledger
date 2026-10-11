@@ -34,8 +34,6 @@ module Cardano.Ledger.Dijkstra.Era (
   SUBUTXO,
   UTXO,
   UTXOW,
-  DijkstraEraBlockHeader (..),
-  DijkstraBbodySignal (..),
 
   -- * Deprecated
   DijkstraBBODY,
@@ -59,23 +57,14 @@ module Cardano.Ledger.Dijkstra.Era (
 ) where
 
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.BaseTypes (Nonce)
-import Cardano.Ledger.Block (Block, EraBlockHeader)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Internal.Era (DijkstraEra)
 import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Lens.Micro
 
 instance EraTxLevel DijkstraEra where
   type STxLevel l DijkstraEra = STxBothLevels l DijkstraEra
-
-data DijkstraBbodySignal era
-  = forall h. DijkstraEraBlockHeader h era => DijkstraBbodySignal (Block h era)
-
-class EraBlockHeader h era => DijkstraEraBlockHeader h era where
-  prevNonceBlockHeaderL :: Lens' (Block h era) Nonce
 
 -------------------------------------------------------------------------------
 -- Deprecated rules

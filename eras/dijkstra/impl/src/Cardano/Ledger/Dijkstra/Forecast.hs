@@ -27,6 +27,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppMaxEndorserBlockTxsSizeL,
   ppMaxRefScriptSizePerEndorserBlockL,
  )
+import Cardano.Ledger.Dijkstra.Rules.Snap ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Plutus.ExUnits (OrdExUnits)
 import Cardano.Ledger.Shelley.API.Forecast (
@@ -38,7 +39,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   esSnapshotsL,
   nesEsL,
-  nesPdL,
+  nesStakePoolDistrG,
  )
 import Cardano.Ledger.State (
   EraGov,
@@ -102,7 +103,7 @@ mkDijkstraForecast ::
   DijkstraForecast t era
 mkDijkstraForecast nes =
   DijkstraForecast
-    { dfPoolDistr = nes ^. nesPdL
+    { dfPoolDistr = nes ^. nesStakePoolDistrG
     , dfMaxBlockHeaderSize = pp ^. ppMaxBHSizeL
     , dfMaxBlockBodySize = pp ^. ppMaxBBSizeL
     , dfProtocolVersion = pp ^. ppProtocolVersionL

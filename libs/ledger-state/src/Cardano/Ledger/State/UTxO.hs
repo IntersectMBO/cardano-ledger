@@ -361,7 +361,7 @@ instance Pretty NewEpochStateStats where
       ]
 
 countNewEpochStateStats :: NewEpochState CurrentEra -> NewEpochStateStats
-countNewEpochStateStats NewEpochState {..} =
+countNewEpochStateStats nes@NewEpochState {..} =
   let ness =
         NewEpochStateStats
           { nessPrevBlocksMade = statMapKeys (unBlocksMade nesBprev)
@@ -369,7 +369,7 @@ countNewEpochStateStats NewEpochState {..} =
           , nessBlocksMade = mempty
           , nessEpochStateStats = countEpochStateStats nesEs
           , nessRewardUpdate = RewardUpdateStats
-          , nessPoolDistrStats = calcPoolDistrStats nesPd
+          , nessPoolDistrStats = calcPoolDistrStats (nes ^. nesStakePoolDistrG)
           , nessAggregateStats = mempty
           }
    in ness

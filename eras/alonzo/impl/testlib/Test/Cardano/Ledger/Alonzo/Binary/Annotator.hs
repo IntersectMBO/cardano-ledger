@@ -220,6 +220,9 @@ instance (AlonzoEraScript era, DecCBOR (NativeScript era)) => DecCBOR (AlonzoTxW
         7 -> Just $ do
           x <- alonzoPlutusScriptDecoder SPlutusV3
           pure $ addScriptsTxWitsRaw x acc
+        8 -> Just $ do
+          x <- alonzoPlutusScriptDecoder SPlutusV4
+          pure $ addScriptsTxWitsRaw x acc
         _ -> Nothing
       {-# INLINE decoderByKey #-}
 

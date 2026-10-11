@@ -6,6 +6,8 @@ module Cardano.Ledger.Allegra.Forecast () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.State.CertState ()
+import Cardano.Ledger.Allegra.State.Stake ()
+import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.Shelley (
   ShelleyForecast (..),
   mkShelleyForecast,

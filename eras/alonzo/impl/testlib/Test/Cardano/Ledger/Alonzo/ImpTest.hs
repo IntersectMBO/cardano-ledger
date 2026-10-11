@@ -38,6 +38,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   computeScriptIntegrityHash,
   computeScriptIntegrity,
   mkTxWithPlutusAndBootstrapAddress,
+  mkTokenMintingTx,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -77,6 +78,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), PolicyID (..), multiAssetFromList)
 import Cardano.Ledger.Plutus (
   Data (..),
   Datum (..),
@@ -109,6 +111,7 @@ import Data.Maybe (catMaybes, isJust, isNothing, mapMaybe)
 import Data.Set ((\\))
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.Typeable (Typeable)
 import Lens.Micro
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
@@ -455,6 +458,8 @@ instance ShelleyEraImp AlonzoEra where
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
 
+instance AllegraEraImp AlonzoEra
+
 instance MaryEraImp AlonzoEra
 
 instance AlonzoEraImp AlonzoEra where
@@ -611,3 +616,19 @@ mkTxWithPlutusAndBootstrapAddress slang = do
           & outputsTxBodyL .~ [txOutBootstrapAddr]
       )
       & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
+
+mkTokenMintingTx ::
+  forall era l. (AlonzoEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
+mkTokenMintingTx sh = do
+  name <- arbitrary
+  count <- choose (1, 10)
+  let policyId = PolicyID sh
+  let ma = multiAssetFromList [(policyId, name, count)]
+  addr <- case impLookupPlutusScript @era sh of
+    Just plutusScript
+      | plutusScriptLanguage plutusScript >= PlutusV4 -> freshKeyAddrNoPtr_
+    _ -> freshKeyAddr_
+  pure $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . mintTxBodyL .~ ma
+      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]

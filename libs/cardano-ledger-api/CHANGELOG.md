@@ -1,12 +1,27 @@
 # Version history for `cardano-ledger-api`
 
+## 1.16.0.0
+
+* Add methods to `AnyEraTxBody`:
+  - `subTransactionsTxBodyG`
+  - `requiredTopLevelGuardsTxBodyG`
+  - `directDepositsTxBodyG`
+  - `accountBalanceIntervalsTxBodyG`
+  - `startingAccountBalanceIntervalsTxBodyG`
+
 ## 1.15.0.0
 
 * Add `ssLeiosCommittee` to `StakeSnapshots`: the Leios voting committee seated on the `set` snapshot, in seat order, each seat attributed to its pool and carrying the pool's registered key with its registration epoch and whether that key is still honoured. Adds `QueryLeiosSeat`
 * Replace `qpsrStakePoolParams` and `qpsrDeposits` with a single `qpsrStakePools` reporting `StakePoolState`, so `queryPoolState` exposes a pool's registered BLS key with the epoch it was registered in, plus its delegators. `queryPoolState` and `mkQueryPoolStateResult` no longer take a `Network`
+* Add `queryNonMyopicMemberRewards` (`GetNonMyopicMemberRewards`) with the `QueryResultNonMyopicMemberRewards` result type
+* Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug
 * Add `era` parameter to `QueryPoolStateResult`, `StakePoolParams`
 * Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
 * Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`. Encoded and decoded only from protocol version 12 (Dijkstra) onwards, so the `GetPoolDistr2` wire format is unchanged in earlier eras
+
+### `testlib`
+
+* Add `Arbitrary` instance for `QueryResultNonMyopicMemberRewards`
 
 ## 1.14.0.0
 

@@ -120,6 +120,8 @@ impBabbageExpectTxSuccess tx = do
       impAnn "Collateral return should be in UTxO" $
         expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- returns]
 
+instance AllegraEraImp BabbageEra
+
 instance MaryEraImp BabbageEra
 
 instance AlonzoEraImp BabbageEra where

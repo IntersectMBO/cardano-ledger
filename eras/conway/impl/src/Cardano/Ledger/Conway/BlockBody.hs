@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary (
   toPlainEncoding,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), PraosEraBlockHeader)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Core
@@ -32,6 +32,7 @@ import Data.Typeable (Typeable)
 
 instance EraBlockBody ConwayEra where
   type BlockBody ConwayEra = AlonzoBlockBody ConwayEra
+  type ProtocolEraBlockHeader h ConwayEra = PraosEraBlockHeader h ConwayEra
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = alonzoBlockBodyHash

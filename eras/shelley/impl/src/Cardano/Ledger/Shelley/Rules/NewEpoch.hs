@@ -120,7 +120,6 @@ instance
           def
           SNothing
           def
-          def
     ]
 
   transitionRules = [newEpochTransition]
@@ -148,7 +147,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , src@(NewEpochState eNoL _ bcur es ru _pd _)
+      , src@(NewEpochState eNoL _ bcur es ru _)
       , eNo
       ) <-
     judgmentContext
@@ -166,24 +165,6 @@ newEpochTransition = do
       es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', eNo)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
-      let pd' = ssStakeMarkPoolDistr (esSnapshots es)
-      -- The spec sets pd' with:
-      -- pd' = calculatePoolDistr (ssStakeSet $ esSnapshots es'''),
-      --
-      -- This is equivalent to:
-      -- pd' = ssStakeMarkPoolDistr (esSnapshots es)
-      --
-      -- since:
-      --
-      -- \* SNAP rotates `ssStakeMark` to `ssStakeSet`, so
-      -- \* the `ssStakeSet` snapshot in es''' is `ssStakeMark` in es
-      -- \* `ssStakeMarkPoolDistr` is computed by calling `calculatePoolDistr`
-      --    on the `ssStakeMark` snapshot at the previous epoch boundary.
-      -- \* RUPD does not alter `esSnaphots`
-      -- \* MIR does not alter `esSnaphots`
-      --
-      -- This was done to memoize the per-pool stake distribution.
-      -- See ADR-7.
       pure $
         src
           { nesEL = eNo
@@ -191,7 +172,6 @@ newEpochTransition = do
           , nesBcur = BlocksMade mempty
           , nesEs = es'''
           , nesRu = SNothing
-          , nesPd = pd'
           }
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty

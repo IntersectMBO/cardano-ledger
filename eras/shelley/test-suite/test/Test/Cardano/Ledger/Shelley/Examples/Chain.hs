@@ -12,16 +12,14 @@ module Test.Cardano.Ledger.Shelley.Examples.Chain (
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, nesPdL)
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.State
 import Cardano.Protocol.TPraos.BlockHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
-import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack
-import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainStateNesL, totalAda)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Test.Cardano.Ledger.Shelley.TreeDiff (expectExprEqual)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
@@ -56,9 +54,7 @@ testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   checkTrace @(CHAIN ShelleyEra)
     runShelleyBase
     ()
-    ( (pure initSt .- block <&> chainStateNesL . nesPdL .~ def)
-        .->> (expectedSt & chainStateNesL . nesPdL .~ def)
-    )
+    (pure initSt .- block .->> expectedSt)
     >> expectExprEqual (totalAda expectedSt) maxLLSupply
 testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
   let st = runShelleyBase $ applySTSTest @(CHAIN ShelleyEra) (TRC ((), initSt, block))

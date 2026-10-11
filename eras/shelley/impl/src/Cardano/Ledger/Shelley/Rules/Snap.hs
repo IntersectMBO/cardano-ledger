@@ -79,9 +79,11 @@ snapTransition = do
 
   let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) _pp = snapEnv
       instantStake = ls ^. instantStakeG
-      -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap =
         snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
+      -- Pre-Dijkstra eras have no Leios committee, so its size is zero and it
+      -- rotates into the set position empty.
+      markSnapShot = mkMarkSnapShot istakeSnap eNo 0 (EpochInterval 0)
 
   tellEvent $
     let stakeMap :: Map (Credential Staking) (Coin, KeyHash StakePool)
@@ -93,12 +95,8 @@ snapTransition = do
 
   pure $
     SnapShots
-      { -- Pre-Dijkstra eras have no Leios committee, so its size is zero and it
-        -- rotates into the set position empty.
-        ssStakeMark = MarkSnapShot istakeSnap eNo 0
-      , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
-        ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
-      , ssStakeSet = mkSetSnapShot (ssStakeMark s) (EpochInterval 0)
+      { ssStakeMark = markSnapShot
+      , ssStakeSet = mkSetSnapShot (ssStakeMark s)
       , ssStakeGo = mkGoSnapShot (ssStakeSet s)
       , ssFee = fees
       }

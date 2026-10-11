@@ -25,13 +25,14 @@ import Cardano.Ledger.Binary (
   toPlainEncoding,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), PraosEraBlockHeader)
 import Cardano.Ledger.Core
 import qualified Data.ByteString as BS
 import Data.Typeable (Typeable)
 
 instance EraBlockBody BabbageEra where
   type BlockBody BabbageEra = AlonzoBlockBody BabbageEra
+  type ProtocolEraBlockHeader h BabbageEra = PraosEraBlockHeader h BabbageEra
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = alonzoBlockBodyHash

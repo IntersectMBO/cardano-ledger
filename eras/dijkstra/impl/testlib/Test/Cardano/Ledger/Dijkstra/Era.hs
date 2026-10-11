@@ -11,11 +11,9 @@ module Test.Cardano.Ledger.Dijkstra.Era (
   DijkstraEraTest,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..), EraPlutusTxInfo)
 import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Era (DijkstraEraBlockHeader (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript)
 import Cardano.Ledger.Dijkstra.State
@@ -24,10 +22,7 @@ import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
-import Data.Maybe (fromJust)
-import Lens.Micro (lens)
 import Paths_cardano_ledger_dijkstra (getDataFileName)
-import Test.Cardano.Ledger.BlockHeader (TestBlockHeader (..))
 import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
@@ -87,6 +82,7 @@ class
   , DijkstraEraTxBody era
   , DijkstraEraScript era
   , DijkstraEraUTxO era
+  , EraPlutusTxInfo PlutusV4 era
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
   DijkstraEraTest era
@@ -104,9 +100,3 @@ instance BabbageEraTest DijkstraEra
 instance ConwayEraTest DijkstraEra
 
 instance DijkstraEraTest DijkstraEra
-
-instance DijkstraEraBlockHeader TestBlockHeader DijkstraEra where
-  prevNonceBlockHeaderL =
-    lens
-      (fromJust . tbhPrevNonce . blockHeader)
-      $ \b@Block {blockHeader} pNonce -> b {blockHeader = blockHeader {tbhPrevNonce = Just pNonce}}

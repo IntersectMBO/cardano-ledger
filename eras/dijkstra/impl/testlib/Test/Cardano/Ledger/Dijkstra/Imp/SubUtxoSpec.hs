@@ -31,7 +31,6 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
   multiAssetFromList,
  )
-import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Tools (setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
@@ -49,7 +48,6 @@ import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (<>~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SUBUTXO" $ do
@@ -61,7 +59,7 @@ spec = describe "SUBUTXO" $ do
         (mkBasicTx $ mkBasicTxBody & vldtTxBodyL .~ validityInterval)
         [injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot]
 
-    disableInConformanceIt "the validity interval ends at the current slot" $ do
+    it "the validity interval ends at the current slot" $ do
       currentSlot <- gets (^. impCurSlotNoG)
       let validityInterval = ValidityInterval SNothing (SJust currentSlot)
       submitFailingSubTx
@@ -115,7 +113,7 @@ spec = describe "SUBUTXO" $ do
       let badReferenceInput = neverSubmittedTxIn @era 0
       submitFailingSubTx
         (mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [badReferenceInput])
-        [injectFailure . SubBadInputsUTxO @era $ NES.singleton badReferenceInput]
+        [injectFailure . BadInputsUTxO @era $ NES.singleton badReferenceInput]
 
     it "an input spent by an earlier sub-transaction fails only the check against the threaded UTxO" $ do
       (sharedTxIn, subTxs) <- subTxsSpendingOneInput
@@ -127,7 +125,7 @@ spec = describe "SUBUTXO" $ do
       let badInput = neverSubmittedTxIn @era 0
       submitFailingSubTx
         (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [badInput])
-        [ injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
+        [ injectFailure . BadInputsUTxO @era $ NES.singleton badInput
         , injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
         ]
 
@@ -142,9 +140,9 @@ spec = describe "SUBUTXO" $ do
                 & inputsTxBodyL .~ [badInput]
                 & referenceInputsTxBodyL .~ [badReferenceInput]
           )
-          [ injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
-          , injectFailure . SubBadInputsUTxO @era $
+          [ injectFailure . BadInputsUTxO @era $
               NES.singleton badInput <> NES.singleton badReferenceInput
+          , injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
           ]
 
   describe "Inputs produced or spent within the batch" $ do
@@ -156,7 +154,7 @@ spec = describe "SUBUTXO" $ do
             , mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [producedTxIn]
             ]
         )
-        [injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn]
+        [injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn]
 
     it "referencing an output from an earlier sub-tx fails" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
@@ -166,7 +164,7 @@ spec = describe "SUBUTXO" $ do
             , mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [producedTxIn]
             ]
         )
-        [injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn]
+        [injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn]
 
     it "same input in different sub-transactions" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
@@ -176,7 +174,7 @@ spec = describe "SUBUTXO" $ do
             , producingSubTx
             ]
         )
-        [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        [ injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn
         , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
         ]
 
@@ -190,6 +188,8 @@ spec = describe "SUBUTXO" $ do
       getUTxO >>= (`expectUTxOContent` [(txIn, isNothing)])
 
   describe "SubOutputBootAddrAttrsTooBig" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "an output to a bootstrap address whose attributes exceed the limit" $ do
       bootAddr <- freshBootstrapAddressOversizedPayload
       let subTx :: Tx SubTx era
@@ -200,6 +200,8 @@ spec = describe "SUBUTXO" $ do
         txOuts <- subTxOutputs fixedUpTx
         pure [injectFailure $ SubOutputBootAddrAttrsTooBig @era txOuts]
 
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "several such outputs, reported in their order in the body" $ do
       firstBootAddr <- freshBootstrapAddressOversizedPayload
       secondBootAddr <- freshBootstrapAddressOversizedPayload
@@ -282,6 +284,8 @@ spec = describe "SUBUTXO" $ do
     getUTxO >>= (`expectUTxOContent` [(txIn, isNothing)])
 
   describe "Composite tests" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt
       "seven failures of one sub-transaction, in the reverse of the order the rule checks them"
       $ do
@@ -305,14 +309,14 @@ spec = describe "SUBUTXO" $ do
                 & outputsTxBodyL .~ [tooBigTxOut, bootstrapAttrsTxOut, tooSmallTxOut]
                 & networkIdTxBodyL .~ SJust Mainnet
           )
-          [ injectFailure . SubWrongNetworkInTxBody @era $
+          [ injectFailure . BadInputsUTxO @era $ NES.singleton badReferenceInput
+          , injectFailure . SubWrongNetworkInTxBody @era $
               Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
           , injectFailure . SubWrongNetwork @era Testnet $ NES.singleton mainnetAddr
           , injectFailure $
               SubBabbageOutputTooSmallUTxO @era
                 [(tooSmallTxOut, getMinCoinTxOut pp tooSmallTxOut)]
           , injectFailure $ SubOutputBootAddrAttrsTooBig @era [bootstrapAttrsTxOut]
-          , injectFailure . SubBadInputsUTxO @era $ NES.singleton badReferenceInput
           , injectFailure $ SubOutputTooBigUTxO @era [outputTooBigEntry pp tooBigTxOut]
           , injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
           ]
@@ -342,6 +346,8 @@ spec = describe "SUBUTXO" $ do
       submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [setMinCoinTxOut pp $ mkBasicTxOut addr mempty]
 
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
+    -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "an output to a bootstrap address whose payload is the largest allowed size" $ do
       bootAddr <- freshBootstrapAddressWithPayloadSize $ Just largestBootstrapAddressAttrsSize
       submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
@@ -351,33 +357,31 @@ spec = describe "SUBUTXO" $ do
     it "still rejects a sub-transaction with the wrong network id in its body" $ do
       let subTx :: Tx SubTx era
           subTx = mkBasicTx $ mkBasicTxBody & networkIdTxBodyL .~ SJust Mainnet
-      topTx <- phase2InvalidTxWithSubTxs [subTx]
-      withNoFixup $
-        submitFailingTx
-          topTx
-          [ injectFailure . SubWrongNetworkInTxBody @era $
-              Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
-          ]
+      topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs [subTx]
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure . SubWrongNetworkInTxBody @era $
+            Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
+        ]
 
     it "does not check the threaded UTxO, so two sub-transactions may name one input" $ do
       (sharedTxIn, subTxs) <- subTxsSpendingOneInput
-      topTx <- phase2InvalidTxWithSubTxs subTxs
-      withNoFixup $ submitTx_ topTx
+      topTx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs subTxs
+      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
       void $ impGetUTxO sharedTxIn
 
     it "spending an output from an earlier sub-tx fails twice" $ do
       (producingSubTx, producedTxIn) <- freshSubTxProducingOutput
       topTx <-
-        phase2InvalidTxWithSubTxs
+        switchTxToPhase2InvalidLegacyMode . mkTopTxWithSubTxs $
           [ producingSubTx
           , mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [producedTxIn]
           ]
-      withNoFixup $
-        submitFailingTx
-          topTx
-          [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
-          , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
-          ]
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn
+        , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        ]
 
 freshSubTxProducingOutput ::
   (HasCallStack, DijkstraEraImp era) =>
@@ -437,12 +441,3 @@ outputTooBigEntry pp txOut =
   , fromIntegral $ pp ^. ppMaxValSizeL
   , txOut
   )
-
-phase2InvalidTxWithSubTxs ::
-  (HasCallStack, DijkstraEraImp era) =>
-  [Tx SubTx era] ->
-  ImpTestM era (Tx TopTx era)
-phase2InvalidTxWithSubTxs subTxs = do
-  failingScriptTxIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum SPlutusV3
-  fixedUpTx <- fixupTx $ mkTopTxWithSubTxs subTxs & bodyTxL . inputsTxBodyL .~ [failingScriptTxIn]
-  pure $ fixedUpTx & isPhase2ValidTxL .~ Phase2Invalid

@@ -54,7 +54,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.Set as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -224,7 +223,7 @@ dijkstraSubUtxoTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
-  TRC (SubUtxoEnv slot pp _ originalUtxo topTxIsPhase2Valid, utxoState, stAnnTx) <-
+  TRC (SubUtxoEnv slot pp _ _ topTxIsPhase2Valid, utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -243,8 +242,6 @@ dijkstraSubUtxoTransition = do
   runTest $ Shelley.validateInputSetEmptyUTxO txBody
 
   let inputs = txBody ^. inputsTxBodyL
-  let refInputs = txBody ^. referenceInputsTxBodyL
-  runTest $ Shelley.validateBadInputsUTxO originalUtxo (inputs `Set.union` refInputs)
   runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxoState) inputs
 
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs

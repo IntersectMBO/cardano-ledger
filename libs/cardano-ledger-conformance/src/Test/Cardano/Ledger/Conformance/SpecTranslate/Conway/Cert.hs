@@ -211,14 +211,14 @@ instance SpecTranslate ConwayEra PulsingRewUpdate where
 instance SpecTranslate ConwayEra (NewEpochState ConwayEra) where
   type SpecRep ConwayEra (NewEpochState ConwayEra) = Agda.NewEpochState
 
-  toSpecRep (NewEpochState {..}) =
+  toSpecRep nes@(NewEpochState {..}) =
     Agda.MkNewEpochState
       <$> toSpecRep nesEL
       <*> toSpecRep nesBprev
       <*> toSpecRep nesBcur
       <*> toSpecRep nesEs
       <*> toSpecRep nesRu
-      <*> (filterZeroEntries <$> toSpecRep nesPd)
+      <*> (filterZeroEntries <$> toSpecRep (nes ^. nesStakePoolDistrG))
     where
       -- The specification does not include zero entries in general
       -- while the implementation might. So we filter them out here for the sake

@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Conformance.Imp.Conway (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
+import Test.Cardano.Ledger.Allegra.Imp.UtxoSpec qualified as AllegraUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.BbodySpec qualified as AlonzoBBODY
 import Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec qualified as AlonzoUTXO
 import Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec qualified as AlonzoUTXOS
@@ -23,6 +24,7 @@ import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as EPOCH
 import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as GOVCERT
 import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as GOV
 import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as LEDGER
+import Test.Cardano.Ledger.Conway.Imp.MempoolSpec qualified as MEMPOOL
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as RATIFY
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec qualified as SNAP
 import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as UTXO
@@ -65,6 +67,8 @@ spec = do
             ShelleyLEDGER.spec
             LEDGER.spec
 
+            MEMPOOL.spec
+
             xdescribe "disabled" ShelleyPOOL.spec
 
             RATIFY.spec
@@ -72,6 +76,7 @@ spec = do
             SNAP.spec
 
             ShelleyUTXO.spec
+            AllegraUTXO.spec
             MaryUTXO.spec
             AlonzoUTXO.spec
             BabbageUTXO.spec

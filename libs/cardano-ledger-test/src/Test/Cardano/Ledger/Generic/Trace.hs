@@ -30,7 +30,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   curPParamsEpochStateL,
   esLStateL,
+  esSnapshotsL,
   lsCertStateL,
+  nesEsL,
+  nesStakePoolDistrG,
   prevPParamsEpochStateL,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -58,7 +61,7 @@ import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
 import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import qualified Test.Cardano.Base.QuickCheck as BaseQC
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Common
@@ -164,9 +167,10 @@ initialMockChainState gstate =
         , nesBcur = BlocksMade Map.empty
         , nesEs = makeEpochState gstate ledgerstate
         , nesRu = SNothing
-        , nesPd = PoolDistr (gsInitialPoolDistr gstate) (knownNonZeroCoin @1)
         , stashedAVVMAddresses = stashedAVVMAddressesZero (reify @era)
         }
+        & nesEsL . esSnapshotsL . ssStakeSetL
+          %~ (\ss -> ss {ssStakePoolDistr = PoolDistr (gsInitialPoolDistr gstate) (knownNonZeroCoin @1)})
 
 makeEpochState ::
   (Reflect era, ShelleyEraAccounts era) => GenState era -> LedgerState era -> EpochState era
@@ -187,13 +191,13 @@ makeEpochState gstate ledgerstate =
 snaps ::
   (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots era
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
-  SnapShots mark (calculatePoolDistr snap) set (mkGoSnapShot set) f
+  SnapShots mark set (mkGoSnapShot set) f
   where
     pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
     snap = stakeDistr u dstate pstate
-    mark = MarkSnapShot snap (EpochNo 0) 0
-    set = mkSetSnapShot mark (EpochInterval 0)
+    mark = mkMarkSnapShot snap (EpochNo 0) 0 (EpochInterval 0)
+    set = mkSetSnapShot mark
 
 -- ==============================================================================
 
@@ -303,8 +307,8 @@ instance
   envGen _gstate = pure ()
 
   sigGen (Gen1 txss gs) () mcs@(MockChainState newepoch _ (SlotNo lastSlot) count) = do
-    let NewEpochState epochnum _ _ epochstate _ pooldistr _ = newepoch
-    issuerkey <- chooseIssuer epochnum lastSlot count pooldistr
+    let NewEpochState epochnum _ _ epochstate _ _ = newepoch
+    issuerkey <- chooseIssuer epochnum lastSlot count (newepoch ^. nesStakePoolDistrG)
     let (txs, nextSlotNo) = txss ! count
     -- Assmble it into a MockBlock
     let mockblock = MockBlock issuerkey nextSlotNo txs

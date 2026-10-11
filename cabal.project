@@ -16,7 +16,7 @@ source-repository-package
   subdir: hs
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
-  tag: 9b77bb1cc7ea64f11621e51ab4f5d1ebf1f512a7
+  tag: f6cf156dc204ff8a12c02bde9794080b9296e17d
 
 source-repository-package
   type: git
@@ -27,10 +27,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-base.git
-  -- TODO: refresh with nix-prefetch-git after pushing the tag
-  --sha256: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-  tag: 2b6a7721b12d2b2b29f19374b0dd763e2210efd3
-  -- Real master (not leios-prototype), past PR #695 which is the same
+  --sha256: sha256-UawlVBgCkU8H6o1k8BHj6pRkZjbHsdVEVIBW0ZFpWkc=
+  tag: c1e1ed8d7ae39c111c73fc5f59ac37ce5933b83c
+  -- cardano-base master, past PR #695 (IETF BLS_POP_ DST for proofs of
+  -- possession; unreleased -- CHaP's 2.6.0.0 still uses BLS_SIG_). Same
   -- DST fix, and past cardano-base's own crypton memory->ram migration --
   -- unlike leios-prototype's DST-fix commit, this one is on the same
   -- crypton line as cardano-ledger master's own cardano-crypto-wrapper, so
@@ -47,7 +47,7 @@ source-repository-package
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
 index-state:
   , hackage.haskell.org 2026-09-02T14:05:07Z
-  , cardano-haskell-packages 2026-09-02T08:49:12Z
+  , cardano-haskell-packages 2026-09-29T22:14:46Z
 
 packages:
   -- == Byron era ==

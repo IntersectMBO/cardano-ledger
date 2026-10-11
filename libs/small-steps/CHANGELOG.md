@@ -1,7 +1,12 @@
 # Version history for `small-steps`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 
+* Add `withJudgmentContext`
 * Add an `Ord` constraint to the `PredicateFailure` type in the `STS` class
 
 ## 1.1.4.0

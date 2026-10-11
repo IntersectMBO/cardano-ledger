@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext,
   EraPlutusTxInfo,
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   toPlutusArgs,
   toPlutusTxInfoForPurpose,
@@ -112,8 +113,10 @@ collectTwoPhaseScriptInputsOutputOrdering = do
     protVer = defaultPParams @AlonzoEra ^. ppProtocolVersionL
     plutus = alwaysSucceedsPlutus @'PlutusV1 3
     plutusRunnable = decodePlutusRunnable (pvMajor protVer) plutus
-    lti :: LedgerTxInfo AlonzoEra
-    lti = mkTestLedgerTxInfo protVer testEpochInfo testSystemStart initUTxO validatingTx
+    lti :: LedgerTxInfo TopTx AlonzoEra
+    lti =
+      mkTestLedgerTxInfo protVer testEpochInfo testSystemStart initUTxO validatingTx $
+        LedgerTopTxInfo mempty
 
 -- ============================== DATA ===============================
 

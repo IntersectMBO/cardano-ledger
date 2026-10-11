@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (toPlutusTxInfoForPurpose)
+import Cardano.Ledger.Alonzo.Plutus.Context (LedgerLevelTxInfo (..), toPlutusTxInfoForPurpose)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (NoCostModel),
   TransactionScriptFailure (RedeemerPointsToUnknownScriptHash),
@@ -35,6 +35,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
+  Language (..),
   SLanguage (..),
   emptyCostModels,
   hashPlutusScript,
@@ -81,7 +82,7 @@ spec = describe "UTXOS" $ do
           expectedUpperBound = (startPOSIX + fromIntegral (currentSlot + txValidity)) * 1000
           tx :: Tx TopTx era
           tx = mkBasicTx mkBasicTxBody & bodyTxL . vldtTxBodyL .~ interval
-          lti = mkTestLedgerTxInfo protVer ei ss utxo tx
+          lti = mkTestLedgerTxInfo protVer ei ss utxo tx $ LedgerTopTxInfo mempty
       case toPlutusTxInfoForPurpose SPlutusV1 lti (SpendingPurpose AsPurpose) of
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
         Right txInfo ->
@@ -129,7 +130,8 @@ spec = describe "UTXOS" $ do
               submitTx_ $
                 mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
-          it "Attempt to calculate ExUnits with an invalid tx" $ do
+          -- PlutusV4 is covered by an exact-failure version of this test in Dijkstra
+          when (lang < PlutusV4) . it "Attempt to calculate ExUnits with an invalid tx" $ do
             txIn <- produceScript alwaysSucceedsWithDatumHash
             let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 

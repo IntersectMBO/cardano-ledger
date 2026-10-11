@@ -91,6 +91,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsGenDelegsL,
   esLStateL,
   lsCertStateL,
+  nesStakePoolDistrG,
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo, isOverlaySlot)
@@ -205,11 +206,11 @@ instance GetLedgerView AlonzoEra
 -- because it makes it simpler to get the ledger view for Praos.
 instance GetLedgerView BabbageEra where
   currentLedgerView
-    NewEpochState {nesPd = pd, nesEs = es} =
+    nes@NewEpochState {nesEs = es} =
       LedgerView
         { lvD = es ^. curPParamsEpochStateL . ppDG
         , lvExtraEntropy = error "Extra entropy is not set in the Babbage era"
-        , lvPoolDistr = pd
+        , lvPoolDistr = nes ^. nesStakePoolDistrG
         , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
@@ -229,11 +230,11 @@ instance GetLedgerView BabbageEra where
 -- because it makes it simpler to get the ledger view for Praos.
 instance GetLedgerView ConwayEra where
   currentLedgerView
-    NewEpochState {nesPd = pd, nesEs = es} =
+    nes@NewEpochState {nesEs = es} =
       LedgerView
         { lvD = es ^. curPParamsEpochStateL . ppDG
         , lvExtraEntropy = error "Extra entropy is not set in the Conway era"
-        , lvPoolDistr = pd
+        , lvPoolDistr = nes ^. nesStakePoolDistrG
         , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
@@ -253,11 +254,11 @@ instance GetLedgerView ConwayEra where
 -- because it makes it simpler to get the ledger view for Praos.
 instance GetLedgerView DijkstraEra where
   currentLedgerView
-    NewEpochState {nesPd = pd, nesEs = es} =
+    nes@NewEpochState {nesEs = es} =
       LedgerView
         { lvD = es ^. curPParamsEpochStateL . ppDG
         , lvExtraEntropy = error "Extra entropy is not set in the Dijkstra era"
-        , lvPoolDistr = pd
+        , lvPoolDistr = nes ^. nesStakePoolDistrG
         , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
@@ -342,15 +343,14 @@ view ::
   NewEpochState era ->
   LedgerView
 view
-  NewEpochState
-    { nesPd = pd
-    , nesEs = es
+  nes@NewEpochState
+    { nesEs = es
     } =
     let !ee = es ^. curPParamsEpochStateL . ppExtraEntropyL
      in LedgerView
           { lvD = es ^. curPParamsEpochStateL . ppDG
           , lvExtraEntropy = ee
-          , lvPoolDistr = pd
+          , lvPoolDistr = nes ^. nesStakePoolDistrG
           , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
           , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
           }
@@ -633,7 +633,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
        in not (isOverlaySlot a (pp ^. ppDG) slotNo)
             && checkLeaderValue (VRF.certifiedOutput y) stake f
     stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-    poolDistr = unPoolDistr $ nesPd ss
+    poolDistr = unPoolDistr $ ss ^. nesStakePoolDistrG
     STS.Tickn.TicknState epochNonce _ = csTickn cds
     currentEpoch = nesEL ss
     ei = epochInfoPure globals

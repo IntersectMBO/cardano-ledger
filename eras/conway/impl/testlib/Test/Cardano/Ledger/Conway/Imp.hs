@@ -20,7 +20,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayHardForkEvent,
   ConwayNewEpochEvent,
  )
-import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
 import Data.Proxy
@@ -34,6 +33,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GOVCERT
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as GOV
 import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HARDFORK
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Conway.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as RATIFY
 import qualified Test.Cardano.Ledger.Conway.Imp.SnapSpec as SNAP
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as UTXO
@@ -44,7 +44,6 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   ( ConwayEraImp era
-  , EraForecast era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
@@ -63,6 +62,7 @@ spec era = do
     GOV.spec
     GOVCERT.spec
     LEDGER.spec
+    MEMPOOL.spec
     HARDFORK.spec
     RATIFY.spec
     SNAP.spec

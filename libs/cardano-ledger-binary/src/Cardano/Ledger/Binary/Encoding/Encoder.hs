@@ -103,7 +103,7 @@ import Cardano.Slotting.Slot (WithOrigin, withOriginToMaybe)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray)
 import qualified Codec.CBOR.Term as C (Term (..), encodeTerm)
 import qualified Codec.CBOR.Write as CBOR (toBuilder)
-import Data.Binary.Put (putWord32le, runPut)
+import Data.Binary.Put (putWord32be, putWord32le, runPut)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
@@ -561,7 +561,7 @@ encodeUTCTime (UTCTime day timeOfDay) =
 --------------------------------------------------------------------------------
 
 ipv4ToBytes :: IPv4 -> BS.ByteString
-ipv4ToBytes = BSL.toStrict . runPut . putWord32le . fromIPv4w
+ipv4ToBytes = BSL.toStrict . runPut . putWord32be . fromIPv4w
 
 encodeIPv4 :: IPv4 -> Encoding
 encodeIPv4 = encodeBytes . ipv4ToBytes

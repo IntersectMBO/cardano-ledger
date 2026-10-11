@@ -4,12 +4,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -37,6 +35,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError (..),
   ContextError,
   EraPlutusContext (..),
+  LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
   toScriptHashByPurpose,
@@ -82,7 +81,7 @@ import qualified PlutusLedgerApi.Common as P
 -- ===============================================================
 
 collectPlutusScriptsWithContext ::
-  forall era l.
+  forall era.
   ( AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
@@ -92,7 +91,7 @@ collectPlutusScriptsWithContext ::
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx l era ->
+  Tx TopTx era ->
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
@@ -109,7 +108,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelTxInfo = LedgerTopTxInfo mempty
         }
     (_, plutusScriptsUsed) =
       resolveNeededPlutusScriptsWithPurpose
@@ -119,23 +118,21 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         mempty
 
 scriptsWithContextFromLedgerTxInfo ::
-  forall era.
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , EraPlutusContext era
   ) =>
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   CostModels ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 scriptsWithContextFromLedgerTxInfo lti =
   scriptsWithContextFromLedgerTxInfoWithResult lti (mkTxInfoResult lti)
 
 scriptsWithContextFromLedgerTxInfoWithResult ::
-  forall era.
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
   ) =>
-  LedgerTxInfo era ->
+  LedgerTxInfo level era ->
   TxInfoResult era ->
   CostModels ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
@@ -145,9 +142,7 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels =
     (map getScriptWithRedeemer (ltiScriptsUsed lti))
     (Right [])
   where
-    redeemers =
-      case lti of
-        LedgerTxInfo {ltiTx} -> ltiTx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
+    redeemers = ltiTx lti ^. witsTxL . rdmrsTxWitsL . unRedeemersL
     getScriptWithRedeemer (plutusPurpose, plutusScriptRunnable) =
       let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
        in case Map.lookup redeemerIndex redeemers of
@@ -346,7 +341,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiMemoizedSubTransactions = mempty
+        , ltiLevelTxInfo = LedgerTopTxInfo mempty
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL

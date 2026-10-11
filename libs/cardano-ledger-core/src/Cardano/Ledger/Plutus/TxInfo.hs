@@ -28,6 +28,7 @@ module Cardano.Ledger.Plutus.TxInfo (
   transKeyHash,
   transSafeHash,
   transScriptHash,
+  transTxIx,
   transTxId,
   transStakeReference,
   transCred,
@@ -173,11 +174,14 @@ slotToPOSIXTime ei sysS s = do
 -- ========================================
 -- translate TxIn and TxOut
 
+transTxIx :: TxIx -> Integer
+transTxIx (TxIx txIx) = toInteger txIx
+
 transTxId :: TxId -> PV1.TxId
 transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 
 transTxIn :: TxIn -> PV1.TxOutRef
-transTxIn (TxIn txid (TxIx txIx)) = PV1.TxOutRef (transTxId txid) (toInteger txIx)
+transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (transTxIx txIx)
 
 transCoinToValue :: Coin -> PV1.Value
 transCoinToValue (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c

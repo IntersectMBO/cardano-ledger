@@ -260,7 +260,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpInstantStake :: !(InstantStake era)
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
     , dpVotingStakePoolDistr :: VotingStakePoolDistr
-    -- ^ Snapshot of the pool distr. Lazy on purpose: See `ssStakeMarkPoolDistr` and ADR-7
+    -- ^ Snapshot of the pool distr. Lazy on purpose: See `msStakePoolDistr` and ADR-7
     -- for explanation.
     , dpDRepDistr :: !(Map DRep (CompactForm Coin))
     -- ^ The partial result that grows with each pulse. The purpose of the pulsing.

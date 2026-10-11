@@ -83,7 +83,6 @@ instance TranslateEra ConwayEra NewEpochState where
         , nesBcur = nesBcur nes
         , nesEs = setCompleteDRepPulsingState def ratifyState es
         , nesRu = nesRu nes
-        , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
         }
 
