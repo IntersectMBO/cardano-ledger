@@ -133,12 +133,7 @@ instance AllegraEraImp DijkstraEra
 
 instance MaryEraImp DijkstraEra
 
-instance AlonzoEraImp DijkstraEra where
-  scriptTestContexts =
-    plutusTestScripts SPlutusV1
-      <> plutusTestScripts SPlutusV2
-      <> plutusTestScripts SPlutusV3
-      <> plutusTestScripts SPlutusV4
+instance AlonzoEraImp DijkstraEra
 
 instance BabbageEraImp DijkstraEra
 
