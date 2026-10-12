@@ -89,7 +89,7 @@ spec = describe "UTXOS" $ do
           hotCred :| _ <- registerCommitteeHotKeys (pure $ ScriptHashObj sh) (coldCred :| [])
           gaId <- submitGovAction InfoAction
           submitYesVote_ (CommitteeVoter hotCred) gaId
-        it "Passes with proposing purpose" $ do
+        it "Passes with proposing purpose" $ whenPostBootstrap $ do
           let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
           committee <- registerInitialCommittee
           (dRep, _, _) <- setupSingleDRep 1_000_000
