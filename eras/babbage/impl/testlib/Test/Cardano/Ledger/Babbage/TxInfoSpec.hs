@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
+module Test.Cardano.Ledger.Babbage.TxInfoSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
@@ -16,6 +16,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerLevelTxInfo (..),
   PlutusTxInInfo,
   PlutusTxInfo,
+  SupportedLanguage (..),
+  supportedLanguages,
   toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..))
@@ -164,32 +166,36 @@ hasReferenceInput slang txInfo =
     SPlutusV2 -> PV2.txInfoReferenceInputs txInfo `shouldNotBe` mempty
     _ -> expectationFailure $ show slang <> " is not supported for this test"
 
-plutusTxInInfoInputs ::
-  forall era l. HasCallStack => SLanguage l -> PlutusTxInfo l -> [PlutusTxInInfo era l]
-plutusTxInInfoInputs slang txInfo =
-  case slang of
-    SPlutusV1 -> error "PlutusV1 not supported"
-    SPlutusV2 -> PV2.txInfoInputs txInfo
-    SPlutusV3 -> PV3.txInfoInputs txInfo
-    SPlutusV4 -> PV4.txInfoInputs txInfo
-
 expectOneInput ::
   forall era l.
-  ( HasCallStack
-  , Show (PlutusTxInInfo era l)
-  , Eq (PlutusTxInInfo era l)
-  ) =>
+  HasCallStack =>
   SLanguage l ->
   PlutusTxInInfo era l ->
   PlutusTxInfo l ->
   Expectation
-expectOneInput l i txInfo = plutusTxInInfoInputs @era l txInfo `shouldBe` [i]
+expectOneInput slang i txInfo =
+  case slang of
+    SPlutusV1 -> expectationFailure "PlutusV1 not supported"
+    SPlutusV2 -> PV2.txInfoInputs txInfo `shouldBe` [i]
+    SPlutusV3 -> PV3.txInfoInputs txInfo `shouldBe` [i]
+    SPlutusV4 -> PV4.txInfoInputs txInfo `shouldBe` [i]
 
 expectOneOutput :: PV2.TxOut -> SLanguage l -> PlutusTxInfo l -> Expectation
 expectOneOutput o slang txInfo =
   case slang of
     SPlutusV2 -> PV2.txInfoOutputs txInfo `shouldBe` [o]
     SPlutusV3 -> PV3.txInfoOutputs txInfo `shouldBe` [o]
+    -- PlutusV4 has its own TxOut type. The addresses used in these tests have no staking
+    -- credential, so the expected output only differs in its Address constructor.
+    SPlutusV4 ->
+      PV4.txInfoOutputs txInfo
+        `shouldBe` [ PV4.TxOut
+                       { PV4.txOutAddress = PV4.Address (PV2.addressCredential (PV2.txOutAddress o)) Nothing
+                       , PV4.txOutValue = PV2.txOutValue o
+                       , PV4.txOutDatum = PV2.txOutDatum o
+                       , PV4.txOutReferenceScript = PV2.txOutReferenceScript o
+                       }
+                   ]
     _ -> expectationFailure $ show slang <> " is not supported"
 
 successfulTranslation ::
@@ -320,8 +326,6 @@ txInfoSpec ::
   , Value era ~ MaryValue
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Inject (BabbageContextError era) (ContextError era)
-  , Show (PlutusTxInInfo era l)
-  , Eq (PlutusTxInInfo era l)
   ) =>
   SLanguage l ->
   Spec
@@ -376,14 +380,15 @@ spec ::
   , Value era ~ MaryValue
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Inject (BabbageContextError era) (ContextError era)
-  , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>
   Spec
 spec =
   describe "txInfo translation" $ do
-    txInfoSpecV1 @era
-    txInfoSpec @era SPlutusV2
+    forM_ (supportedLanguages @era) $ \(SupportedLanguage slang) ->
+      case slang of
+        SPlutusV1 -> txInfoSpecV1 @era
+        _ -> txInfoSpec @era slang
     it "use reference input starting in Babbage" $
       -- This test will fail in PlutusV3 because of ReferenceInputsNotDisjointFromInputs
       successfulTranslation @era

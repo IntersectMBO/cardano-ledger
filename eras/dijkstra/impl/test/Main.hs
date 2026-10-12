@@ -8,12 +8,10 @@ import Cardano.Ledger.Core (Tx, TxBody, TxLevel (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Block.Endorser (EbReferences)
 import Cardano.Ledger.Dijkstra.Rules ()
-import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Leios.BlockHeader as Leios
 import Data.Typeable (Proxy (..), typeRep)
 import qualified Test.Cardano.Base.QuickCheck as BaseQC
-import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
@@ -65,7 +63,6 @@ main =
         roundTripAesonProperty @(Tx SubTx DijkstraEra)
     describe "TxInfo" $ do
       BabbageTxInfo.spec @DijkstraEra
-      txInfoSpec @DijkstraEra SPlutusV3
       DijkstraTxInfoSpec.spec @DijkstraEra
     GoldenBinary.spec @DijkstraEra
     PlutusSpec.spec
