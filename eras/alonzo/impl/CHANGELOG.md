@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Change `scriptTestContexts` into a standalone top-level function
 * Change `mkTxWithPlutusAndBootstrapAddress` and `mkTokenMintingTx` to return `AnyLevelTx`
 * Add `DecCBOR` instances for `PlutusData` and `Data`
 * Add `mkTokenMintingTx`
