@@ -659,7 +659,7 @@ malformedGuardDatumCases =
   ,
     ( "a Plutus script guard without a datum"
     , do
-        lang <- elements $ eraLanguages @era
+        lang <- elements [l | l <- eraLanguages @era, l >= PlutusV4]
         plutusScript <- withSLanguage lang $ mkPlutusScript . alwaysSucceedsNoDatum
         let guardScript = fromPlutusScript plutusScript :: Script era
             guardCred = ScriptHashObj $ hashScript guardScript
