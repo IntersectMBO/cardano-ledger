@@ -237,7 +237,7 @@ class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era whe
   default requiredTopLevelGuardsTxBodyG ::
     DijkstraEraTxBody era =>
     SimpleGetter (TxBody l era) (Maybe (Map (Credential Guard) (StrictMaybe (Data era))))
-  requiredTopLevelGuardsTxBodyG = requiredTopLevelGuardsL . to Just
+  requiredTopLevelGuardsTxBodyG = requiredTopLevelGuardsTxBodyL . to Just
 
   directDepositsTxBodyG :: SimpleGetter (TxBody l era) (Maybe DirectDeposits)
   default directDepositsTxBodyG ::

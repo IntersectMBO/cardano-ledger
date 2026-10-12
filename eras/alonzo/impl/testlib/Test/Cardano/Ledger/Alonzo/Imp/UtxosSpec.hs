@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -27,11 +28,15 @@ import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
+  Inject (..),
   ProtVer (..),
   SlotNo (..),
   StrictMaybe (..),
+  TxIx (..),
   natVersion,
  )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
@@ -42,11 +47,13 @@ import Cardano.Ledger.Plutus (
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Control.Monad.Reader (asks)
 import Data.Either (isLeft)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Lens.Micro (set, to, (%~), (&), (.~), (<>~), (^.), _2)
@@ -61,6 +68,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysSucceedsWithDatum,
   datumIsWellformed,
   inputsOutputsAreNotEmptyWithDatum,
+  purposeIsWellformedNoDatum,
   purposeIsWellformedWithDatum,
   redeemerSameAsDatum,
  )
@@ -211,3 +219,40 @@ spec = describe "UTXOS" $ do
         it "Scripts with bootstrap addresses pass" $
           when (eraProtVerLow @era <= eraProtVerHigh @AlonzoEra) $ do
             mkTxWithPlutusAndBootstrapAddress slang >>= submitTx_
+        describe "purposeIsWellformedNoDatum" $ do
+          -- This test is disabled in PlutusV1 and V2 because the datum is
+          -- mandatory before PlutusV3 and the "NoDatum" script would fail if we
+          -- passed a datum
+          when (lang >= PlutusV3) $ it "Passes with spending purpose" $ do
+            val <- Coin <$> choose (2_000_000, 8_000_000)
+            sCred <- arbitrary @(Credential Staking)
+            let
+              plutusScript = purposeIsWellformedNoDatum slang
+              sh = hashPlutusScript plutusScript
+              addr = mkAddr (ScriptHashObj @Payment sh) sCred
+              txOut = mkBasicTxOut addr (inject val)
+            tx <-
+              submitTxAnn "Produce script-locked output" $
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . outputsTxBodyL .~ SSeq.singleton txOut
+            submitTxAnn_ "Use locked output" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx tx) (TxIx 0))
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+          -- TODO: Re-enable after issue is resolved, by removing this override
+          disableInConformanceIt "Passes with minting purpose" $ do
+            let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+            tx <- mkTokenMintingTx sh
+            submitTxAnn_ "Mint tokens with script policy" tx
+          it "Passes with certifying purpose" $ do
+            let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+            txCert <- genRegTxCert $ ScriptHashObj sh
+            submitTxAnn_ "Register script staking credential" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL .~ SSeq.singleton txCert
+          it "Passes with withdrawing purpose" $ do
+            let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+            account <- registerStakeCredential $ ScriptHashObj sh
+            submitTxAnn_ "Withdraw from script-controlled account" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . withdrawalsTxBodyL .~ Withdrawals (Map.singleton account mempty)

@@ -16,6 +16,7 @@
 * Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Change `eraMaxLanguage` to `PlutusV4`
+* Rename `requiredTopLevelGuardsL` to `requiredTopLevelGuardsTxBodyL`
 
 ### `testlib`
 
