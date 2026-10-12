@@ -23,9 +23,10 @@ spec = do
          , deposit :: CompactForm Coin
          , delegs :: Set (Credential Staking)
          , epochNo :: EpochNo
+         , blsKeyState
          ) ->
           let poolId = sppId stakePoolParams
               network = aaNetworkId $ sppAccountAddress stakePoolParams
-              stakePoolState = mkStakePoolState epochNo deposit delegs stakePoolParams
+              stakePoolState = mkStakePoolState epochNo blsKeyState deposit delegs stakePoolParams
               stakePoolParams' = stakePoolStateToStakePoolParams network poolId stakePoolState
            in stakePoolParams === stakePoolParams'

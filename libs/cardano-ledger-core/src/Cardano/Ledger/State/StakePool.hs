@@ -284,15 +284,22 @@ instance Default StakePoolState where
 
 -- | Convert 'StakePoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
--- or update parameters. The epoch is the one the parameters take effect in:
--- a voting key carried by the parameters is stamped with it, so registering
--- again renews the key.
+-- or update parameters.
 mkStakePoolState ::
-  EpochNo -> CompactForm Coin -> Set (Credential Staking) -> StakePoolParams era -> StakePoolState
-mkStakePoolState epochNo deposit delegators spp =
+  -- | The registration epoch recorded for a voting key that is new to the pool; its
+  -- lifetime is counted from here.
+  EpochNo ->
+  -- | The voting key the pool is currently registered with, if any. Re-registering
+  -- that same key keeps the epoch it was first registered in.
+  StrictMaybe BlsKeyState ->
+  CompactForm Coin ->
+  Set (Credential Staking) ->
+  StakePoolParams era ->
+  StakePoolState
+mkStakePoolState epochNo mbCurrentBlsKeyState deposit delegators spp =
   StakePoolState
     { spsVrf = sppVrf spp
-    , spsBlsKey = (`BlsKeyState` epochNo) <$> sppBlsKey spp
+    , spsBlsKey = registerBlsKey <$> sppBlsKey spp
     , spsPledge = sppPledge spp
     , spsCost = sppCost spp
     , spsMargin = sppMargin spp
@@ -303,6 +310,14 @@ mkStakePoolState epochNo deposit delegators spp =
     , spsDeposit = deposit
     , spsDelegators = delegators
     }
+  where
+    -- A key the pool already holds keeps its original registration epoch; anything
+    -- else starts a fresh lifetime.
+    registerBlsKey newBlsKey
+      | SJust currentBlsKeyState <- mbCurrentBlsKeyState
+      , bksKey currentBlsKeyState == newBlsKey =
+          currentBlsKeyState
+      | otherwise = BlsKeyState newBlsKey epochNo
 
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from

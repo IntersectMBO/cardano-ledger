@@ -24,19 +24,7 @@ module Cardano.Ledger.Dijkstra.Rules.Pool (
 import Cardano.Crypto.DSIGN (verifyPossessionProofDSIGN)
 import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Hash.Class (hashSize)
-import Cardano.Ledger.BaseTypes (
-  EpochNo,
-  Globals (..),
-  Mismatch (..),
-  Network,
-  Relation (RelEQ, RelGT, RelGTEQ, RelLTEQ),
-  ShelleyBase,
-  StrictMaybe (SJust),
-  addEpochInterval,
-  invalidKey,
-  knownNonZeroBounded,
-  networkId,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -270,7 +258,9 @@ poolTransition = do
           pure $
             ps
               & psStakePoolsL
-                %~ Map.insert sppId (mkStakePoolState cEpoch (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
+                %~ Map.insert
+                  sppId
+                  (mkStakePoolState cEpoch SNothing (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
               & psVRFKeyHashesL %~ addVRFKeyHashOccurrence sppVrf
         -- re-register Pool
         Just stakePoolState -> do

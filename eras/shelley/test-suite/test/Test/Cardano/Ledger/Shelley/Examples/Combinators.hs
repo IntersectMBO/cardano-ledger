@@ -269,7 +269,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psStakePools =
                 Map.insert
                   (sppId pool)
-                  (mkStakePoolState (EpochNo 0) poolDeposit mempty pool)
+                  (mkStakePoolState (EpochNo 0) SNothing poolDeposit mempty pool)
                   (psStakePools ps)
             }
         Just _ ->
@@ -311,7 +311,13 @@ updatePoolParams network pool cs = cs {chainNes = nes'}
         { psStakePools =
             Map.insert
               (sppId pool)
-              (mkStakePoolState (EpochNo 0) (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
+              ( mkStakePoolState
+                  (EpochNo 0)
+                  SNothing
+                  (es ^. curPParamsEpochStateL . ppPoolDepositCompactL)
+                  mempty
+                  pool
+              )
               (psStakePools ps)
         , psFutureStakePoolParams =
             Map.mapMaybeWithKey

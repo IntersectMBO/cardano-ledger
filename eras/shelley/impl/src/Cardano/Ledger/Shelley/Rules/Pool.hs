@@ -24,18 +24,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
 ) where
 
 import Cardano.Crypto.Hash.Class (hashSize)
-import Cardano.Ledger.BaseTypes (
-  EpochNo,
-  Globals (..),
-  Mismatch (..),
-  Network,
-  Relation (..),
-  ShelleyBase,
-  addEpochInterval,
-  invalidKey,
-  knownNonZeroBounded,
-  networkId,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -272,7 +261,9 @@ poolTransition = do
           pure $
             ps
               & psStakePoolsL
-                %~ Map.insert sppId (mkStakePoolState cEpoch (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
+                %~ Map.insert
+                  sppId
+                  (mkStakePoolState cEpoch SNothing (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
               & psVRFKeyHashesL %~ updateVRFKeyHash
         -- re-register Pool
         Just stakePoolState -> do

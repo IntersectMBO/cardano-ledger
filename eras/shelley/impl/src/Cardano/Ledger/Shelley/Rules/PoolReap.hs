@@ -144,6 +144,7 @@ poolReapTransition = do
               ( Map.zipWithMatched $ \_ futureParams currentState ->
                   mkStakePoolState
                     e
+                    SNothing
                     (currentState ^. spsDepositL)
                     (currentState ^. spsDelegatorsL)
                     futureParams
