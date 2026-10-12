@@ -41,7 +41,6 @@ import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Credential (Credential (..), StakeReference)
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
-  Language (..),
   PlutusLanguage,
   SLanguage,
   hashPlutusScript,
@@ -87,7 +86,7 @@ spec = describe "UTXOW" $ do
       pp <- getsPParams id
       badScriptIntegrityHash <- arbitrary
       let
-        langView = [getLanguageView pp PlutusV2]
+        langView = [getLanguageView pp lang]
         scriptIntegrity = ScriptIntegrity @era redeemers dats langView
         redeemers = fixedTx ^. witsTxL . rdmrsTxWitsL
         dats = fixedTx ^. witsTxL . datsTxWitsL

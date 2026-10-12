@@ -35,7 +35,10 @@ import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellformedNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (
+  alwaysFailsWithDatum,
+  purposeIsWellformedNoDatum,
+ )
 
 spec ::
   forall era.
@@ -202,7 +205,7 @@ spec = describe "BBODY" $ do
     -- produce an utxo with a failing script
     lang <- elements $ eraLanguages @era
     failingPlutusTxIn <- withSLanguage lang $ \slang -> do
-      let plutus = alwaysFailsNoDatum slang
+      let plutus = alwaysFailsWithDatum slang
       produceScript $ hashPlutusScript plutus
 
     -- produce a utxo with a succeeding script

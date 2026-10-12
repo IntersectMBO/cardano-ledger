@@ -17,7 +17,7 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Plutus (hashPlutusScript, withSLanguage)
+import Cardano.Ledger.Plutus (Language (..), SLanguage (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -38,8 +38,7 @@ spec = describe "LEDGER" $ do
   it "TxRefScriptsSizeTooBig" $ do
     -- we use here the largest script we currently have as many times as necessary to
     -- trigger the predicate failure
-    lang <- elements $ eraLanguages @era
-    plutusScript <- withSLanguage lang $ mkPlutusScript @era . purposeIsWellformedNoDatum
+    plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV3
     pp <- getsPParams id
     let script :: Script era
         script = fromPlutusScript plutusScript
@@ -190,7 +189,7 @@ spec = describe "LEDGER" $ do
 
   it "Withdraw from delegated and non-delegated staking script" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-    lang <- elements $ eraLanguages @era
+    lang <- elements [l | l <- eraLanguages @era, l >= PlutusV3]
     let scriptHash = withSLanguage lang $ hashPlutusScript . alwaysSucceedsNoDatum
     let cred = ScriptHashObj scriptHash
     ra <- registerStakeCredential cred
