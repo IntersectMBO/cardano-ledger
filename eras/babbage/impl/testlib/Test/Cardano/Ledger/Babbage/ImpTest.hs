@@ -31,7 +31,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFai
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject, StrictMaybe (..))
 import Cardano.Ledger.Plutus.CostModels (CostModelsUpdate (..), updateCostModels)
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.LedgerState (
   UTxO (..),
   curPParamsEpochStateL,
@@ -125,8 +125,7 @@ instance AllegraEraImp BabbageEra
 
 instance MaryEraImp BabbageEra
 
-instance AlonzoEraImp BabbageEra where
-  scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
+instance AlonzoEraImp BabbageEra
 
 produceRefScript ::
   (ShelleyEraImp era, BabbageEraTxOut era) =>
