@@ -177,6 +177,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.UtxosSpec
     Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec
     Test.Cardano.Ledger.Dijkstra.ImpTest
+    Test.Cardano.Ledger.Dijkstra.Translation.TranslatableGen
     Test.Cardano.Ledger.Dijkstra.TreeDiff
     Test.Cardano.Ledger.Dijkstra.TxInfoSpec
 
@@ -226,6 +227,7 @@ library testlib
     microlens-mtl,
     mtl,
     plutus-ledger-api >=1.71,
+    plutus-tx,
     small-steps,
     tree-diff,
 
