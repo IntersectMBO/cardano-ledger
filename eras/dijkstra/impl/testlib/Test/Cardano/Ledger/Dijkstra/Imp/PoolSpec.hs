@@ -370,6 +370,101 @@ spec = describe "POOL" $ do
           [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
       pools <- getPools
       expectNothing $ Map.lookup (sppId pps) pools
+
+    it "re-registering with the same and different BLS key" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      registeredIn <- getsNES nesELL
+      passEpoch
+      submitTx_ $ registerPoolTx pps
+      passEpoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+      newBlsKey <- freshBlsKey
+      renewalSubmittedIn <- getsNES nesELL
+      submitTx_ $ registerPoolTx pps {sppBlsKey = SJust newBlsKey}
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+      passEpoch
+      -- dated one epoch after the re-registration was submitted,
+      -- because re-registration is applied by POOLREAP on entering the next epoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState newBlsKey (succ renewalSubmittedIn)))
+
+    it "re-registering with the same BLS key within the same epoch" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      submitTx_ $ registerPoolTx pps
+      registeredIn <- getsNES nesELL
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+      passEpoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+
+    it "re-registering with a new BLS key within the same epoch" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      newBlsKey <- freshBlsKey
+      submitTx_ $ registerPoolTx pps {sppBlsKey = SJust newBlsKey}
+      registeredIn <- getsNES nesELL
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+      passEpoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState newBlsKey (succ registeredIn)))
+
+    it "changing other pool parameters does not renew the BLS key" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      registeredIn <- getsNES nesELL
+      passEpoch
+      minPoolCost <- getsPParams ppMinPoolCostL
+      submitTx_ $ registerPoolTx pps {sppCost = minPoolCost <> Coin 1}
+      passEpoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+
+    it "dropping the BLS key clears it" $ do
+      pps <- registerPoolWithBlsKey . SJust =<< freshBlsKey
+      passEpoch
+      submitTx_ $ registerPoolTx pps {sppBlsKey = SNothing}
+      passEpoch
+      expectBlsKeyState (sppId pps) SNothing
+
+    it "dropping and re-registering the BLS key within one epoch does not renew it" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      registeredIn <- getsNES nesELL
+      passEpoch
+      submitTx_ $ registerPoolTx pps {sppBlsKey = SNothing}
+      submitTx_ $ registerPoolTx pps
+      passEpoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+
+    it "re-registering a dropped BLS key starts a fresh lifetime" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      passEpoch
+      submitTx_ $ registerPoolTx pps {sppBlsKey = SNothing}
+      passEpoch
+      expectBlsKeyState (sppId pps) SNothing
+      reRegisteredIn <- getsNES nesELL
+      submitTx_ $ registerPoolTx pps
+      expectBlsKeyState (sppId pps) SNothing
+      passEpoch
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey (succ reRegisteredIn)))
+
+    it "un-retiring a pool by re-registration does not renew its BLS key" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      registeredIn <- getsNES nesELL
+      retirePoolTx (sppId pps) (EpochInterval 2) >>= submitTx_
+      submitTx_ $ registerPoolTx pps
+      passNEpochs 3
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredIn))
+
+    it "a reaped pool that registers again starts a fresh lifetime" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      retirePoolTx (sppId pps) (EpochInterval 1) >>= submitTx_
+      passNEpochs 2
+      expectPool (sppId pps) Nothing
+      registeredAgainIn <- getsNES nesELL
+      submitTx_ $ registerPoolTx pps
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState blsKey registeredAgainIn))
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
