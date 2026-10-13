@@ -26,6 +26,13 @@ module Cardano.Ledger.Dijkstra.TxInfo (
   guardDijkstraFeaturesForPlutusV1toV3,
   transFailUnsupportedScriptInSubTx,
   transValidityInterval,
+  transGuardingTopTxInfo,
+  transProposal,
+  transVotingProcedures,
+  transTxInInfoV4,
+  transTxOutV4,
+  transWithdrawals,
+  transDirectDeposits,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
