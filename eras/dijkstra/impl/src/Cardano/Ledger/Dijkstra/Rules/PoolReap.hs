@@ -129,6 +129,8 @@ poolReapTransition = do
               ( Map.zipWithMatched $ \_ futureParams currentState ->
                   mkStakePoolState
                     e
+                    -- the pool keeps the epoch its voting key was registered in unless the re-registration actually rotates it
+                    (currentState ^. spsBlsKeyL)
                     (currentState ^. spsDepositL)
                     (currentState ^. spsDelegatorsL)
                     futureParams

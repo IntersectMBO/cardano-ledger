@@ -777,7 +777,7 @@ mkRewardAns
                 VMap.filter (\_ swd -> swdDelegation swd == stakePoolId) $
                   unActiveStake activeStake
             delegators = Map.findWithDefault mempty stakePoolId delegatorsPerStakePool
-            stakePoolState = mkStakePoolState (EpochNo 0) (pp ^. ppPoolDepositCompactL) delegators stakePoolParams
+            stakePoolState = mkStakePoolState (EpochNo 0) SNothing (pp ^. ppPoolDepositCompactL) delegators stakePoolParams
             stakePoolSnapShot = mkStakePoolSnapShot stakeRestrictedToPool totalActiveStake stakePoolState
          in mkPoolRewardInfo
               pp

@@ -798,7 +798,7 @@ resetStakePoolSnapShotFromPoolParams stakePools ss@SnapShot {..} =
     snapShotFromStakePoolParams stakePoolParams =
       let delegations = Map.findWithDefault mempty (sppId stakePoolParams) delegatorsPerStakePool
        in mkStakePoolSnapShot ssActiveStake ssTotalActiveStake $
-            mkStakePoolState (BaseTypes.EpochNo 0) mempty delegations stakePoolParams
+            mkStakePoolState (BaseTypes.EpochNo 0) SNothing mempty delegations stakePoolParams
     delegatorsPerStakePool =
       VMap.foldlWithKey
         (\acc cred swd -> Map.insertWith (<>) (swdDelegation swd) (Set.singleton cred) acc)
