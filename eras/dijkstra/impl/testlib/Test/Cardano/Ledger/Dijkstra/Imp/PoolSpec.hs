@@ -335,29 +335,17 @@ spec = describe "POOL" $ do
 
   describe "BLS PoolReg" $ do
     let
-      mkPoolRegTxFromParams pps =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
-
       getPools = getsNES $ nesEsL . epochStateStakePoolsL
 
     it "registers a pool with a valid BLS key and proof of possession" $ do
-      pps <- freshStakePool
       ownerBlsKey <- freshBlsKey
-      let ppsWithBlsKey = pps {sppBlsKey = SJust ownerBlsKey}
-      submitTxAnn_ "Registering a new stake pool" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert ppsWithBlsKey)
-      pools <- getPools
-      stakePoolState <- expectJust $ Map.lookup (sppId pps) pools
-      bksKey <$> spsBlsKey stakePoolState `shouldBe` SJust ownerBlsKey
+      pps <- registerPoolWithBlsKey (SJust ownerBlsKey)
+      epochNo <- getsNES nesELL
+      expectBlsKeyState (sppId pps) (SJust (BlsKeyState ownerBlsKey epochNo))
 
     it "fails to re-register an existing pool with an invalid BLS proof of possession" $ do
-      pps <- freshStakePool
       ownerBlsKey <- freshBlsKey
-      let ppsWithBlsKey = pps {sppBlsKey = SJust ownerBlsKey}
-      submitTxAnn_ "Registering a new stake pool" $
-        mkPoolRegTxFromParams ppsWithBlsKey
+      pps <- registerPoolWithBlsKey (SJust ownerBlsKey)
       pStateBefore <- getPools
       invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
       -- TODO: remove `withDisabledPostSubmitTxHook` once the Agda spec includes BLS
@@ -365,7 +353,7 @@ spec = describe "POOL" $ do
       -- See https://github.com/IntersectMBO/formal-ledger-specifications/pull/1300
       withDisabledPostSubmitTxHook $
         submitFailingTx
-          (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
+          (registerPoolTx pps {sppBlsKey = SJust invalidOwnerBlsKey})
           [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
       passEpoch
       getPools `shouldReturn` pStateBefore
@@ -378,7 +366,7 @@ spec = describe "POOL" $ do
       -- See https://github.com/IntersectMBO/formal-ledger-specifications/pull/1300
       withDisabledPostSubmitTxHook $
         submitFailingTx
-          (mkPoolRegTxFromParams pps {sppBlsKey = SJust invalidOwnerBlsKey})
+          (registerPoolTx pps {sppBlsKey = SJust invalidOwnerBlsKey})
           [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
       pools <- getPools
       expectNothing $ Map.lookup (sppId pps) pools
@@ -404,6 +392,12 @@ spec = describe "POOL" $ do
             & psVRFKeyHashesL %~ addVRFKeyHashOccurrence vrf . Map.delete ownVrf
       expectPool kh (Just vrf)
       pure kh
+    registerPoolWithBlsKey mbBlsKey = do
+      pps <- freshStakePool
+      let ppsWithBlsKey = pps {sppBlsKey = mbBlsKey}
+      submitTxAnn_ "Registering a new stake pool" $
+        registerPoolTx ppsWithBlsKey
+      pure ppsWithBlsKey
     retirePoolTx kh retirementInterval = do
       curEpochNo <- getsNES nesELL
       pure $
@@ -420,6 +414,9 @@ spec = describe "POOL" $ do
       psVRFKeyHashes
         <$> getPState
           `shouldReturn` Map.fromList [(vrf, unsafeNonZero n) | (vrf, n) <- vrfs]
+    expectBlsKeyState poolId expected = do
+      sps <- expectJust . Map.lookup poolId . psStakePools =<< getPState
+      spsBlsKey sps `shouldBe` expected
     poolParams ::
       KeyHash StakePool ->
       VRFVerKeyHash StakePoolVRF ->
