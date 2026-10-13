@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStateExamples,
   queryFuturePParamsExamples,
   queryGovStateExamples,
+  queryLeiosCommitteeExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
@@ -33,6 +34,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
+import Cardano.Crypto.Leios (mkLeiosCommittee)
 import Cardano.Ledger.Api.Governance (
   Committee (..),
   Constitution (..),
@@ -54,6 +56,7 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   QueryPoolStateResult (..),
+  QueryResultLeiosCommittee (..),
   QueryResultPoolDistr,
   StakeSnapshot (..),
   StakeSnapshots (..),
@@ -76,13 +79,14 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.State (
-  BlsKey,
+  BlsKey (..),
   ChainAccountState (..),
   FuturePParams (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   StakePoolParams (..),
   StakePoolRelay (..),
+  emptyLeiosCommittee,
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Data.Default (def)
@@ -96,6 +100,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Vector.Strict as VS
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -658,3 +663,27 @@ queryStakeSnapshotsExamples =
       , ssGoTotal = knownNonZeroCoin @4_000_000_000
       }
   ]
+
+queryLeiosCommitteeExamples :: [QueryResultLeiosCommittee]
+queryLeiosCommitteeExamples =
+  [ QueryResultLeiosCommittee
+      { qrlcCurrentLeiosCommittee = emptyLeiosCommittee
+      , qrlcFutureLeiosCommittee = SJust emptyLeiosCommittee
+      }
+  , QueryResultLeiosCommittee
+      { qrlcCurrentLeiosCommittee = exampleLeiosCommittee
+      , qrlcFutureLeiosCommittee = SJust exampleLeiosCommittee
+      }
+  , QueryResultLeiosCommittee
+      { qrlcCurrentLeiosCommittee = exampleLeiosCommittee
+      , qrlcFutureLeiosCommittee = SNothing
+      }
+  ]
+  where
+    -- one seat with a voting key and one without
+    exampleLeiosCommittee =
+      mkLeiosCommittee $
+        VS.fromList
+          [ (SJust (blsPubKey exampleBlsKey, blsPossessionProof exampleBlsKey), 3 % 8)
+          , (SNothing, 1 % 4)
+          ]

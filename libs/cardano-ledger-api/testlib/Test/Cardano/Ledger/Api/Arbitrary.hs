@@ -17,6 +17,10 @@ instance Arbitrary QueryResultNonMyopicMemberRewards where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+instance Arbitrary QueryResultLeiosCommittee where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 instance Arbitrary StakeSnapshot where
   arbitrary = genericArbitraryU
   shrink = genericShrink

@@ -2,12 +2,17 @@
 
 ## 1.16.0.0
 
+* Add `queryLeiosCommittee` (`GetLeiosCommittee`) with the `QueryResultLeiosCommittee` result type
 * Add methods to `AnyEraTxBody`:
   - `subTransactionsTxBodyG`
   - `requiredTopLevelGuardsTxBodyG`
   - `directDepositsTxBodyG`
   - `accountBalanceIntervalsTxBodyG`
   - `startingAccountBalanceIntervalsTxBodyG`
+
+### `testlib`
+
+* Add `Arbitrary` instance for `QueryResultLeiosCommittee`
 
 ## 1.15.0.0
 

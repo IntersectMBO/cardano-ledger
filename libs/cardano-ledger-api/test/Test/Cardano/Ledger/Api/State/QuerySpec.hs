@@ -60,6 +60,7 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStateExamples,
   queryFuturePParamsExamples,
   queryGovStateExamples,
+  queryLeiosCommitteeExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
@@ -130,6 +131,7 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryFuturePParams" (queryFuturePParamsExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryGovState" (queryGovStateExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryLeiosCommittee" queryLeiosCommitteeExamples
       eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" (queryPoolParametersExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryPoolState" (queryPoolStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryProposals" (queryProposalsExamples @era)
@@ -151,6 +153,7 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @(QueryPoolStateResult era)
+      prop "QueryResultLeiosCommittee" $ roundTripEraExpectation @era @QueryResultLeiosCommittee
       prop "QueryResultNonMyopicMemberRewards" $
         roundTripEraExpectation @era @QueryResultNonMyopicMemberRewards
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots

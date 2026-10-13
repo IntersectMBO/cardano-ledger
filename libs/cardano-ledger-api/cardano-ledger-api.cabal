@@ -110,6 +110,7 @@ library testlib
     base,
     bytestring,
     cardano-base,
+    cardano-crypto-leios,
     cardano-ledger-api,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
@@ -121,6 +122,7 @@ library testlib
     data-default,
     generic-random,
     prettyprinter,
+    vector,
 
 test-suite cardano-ledger-api-test
   type: exitcode-stdio-1.0

@@ -94,6 +94,10 @@ module Cardano.Ledger.Api.State.Query (
   queryNonMyopicMemberRewards,
   QueryResultNonMyopicMemberRewards (..),
 
+  -- * @GetLeiosCommittee@
+  queryLeiosCommittee,
+  QueryResultLeiosCommittee (..),
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -860,3 +864,42 @@ queryNonMyopicMemberRewards ::
   QueryResultNonMyopicMemberRewards
 queryNonMyopicMemberRewards g st s =
   QueryResultNonMyopicMemberRewards $ Wallet.getNonMyopicMemberRewards g st s
+
+data QueryResultLeiosCommittee = QueryResultLeiosCommittee
+  { qrlcCurrentLeiosCommittee :: !LeiosCommittee
+  -- ^ Committee voting on Leios endorser blocks in the current epoch, from the "Set" snapshot.
+  , qrlcFutureLeiosCommittee :: !(StrictMaybe LeiosCommittee)
+  -- ^ Committee from the "Mark" snapshot that will be used for Leios voting next epoch.
+  -- It is marked as Maybe, because with full utilization of LedgerHD an answer for this field
+  -- will not be available until somewhere in the middle of the epoch.
+  }
+  deriving (Eq, Show, Generic)
+  deriving (ToJSON) via KeyValuePairs QueryResultLeiosCommittee
+
+instance NFData QueryResultLeiosCommittee
+
+instance ToKeyValuePairs QueryResultLeiosCommittee where
+  toKeyValuePairs (QueryResultLeiosCommittee current mFuture) =
+    [ "currentLeiosCommittee" .= leiosCommitteeToJSON current
+    , "futureLeiosCommittee" .= fmap leiosCommitteeToJSON mFuture
+    ]
+
+instance EncCBOR QueryResultLeiosCommittee where
+  encCBOR (QueryResultLeiosCommittee current mFuture) =
+    encodeListLen 2
+      <> encCBOR current
+      <> encCBOR mFuture
+
+instance DecCBOR QueryResultLeiosCommittee where
+  decCBOR =
+    decodeRecordNamed "QueryResultLeiosCommittee" (const 2) $
+      QueryResultLeiosCommittee <$> decCBOR <*> decCBOR
+
+queryLeiosCommittee :: NewEpochState era -> QueryResultLeiosCommittee
+queryLeiosCommittee nes =
+  QueryResultLeiosCommittee
+    { qrlcCurrentLeiosCommittee = snapShots ^. ssStakeSetL . ssLeiosCommitteeL
+    , qrlcFutureLeiosCommittee = SJust $ msLeiosCommittee (snapShots ^. ssStakeMarkL)
+    }
+  where
+    snapShots = nes ^. nesEsL . esSnapshotsL
