@@ -14,6 +14,7 @@ import Test.Cardano.Data.MapExtrasSpec (mapExtrasSpec)
 import Test.Cardano.Data.OMap.StrictSpec qualified as OMap
 import Test.Cardano.Data.OSet.StrictSpec qualified as OSet
 import Test.Cardano.Data.Set.NonEmpty qualified as Set.NonEmpty
+import Test.Cardano.Data.SimpleOMap.StrictSpec qualified as SimpleOMap
 import Test.Hspec
 import Test.Hspec.Runner
 
@@ -32,6 +33,7 @@ spec =
     OSet.spec
     Map.NonEmpty.spec
     OMap.spec
+    SimpleOMap.spec
 
 main :: IO ()
 main = do

@@ -41,6 +41,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader, LeiosBbodySignal (..), LeiosEraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
 import Cardano.Ledger.Dijkstra.Block ()
+import Cardano.Ledger.Dijkstra.Block.Endorser ()
 import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era

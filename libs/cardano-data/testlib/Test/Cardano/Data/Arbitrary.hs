@@ -13,6 +13,7 @@ import Data.OSet.Strict qualified as OSet
 import Data.Set qualified as Set
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Set.NonEmpty qualified as NES
+import Data.SimpleOMap.Strict qualified as SimpleOMap
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.QuickCheck
 
@@ -24,6 +25,10 @@ genOSet = fmap OSet.fromFoldable . listOf
 
 instance (Arbitrary v, OMap.HasOKey k v, Arbitrary k) => Arbitrary (OMap.OMap k v) where
   arbitrary = OMap.fromFoldable @[] <$> arbitrary
+
+instance (Arbitrary k, Arbitrary v, Ord k) => Arbitrary (SimpleOMap.OMap k v) where
+  arbitrary = SimpleOMap.fromFoldable @[] <$> arbitrary
+  shrink om = SimpleOMap.fromFoldable @[] <$> shrink (SimpleOMap.assocList om)
 
 instance (Arbitrary a, Ord a) => Arbitrary (NonEmptySet a) where
   arbitrary = do

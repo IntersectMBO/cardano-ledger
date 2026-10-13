@@ -28,6 +28,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
+import Cardano.Ledger.Dijkstra.Block.Endorser
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -48,6 +49,7 @@ import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.SimpleOMap.Strict as SimpleOMap
 import Data.Typeable (Typeable)
 import Generic.Random (genericArbitraryU)
 import Lens.Micro ((&), (.~))
@@ -417,3 +419,12 @@ genNonEmptyAccountBalanceIntervals = AccountBalanceIntervals . Map.fromList . ge
 instance Arbitrary (AccountBalanceInterval era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+instance Arbitrary EbReferences where
+  arbitrary =
+    mkEbReferences (eraProtVerLow @DijkstraEra) . SimpleOMap.fromFoldable <$> listOf1 arbitrary
+  shrink =
+    map (mkEbReferences (eraProtVerLow @DijkstraEra))
+      . filter (not . SimpleOMap.null)
+      . shrink
+      . getEbReferences

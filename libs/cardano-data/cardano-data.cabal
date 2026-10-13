@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-data
-version: 1.4.0.0
+version: 1.4.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -26,6 +26,7 @@ library
     Data.OSet.Strict
     Data.Pulse
     Data.Set.NonEmpty
+    Data.SimpleOMap.Strict
     Data.Universe
 
   hs-source-dirs: src
@@ -99,6 +100,7 @@ test-suite cardano-data-tests
     Test.Cardano.Data.OMap.StrictSpec
     Test.Cardano.Data.OSet.StrictSpec
     Test.Cardano.Data.Set.NonEmpty
+    Test.Cardano.Data.SimpleOMap.StrictSpec
 
   default-language: Haskell2010
   ghc-options:
