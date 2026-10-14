@@ -15,14 +15,18 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   committeeCredentialToStrictMaybe,
-  vkeyToInteger,
+  verkeyToInteger,
   vkeyFromInteger,
+  verkeyFromInteger96,
+  popFromInteger,
+  popToInteger,
+  vkeyToInteger,
   signatureToInteger,
   signatureFromInteger,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
-import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
+import Cardano.Crypto.DSIGN (DSIGNAggregatable (..), DSIGNAlgorithm (..), SignedDSIGN (..))
+import Cardano.Crypto.Util (bytesToInteger, naturalToBytes)
 import Cardano.Ledger.Address (
   AccountAddress (..),
   AccountId (..),
@@ -33,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochInterval (..),
   EpochNo (..),
+  Milliseconds32 (..),
   Network (..),
   ProtVer (..),
   SlotNo (..),
@@ -61,6 +66,7 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Control.Monad (forM)
 import Control.Monad.Except (throwError)
+import Data.ByteString (ByteString)
 import Data.Functor.Identity (Identity (..))
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -162,17 +168,32 @@ instance
 
   toSpecRep (PParamsUpdate ppu) = toSpecRep ppu
 
+integerToBytes :: Int -> Integer -> ByteString
+integerToBytes s = naturalToBytes s . fromInteger
+
+verkeyToInteger :: DSIGNAlgorithm v => VerKeyDSIGN v -> Integer
+verkeyToInteger = bytesToInteger . rawEncodeFixedSized
+
+verkeyFromInteger96 :: DSIGNAlgorithm v => Integer -> Maybe (VerKeyDSIGN v)
+verkeyFromInteger96 = rawDecodeFixedSized . integerToBytes 96
+
 vkeyToInteger :: VKey kd -> Integer
-vkeyToInteger = toInteger . bytesToNatural . rawEncodeFixedSized . unVKey
+vkeyToInteger = verkeyToInteger . unVKey
 
 vkeyFromInteger :: Integer -> Maybe (VKey kd)
-vkeyFromInteger = fmap VKey . rawDecodeFixedSized . naturalToBytes 32 . fromInteger
+vkeyFromInteger = fmap VKey . rawDecodeFixedSized . integerToBytes 32
+
+popToInteger :: DSIGNAggregatable v => PossessionProofDSIGN v -> Integer
+popToInteger = bytesToInteger . rawEncodeFixedSized
+
+popFromInteger :: DSIGNAggregatable v => Integer -> Maybe (PossessionProofDSIGN v)
+popFromInteger = rawDecodeFixedSized . integerToBytes 48
 
 signatureToInteger :: DSIGNAlgorithm v => SigDSIGN v -> Integer
-signatureToInteger = toInteger . bytesToNatural . rawEncodeFixedSized
+signatureToInteger = bytesToInteger . rawEncodeFixedSized
 
 signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
-signatureFromInteger = rawDecodeFixedSized . naturalToBytes 64 . fromInteger
+signatureFromInteger = rawDecodeFixedSized . integerToBytes 64
 
 instance SpecTranslate era (VKey k) where
   type SpecRep era (VKey k) = Agda.HSVKey
@@ -251,3 +272,8 @@ instance SpecNormalize Agda.BootstrapAddr
 instance SpecNormalize Agda.Credential
 
 instance SpecNormalize Agda.RewardAddress
+
+instance SpecTranslate era Milliseconds32 where
+  type SpecRep era Milliseconds32 = Integer
+
+  toSpecRep = toSpecRep . unMilliseconds32
