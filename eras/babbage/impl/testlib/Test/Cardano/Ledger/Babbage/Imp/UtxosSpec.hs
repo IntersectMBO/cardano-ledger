@@ -117,9 +117,7 @@ spec = describe "UTXOS" $ do
   describe "Scripts with bootstrap addresses fail" $
     forM_ (eraLanguages @era) $ \lang ->
       withSLanguage lang $ \slang ->
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-        -- TODO: Re-enable after issue is resolved, by removing this override
-        disableInConformanceIt (show lang) $ do
+        it (show lang) $ do
           tx <- mkTxWithPlutusAndBootstrapAddress slang
           submitFailingTx
             tx

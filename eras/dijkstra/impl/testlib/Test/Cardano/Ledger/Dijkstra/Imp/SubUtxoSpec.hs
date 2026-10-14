@@ -188,9 +188,7 @@ spec = describe "SUBUTXO" $ do
       getUTxO >>= (`expectUTxOContent` [(txIn, isNothing)])
 
   describe "SubOutputBootAddrAttrsTooBig" $ do
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "an output to a bootstrap address whose attributes exceed the limit" $ do
+    it "an output to a bootstrap address whose attributes exceed the limit" $ do
       bootAddr <- freshBootstrapAddressOversizedPayload
       let subTx :: Tx SubTx era
           subTx =
@@ -200,9 +198,7 @@ spec = describe "SUBUTXO" $ do
         txOuts <- subTxOutputs fixedUpTx
         pure [injectFailure $ SubOutputBootAddrAttrsTooBig @era txOuts]
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "several such outputs, reported in their order in the body" $ do
+    it "several such outputs, reported in their order in the body" $ do
       firstBootAddr <- freshBootstrapAddressOversizedPayload
       secondBootAddr <- freshBootstrapAddressOversizedPayload
       let firstTxOut = mkBasicTxOut (AddrBootstrap firstBootAddr) mempty
@@ -284,9 +280,7 @@ spec = describe "SUBUTXO" $ do
     getUTxO >>= (`expectUTxOContent` [(txIn, isNothing)])
 
   describe "Composite tests" $ do
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt
+    it
       "seven failures of one sub-transaction, in the reverse of the order the rule checks them"
       $ do
         restrictMaxValSizeToAdaOnly
@@ -346,9 +340,7 @@ spec = describe "SUBUTXO" $ do
       submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [setMinCoinTxOut pp $ mkBasicTxOut addr mempty]
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "an output to a bootstrap address whose payload is the largest allowed size" $ do
+    it "an output to a bootstrap address whose payload is the largest allowed size" $ do
       bootAddr <- freshBootstrapAddressWithPayloadSize $ Just largestBootstrapAddressAttrsSize
       submitTx_ . mkTopTxWithSubTxs . pure . mkBasicTx $
         mkBasicTxBody & outputsTxBodyL .~ [mkBasicTxOut (AddrBootstrap bootAddr) mempty]
