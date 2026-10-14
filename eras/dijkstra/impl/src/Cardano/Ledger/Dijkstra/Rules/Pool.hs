@@ -279,6 +279,7 @@ poolTransition = do
             guard $
               Set.member blsKeyHash psBlsKeyHashes && newBlsKeyHash `notElem` ownBlsKeyHashes
             pure blsKey
+          trackNewBlsKeyHash = strictMaybe id Set.insert newBlsKeyHash
 
       case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
@@ -294,11 +295,12 @@ poolTransition = do
                   sppId
                   (mkStakePoolState cEpoch SNothing (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
               & psVRFKeyHashesL %~ addVRFKeyHashOccurrence sppVrf
-              & psBlsKeyHashesL %~ strictMaybe id Set.insert newBlsKeyHash
+              & psBlsKeyHashesL %~ trackNewBlsKeyHash
         -- re-register Pool
         Just stakePoolState -> do
           let activeVrf = stakePoolState ^. spsVrfL
-              mbFutureVrf = (^. sppVrfL) <$> Map.lookup sppId psFutureStakePoolParams
+              mbFutureParams = Map.lookup sppId psFutureStakePoolParams
+              mbFutureVrf = (^. sppVrfL) <$> mbFutureParams
               -- The only reference to this VRF key hash, if any, must be the
               -- pool's own, held through its active or its future parameters.
               expectedOccurrences
@@ -324,10 +326,10 @@ poolTransition = do
                 | otherwise = id
               activeBlsKeyHash = hashBlsKey . bksKey <$> stakePoolState ^. spsBlsKeyL
               newFutureBlsKeyHash =
-                hashBlsKey <$> (sppBlsKey =<< maybeToStrictMaybe (Map.lookup sppId psFutureStakePoolParams))
+                hashBlsKey <$> (sppBlsKey =<< maybeToStrictMaybe mbFutureParams)
               -- The re-registration replaces the future parameters, which releases their BLS key,
               -- unless the active parameters use it as well. If the re-registration uses that
-              -- same key, it is recorded again.
+              -- same key, `trackNewBlsKeyHash` records it again.
               releaseFutureBlsKeyHash = case newFutureBlsKeyHash of
                 SJust curFutureBlsKeyHash
                   | newFutureBlsKeyHash /= activeBlsKeyHash -> Set.delete curFutureBlsKeyHash
@@ -345,7 +347,7 @@ poolTransition = do
                 %~ Map.insert sppId stakePoolParams
               & psRetiringL %~ Map.delete sppId
               & psVRFKeyHashesL %~ updateFutureVRFKeyHash
-              & psBlsKeyHashesL %~ strictMaybe id Set.insert newBlsKeyHash . releaseFutureBlsKeyHash
+              & psBlsKeyHashesL %~ trackNewBlsKeyHash . releaseFutureBlsKeyHash
     RetirePool sppId e -> do
       Map.member sppId psStakePools ?! injectFailure (StakePoolNotRegisteredOnKeyPOOL sppId)
       let maxEpoch = pp ^. ppEMaxL
