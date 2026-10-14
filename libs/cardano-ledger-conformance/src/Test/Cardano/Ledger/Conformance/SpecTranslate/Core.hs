@@ -32,6 +32,9 @@ import Cardano.Ledger.Address (
   AccountId (..),
   Addr (..),
   BootstrapAddress (..),
+  bootstrapAddressAttrsSize,
+  bootstrapKeyHash,
+  getNetwork,
  )
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -65,7 +68,6 @@ import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Control.Monad (forM)
-import Control.Monad.Except (throwError)
 import Data.ByteString (ByteString)
 import Data.Functor.Identity (Identity (..))
 import qualified Data.Map as Map
@@ -91,7 +93,11 @@ instance SpecTranslate era StakeReference where
 instance SpecTranslate era BootstrapAddress where
   type SpecRep era BootstrapAddress = Agda.BootstrapAddr
 
-  toSpecRep _ = throwError "Cannot translate bootstrap addresses"
+  toSpecRep addr =
+    Agda.BootstrapAddr
+      <$> toSpecRep (getNetwork $ AddrBootstrap addr)
+      <*> (Agda.KeyHashObj <$> toSpecRep (bootstrapKeyHash addr))
+      <*> pure (toInteger $ bootstrapAddressAttrsSize addr)
 
 instance SpecTranslate era Addr where
   type SpecRep era Addr = Agda.Addr
