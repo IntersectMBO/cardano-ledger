@@ -89,9 +89,7 @@ spec = describe "SUBUTXOW" $ do
     forM_ (missingVKeyWitnessSources @era) $ \(sourceName, mkSubTx) ->
       it sourceName $ withheldWitnessFails mkSubTx
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "spending a bootstrap address input" $
+    it "spending a bootstrap address input" $
       withheldWitnessFails $ do
         bootAddr <- freshBootstrapAddress
         txIn <- sendCoinTo (AddrBootstrap bootAddr) mempty
