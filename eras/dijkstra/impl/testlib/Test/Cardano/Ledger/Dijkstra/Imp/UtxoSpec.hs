@@ -10,8 +10,10 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec (spec) where
 
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
@@ -28,16 +30,19 @@ import Cardano.Ledger.Plutus
 import qualified Cardano.Ledger.Shelley.AdaPots as AdaPots
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Shelley.UTxO (produced)
+import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, produced)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.Val
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Lens.Micro
+import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -570,6 +575,99 @@ spec = describe "UTXO" $ do
         topTx <- mkTopTx amounts
         balanced <- balanceSubTransactions topTx
         withFixup noBalanceFixup $ submitTx_ balanced
+
+  describe "minFee calculation" $ do
+    it "reference scripts in subtransactions, as reference inputs" $ do
+      scripts <- freshNativeScripts 3
+      refIns <- produceRefScripts (NE.fromList scripts)
+      topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] (NE.toList refIns)]
+      expectRefScriptsFee topTx scripts
+
+    it "reference scripts in subtransactions, as spend inputs" $ do
+      scripts <- freshNativeScripts 3
+      refIns <- produceRefScripts (NE.fromList scripts)
+      topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs (NE.toList refIns) []]
+      expectRefScriptsFee topTx scripts
+
+    it "reference scripts at both levels" $ do
+      topScripts <- freshNativeScripts 2
+      subScripts <- freshNativeScripts 3
+      topRefIns <- produceRefScripts (NE.fromList topScripts)
+      subRefIns <- produceRefScripts (NE.fromList subScripts)
+      topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] (NE.toList subRefIns)]
+      expectRefScriptsFee
+        (topTx & bodyTxL . referenceInputsTxBodyL .~ Set.fromList (NE.toList topRefIns))
+        (topScripts <> subScripts)
+
+    it "the same reference script at both levels" $ do
+      script <- freshNativeScript
+      topRefIn :| [subRefIn] <- produceRefScripts (script :| [script])
+      topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] [subRefIn]]
+      expectRefScriptsFee
+        (topTx & bodyTxL . referenceInputsTxBodyL .~ [topRefIn])
+        [script, script]
+
+    it "reference scripts on collateral inputs are not paid for" $ do
+      subScript <- freshNativeScript
+      collateralScript <- freshNativeScript
+      subRefIn :| [] <- produceRefScripts (subScript :| [])
+      collateralIn :| [] <- produceRefScripts (collateralScript :| [])
+      topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] [subRefIn]]
+      expectRefScriptsFee
+        (topTx & bodyTxL . collateralInputsTxBodyL .~ [collateralIn])
+        [subScript]
+
+    it "a fee that does not cover a sub-transaction's reference scripts is rejected" $ do
+      -- large enough that the reference script charge exceeds the 10% padding `fixupFees` adds
+      modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ (100_000 %! 1)
+      pp <- getsPParams id
+      refIn <- freshFundedTxIn
+      let topTx = mkTopTxWithSubTxs [mkTxWithInputsAndRefInputs [] [refIn]]
+      plutus <- mkPlutusScript $ alwaysSucceedsWithDatum SPlutusV4
+      actualRefTxIn <- produceRefScript (fromPlutusScript plutus)
+
+      withPostFixupSubTxs
+        ( \subTx ->
+            rederiveAddrTxWits
+              ( -- attach scripts to reference inputs after the fixup, so they're not accounted for in the fee
+                subTx & bodyTxL . referenceInputsTxBodyL .~ [actualRefTxIn]
+              )
+        )
+        $ do
+          submitFailingTxM topTx $ \fixedUpTx -> do
+            pure
+              [ injectFailure $
+                  FeeTooSmallUTxO
+                    Mismatch
+                      { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
+                      , mismatchExpected = getMinFeeTx pp fixedUpTx (originalBytesSize (fromPlutusScript plutus))
+                      }
+              ]
+
+    it "execution units from subtransaction redeemers are accounted for in minFee" $ do
+      modifyPParams $ ppTxFeePerByteL .~ CoinPerByte mempty
+      pp <- getsPParams id
+      exUnits <- (ExUnits 1 1 <>) <$> arbitrary
+      let mkTxWithRedeemer :: Typeable l => ImpTestM era (Tx l era)
+          mkTxWithRedeemer = do
+            txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV4
+            dt <- arbitrary
+            pure $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ [txIn]
+                & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert (mkSpendingPurpose (AsIx 0)) (dt, exUnits)
+      subTxWithRedeemer <- mkTxWithRedeemer @SubTx
+      utxo <- getUTxO
+
+      let feeTxWithSubTxWithRedeemers =
+            getMinFeeTxUtxo pp (mkTopTxWithSubTxs [subTxWithRedeemer]) utxo
+      let feeTxWithSubTxNoRedeemers =
+            getMinFeeTxUtxo pp (mkTopTxWithSubTxs [mkBasicTx mkBasicTxBody]) utxo
+      let diff = feeTxWithSubTxWithRedeemers <-> feeTxWithSubTxNoRedeemers
+
+      diff `shouldNotBe` mempty
+      prices <- getsPParams ppPricesL
+      diff `shouldBe` txscriptfee prices exUnits
   where
     submitInAllModes :: HasCallStack => ImpTestM era (Tx TopTx era) -> ImpTestM era ()
     submitInAllModes genTx = do
@@ -661,6 +759,28 @@ spec = describe "UTXO" $ do
             mkBasicTx mkBasicTxBody
               & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
       txInAt 0 <$> submitTx tx
+    -- Check that the minimum fee accounts for exactly `scripts` worth of reference
+    -- script bytes.
+    expectRefScriptsFee :: HasCallStack => Tx TopTx era -> [Script era] -> ImpTestM era ()
+    expectRefScriptsFee tx scripts = do
+      pp <- getsPParams id
+      utxo <- getUTxO
+      let refScriptsSize = sum $ originalBytesSize <$> scripts
+          costPerByte = pp ^. ppMinFeeRefScriptCostPerByteL
+
+      -- the ledger counted our scripts' bytes: the same fee function on both sides,
+      -- so the size is all that can differ
+      getMinFeeTxUtxo pp tx utxo `shouldBe` getMinFeeTx pp tx refScriptsSize
+      -- the only difference between the two fee computations is the reference scripts,
+      -- so the difference between them is exactly what was charged for them
+      (getMinFeeTxUtxo pp tx utxo <-> getShelleyMinFeeTxUtxo pp tx)
+        `shouldBe` Coin
+          -- our scripts fit in the first tier, where the price is a flat rate per byte
+          (floor $ fromIntegral @Int @Rational refScriptsSize * unboundRational costPerByte)
+    freshNativeScript :: ImpTestM era (Script era)
+    freshNativeScript = fromNativeScript . RequireSignature <$> freshKeyHash
+    freshNativeScripts :: Int -> ImpTestM era [Script era]
+    freshNativeScripts n = replicateM n freshNativeScript
 
 noBalanceFixup ::
   ( HasCallStack
