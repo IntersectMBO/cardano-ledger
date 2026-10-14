@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Verify BLS proofs of possession under the IETF `BLS_POP_` domain separation tag, as `cardano-crypto-class` now makes them
 * Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
 * Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
 * Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that,
