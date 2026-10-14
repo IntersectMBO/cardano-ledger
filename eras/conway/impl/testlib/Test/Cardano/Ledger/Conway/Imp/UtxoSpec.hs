@@ -147,7 +147,7 @@ spec = describe "UTXO" $ do
         modifyPParams (ppMinFeeRefScriptCostPerByteL .~ (10 %! 1))
         scriptTxIn <- nativeScript >>= impAddNativeScript >>= produceScript
         refIns <- produceRefScripts (NE.fromList refScripts)
-        tx <- submitTxWithRefInputs scriptTxIn refIns
+        tx <- submitTx $ mkTxWithInputsAndRefInputs [scriptTxIn] (NE.toList refIns)
         minFeeDiff <- do
           utxo <- getUTxO
           pp <- getsNES $ nesEsL . curPParamsEpochStateL
