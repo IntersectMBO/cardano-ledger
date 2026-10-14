@@ -25,7 +25,6 @@ import Cardano.Ledger.Shelley.Scripts (
 import Data.Foldable (for_)
 import Data.List (inits)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Traversable (for)
@@ -75,7 +74,7 @@ spec = describe "BBODY" $ do
       -- reference inputs
       txIn <- freshKeyAddr_ >>= \addr -> sendCoinTo addr (Coin 100_000_000)
       refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
-      pure $ mkTxWithRefInputs txIn (NE.fromList refIns)
+      pure $ mkTxWithInputsAndRefInputs [txIn] refIns
 
     submitFailingBlock
       txs
@@ -156,23 +155,26 @@ spec = describe "BBODY" $ do
       -- spend script using the reference script
       spendScriptWithRefScriptTx <-
         mkTxWithExpectedSize scriptSize $
-          submitTxWithRefInputs scriptSpendIn [refScriptTx1In]
+          submitTx $
+            mkTxWithInputsAndRefInputs [scriptSpendIn] [refScriptTx1In]
       -- spend using two ref inputs
       spendScriptWithTwoRefScriptsTx <-
         mkTxWithExpectedSize (2 * scriptSize) $
-          submitTxWithRefInputs scriptSpendIn2 [refScriptTx1In, txInAt 0 (fst refScriptTx2)]
+          submitTx $
+            mkTxWithInputsAndRefInputs [scriptSpendIn2] [refScriptTx1In, txInAt 0 (fst refScriptTx2)]
       -- spend the root utxo
       rootIn <- fst <$> getImpRootTxOut
       spendRootUtxoTx <-
         mkTxWithExpectedSize scriptSize $
-          submitTxWithRefInputs rootIn [refScriptTx1In]
+          submitTx $
+            mkTxWithInputsAndRefInputs [rootIn] [refScriptTx1In]
       -- spend the reference script itself
       -- We must check the size without submitting the transaction,
       -- since applying it removes the reference script from the UTxO
       spendRefScriptTx <-
         mkTxWithExpectedSize scriptSize $
           fixupTx $
-            mkTxWithRefInputs refScriptTx1In (NE.fromList [refScriptTx1In])
+            mkTxWithInputsAndRefInputs [refScriptTx1In] [refScriptTx1In]
 
       let txsWithRefScriptSizes =
             [ refScriptTx1
@@ -236,7 +238,7 @@ spec = describe "BBODY" $ do
 
       -- consume the script, passing the output from the previous collateral as reference input
       let refScriptTxIn = txInAt 1 createCollateralTx
-      useCollateralTx <- submitTxWithRefInputs scriptTxIn [refScriptTxIn]
+      useCollateralTx <- submitTx $ mkTxWithInputsAndRefInputs [scriptTxIn] [refScriptTxIn]
       totalRefScriptSizeInBlock protVer [createCollateralTx, useCollateralTx]
         <$> getUTxO `shouldReturn` scriptSize
       pure [createCollateralTx, useCollateralTx]
