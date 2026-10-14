@@ -31,7 +31,7 @@ flag asserts
 library
   exposed-modules:
     Cardano.Ledger.Dijkstra
-    Cardano.Ledger.Dijkstra.Block
+    Cardano.Ledger.Dijkstra.Block.Endorser
     Cardano.Ledger.Dijkstra.BlockBody
     Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Core
@@ -54,6 +54,7 @@ library
     Cardano.Ledger.Dijkstra.UTxO
 
   other-modules:
+    Cardano.Ledger.Dijkstra.Block
     Cardano.Ledger.Dijkstra.Rules.Bbody
     Cardano.Ledger.Dijkstra.Rules.Cert
     Cardano.Ledger.Dijkstra.Rules.Certs
@@ -115,7 +116,7 @@ library
     cardano-base >=0.1.4,
     cardano-crypto-class,
     cardano-crypto-leios >=0.3,
-    cardano-data ^>=1.4,
+    cardano-data ^>=1.4.1,
     cardano-ledger-allegra,
     cardano-ledger-alonzo ^>=1.17,
     cardano-ledger-babbage ^>=1.15,

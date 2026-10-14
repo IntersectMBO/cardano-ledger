@@ -53,6 +53,9 @@ certificate =
   // drep_update_cert
   ]
 
+;We only accept non-empty reference maps
+eb_references = [+ eb_reference]
+
 header = [header_body, body_signature : kes_signature]
 
 header_body =
@@ -942,4 +945,6 @@ leios_certificate =
 leios_signature = bytes .size 48
 
 peras_certificate = bytes
+
+eb_reference = [transaction_hash : hash32, transaction_size : uint .size 4]
 

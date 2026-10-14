@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `Cardano.Ledger.Dijkstra.Block.Endorser`, with `DijkstraEndorserBlock` and related types, and the `EraEndorserBlock` class
 * Extend `DijkstraEraForecast` with Peras protocol parameters
 * Validate the treasury value and the reference scripts size in `LEDGER`, and the treasury value in `SUBLEDGER`, regardless of phase-2 validity
 * Add `POOLREAP` rule for Dijkstra:
@@ -21,6 +22,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `EbReferences`
 * Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
 
 ## 0.4.0.0

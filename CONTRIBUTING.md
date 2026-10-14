@@ -153,11 +153,11 @@ For each era, the serialization protocol is defined by a corresponding cddl file
 located at: `eras/<era>/impl/cddl/data/<era>.cddl`.
 
 These files are generated using [cuddle](https://github.com/input-output-hk/cuddle),
-based on the Haskell definitions in: `eras/<era>/impl/testlib/Test/Cardano/Ledger/<era>/CDDL.hs`.
+based on the Haskell definitions in: `eras/<era>/impl/cddl/lib/Cardano/Ledger/<era>/HuddleSpec.hs`.
 
 To modify the cddl files for a given era:
-1. Edit the CDDL.hs file for the desired era to reflect your changes
-2. Regenerate the cddl files by running `./scripts/gen-cddl.sh`
+1. Edit the HuddleSpec.hs file for the desired era to reflect your changes
+2. Regenerate the cddl files for all eras by running `cleret cabal run generate-cddl`
 
 ## Testing the Haskell programs
 

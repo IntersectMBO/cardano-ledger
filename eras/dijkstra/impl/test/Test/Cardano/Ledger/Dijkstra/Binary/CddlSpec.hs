@@ -18,6 +18,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Block.Endorser (EbReferences)
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
@@ -25,6 +26,7 @@ import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Leios.BlockHeader as Leios
 import Data.OSet.Strict (OSet)
+import Data.Word (Word32)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genDatumPresent, genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
@@ -98,4 +100,6 @@ spec = do
         genLeiosBlock
         v
         "block"
+      fullCddlSpec @(Hash HASH EraIndependentTx, Word32) v "eb_reference"
+      fullCddlSpec @EbReferences v "eb_references"
       fullCddlSpec @EbReferencesAnnouncement v "eb_references_announcement"
