@@ -55,6 +55,7 @@ fromMap x = if Map.null x then Nothing else Just (NonEmptyMap x)
 toMap :: forall k v. NonEmptyMap k v -> Map k v
 toMap (NonEmptyMap map) = map
 
+-- | \(O(n)\)
 keysSet :: NonEmptyMap k v -> NonEmptySet k
 keysSet (NonEmptyMap m) = fromJust $ NES.fromSet $ Map.keysSet m
 

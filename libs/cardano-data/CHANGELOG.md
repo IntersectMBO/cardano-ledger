@@ -2,6 +2,7 @@
 
 ## 1.4.1.0
 
+* Add `keysSet` to `NonEmptyMap`
 * Add `Data.SimpleOMap.Strict`, a variant of `Data.OMap.Strict` without the `HasOKey` constraint
 
 ### `testlib`
