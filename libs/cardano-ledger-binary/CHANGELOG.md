@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.10.1.0
+## 1.10.2.0
 
 * Add `decodeNonEmptyMapNoDuplicatesAnn`
 * Rename `decodeMapTraverse` to `decodeMapTraverseWithDuplicates`
