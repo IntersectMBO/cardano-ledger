@@ -85,6 +85,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   futurePParamsEpochStateL,
   lsUTxOStateL,
   lsCertStateL,
+  lsLastEbAnnouncementL,
   utxosDepositedL,
   utxosFeesL,
   utxosGovStateL,

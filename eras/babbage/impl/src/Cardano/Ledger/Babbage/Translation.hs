@@ -131,6 +131,7 @@ instance TranslateEra BabbageEra LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsCertState = translateEra' ctxt $ lsCertState ls
+        , lsLastEbAnnouncement = lsLastEbAnnouncement ls
         }
 
 instance TranslateEra BabbageEra UTxOState where

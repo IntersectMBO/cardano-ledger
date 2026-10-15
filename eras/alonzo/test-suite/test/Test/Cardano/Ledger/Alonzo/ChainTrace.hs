@@ -82,9 +82,9 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
     alonzoSpecificPropsLEDGER :: SourceSignalTarget (LEDGER AlonzoEra) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds
+        { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds _
         , signal = stAnnTx
-        , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds'
+        , target = LedgerState UTxOState {utxosUtxo = UTxO u', utxosDeposited = dp', utxosFees = f'} ds' _
         } =
         let tx = stAnnTx ^. txStAnnTxG
             isValid' = tx ^. isPhase2ValidTxL

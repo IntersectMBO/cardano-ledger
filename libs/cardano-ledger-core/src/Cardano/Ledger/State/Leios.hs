@@ -1,12 +1,19 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
--- | The Leios voting committee: the pools entitled to vote on endorser blocks
--- for one epoch (CIP-0164). The committee type itself is cardano-base's
--- 'LeiosCommittee'; this module re-exports it, gives it an empty value, teaches
--- it to serialize as part of the ledger state, and selects it from the
--- per-epoch stake standing of the pools ('LeiosCandidate').
+-- | Leios (CIP-0164) parts of the ledger state.
+--
+-- The voting committee: the pools entitled to vote on endorser blocks for one
+-- epoch. The committee type itself is cardano-base's 'LeiosCommittee'; this
+-- module re-exports it, gives it an empty value, teaches it to serialize as part
+-- of the ledger state, and selects it from the per-epoch stake standing of the
+-- pools ('LeiosCandidate').
+--
+-- The last endorser block announcement made by a block header ('EbAnnouncement').
 module Cardano.Ledger.State.Leios (
   LeiosCommittee (..),
   LeiosSeat (..),
@@ -14,19 +21,26 @@ module Cardano.Ledger.State.Leios (
   LeiosCandidate (..),
   selectLeiosCommittee,
   leiosCommitteeToJSON,
+  EbAnnouncement (..),
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
 import Cardano.Ledger.BaseTypes (
   EpochInterval,
+  KeyValuePairs (..),
   StrictMaybe (..),
+  ToKeyValuePairs (..),
   addEpochInterval,
   strictMaybeToMaybe,
  )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Block (EbReferencesAnnouncement)
 import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.Hashes (EraIndependentBlockHeader, SafeHash)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
-import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.Slot (EpochNo, SlotNo)
 import Cardano.Ledger.State.StakePool (BlsKey (..), BlsKeyState (..))
+import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value, object, toJSON, (.=))
 import Data.Function ((&))
 import Data.Ord (Down (..))
@@ -35,6 +49,8 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Intro as Intro
 import qualified Data.Vector.Strict as VS
 import Data.Word (Word16)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks)
 
 -- | The committee with no seats: the value for eras before Leios and for a
 -- committee size of zero.
@@ -102,3 +118,38 @@ leiosCommitteeToJSON =
         [ "seatWeight" .= weight
         , "seatVKey" .= show (strictMaybeToMaybe vkey)
         ]
+
+-- | Endorser Block (EB) references announcement together with the block header that made it.
+data EbAnnouncement = EbAnnouncement
+  { ebAnnouncement :: !EbReferencesAnnouncement
+  -- ^ Announcement of the Endorser Block references
+  , ebAnnouncementSlotNo :: !SlotNo
+  -- ^ Slot number of the block whose header made the announcement
+  , ebAnnouncedInBlockHeader :: !(SafeHash EraIndependentBlockHeader)
+  -- ^ Hash of the block header that made the announcement
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData)
+  deriving (ToJSON) via KeyValuePairs EbAnnouncement
+
+instance EncCBOR EbAnnouncement where
+  encCBOR (EbAnnouncement a s h) =
+    encodeListLen 3
+      <> encCBOR a
+      <> encCBOR s
+      <> encCBOR h
+
+instance DecCBOR EbAnnouncement where
+  decCBOR =
+    decodeRecordNamed "EbAnnouncement" (const 3) $
+      EbAnnouncement
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+
+instance ToKeyValuePairs EbAnnouncement where
+  toKeyValuePairs (EbAnnouncement a s h) =
+    [ "announcement" .= a
+    , "slotNo" .= s
+    , "announcedInBlockHeader" .= h
+    ]

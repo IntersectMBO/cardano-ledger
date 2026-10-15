@@ -190,7 +190,7 @@ uTxOStateZero =
     mempty
 
 ledgerStateZero :: forall era. Reflect era => LedgerState era
-ledgerStateZero = LedgerState uTxOStateZero dPStateZero
+ledgerStateZero = LedgerState uTxOStateZero dPStateZero SNothing
 
 epochStateZero :: Reflect era => EpochState era
 epochStateZero =
@@ -300,7 +300,7 @@ extractCertState x = case whichCertState (reify @era) of
       & (certVStateL .~ extract x)
 
 instance Reflect era => Extract (LedgerState era) era where
-  extract x = LedgerState (extract x) (extractCertState x)
+  extract x = LedgerState (extract x) (extractCertState x) SNothing
 
 instance Reflect era => Extract (EpochState era) era where
   extract x =

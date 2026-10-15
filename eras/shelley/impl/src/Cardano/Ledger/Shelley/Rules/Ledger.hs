@@ -269,12 +269,12 @@ shelleyLedgerAssertions =
   [ PostCondition
       "Deposit pot must equal obligation (LEDGER)"
       ( \(TRC (_, _, _))
-         (LedgerState utxoSt dpstate) -> potEqualsObligation dpstate utxoSt
+         (LedgerState utxoSt dpstate _) -> potEqualsObligation dpstate utxoSt
       )
   , PostCondition
       "Reverse stake pool delegations must match"
       ( \(TRC (_, _, _))
-         (LedgerState _ certState) ->
+         (LedgerState _ certState _) ->
             uncurry (==) $ calculateDelegatorsPerStakePool certState
       )
   ]
@@ -330,7 +330,11 @@ ledgerTransition ::
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, stAnnTx) <-
+  TRC
+    ( LedgerEnv slot mbCurEpochNo txIx pp account
+      , LedgerState utxoSt certState lastEbAnnouncement
+      , stAnnTx
+      ) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
@@ -351,7 +355,7 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure (LedgerState utxoSt' certState')
+  pure (LedgerState utxoSt' certState' lastEbAnnouncement)
 
 testIncompleteAndMissingWithdrawals ::
   ( EraAccounts era

@@ -495,7 +495,7 @@ ledgerStateSpec ::
   Specification (LedgerState era)
 ledgerStateSpec pp univ ctx epoch =
   constrained $ \ [var|ledgerState|] ->
-    match ledgerState $ \ [var|utxoS|] [var|csg|] ->
+    match ledgerState $ \ [var|utxoS|] [var|csg|] _lastEbAnnouncement ->
       [ satisfies csg (conwayCertStateSpec univ ctx epoch)
       , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era pp univ certstate))
       ]

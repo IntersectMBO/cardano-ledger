@@ -169,6 +169,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
               , utxosDonation = mempty
               }
         , lsCertState = mkShelleyCertState def dState
+        , lsLastEbAnnouncement = SNothing
         }
 
     dState :: DState ShelleyEra

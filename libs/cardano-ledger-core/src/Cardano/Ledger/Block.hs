@@ -34,12 +34,19 @@ module Cardano.Ledger.Block (
   EbReferencesAnnouncement (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  Nonce (..),
+  ProtVer (..),
+  StrictMaybe,
+  ToKeyValuePairs (..),
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON, (.=))
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -175,6 +182,7 @@ data EbReferencesAnnouncement = EbReferencesAnnouncement
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData)
+  deriving (ToJSON) via KeyValuePairs EbReferencesAnnouncement
 
 instance EncCBOR EbReferencesAnnouncement where
   encCBOR (EbReferencesAnnouncement h s) =
@@ -188,3 +196,9 @@ instance DecCBOR EbReferencesAnnouncement where
       EbReferencesAnnouncement
         <$> decCBOR
         <*> decCBOR
+
+instance ToKeyValuePairs EbReferencesAnnouncement where
+  toKeyValuePairs (EbReferencesAnnouncement h s) =
+    [ "hash" .= h
+    , "size" .= s
+    ]

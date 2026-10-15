@@ -365,7 +365,7 @@ conwayLedgerTransitionTRC ::
 conwayLedgerTransitionTRC
   ( TRC
       ( Shelley.LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState
-        , LedgerState utxoState certState
+        , LedgerState utxoState certState lastEbAnnouncement
         , stAnnTx
         )
     ) = do
@@ -448,7 +448,7 @@ conwayLedgerTransitionTRC
           , utxoState'
           , stAnnTx
           )
-    pure $ LedgerState utxoState'' certStateAfterCERTS
+    pure $ LedgerState utxoState'' certStateAfterCERTS lastEbAnnouncement
 
 validateTreasuryValue ::
   ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)

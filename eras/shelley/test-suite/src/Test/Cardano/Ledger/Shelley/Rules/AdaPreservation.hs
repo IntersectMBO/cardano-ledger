@@ -378,9 +378,9 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
     sumIncreaseWithdrawals :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     sumIncreaseWithdrawals
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f} _
+        { source = LedgerState UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f} _ _
         , signal = stAnnTx
-        , target = LedgerState UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'} _
+        , target = LedgerState UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'} _ _
         } =
         let tx = stAnnTx ^. txStAnnTxG
          in property (hasFailedScripts tx)
@@ -414,10 +414,12 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
           LedgerState
             UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f}
             cState1
+            _
         , target =
           LedgerState
             UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
             cState2
+            _
         } =
         (sumCoinUTxO u' <+> d' <+> f') <-> (sumCoinUTxO u <+> d <+> f)
           === sumAccountsBalances cState1 <-> sumAccountsBalances cState2
@@ -445,9 +447,9 @@ potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, sign
     (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     rewardsDecreaseByWithdrawals
       SourceSignalTarget
-        { source = LedgerState _ dpstate
+        { source = LedgerState _ dpstate _
         , signal = stAnnTx
-        , target = LedgerState _ dpstate'
+        , target = LedgerState _ dpstate' _
         } =
         let tx = stAnnTx ^. txStAnnTxG
             totalRewards = sumAccountsBalances dpstate
@@ -496,8 +498,8 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
       where
         tx = stAnnTx ^. txStAnnTxG
         failedScripts = property $ hasFailedScripts tx
-        LedgerState (UTxOState {utxosUtxo = u}) certState = ledgerSt
-        LedgerState (UTxOState {utxosUtxo = u'}) _ = ledgerSt'
+        LedgerState (UTxOState {utxosUtxo = u}) certState _ = ledgerSt
+        LedgerState (UTxOState {utxosUtxo = u'}) _ _ = ledgerSt'
         txb = tx ^. bodyTxL
         created =
           sumCoinUTxO u'
@@ -533,7 +535,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
 
     createdIsConsumed
       SourceSignalTarget
-        { source = LedgerState (UTxOState {utxosUtxo = utxo}) certState
+        { source = LedgerState (UTxOState {utxosUtxo = utxo}) certState _
         , signal = stAnnTx
         } =
         inps === outs
@@ -571,7 +573,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     outputPreserved
       SourceSignalTarget
-        { target = LedgerState (UTxOState {utxosUtxo = UTxO utxo}) _
+        { target = LedgerState (UTxOState {utxosUtxo = UTxO utxo}) _ _
         , signal = stAnnTx
         } =
         let tx = stAnnTx ^. txStAnnTxG
@@ -604,8 +606,8 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
     (UTxO irrelevantUTxO, ledgerTrRestr) =
       ledgerTraceFromBlockWithRestrictedUTxO @era chainSt block
     outputPreserved
-      SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uFull}) _}
-      SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uRestr}) _} =
+      SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uFull}) _ _}
+      SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uRestr}) _ _} =
         counterexample
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
           (uRestr `Map.disjoint` irrelevantUTxO)

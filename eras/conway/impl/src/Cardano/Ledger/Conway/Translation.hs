@@ -43,6 +43,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
   lsCertStateL,
+  lsLastEbAnnouncementL,
   lsUTxOStateL,
  )
 import Data.Coerce (coerce)
@@ -152,6 +153,7 @@ instance TranslateEra ConwayEra API.LedgerState where
       API.LedgerState
         { API.lsUTxOState = translateEra' conwayGenesis $ ls ^. lsUTxOStateL
         , API.lsCertState = translateCertState conwayGenesis $ ls ^. lsCertStateL
+        , API.lsLastEbAnnouncement = ls ^. lsLastEbAnnouncementL
         }
 
 translateCertState ::
