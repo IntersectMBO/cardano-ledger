@@ -15,9 +15,11 @@ import Cardano.Ledger.Api.State.Query (
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+  QueryResultStakePoolState (..),
   queryCommitteeMembersState,
   queryDRepDelegations,
   queryDRepState,
+  queryStakePoolState,
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
@@ -28,10 +30,11 @@ import Cardano.Ledger.Conway.Governance (
   Voter (StakePoolVoter),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State (BlsKeyState (..), StakePoolParams (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Set as Set
@@ -39,6 +42,7 @@ import Lens.Micro
 import Lens.Micro.Mtl
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
+import Test.Cardano.Ledger.Dijkstra.ImpTest (DijkstraEraImp)
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -475,3 +479,71 @@ spec = withImpInitEachEraVersion (Proxy @era) $ do
       ImpTestM era ()
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty
+
+stakePoolStateSpec ::
+  forall era.
+  DijkstraEraImp era =>
+  Spec
+stakePoolStateSpec = withImpInitEachEraVersion (Proxy @era) $
+  describe "StakePoolState" $
+    it "reports a pool through registration, delegation, re-registration and retirement" $ do
+      stakePoolParams <- freshStakePool
+      blsKey <- freshBlsKey
+      let poolId = sppId stakePoolParams
+          registeredStakePoolParams = stakePoolParams {sppBlsKey = SJust blsKey}
+      submitPoolCert $ RegPoolTxCert registeredStakePoolParams
+      currentEpochNo <- getsNES nesELL
+      poolDeposit <- getsPParams ppPoolDepositL
+      let registeredStakePoolState =
+            QueryResultStakePoolState
+              { qrspsVrf = sppVrf stakePoolParams
+              , qrspsBlsKey = SJust $ BlsKeyState blsKey currentEpochNo
+              , qrspsPledge = sppPledge stakePoolParams
+              , qrspsCost = sppCost stakePoolParams
+              , qrspsMargin = sppMargin stakePoolParams
+              , qrspsAccountId = aaId $ sppAccountAddress stakePoolParams
+              , qrspsOwners = sppOwners stakePoolParams
+              , qrspsRelays = sppRelays stakePoolParams
+              , qrspsMetadata = sppMetadata stakePoolParams
+              , qrspsDeposit = poolDeposit
+              , qrspsNumDelegators = 0
+              , qrspsDelegators = SJust []
+              , qrspsRetiring = SNothing
+              , qrspsFutureStakePoolParams = SNothing
+              }
+      expectStakePoolState poolId registeredStakePoolState
+
+      delegator <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential delegator
+      delegateStake delegator poolId
+      let delegatedStakePoolState =
+            registeredStakePoolState {qrspsNumDelegators = 1, qrspsDelegators = SJust [delegator]}
+      expectStakePoolState poolId delegatedStakePoolState
+
+      let futureStakePoolParams =
+            registeredStakePoolParams {sppPledge = sppPledge stakePoolParams <> Coin 1}
+      submitPoolCert $ RegPoolTxCert futureStakePoolParams
+      let reregisteredStakePoolState =
+            delegatedStakePoolState {qrspsFutureStakePoolParams = SJust futureStakePoolParams}
+      expectStakePoolState poolId reregisteredStakePoolState
+
+      let retirementEpochNo = addEpochInterval currentEpochNo $ EpochInterval 1
+      submitPoolCert $ RetirePoolTxCert poolId retirementEpochNo
+      expectStakePoolState poolId $
+        reregisteredStakePoolState {qrspsRetiring = SJust retirementEpochNo}
+  where
+    submitPoolCert :: TxCert era -> ImpTestM era ()
+    submitPoolCert poolCert =
+      submitTx_ $ mkBasicTx mkBasicTxBody & bodyTxL . certsTxBodyL .~ [poolCert]
+
+    expectStakePoolState ::
+      HasCallStack =>
+      KeyHash StakePool ->
+      QueryResultStakePoolState era ->
+      ImpTestM era ()
+    expectStakePoolState poolId expectedStakePoolState = do
+      nes <- getsNES id
+      queryStakePoolState nes (Just [poolId]) True
+        `shouldBe` [(poolId, expectedStakePoolState)]
+      queryStakePoolState nes (Just [poolId]) False
+        `shouldBe` [(poolId, expectedStakePoolState {qrspsDelegators = SNothing})]

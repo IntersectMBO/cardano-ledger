@@ -1,0 +1,228 @@
+[
+    {},
+    {
+        "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06": {
+            "accountId": {
+                "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            },
+            "blsKey": null,
+            "cost": 170000000,
+            "delegators": [
+                {
+                    "scriptHash": "92bf8969a49623af689a49861adf7639b25fd663c95733f147f44e71"
+                },
+                {
+                    "keyHash": "6d8143487c22dc58eceb5b53f9876e008f052212542d25a0ae8b859b"
+                }
+            ],
+            "deposit": 500000000,
+            "futureStakePoolParams": {
+                "accountAddress": {
+                    "credential": {
+                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    },
+                    "network": "Testnet"
+                },
+                "blsKey": null,
+                "cost": 170000000,
+                "margin": 0.1,
+                "metadata": {
+                    "hash": "7b7d",
+                    "url": "consensus.pool"
+                },
+                "owners": [
+                    "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                ],
+                "pledge": 150000000000,
+                "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
+                "relays": [
+                    {
+                        "single host address": {
+                            "IPv4": "127.0.0.1",
+                            "IPv6": "2001:db8::1",
+                            "port": 3000
+                        }
+                    },
+                    {
+                        "single host name": {
+                            "dnsName": "relay.example.com",
+                            "port": 3001
+                        }
+                    },
+                    {
+                        "multi host name": {
+                            "dnsName": "relay.example.com"
+                        }
+                    }
+                ],
+                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+            },
+            "margin": 0.1,
+            "metadata": {
+                "hash": "7b7d",
+                "url": "consensus.pool"
+            },
+            "numDelegators": 2,
+            "owners": [
+                "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            ],
+            "pledge": 100000000000,
+            "relays": [
+                {
+                    "single host address": {
+                        "IPv4": "127.0.0.1",
+                        "IPv6": "2001:db8::1",
+                        "port": 3000
+                    }
+                },
+                {
+                    "single host name": {
+                        "dnsName": "relay.example.com",
+                        "port": 3001
+                    }
+                },
+                {
+                    "multi host name": {
+                        "dnsName": "relay.example.com"
+                    }
+                }
+            ],
+            "retiring": 250,
+            "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+        },
+        "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": {
+            "accountId": {
+                "keyHash": "3113f778bfe62098fb783f7defac9b1f5f5d054e267005f630b85acb"
+            },
+            "blsKey": null,
+            "cost": 170000000,
+            "delegators": [
+                {
+                    "scriptHash": "0fb2c57096165367d49491db222d5fc66d38f59be2c1cb467f002ac2"
+                },
+                {
+                    "keyHash": "1a7d5e232ad01edfcd4d8d651b616364c11cdc041bb5b92a4a01575e"
+                },
+                {
+                    "keyHash": "1cd2b7f71d400aaabd4f85803ae5ff6f77c1a978586fda00e174216c"
+                }
+            ],
+            "deposit": 500000000,
+            "futureStakePoolParams": null,
+            "margin": 1.0e-2,
+            "metadata": null,
+            "numDelegators": 3,
+            "owners": [
+                "3113f778bfe62098fb783f7defac9b1f5f5d054e267005f630b85acb"
+            ],
+            "pledge": 50000000000,
+            "relays": [],
+            "retiring": null,
+            "vrf": "e07a156ccb70a41eef8339001bd6a0e0f773e0ee33ce94fb9222df1874d6fddd"
+        }
+    },
+    {
+        "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06": {
+            "accountId": {
+                "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            },
+            "blsKey": null,
+            "cost": 170000000,
+            "delegators": null,
+            "deposit": 500000000,
+            "futureStakePoolParams": {
+                "accountAddress": {
+                    "credential": {
+                        "keyHash": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                    },
+                    "network": "Testnet"
+                },
+                "blsKey": null,
+                "cost": 170000000,
+                "margin": 0.1,
+                "metadata": {
+                    "hash": "7b7d",
+                    "url": "consensus.pool"
+                },
+                "owners": [
+                    "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+                ],
+                "pledge": 150000000000,
+                "poolId": "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06",
+                "relays": [
+                    {
+                        "single host address": {
+                            "IPv4": "127.0.0.1",
+                            "IPv6": "2001:db8::1",
+                            "port": 3000
+                        }
+                    },
+                    {
+                        "single host name": {
+                            "dnsName": "relay.example.com",
+                            "port": 3001
+                        }
+                    },
+                    {
+                        "multi host name": {
+                            "dnsName": "relay.example.com"
+                        }
+                    }
+                ],
+                "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+            },
+            "margin": 0.1,
+            "metadata": {
+                "hash": "7b7d",
+                "url": "consensus.pool"
+            },
+            "numDelegators": 2,
+            "owners": [
+                "0d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb06"
+            ],
+            "pledge": 100000000000,
+            "relays": [
+                {
+                    "single host address": {
+                        "IPv4": "127.0.0.1",
+                        "IPv6": "2001:db8::1",
+                        "port": 3000
+                    }
+                },
+                {
+                    "single host name": {
+                        "dnsName": "relay.example.com",
+                        "port": 3001
+                    }
+                },
+                {
+                    "multi host name": {
+                        "dnsName": "relay.example.com"
+                    }
+                }
+            ],
+            "retiring": 250,
+            "vrf": "c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+        },
+        "b77908a84072eb9151782d64504f0f6975b7143d49514eaeb0991d00": {
+            "accountId": {
+                "keyHash": "3113f778bfe62098fb783f7defac9b1f5f5d054e267005f630b85acb"
+            },
+            "blsKey": null,
+            "cost": 170000000,
+            "delegators": null,
+            "deposit": 500000000,
+            "futureStakePoolParams": null,
+            "margin": 1.0e-2,
+            "metadata": null,
+            "numDelegators": 3,
+            "owners": [
+                "3113f778bfe62098fb783f7defac9b1f5f5d054e267005f630b85acb"
+            ],
+            "pledge": 50000000000,
+            "relays": [],
+            "retiring": null,
+            "vrf": "e07a156ccb70a41eef8339001bd6a0e0f773e0ee33ce94fb9222df1874d6fddd"
+        }
+    }
+]
