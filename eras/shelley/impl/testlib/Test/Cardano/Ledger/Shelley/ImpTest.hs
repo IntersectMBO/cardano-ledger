@@ -66,6 +66,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshBlsKey,
   submitTx,
   submitTx_,
+  AnyLevelTx (..),
+  submitAnyTx,
+  submitAnyTx_,
   submitTxAnn,
   submitTxAnn_,
   submitFailingTx,
@@ -174,6 +177,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   shelleyGenRegTxCert,
   shelleyGenUnRegTxCert,
   shelleyDelegStakeTxCert,
+  shelleyTopTxFromAnyLevel,
 
   -- * Logging
   Doc,
@@ -652,6 +656,10 @@ class
 
   delegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
 
+  topTxFromAnyLevel :: (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
+
+data AnyLevelTx era = AnyLevelTx (forall l. Typeable l => Tx l era)
+
 impSatisfySignature ::
   KeyHash Witness ->
   Set.Set (KeyHash Witness) ->
@@ -979,6 +987,10 @@ instance
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
+
+shelleyTopTxFromAnyLevel :: (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
+shelleyTopTxFromAnyLevel atx = pure $ atx @TopTx
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1378,6 +1390,18 @@ submitTx_ = void . submitTx
 
 submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
+
+submitAnyTx ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era (Tx TopTx era)
+submitAnyTx = submitTx <=< topTxFromAnyLevel
+
+submitAnyTx_ ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era ()
+submitAnyTx_ = void . submitAnyTx
 
 trySubmitTx ::
   forall era.

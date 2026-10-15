@@ -27,7 +27,7 @@ spec = describe "BBODY" $ do
     perasCert <- arbitrary
     withTxsInModifiedFailingBlockM
       (modifyBlockBody protVer $ perasCertBlockBodyL .~ SJust perasCert)
-      (submitTx_ $ mkBasicTx mkBasicTxBody)
+      (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
       $ \block ->
         pure
           [ injectFailure $
@@ -45,7 +45,7 @@ spec = describe "BBODY" $ do
                   pred $ bhviHighestSupportedMajorVersion versionInfo
               }
       )
-      (submitTx_ $ mkBasicTx mkBasicTxBody)
+      (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
       $ \block ->
         pure
           [ injectFailure $

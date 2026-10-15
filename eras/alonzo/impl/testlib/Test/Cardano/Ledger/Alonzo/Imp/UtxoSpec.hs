@@ -57,7 +57,7 @@ spec = describe "UTXO" $ do
   it "Collateral input already spent" $ do
     addr <- freshKeyAddr_
     spentTxIn <- sendCoinTo addr (Coin 10_000_000)
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [spentTxIn]
     let tx =
           mkBasicTx mkBasicTxBody

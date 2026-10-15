@@ -35,6 +35,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
+import Data.Typeable (Typeable)
 import GHC.Exts (fromList)
 import Lens.Micro (to, (%~), (&), (.~))
 import Lens.Micro.Mtl (use)
@@ -57,9 +58,7 @@ spec = describe "Valid transactions" $ do
       txOut = mkBasicTxOut addr (inject amount) & dataHashTxOutL .~ SJust datumHash
       tx1 = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
     txIn <- txInAt 0 <$> submitTx tx1
-    let
-      tx2 = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
-    submitTx_ tx2
+    submitAnyTx_ $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -72,7 +71,7 @@ spec = describe "Valid transactions" $ do
 
         it "Validating SPEND script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
-          submitTx_ $
+          submitAnyTx_ $
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
@@ -85,6 +84,9 @@ spec = describe "Valid transactions" $ do
         it "Validating CERT script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
           txCert <- genRegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
+          -- TODO: Switch to `submitAnyTx_` once the Dijkstra sub-transaction fixup estimates
+          -- execution units instead of assigning the maximum to every redeemer. With two scripts
+          -- in a sub-transaction the total exceeds the maximum execution units of a transaction
           submitTx_ $
             mkBasicTx $
               mkBasicTxBody
@@ -93,19 +95,21 @@ spec = describe "Valid transactions" $ do
 
         it "Validating WITHDRAWAL script" $ do
           account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
-          submitTx_ $
+          submitAnyTx_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
         -- TODO: Re-enable after issues are resolved, by removing this override
         disableInConformanceIt "Validating MINT script" $ do
-          submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
+          AnyLevelTx tx <- mkTokenMintingTx alwaysSucceedsNoDatumHash
+          submitAnyTx_ tx
 
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
         -- TODO: Re-enable after issues are resolved, by removing this override
         disableInConformanceIt "Not validating MINT script" $ do
-          submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
+          AnyLevelTx tx <- mkTokenMintingTx alwaysFailsNoDatumHash
+          submitPhase2Invalid_ tx
 
         it "Acceptable supplementary datum" $ do
           inputAddr <- freshKeyHash @Payment
@@ -119,14 +123,13 @@ spec = describe "Valid transactions" $ do
                 (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
                 (MaryValue amount mempty)
                 & dataHashTxOutL .~ SJust datumHash
-            txBody =
-              mkBasicTxBody
-                & inputsTxBodyL .~ [txIn]
-                & outputsTxBodyL .~ [txOut]
-            tx =
-              mkBasicTx txBody
-                & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
-          submitTx_ tx
+          submitAnyTx_ $
+            mkBasicTx
+              ( mkBasicTxBody
+                  & inputsTxBodyL .~ [txIn]
+                  & outputsTxBodyL .~ [txOut]
+              )
+              & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
 
 alonzoToConwaySpec ::
   forall era.
@@ -185,7 +188,8 @@ alonzoToConwaySpec = do
               mkBasicTxOut
                 (mkAddr outputAddr StakeRefNull)
                 (MaryValue mempty multiAsset)
-            txBody =
+          submitAnyTx_ $
+            mkBasicTx $
               mkBasicTxBody
                 & inputsTxBodyL .~ fromList txIns
                 & vldtTxBodyL .~ ValidityInterval SNothing (SJust $ slotNo + 1)
@@ -193,12 +197,12 @@ alonzoToConwaySpec = do
                 & withdrawalsTxBodyL .~ Withdrawals (fromList [(acct, mempty) | acct <- rewardAccounts])
                 & certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> rewardScriptHashes)
                 & outputsTxBodyL .~ [txOut]
-          submitTx_ $ mkBasicTx txBody
 
         it "Multiple identical certificates" $ do
           let scriptHash = alwaysSucceedsNoDatumHash
           void . registerStakeCredential $ ScriptHashObj scriptHash
-          let tx =
+          let tx :: forall l. Typeable l => Tx l era
+              tx =
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
           if eraProtVerLow @era < natVersion @9
@@ -209,7 +213,7 @@ alonzoToConwaySpec = do
                 [injectFailure $ Shelley.StakeKeyNotRegisteredDELEG (ScriptHashObj scriptHash)]
             else
               -- Conway fixed the bug that was causing DELEG to fail
-              submitTx_ tx
+              submitAnyTx_ tx
   where
     -- NOTE: certain tests somehow require certificates without deposits
     -- otherwise, they will yield a Plutus failure

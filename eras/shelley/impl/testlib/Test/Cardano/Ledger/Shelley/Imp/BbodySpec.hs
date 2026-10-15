@@ -29,7 +29,7 @@ spec = describe "BBODY" $ do
     protVer <- getProtVer
     withTxsInModifiedFailingBlockM
       (blockBodySizeBlockHeaderL %~ (+ 1))
-      (submitTx_ $ mkBasicTx mkBasicTxBody)
+      (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
       $ \block ->
         pure
           [ injectFailure $
@@ -44,7 +44,7 @@ spec = describe "BBODY" $ do
     invalidBodyHash <- arbitrary
     withTxsInModifiedFailingBlockM
       (blockBodyHashBlockHeaderL .~ invalidBodyHash)
-      (submitTx_ $ mkBasicTx mkBasicTxBody)
+      (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
       $ \block ->
         pure
           [ injectFailure $

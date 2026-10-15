@@ -67,7 +67,7 @@ spec = describe "MEMPOOL" $ do
             (Map.singleton ccCold (addEpochInterval curEpochNo (EpochInterval 7)))
             (1 %! 1)
     proposal <- mkProposal action
-    submitTx_ $ mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
+    submitAnyTx_ $ mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
     ccHot <- registerCommitteeHotKey ccCold
     govActionId <- do
       accountAddress <- registerAccountAddress

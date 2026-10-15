@@ -19,6 +19,7 @@ import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -64,7 +65,8 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
+    let tx :: forall l. Typeable l => Tx l era
+        tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
     pv <- getProtVer
     -- In bootstrap phase and in post-Conway eras (CIP-181), the DRep delegation check
@@ -75,9 +77,9 @@ spec = describe "LEDGER" $ do
         submitFailingTx
           tx
           [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
-      else submitTx_ tx
+      else submitAnyTx_ tx
     _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx $
         mkBasicTxBody
           & withdrawalsTxBodyL
@@ -96,7 +98,8 @@ spec = describe "LEDGER" $ do
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
-    let tx =
+    let tx :: forall l. Typeable l => Tx l era
+        tx =
           mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
@@ -107,7 +110,7 @@ spec = describe "LEDGER" $ do
     -- does not apply, so the withdrawal succeeds.
     if not (hardforkConwayBootstrapPhase pv) && pvMajor pv < natVersion @12
       then submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
-      else submitTx_ tx >> (getBalance cred `shouldReturn` mempty)
+      else submitAnyTx_ tx >> (getBalance cred `shouldReturn` mempty)
 
   -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
   -- TODO: Re-enable after issue is resolved, by removing this override
@@ -125,12 +128,11 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    let tx =
-          mkBasicTx $
-            mkBasicTxBody
-              & certsTxBodyL .~ [UnRegDepositTxCert cred refund]
-              & (withdrawalsTxBodyL .~ Withdrawals [(ra, balance)])
-    submitTx_ tx
+    submitAnyTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & certsTxBodyL .~ [UnRegDepositTxCert cred refund]
+          & (withdrawalsTxBodyL .~ Withdrawals [(ra, balance)])
 
   it "Withdraw from a key delegated to an expired DRep" $ do
     modifyPParams $ \pp ->
@@ -152,7 +154,7 @@ spec = describe "LEDGER" $ do
 
     _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx $
         mkBasicTxBody
           & withdrawalsTxBodyL
@@ -177,7 +179,7 @@ spec = describe "LEDGER" $ do
     passNEpochs 4
     isDRepExpired drep `shouldReturn` True
 
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx $
         mkBasicTxBody
           & withdrawalsTxBodyL
@@ -193,10 +195,10 @@ spec = describe "LEDGER" $ do
     submitAndExpireProposalToMakeReward cred
     balance <- getBalance cred
 
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, balance)]
 
-    submitTx_ $
+    submitAnyTx_ $
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
