@@ -448,6 +448,7 @@ createInitialState tc =
               }
         , nesRu = SNothing
         , stashedAVVMAddresses = def
+        , nesLastTickSlotNo = minBound
         }
     govState :: GovState era
     govState =

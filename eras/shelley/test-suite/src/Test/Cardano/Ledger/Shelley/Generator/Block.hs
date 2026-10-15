@@ -131,7 +131,7 @@ genBlockWithTxGen
             $ selectNextSlotWithLeader ge origChainState firstConsideredSlot
 
     -- Now we need to compute the KES period and get the set of hot keys.
-    let NewEpochState _ _ _ es _ _ = chainNes chainSt
+    let NewEpochState _ _ _ _ es _ _ = chainNes chainSt
         EpochState acnt ls _ _ = es
         pp = es ^. curPParamsEpochStateL
         kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot

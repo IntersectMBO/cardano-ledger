@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochNo (..),
   KeyValuePairs (..),
+  SlotNo,
   StrictMaybe (..),
   ToKeyValuePairs (..),
  )
@@ -300,7 +301,9 @@ instance (EraTxOut era, EraGov era, EraStake era) => ToKeyValuePairs (UTxOState 
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
-  { nesEL :: !EpochNo
+  { nesLastTickSlotNo :: !SlotNo
+  -- ^ Slot number at which the TICK rule was last applied.
+  , nesEL :: !EpochNo
   -- ^ Number of the epoch when this NewEpochState was modified last. With respect to
   -- block and transactions validation this will always be the current epoch
   -- number. However, when it comes to the TICK rule, it will be the epoch number of the
@@ -350,7 +353,7 @@ instance
   (EraStake era, EraGov era, EraCertState era, Default (StashedAVVMAddresses era)) =>
   Default (NewEpochState era)
   where
-  def = NewEpochState (EpochNo 0) def def def def def
+  def = NewEpochState minBound (EpochNo 0) def def def def def
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -392,8 +395,9 @@ instance
   ) =>
   EncCBOR (NewEpochState era)
   where
-  encCBOR (NewEpochState e bp bc es ru av) =
-    encodeListLen 6
+  encCBOR (NewEpochState slot e bp bc es ru av) =
+    encodeListLen 7
+      <> encCBOR slot
       <> encCBOR e
       <> encCBOR bp
       <> encCBOR bc
@@ -413,6 +417,7 @@ instance
   decCBOR = do
     decode $
       RecD NewEpochState
+        <! From
         <! From
         <! From
         <! From
@@ -586,6 +591,9 @@ nesRuL = lens nesRu (\ds u -> ds {nesRu = u})
 
 nesStashedAVVMAddressesL :: Lens' (NewEpochState era) (StashedAVVMAddresses era)
 nesStashedAVVMAddressesL = lens stashedAVVMAddresses (\ds u -> ds {stashedAVVMAddresses = u})
+
+nesLastTickSlotNoL :: Lens' (NewEpochState era) SlotNo
+nesLastTickSlotNoL = lens nesLastTickSlotNo (\ds u -> ds {nesLastTickSlotNo = u})
 
 -- For backward compatibility
 nesEpochStateL :: Lens' (NewEpochState era) (EpochState era)

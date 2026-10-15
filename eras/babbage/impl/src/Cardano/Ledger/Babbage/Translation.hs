@@ -55,6 +55,7 @@ instance TranslateEra BabbageEra NewEpochState where
         , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
         , stashedAVVMAddresses = ()
+        , nesLastTickSlotNo = nesLastTickSlotNo nes
         }
 
 instance TranslateEra BabbageEra (Tx TopTx) where

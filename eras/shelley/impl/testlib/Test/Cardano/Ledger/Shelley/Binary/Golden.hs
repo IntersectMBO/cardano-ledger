@@ -89,7 +89,8 @@ goldenNewEpochStateExpectation
     } =
     expectGoldenToCBOR DiffHex nes $
       mconcat
-        [ E (TkListLen 6)
+        [ E (TkListLen 7)
+        , E (TkWord64 (unSlotNo nesLastTickSlotNo))
         , E (TkWord64 (unEpochNo nesEL))
         , mapEnc (unBlocksMade nesBprev)
         , mapEnc (unBlocksMade nesBcur)

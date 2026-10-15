@@ -84,6 +84,7 @@ instance TranslateEra ConwayEra NewEpochState where
         , nesEs = setCompleteDRepPulsingState def ratifyState es
         , nesRu = nesRu nes
         , stashedAVVMAddresses = ()
+        , nesLastTickSlotNo = nesLastTickSlotNo nes
         }
 
 instance TranslateEra ConwayEra (Tx TopTx) where

@@ -205,6 +205,7 @@ epochStateZero =
 newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
   NewEpochState
+    minBound
     (EpochNo 0)
     blocksMadeZero
     blocksMadeZero
@@ -314,6 +315,7 @@ instance Reflect era => Extract (EpochState era) era where
 instance forall era. Reflect era => Extract (NewEpochState era) era where
   extract x =
     NewEpochState
+      minBound
       (mEL x)
       (BlocksMade (mBprev x))
       (BlocksMade (mBcur x))

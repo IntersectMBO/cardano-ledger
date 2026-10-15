@@ -214,6 +214,7 @@ library testlib
     Test.Cardano.Ledger.Shelley.Imp.EpochSpec
     Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
     Test.Cardano.Ledger.Shelley.Imp.PoolSpec
+    Test.Cardano.Ledger.Shelley.Imp.TickSpec
     Test.Cardano.Ledger.Shelley.Imp.UtxoSpec
     Test.Cardano.Ledger.Shelley.Imp.UtxowSpec
     Test.Cardano.Ledger.Shelley.ImpTest

@@ -198,6 +198,7 @@ initialShelleyState ::
 initialShelleyState lab e utxo reserves genDelegs pp initNonce =
   ChainState
     ( NewEpochState
+        minBound
         e
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
@@ -342,8 +343,8 @@ chainTransition =
 
         nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, s)
 
-        let NewEpochState e1 _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _ = nes'
+        let NewEpochState _ e1 _ _ _ _ _ = nes
+            NewEpochState _ e2 _ bcur es _ _ = nes'
         let EpochState account ls _ _ = es
             pp' = es ^. curPParamsEpochStateL
         let LedgerState _ certState = ls

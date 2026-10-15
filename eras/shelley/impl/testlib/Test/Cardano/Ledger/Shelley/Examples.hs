@@ -219,6 +219,7 @@ exampleNewEpochState value ppp pp =
     , nesEs = epochState
     , nesRu = SJust rewardUpdate
     , stashedAVVMAddresses = def
+    , nesLastTickSlotNo = minBound
     }
   where
     epochState :: EpochState era
