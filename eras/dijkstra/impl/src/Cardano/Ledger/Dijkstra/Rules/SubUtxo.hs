@@ -246,7 +246,7 @@ dijkstraSubUtxoTransition = do
 
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
-  runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+  runTest $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
 
   netId <- liftSTS $ asks networkId
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
