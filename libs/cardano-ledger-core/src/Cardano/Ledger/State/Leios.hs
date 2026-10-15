@@ -7,7 +7,7 @@
 -- 'LeiosCommittee'; this module re-exports it, gives it an empty value, teaches
 -- it to serialize as part of the ledger state, and selects it from the
 -- per-epoch stake standing of the pools ('LeiosCandidate').
-module Cardano.Ledger.State.LeiosCommittee (
+module Cardano.Ledger.State.Leios (
   LeiosCommittee (..),
   LeiosSeat (..),
   emptyLeiosCommittee,

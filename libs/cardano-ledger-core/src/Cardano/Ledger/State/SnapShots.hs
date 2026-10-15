@@ -93,7 +93,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.State.CertState (DState (..), PState (..))
-import Cardano.Ledger.State.LeiosCommittee (
+import Cardano.Ledger.State.Leios (
   LeiosCandidate (..),
   LeiosCommittee (..),
   leiosCommitteeToJSON,
