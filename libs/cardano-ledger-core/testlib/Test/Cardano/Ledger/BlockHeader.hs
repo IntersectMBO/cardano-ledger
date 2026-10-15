@@ -25,6 +25,7 @@ data TestBlockHeader
   , tbhSlot :: SlotNo
   , tbhVersionInfo :: BlockHeaderVersionInfo
   , tbhEbRefsAnn :: StrictMaybe EbReferencesAnnouncement
+  , tbhHash :: SafeHash EraIndependentBlockHeader
   }
   deriving (Generic)
 
@@ -33,6 +34,7 @@ instance NFData TestBlockHeader
 instance Era era => EraBlockHeader TestBlockHeader era where
   blockIssuerBlockHeaderG = blockHeaderL . to tbhIssuer
   blockHeaderSizeBlockHeaderG = blockHeaderL . to tbhHSize
+  blockHeaderHashBlockHeaderG = blockHeaderL . to tbhHash
   blockBodySizeBlockHeaderL =
     blockHeaderL . lens tbhBSize (\bh sz -> bh {tbhBSize = sz})
   blockBodyHashBlockHeaderL =
@@ -66,4 +68,5 @@ mkTestBlockHeaderNoNonce block =
     , tbhSlot = block ^. slotNoBlockHeaderL
     , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 (eraProtVerLow @era)) 0
     , tbhEbRefsAnn = SNothing
+    , tbhHash = block ^. blockHeaderHashBlockHeaderG
     }

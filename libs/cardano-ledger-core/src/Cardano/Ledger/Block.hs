@@ -120,6 +120,7 @@ data LeiosBbodySignal era
 class Era era => EraBlockHeader h era where
   blockIssuerBlockHeaderG :: SimpleGetter (Block h era) (KeyHash BlockIssuer)
   blockHeaderSizeBlockHeaderG :: SimpleGetter (Block h era) Int
+  blockHeaderHashBlockHeaderG :: SimpleGetter (Block h era) (SafeHash EraIndependentBlockHeader)
   blockBodySizeBlockHeaderL :: Lens' (Block h era) Word32
   blockBodyHashBlockHeaderL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
   slotNoBlockHeaderL :: Lens' (Block h era) SlotNo

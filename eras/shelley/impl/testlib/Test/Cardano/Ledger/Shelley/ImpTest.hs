@@ -1764,6 +1764,7 @@ tryTxsInBlock ::
 tryTxsInBlock modifyBlock txs finalState blockIssuer = do
   slotNo <- use impCurSlotNoG
   nes <- use impNESL
+  blockHeaderHash <- arbitrary
 
   let
     ProtVer curMajor curMinor = nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL
@@ -1777,6 +1778,7 @@ tryTxsInBlock modifyBlock txs finalState blockIssuer = do
         , tbhSlot = slotNo
         , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 curMajor) curMinor
         , tbhEbRefsAnn = SNothing
+        , tbhHash = blockHeaderHash
         }
     block = modifyBlock Block {blockHeader, blockBody}
 
