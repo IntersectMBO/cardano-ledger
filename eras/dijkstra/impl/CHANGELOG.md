@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
 * Add `LeiosCertMissing` and `LeiosCertBlockBodyHasTxs` constructors to `DijkstraBbodyPredFailure`
 * Rename `decodeDijkstraTopTx` to `decodeDijkstraTopTxInMempool`
 * Remove the `DijkstraEraTx` type class and its `hashTx` method in favour of `HashAnnotated (Tx TopTx DijkstraEra) EraIndependentTx`
