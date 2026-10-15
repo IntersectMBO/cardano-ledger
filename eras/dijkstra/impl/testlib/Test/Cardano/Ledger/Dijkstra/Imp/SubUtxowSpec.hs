@@ -293,6 +293,23 @@ spec = describe "SUBUTXOW" $ do
             (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])
             [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
 
+  describe "Required top-level guards" $
+    forM_ [l | l <- eraLanguages @era, l >= PlutusV4] $ \lang ->
+      withSLanguage lang $ \slang ->
+        describe (show lang) $ do
+          it "Succeeds when required guard is provided" $ do
+            let
+              guardCred = ScriptHashObj $ hashPlutusScript $ alwaysSucceedsNoDatum slang
+            datum <- arbitrary
+            let
+              subTx =
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . requiredTopLevelGuardsTxBodyL .~ Map.singleton guardCred (SJust datum)
+            submitTx_ $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . guardsTxBodyL .~ [guardCred]
+                & bodyTxL . subTransactionsTxBodyL .~ [subTx]
+
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
