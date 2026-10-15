@@ -9,6 +9,7 @@ module Data.Map.NonEmpty (
   singleton,
   toList,
   toMap,
+  keysSet,
 ) where
 
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR)
@@ -17,6 +18,9 @@ import Data.Aeson (FromJSON (parseJSON), FromJSONKey, ToJSON)
 import qualified Data.Foldable as Foldable
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import NoThunks.Class (NoThunks)
 import Prelude hiding (map)
 
@@ -50,6 +54,9 @@ fromMap x = if Map.null x then Nothing else Just (NonEmptyMap x)
 -- | \(O(1)\).
 toMap :: forall k v. NonEmptyMap k v -> Map k v
 toMap (NonEmptyMap map) = map
+
+keysSet :: NonEmptyMap k v -> NonEmptySet k
+keysSet (NonEmptyMap m) = fromJust $ NES.fromSet $ Map.keysSet m
 
 -- | \(O(n \log n)\).
 fromFoldable :: forall f k v. (Foldable f, Ord k) => f (k, v) -> Maybe (NonEmptyMap k v)

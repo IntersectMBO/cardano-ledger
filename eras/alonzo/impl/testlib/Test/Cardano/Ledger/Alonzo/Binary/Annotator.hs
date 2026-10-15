@@ -31,6 +31,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
+import qualified Codec.Serialise as Cborg
 import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -46,6 +47,11 @@ import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+
+instance Era era => DecCBOR (PlutusData era) where
+  decCBOR = fromPlainDecoder Cborg.decode
+
+deriving instance Era era => DecCBOR (Data era)
 
 instance
   ( AlonzoEraTx era

@@ -46,7 +46,7 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (..),
   ToCBOR (..),
-  decodeFull',
+  decodeFullAnnotator,
   decodeNestedCborBytes,
   encodeTag,
   fromPlainDecoder,
@@ -74,6 +74,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (Null), object, withObject,
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Base16 as BS16
+import qualified Data.ByteString.Lazy as LBS
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
 import Data.MemPack
@@ -96,9 +97,6 @@ newtype PlutusData era = PlutusData PV1.Data
 instance EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
 
-instance Typeable era => DecCBOR (PlutusData era) where
-  decCBOR = fromPlainDecoder Cborg.decode
-
 instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
   decCBOR = pure <$> fromPlainDecoder Cborg.decode
 
@@ -110,7 +108,7 @@ instance FromJSON (PlutusData era) where
 
 newtype Data era = MkData (MemoBytes (PlutusData era))
   deriving (Eq, Ord, Generic)
-  deriving newtype (SafeToHash, ToCBOR, NFData, DecCBOR)
+  deriving newtype (SafeToHash, ToCBOR, NFData)
 
 -- | Encodes memoized bytes created upon construction.
 instance Typeable era => EncCBOR (Data era)
@@ -235,7 +233,7 @@ makeBinaryData sbs = do
 decodeBinaryData :: forall era. Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do
   let bs = fromShort sbs
-  plutusData <- decodeFull' (eraProtVerLow @era) bs
+  plutusData <- decodeFullAnnotator (eraProtVerLow @era) "PlutusData" decCBOR $ LBS.fromStrict bs
   pure (MkData (mkMemoBytesShort plutusData sbs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to

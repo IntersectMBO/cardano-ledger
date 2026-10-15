@@ -439,12 +439,7 @@ instance
           | STopTx <- sTxLevel ->
               Just $ decodeAccA acc (subTransactionsDijkstraTxBodyRawL .~) decodeSubTransactions
         24 ->
-          Just $
-            decodeAccA acc (requiredTopLevelGuardsDijkstraTxBodyRawL .~) $
-              pure <$> do
-                x <- decodeMap decCBOR (decodeNullStrictMaybe decCBOR)
-                failOnNull x $ emptyNamedFailure "RequiredTopLevelGuards" "non-empty"
-                pure x
+          Just $ decodeAccA acc (requiredTopLevelGuardsDijkstraTxBodyRawL .~) decodeRequiredTopLevelGuards
         25 ->
           Just $
             decodeAccA acc (directDepositsDijkstraTxBodyRawL .~) $
@@ -474,6 +469,10 @@ instance
         decodeNonEmptySetLikeEnforceNoDuplicatesAnn
           (flip (OMap.|>))
           (\o -> (OMap.size o, o))
+      decodeRequiredTopLevelGuards ::
+        Decoder s (Annotator (Map (Credential Guard) (StrictMaybe (Data era))))
+      decodeRequiredTopLevelGuards =
+        decodeNonEmptyMapNoDuplicatesAnn (pure <$> decCBOR) (sequence <$> decodeNullStrictMaybe decCBOR)
       requiredFields :: STxBothLevels l era -> [(Word, String)]
       requiredFields = \case
         STopTx -> [(0, "inputs"), (1, "outputs"), (2, "fee")]
