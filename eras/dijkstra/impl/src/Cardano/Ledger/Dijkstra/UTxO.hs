@@ -15,6 +15,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
   getDijkstraSupplementalDataHashes,
+  getDijkstraMinFeeTxUtxo,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
   localProducedValue,
@@ -36,7 +37,6 @@ import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
-  getConwayMinFeeTxUtxo,
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
   txNonDistinctRefScriptsSize,
@@ -160,7 +160,7 @@ instance EraUTxO DijkstraEra where
 
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
-  getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+  getMinFeeTxUtxo = getDijkstraMinFeeTxUtxo
 
 -- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
 -- scripts from all subtransactions.
@@ -298,6 +298,22 @@ subTransactionsDijkstraStAnnTx ::
 subTransactionsDijkstraStAnnTx DijkstraStAnnTopTx {dsattSubTransactions} = dsattSubTransactions
 
 -- | Total size of reference scripts across a top-level transaction and all its subtransactions.
+getDijkstraMinFeeTxUtxo ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  , STxLevel l era ~ STxBothLevels l era
+  ) =>
+  PParams era ->
+  Tx l era ->
+  UTxO era ->
+  Coin
+getDijkstraMinFeeTxUtxo pparams tx utxo =
+  getMinFeeTx pparams tx $
+    withBothTxLevels
+      tx
+      (batchNonDistinctRefScriptsSize utxo)
+      (txNonDistinctRefScriptsSize utxo)
+
 batchNonDistinctRefScriptsSize ::
   ( EraTx era
   , DijkstraEraTxBody era

@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
 * Extend `DijkstraEraForecast` with Peras protocol parameters
 * Validate the treasury value and the reference scripts size in `LEDGER`, and the treasury value in `SUBLEDGER`, regardless of phase-2 validity
 * Add `POOLREAP` rule for Dijkstra:
