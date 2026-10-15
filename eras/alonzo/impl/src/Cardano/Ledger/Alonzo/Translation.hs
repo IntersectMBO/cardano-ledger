@@ -58,6 +58,7 @@ instance TranslateEra AlonzoEra NewEpochState where
         , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
         , stashedAVVMAddresses = ()
+        , nesLastBlockSlotNo = nesLastBlockSlotNo nes
         }
 
 instance TranslateEra AlonzoEra PParams where

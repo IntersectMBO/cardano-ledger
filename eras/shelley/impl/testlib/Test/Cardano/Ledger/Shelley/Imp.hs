@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as DELEG
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as EPOCH
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as POOL
+import qualified Test.Cardano.Ledger.Shelley.Imp.TickSpec as TICK
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxoSpec as UTXO
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -36,6 +37,7 @@ spec era = do
     EPOCH.spec
     LEDGER.spec
     POOL.spec
+    TICK.spec
     UTXOW.spec
     UTXO.spec
   describe "ShelleyEraPureTests" $ do

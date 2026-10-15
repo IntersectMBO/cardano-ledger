@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Add `nesLastBlockSlotNo` field to `NewEpochState` and `nesLastBlockSlotNoL`:
+  - `TICK` sets it to the slot number of the block
+  - `NewEpochState` encodes `nesLastBlockSlotNo`, so the on-disk ledger state format changes and requires replay
 * Add `poolReapAssertions`
 * Export `renderPoolReapViolation`
 * Remove `nesPd` field from `NewEpochState` and `nesPdL`:
@@ -18,6 +21,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Shelley.Imp.TickSpec`
 * Add `initTransitionConfig` to `ShelleyEraImp`
 * Add `injectGenesisStaking` and `injectFreshGenesisStakePools`
 * Add `topTxFromAnyLevel` method to `ShelleyEraImp`

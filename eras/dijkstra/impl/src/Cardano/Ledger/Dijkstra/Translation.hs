@@ -77,6 +77,7 @@ instance TranslateEra DijkstraEra NewEpochState where
         , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
         , stashedAVVMAddresses = ()
+        , nesLastBlockSlotNo = nesLastBlockSlotNo nes
         }
 
 --------------------------------------------------------------------------------

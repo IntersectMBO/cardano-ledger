@@ -49,7 +49,7 @@ getGKeys ::
   Set (KeyHash GenesisRole)
 getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsGenDelegsL)
   where
-    NewEpochState _ _ _ es _ _ = nes
+    NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ ls _ _ = es
 
 -- | Creates the ledger state for an empty ledger which
@@ -107,6 +107,7 @@ updateNES
              es@(EpochState acnt _ ss nm)
              _ru
              _avvm
+             _lastBlockSlotNo
            )
   bcur
   ls =

@@ -115,6 +115,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
             redeemers =
               Map.filter (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
          in UTxO redeemers
+    , nesLastBlockSlotNo = minBound
     }
   where
     pparams :: PParams ShelleyEra

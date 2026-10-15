@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochNo (..),
   KeyValuePairs (..),
+  SlotNo,
   StrictMaybe (..),
   ToKeyValuePairs (..),
  )
@@ -325,6 +326,10 @@ data NewEpochState era = NewEpochState
   --
   -- This is very much an awkward implementation hack, and hence we hide it
   -- from as many places as possible.
+  , nesLastBlockSlotNo :: !SlotNo
+  -- ^ Slot number at which the TICK rule was last applied. This is the slot of
+  -- the last applied block, unless the state was ticked to a later slot
+  -- without applying a block.
   }
   deriving (Generic)
 
@@ -350,7 +355,7 @@ instance
   (EraStake era, EraGov era, EraCertState era, Default (StashedAVVMAddresses era)) =>
   Default (NewEpochState era)
   where
-  def = NewEpochState (EpochNo 0) def def def def def
+  def = NewEpochState (EpochNo 0) def def def def def minBound
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -392,14 +397,15 @@ instance
   ) =>
   EncCBOR (NewEpochState era)
   where
-  encCBOR (NewEpochState e bp bc es ru av) =
-    encodeListLen 6
+  encCBOR (NewEpochState e bp bc es ru av ls) =
+    encodeListLen 7
       <> encCBOR e
       <> encCBOR bp
       <> encCBOR bc
       <> encCBOR es
       <> encCBOR ru
       <> encCBOR av
+      <> encCBOR ls
 
 instance
   ( EraTxOut era
@@ -413,6 +419,7 @@ instance
   decCBOR = do
     decode $
       RecD NewEpochState
+        <! From
         <! From
         <! From
         <! From
@@ -586,6 +593,9 @@ nesRuL = lens nesRu (\ds u -> ds {nesRu = u})
 
 nesStashedAVVMAddressesL :: Lens' (NewEpochState era) (StashedAVVMAddresses era)
 nesStashedAVVMAddressesL = lens stashedAVVMAddresses (\ds u -> ds {stashedAVVMAddresses = u})
+
+nesLastBlockSlotNoL :: Lens' (NewEpochState era) SlotNo
+nesLastBlockSlotNoL = lens nesLastBlockSlotNo (\ds u -> ds {nesLastBlockSlotNo = u})
 
 -- For backward compatibility
 nesEpochStateL :: Lens' (NewEpochState era) (EpochState era)

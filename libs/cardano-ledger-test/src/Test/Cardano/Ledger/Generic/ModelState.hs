@@ -209,6 +209,7 @@ newEpochStateZero =
     epochStateZero
     SNothing
     (stashedAVVMAddressesZero (reify :: Proof era))
+    minBound
 
 stashedAVVMAddressesZero :: Proof era -> StashedAVVMAddresses era
 stashedAVVMAddressesZero Shelley = utxoZero
@@ -317,6 +318,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (extract x)
       (Complete <$> mRu x)
       (stashedAVVMAddressesZero (reify :: Proof era))
+      minBound
       -- pool distribution is not serialised so it needs to be computed separately
       & nesEsL . esSnapshotsL . ssStakeSetL
         %~ (\ss -> ss {ssStakePoolDistr = PoolDistr (mPoolDistr x) (knownNonZeroCoin @1)})
