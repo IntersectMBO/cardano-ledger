@@ -297,7 +297,7 @@ dpState :: CertState ShelleyEra
 dpState = def
 
 ledgerState :: LedgerState ShelleyEra
-ledgerState = LedgerState utxoState dpState
+ledgerState = LedgerState utxoState dpState SNothing
 
 addReward :: CertState ShelleyEra -> Credential Staking -> Coin -> CertState ShelleyEra
 addReward dp cred c =
@@ -422,7 +422,7 @@ testEmptyInputSet =
           (mkVKeyAccountAddress Testnet aliceStake ^. accountAddressCredentialL)
           (Coin 2000)
    in testLEDGER
-        (LedgerState utxoState dpState')
+        (LedgerState utxoState dpState' SNothing)
         tx
         ledgerEnv
         (Left [UtxowFailure (UtxoFailure InputSetEmptyUTxO)])
@@ -509,7 +509,7 @@ testWithdrawalNoWit =
           dpState
           (mkVKeyAccountAddress Testnet bobStake ^. accountAddressCredentialL)
           (Coin 10)
-   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState' SNothing) tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
@@ -538,7 +538,7 @@ testWithdrawalWrongAmt =
             NEM.singleton rAccount $
               Mismatch (Coin 11) (Coin 10)
         ]
-   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState' SNothing) tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
 testOutputTooSmall =

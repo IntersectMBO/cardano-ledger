@@ -119,6 +119,7 @@ instance TranslateEra MaryEra LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsCertState = translateEra' ctxt $ lsCertState ls
+        , lsLastEbAnnouncement = lsLastEbAnnouncement ls
         }
 
 instance TranslateEra MaryEra ProposedPPUpdates where

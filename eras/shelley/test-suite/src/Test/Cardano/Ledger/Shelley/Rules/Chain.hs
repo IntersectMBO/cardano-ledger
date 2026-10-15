@@ -216,6 +216,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     mempty
                 )
                 (def & certDStateL .~ dState)
+                SNothing
             )
             emptySnapShots
             def
@@ -347,7 +348,7 @@ chainTransition =
             NewEpochState e2 _ bcur es _ _ _ = nes'
         let EpochState account ls _ _ = es
             pp' = es ^. curPParamsEpochStateL
-        let LedgerState _ certState = ls
+        let LedgerState _ certState _ = ls
             genDelegs = certState ^. certDStateL . dsGenDelegsL
             ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph

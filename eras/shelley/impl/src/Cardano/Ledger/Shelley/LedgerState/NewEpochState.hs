@@ -16,6 +16,7 @@ module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
 import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  StrictMaybe (..),
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
@@ -73,6 +74,7 @@ genesisState genDelegs0 utxo0 =
     ( def
         & certDStateL .~ dState
     )
+    SNothing
   where
     dState :: DState era
     dState =

@@ -371,6 +371,8 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
     blockHeaderL . headerBodyRawL (Proxy @era) . lens hbrBodyHash (\hbr h -> hbr {hbrBodyHash = h})
   slotNoBlockHeaderL =
     blockHeaderL . headerBodyRawL (Proxy @era) . lens hbrSlotNo (\hbr sn -> hbr {hbrSlotNo = sn})
+  blockHeaderHashBlockHeaderG =
+    blockHeaderL . to hashAnnotated
 
 instance (Crypto c, Era era) => LeiosEraBlockHeader (Header c) era where
   versionInfoBlockHeaderL =

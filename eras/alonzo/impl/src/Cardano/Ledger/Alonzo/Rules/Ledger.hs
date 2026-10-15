@@ -112,7 +112,11 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (Shelley.LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, stAnnTx) <-
+  TRC
+    ( Shelley.LedgerEnv slot mbCurEpochNo txIx pp account
+      , LedgerState utxoSt certState lastEbAnnouncement
+      , stAnnTx
+      ) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -139,7 +143,7 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure $ LedgerState utxoSt' certState'
+  pure $ LedgerState utxoSt' certState' lastEbAnnouncement
 
 instance
   ( AlonzoEraTx era

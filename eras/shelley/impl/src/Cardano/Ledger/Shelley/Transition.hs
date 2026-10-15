@@ -443,6 +443,7 @@ createInitialState tc =
                         smartUTxOState pp initialUtxo zero zero govState zero
                     , lsCertState =
                         def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
+                    , lsLastEbAnnouncement = SNothing
                     }
               , esNonMyopic = def
               }

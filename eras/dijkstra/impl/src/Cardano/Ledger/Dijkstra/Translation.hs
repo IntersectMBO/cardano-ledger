@@ -42,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
   lsCertStateL,
+  lsLastEbAnnouncementL,
   lsUTxOStateL,
  )
 import Data.Coerce (coerce)
@@ -125,6 +126,7 @@ instance TranslateEra DijkstraEra LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctx $ ls ^. lsUTxOStateL
         , lsCertState = translateCertState ctx $ ls ^. lsCertStateL
+        , lsLastEbAnnouncement = ls ^. lsLastEbAnnouncementL
         }
 
 translateCertState ::

@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary (
   encodeMemPack,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Block (EbAnnouncement)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
@@ -451,6 +452,8 @@ data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)
   -- ^ The current unspent transaction outputs.
   , lsCertState :: !(CertState era)
+  , lsLastEbAnnouncement :: !(StrictMaybe EbAnnouncement)
+  -- ^ The last Endorser Block references announcement made by a block header.
   }
   deriving (Generic)
 
@@ -506,10 +509,11 @@ instance
   ) =>
   EncCBOR (LedgerState era)
   where
-  encCBOR LedgerState {lsUTxOState, lsCertState} =
-    encodeListLen 2
+  encCBOR LedgerState {lsUTxOState, lsCertState, lsLastEbAnnouncement} =
+    encodeListLen 3
       <> encCBOR lsCertState -- encode delegation state first to improve sharing
       <> encCBOR lsUTxOState
+      <> encCBOR lsLastEbAnnouncement
 
 instance
   ( EraTxOut era
@@ -527,10 +531,11 @@ instance
       , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR =
-    decodeRecordNamedT "LedgerState" (const 2) $ do
+    decodeRecordNamedT "LedgerState" (const 3) $ do
       lsCertState <- decSharePlusCBOR
       lsUTxOState <- decSharePlusCBOR
-      pure LedgerState {lsUTxOState, lsCertState}
+      lsLastEbAnnouncement <- lift decCBOR
+      pure LedgerState {lsUTxOState, lsCertState, lsLastEbAnnouncement}
 
 deriving via
   KeyValuePairs (LedgerState era)
@@ -545,10 +550,11 @@ instance
   ) =>
   ToKeyValuePairs (LedgerState era)
   where
-  toKeyValuePairs ls@(LedgerState _ _) =
+  toKeyValuePairs ls@(LedgerState _ _ _) =
     let LedgerState {..} = ls
      in [ "utxoState" .= lsUTxOState
         , "delegationState" .= lsCertState
+        , "lastEbAnnouncement" .= lsLastEbAnnouncement
         ]
 
 -- ====================================================
@@ -567,7 +573,7 @@ instance
   def = EpochState def def def def
 
 instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerState era) where
-  def = LedgerState def def
+  def = LedgerState def def SNothing
 
 -- =============================================================
 -- Lenses for types found inside NewEpochState and its fields
@@ -630,6 +636,9 @@ lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
 
 lsCertStateL :: Lens' (LedgerState era) (CertState era)
 lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
+
+lsLastEbAnnouncementL :: Lens' (LedgerState era) (StrictMaybe EbAnnouncement)
+lsLastEbAnnouncementL = lens lsLastEbAnnouncement (\x y -> x {lsLastEbAnnouncement = y})
 
 -- ================ UTxOState ===========================
 

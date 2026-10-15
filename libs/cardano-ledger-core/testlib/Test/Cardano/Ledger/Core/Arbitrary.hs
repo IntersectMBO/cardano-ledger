@@ -77,7 +77,11 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as BaseTypes
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
-import Cardano.Ledger.Block (BlockHeaderVersionInfo (..))
+import Cardano.Ledger.Block (
+  BlockHeaderVersionInfo (..),
+  EbAnnouncement (..),
+  EbReferencesAnnouncement (..),
+ )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
@@ -287,6 +291,12 @@ instance Arbitrary ProtVer where
 
 instance Arbitrary BlockHeaderVersionInfo where
   arbitrary = BlockHeaderVersionInfo <$> arbitrary <*> arbitrary
+
+instance Arbitrary EbReferencesAnnouncement where
+  arbitrary = EbReferencesAnnouncement <$> arbitrary <*> arbitrary
+
+instance Arbitrary EbAnnouncement where
+  arbitrary = EbAnnouncement <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- | Generate a 'ProtVer' whose major version falls within the era's accepted range.
 genEraProtVer :: forall era. Era era => Gen ProtVer

@@ -32,14 +32,22 @@ module Cardano.Ledger.Block (
   BlockHeaderVersionInfo (..),
   neededTxInsForBlock,
   EbReferencesAnnouncement (..),
+  EbAnnouncement (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (
+  KeyValuePairs (..),
+  Nonce (..),
+  ProtVer (..),
+  StrictMaybe,
+  ToKeyValuePairs (..),
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON, (.=))
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -123,6 +131,7 @@ class Era era => EraBlockHeader h era where
   blockBodySizeBlockHeaderL :: Lens' (Block h era) Word32
   blockBodyHashBlockHeaderL :: Lens' (Block h era) (Hash HASH EraIndependentBlockBody)
   slotNoBlockHeaderL :: Lens' (Block h era) SlotNo
+  blockHeaderHashBlockHeaderG :: SimpleGetter (Block h era) (SafeHash EraIndependentBlockHeader)
 
 class Era era => TPraosEraBlockHeader h era
 
@@ -174,6 +183,7 @@ data EbReferencesAnnouncement = EbReferencesAnnouncement
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData)
+  deriving (ToJSON) via KeyValuePairs EbReferencesAnnouncement
 
 instance EncCBOR EbReferencesAnnouncement where
   encCBOR (EbReferencesAnnouncement h s) =
@@ -187,3 +197,44 @@ instance DecCBOR EbReferencesAnnouncement where
       EbReferencesAnnouncement
         <$> decCBOR
         <*> decCBOR
+
+instance ToKeyValuePairs EbReferencesAnnouncement where
+  toKeyValuePairs (EbReferencesAnnouncement h s) =
+    [ "hash" .= h
+    , "size" .= s
+    ]
+
+-- | Endorser Block (EB) references announcement together with the block header that made it.
+data EbAnnouncement = EbAnnouncement
+  { ebAnnouncement :: !EbReferencesAnnouncement
+  -- ^ Announcement of the Endorser Block references
+  , ebAnnouncementSlotNo :: !SlotNo
+  -- ^ Slot number of the block whose header made the announcement
+  , ebAnnouncedInBlockHeader :: !(SafeHash EraIndependentBlockHeader)
+  -- ^ Hash of the block header that made the announcement
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData)
+  deriving (ToJSON) via KeyValuePairs EbAnnouncement
+
+instance EncCBOR EbAnnouncement where
+  encCBOR (EbAnnouncement a s h) =
+    encodeListLen 3
+      <> encCBOR a
+      <> encCBOR s
+      <> encCBOR h
+
+instance DecCBOR EbAnnouncement where
+  decCBOR =
+    decodeRecordNamed "EbAnnouncement" (const 3) $
+      EbAnnouncement
+        <$> decCBOR
+        <*> decCBOR
+        <*> decCBOR
+
+instance ToKeyValuePairs EbAnnouncement where
+  toKeyValuePairs (EbAnnouncement a s h) =
+    [ "announcement" .= a
+    , "slotNo" .= s
+    , "announcedInBlockHeader" .= h
+    ]

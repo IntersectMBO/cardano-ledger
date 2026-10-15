@@ -249,6 +249,8 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
     blockHeaderL . headerBodyL . lens hbBodyHash (\hb h -> hb {hbBodyHash = h})
   slotNoBlockHeaderL =
     blockHeaderL . headerBodyL . lens hbSlotNo (\hb sn -> hb {hbSlotNo = sn})
+  blockHeaderHashBlockHeaderG =
+    blockHeaderL . to hashAnnotated
 
 instance (Crypto c, Era era) => PraosEraBlockHeader (Header c) era where
   protVerBlockHeaderL =

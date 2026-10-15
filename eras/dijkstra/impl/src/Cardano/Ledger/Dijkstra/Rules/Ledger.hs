@@ -402,7 +402,7 @@ dijkstraLedgerTransition = do
       originalAccounts = lsCertState ledgerState ^. certDStateL . accountsL
 
   -- Process all subtransactions first
-  LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers <-
+  LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers lastEbAnnouncement <-
     trans @(EraRule "SUBLEDGERS" era) $
       TRC
         ( SubLedgerEnv
@@ -484,7 +484,7 @@ dijkstraLedgerTransition = do
         , utxoStateBeforeUtxow
         , stAnnTx
         )
-  pure $ LedgerState utxoStateFinal certStateFinal
+  pure $ LedgerState utxoStateFinal certStateFinal lastEbAnnouncement
 
 instance
   ( AlonzoEraTx era

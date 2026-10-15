@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation (
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.State
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
@@ -77,7 +78,7 @@ testScriptPostTranslation =
           result =
             runShelleyBase $
               applySTSTest @(Shelley.LEDGER AllegraEra)
-                (TRC (env, LedgerState utxoStAllegra def, txa))
+                (TRC (env, LedgerState utxoStAllegra def SNothing, txa))
        in case result of
             Left e -> error $ show e
             Right _ -> pure ()

@@ -113,9 +113,9 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
     checkIncrStakeComp :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     checkIncrStakeComp
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp
+        { source = LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp _
         , signal = stAnnTx
-        , target = LedgerState UTxOState {utxosUtxo = u', utxosInstantStake = is'} dp'
+        , target = LedgerState UTxOState {utxosUtxo = u', utxosInstantStake = is'} dp' _
         } =
         let tx = stAnnTx ^. txStAnnTxG
          in counterexample
@@ -174,7 +174,7 @@ checkIncrementalStake ::
   Property
 checkIncrementalStake es =
   let
-    LedgerState (UTxOState utxo _ _ _ instantStake _) certState = esLState es
+    LedgerState (UTxOState utxo _ _ _ instantStake _) certState _ = esLState es
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate

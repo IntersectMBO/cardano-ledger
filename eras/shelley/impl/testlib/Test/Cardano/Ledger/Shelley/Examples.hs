@@ -250,6 +250,7 @@ exampleNewEpochState value ppp pp =
                     , utxosDonation = mempty
                     }
               , lsCertState = def
+              , lsLastEbAnnouncement = SNothing
               }
         , esNonMyopic = def
         }

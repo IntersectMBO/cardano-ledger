@@ -356,7 +356,7 @@ certStateTotalAda = case reify @era of
   Conway -> mempty
 
 instance Reflect era => TotalAda (LedgerState era) where
-  totalAda (LedgerState utxos dps) = totalAda utxos <+> certStateTotalAda dps
+  totalAda (LedgerState utxos dps _) = totalAda utxos <+> certStateTotalAda dps
 
 instance Reflect era => TotalAda (EpochState era) where
   totalAda eps = totalAda (esLState eps) <+> totalAda (esChainAccountState eps)

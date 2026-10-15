@@ -186,6 +186,7 @@ instance
     LedgerState
       <$> arbitrary
       <*> arbitrary
+      <*> arbitrary
   shrink LedgerState {..} =
     -- We drop the first element in the list so the list does not contain the
     -- original LedgerState which would cause `shrink` to loop indefinitely.
@@ -193,6 +194,7 @@ instance
       LedgerState
         <$> (lsUTxOState : shrink lsUTxOState)
         <*> (lsCertState : shrink lsCertState)
+        <*> (lsLastEbAnnouncement : shrink lsLastEbAnnouncement)
 
 instance
   ( EraTxOut era
