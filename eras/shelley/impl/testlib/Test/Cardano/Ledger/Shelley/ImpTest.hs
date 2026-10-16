@@ -161,6 +161,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   modifyImpInitPostEpochBoundaryHook,
   disableImpInitPostEpochBoundaryHook,
   disableInConformanceIt,
+  iteExpectedConformanceFailureL,
+  impConformanceFailureL,
   minorFollow,
   majorFollow,
   genCantFollow,
@@ -391,6 +393,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
               { iteFixup = fixupTx
               , itePostSubmitTxHook = \_ _ _ -> pure ()
               , itePostEpochBoundaryHook = \_ _ _ -> pure ()
+              , iteExpectedConformanceFailure = False
               }
         , impInitState = initState
         }
@@ -429,6 +432,7 @@ data ImpTestState era = ImpTestState
   , impRecordedTxs :: !(StrictMaybe (StrictSeq (Tx TopTx era)))
   -- ^ When this is set to `SNothing` transactions are not being recorded.
   -- This should never be switched to `Just` outside of simulations.
+  , impConformanceFailure :: Bool
   }
 
 -- | This is a preliminary state that is used to prepare the actual `ImpTestState`
@@ -496,6 +500,9 @@ impEventsL = lens impEvents (\x y -> x {impEvents = y})
 
 impRecordedTxsL :: Lens' (ImpTestState era) (StrictMaybe (StrictSeq (Tx TopTx era)))
 impRecordedTxsL = lens impRecordedTxs (\x y -> x {impRecordedTxs = y})
+
+impConformanceFailureL :: Lens' (ImpTestState era) Bool
+impConformanceFailureL = lens impConformanceFailure (\x y -> x {impConformanceFailure = y})
 
 class
   ( ShelleyEraTest era
@@ -774,6 +781,7 @@ defaultInitImpTestState nes = do
       , impGlobals = globals
       , impEvents = mempty
       , impRecordedTxs = mempty
+      , impConformanceFailure = False
       }
 
 withEachEraVersion ::
@@ -812,13 +820,12 @@ shelleyModifyImpInitProtVer ver =
 
 modifyImpInitPostSubmitTxHook ::
   forall era.
-  ( forall t.
-    Globals ->
+  ( Globals ->
     TRC (EraRule "LEDGER" era) ->
     Either
       (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-    ImpM t ()
+    ImpTestM era ()
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
@@ -831,13 +838,12 @@ modifyImpInitPostSubmitTxHook f =
       }
 
 withPostSubmitTxHook ::
-  ( forall t.
-    Globals ->
+  ( Globals ->
     TRC (EraRule "LEDGER" era) ->
     Either
       (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-    ImpM t ()
+    ImpTestM era ()
   ) ->
   ImpTestM era a ->
   ImpTestM era a
@@ -856,11 +862,10 @@ disableImpInitPostSubmitTxHook =
 
 modifyImpInitPostEpochBoundaryHook ::
   forall era.
-  ( forall t.
-    Globals ->
+  ( Globals ->
     TRC (EraRule "NEWEPOCH" era) ->
     State (EraRule "NEWEPOCH" era) ->
-    ImpM t ()
+    ImpTestM era ()
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
@@ -882,10 +887,14 @@ disableInConformanceIt ::
   String ->
   ImpTestM era () ->
   SpecWith (ImpInit (LedgerSpec era))
-disableInConformanceIt s =
-  disableImpInitPostSubmitTxHook
-    . disableImpInitPostEpochBoundaryHook
-    . it (s ++ " [disabled in conformance]")
+disableInConformanceIt s test =
+  it (s ++ " [disabled in conformance]") test'
+  where
+    test' = local (iteExpectedConformanceFailureL .~ True) $ do
+      test
+      d <- use impConformanceFailureL
+      unless d $
+        assertFailure "Expected conformance divergence but impl and spec agree"
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -1017,19 +1026,18 @@ impWitsVKeyNeeded txBody = do
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx TopTx era -> ImpTestM era (Tx TopTx era)
   , itePostSubmitTxHook ::
-      forall t.
       Globals ->
       TRC (EraRule "LEDGER" era) ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-      ImpM t ()
+      ImpTestM era ()
   , itePostEpochBoundaryHook ::
-      forall t.
       Globals ->
       TRC (EraRule "NEWEPOCH" era) ->
       State (EraRule "NEWEPOCH" era) ->
-      ImpM t ()
+      ImpTestM era ()
+  , iteExpectedConformanceFailure :: Bool
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx TopTx era -> ImpTestM era (Tx TopTx era))
@@ -1039,13 +1047,12 @@ itePostSubmitTxHookL ::
   forall era.
   Lens'
     (ImpTestEnv era)
-    ( forall t.
-      Globals ->
+    ( Globals ->
       TRC (EraRule "LEDGER" era) ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-      ImpM t ()
+      ImpTestM era ()
     )
 itePostSubmitTxHookL = lens itePostSubmitTxHook (\x y -> x {itePostSubmitTxHook = y})
 
@@ -1053,13 +1060,15 @@ itePostEpochBoundaryHookL ::
   forall era.
   Lens'
     (ImpTestEnv era)
-    ( forall t.
-      Globals ->
+    ( Globals ->
       TRC (EraRule "NEWEPOCH" era) ->
       State (EraRule "NEWEPOCH" era) ->
-      ImpM t ()
+      ImpTestM era ()
     )
 itePostEpochBoundaryHookL = lens itePostEpochBoundaryHook (\x y -> x {itePostEpochBoundaryHook = y})
+
+iteExpectedConformanceFailureL :: Lens' (ImpTestEnv era) Bool
+iteExpectedConformanceFailureL = lens iteExpectedConformanceFailure (\x y -> x {iteExpectedConformanceFailure = y})
 
 instance MonadWriter (Seq (SomeSTSEvent era)) (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
