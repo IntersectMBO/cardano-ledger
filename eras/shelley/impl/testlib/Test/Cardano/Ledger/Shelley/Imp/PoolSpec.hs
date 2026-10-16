@@ -39,25 +39,37 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
-    it "register a pool with too low cost" $ do
+    disableInConformanceIt "register a pool with too low cost" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
       minPoolCost <- getsPParams ppMinPoolCostL
       tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
       pps <- poolParams kh vrf
-      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
-      submitFailingTx
-        tx
-        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+      let tx :: forall l. Typeable l => Tx l era
+          tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
+      if pvMajor pv >= natVersion @12
+        then
+          submitAnyTx_ tx
+        else
+          submitFailingTx
+            tx
+            [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
-    it "re-register a pool with too low cost" $ do
+    disableInConformanceIt "re-register a pool with too low cost" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       pps <- poolParams kh vrf
       minPoolCost <- getsPParams ppMinPoolCostL
       tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
-      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
-      submitFailingTx
-        tx
-        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+      let tx :: forall l. Typeable l => Tx l era
+          tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
+      if pvMajor pv >= natVersion @12
+        then
+          submitAnyTx_ tx
+        else
+          submitFailingTx
+            tx
+            [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
     it "register a pool with a staking address having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL

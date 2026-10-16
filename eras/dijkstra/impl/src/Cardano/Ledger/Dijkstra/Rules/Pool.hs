@@ -31,7 +31,6 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
 import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust, checkFailOnJustStatic)
@@ -63,8 +62,6 @@ data DijkstraPoolPredFailure era
   | StakePoolRetirementWrongEpochPOOL
       (Mismatch RelGT EpochNo)
       (Mismatch RelLTEQ EpochNo)
-  | StakePoolCostTooLowPOOL
-      (Mismatch RelGTEQ Coin)
   | WrongNetworkPOOL
       (Mismatch RelEQ Network)
       -- | Stake Pool ID
@@ -100,8 +97,6 @@ instance Era era => EncCBOR (DijkstraPoolPredFailure era) where
         <> encCBOR (1 :: Word8)
         <> encCBOR gt
         <> encCBOR lt
-    StakePoolCostTooLowPOOL m ->
-      encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR m
     WrongNetworkPOOL m c ->
       encodeListLen 3 <> encCBOR (4 :: Word8) <> encCBOR m <> encCBOR c
     PoolMedataHashTooBig a b ->
@@ -123,9 +118,6 @@ instance Era era => DecCBOR (DijkstraPoolPredFailure era) where
         gt <- decCBOR
         lt <- decCBOR
         pure (3, StakePoolRetirementWrongEpochPOOL gt lt)
-      3 -> do
-        costMismatch <- decCBOR
-        pure (2, StakePoolCostTooLowPOOL costMismatch)
       4 -> do
         networkIdMismatch <- decCBOR
         poolId <- decCBOR
@@ -160,7 +152,7 @@ instance InjectRuleFailure "POOL" Shelley.ShelleyPoolPredFailure DijkstraEra whe
   injectFailure = \case
     Shelley.StakePoolNotRegisteredOnKeyPOOL poolId -> StakePoolNotRegisteredOnKeyPOOL poolId
     Shelley.StakePoolRetirementWrongEpochPOOL mismatchGTEpochNo mismatchLTEQEpochNo -> StakePoolRetirementWrongEpochPOOL mismatchGTEpochNo mismatchLTEQEpochNo
-    Shelley.StakePoolCostTooLowPOOL mismatchCost -> StakePoolCostTooLowPOOL mismatchCost
+    Shelley.StakePoolCostTooLowPOOL _ -> error "Impossible: StakePoolCostTooLowPOOL has been removed in Dijkstra"
     Shelley.WrongNetworkPOOL mismatchNetwork poolId -> WrongNetworkPOOL mismatchNetwork poolId
     Shelley.PoolMedataHashTooBig poolId metadataHashSize -> PoolMedataHashTooBig poolId metadataHashSize
     Shelley.VRFKeyHashAlreadyRegistered poolId poolVrfKeyHash -> VRFKeyHashAlreadyRegistered poolId poolVrfKeyHash
@@ -225,7 +217,7 @@ poolTransition = do
     judgmentContext
   case poolCert of
     RegPool stakePoolParams -> do
-      let StakePoolParams {sppId, sppBlsKey = newBlsKey, sppVrf, sppAccountAddress, sppMetadata, sppCost} =
+      let StakePoolParams {sppId, sppBlsKey = newBlsKey, sppVrf, sppAccountAddress, sppMetadata} =
             stakePoolParams
       actualNetID <- liftSTS $ asks networkId
       let suppliedNetID = aaNetworkId sppAccountAddress
@@ -245,17 +237,6 @@ poolTransition = do
          in s
               <= fromIntegral (hashSize ([] @HASH))
                 ?! injectFailure (PoolMedataHashTooBig sppId s)
-
-      let minPoolCost = pp ^. ppMinPoolCostL
-      sppCost
-        >= minPoolCost
-          ?! injectFailure
-            ( StakePoolCostTooLowPOOL
-                Mismatch
-                  { mismatchSupplied = sppCost
-                  , mismatchExpected = minPoolCost
-                  }
-            )
 
       -- Returns the BlsKey wrapped in 'SJust' if it is invalid. A valid 'BlsKey' returns 'SNothing'.
       let invalidBlsKey = do
