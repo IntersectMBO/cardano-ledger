@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Remove `DecCBOR` instances from `Data` and `PlutusData`
 * Add optional `BlsKeyState` argument to `mkStakePoolState`
 * Select the Leios voting committee (CIP-0164) when the mark snapshot is created, instead of when it rotates into the set position:
   - Add `msStakePoolDistr`, `msLeiosMaxKeyAge` and `msLeiosCommittee` fields to `MarkSnapShot`, memoizing lazily the stake pool distribution and the committee

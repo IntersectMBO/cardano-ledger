@@ -87,6 +87,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 
   -- **** Applicaitve
   decodeMapTraverse,
+  decodeMapTraverseWithDuplicates,
   decodeMapContentsTraverse,
 
   -- *** Time
@@ -1151,14 +1152,22 @@ decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
 {-# INLINE decodeMapContents #-}
 
+decodeMapTraverseWithDuplicates ::
+  (Ord a, Applicative t) =>
+  Decoder s (t a) ->
+  Decoder s (t b) ->
+  Decoder s (t (Map.Map a b))
+decodeMapTraverseWithDuplicates decodeKey decodeValue =
+  fmap Map.fromList <$> decodeMapContentsTraverse decodeKey decodeValue
+{-# INLINE decodeMapTraverseWithDuplicates #-}
+
 decodeMapTraverse ::
   (Ord a, Applicative t) =>
   Decoder s (t a) ->
   Decoder s (t b) ->
   Decoder s (t (Map.Map a b))
-decodeMapTraverse decodeKey decodeValue =
-  fmap Map.fromList <$> decodeMapContentsTraverse decodeKey decodeValue
-{-# INLINE decodeMapTraverse #-}
+decodeMapTraverse = decodeMapTraverseWithDuplicates
+{-# DEPRECATED decodeMapTraverse "Use decodeMapTraverseWithDuplicates or decodeMapNoDuplicatesAnn instead" #-}
 
 decodeMapContentsTraverse ::
   Applicative t =>

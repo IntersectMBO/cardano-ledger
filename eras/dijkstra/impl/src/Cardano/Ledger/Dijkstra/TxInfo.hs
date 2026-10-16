@@ -137,13 +137,13 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Map.NonEmpty (NonEmptyMap)
-import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.OMap.Strict as OMap
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -167,7 +167,7 @@ data DijkstraContextError era
   | -- | Attempt to use PlutusV1-V3 with script hashes in guards will result in this failure
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
-    RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
+    RequiredTopLevelGuardsNotSupported (NonEmptySet (Credential Guard))
   | -- | Attempt to use PlutusV4 script with an invalid redeemer pointer will result in this failure
     ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
   deriving (Generic)
@@ -505,7 +505,7 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
     Left $
       inject $
         AccountBalanceIntervalsNotSupported @era accountBalanceIntervals
-  case NEMap.fromMap requiredTopLevelGuards of
+  case NES.fromSet $ Map.keysSet requiredTopLevelGuards of
     Nothing -> Right ()
     Just neRequiredTopLevelGuards ->
       Left $

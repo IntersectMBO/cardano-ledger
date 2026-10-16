@@ -323,4 +323,5 @@ spec = describe "TxInfo" $ do
           txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult
-            `shouldBeLeft` inject (RequiredTopLevelGuardsNotSupported @era neRequiredTopLevelGuards)
+            `shouldBeLeft` inject
+              (RequiredTopLevelGuardsNotSupported @era $ NEM.keysSet neRequiredTopLevelGuards)

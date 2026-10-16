@@ -6,7 +6,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -29,6 +28,7 @@ module Cardano.Ledger.Binary.Decoding.Annotated (
   FullByteString (..),
   decodeAnnSet,
   decodeNonEmptySetLikeEnforceNoDuplicatesAnn,
+  decodeNonEmptyMapNoDuplicatesAnn,
 ) where
 
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
@@ -37,6 +37,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
   DecoderError (..),
   allowTag,
   decodeList,
+  decodeMapContentsTraverse,
   decodeNonEmptyList,
   decodeWithByteSpan,
   fromPlainDecoder,
@@ -59,6 +60,7 @@ import Data.Function (on)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -273,6 +275,21 @@ decodeNonEmptySetLikeEnforceNoDuplicatesAnn insert getFinalWithLen = do
         (finalLen, final) = getFinalWithLen m
     {-# INLINE finish #-}
 {-# INLINE decodeNonEmptySetLikeEnforceNoDuplicatesAnn #-}
+
+decodeNonEmptyMapNoDuplicatesAnn ::
+  Ord a =>
+  Decoder s (Annotator a) ->
+  Decoder s (Annotator b) ->
+  Decoder s (Annotator (Map.Map a b))
+decodeNonEmptyMapNoDuplicatesAnn decodeKey decodeValue = do
+  contents <- decodeMapContentsTraverse decodeKey decodeValue
+  pure $ do
+    kvs <- contents
+    let m = Map.fromList kvs
+    when (null kvs) $ fail "Got an empty map, expected non-empty"
+    when (length kvs /= Map.size m) $ fail "Duplicates found, expected no duplicates"
+    pure m
+{-# INLINE decodeNonEmptyMapNoDuplicatesAnn #-}
 
 instance DecCBOR (Annotator PV1.Data) where
   decCBOR = pure <$> fromPlainDecoder Serialise.decode
