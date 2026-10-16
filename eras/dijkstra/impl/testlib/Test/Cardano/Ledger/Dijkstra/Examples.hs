@@ -186,17 +186,17 @@ exampleDijkstraGenesis =
           , udppMaxPledgeLeverage = MaxPledgeLeverage SNothing
           , udppMinPoolMargin = fromJust $ boundRational 0.015
           , udppPlutusV4CostModel = testingCostModel PlutusV4
-          , -- Maximum feasible values of CIP-164 Table 7
-            -- TODO: Update these to the actual, initial PV12 parameters
+          , -- Leios: Low-medium parameters, definitely within the guard rail limits
             udppLeiosAnnouncementPeriodLength = Milliseconds32 1_000 -- L_hdr
           , udppLeiosVotePeriodLength = Milliseconds32 4_000 -- L_vote
           , udppLeiosDiffusionPeriodLength = Milliseconds32 7_000 -- L_diff
           , udppLeiosCommitteeSize = 900 -- N_c
           , udppLeiosQuorumStakeThreshold = fromJust $ boundRational 0.75 -- tau
-          , udppMaxEndorserBlockReferencesSize = 512 * 1024 -- 512 KiB
-          , udppMaxEndorserBlockTxsSize = 12 * 1024 * 1024 -- 12 MiB
-          , udppMaxEndorserBlockExUnits = OrdExUnits $ ExUnits 7_000_000_000 2_000_000_000_000
-          , udppMaxRefScriptSizePerEndorserBlock = 12 * 1024 * 1024 -- 12 MiB
+          , udppMaxEndorserBlockReferencesSize = 100_000
+          , udppMaxEndorserBlockTxsSize = 1_000_000
+          , udppMaxEndorserBlockExUnits = OrdExUnits (ExUnits 720_000_000 200_000_000_000)
+          , udppMaxRefScriptSizePerEndorserBlock = 4 * 1024 * 1024 -- 4 MiB
+          -- Peras
           , udppPerasMinCandidateBlockAge = SlotInterval 90
           , udppPerasHealingFactor = 1 %! 2
           , udppPerasCertBoost = 15
@@ -365,15 +365,17 @@ exampleDijkstraOnwardsEraPParams =
     & ppMaxRefScriptSizePerTxL .~ 200 * 1024
     & ppRefScriptCostStrideL .~ knownNonZeroBounded @25_600
     & ppRefScriptCostMultiplierL .~ 12 %! 10
+    -- Leios: Low-medium parameters, definitely within the guard rail limits
     & ppLeiosAnnouncementPeriodLengthL .~ Milliseconds32 1_000
     & ppLeiosVotePeriodLengthL .~ Milliseconds32 4_000
     & ppLeiosDiffusionPeriodLengthL .~ Milliseconds32 7_000
     & ppLeiosCommitteeSizeL .~ 900
     & ppLeiosQuorumStakeThresholdL .~ 3 %! 4
-    & ppMaxEndorserBlockReferencesSizeL .~ 512 * 1024
-    & ppMaxEndorserBlockTxsSizeL .~ 12 * 1024 * 1024
-    & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000)
-    & ppMaxRefScriptSizePerEndorserBlockL .~ 12 * 1024 * 1024
+    & ppMaxEndorserBlockReferencesSizeL .~ 100_000
+    & ppMaxEndorserBlockTxsSizeL .~ 1_000_000
+    & ppMaxEndorserBlockExUnitsL .~ OrdExUnits (ExUnits 720_000_000 200_000_000_000)
+    & ppMaxRefScriptSizePerEndorserBlockL .~ 4 * 1024 * 1024
+    -- Peras
     & ppPerasMinCandidateBlockAgeL .~ SlotInterval 90
     & ppPerasHealingFactorL .~ 1 %! 2
     & ppPerasCertBoostL .~ 15
@@ -388,15 +390,17 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuMaxRefScriptSizePerTxL .~ SJust (200 * 1024)
     & ppuRefScriptCostStrideL .~ SJust (knownNonZeroBounded @25_600)
     & ppuRefScriptCostMultiplierL .~ SJust (12 %! 10)
+    -- Leios: Low-medium parameters, definitely within the guard rail limits
     & ppuLeiosAnnouncementPeriodLengthL .~ SJust (Milliseconds32 1_000)
     & ppuLeiosVotePeriodLengthL .~ SJust (Milliseconds32 4_000)
     & ppuLeiosDiffusionPeriodLengthL .~ SJust (Milliseconds32 7_000)
     & ppuLeiosCommitteeSizeL .~ SJust 900
     & ppuLeiosQuorumStakeThresholdL .~ SJust (3 %! 4)
-    & ppuMaxEndorserBlockReferencesSizeL .~ SJust (512 * 1024)
-    & ppuMaxEndorserBlockTxsSizeL .~ SJust (12 * 1024 * 1024)
-    & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 7_000_000_000 2_000_000_000_000))
-    & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (12 * 1024 * 1024)
+    & ppuMaxEndorserBlockReferencesSizeL .~ SJust 100_000
+    & ppuMaxEndorserBlockTxsSizeL .~ SJust 1_000_000
+    & ppuMaxEndorserBlockExUnitsL .~ SJust (OrdExUnits (ExUnits 720_000_000 200_000_000_000))
+    & ppuMaxRefScriptSizePerEndorserBlockL .~ SJust (4 * 1024 * 1024)
+    -- Peras
     & ppuPerasMinCandidateBlockAgeL .~ SJust (SlotInterval 90)
     & ppuPerasHealingFactorL .~ SJust (1 %! 2)
     & ppuPerasCertBoostL .~ SJust 15
