@@ -97,7 +97,7 @@ instance SpecTranslate era BootstrapAddress where
   toSpecRep addr =
     Agda.BootstrapAddr
       <$> toSpecRep (getNetwork $ AddrBootstrap addr)
-      <*> (Agda.KeyHashObj <$> toSpecRep (bootstrapKeyHash addr))
+      <*> toSpecRep (bootstrapKeyHash addr)
       <*> pure (toInteger $ bootstrapAddressAttrsSize addr)
 
 instance SpecTranslate era Addr where
