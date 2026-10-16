@@ -266,7 +266,13 @@ plutusScriptsWithContextDijkstraStAnnTx ::
 plutusScriptsWithContextDijkstraStAnnTx stAnnTx =
   withBothTxLevels
     stAnnTx
-    (\DijkstraStAnnTopTx {dsattPlutusScriptsWithContext} -> dsattPlutusScriptsWithContext)
+    ( \DijkstraStAnnTopTx {dsattPlutusScriptsWithContext, dsattSubTransactions} ->
+        -- Evaluate the whole batch together, after all phase-1 checks have passed.
+        -- Collection errors in a sub-transaction must also reject the batch.
+        concat
+          <$> sequence
+            (dsattPlutusScriptsWithContext : map dsastPlutusScriptsWithContext dsattSubTransactions)
+    )
     (\DijkstraStAnnSubTx {dsastPlutusScriptsWithContext} -> dsastPlutusScriptsWithContext)
 
 plutusLanguagesUsedDijkstraStAnnTx ::

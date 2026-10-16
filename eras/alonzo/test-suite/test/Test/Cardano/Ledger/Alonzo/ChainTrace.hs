@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
  )
 import Cardano.Ledger.Alonzo.Rules (BBODY, LEDGER)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), mkPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..), totExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..), ScriptResult (..))
 import Cardano.Ledger.Plutus.Language (plutusFromRunnable)
@@ -93,7 +93,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
             utxoConsumed = not $ u `Map.isSubmapOf` u'
             allScripts = tx ^. witsTxL . scriptTxWitsL
             hasPlutus = if all (isNativeScript @AlonzoEra) allScripts then NoPlutus else HasPlutus
-            totEU = totExUnits tx
+            totEU = getTotalExUnits tx
             nonTrivialExU = exUnitsMem totEU > 0 && exUnitsSteps totEU > 0
             collected =
               -- Note that none of our plutus scripts use validity intervals,

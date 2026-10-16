@@ -45,6 +45,7 @@
 ### `testlib`
 
 * Export `makeCollateralInput` and `txWithMaxRedeemers`
+* Use annotated transaction script collection in `impPlutusWithContexts` so phase-2 test expectations include subtransactions.
 * Add `Inject (AlonzoContextError era) (ContextError era)` superclass constraint to the `AlonzoEraTest` type class
 * Add `mkTestLedgerTxInfo` helper
 * Add `Serialise` instance for `PV4.POSIXTimeRange`
