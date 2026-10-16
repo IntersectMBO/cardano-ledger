@@ -5,8 +5,7 @@
 module Test.Cardano.Ledger.Dijkstra.GoldenSpec (spec) where
 
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Tx (DijkstraEraTx (hashTx))
-import Cardano.Ledger.Hashes (extractHash)
+import Cardano.Ledger.Hashes (extractHash, hashAnnotated)
 import Paths_cardano_ledger_dijkstra (getDataFileName)
 import Test.Cardano.Ledger.Binary.Golden (goldenForHashHex)
 import Test.Cardano.Ledger.Common
@@ -21,8 +20,8 @@ spec =
       goldenJsonPParamsSpec @DijkstraEra
     beforeAll (getDataFileName "golden/pparams-update.json") $
       goldenJsonPParamsUpdateSpec @DijkstraEra
-    it "hashTx" $
+    it "hashAnnotated (Tx TopTx)" $
       toPackageGolden getDataFileName $
         goldenForHashHex
           "golden/hashtx.hex"
-          (extractHash $ hashTx exampleDijkstraTx)
+          (extractHash $ hashAnnotated exampleDijkstraTx)

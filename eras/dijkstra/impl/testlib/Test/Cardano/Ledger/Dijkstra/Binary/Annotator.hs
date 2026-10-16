@@ -29,9 +29,14 @@ import Cardano.Ledger.Dijkstra.BlockBody.Internal (
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (
+  DijkstraTopTx (..),
+  DijkstraTopTxRaw (..),
+  DijkstraTx (..),
+  Tx (..),
+ )
 import Cardano.Ledger.Dijkstra.TxBody
-import Cardano.Ledger.MemoBytes (decodeMemoized)
+import Cardano.Ledger.MemoBytes (decodeMemoized, mkMemoizedEra)
 import Control.Monad (when)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
@@ -198,7 +203,7 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
-      STopTx -> decodeDijkstraTopTx
+      STopTx -> decodeDijkstraTopTxInMempool
       SSubTx -> decodeRecordNamed "DijkstraSubTx" (const 3) $ do
         body <- decCBOR
         wits <- decCBOR
@@ -208,13 +213,8 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
 
-decodeDijkstraTopTx ::
-  ( DecCBOR (TxBody TopTx era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  Decoder s (DijkstraTx TopTx era)
-decodeDijkstraTopTx =
+decodeDijkstraTopTxInMempool :: Decoder s (DijkstraTx TopTx DijkstraEra)
+decodeDijkstraTopTxInMempool =
   fst <$> do
     let isPhase2ValidBackwardsCompatibleLength isPhase2ValidFlagSupplied =
           if isPhase2ValidFlagSupplied then 4 else 3
@@ -229,25 +229,24 @@ decodeDijkstraTopTx =
               False -> fail "Value `false` not allowed for `isPhase2Valid`"
           _ -> pure False
       aux <- decodeNullStrictMaybe decCBOR
-      pure (DijkstraTx body wits Phase2Valid aux, isPhase2ValidFlagSupplied)
+      pure
+        ( DijkstraTopTx (mkMemoizedEra @DijkstraEra (DijkstraTopTxRaw body wits Phase2Valid aux))
+        , isPhase2ValidFlagSupplied
+        )
 
-decodeDijkstraTopTxInBlock ::
-  ( DecCBOR (TxBody TopTx era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  Decoder s (DijkstraTx TopTx era)
+decodeDijkstraTopTxInBlock :: Decoder s (DijkstraTx TopTx DijkstraEra)
 decodeDijkstraTopTxInBlock =
-  decodeRecordNamed "DijkstraTx" (const 4) $ do
-    body <- decCBOR
-    wits <- decCBOR
-    aux <- decodeNullStrictMaybe decCBOR
-    isPhase2Valid <- decCBOR
-    pure $ DijkstraTx body wits isPhase2Valid aux
+  fmap (DijkstraTopTx . MkDijkstraTopTx) . decodeMemoized $
+    decodeRecordNamed "DijkstraTx" (const 4) $ do
+      body <- decCBOR
+      wits <- decCBOR
+      aux <- decodeNullStrictMaybe decCBOR
+      isPhase2Valid <- decCBOR
+      pure $ DijkstraTopTxRaw body wits isPhase2Valid aux
 
 instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
   decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 3) $ do
-    txs <- decodeSeq (decodeDijkstraTopTxInBlock @DijkstraEra)
+    txs <- decodeSeq decodeDijkstraTopTxInBlock
     mbLeiosCert <- decodeNullStrictMaybe decCBOR
     mbPerasCert <- decodeNullStrictMaybe decCBOR
     pure $ DijkstraBlockBodyRaw (StrictSeq.forceToStrict (coerce <$> txs)) mbLeiosCert mbPerasCert

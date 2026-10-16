@@ -100,7 +100,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTxRaw (..), DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
 import Cardano.Ledger.Internal.Era (EraHasName (..))
@@ -608,8 +608,8 @@ instance EraApi DijkstraEra where
   type TxUpgradeError DijkstraEra = TxBodyUpgradeError DijkstraEra
   type TxBodyUpgradeError DijkstraEra = DijkstraTxBodyUpgradeError
   upgradeTx (MkConwayTx (AlonzoTx b w valid aux)) =
-    fmap MkDijkstraTx $
-      DijkstraTx
+    fmap (MkDijkstraTx . DijkstraTopTx . mkMemoizedEra @DijkstraEra) $
+      DijkstraTopTxRaw
         <$> upgradeTxBody b
         <*> pure (upgradeTxWits w)
         <*> pure valid

@@ -120,7 +120,8 @@ instance EraBlockBody DijkstraEra where
   hashBlockBody (MkDijkstraBlockBody m) = extractHash $ getMemoBytesHash m
   blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
 
-mkBasicBlockBodyDijkstra :: forall era. AlonzoEraTx era => DijkstraBlockBody era
+mkBasicBlockBodyDijkstra ::
+  forall era. (Era era, SafeToHash (Tx TopTx era)) => DijkstraBlockBody era
 mkBasicBlockBodyDijkstra =
   mkMemoized (eraProtVerLow @era) $
     DijkstraBlockBodyRaw mempty SNothing SNothing
@@ -161,7 +162,7 @@ instance Memoized (DijkstraBlockBody era) where
   type RawType (DijkstraBlockBody era) = DijkstraBlockBodyRaw era
 
 pattern DijkstraBlockBody ::
-  AlonzoEraTx era =>
+  SafeToHash (Tx TopTx era) =>
   StrictSeq (Tx TopTx era) ->
   StrictMaybe LeiosCert ->
   StrictMaybe PerasCert ->
@@ -181,7 +182,7 @@ pattern DijkstraBlockBody txs mbLeiosCert mbPerasCert <-
 -- Serialisation and hashing
 --------------------------------------------------------------------------------
 
-instance AlonzoEraTx era => EncCBOR (DijkstraBlockBodyRaw era) where
+instance SafeToHash (Tx TopTx era) => EncCBOR (DijkstraBlockBodyRaw era) where
   encCBOR (DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert) =
     encodeListLen 3
       <> encodeFoldableEncoder toCBORForBlockInclusion txs
