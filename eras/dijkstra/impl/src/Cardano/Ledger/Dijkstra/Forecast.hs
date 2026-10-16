@@ -10,7 +10,7 @@ module Cardano.Ledger.Dijkstra.Forecast (
   DijkstraEraForecast (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Milliseconds32, ProtVer, UnitInterval)
+import Cardano.Ledger.BaseTypes (Milliseconds32, PositiveInterval, ProtVer, UnitInterval)
 import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -26,6 +26,12 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppMaxEndorserBlockReferencesSizeL,
   ppMaxEndorserBlockTxsSizeL,
   ppMaxRefScriptSizePerEndorserBlockL,
+  ppPerasBootstrapRoundL,
+  ppPerasCertBoostL,
+  ppPerasHealingFactorL,
+  ppPerasMinCandidateBlockAgeL,
+  ppPerasQuorumThresholdSafetyMarginL,
+  ppPerasTargetCommitteeSizeL,
  )
 import Cardano.Ledger.Dijkstra.Rules.Snap ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
@@ -48,18 +54,24 @@ import Cardano.Ledger.State (
   ssLeiosCommitteeL,
   ssStakeSetL,
  )
+import Cardano.Slotting.Slot (SlotInterval)
 import Control.DeepSeq (NFData)
+import Data.Maybe.Strict (StrictMaybe)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks (..))
 
--- | Forecast data for Leios eras: the Praos fields, plus the epoch's voting
--- committee and the Leios protocol parameters.
+-- | Forecast data for Dijkstra era onward.
 --
--- The Leios fields are fixed at an epoch boundary. The committee is seated on
--- the stake snapshot by the SNAP rule, the rest are protocol parameters. So
--- they are forecastable for the same reason the Praos fields are.
+-- This includes:
+-- * Praos fields
+-- * Leios protocol parameters and the epoch's voting committee
+-- * Peras protocol parameters
+--
+-- NOTE: The Leios fields are fixed at an epoch boundary. The committee is
+-- seated on the stake snapshot by the SNAP rule, the rest are protocol
+-- parameters. They are forecastable for the same reason the Praos fields are.
 data DijkstraForecast (t :: Timeline) era = DijkstraForecast
   { dfPoolDistr :: !PoolDistr
   , dfMaxBlockHeaderSize :: !Word16
@@ -75,6 +87,12 @@ data DijkstraForecast (t :: Timeline) era = DijkstraForecast
   , dfMaxEndorserBlockTxsSize :: !Word32
   , dfMaxEndorserBlockExUnits :: !OrdExUnits
   , dfMaxRefScriptSizePerEndorserBlock :: !Word32
+  , dfPerasMinCandidateBlockAge :: !SlotInterval
+  , dfPerasHealingFactor :: !PositiveInterval
+  , dfPerasCertBoost :: !Word16
+  , dfPerasTargetCommitteeSize :: !Word16
+  , dfPerasBootstrapRound :: !(StrictMaybe Word32)
+  , dfPerasQuorumThresholdSafetyMargin :: !UnitInterval
   }
   deriving (Eq, Show, Generic)
 
@@ -96,6 +114,12 @@ class EraForecast era => DijkstraEraForecast era where
   maxEndorserBlockTxsSizeForecastL :: Lens' (Forecast t era) Word32
   maxEndorserBlockExUnitsForecastL :: Lens' (Forecast t era) OrdExUnits
   maxRefScriptSizePerEndorserBlockForecastL :: Lens' (Forecast t era) Word32
+  perasMinCandidateBlockAgeForecastL :: Lens' (Forecast t era) SlotInterval
+  perasHealingFactorForecastL :: Lens' (Forecast t era) PositiveInterval
+  perasCertBoostForecastL :: Lens' (Forecast t era) Word16
+  perasTargetCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
+  perasBootstrapRoundForecastL :: Lens' (Forecast t era) (StrictMaybe Word32)
+  perasQuorumThresholdSafetyMarginForecastL :: Lens' (Forecast t era) UnitInterval
 
 mkDijkstraForecast ::
   (DijkstraEraPParams era, EraGov era) =>
@@ -117,6 +141,12 @@ mkDijkstraForecast nes =
     , dfMaxEndorserBlockTxsSize = pp ^. ppMaxEndorserBlockTxsSizeL
     , dfMaxEndorserBlockExUnits = pp ^. ppMaxEndorserBlockExUnitsL
     , dfMaxRefScriptSizePerEndorserBlock = pp ^. ppMaxRefScriptSizePerEndorserBlockL
+    , dfPerasMinCandidateBlockAge = pp ^. ppPerasMinCandidateBlockAgeL
+    , dfPerasHealingFactor = pp ^. ppPerasHealingFactorL
+    , dfPerasCertBoost = pp ^. ppPerasCertBoostL
+    , dfPerasTargetCommitteeSize = pp ^. ppPerasTargetCommitteeSizeL
+    , dfPerasBootstrapRound = pp ^. ppPerasBootstrapRoundL
+    , dfPerasQuorumThresholdSafetyMargin = pp ^. ppPerasQuorumThresholdSafetyMarginL
     }
   where
     pp = nes ^. nesEsL . curPParamsEpochStateL
@@ -171,6 +201,30 @@ dfMaxRefScriptSizePerEndorserBlockL :: Lens' (DijkstraForecast t era) Word32
 dfMaxRefScriptSizePerEndorserBlockL =
   lens dfMaxRefScriptSizePerEndorserBlock $ \s x -> s {dfMaxRefScriptSizePerEndorserBlock = x}
 
+dfPerasMinCandidateBlockAgeL :: Lens' (DijkstraForecast t era) SlotInterval
+dfPerasMinCandidateBlockAgeL =
+  lens dfPerasMinCandidateBlockAge $ \s x -> s {dfPerasMinCandidateBlockAge = x}
+
+dfPerasHealingFactorL :: Lens' (DijkstraForecast t era) PositiveInterval
+dfPerasHealingFactorL =
+  lens dfPerasHealingFactor $ \s x -> s {dfPerasHealingFactor = x}
+
+dfPerasCertBoostL :: Lens' (DijkstraForecast t era) Word16
+dfPerasCertBoostL =
+  lens dfPerasCertBoost $ \s x -> s {dfPerasCertBoost = x}
+
+dfPerasTargetCommitteeSizeL :: Lens' (DijkstraForecast t era) Word16
+dfPerasTargetCommitteeSizeL =
+  lens dfPerasTargetCommitteeSize $ \s x -> s {dfPerasTargetCommitteeSize = x}
+
+dfPerasBootstrapRoundL :: Lens' (DijkstraForecast t era) (StrictMaybe Word32)
+dfPerasBootstrapRoundL =
+  lens dfPerasBootstrapRound $ \s x -> s {dfPerasBootstrapRound = x}
+
+dfPerasQuorumThresholdSafetyMarginL :: Lens' (DijkstraForecast t era) UnitInterval
+dfPerasQuorumThresholdSafetyMarginL =
+  lens dfPerasQuorumThresholdSafetyMargin $ \s x -> s {dfPerasQuorumThresholdSafetyMargin = x}
+
 instance EraForecast DijkstraEra where
   type Forecast t DijkstraEra = DijkstraForecast t DijkstraEra
   mkForecast = mkDijkstraForecast
@@ -190,3 +244,9 @@ instance DijkstraEraForecast DijkstraEra where
   maxEndorserBlockTxsSizeForecastL = dfMaxEndorserBlockTxsSizeL
   maxEndorserBlockExUnitsForecastL = dfMaxEndorserBlockExUnitsL
   maxRefScriptSizePerEndorserBlockForecastL = dfMaxRefScriptSizePerEndorserBlockL
+  perasMinCandidateBlockAgeForecastL = dfPerasMinCandidateBlockAgeL
+  perasHealingFactorForecastL = dfPerasHealingFactorL
+  perasCertBoostForecastL = dfPerasCertBoostL
+  perasTargetCommitteeSizeForecastL = dfPerasTargetCommitteeSizeL
+  perasBootstrapRoundForecastL = dfPerasBootstrapRoundL
+  perasQuorumThresholdSafetyMarginForecastL = dfPerasQuorumThresholdSafetyMarginL

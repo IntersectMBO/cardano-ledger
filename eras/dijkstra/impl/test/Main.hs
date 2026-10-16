@@ -6,6 +6,7 @@ module Main where
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core (Tx, TxBody, TxLevel (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Block.Endorser (EbReferences)
 import Cardano.Ledger.Dijkstra.Rules ()
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
@@ -19,6 +20,7 @@ import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
   roundTripAnnEraExpectation,
   roundTripEraExpectation,
+  roundTripEraSpec,
  )
 import Test.Cardano.Ledger.Dijkstra.Arbitrary (genSmallDijkstraTxsBlockBody)
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
@@ -35,13 +37,16 @@ import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec DijkstraEra where
-  eraImpSpec = Imp.spec
+  eraImpSpec era = do
+    Imp.dijkstraOnlySpec
+    Imp.spec era
 
 main :: IO ()
 main =
   ledgerEraTestMain @DijkstraEra $ do
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
+      roundTripEraSpec @DijkstraEra @EbReferences
       prop "Block (Leios.Header)" $
         BaseQC.withNumTests 25 $
           forAll (Block <$> arbitrary <*> genSmallDijkstraTxsBlockBody) $ \block ->

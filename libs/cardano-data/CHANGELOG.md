@@ -1,8 +1,13 @@
 # Version history for `cardano-data`
 
-## 1.4.0.1
+## 1.4.1.0
 
-*
+* Add `keysSet` to `NonEmptyMap`
+* Add `Data.SimpleOMap.Strict`, a variant of `Data.OMap.Strict` without the `HasOKey` constraint
+
+### `testlib`
+
+* Add `Arbitrary` instance for `Data.SimpleOMap.Strict.OMap`
 
 ## 1.4.0.0
 

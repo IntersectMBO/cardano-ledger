@@ -722,7 +722,7 @@ purposeIsWellformedNoDatum =
       , "a8c05cc068004c064004c060004c05c004c058004c054004c050004c04c004c048004c044004c034dd50019baa"
       , "3008001300737540044466004600e0026014002aae755d1aba05744ae6955cf2ba15736aae7d"
       ]
-    -- ScriptHash "fabf7e77af08a5c801ce0f9bc98c5568822f2c185c99703f654f670b"
+    -- ScriptHash "c4940231fc846fdda35da36b5b92d99d93c87a0dd1b55d3a9ed46ee3"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- purposeIsWellformedNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -739,31 +739,31 @@ purposeIsWellformedNoDatum =
     --                                                                                                                                          PlutusLedgerApi.V3.Data.Contexts.SpendingScript txOutRef_10
     --                                                                                                                                                                                          mDatum_11 -> case mDatum_11 of
     --                                                                                                                                                                                                       {GHC.Maybe.Just _ -> GHC.Types.False;
-    --                                                                                                                                                                                                        GHC.Maybe.Nothing -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter ((txOutRef_10 PlutusTx.Eq.Class.==) GHC.Base.. PlutusLedgerApi.V3.Data.Contexts.txInInfoOutRef) infoInputs_3};
+    --                                                                                                                                                                                                        GHC.Maybe.Nothing -> GHC.Classes.not GHC.Base.$ (PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter ((txOutRef_10 PlutusTx.Eq.Class.==) GHC.Base.. PlutusLedgerApi.V3.Data.Contexts.txInInfoOutRef) infoInputs_3)};
     --                                                                                                                                          PlutusLedgerApi.V3.Data.Contexts.RewardingScript cred_12 -> PlutusTx.Data.AssocMap.member cred_12 infoWdrl_4;
     --                                                                                                                                          PlutusLedgerApi.V3.Data.Contexts.CertifyingScript _idx_13
-    --                                                                                                                                                                                            txCert_14 -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter (txCert_14 PlutusTx.Eq.Class.==) infoTxCerts_5;
+    --                                                                                                                                                                                            txCert_14 -> GHC.Classes.not GHC.Base.$ (PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter (txCert_14 PlutusTx.Eq.Class.==) infoTxCerts_5);
     --                                                                                                                                          PlutusLedgerApi.V3.Data.Contexts.VotingScript voter_15 -> PlutusTx.Data.AssocMap.member voter_15 infoVotes_6;
     --                                                                                                                                          PlutusLedgerApi.V3.Data.Contexts.ProposingScript _idx_16
     --                                                                                                                                                                                           _propProc_17 -> GHC.Types.True}})
     -- @@@
     SPlutusV3 ->
-      [ "5902640101009800aab9daba3aba0aba2ab9aaab9eaba1ab9bab9caab9f4888888888896600264660024464660"
+      [ "5902720101009800aab9daba3aba0aba2ab9aaab9eaba1ab9bab9caab9f4888888888896600264660024464660"
       , "08446464646464646464b30013370e9000000c66002ea66eb8c04cc050016653001237560032374c0032329800"
       , "980d800c01e244600400680c26002eb646ea000653001337109000000c488c00800e00e80c200280126eacc050"
       , "025001111191800800919803a5eb7bdb18094cd4c00cc014c064004848cc078cdd818100019803001198020020"
       , "008919801801800a0048992cc004cdc3a400400513300f223232533535980099b8748000006246424460040066"
-      , "03200315980099b87480080062401516406880d0c06400885280980ecc0048006400323375e00a660284400460"
-      , "346ea80066eb003d005180e8009baa301600130150068acc004cdc3a4008005198009000cc050c05401a6eacc0"
-      , "5001d003456600266e1d200600289980791180dcc0048006400323375e602e0040033758602c0148018c05401a"
-      , "2b30013370e90040014660024003301430150069bab3014301730173017301730173017007400d15980099b874"
-      , "802800a26601e44944c05401a26466028002002c80b1016202c405880b0888c88c008004c8c0040048a600297a"
-      , "e091192cc004c0180062646604060100040026600a00a0051330050050024074600e005001402080a8c0600108"
-      , "88c8cc0040040088cc0152814c004cdd79802802180e000c928c8cc00c00c0050181112cc00400620071330023"
-      , "013001301600140402440026ea8c038c04401cc040004c03c004c038c038c038004c028dd5001980400098039b"
-      , "aa00222330023007001300a0018a4d132633003491035054350049900701"
+      , "03200315980099b87480080062401516406880d0c06400885280cc004c076600240032001919baf00533014220"
+      , "02301a3754003375801e802a94294501a180e8009baa301600130150068acc004cdc3a4008005198009000cc05"
+      , "0c05401a6eacc05001d003456600266e1d2006002899807914c004c06e600240032001919baf30170020019bac"
+      , "301600a400d4a14a280c0c05401a2b30013370e90040014660024003301430150069bab3014301730173017301"
+      , "730173017007400d15980099b874802800a26601e44944c05401a26466028002002c80b1016202c405880b0888"
+      , "c88c008004c8c0040048a600297ae091192cc004c0180062646604060100040026600a00a00513300500500240"
+      , "74600e005001402080a8c060010888c8cc0040040088cc0152814c004cdd79802802180e000c928c8cc00c00c0"
+      , "050181112cc00400620071330023013001301600140402440026ea8c038c04401cc040004c03c004c038c038c0"
+      , "38004c028dd5001980400098039baa00222330023007001300a0018a4d132633003491035054350049900701"
       ]
-    -- ScriptHash "c17ef442371ccb694a6c43ce6c8e2980bbdb2bd5bfa486b641ea4980"
+    -- ScriptHash "c9090913e014824804fd16fade6127752b305615eebdfb440b722784"
     -- Preprocessed PlutusV4 Script:
     -- @@@
     -- purposeIsWellformedNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -783,9 +783,9 @@ purposeIsWellformedNoDatum =
     --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.SpendingScript txOutRef_13
     --                                                                                                                                                                                   mDatum_14 -> case mDatum_14 of
     --                                                                                                                                                                                                {GHC.Maybe.Just _ -> GHC.Types.False;
-    --                                                                                                                                                                                                 GHC.Maybe.Nothing -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter ((txOutRef_13 PlutusTx.Eq.Class.==) GHC.Base.. PlutusLedgerApi.V4.Data.Contexts.txInInfoOutRef) infoInputs_3};
+    --                                                                                                                                                                                                 GHC.Maybe.Nothing -> GHC.Classes.not GHC.Base.$ (PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter ((txOutRef_13 PlutusTx.Eq.Class.==) GHC.Base.. PlutusLedgerApi.V4.Data.Contexts.txInInfoOutRef) infoInputs_3)};
     --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.CertifyingScript _idx_15
-    --                                                                                                                                                                                     txCert_16 -> PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter (txCert_16 PlutusTx.Eq.Class.==) infoTxCerts_4;
+    --                                                                                                                                                                                     txCert_16 -> GHC.Classes.not GHC.Base.$ (PlutusTx.Data.List.null GHC.Base.$ PlutusTx.Data.List.filter (txCert_16 PlutusTx.Eq.Class.==) infoTxCerts_4);
     --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.VotingScript voter_17 -> PlutusTx.Data.AssocMap.member voter_17 infoVotes_5;
     --                                                                                                                                   PlutusLedgerApi.V4.Data.Contexts.ProposingScript _idx_18
     --                                                                                                                                                                                    _propProc_19 -> GHC.Types.True;
@@ -794,20 +794,21 @@ purposeIsWellformedNoDatum =
     --                                                                                                                                                                                   topTxInfo_22 -> (PlutusLedgerApi.V1.Data.Credential.ScriptCredential sh_11 PlutusTx.Eq.Class.== (infoGuards_7 PlutusTx.Data.List.!! ix_21)) PlutusTx.Bool.&& (PlutusTx.Maybe.isJust infoSubTxIx_8 PlutusTx.Eq.Class.== PlutusTx.Maybe.isNothing topTxInfo_22)}})
     -- @@@
     SPlutusV4 ->
-      [ "5902700102009800aba3aba0aba1ab9cabd8488888c8a64dd6000c8a4006452003229375800d229001914800c8"
+      [ "5902780102009800aba3aba0aba1ab9cabd8488888c8a64dd6000c8a4006452003229375800d229001914800c8"
       , "a4cc03d2004001914800c8a40064526602a9003000c8a4cc05d2006001911919499b8748002400a44004991949"
       , "9b874800a401244004c99b874801a401244004c99b8748022401244004c99b874802a401244004c99b87480124"
       , "01244004c99b8748032401244004994800c004d9900491000a4465266ebccdd2a4004660466ea4dd7181100c25"
       , "eb824cdc4000a40013301f001375801732633021490103505436004994a132993300575a02d24a34a0c800d28d"
       , "282002933004200130220029250a510dd6801198009000cc07e4012440029bab00a400ca51660024003301f900"
-      , "491000a6eac01900333200922001488c08e600240032001919baf30220020019bac00e40106640124400291499"
-      , "80190009810800c9284c08e600240032001919baf00393758003220024dd600920080452003280098019810800"
-      , "a50021111911801000991800800914800c88ca4c0180066600a00a005323302730080020013300500500218038"
-      , "0152f5c0cc005d4cdd7180ec80148800532980091bab00191ba600191949811000e002002c009300175b237500"
-      , "0329337109000000e00580080090014009375601a8008888c8c0040048a4006526008600d200322001488cc098"
-      , "cdd84801c88008600e0046600a00a00323300400400152f5bded8c040042232230020013230010012290019499"
-      , "baf3005004900191001246600800800324a2a501baa01200132633004491035054350049a930c8c004004888e4"
-      , "006445266e1d2000005994c00401e003003401c66e040152002801a464c6600c92010350543700498931"
+      , "491000a6eac0190033320092200148a4c08e600240032001919baf30220020019bac00e40114a34a0332009220"
+      , "0148a4cc00c8004c084006494326047300120019000c8cdd7801c9bac0019100126eb0049004528d280114800c"
+      , "a00260066042002940084446446004002646002002452003223293006001998028028014c8cc09cc020008004c"
+      , "c014014008600e0054bd7033001753375c603b2005220014ca600246eac00646e9800646526044003800800b00"
+      , "24c005d6c8dd4000ca4cdc424000003801600200240050024dd5806a0022223230010012290019498021803480"
+      , "0c88005223302633761200722002180380119802802800c8cc0100100054bd6f7b6301001088c88c008004c8c0"
+      , "040048a40065266ebcc014012400644004919802002000c928a9406ea8048004c98cc0112401035054350049a9"
+      , "30c8c004004888e4006445266e1d2000005994c00401e003003401c66e040152002801a464c6600c9201035054"
+      , "3700498931"
       ]
 
 -- | Script that succeeds when datum is expected and purpose arguments are validated against txInfo

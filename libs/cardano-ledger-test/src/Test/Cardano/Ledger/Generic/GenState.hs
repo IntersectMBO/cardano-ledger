@@ -681,7 +681,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
             ( \poolId sps ->
                 let mbDelegs = Map.lookup poolId delegatorsPerStakePool
                     delegs = fromMaybe mempty mbDelegs
-                 in mkStakePoolState (EpochNo 0) poolDeposit delegs sps
+                 in mkStakePoolState (EpochNo 0) SNothing poolDeposit delegs sps
             )
             pools
         )
@@ -1099,7 +1099,9 @@ genRetirementHash = do
 
       -- add the Pool to the Model
       modifyModelStakePools
-        (Map.insert poolid $ mkStakePoolState (EpochNo 0) (pp ^. ppPoolDepositCompactL) mempty poolparams)
+        ( Map.insert poolid $
+            mkStakePoolState (EpochNo 0) SNothing (pp ^. ppPoolDepositCompactL) mempty poolparams
+        )
       modifyModelPoolDistr (Map.insert poolid stake)
       pure poolid
 
@@ -1118,7 +1120,7 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
       modifyGenStateInitialPoolDistr (Map.insert kh ips)
       -- update the model
       modifyModelStakePools
-        (Map.insert kh $ mkStakePoolState (EpochNo 0) (pparams ^. ppPoolDepositCompactL) mempty spp)
+        (Map.insert kh $ mkStakePoolState (EpochNo 0) SNothing (pparams ^. ppPoolDepositCompactL) mempty spp)
       return (kh, spp)
     pickExisting = do
       psStakePools <- gets (mStakePools . gsModel)

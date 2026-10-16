@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.10.0.1
+## 1.10.2.0
 
-* Fix IPv4 encoding order to use network order instead of swapped
+* Add `decodeNonEmptyMapNoDuplicatesAnn`
+* Rename `decodeMapTraverse` to `decodeMapTraverseWithDuplicates`
+
+## 1.10.1.0
+
+* Fix IPv4 encoding order in `encodeIPv4`, `ipv4ToBytes` and `decodeIPv4` to use network order instead of swapped
 
 ## 1.10.0.0
 

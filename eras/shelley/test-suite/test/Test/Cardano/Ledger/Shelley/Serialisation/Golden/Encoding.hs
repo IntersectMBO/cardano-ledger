@@ -44,7 +44,7 @@ import Cardano.Ledger.Binary (
   byronProtVer,
   decodeFullAnnotator,
   decodeFullDecoder,
-  decodeMapTraverse,
+  decodeMapTraverseWithDuplicates,
   encCBOR,
   encodeFixedSized,
   fromPlainEncoding,
@@ -148,7 +148,7 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 type MultiSigMap = Map.Map ScriptHash (MultiSig ShelleyEra)
 
 decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
-decodeMultiSigMap = decodeMapTraverse (pure <$> decCBOR) decCBOR
+decodeMultiSigMap = decodeMapTraverseWithDuplicates (pure <$> decCBOR) decCBOR
 
 deserializeMultiSigMap :: BSL.ByteString -> Either DecoderError MultiSigMap
 deserializeMultiSigMap =

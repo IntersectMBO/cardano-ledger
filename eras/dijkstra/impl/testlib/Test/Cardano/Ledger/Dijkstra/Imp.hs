@@ -1,13 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp where
 
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Dijkstra
 import Cardano.Ledger.Dijkstra.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
+import Data.Proxy
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
@@ -22,6 +25,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubLedgerSpec as SUBLEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec as SUBUTXO
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SubUtxowSpec as SUBUTXOW
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec as UTXO
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxosSpec as UTXOS
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec as UTXOW
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 
@@ -47,6 +51,12 @@ spec era = do
     POOL.spec
     SNAP.spec
     UTXOW.spec
+    UTXOS.spec
     UTXO.spec
     SUBUTXO.spec
     SUBUTXOW.spec
+
+dijkstraOnlySpec :: Spec
+dijkstraOnlySpec =
+  describe "DijkstraEra Specific" $ withImpInitEachEraVersion (Proxy @DijkstraEra) $ do
+    POOL.dijkstraOnlySpec

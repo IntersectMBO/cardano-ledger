@@ -1,11 +1,13 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.17.1.0
+## 1.18.0.0
 
 *
 
 ### `testlib`
 
+* Change `mkTxWithPlutusAndBootstrapAddress` and `mkTokenMintingTx` to return `AnyLevelTx`
+* Add `DecCBOR` instances for `PlutusData` and `Data`
 * Add `mkTokenMintingTx`
 
 ## 1.17.0.0

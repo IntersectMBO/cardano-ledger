@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Add `queryStakePoolState` with the `QueryResultStakePoolState` result type
+* Add `queryLeiosCommittee` (`GetLeiosCommittee`) with the `QueryResultLeiosCommittee` result type
 * Add methods to `AnyEraTxBody`:
   - `subTransactionsTxBodyG`
   - `requiredTopLevelGuardsTxBodyG`
@@ -9,10 +11,13 @@
   - `accountBalanceIntervalsTxBodyG`
   - `startingAccountBalanceIntervalsTxBodyG`
 
+### `testlib`
+
+* Add `queryStakePoolStateExamples`
+* Add `Arbitrary` instance for `QueryResultLeiosCommittee`
+
 ## 1.15.0.0
 
-* Add `ssLeiosCommittee` to `StakeSnapshots`: the Leios voting committee seated on the `set` snapshot, in seat order, each seat attributed to its pool and carrying the pool's registered key with its registration epoch and whether that key is still honoured. Adds `QueryLeiosSeat`
-* Replace `qpsrStakePoolParams` and `qpsrDeposits` with a single `qpsrStakePools` reporting `StakePoolState`, so `queryPoolState` exposes a pool's registered BLS key with the epoch it was registered in, plus its delegators. `queryPoolState` and `mkQueryPoolStateResult` no longer take a `Network`
 * Add `queryNonMyopicMemberRewards` (`GetNonMyopicMemberRewards`) with the `QueryResultNonMyopicMemberRewards` result type
 * Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug
 * Add `era` parameter to `QueryPoolStateResult`, `StakePoolParams`

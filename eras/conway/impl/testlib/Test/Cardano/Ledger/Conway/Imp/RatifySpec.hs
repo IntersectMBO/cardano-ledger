@@ -607,7 +607,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       disableTreasuryExpansion
       amount <- uniformRM (Coin 1, Coin 100_000_000)
       -- Ensure sufficient amount in the treasury
-      submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
+      submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
       hotCommitteeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       passEpoch
@@ -636,7 +636,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       amount <- uniformRM (Coin 1, Coin 100_000_000)
       -- Ensure sufficient amount in the treasury
-      submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
+      submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
       passEpoch
       treasury <- getsNES treasuryL
       gaiTW <- submitTreasuryWithdrawal amount

@@ -69,7 +69,6 @@ library
     aeson >=2.2,
     base >=4.18 && <5,
     bytestring,
-    cardano-crypto-leios,
     cardano-data,
     cardano-ledger-allegra ^>=1.10,
     cardano-ledger-alonzo >=1.16,
@@ -86,7 +85,6 @@ library
     deepseq,
     microlens,
     transformers,
-    vector,
     vector-map >=1.2,
 
 library testlib
@@ -112,6 +110,7 @@ library testlib
     base,
     bytestring,
     cardano-base,
+    cardano-crypto-leios,
     cardano-ledger-api,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway:{cardano-ledger-conway, testlib},

@@ -624,7 +624,7 @@ mapDecodeA ::
   Decode (Closed Dense) (Annotator k) ->
   Decode (Closed Dense) (Annotator v) ->
   Decode (Closed Dense) (Annotator (Map.Map k v))
-mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
+mapDecodeA k v = D (decodeMapTraverseWithDuplicates (decode k) (decode v))
 {-# INLINE mapDecodeA #-}
 
 --------------------------------------------------------------------------------

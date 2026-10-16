@@ -11,17 +11,17 @@ instance Arbitrary MemberStatus where
   arbitrary = arbitraryBoundedEnum
 
 instance Arbitrary (QueryPoolStateResult era) where
-  arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = QueryPoolStateResult <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary QueryResultNonMyopicMemberRewards where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary StakeSnapshot where
+instance Arbitrary QueryResultLeiosCommittee where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary QueryLeiosSeat where
+instance Arbitrary StakeSnapshot where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

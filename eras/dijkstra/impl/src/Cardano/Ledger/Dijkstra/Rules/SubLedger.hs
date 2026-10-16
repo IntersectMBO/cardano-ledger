@@ -257,11 +257,11 @@ dijkstraSubLedgersTransition = do
   let committee = govState ^. committeeGovStateL
   let proposals = govState ^. proposalsGovStateL
 
+  runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+
   (utxoStateBeforeSubUtxow, certStateFinal) <-
     if topIsPhase2Valid == Phase2Valid
       then do
-        runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-
         certStateAfterSubEntities <-
           trans @(EraRule "SUBENTITIES" era) $
             TRC

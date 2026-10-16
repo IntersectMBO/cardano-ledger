@@ -6,14 +6,16 @@ module Test.Cardano.Ledger.Shelley.Imp.EpochSpec (
   spec,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval, epochInfoPure)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval, epochInfoPure, unNonZero)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.API.Forecast (futureForecast, poolDistrForecastL)
 import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   esSnapshotsL,
+  gsSnapShotL,
   lsCertStateL,
   lsUTxOStateL,
   msSnapShotL,
@@ -21,6 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   nesStakePoolDistrG,
   ssSnapShotL,
+  ssStakeGoL,
   ssStakeMarkL,
   ssStakeSetL,
   totalObligation,
@@ -28,7 +31,15 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
  )
 import Cardano.Ledger.Slot (epochInfoFirst)
+import Cardano.Ledger.State (
+  PoolDistr (..),
+  SnapShot (..),
+  StakePoolSnapShot (..),
+ )
 import Cardano.Ledger.Val (Val (..))
+import Data.Foldable (fold)
+import qualified Data.Map.Strict as Map
+import qualified Data.VMap as VMap
 import Lens.Micro ((^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Imp.Common
@@ -80,3 +91,20 @@ spec = describe "EPOCH" $ do
 
     passEpoch
     getsNES nesStakePoolDistrG `shouldReturn` forecastPoolDistr
+
+  it "Genesis staking seeds the mark, set and go snapshots" $ do
+    poolStake <- injectFreshGenesisStakePools 3
+    snapShots <- getsNES $ nesEsL . esSnapshotsL
+    let markSnapShot = snapShots ^. ssStakeMarkL . msSnapShotL
+    -- SNAP rotates the snapshots, but at genesis there is nothing to rotate yet, so all of
+    -- them are seeded with the same stake distribution
+    snapShots ^. ssStakeSetL . ssSnapShotL `shouldBe` markSnapShot
+    snapShots ^. ssStakeGoL . gsSnapShotL `shouldBe` markSnapShot
+    -- the total active stake agrees with the sum of the delegated stake pools (#5788)
+    fromCompact . spssStake
+      <$> VMap.toMap (ssStakePoolsSnapShot markSnapShot)
+        `shouldBe` poolStake
+    unNonZero (ssTotalActiveStake markSnapShot) `shouldBe` fold poolStake
+    -- every genesis pool is in the stake distribution that leader election uses right away
+    poolDistr <- getsNES nesStakePoolDistrG
+    Map.keysSet (unPoolDistr poolDistr) `shouldBe` Map.keysSet poolStake

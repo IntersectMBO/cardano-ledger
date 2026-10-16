@@ -40,11 +40,8 @@ spec = describe "UTXOW" $ do
     disableInConformanceIt "Valid Witnesses" $ do
       aliceBootAddr <- freshBootstrapAddress
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
-      let txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]
-      submitTx_ (mkBasicTx txBody)
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "InvalidWitnessesUTXOW" $ do
+      submitAnyTx_ $ mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+    it "InvalidWitnessesUTXOW" $ do
       aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstrapAddress
       aliceByronKeyPair <- getByronKeyPair aliceBootAddr
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
@@ -150,11 +147,10 @@ spec = describe "UTXOW" $ do
     let
       auxData = mkBasicTxAuxData & metadataTxAuxDataL .~ invalidMetadatum
       auxDataHash = hashTxAuxData auxData
-      tx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . auxDataHashTxBodyL .~ SJust auxDataHash
-          & auxDataTxL .~ SJust auxData
-    submitTx_ tx
+    submitAnyTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . auxDataHashTxBodyL .~ SJust auxDataHash
+        & auxDataTxL .~ SJust auxData
 
 genInvalidMetadata :: ImpTestM era (Map.Map Word64 Metadatum)
 genInvalidMetadata = do

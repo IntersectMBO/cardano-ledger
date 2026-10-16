@@ -89,9 +89,7 @@ spec = describe "SUBUTXOW" $ do
     forM_ (missingVKeyWitnessSources @era) $ \(sourceName, mkSubTx) ->
       it sourceName $ withheldWitnessFails mkSubTx
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "spending a bootstrap address input" $
+    it "spending a bootstrap address input" $
       withheldWitnessFails $ do
         bootAddr <- freshBootstrapAddress
         txIn <- sendCoinTo (AddrBootstrap bootAddr) mempty
@@ -129,7 +127,7 @@ spec = describe "SUBUTXOW" $ do
     disableInConformanceIt "minting" $
       failingScriptFails $ do
         scriptHash <- unsatisfiableTimeLock
-        subTx <- mkTokenMintingTx scriptHash
+        AnyLevelTx subTx <- mkTokenMintingTx scriptHash
         pure (subTx, scriptHash)
 
   it "SubMissingTxMetadata" $ do
@@ -233,7 +231,7 @@ spec = describe "SUBUTXOW" $ do
       it caseName $ do
         (guardCred, requiredGuards) <- mkGuard
         let subTx :: Tx SubTx era
-            subTx = mkBasicTx $ mkBasicTxBody & requiredTopLevelGuardsL .~ requiredGuards
+            subTx = mkBasicTx $ mkBasicTxBody & requiredTopLevelGuardsTxBodyL .~ requiredGuards
             topTx =
               mkTopTxWithSubTxs [subTx]
                 & bodyTxL . guardsTxBodyL .~ [guardCred]
@@ -294,6 +292,23 @@ spec = describe "SUBUTXOW" $ do
             lang
             (mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]])
             [injectFailure . SubUnspendableUTxONoDatumHash @era $ NES.singleton txIn]
+
+  describe "Required top-level guards" $
+    forM_ [l | l <- eraLanguages @era, l >= PlutusV4] $ \lang ->
+      withSLanguage lang $ \slang ->
+        describe (show lang) $ do
+          it "Succeeds when required guard is provided" $ do
+            let
+              guardCred = ScriptHashObj $ hashPlutusScript $ alwaysSucceedsNoDatum slang
+            datum <- arbitrary
+            let
+              subTx =
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . requiredTopLevelGuardsTxBodyL .~ Map.singleton guardCred (SJust datum)
+            submitTx_ $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . guardsTxBodyL .~ [guardCred]
+                & bodyTxL . subTransactionsTxBodyL .~ [subTx]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->

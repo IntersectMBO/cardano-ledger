@@ -23,19 +23,7 @@ module Cardano.Ledger.Dijkstra.Rules.Pool (
 
 import Cardano.Crypto.DSIGN (verifyPossessionProofDSIGN)
 import Cardano.Crypto.Hash.Class (hashSize)
-import Cardano.Ledger.BaseTypes (
-  EpochNo,
-  Globals (..),
-  Mismatch (..),
-  Network,
-  Relation (RelEQ, RelGT, RelGTEQ, RelLTEQ),
-  ShelleyBase,
-  StrictMaybe (SJust),
-  addEpochInterval,
-  invalidKey,
-  knownNonZeroBounded,
-  networkId,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -192,11 +180,10 @@ instance
 -- hash differs from the active one. A future VRF key hash that coincides with
 -- the pool's active one is not counted separately.
 --
--- POOLREAP follows the same accounting at the epoch boundary when it adopts
--- future parameters and retires pools, except that it drops a superseded
--- active VRF key hash entirely instead of decrementing its count. The two only
--- differ for VRF key hashes that several pools have shared since before their
--- uniqueness was enforced.
+-- The Dijkstra POOLREAP rule keeps this invariant at the epoch boundary: a
+-- pool whose future VRF key hash differs from its active one releases the
+-- reference to the active one once the future parameters are adopted, and a
+-- retired pool releases the reference to the VRF key hash it uses.
 poolTransition ::
   forall rule era.
   ( EraPParams era
@@ -269,7 +256,9 @@ poolTransition = do
           pure $
             ps
               & psStakePoolsL
-                %~ Map.insert sppId (mkStakePoolState cEpoch (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
+                %~ Map.insert
+                  sppId
+                  (mkStakePoolState cEpoch SNothing (pp ^. ppPoolDepositCompactL) mempty stakePoolParams)
               & psVRFKeyHashesL %~ addVRFKeyHashOccurrence sppVrf
         -- re-register Pool
         Just stakePoolState -> do

@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Add `poolReapAssertions`
+* Export `renderPoolReapViolation`
 * Remove `nesPd` field from `NewEpochState` and `nesPdL`:
   - Add `nesStakePoolDistrG`, which reads the stake pool distribution from the set snapshot instead
   - Remove the re-export of `ssStakeMarkPoolDistrL` from `Cardano.Ledger.Shelley.LedgerState`
@@ -16,6 +18,11 @@
 
 ### `testlib`
 
+* Add `initTransitionConfig` to `ShelleyEraImp`
+* Add `injectGenesisStaking` and `injectFreshGenesisStakePools`
+* Add `topTxFromAnyLevel` method to `ShelleyEraImp`
+* Add `AnyLevelTx`, `submitAnyTx`, `submitAnyTx_` and `shelleyTopTxFromAnyLevel`
+* Add `getPState`
 * Add `EraForecast` superclass to `ShelleyEraImp`, together with `Eq`, `ToExpr`, `NFData` and `Typeable` superclasses for the `TICKF` event
 * Add `ToExpr` instance for `ShelleyTickfEvent`
 

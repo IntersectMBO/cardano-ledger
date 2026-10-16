@@ -520,8 +520,11 @@ removeVRFKeyHashOccurrence = Map.update (mapNonZero (subtract 1))
 
 -- | Recompute 'psVRFKeyHashes' from scratch out of the registered stake pools: a pool
 -- holds one reference through its active parameters and one more through its future
--- parameters whenever those carry a different VRF key hash. Meant for hard forks and
--- era transitions that have to bring the map into a consistent state.
+-- parameters whenever those carry a different VRF key hash. It traverses every stake
+-- pool, so the rules update the map incrementally instead. This is meant for hard forks
+-- and era transitions that have to bring the map into a consistent state, and for
+-- assertions that check the incremental updates against it, such as the post-condition
+-- of the Dijkstra @POOLREAP@ rule.
 populateVRFKeyHashes :: PState era -> PState era
 populateVRFKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
   ps {psVRFKeyHashes = F.foldl' (flip addVRFKeyHashOccurrence) activeVRFKeyHashes futureVRFKeyHashes}

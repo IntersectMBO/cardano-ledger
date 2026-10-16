@@ -2,6 +2,14 @@
 
 ## 0.5.0.0
 
+* Change the field type of `RequiredTopLevelGuardsNotSupported` to `NonEmptySet (Credential Guard)`
+* Add `Cardano.Ledger.Dijkstra.Block.Endorser`, with `DijkstraEndorserBlock` and related types, and the `EraEndorserBlock` class
+* Extend `DijkstraEraForecast` with Peras protocol parameters
+* Validate the treasury value and the reference scripts size in `LEDGER`, and the treasury value in `SUBLEDGER`, regardless of phase-2 validity
+* Add `POOLREAP` rule for Dijkstra:
+  - Add `Cardano.Ledger.Dijkstra.Rules.PoolReap` module
+  - Change `EraRule "POOLREAP" DijkstraEra` from `Shelley.POOLREAP` to `POOLREAP`
+  - Add `EraRuleEvent "POOLREAP" DijkstraEra` type instance
 * Add `DijkstraEraForecast`, exposing the Leios voting committee and the Leios protocol parameters from a forecast
 * Replace the reused `BabbageForecast` with `DijkstraForecast`, which additionally carries the Leios voting committee and the Leios protocol parameters, and instantiates `DijkstraEraForecast`
 * Add `getDijkstraSupplementalDataHashes` and use it for `getSupplementalDataHashes`, so that,
@@ -11,9 +19,11 @@
 * Change `seatInitialLeiosCommittee` to accept a `TransitionConfig` and also seat the Leios voting committee (CIP-0164) in the set and go snapshots
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Change `eraMaxLanguage` to `PlutusV4`
+* Rename `requiredTopLevelGuardsL` to `requiredTopLevelGuardsTxBodyL`
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `EbReferences`
 * Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
 
 ## 0.4.0.0

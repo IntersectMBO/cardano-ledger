@@ -60,6 +60,7 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStateExamples,
   queryFuturePParamsExamples,
   queryGovStateExamples,
+  queryLeiosCommitteeExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
@@ -70,6 +71,7 @@ import Test.Cardano.Ledger.Api.State.Query.Examples (
   queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
+  queryStakePoolStateExamples,
   queryStakeSnapshotsExamples,
  )
 import Test.Cardano.Ledger.Binary.Golden (cborGoldenSpec)
@@ -130,6 +132,7 @@ latestErasSpec =
       eraLedgerStateQueryGoldenSpec @era "queryDRepState" queryDRepStateExamples
       eraLedgerStateQueryGoldenSpec @era "queryFuturePParams" (queryFuturePParamsExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryGovState" (queryGovStateExamples @era)
+      eraLedgerStateQueryGoldenSpec @era "queryLeiosCommittee" queryLeiosCommitteeExamples
       eraLedgerStateQueryGoldenSpec @era "queryPoolParameters" (queryPoolParametersExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryPoolState" (queryPoolStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryProposals" (queryProposalsExamples @era)
@@ -148,15 +151,18 @@ latestErasSpec =
         "queryStakePoolDelegsAndRewards"
         queryStakePoolDelegsAndRewardsExamples
       eraLedgerStateQueryGoldenSpec @era "queryStakePoolRelays" queryStakePoolRelaysExamples
+      eraLedgerStateQueryGoldenSpec @era "queryStakePoolState" (queryStakePoolStateExamples @era)
       eraLedgerStateQueryGoldenSpec @era "queryStakeSnapshots" queryStakeSnapshotsExamples
     describe "Roundtrip" $ do
       prop "QueryPoolStateResult" $ roundTripEraExpectation @era @(QueryPoolStateResult era)
+      prop "QueryResultLeiosCommittee" $ roundTripEraExpectation @era @QueryResultLeiosCommittee
       prop "QueryResultNonMyopicMemberRewards" $
         roundTripEraExpectation @era @QueryResultNonMyopicMemberRewards
       prop "StakeSnapshots" $ roundTripEraExpectation @era @StakeSnapshots
     describe "Queries" $ do
       committeeMembersStateSpec @era
       queryStakeSnapshotsSpec @era
+      queryStakePoolStateSpec @era
 
 committeeMembersStateSpec ::
   forall era.
@@ -591,3 +597,50 @@ queryStakeSnapshotsSpec =
           , counterexample "Total Go" $ ssGoTotal result === nonZeroTotal goSnap
           , counterexample "subPoolIds" $ Map.keysSet (ssStakeSnapshots subResult) === subPoolIds
           ]
+
+queryStakePoolStateSpec ::
+  forall era.
+  ( EraCertState era
+  , EraGov era
+  , EraStake era
+  , Default (StashedAVVMAddresses era)
+  ) =>
+  Spec
+queryStakePoolStateSpec =
+  describe "GetStakePoolState" $
+    prop "reports each requested pool state when it is registered" $
+      \arbitraryPState network includeDelegators -> do
+        pState <- (psStakePoolsL . traverse . spsBlsKeyL) (const arbitrary) arbitraryPState
+        let stakePools = psStakePools pState
+        mPoolKeys <-
+          oneof
+            [ pure Nothing
+            , Just <$> ((<>) <$> uniformSubSet Nothing (Map.keysSet stakePools) QC <*> arbitrary)
+            ]
+        let
+          nes =
+            def @(NewEpochState era) & nesEsL . esLStateL . lsCertStateL . certPStateL .~ pState
+          result = queryStakePoolState nes mPoolKeys includeDelegators
+          poolStateResult = queryPoolState nes mPoolKeys network
+          expected = Map.mapWithKey toExpected $ qpsrStakePoolParams poolStateResult
+          toExpected poolId stakePoolParams =
+            let stakePoolState = stakePools Map.! poolId
+             in QueryResultStakePoolState
+                  { qrspsVrf = sppVrf stakePoolParams
+                  , qrspsBlsKey = spsBlsKey stakePoolState
+                  , qrspsPledge = sppPledge stakePoolParams
+                  , qrspsCost = sppCost stakePoolParams
+                  , qrspsMargin = sppMargin stakePoolParams
+                  , qrspsAccountId = aaId $ sppAccountAddress stakePoolParams
+                  , qrspsOwners = sppOwners stakePoolParams
+                  , qrspsRelays = sppRelays stakePoolParams
+                  , qrspsMetadata = sppMetadata stakePoolParams
+                  , qrspsDeposit = qpsrDeposits poolStateResult Map.! poolId
+                  , qrspsNumDelegators = Set.size $ spsDelegators stakePoolState
+                  , qrspsDelegators =
+                      if includeDelegators then SJust $ spsDelegators stakePoolState else SNothing
+                  , qrspsRetiring = maybeToStrictMaybe $ Map.lookup poolId $ qpsrRetiring poolStateResult
+                  , qrspsFutureStakePoolParams =
+                      maybeToStrictMaybe $ Map.lookup poolId $ qpsrFutureStakePoolParams poolStateResult
+                  }
+        pure @Gen $ result === expected

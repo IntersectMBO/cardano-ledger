@@ -23,7 +23,7 @@ import Cardano.Ledger.Shelley.API.Forecast (futureForecast)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, esSnapshotsL, nesELL, nesEsL)
 import Cardano.Ledger.Slot (epochInfoFirst)
 import Cardano.Ledger.State (
-  LeiosCommittee,
+  LeiosCommittee (..),
   MarkSnapShot (..),
   ssLeiosCommitteeL,
   ssStakeMarkL,
@@ -100,6 +100,23 @@ spec = describe "SNAP" $ do
     passEpoch
     -- TICK performs the same rotation once the next epoch actually starts
     getsNES setCommitteeL `shouldReturn` markCommittee
+
+  it "Genesis staking seats the Leios committee in the set snapshot" $ do
+    -- committee is large enough to seat every genesis pool
+    modifyPParams $ \pp -> pp & ppLeiosCommitteeSizeL .~ 1_000
+    poolStake <- injectFreshGenesisStakePools 3
+    globals <- use impGlobalsL
+    nes <- getsNES id
+    let epochNo = nes ^. nesELL
+        markSnapShot = nes ^. nesEsL . esSnapshotsL . ssStakeMarkL
+        setCommittee = nes ^. nesEsL . esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
+    msLeiosCommitteeSize markSnapShot `shouldBe` 1_000
+    -- SNAP derives the max key age from Globals, while genesis computes it from the KES
+    -- parameters of the Shelley genesis, and the two must agree
+    msLeiosMaxKeyAge markSnapShot `shouldBe` maxKeyAgeEpochs globals epochNo
+    -- the committee is seated in the set snapshot, so it votes from the very first epoch
+    setCommittee `shouldBe` msLeiosCommittee markSnapShot
+    length (leiosCommitteeSeats setCommittee) `shouldBe` length poolStake
 
   it "SPO voting stake no longer lags DRep voting stake by the refunded deposit" $ do
     (pool, drep, _) <- setupExpiredRefundScenario

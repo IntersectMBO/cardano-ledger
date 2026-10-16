@@ -16,9 +16,11 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   POOLREAP,
   ShelleyPoolreapEvent (..),
   ShelleyPoolreapState (..),
+  poolReapAssertions,
   prCertStateL,
   prChainAccountStateL,
   prUTxOStateL,
+  renderPoolReapViolation,
 ) where
 
 import Cardano.Ledger.BaseTypes
@@ -111,22 +113,7 @@ instance
   transitionRules = [poolReapTransition]
 
   renderAssertionViolation = renderPoolReapViolation
-  assertions =
-    [ PostCondition
-        "Deposit pot must equal obligation (PoolReap)"
-        ( \_trc st ->
-            potEqualsObligation
-              (prCertState st)
-              (prUTxOSt st)
-        )
-    , PostCondition
-        "PoolReap may not create or remove account addresses"
-        ( \(TRC (_, st, _)) st' ->
-            let accountsCount prState =
-                  Map.size (prCertState prState ^. certDStateL . accountsL . accountsMapL)
-             in accountsCount st == accountsCount st'
-        )
-    ]
+  assertions = poolReapAssertions
 
 poolReapTransition :: forall era. EraCertState era => TransitionRule (POOLREAP era)
 poolReapTransition = do
@@ -157,6 +144,7 @@ poolReapTransition = do
               ( Map.zipWithMatched $ \_ futureParams currentState ->
                   mkStakePoolState
                     e
+                    SNothing
                     (currentState ^. spsDepositL)
                     (currentState ^. spsDelegatorsL)
                     futureParams
@@ -236,6 +224,31 @@ poolReapTransition = do
     delegsToClear cState pools =
       foldMap spsDelegators $
         Map.restrictKeys (cState ^. certPStateL . psStakePoolsL) pools
+
+-- | Assertions for a @POOLREAP@ rule that operates on 'ShelleyPoolreapState', shared by
+-- the eras that define such a rule.
+poolReapAssertions ::
+  ( EraGov era
+  , State t ~ ShelleyPoolreapState era
+  , EraCertState era
+  ) =>
+  [Assertion t]
+poolReapAssertions =
+  [ PostCondition
+      "Deposit pot must equal obligation (PoolReap)"
+      ( \_trc st ->
+          potEqualsObligation
+            (prCertState st)
+            (prUTxOSt st)
+      )
+  , PostCondition
+      "PoolReap may not create or remove account addresses"
+      ( \(TRC (_, st, _)) st' ->
+          let accountsCount prState =
+                Map.size (prCertState prState ^. certDStateL . accountsL . accountsMapL)
+           in accountsCount st == accountsCount st'
+      )
+  ]
 
 renderPoolReapViolation ::
   ( EraGov era

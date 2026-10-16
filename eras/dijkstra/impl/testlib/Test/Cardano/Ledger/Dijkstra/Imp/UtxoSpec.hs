@@ -597,7 +597,7 @@ spec = describe "UTXO" $ do
     expectProduced :: Tx TopTx era -> Value era -> ImpTestM era ()
     expectProduced tx expected = do
       pp <- getsPParams id
-      pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+      pState <- getPState
       produced pp pState (tx ^. bodyTxL) `shouldBe` expected
 
     expectConsumed :: Tx TopTx era -> Value era -> ImpTestM era ()
@@ -646,7 +646,7 @@ spec = describe "UTXO" $ do
       pure $ ensureMinCoinTxOut pp (mkBasicTxOut addr (inject amount))
     fundAccountBalance :: AccountAddress -> Coin -> ImpTestM era ()
     fundAccountBalance account amount = do
-      submitTx_ $
+      submitAnyTx_ $
         mkBasicTx $
           mkBasicTxBody
             & directDepositsTxBodyL .~ DirectDeposits [(account, amount)]

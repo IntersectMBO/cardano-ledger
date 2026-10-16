@@ -318,9 +318,10 @@ spec = describe "TxInfo" $ do
         let
           tx =
             mkBasicTx @era @TopTx $
-              mkBasicTxBody & requiredTopLevelGuardsL .~ NEM.toMap neRequiredTopLevelGuards
+              mkBasicTxBody & requiredTopLevelGuardsTxBodyL .~ NEM.toMap neRequiredTopLevelGuards
           ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
           txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult
-            `shouldBeLeft` inject (RequiredTopLevelGuardsNotSupported @era neRequiredTopLevelGuards)
+            `shouldBeLeft` inject
+              (RequiredTopLevelGuardsNotSupported @era $ NEM.keysSet neRequiredTopLevelGuards)

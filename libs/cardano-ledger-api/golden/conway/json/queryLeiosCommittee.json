@@ -1,0 +1,59 @@
+[
+    {
+        "currentLeiosCommittee": [],
+        "futureLeiosCommittee": []
+    },
+    {
+        "currentLeiosCommittee": [
+            {
+                "seatVKey": "Just (VerKeyBLS12381 \"5a7583feefb4cb33b95a4bc1cb1a82902535ae6f004c70157239cf4b3984c9e55910712a1a08a22ae28486cac6b7e015cda6bdf096cfdc322b7e4671436e8d0cf348d38ec9344d01fdafe93834af0a0d1cf0334a30e4a580f2f3d950887f041003233c87b4e8c8f33a5e518395ba9ad9451541a1dcb3c265ae71b0394f83e730fb0afc33547b2a61fed71dc168bcdf0396b82b0e0aeb66b821a3277067b3e1b28830b0ea63e194dfcafd0c2c1d6b3e349b807403f7b231f93a78b491145c4202fdff02000000097602000cc40b00f4ebba58c7535798485f455752705358ce776dec56a2971a075c93e480fac35ef615000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\")",
+                "seatWeight": {
+                    "denominator": 8,
+                    "numerator": 3
+                }
+            },
+            {
+                "seatVKey": "Nothing",
+                "seatWeight": {
+                    "denominator": 4,
+                    "numerator": 1
+                }
+            }
+        ],
+        "futureLeiosCommittee": [
+            {
+                "seatVKey": "Just (VerKeyBLS12381 \"5a7583feefb4cb33b95a4bc1cb1a82902535ae6f004c70157239cf4b3984c9e55910712a1a08a22ae28486cac6b7e015cda6bdf096cfdc322b7e4671436e8d0cf348d38ec9344d01fdafe93834af0a0d1cf0334a30e4a580f2f3d950887f041003233c87b4e8c8f33a5e518395ba9ad9451541a1dcb3c265ae71b0394f83e730fb0afc33547b2a61fed71dc168bcdf0396b82b0e0aeb66b821a3277067b3e1b28830b0ea63e194dfcafd0c2c1d6b3e349b807403f7b231f93a78b491145c4202fdff02000000097602000cc40b00f4ebba58c7535798485f455752705358ce776dec56a2971a075c93e480fac35ef615000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\")",
+                "seatWeight": {
+                    "denominator": 8,
+                    "numerator": 3
+                }
+            },
+            {
+                "seatVKey": "Nothing",
+                "seatWeight": {
+                    "denominator": 4,
+                    "numerator": 1
+                }
+            }
+        ]
+    },
+    {
+        "currentLeiosCommittee": [
+            {
+                "seatVKey": "Just (VerKeyBLS12381 \"5a7583feefb4cb33b95a4bc1cb1a82902535ae6f004c70157239cf4b3984c9e55910712a1a08a22ae28486cac6b7e015cda6bdf096cfdc322b7e4671436e8d0cf348d38ec9344d01fdafe93834af0a0d1cf0334a30e4a580f2f3d950887f041003233c87b4e8c8f33a5e518395ba9ad9451541a1dcb3c265ae71b0394f83e730fb0afc33547b2a61fed71dc168bcdf0396b82b0e0aeb66b821a3277067b3e1b28830b0ea63e194dfcafd0c2c1d6b3e349b807403f7b231f93a78b491145c4202fdff02000000097602000cc40b00f4ebba58c7535798485f455752705358ce776dec56a2971a075c93e480fac35ef615000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\")",
+                "seatWeight": {
+                    "denominator": 8,
+                    "numerator": 3
+                }
+            },
+            {
+                "seatVKey": "Nothing",
+                "seatWeight": {
+                    "denominator": 4,
+                    "numerator": 1
+                }
+            }
+        ],
+        "futureLeiosCommittee": null
+    }
+]

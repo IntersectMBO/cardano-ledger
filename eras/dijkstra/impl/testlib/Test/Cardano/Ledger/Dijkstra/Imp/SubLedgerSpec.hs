@@ -60,9 +60,17 @@ spec = describe "SUBLEDGER" $ do
       submitTx_ . mkTopTxWithSubTxs $ [donatingSubTx, declareTreasurySubTx actualTreasury]
 
   describe "A phase-2 invalid top level transaction" $
-    disableInConformanceIt "raises no SUBLEDGER failure" $ do
+    it "is rejected when a sub-transaction declares a treasury value other than the actual one" $ do
       actualTreasury <- getsNES treasuryL
+      let declaredTreasury = actualTreasury <> Coin 1
       topTx <-
         switchTxToPhase2InvalidLegacyMode . mkTopTxWithSubTxs $
-          [declareTreasurySubTx $ actualTreasury <> Coin 1]
-      submitTx_ $ topTx & isPhase2ValidTxL .~ Phase2Invalid
+          [declareTreasurySubTx declaredTreasury]
+      submitFailingTx
+        (topTx & isPhase2ValidTxL .~ Phase2Invalid)
+        [ injectFailure . SubTreasuryValueMismatch $
+            Mismatch
+              { mismatchSupplied = declaredTreasury
+              , mismatchExpected = actualTreasury
+              }
+        ]

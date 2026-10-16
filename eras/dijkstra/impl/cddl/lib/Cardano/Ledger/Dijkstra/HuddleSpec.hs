@@ -30,6 +30,8 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   scriptRequireGuardGroup,
   dijkstraRedeemerTagRule,
   auxiliaryDataMapRule,
+  ebReferenceRule,
+  ebReferencesRule,
 ) where
 
 import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
@@ -41,12 +43,17 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose, liftGen),
   Name (..),
   RuleTerm (..),
+  antiChoose,
+  faultyBool,
   genArrayTerm,
   genRule,
   generateFromName,
+  liftAntiGen,
+  replicateMNorm,
   scale,
   unwrapSingle,
   validateArrayTerm,
+  validateBytesTerm,
   validateFromName,
   withAntiGen,
  )
@@ -55,7 +62,7 @@ import Cardano.Ledger.State (
   BlsKey (..),
  )
 import Codec.CBOR.Term (Term (..))
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Bits (finiteBitSize)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
@@ -84,7 +91,53 @@ dijkstraCDDL =
     , HIRule $ huddleRule @"potential_languages" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"signkey_kes" (Proxy @DijkstraEra)
     , HIRule $ huddleRule @"certificate" (Proxy @DijkstraEra)
+    , HIRule $ huddleRule @"eb_references" (Proxy @DijkstraEra)
     ]
+
+ebReferenceRule ::
+  HuddleRule "hash32" era => Proxy "eb_reference" -> Proxy era -> Rule
+ebReferenceRule pname p =
+  pname
+    =.= arr
+      [ "transaction_hash" ==> huddleRule @"hash32" p
+      , "transaction_size" ==> VUInt `sized` (4 :: Word64)
+      ]
+
+ebReferencesRule ::
+  forall era.
+  HuddleRule "eb_reference" era => Proxy "eb_references" -> Proxy era -> Rule
+ebReferencesRule pname p =
+  comment "We only accept non-empty reference maps" $
+    withCBORGen generate $
+      withValidator validator $
+        pname =.= arr [1 <+ a (huddleRule @"eb_reference" p)]
+  where
+    -- we exercise uniqueness checks by adding a duplicate when zapping since
+    -- it's unlikely to happen randomly
+    generate = do
+      n <- liftAntiGen . Gen.sized $ \sz -> antiChoose (1, max 1 sz) (0, 0)
+      entries <-
+        withAntiGen (replicateMNorm n) . scale (`div` (n + 1)) $ genRule @"eb_reference" @era
+      repeatFirst <- liftAntiGen $ faultyBool False
+      SingleTerm <$> genArrayTerm (if repeatFirst then entries <> take 1 entries else entries)
+    validator term = do
+      entries <- unwrapSingle term >>= validateArrayTerm
+      when (null entries) $ fail "empty endorser-block references"
+      hashes <- traverse validateEntry entries
+      unless (length hashes == length (nub hashes)) $
+        fail "duplicate endorser-block transaction hashes"
+    validateEntry entry = do
+      validateFromName (Name "eb_reference") entry
+      fields <- validateArrayTerm entry
+      case fields of
+        [h, _] -> validateBytesTerm h
+        _ -> fail "expected an endorser-block reference pair"
+
+instance HuddleRule "eb_reference" DijkstraEra where
+  huddleRuleNamed = ebReferenceRule
+
+instance HuddleRule "eb_references" DijkstraEra where
+  huddleRuleNamed = ebReferencesRule
 
 guardsRule ::
   forall era.

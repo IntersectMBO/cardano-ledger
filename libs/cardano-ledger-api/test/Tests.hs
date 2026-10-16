@@ -12,7 +12,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Data.Default (def)
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
-import qualified Test.Cardano.Ledger.Api.State.Imp.QuerySpec as ImpQuery (spec)
+import qualified Test.Cardano.Ledger.Api.State.Imp.QuerySpec as ImpQuery (spec, stakePoolStateSpec)
 import qualified Test.Cardano.Ledger.Api.State.QuerySpec as StateQuery (spec)
 import qualified Test.Cardano.Ledger.Api.Tx as Tx (spec)
 import qualified Test.Cardano.Ledger.Api.Tx.Body as TxBody (spec)
@@ -22,6 +22,7 @@ import qualified Test.Cardano.Ledger.Api.Upgrade as Upgrade
 import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator ()
@@ -37,8 +38,10 @@ apiSpec =
       TxBody.spec
     describe "State" $ do
       StateQuery.spec
-    describe "Imp" $
+    describe "Imp" $ do
       ImpQuery.spec @ConwayEra
+      ImpQuery.spec @DijkstraEra
+      ImpQuery.stakePoolStateSpec @DijkstraEra
     describe "Upgrade" $ do
       Upgrade.spec @AllegraEra def
       Upgrade.spec @MaryEra def

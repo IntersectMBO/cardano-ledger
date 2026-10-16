@@ -419,13 +419,13 @@ dijkstraLedgerTransition = do
 
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
+  let txBody = tx ^. bodyTxL
+  runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
+  runTest $ validateAllRefScriptSize pp originalUtxo tx
+
   (utxoStateBeforeUtxow, certStateFinal) <-
     if tx ^. isPhase2ValidTxL == Phase2Valid
       then do
-        let txBody = tx ^. bodyTxL
-        runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-        runTest $ validateAllRefScriptSize pp originalUtxo tx
-
         let govState = utxoStateAfterSubLedgers ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
             proposals = govState ^. proposalsGovStateL

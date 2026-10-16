@@ -66,6 +66,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshBlsKey,
   submitTx,
   submitTx_,
+  AnyLevelTx (..),
+  submitAnyTx,
+  submitAnyTx_,
   submitTxAnn,
   submitTxAnn_,
   submitFailingTx,
@@ -95,6 +98,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getProtVer,
   getsNES,
   getUTxO,
+  getPState,
   getCurSlotNo,
   impAddNativeScript,
   impAnn,
@@ -115,6 +119,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshUnregisteredAccount,
   freshStakePool,
   freshPoolParams,
+  injectGenesisStaking,
+  injectFreshGenesisStakePools,
   registerPool,
   registerPoolWithAccountAddress,
   registerPoolWithParams,
@@ -171,6 +177,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   shelleyGenRegTxCert,
   shelleyGenUnRegTxCert,
   shelleyDelegStakeTxCert,
+  shelleyTopTxFromAnyLevel,
 
   -- * Logging
   Doc,
@@ -248,6 +255,7 @@ import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
+  ShelleyGenesisStaking (..),
   describeValidationErr,
   fromNominalDiffTimeMicro,
   mkShelleyGlobals,
@@ -287,6 +295,12 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.Transition (
+  EraTransition (..),
+  mkShelleyTransitionConfig,
+  tcInitialFundsL,
+  tcInitialStakingL,
+ )
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Shelley.UTxO (produced, shelleyConsumed)
 import Cardano.Ledger.Slot (epochFromSlot, epochInfoFirst, getTheSlotOfNoReturn)
@@ -320,6 +334,7 @@ import Data.Foldable (fold, toList, traverse_)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.ListMap as ListMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, isNothing, mapMaybe)
@@ -341,6 +356,8 @@ import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
 import Prettyprinter (Doc)
 import Prettyprinter.Render.Terminal (AnsiStyle)
+import qualified System.FS.Sim.MockFS as MockFS
+import System.FS.Sim.STM (simHasFS')
 import qualified System.Random.Stateful as R
 import Test.Cardano.Ledger.BlockHeader
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -563,6 +580,23 @@ class
     m (Genesis era)
   initGenesis = pure NoGenesis
 
+  -- | The `TransitionConfig` of a testnet that boots straight into the current era, made of
+  -- the `initGenesis` of the current era and of every era before it.
+  initTransitionConfig ::
+    (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadFail m) =>
+    m (TransitionConfig era)
+  default initTransitionConfig ::
+    ( HasKeyPairs s
+    , MonadState s m
+    , HasStatefulGen g m
+    , MonadFail m
+    , ShelleyEraImp (PreviousEra era)
+    , TranslationContext era ~ Genesis era
+    ) =>
+    m (TransitionConfig era)
+  initTransitionConfig =
+    mkTransitionConfig <$> initGenesis @era <*> initTransitionConfig @(PreviousEra era)
+
   initNewEpochState ::
     (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadFail m) =>
     m (NewEpochState era)
@@ -621,6 +655,10 @@ class
   genUnRegTxCert :: Credential Staking -> ImpTestM era (TxCert era)
 
   delegStakeTxCert :: Credential Staking -> KeyHash StakePool -> TxCert era
+
+  topTxFromAnyLevel :: (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
+
+data AnyLevelTx era = AnyLevelTx (forall l. Typeable l => Tx l era)
 
 impSatisfySignature ::
   KeyHash Witness ->
@@ -925,6 +963,8 @@ instance
       Right () -> pure gen
       Left errs -> fail . T.unpack . T.unlines $ map describeValidationErr errs
 
+  initTransitionConfig = mkShelleyTransitionConfig <$> initGenesis @ShelleyEra
+
   initNewEpochState = do
     shelleyGenesis <- initGenesis @ShelleyEra
     let transContext = toFromByronTranslationContext shelleyGenesis
@@ -947,6 +987,10 @@ instance
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
   delegStakeTxCert = shelleyDelegStakeTxCert
+  topTxFromAnyLevel = shelleyTopTxFromAnyLevel
+
+shelleyTopTxFromAnyLevel :: (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
+shelleyTopTxFromAnyLevel atx = pure $ atx @TopTx
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1346,6 +1390,18 @@ submitTx_ = void . submitTx
 
 submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
+
+submitAnyTx ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era (Tx TopTx era)
+submitAnyTx = submitTx <=< topTxFromAnyLevel
+
+submitAnyTx_ ::
+  (HasCallStack, ShelleyEraImp era) =>
+  (forall l. Typeable l => Tx l era) ->
+  ImpTestM era ()
+submitAnyTx_ = void . submitAnyTx
 
 trySubmitTx ::
   forall era.
@@ -2135,6 +2191,9 @@ getsNES l = gets . view $ impNESL . l
 getUTxO :: ImpTestM era (UTxO era)
 getUTxO = getsNES utxoL
 
+getPState :: EraCertState era => ImpTestM era (PState era)
+getPState = getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
+
 getProtVer :: EraGov era => ImpTestM era ProtVer
 getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
@@ -2278,6 +2337,52 @@ freshStakePool = do
   let owner = KeyHashObj ownerKeyHash
   ownerAccountAddress <- registerStakeCredential owner
   freshPoolParams poolId ownerAccountAddress
+
+-- | Simulate state injection that happens when a testnet boots into an era
+injectGenesisStaking ::
+  ShelleyEraImp era =>
+  -- | Stake pools
+  [StakePoolParams era] ->
+  -- | Stake keys, each delegated to a stake pool
+  [(KeyHash Staking, KeyHash StakePool)] ->
+  -- | Initial funds
+  [(Addr, Coin)] ->
+  ImpTestM era ()
+injectGenesisStaking stakePools delegations funds = do
+  transitionConfig <- initTransitionConfig
+  let staking =
+        ShelleyGenesisStaking
+          { sgsPools = ListMap.fromList [(sppId spp, coerce spp) | spp <- stakePools]
+          , sgsStake = ListMap.fromList delegations
+          }
+  nes <- getsNES id
+  injectedNes <- liftIO $ do
+    fs <- simHasFS' MockFS.empty
+    injectIntoTestState
+      fs
+      ( transitionConfig
+          & tcInitialStakingL .~ staking
+          & tcInitialFundsL .~ ListMap.fromList funds
+      )
+      nes
+  modifyNES $ const injectedNes
+
+-- | Same as `injectGenesisStaking`, plus injecting fresh stake pools with some funds delegated
+injectFreshGenesisStakePools ::
+  ShelleyEraImp era =>
+  Int ->
+  ImpTestM era (Map (KeyHash StakePool) Coin)
+injectFreshGenesisStakePools n = do
+  stakePools <- replicateM n $ do
+    poolId <- freshKeyHash
+    stakePoolParams <- freshUnregisteredAccount >>= freshPoolParams poolId
+    stakingKeyHash <- freshKeyHash
+    paymentKeyHash <- freshKeyHash @Payment
+    stake <- uniformRM (Coin 1_000_000, Coin 1_000_000_000)
+    pure (stakePoolParams, (stakingKeyHash, poolId), (mkAddr paymentKeyHash stakingKeyHash, stake))
+  let (pools, delegations, funds) = unzip3 stakePools
+  injectGenesisStaking pools delegations funds
+  pure $ Map.fromList [(poolId, stake) | ((_, poolId), (_, stake)) <- zip delegations funds]
 
 freshPoolParams ::
   ShelleyEraImp era =>

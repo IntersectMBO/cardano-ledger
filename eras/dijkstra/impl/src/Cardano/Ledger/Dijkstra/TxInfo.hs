@@ -137,13 +137,13 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Map.NonEmpty (NonEmptyMap)
-import qualified Data.Map.NonEmpty as NEMap
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.OMap.Strict as OMap
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
+import Data.Set.NonEmpty (NonEmptySet)
+import qualified Data.Set.NonEmpty as NES
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -167,7 +167,7 @@ data DijkstraContextError era
   | -- | Attempt to use PlutusV1-V3 with script hashes in guards will result in this failure
     GuardScriptHashesNotSupported (NonEmpty ScriptHash)
   | -- | Attempt to use PlutusV1-V3 with non-empty required top-level guards will result in this failure
-    RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
+    RequiredTopLevelGuardsNotSupported (NonEmptySet (Credential Guard))
   | -- | Attempt to use PlutusV4 script with an invalid redeemer pointer will result in this failure
     ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
   deriving (Generic)
@@ -495,7 +495,7 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
   let txBody = tx ^. bodyTxL
       directDeposits = txBody ^. directDepositsTxBodyL
       accountBalanceIntervals = txBody ^. accountBalanceIntervalsTxBodyL
-      requiredTopLevelGuards = txBody ^. requiredTopLevelGuardsL
+      requiredTopLevelGuards = txBody ^. requiredTopLevelGuardsTxBodyL
       scriptHashes = [sh | ScriptHashObj sh <- toList (txBody ^. guardsTxBodyL)]
   unless (null $ unDirectDeposits directDeposits) $
     Left $
@@ -505,7 +505,7 @@ guardDijkstraFeaturesForPlutusV1toV3 tx = do
     Left $
       inject $
         AccountBalanceIntervalsNotSupported @era accountBalanceIntervals
-  case NEMap.fromMap requiredTopLevelGuards of
+  case NES.fromSet $ Map.keysSet requiredTopLevelGuards of
     Nothing -> Right ()
     Just neRequiredTopLevelGuards ->
       Left $
@@ -733,7 +733,7 @@ transTxBodyRequiredTopLevelGuards ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential (Maybe PV4.Datum)
 transTxBodyRequiredTopLevelGuards txb = transMap transCred (fmap transDatum . strictMaybeToMaybe) requiredGuards
   where
-    requiredGuards = txb ^. requiredTopLevelGuardsL
+    requiredGuards = txb ^. requiredTopLevelGuardsTxBodyL
 
 transAccountAddressToAccountId :: AccountAddress -> PV4.AccountId
 transAccountAddressToAccountId (AccountAddress _ (AccountId c)) = PV4.AccountId $ transCred c
@@ -836,7 +836,7 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
     lookupRequiredTopLevelGuardDatum :: Tx level era -> Maybe (TxId, Data era)
     lookupRequiredTopLevelGuardDatum tx = do
       guardDatumMaybe <-
-        Map.lookup (ScriptHashObj guardingScriptHash) (tx ^. bodyTxL . requiredTopLevelGuardsL)
+        Map.lookup (ScriptHashObj guardingScriptHash) (tx ^. bodyTxL . requiredTopLevelGuardsTxBodyL)
       -- Datum is enforced to be present by `MalformedGuardDatums`, hence we can ignore
       -- here the case of it missing
       guardDatum <- strictMaybeToMaybe guardDatumMaybe
@@ -880,7 +880,7 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
     filterBatchMintsWith f = foldMapBatch (filterMultiAsset (\_ _ -> f) . (^. bodyTxL . mintTxBodyL))
     batchMints = filterBatchMintsWith (> 0)
     batchBurns = filterBatchMintsWith (< 0)
-    batchRequiredTopLevelGuards = foldMapBatch (Map.keysSet . (^. bodyTxL . requiredTopLevelGuardsL))
+    batchRequiredTopLevelGuards = foldMapBatch (Map.keysSet . (^. bodyTxL . requiredTopLevelGuardsTxBodyL))
     batchTreasuryDonations = foldMapBatch (^. bodyTxL . treasuryDonationTxBodyL)
 
   batchTimeRange <-

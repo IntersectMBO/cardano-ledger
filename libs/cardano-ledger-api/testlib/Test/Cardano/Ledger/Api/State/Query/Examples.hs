@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryDRepStateExamples,
   queryFuturePParamsExamples,
   queryGovStateExamples,
+  queryLeiosCommitteeExamples,
   queryPoolParametersExamples,
   queryPoolStateExamples,
   queryProposalsExamples,
@@ -29,10 +30,12 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
   queryStakePoolDefaultVoteExamples,
   queryStakePoolDelegsAndRewardsExamples,
   queryStakePoolRelaysExamples,
+  queryStakePoolStateExamples,
   queryStakeSnapshotsExamples,
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
+import Cardano.Crypto.Leios (mkLeiosCommittee)
 import Cardano.Ledger.Api.Governance (
   Committee (..),
   Constitution (..),
@@ -53,9 +56,10 @@ import Cardano.Ledger.Api.State.Query (
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
-  QueryLeiosSeat (..),
   QueryPoolStateResult (..),
+  QueryResultLeiosCommittee (..),
   QueryResultPoolDistr,
+  QueryResultStakePoolState (..),
   StakeSnapshot (..),
   StakeSnapshots (..),
   toQueryResultPoolDistr,
@@ -71,13 +75,13 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (natVersion)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), knownNonZeroCoin)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
-import Cardano.Ledger.Core (Era, eraProtVerHigh)
+import Cardano.Ledger.Core (AccountAddress (..), AccountId (..), Era, eraProtVerHigh)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (SafeHash)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), VRFVerKeyHash (..))
 import Cardano.Ledger.State (
-  BlsKey,
+  BlsKey (..),
   BlsKeyState (..),
   ChainAccountState (..),
   FuturePParams (..),
@@ -85,7 +89,7 @@ import Cardano.Ledger.State (
   PoolDistr (..),
   StakePoolParams (..),
   StakePoolRelay (..),
-  mkStakePoolState,
+  emptyLeiosCommittee,
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Data.Default (def)
@@ -99,7 +103,8 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Vector as Vector
+import qualified Data.Vector.Strict as VS
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Conway.Examples (
   exampleAnchor,
   exampleProposalProcedure,
@@ -492,36 +497,93 @@ queryPoolParametersExamples =
 queryPoolStateExamples :: [QueryPoolStateResult era]
 queryPoolStateExamples =
   [ QueryPoolStateResult
-      { qpsrStakePools = Map.empty
+      { qpsrStakePoolParams = Map.empty
       , qpsrFutureStakePoolParams = Map.empty
       , qpsrRetiring = Map.empty
+      , qpsrDeposits = Map.empty
       }
   , QueryPoolStateResult
-      { qpsrStakePools =
+      { qpsrStakePoolParams =
           Map.fromList
-            [ (sppId exampleStakePoolParams, exampleStakePoolStateWithBlsKey)
-            , (mkKeyHash 99, exampleStakePoolState)
+            [ (sppId exampleStakePoolParams, exampleStakePoolParams)
+            , (mkKeyHash 99, exampleStakePoolParams {sppId = mkKeyHash 99})
             ]
       , qpsrFutureStakePoolParams =
           Map.singleton
             (mkKeyHash 100)
             (exampleStakePoolParams {sppId = mkKeyHash 100})
       , qpsrRetiring = Map.singleton (mkKeyHash 99) (EpochNo 250)
+      , qpsrDeposits =
+          Map.fromList
+            [ (mkKeyHash 1, Coin 500_000_000)
+            , (mkKeyHash 99, Coin 500_000_000)
+            ]
       }
   ]
+
+queryStakePoolStateExamples ::
+  forall era. Era era => [Map (KeyHash StakePool) (QueryResultStakePoolState era)]
+queryStakePoolStateExamples =
+  [ Map.empty
+  , stakePoolStates
+  , Map.map (\stakePoolState -> stakePoolState {qrspsDelegators = SNothing}) stakePoolStates
+  ]
   where
-    exampleStakePoolState =
-      mkStakePoolState (EpochNo 191) (CompactCoin 500_000_000) delegators exampleStakePoolParams
-    -- A pool that registered a voting key: the epoch it registered in rides
-    -- along on the key, which is the whole reason this query reports
-    -- StakePoolState.
-    exampleStakePoolStateWithBlsKey =
-      mkStakePoolState
-        (EpochNo 191)
-        (CompactCoin 500_000_000)
-        delegators
-        exampleStakePoolParams {sppBlsKey = SJust exampleBlsKey}
-    delegators = Set.fromList [KeyHashObj (mkKeyHash 7), KeyHashObj (mkKeyHash 8)]
+    stakePoolParams =
+      exampleStakePoolParams
+        { sppBlsKey = exampleIndividualPoolStakeBls @era
+        , sppPledge = Coin 100_000_000_000
+        , sppCost = Coin 170_000_000
+        }
+    stakePoolStates =
+      Map.fromList
+        [
+          ( sppId stakePoolParams
+          , QueryResultStakePoolState
+              { qrspsVrf = sppVrf stakePoolParams
+              , qrspsBlsKey = (`BlsKeyState` EpochNo 200) <$> sppBlsKey stakePoolParams
+              , qrspsPledge = sppPledge stakePoolParams
+              , qrspsCost = sppCost stakePoolParams
+              , qrspsMargin = sppMargin stakePoolParams
+              , qrspsAccountId = aaId $ sppAccountAddress stakePoolParams
+              , qrspsOwners = sppOwners stakePoolParams
+              , qrspsRelays = sppRelays stakePoolParams
+              , qrspsMetadata = sppMetadata stakePoolParams
+              , qrspsDeposit = Coin 500_000_000
+              , qrspsNumDelegators = 2
+              , qrspsDelegators =
+                  SJust $ Set.fromList [KeyHashObj (mkKeyHash 10), ScriptHashObj (mkScriptHash 11)]
+              , qrspsRetiring = SJust $ EpochNo 250
+              , qrspsFutureStakePoolParams =
+                  SJust $ stakePoolParams {sppPledge = Coin 150_000_000_000}
+              }
+          )
+        ,
+          ( mkKeyHash 99
+          , QueryResultStakePoolState
+              { qrspsVrf = VRFVerKeyHash $ mkDummyHash (99 :: Int)
+              , qrspsBlsKey = SNothing
+              , qrspsPledge = Coin 50_000_000_000
+              , qrspsCost = Coin 170_000_000
+              , qrspsMargin = unsafeBoundRational (1 % 100)
+              , qrspsAccountId = AccountId $ KeyHashObj (mkKeyHash 98)
+              , qrspsOwners = Set.singleton $ mkKeyHash 98
+              , qrspsRelays = StrictSeq.empty
+              , qrspsMetadata = SNothing
+              , qrspsDeposit = Coin 500_000_000
+              , qrspsNumDelegators = 3
+              , qrspsDelegators =
+                  SJust $
+                    Set.fromList
+                      [ KeyHashObj (mkKeyHash 12)
+                      , KeyHashObj (mkKeyHash 13)
+                      , ScriptHashObj (mkScriptHash 14)
+                      ]
+              , qrspsRetiring = SNothing
+              , qrspsFutureStakePoolParams = SNothing
+              }
+          )
+        ]
 
 queryFuturePParamsExamples :: EraTest era => [Maybe (PParams era)]
 queryFuturePParamsExamples = [Nothing, Just def, Just examplePParams]
@@ -643,7 +705,6 @@ queryStakeSnapshotsExamples =
       , ssMarkTotal = knownNonZeroCoin @1
       , ssSetTotal = knownNonZeroCoin @1
       , ssGoTotal = knownNonZeroCoin @1
-      , ssLeiosCommittee = Vector.empty
       }
   , StakeSnapshots
       { ssStakeSnapshots =
@@ -665,31 +726,32 @@ queryStakeSnapshotsExamples =
                   }
               )
             ]
-      , -- The three states a seat can be in: voting, seated with a key the
-        -- committee no longer honours, and seated having never registered one.
-        ssLeiosCommittee =
-          Vector.fromList
-            [ QueryLeiosSeat
-                { qlsPoolId = mkKeyHash 1
-                , qlsWeight = 2 % 3
-                , qlsKey = SJust (BlsKeyState exampleBlsKey (EpochNo 191))
-                , qlsVoting = True
-                }
-            , QueryLeiosSeat
-                { qlsPoolId = mkKeyHash 2
-                , qlsWeight = 1 % 3
-                , qlsKey = SJust (BlsKeyState exampleBlsKey (EpochNo 12))
-                , qlsVoting = False
-                }
-            , QueryLeiosSeat
-                { qlsPoolId = mkKeyHash 3
-                , qlsWeight = 0
-                , qlsKey = SNothing
-                , qlsVoting = False
-                }
-            ]
       , ssMarkTotal = knownNonZeroCoin @5_000_000_000
       , ssSetTotal = knownNonZeroCoin @4_500_000_000
       , ssGoTotal = knownNonZeroCoin @4_000_000_000
       }
   ]
+
+queryLeiosCommitteeExamples :: [QueryResultLeiosCommittee]
+queryLeiosCommitteeExamples =
+  [ QueryResultLeiosCommittee
+      { qrlcCurrentLeiosCommittee = emptyLeiosCommittee
+      , qrlcFutureLeiosCommittee = SJust emptyLeiosCommittee
+      }
+  , QueryResultLeiosCommittee
+      { qrlcCurrentLeiosCommittee = exampleLeiosCommittee
+      , qrlcFutureLeiosCommittee = SJust exampleLeiosCommittee
+      }
+  , QueryResultLeiosCommittee
+      { qrlcCurrentLeiosCommittee = exampleLeiosCommittee
+      , qrlcFutureLeiosCommittee = SNothing
+      }
+  ]
+  where
+    -- one seat with a voting key and one without
+    exampleLeiosCommittee =
+      mkLeiosCommittee $
+        VS.fromList
+          [ (SJust (blsPubKey exampleBlsKey, blsPossessionProof exampleBlsKey), 3 % 8)
+          , (SNothing, 1 % 4)
+          ]

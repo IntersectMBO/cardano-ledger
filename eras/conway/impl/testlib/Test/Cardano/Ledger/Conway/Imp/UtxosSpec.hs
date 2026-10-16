@@ -41,6 +41,7 @@ import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
+import Data.Typeable (Typeable)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -50,6 +51,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsNoDatum,
   alwaysSucceedsNoDatum,
   evenRedeemerNoDatum,
+  purposeIsWellformedNoDatum,
   redeemerSameAsDatum,
  )
 
@@ -69,14 +71,35 @@ spec = describe "UTXOS" $ do
             addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
         amount <- uniformRM (Coin 10_000_000, Coin 100_000_000)
         txIn <- sendCoinTo addr amount
-        let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+        let tx :: forall l. Typeable l => Tx l era
+            tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
         if lang >= PlutusV3
-          then submitTx_ tx
+          then submitAnyTx_ tx
           else
             submitFailingTx
               tx
               [ injectFailure $ Alonzo.UnspendableUTxONoDatumHash $ NES.singleton txIn
               ]
+  describe "purposeIsWellformedNoDatum" $
+    for_ [l | l <- eraLanguages @era, l >= PlutusV3] $ \lang -> do
+      withSLanguage lang $ \slang -> describe (show slang) $ do
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1349
+        -- TODO: Re-enable this after issue is resolved, by removing this override
+        disableInConformanceIt "Passes with voting purpose" $ do
+          let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+          coldCred : _ <- Set.toList <$> getCommitteeMembers
+          hotCred :| _ <- registerCommitteeHotKeys (pure $ ScriptHashObj sh) (coldCred :| [])
+          gaId <- submitGovAction InfoAction
+          submitYesVote_ (CommitteeVoter hotCred) gaId
+        it "Passes with proposing purpose" $ whenPostBootstrap $ do
+          let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
+          committee <- registerInitialCommittee
+          (dRep, _, _) <- setupSingleDRep 1_000_000
+          anchor <- arbitrary
+          void $ enactConstitution SNothing (Constitution anchor (SJust sh)) dRep committee
+          account <- registerAccountAddress
+          proposal <- mkProposal $ TreasuryWithdrawals (Map.singleton account (Coin 1000)) (SJust sh)
+          submitProposal_ proposal
 
 datumAndReferenceInputsSpec ::
   forall era.
@@ -167,7 +190,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "CurrentTreasuryValue" $ do
         it "V1" $ do
           donation <- arbitrary
-          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+          submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
           passEpoch
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
@@ -176,7 +199,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ inject (CurrentTreasuryFieldNotSupported @era donation)
         it "V2" $ do
           donation <- arbitrary
-          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+          submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
           passEpoch
           testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
@@ -257,7 +280,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
     describe "Certificates" $ do
       describe "Translated" $ do
         let testCertificateTranslated okCert txIn = do
-              submitTx_
+              submitAnyTx_
                 ( mkBasicTx mkBasicTxBody
                     & bodyTxL . inputsTxBodyL
                       .~ Set.singleton txIn
@@ -549,7 +572,7 @@ costModelsSpec =
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
 
-      mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
+      AnyLevelTx mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
         submitFailingTx mintingTokenTx [injectFailure $ Alonzo.CollectErrors [NoCostModel PlutusV3]]
@@ -570,7 +593,7 @@ costModelsSpec =
           committeeMembers'
 
       impAnn "Minting token succeeds" $ do
-        submitTx_ mintingTokenTx
+        submitAnyTx_ mintingTokenTx
 
       impAnn "Updating CostModels succeeds" $ do
         void $
