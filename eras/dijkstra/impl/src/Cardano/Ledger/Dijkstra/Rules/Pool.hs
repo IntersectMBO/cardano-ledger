@@ -225,7 +225,7 @@ poolTransition = do
     judgmentContext
   case poolCert of
     RegPool stakePoolParams -> do
-      let StakePoolParams {sppId, sppBlsKey = newBlsKey, sppVrf, sppAccountAddress, sppMetadata, sppCost} =
+      let StakePoolParams {sppId, sppBlsKey = newBlsKey, sppVrf, sppAccountAddress, sppMetadata} =
             stakePoolParams
       actualNetID <- liftSTS $ asks networkId
       let suppliedNetID = aaNetworkId sppAccountAddress
@@ -245,17 +245,6 @@ poolTransition = do
          in s
               <= fromIntegral (hashSize ([] @HASH))
                 ?! injectFailure (PoolMedataHashTooBig sppId s)
-
-      let minPoolCost = pp ^. ppMinPoolCostL
-      sppCost
-        >= minPoolCost
-          ?! injectFailure
-            ( StakePoolCostTooLowPOOL
-                Mismatch
-                  { mismatchSupplied = sppCost
-                  , mismatchExpected = minPoolCost
-                  }
-            )
 
       -- Returns the BlsKey wrapped in 'SJust' if it is invalid. A valid 'BlsKey' returns 'SNothing'.
       let invalidBlsKey = do
