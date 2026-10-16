@@ -687,6 +687,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         )
         Map.empty
         Map.empty
+        Set.empty
     -- In a wellformed LedgerState the deposited equals the obligation.
     deposited = totalObligation dpstate emptyGovState
     pools = gsInitialStakePoolParams gstate

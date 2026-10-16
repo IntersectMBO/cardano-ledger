@@ -38,20 +38,20 @@ import Data.Default (Default)
 import Data.Foldable (fold)
 import Data.Foldable as F (foldl')
 import qualified Data.Map.Merge.Strict as Map
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void (Void)
-import Data.Word (Word64)
 import Lens.Micro
 
 -- The `POOLREAP` rule of the Dijkstra era mirrors the Shelley one, except for how it keeps
--- `psVRFKeyHashes` in sync with the registered stake pools. Dropping the VRF key hashes
--- that a re-registration supersedes, the way Shelley does, loses the references that
--- other pools still hold to the same hash. Instead, every pool that switches to a
--- different VRF key hash releases a single reference to its active one, just like every
--- retired pool releases a single reference to the VRF key hash it uses.
+-- `psVRFKeyHashes` and `psBlsKeyHashes` in sync with the registered stake pools. Dropping
+-- the VRF key hashes that a re-registration supersedes, the way Shelley does, loses the
+-- references that other pools still hold to the same hash. Instead, every pool that
+-- switches to a different VRF key hash releases a single reference to its active one,
+-- just like every retired pool releases a single reference to the VRF key hash it uses.
+-- The BLS key hashes that pools stop using in the same way are removed from
+-- `psBlsKeyHashes`.
 -- The `POOLREAP` rule type itself is declared in "Cardano.Ledger.Dijkstra.Era".
 type instance EraRuleEvent "POOLREAP" DijkstraEra = ShelleyPoolreapEvent DijkstraEra
 
@@ -72,52 +72,58 @@ instance
   transitionRules = [poolReapTransition]
 
   renderAssertionViolation av =
-    renderPoolReapViolation av <> foldMap renderVRFKeyHashCounts (avState av)
+    renderPoolReapViolation av <> foldMap renderKeyHashes (avState av)
   assertions =
     poolReapAssertions
       <> [ PostCondition
-             "VRF key hash counts must match those recomputed from the stake pools (PoolReap)"
-             (\_trc -> uncurry (==) . vrfKeyHashCounts)
+             "VRF and BLS key hashes must match those recomputed from the stake pools (PoolReap)"
+             (\_trc -> uncurry (==) . recomputedKeyHashes)
          ]
 
--- | The VRF key hash counts that @POOLREAP@ leaves behind, together with the ones recomputed
--- from the stake pools that remain registered. Its post-condition requires them to be equal.
-vrfKeyHashCounts ::
-  EraCertState era =>
-  ShelleyPoolreapState era ->
-  ( Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-  , Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
-  )
-vrfKeyHashCounts st = (psVRFKeyHashes ps, psVRFKeyHashes (populateVRFKeyHashes ps))
+-- | The pool state that @POOLREAP@ leaves behind, together with the same state with its VRF
+-- and BLS key hashes recomputed from the stake pools that remain registered. Its
+-- post-condition requires them to be equal.
+recomputedKeyHashes :: EraCertState era => ShelleyPoolreapState era -> (PState era, PState era)
+recomputedKeyHashes st = (ps, populateBlsKeyHashes (populateVRFKeyHashes ps))
   where
     ps = prCertState st ^. certPStateL
 
-renderVRFKeyHashCounts :: EraCertState era => ShelleyPoolreapState era -> String
-renderVRFKeyHashCounts st =
+renderKeyHashes :: EraCertState era => ShelleyPoolreapState era -> String
+renderKeyHashes st =
   "\nVRF key hash counts (psVRFKeyHashes) = "
-    <> show (unNonZero <$> counts)
+    <> show (unNonZero <$> psVRFKeyHashes ps)
     <> "\nVRF key hash counts recomputed from the stake pools (populateVRFKeyHashes) = "
-    <> show (unNonZero <$> recomputed)
+    <> show (unNonZero <$> psVRFKeyHashes recomputed)
+    <> "\nBLS key hashes (psBlsKeyHashes) = "
+    <> show (psBlsKeyHashes ps)
+    <> "\nBLS key hashes recomputed from the stake pools (populateBlsKeyHashes) = "
+    <> show (psBlsKeyHashes recomputed)
   where
-    (counts, recomputed) = vrfKeyHashCounts st
+    (ps, recomputed) = recomputedKeyHashes st
 
 poolReapTransition :: forall era. EraCertState era => TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (_, PoolreapState us a cs0, e) <- judgmentContext
   let
     ps0 = cs0 ^. certPStateL
-    -- The active VRF key hash of every pool whose future parameters switch to a different
-    -- one. A hash that several of these pools share is listed once for each of them.
-    supersededVRFKeyHashes =
-      Map.elems $
-        Map.merge
-          Map.dropMissing
-          Map.dropMissing
-          ( Map.zipWithMaybeMatched $ \_ sps sppF ->
-              if sps ^. spsVrfL /= sppF ^. sppVrfL then Just (sps ^. spsVrfL) else Nothing
-          )
-          (ps0 ^. psStakePoolsL)
-          (ps0 ^. psFutureStakePoolParamsL)
+    -- The keys that pools stop using, as given by `activeKey` and `futureKey` for their
+    -- active and future parameters: a pool whose future parameters change its key stops
+    -- using the active one once they are adopted, and a retiring pool stops using the one
+    -- it has by then. A key that several of these pools share is listed once for each of
+    -- them.
+    releasedKeys :: Eq k => (StakePoolState -> k) -> (StakePoolParams era -> k) -> [k]
+    releasedKeys activeKey futureKey =
+      Map.elems
+        ( Map.merge
+            Map.dropMissing
+            Map.dropMissing
+            ( Map.zipWithMaybeMatched $ \_ sps sppF ->
+                let key = activeKey sps in if key /= futureKey sppF then Just key else Nothing
+            )
+            (ps0 ^. psStakePoolsL)
+            (ps0 ^. psFutureStakePoolParamsL)
+        )
+        <> (activeKey <$> Map.elems retiringPools)
 
     -- activate future stakePools
     ps =
@@ -148,16 +154,22 @@ poolReapTransition = do
     -- The Map of pools retiring this epoch
     retiringPools :: Map.Map (KeyHash StakePool) StakePoolState
     retiringPools = Map.restrictKeys (psStakePools ps) retired
-    -- The VRF key hash of every pool retiring this epoch, once for each of them
-    retiredVRFKeyHashes = spsVrf <$> Map.elems retiringPools
 
-    -- Every pool releases a single reference to each VRF key hash it stops using, which
-    -- keeps the invariant documented in "Cardano.Ledger.Dijkstra.Rules.Pool".
+    -- Every pool releases a single reference to each VRF key hash it stops using, and the BLS
+    -- key hashes that pools stop using are removed, which keeps the invariants documented in
+    -- "Cardano.Ledger.Dijkstra.Rules.Pool".
     vrfKeyHashes =
       F.foldl'
         (flip removeVRFKeyHashOccurrence)
         (psVRFKeyHashes ps0)
-        (supersededVRFKeyHashes <> retiredVRFKeyHashes)
+        (releasedKeys spsVrf sppVrf)
+    blsKeyHashes =
+      psBlsKeyHashes ps0
+        `Set.difference` Set.fromList
+          [ blsKeyHash
+          | SJust blsKeyHash <-
+              releasedKeys (fmap (hashBlsKey . bksKey) . spsBlsKey) (fmap hashBlsKey . sppBlsKey)
+          ]
 
     -- collect all of the potential refunds
     accountRefunds :: Map.Map (Credential Staking) (CompactForm Coin)
@@ -205,6 +217,7 @@ poolReapTransition = do
           & certPStateL . psStakePoolsL %~ (`Map.withoutKeys` retired)
           & certPStateL . psRetiringL %~ (`Map.withoutKeys` retired)
           & certPStateL . psVRFKeyHashesL .~ vrfKeyHashes
+          & certPStateL . psBlsKeyHashesL .~ blsKeyHashes
       )
   where
     delegsToClear cState pools =

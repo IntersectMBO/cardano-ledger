@@ -2,6 +2,12 @@
 
 ## 1.23.0.0
 
+* Track the hashes of the BLS keys of stake pools in `PState`:
+  - Add `psBlsKeyHashes` to `PState`
+  - Add `psBlsKeyHashesL`
+  - Add `populateBlsKeyHashes` to `Cardano.Ledger.State.CertState`
+  - Add `BlsVerKeyHash` to `Cardano.Ledger.Hashes`
+  - Add `hashBlsKey` to `Cardano.Ledger.State.StakePool`
 * Remove `DecCBOR` instances from `Data` and `PlutusData`
 * Add optional `BlsKeyState` argument to `mkStakePoolState`
 * Select the Leios voting committee (CIP-0164) when the mark snapshot is created, instead of when it rotates into the set position:
@@ -13,6 +19,10 @@
   - `MarkSnapShot` now also encodes `msLeiosMaxKeyAge`, so the on-disk ledger state format changes and requires replay
 * Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
 * Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
+
+### `testlib`
+
+* Add `Arbitrary` and `ToExpr` instances for `BlsVerKeyHash`
 
 ## 1.22.0.0
 

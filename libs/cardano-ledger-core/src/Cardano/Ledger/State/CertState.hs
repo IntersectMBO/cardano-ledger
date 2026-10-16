@@ -47,10 +47,13 @@ module Cardano.Ledger.State.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psVRFKeyHashesL,
+  psBlsKeyHashesL,
   -- Helpers for `psVRFKeyHashes`
   addVRFKeyHashOccurrence,
   removeVRFKeyHashOccurrence,
   populateVRFKeyHashes,
+  -- Helpers for `psBlsKeyHashes`
+  populateBlsKeyHashes,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -58,7 +61,7 @@ import Cardano.Ledger.BaseTypes (
   AnchorData,
   KeyValuePairs (..),
   NonZero,
-  StrictMaybe,
+  StrictMaybe (..),
   ToKeyValuePairs (..),
   knownNonZeroBounded,
   mapNonZero,
@@ -87,7 +90,13 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State.Account
-import Cardano.Ledger.State.StakePool (StakePoolParams (..), StakePoolState (..), spsDelegatorsL)
+import Cardano.Ledger.State.StakePool (
+  BlsKeyState (..),
+  StakePoolParams (..),
+  StakePoolState (..),
+  hashBlsKey,
+  spsDelegatorsL,
+ )
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -248,6 +257,9 @@ data PState era = PState
   -- of the Shelley Ledger Specification for a sequence diagram.
   , psRetiring :: !(Map (KeyHash StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
+  , psBlsKeyHashes :: !(Set.Set BlsVerKeyHash)
+  -- ^ Hashes of the BLS public keys that stake pools use through their active or future
+  -- parameters. Only maintained from Dijkstra onwards, it is empty in earlier eras.
   }
   deriving (Show, Eq, Generic)
   deriving (ToJSON) via KeyValuePairs (PState era)
@@ -257,18 +269,19 @@ instance NoThunks (PState era)
 instance NFData (PState era)
 
 instance Era era => EncCBOR (PState era) where
-  encCBOR (PState a b c d) =
-    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
+  encCBOR (PState a b c d e) =
+    encodeListLen 5 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d <> encCBOR e
 
 instance Era era => DecShareCBOR (PState era) where
   type Share (PState era) = (Interns (VRFVerKeyHash StakePoolVRF), Interns (KeyHash StakePool))
 
-  decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
+  decSharePlusCBOR = decodeRecordNamedT "PState" (const 5) $ do
     psVRFKeyHashes <- decSharePlusLensCBOR (toMemptyLens _1 _1)
     psStakePools <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 _2)
-    pure PState {psVRFKeyHashes, psStakePools, psFutureStakePoolParams, psRetiring}
+    psBlsKeyHashes <- lift decCBOR
+    pure PState {psVRFKeyHashes, psStakePools, psFutureStakePoolParams, psRetiring, psBlsKeyHashes}
 
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
@@ -279,6 +292,7 @@ instance ToKeyValuePairs (PState era) where
     , "stakePools" .= psStakePools
     , "futureStakePoolParams" .= psFutureStakePoolParams
     , "retiring" .= psRetiring
+    , "blsKeyHashes" .= psBlsKeyHashes
     ]
 
 -- | Reverses stake pool delegation.
@@ -427,7 +441,7 @@ instance Default (Accounts era) => Default (DState era) where
   def = DState def Map.empty (GenDelegs Map.empty) def
 
 instance Default (PState era) where
-  def = PState Map.empty Map.empty Map.empty Map.empty
+  def = PState Map.empty Map.empty Map.empty Map.empty Set.empty
 
 -- | A composite of all the Deposits the system is obligated to eventually pay back.
 data Obligations = Obligations
@@ -499,6 +513,9 @@ psRetiringL = lens psRetiring (\ps u -> ps {psRetiring = u})
 psVRFKeyHashesL :: Lens' (PState era) (Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64))
 psVRFKeyHashesL = lens psVRFKeyHashes (\ps u -> ps {psVRFKeyHashes = u})
 
+psBlsKeyHashesL :: Lens' (PState era) (Set.Set BlsVerKeyHash)
+psBlsKeyHashesL = lens psBlsKeyHashes (\ps u -> ps {psBlsKeyHashes = u})
+
 -- | Record one more reference to a VRF key hash in 'psVRFKeyHashes'. The count
 -- saturates at 'maxBound' instead of overflowing.
 addVRFKeyHashOccurrence ::
@@ -536,3 +553,18 @@ populateVRFKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
       , let futureVrf = sppVrf futureParams
       , (spsVrf <$> Map.lookup poolId psStakePools) /= Just futureVrf
       ]
+
+-- | Recompute 'psBlsKeyHashes' from scratch out of the registered stake pools: the hashes
+-- of the BLS public keys of their active and of their future parameters. Keys that have
+-- aged out still count. Only Dijkstra maintains the set, so this is meant for the
+-- translation into Dijkstra, for the injection of genesis stake pools, and for the
+-- post-condition of the Dijkstra @POOLREAP@ rule that checks the incremental updates
+-- against it.
+populateBlsKeyHashes :: PState era -> PState era
+populateBlsKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
+  ps {psBlsKeyHashes = Set.fromList $ activeBlsKeyHashes <> futureBlsKeyHashes}
+  where
+    activeBlsKeyHashes =
+      [hashBlsKey (bksKey bks) | SJust bks <- spsBlsKey <$> Map.elems psStakePools]
+    futureBlsKeyHashes =
+      [hashBlsKey blsKey | SJust blsKey <- sppBlsKey <$> Map.elems psFutureStakePoolParams]

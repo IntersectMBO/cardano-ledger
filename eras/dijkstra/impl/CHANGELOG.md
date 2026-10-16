@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `BlsKeyAlreadyRegistered` constructor to `DijkstraPoolPredFailure`
 * Change the field type of `RequiredTopLevelGuardsNotSupported` to `NonEmptySet (Credential Guard)`
 * Add `Cardano.Ledger.Dijkstra.Block.Endorser`, with `DijkstraEndorserBlock` and related types, and the `EraEndorserBlock` class
 * Extend `DijkstraEraForecast` with Peras protocol parameters

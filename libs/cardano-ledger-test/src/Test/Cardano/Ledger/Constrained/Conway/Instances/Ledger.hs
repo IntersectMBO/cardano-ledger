@@ -678,6 +678,10 @@ instance Typeable r => HasSpec (VRFVerKeyHash r) where
   conformsTo _ _ = True
   toPreds _ _ = assert True
 
+instance HasSimpleRep BlsVerKeyHash
+
+instance HasSpec BlsVerKeyHash
+
 instance (HashAlgorithm a, Typeable b) => HasSpec (Hash a b) where
   type TypeSpec (Hash a b) = ()
   emptySpec = ()
