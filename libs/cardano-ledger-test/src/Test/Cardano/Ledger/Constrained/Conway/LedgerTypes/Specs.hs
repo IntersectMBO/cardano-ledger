@@ -495,7 +495,7 @@ ledgerStateSpec ::
   Specification (LedgerState era)
 ledgerStateSpec pp univ ctx epoch =
   constrained $ \ [var|ledgerState|] ->
-    match ledgerState $ \ [var|utxoS|] [var|csg|] ->
+    match ledgerState $ \ [var|utxoS|] [var|csg|] _lastEbAnnouncement ->
       [ satisfies csg (conwayCertStateSpec univ ctx epoch)
       , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era pp univ certstate))
       ]
@@ -591,7 +591,7 @@ newEpochStateSpec pp univ certctx =
     ( \ [var|newEpochState|] ->
         match
           (newEpochState :: Term (NewEpochState era))
-          ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|stashAvvm|] ->
+          ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|stashAvvm|] _lastBlockSlotNo ->
               [ satisfies epochstate (epochStateSpec @era pp univ certctx eno)
               , satisfies stashAvvm (constrained (\ [var|x|] -> x ==. lit ()))
               , match blocksPrev (genHint 3)

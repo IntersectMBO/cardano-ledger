@@ -16,6 +16,7 @@ module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
 import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  StrictMaybe (..),
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
@@ -49,7 +50,7 @@ getGKeys ::
   Set (KeyHash GenesisRole)
 getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsGenDelegsL)
   where
-    NewEpochState _ _ _ es _ _ = nes
+    NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ ls _ _ = es
 
 -- | Creates the ledger state for an empty ledger which
@@ -73,6 +74,7 @@ genesisState genDelegs0 utxo0 =
     ( def
         & certDStateL .~ dState
     )
+    SNothing
   where
     dState :: DState era
     dState =
@@ -107,6 +109,7 @@ updateNES
              es@(EpochState acnt _ ss nm)
              _ru
              _avvm
+             _lastBlockSlotNo
            )
   bcur
   ls =

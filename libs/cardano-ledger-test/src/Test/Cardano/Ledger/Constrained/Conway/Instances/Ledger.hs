@@ -84,6 +84,7 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   encodeListLen,
  )
+import Cardano.Ledger.Block (EbAnnouncement, EbReferencesAnnouncement)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra, Tx (..))
@@ -274,6 +275,14 @@ instance Typeable index => HasSpec (SafeHash index) where
   fixupWithTypeSpec _ _ = Nothing
   conformsTo _ _ = True
   toPreds _ _ = assert True
+
+instance HasSimpleRep EbReferencesAnnouncement
+
+instance HasSpec EbReferencesAnnouncement
+
+instance HasSimpleRep EbAnnouncement
+
+instance HasSpec EbAnnouncement
 
 instance HasSimpleRep TxId
 

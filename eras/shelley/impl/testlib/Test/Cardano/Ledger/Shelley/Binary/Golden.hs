@@ -89,7 +89,7 @@ goldenNewEpochStateExpectation
     } =
     expectGoldenToCBOR DiffHex nes $
       mconcat
-        [ E (TkListLen 6)
+        [ E (TkListLen 7)
         , E (TkWord64 (unEpochNo nesEL))
         , mapEnc (unBlocksMade nesBprev)
         , mapEnc (unBlocksMade nesBcur)
@@ -112,6 +112,7 @@ goldenNewEpochStateExpectation
             ]
         , Ev ver nesRu
         , E stashedAVVMAddresses
+        , E (TkWord64 (unSlotNo nesLastBlockSlotNo))
         ]
     where
       ver = eraProtVerLow @era

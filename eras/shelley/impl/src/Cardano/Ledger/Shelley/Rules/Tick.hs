@@ -259,7 +259,7 @@ bheadTransition ::
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do
-  TRC ((), nes0@(NewEpochState _ bprev _ es _ _), slot) <-
+  TRC ((), nes0@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
   nes1 <- validatingTickTransition @TICK nes0 slot
@@ -275,7 +275,7 @@ bheadTransition = do
     trans @(EraRule "RUPD" era) $
       TRC (RupdEnv bprev es, nesRu nes1, slot)
 
-  let nes2 = nes1 {nesRu = ru''}
+  let nes2 = nes1 {nesRu = ru'', nesLastBlockSlotNo = slot}
   pure nes2
 
 instance

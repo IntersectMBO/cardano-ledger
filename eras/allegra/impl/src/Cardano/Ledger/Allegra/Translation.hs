@@ -68,6 +68,7 @@ instance TranslateEra AllegraEra NewEpochState where
           -- addresses as our UTxO, and we have deleted them above (with
           -- 'returnRedeemAddrsToReserves'), so we may safely discard this map.
           stashedAVVMAddresses = ()
+        , nesLastBlockSlotNo = nesLastBlockSlotNo nes
         }
 
 instance TranslateEra AllegraEra (Tx TopTx) where
@@ -153,6 +154,7 @@ instance TranslateEra AllegraEra LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsCertState = translateEra' ctxt $ lsCertState ls
+        , lsLastEbAnnouncement = lsLastEbAnnouncement ls
         }
 
 instance TranslateEra AllegraEra SnapShots where

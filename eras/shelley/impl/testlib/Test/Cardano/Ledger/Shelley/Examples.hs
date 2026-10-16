@@ -219,6 +219,7 @@ exampleNewEpochState value ppp pp =
     , nesEs = epochState
     , nesRu = SJust rewardUpdate
     , stashedAVVMAddresses = def
+    , nesLastBlockSlotNo = minBound
     }
   where
     epochState :: EpochState era
@@ -249,6 +250,7 @@ exampleNewEpochState value ppp pp =
                     , utxosDonation = mempty
                     }
               , lsCertState = def
+              , lsLastEbAnnouncement = SNothing
               }
         , esNonMyopic = def
         }

@@ -188,7 +188,7 @@ uTxOStateZero =
     mempty
 
 ledgerStateZero :: forall era. Reflect era => LedgerState era
-ledgerStateZero = LedgerState uTxOStateZero dPStateZero
+ledgerStateZero = LedgerState uTxOStateZero dPStateZero SNothing
 
 epochStateZero :: Reflect era => EpochState era
 epochStateZero =
@@ -209,6 +209,7 @@ newEpochStateZero =
     epochStateZero
     SNothing
     (stashedAVVMAddressesZero (reify :: Proof era))
+    minBound
 
 stashedAVVMAddressesZero :: Proof era -> StashedAVVMAddresses era
 stashedAVVMAddressesZero Shelley = utxoZero
@@ -296,7 +297,7 @@ extractCertState x = case whichCertState (reify @era) of
       & (certVStateL .~ extract x)
 
 instance Reflect era => Extract (LedgerState era) era where
-  extract x = LedgerState (extract x) (extractCertState x)
+  extract x = LedgerState (extract x) (extractCertState x) SNothing
 
 instance Reflect era => Extract (EpochState era) era where
   extract x =
@@ -317,6 +318,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (extract x)
       (Complete <$> mRu x)
       (stashedAVVMAddressesZero (reify :: Proof era))
+      minBound
       -- pool distribution is not serialised so it needs to be computed separately
       & nesEsL . esSnapshotsL . ssStakeSetL
         %~ (\ss -> ss {ssStakePoolDistr = PoolDistr (mPoolDistr x) (knownNonZeroCoin @1)})

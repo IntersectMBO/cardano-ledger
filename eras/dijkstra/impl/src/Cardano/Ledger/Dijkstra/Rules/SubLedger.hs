@@ -245,7 +245,7 @@ dijkstraSubLedgersTransition ::
 dijkstraSubLedgersTransition = do
   TRC
     ( SubLedgerEnv slot mbCurEpochNo pp chainAccountState originalUtxo originalAccounts topIsPhase2Valid
-      , LedgerState utxoState certState
+      , LedgerState utxoState certState lastEbAnnouncement
       , stAnnTx
       ) <-
     judgmentContext
@@ -308,7 +308,7 @@ dijkstraSubLedgersTransition = do
         , utxoStateBeforeSubUtxow
         , stAnnTx
         )
-  pure $ LedgerState utxoStateAfterSubUtxow certStateFinal
+  pure $ LedgerState utxoStateAfterSubUtxow certStateFinal lastEbAnnouncement
 
 instance
   ( STS (SUBGOV era)

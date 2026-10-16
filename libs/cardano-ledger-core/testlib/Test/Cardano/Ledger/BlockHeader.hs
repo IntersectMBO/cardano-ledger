@@ -25,6 +25,7 @@ data TestBlockHeader
   , tbhSlot :: SlotNo
   , tbhVersionInfo :: BlockHeaderVersionInfo
   , tbhEbRefsAnn :: StrictMaybe EbReferencesAnnouncement
+  , tbhHash :: SafeHash EraIndependentBlockHeader
   }
   deriving (Generic)
 
@@ -39,6 +40,7 @@ instance Era era => EraBlockHeader TestBlockHeader era where
     blockHeaderL . lens tbhBHash (\bh h -> bh {tbhBHash = h})
   slotNoBlockHeaderL =
     blockHeaderL . lens tbhSlot (\hb sn -> hb {tbhSlot = sn})
+  blockHeaderHashBlockHeaderG = blockHeaderL . to tbhHash
 
 instance Era era => TPraosEraBlockHeader TestBlockHeader era
 
@@ -66,4 +68,5 @@ mkTestBlockHeaderNoNonce block =
     , tbhSlot = block ^. slotNoBlockHeaderL
     , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 (eraProtVerLow @era)) 0
     , tbhEbRefsAnn = SNothing
+    , tbhHash = block ^. blockHeaderHashBlockHeaderG
     }

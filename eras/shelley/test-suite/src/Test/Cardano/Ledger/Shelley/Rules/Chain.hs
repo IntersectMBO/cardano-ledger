@@ -216,6 +216,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     mempty
                 )
                 (def & certDStateL .~ dState)
+                SNothing
             )
             emptySnapShots
             def
@@ -225,6 +226,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         )
         SNothing
         def
+        minBound
     )
     cs
     initNonce
@@ -342,11 +344,11 @@ chainTransition =
 
         nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, s)
 
-        let NewEpochState e1 _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _ = nes'
+        let NewEpochState e1 _ _ _ _ _ _ = nes
+            NewEpochState e2 _ bcur es _ _ _ = nes'
         let EpochState account ls _ _ = es
             pp' = es ^. curPParamsEpochStateL
-        let LedgerState _ certState = ls
+        let LedgerState _ certState _ = ls
             genDelegs = certState ^. certDStateL . dsGenDelegsL
             ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph

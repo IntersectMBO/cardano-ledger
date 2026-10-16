@@ -121,7 +121,7 @@ snapTransition = do
   -- when we entered Shelley era.
   maxKeyAge <- liftSTS $ asks (`maxKeyAgeEpochs` eNo)
 
-  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) pp = snapEnv
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState _) pp = snapEnv
       instantStake = ls ^. instantStakeG
       istakeSnap =
         snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)

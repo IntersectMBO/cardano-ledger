@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochNo (..),
   KeyValuePairs (..),
+  SlotNo,
   StrictMaybe (..),
   ToKeyValuePairs (..),
  )
@@ -43,6 +44,7 @@ import Cardano.Ledger.Binary (
   encodeMemPack,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Block (EbAnnouncement)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
@@ -325,6 +327,10 @@ data NewEpochState era = NewEpochState
   --
   -- This is very much an awkward implementation hack, and hence we hide it
   -- from as many places as possible.
+  , nesLastBlockSlotNo :: !SlotNo
+  -- ^ Slot number at which the TICK rule was last applied. This is the slot of
+  -- the last applied block, unless the state was ticked to a later slot
+  -- without applying a block.
   }
   deriving (Generic)
 
@@ -350,7 +356,7 @@ instance
   (EraStake era, EraGov era, EraCertState era, Default (StashedAVVMAddresses era)) =>
   Default (NewEpochState era)
   where
-  def = NewEpochState (EpochNo 0) def def def def def
+  def = NewEpochState (EpochNo 0) def def def def def minBound
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -392,14 +398,15 @@ instance
   ) =>
   EncCBOR (NewEpochState era)
   where
-  encCBOR (NewEpochState e bp bc es ru av) =
-    encodeListLen 6
+  encCBOR (NewEpochState e bp bc es ru av ls) =
+    encodeListLen 7
       <> encCBOR e
       <> encCBOR bp
       <> encCBOR bc
       <> encCBOR es
       <> encCBOR ru
       <> encCBOR av
+      <> encCBOR ls
 
 instance
   ( EraTxOut era
@@ -413,6 +420,7 @@ instance
   decCBOR = do
     decode $
       RecD NewEpochState
+        <! From
         <! From
         <! From
         <! From
@@ -444,6 +452,8 @@ data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)
   -- ^ The current unspent transaction outputs.
   , lsCertState :: !(CertState era)
+  , lsLastEbAnnouncement :: !(StrictMaybe EbAnnouncement)
+  -- ^ The last Endorser Block references announcement made by a block header.
   }
   deriving (Generic)
 
@@ -499,10 +509,11 @@ instance
   ) =>
   EncCBOR (LedgerState era)
   where
-  encCBOR LedgerState {lsUTxOState, lsCertState} =
-    encodeListLen 2
+  encCBOR LedgerState {lsUTxOState, lsCertState, lsLastEbAnnouncement} =
+    encodeListLen 3
       <> encCBOR lsCertState -- encode delegation state first to improve sharing
       <> encCBOR lsUTxOState
+      <> encCBOR lsLastEbAnnouncement
 
 instance
   ( EraTxOut era
@@ -520,10 +531,11 @@ instance
       , Interns (Credential HotCommitteeRole)
       )
   decSharePlusCBOR =
-    decodeRecordNamedT "LedgerState" (const 2) $ do
+    decodeRecordNamedT "LedgerState" (const 3) $ do
       lsCertState <- decSharePlusCBOR
       lsUTxOState <- decSharePlusCBOR
-      pure LedgerState {lsUTxOState, lsCertState}
+      lsLastEbAnnouncement <- lift decCBOR
+      pure LedgerState {lsUTxOState, lsCertState, lsLastEbAnnouncement}
 
 deriving via
   KeyValuePairs (LedgerState era)
@@ -538,10 +550,11 @@ instance
   ) =>
   ToKeyValuePairs (LedgerState era)
   where
-  toKeyValuePairs ls@(LedgerState _ _) =
+  toKeyValuePairs ls@(LedgerState _ _ _) =
     let LedgerState {..} = ls
      in [ "utxoState" .= lsUTxOState
         , "delegationState" .= lsCertState
+        , "lastEbAnnouncement" .= lsLastEbAnnouncement
         ]
 
 -- ====================================================
@@ -560,7 +573,7 @@ instance
   def = EpochState def def def def
 
 instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerState era) where
-  def = LedgerState def def
+  def = LedgerState def def SNothing
 
 -- =============================================================
 -- Lenses for types found inside NewEpochState and its fields
@@ -586,6 +599,9 @@ nesRuL = lens nesRu (\ds u -> ds {nesRu = u})
 
 nesStashedAVVMAddressesL :: Lens' (NewEpochState era) (StashedAVVMAddresses era)
 nesStashedAVVMAddressesL = lens stashedAVVMAddresses (\ds u -> ds {stashedAVVMAddresses = u})
+
+nesLastBlockSlotNoL :: Lens' (NewEpochState era) SlotNo
+nesLastBlockSlotNoL = lens nesLastBlockSlotNo (\ds u -> ds {nesLastBlockSlotNo = u})
 
 -- For backward compatibility
 nesEpochStateL :: Lens' (NewEpochState era) (EpochState era)
@@ -620,6 +636,9 @@ lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
 
 lsCertStateL :: Lens' (LedgerState era) (CertState era)
 lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
+
+lsLastEbAnnouncementL :: Lens' (LedgerState era) (StrictMaybe EbAnnouncement)
+lsLastEbAnnouncementL = lens lsLastEbAnnouncement (\x y -> x {lsLastEbAnnouncement = y})
 
 -- ================ UTxOState ===========================
 

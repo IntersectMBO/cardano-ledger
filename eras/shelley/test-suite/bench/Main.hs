@@ -133,7 +133,7 @@ profileCreateRegKeys = do
   -- mainbench: internal error: PAP object entered!
   -- (GHC version 8.6.5 for x86_64_unknown_linux)
   -- Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
-  let touch (LedgerState x y) = touchUTxOState x + touchCertState y
+  let touch (LedgerState x y _) = touchUTxOState x + touchCertState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
 -- ============================================
@@ -156,7 +156,7 @@ profileCreateRegPools :: Word64 -> IO ()
 profileCreateRegPools size = do
   putStrLn "Enter profiling pool creation"
   let state = ledgerStateWithNregisteredPools 1 size
-  let touch (LedgerState x y) = touchUTxOState x + touchCertState y
+  let touch (LedgerState x y _) = touchUTxOState x + touchCertState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
 -- ==========================================

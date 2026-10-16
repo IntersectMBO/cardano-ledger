@@ -125,6 +125,7 @@ instance
           def
           SNothing
           def
+          minBound
     ]
 
   transitionRules = [newEpochTransition]
@@ -153,7 +154,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , nes@(NewEpochState eL _ bcur es0 ru _)
+      , nes@(NewEpochState eL _ bcur es0 ru _ _)
       , eNo
       ) <-
     judgmentContext

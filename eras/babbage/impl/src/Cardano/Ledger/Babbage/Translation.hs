@@ -55,6 +55,7 @@ instance TranslateEra BabbageEra NewEpochState where
         , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
         , stashedAVVMAddresses = ()
+        , nesLastBlockSlotNo = nesLastBlockSlotNo nes
         }
 
 instance TranslateEra BabbageEra (Tx TopTx) where
@@ -130,6 +131,7 @@ instance TranslateEra BabbageEra LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsCertState = translateEra' ctxt $ lsCertState ls
+        , lsLastEbAnnouncement = lsLastEbAnnouncement ls
         }
 
 instance TranslateEra BabbageEra UTxOState where
