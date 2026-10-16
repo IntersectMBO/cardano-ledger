@@ -5,6 +5,10 @@
 * Add `decodeNonEmptyMapNoDuplicatesAnn`
 * Rename `decodeMapTraverse` to `decodeMapTraverseWithDuplicates`
 
+## 1.10.1.0
+
+* Fix IPv4 encoding order in `encodeIPv4`, `ipv4ToBytes` and `decodeIPv4` to use network order instead of swapped
+
 ## 1.10.0.0
 
 * Add `EncCBOR` and `DecCBOR` instances to `SlotInterval`
