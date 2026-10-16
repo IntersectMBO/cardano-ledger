@@ -2,6 +2,9 @@
 
 ## 1.23.0.0
 
+* Add `EbAnnouncement` to `Cardano.Ledger.Block`
+* Add `blockHeaderHashBlockHeaderG` to `EraBlockHeader`
+* Add `ToJSON` and `ToKeyValuePairs` instances for `EbReferencesAnnouncement`
 * Remove `DecCBOR` instances from `Data` and `PlutusData`
 * Add optional `BlsKeyState` argument to `mkStakePoolState`
 * Select the Leios voting committee (CIP-0164) when the mark snapshot is created, instead of when it rotates into the set position:
@@ -13,6 +16,12 @@
   - `MarkSnapShot` now also encodes `msLeiosMaxKeyAge`, so the on-disk ledger state format changes and requires replay
 * Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
 * Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
+
+### `testlib`
+
+* Add `tbhHash` field to `TestBlockHeader`
+* Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
+* Add `ToExpr` instance for `EbAnnouncement`
 
 ## 1.22.0.0
 
