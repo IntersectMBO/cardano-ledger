@@ -17,8 +17,6 @@ module Cardano.Ledger.Shelley.Rewards (
   calcStakePoolMemberReward,
   LeaderOnlyReward (..),
   leaderRewardToGeneral,
-  leaderRew,
-  memberRew,
   aggregateRewards,
   filterRewards,
   sumRewards,
@@ -60,7 +58,7 @@ import Cardano.Ledger.Shelley.Era (
   hardforkAllegraAggregatedRewards,
   hardforkBabbageForgoRewardPrefilter,
  )
-import Cardano.Ledger.State (StakePoolParams (..), StakePoolSnapShot (..), maxPool')
+import Cardano.Ledger.State (StakePoolSnapShot (..), maxPool')
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold, foldMap')
@@ -96,16 +94,6 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
   where
     beta = toInteger blocksN % toInteger (max 1 blocksTotal)
 
--- | Calculate pool leader reward
-leaderRew ::
-  Coin ->
-  StakePoolParams era ->
-  StakeShare ->
-  StakeShare ->
-  Coin
-leaderRew f pool = calcStakePoolOperatorReward f (sppCost pool) (sppMargin pool)
-{-# DEPRECATED leaderRew "In favor of `calcStakePoolOperatorReward`" #-}
-
 -- | See section "5.5.4.1 Pool Operator Reward" in [Design Specification for Delegation and Incentives in Cardano](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf)
 calcStakePoolOperatorReward ::
   -- | Total Pool Rewards
@@ -125,16 +113,6 @@ calcStakePoolOperatorReward f cost margin (StakeShare s) (StakeShare sigma)
       cost <> rationalToCoinViaFloor (coinToRational (f <-> cost) * (m + (1 - m) * s / sigma))
   where
     m = unboundRational margin
-
--- | Calculate pool member reward
-memberRew ::
-  Coin ->
-  StakePoolParams era ->
-  StakeShare ->
-  StakeShare ->
-  Coin
-memberRew f pool = calcStakePoolMemberReward f (sppCost pool) (sppMargin pool)
-{-# DEPRECATED memberRew "In favor of `calcStakePoolMemberReward`" #-}
 
 -- | See section "5.5.4.2 Pool Member Reward" in [Design Specification for Delegation and Incentives in Cardano](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf)
 calcStakePoolMemberReward ::
