@@ -50,7 +50,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (FixedSizeCodec (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
-  ADDRHASH,
+  EraIndependentTxBody,
+  HASH,
   Hash,
   KeyHash (..),
   KeyRole (..),
@@ -64,8 +65,8 @@ import Cardano.Ledger.Conway.Core (
 import Cardano.Ledger.Conway.Governance (VotingStakePoolDistr, vspdIndividualStakeL)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (VKey (..))
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Keys (BootstrapWitness (..), DSIGN, VKey (..), bootstrapWitKeyHash)
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.Plutus.ExUnits (Prices)
 import Control.Monad (forM)
 import Data.ByteString (ByteString)
@@ -201,23 +202,30 @@ signatureToInteger = bytesToInteger . rawEncodeFixedSized
 signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
 signatureFromInteger = rawDecodeFixedSized . integerToBytes 64
 
-instance SpecTranslate era (VKey k) where
-  type SpecRep era (VKey k) = Agda.HSVKey
-
-  toSpecRep x = do
-    let hvkVKey = vkeyToInteger x
-    hvkStoredHash <- toSpecRep (hashVerKeyDSIGN @_ @ADDRHASH $ unVKey x)
-    pure Agda.MkHSVKey {..}
-
 instance DSIGNAlgorithm v => SpecTranslate era (SignedDSIGN v a) where
   type SpecRep era (SignedDSIGN v a) = Integer
 
   toSpecRep (SignedDSIGN x) = pure $ signatureToInteger x
 
 instance SpecTranslate era (WitVKey k) where
-  type SpecRep era (WitVKey k) = (SpecRep era (VKey k), Integer)
+  type
+    SpecRep era (WitVKey k) =
+      (Agda.HSVKey, SpecRep era (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)))
 
-  toSpecRep (WitVKey vk sk) = toSpecRepTuple (vk, sk)
+  toSpecRep wk@(WitVKey vk sk) = do
+    sk' <- toSpecRep sk
+    kh <- toSpecRep (witVKeyHash wk)
+    pure (Agda.MkHSVKey (vkeyToInteger vk) kh, sk')
+
+instance SpecTranslate era BootstrapWitness where
+  type
+    SpecRep era BootstrapWitness =
+      (Agda.HSVKey, SpecRep era (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)))
+
+  toSpecRep bw@(BootstrapWitness {..}) = do
+    sk <- toSpecRep bwSignature
+    kh <- toSpecRep (bootstrapWitKeyHash bw)
+    pure (Agda.MkHSVKey (vkeyToInteger bwKey) kh, sk)
 
 instance SpecTranslate era (VRFVerKeyHash r) where
   type SpecRep era (VRFVerKeyHash r) = Integer
