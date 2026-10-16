@@ -39,10 +39,11 @@ import Cardano.Ledger.Dijkstra.PParams (
 import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTxRaw (..), DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.MemoBytes (mkMemoizedEra)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
@@ -176,7 +177,9 @@ instance (Arbitrary (TxBody l DijkstraEra), Typeable l) => Arbitrary (Tx l Dijks
     fmap MkDijkstraTx . withSTxBothLevels @l $ \case
       -- Per CIP-0167, Dijkstra transactions should always have isPhase2Valid = Phase2Valid
       -- The isPhase2Valid flag is omitted in serialization and defaults to Phase2Valid
-      STopTx -> DijkstraTx <$> arbitrary <*> arbitrary <*> pure Phase2Valid <*> arbitrary
+      STopTx ->
+        DijkstraTopTx . mkMemoizedEra @DijkstraEra
+          <$> (DijkstraTopTxRaw <$> arbitrary <*> arbitrary <*> pure Phase2Valid <*> arbitrary)
       SSubTx -> DijkstraSubTx <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (DijkstraTxCert era) where
@@ -351,11 +354,7 @@ instance Arbitrary PerasCert where
   arbitrary = PerasCert <$> arbitrary
 
 instance
-  ( EraBlockBody era
-  , AlonzoEraTx era
-  , Arbitrary (Tx TopTx era)
-  , SafeToHash (TxWits era)
-  ) =>
+  (Arbitrary (Tx TopTx era), SafeToHash (Tx TopTx era)) =>
   Arbitrary (DijkstraBlockBody era)
   where
   arbitrary =
@@ -370,6 +369,7 @@ instance
 genSmallDijkstraTxsBlockBody ::
   ( AlonzoEraTx era
   , Arbitrary (Tx TopTx era)
+  , SafeToHash (Tx TopTx era)
   ) =>
   Gen (DijkstraBlockBody era)
 genSmallDijkstraTxsBlockBody =
@@ -397,7 +397,7 @@ genSmallDijkstraTxsBlockBody =
 -- carries Dijkstra-era transactions). The Peras certificate is also omitted so
 -- the wire form is minimal.
 genSmallDijkstraCertBlockBody ::
-  AlonzoEraTx era =>
+  SafeToHash (Tx TopTx era) =>
   Gen (DijkstraBlockBody era)
 genSmallDijkstraCertBlockBody =
   DijkstraBlockBody mempty

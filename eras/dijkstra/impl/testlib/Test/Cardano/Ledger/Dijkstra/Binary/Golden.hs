@@ -24,8 +24,10 @@ import Cardano.Ledger.Binary (
   shelleyProtVer,
  )
 import qualified Cardano.Ledger.Binary as Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTx)
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Data (Proxy (..))
@@ -35,7 +37,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
-import Test.Cardano.Ledger.Common (Spec, ToExpr, describe, it)
+import Test.Cardano.Ledger.Common (Spec, ToExpr, describe, expectRight, it, shouldBe)
 import Test.Cardano.Ledger.Conway.Binary.Golden hiding (spec)
 import Test.Cardano.Ledger.Core.KeyPair (mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
@@ -372,6 +374,11 @@ goldenBlockTransaction = do
           "Annotator (MemoBytes (DijkstraBlockBodyRaw DijkstraEra))"
           (DeserialiseFailure 14 "Failed to decode AlonzoTxAuxData")
       )
+  -- The transaction encoder does not produce an indefinite-length list, so
+  -- these bytes can only be the original ones
+  it "Keep the bytes of a block transaction encoded as an indefinite-length list" $ do
+    tx <- expectRight $ decodeEnc @(DijkstraTopTx era) version txInBlockIndefiniteEnc
+    originalBytes tx `shouldBe` Plain.serialize' txInBlockIndefiniteEnc
   where
     version = eraProtVerLow @era
     blockBodyWithFlag isPhase2Valid =
@@ -409,6 +416,15 @@ goldenBlockTransaction = do
         , E TkNull
         , E TkNull
         , E TkNull
+        ]
+    txInBlockIndefiniteEnc =
+      mconcat
+        [ E TkListBegin
+        , txBodyEnc
+        , E (TkMapLen 0)
+        , E TkNull
+        , E (TkBool True)
+        , E TkBreak
         ]
     txBodyEnc =
       mconcat

@@ -52,7 +52,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScriptRaw,
   DijkstraPlutusPurpose,
  )
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTx (..), DijkstraTopTxRaw, DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
@@ -151,17 +151,13 @@ instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)
 
 instance (AlonzoEraTx era, ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
 
+instance ToExpr (DijkstraTopTxRaw DijkstraEra)
+
+deriving newtype instance ToExpr (DijkstraTopTx DijkstraEra)
+
 instance ToExpr (DijkstraTx l DijkstraEra) where
   toExpr = \case
-    txBody@(DijkstraTx {}) ->
-      let DijkstraTx {..} = txBody
-       in Rec "DijkstraTx" $
-            OMap.fromList
-              [ ("dtBody", toExpr dtBody)
-              , ("dtWits", toExpr dtWits)
-              , ("dtIsPhase2Valid", toExpr dtIsPhase2Valid)
-              , ("dtAuxData", toExpr dtAuxData)
-              ]
+    DijkstraTopTx t -> App "DijkstraTopTx" [toExpr t]
     txBody@(DijkstraSubTx {}) ->
       let DijkstraSubTx {..} = txBody
        in Rec "DijkstraSubTx" $
