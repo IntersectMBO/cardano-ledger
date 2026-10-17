@@ -269,6 +269,10 @@ notPoolOwner owners = \case
 rewardOnePoolMember ::
   -- | The protocol version
   ProtVer ->
+  -- | The minimum pool cost protocol parameter
+  Coin ->
+  -- | The minimum pool margin protocol parameter
+  UnitInterval ->
   -- | The total amount of stake in the system
   Coin ->
   -- | The set of registered stake credentials
@@ -285,7 +289,7 @@ rewardOnePoolMember ::
   -- This could be Nothing if the credential is no longer registered,
   -- if it is an owner, or if the reward is zero.
   Maybe Coin
-rewardOnePoolMember pv totalStake addrsRew rewardInfo hk (Coin c) =
+rewardOnePoolMember pv minCost minMargin totalStake addrsRew rewardInfo hk (Coin c) =
   if prefilter && notPoolOwner (spssSelfDelegatedOwners (poolPs rewardInfo)) hk && r /= Coin 0
     then Just r
     else Nothing
@@ -296,7 +300,9 @@ rewardOnePoolMember pv totalStake addrsRew rewardInfo hk (Coin c) =
     poolR = poolPot rewardInfo
     -- warning: totalStake could be zero!
     stakeShare = StakeShare $ c % unCoin totalStake
-    r = calcStakePoolMemberReward poolR spssCost spssMargin stakeShare sigma
+    effectiveCost = max spssCost minCost
+    effectiveMargin = max spssMargin minMargin
+    r = calcStakePoolMemberReward poolR effectiveCost effectiveMargin stakeShare sigma
 
 -- | Calculate single stake pool specific values for the reward computation.
 --
@@ -340,11 +346,13 @@ mkPoolRewardInfo
                 else mempty
             appPerf = mkApparentPerformance pp_d sigmaA numBlocksMade blocksTotal
             poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
+            effectiveCost = max (spssCost stakePoolSnapShot) (pp ^. ppMinPoolCostL)
+            effectiveMargin = max (spssMargin stakePoolSnapShot) (pp ^. ppMinPoolMarginG)
             stakePoolOperatorReward =
               calcStakePoolOperatorReward
                 poolR
-                (spssCost stakePoolSnapShot)
-                (spssMargin stakePoolSnapShot)
+                effectiveCost
+                effectiveMargin
                 (StakeShare poolOwnerRelativeStake)
                 (StakeShare sigma)
             rewardInfo =

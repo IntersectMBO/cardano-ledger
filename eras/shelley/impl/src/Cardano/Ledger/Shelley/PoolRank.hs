@@ -55,7 +55,7 @@ import Cardano.Ledger.Binary (
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
-import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
+import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppMinPoolCostL, ppMinPoolMarginG, ppNOptL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), calcStakePoolMemberReward)
 import Cardano.Ledger.State (StakePoolParams (..), StakePoolSnapShot (..), maxPool)
@@ -426,4 +426,6 @@ calcNonMyopicMemberReward pp rPot poolId cost margin s sigma t topPools (Perform
   let nm = nonMyopicStake pp s sigma t poolId topPools
       f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
       fHat = floor (p * fromRational (coinToRational f))
-   in calcStakePoolMemberReward (Coin fHat) cost margin t nm
+      effectiveCost = max cost $ pp ^. ppMinPoolCostL
+      effectiveMargin = max margin $ pp ^. ppMinPoolMarginG
+   in calcStakePoolMemberReward (Coin fHat) effectiveCost effectiveMargin t nm
