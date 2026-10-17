@@ -329,12 +329,13 @@ instance SpecTranslate ConwayEra (AlonzoTxWits ConwayEra) where
 
   toSpecRep x =
     Agda.MkTxWitnesses
-      <$> fmap Agda.MkHSMap (toSpecRep txWitsMap)
+      <$> (Agda.MkHSMap <$> ((++) <$> toSpecRep txWitsMap <*> toSpecRep txWitsBootMap))
       <*> fmap Agda.MkHSSet (toSpecRep (Map.elems $ txscripts x))
       <*> toSpecRep (txdats x)
       <*> toSpecRep (txrdmrs x)
     where
       txWitsMap = toList (txwitsVKey x)
+      txWitsBootMap = toList (txwitsBoot x)
 
 instance SpecTranslate ConwayEra (AlonzoTxAuxData ConwayEra) where
   type SpecRep ConwayEra (AlonzoTxAuxData ConwayEra) = Agda.AuxiliaryData
