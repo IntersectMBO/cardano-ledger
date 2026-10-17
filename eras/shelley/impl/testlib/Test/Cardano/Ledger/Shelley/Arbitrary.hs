@@ -312,6 +312,8 @@ instance Arbitrary FreeVars where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------

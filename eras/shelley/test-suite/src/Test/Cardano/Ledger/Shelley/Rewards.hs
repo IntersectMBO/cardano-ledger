@@ -53,6 +53,7 @@ import Cardano.Ledger.Coin (
   toDeltaCoin,
  )
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Core (ppMinPoolMarginG)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Rewards (Reward (..))
@@ -795,6 +796,8 @@ mkRewardAns
           , fvPoolRewardInfo =
               VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') stakePools
           , fvProtVer = pp ^. ppProtocolVersionL
+          , fvMinPoolCost = pp ^. ppMinPoolCostL
+          , fvMinPoolMargin = pp ^. ppMinPoolMarginG
           }
       pulser :: Pulser
       pulser = RSLP 2 free (unActiveStake activeStake) (RewardAns Map.empty Map.empty)

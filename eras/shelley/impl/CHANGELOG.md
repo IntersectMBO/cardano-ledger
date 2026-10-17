@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Remove deprecated `leaderRew` and `memberRew` functions
 * Add `poolReapAssertions`
 * Export `renderPoolReapViolation`
 * Remove `nesPd` field from `NewEpochState` and `nesPdL`:
