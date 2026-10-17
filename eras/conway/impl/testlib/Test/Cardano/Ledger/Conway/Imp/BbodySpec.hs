@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec) where
 
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
@@ -17,7 +18,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure (..),
   totalRefScriptSizeInBlock,
  )
-import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Plutus (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
@@ -34,14 +35,18 @@ import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellformedNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (
+  alwaysFailsWithDatum,
+  purposeIsWellformedNoDatum,
+ )
 
 spec ::
   forall era.
   ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
-    plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
+    lang <- elements $ eraLanguages @era
+    plutusScript <- withSLanguage lang $ mkPlutusScript @era . purposeIsWellformedNoDatum
     let scriptSize = originalBytesSize plutusScript
     pp <- getsPParams id
 
@@ -85,7 +90,9 @@ spec = describe "BBODY" $ do
 
   it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
     whenMajorVersionAtLeast @11 $ do
-      Just plutusScript <- pure $ mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
+      lang <- elements $ eraLanguages @era
+      Just plutusScript <- pure $ withSLanguage lang $ \slang ->
+        mkPlutusScript @era $ purposeIsWellformedNoDatum slang
       let scriptSize = originalBytesSize plutusScript
 
       pp <- getsPParams id
@@ -196,8 +203,9 @@ spec = describe "BBODY" $ do
     protVer <- getsPParams ppProtocolVersionL
 
     -- produce an utxo with a failing script
-    failingPlutusTxIn <- do
-      let plutus = alwaysFailsNoDatum SPlutusV3
+    lang <- elements $ eraLanguages @era
+    failingPlutusTxIn <- withSLanguage lang $ \slang -> do
+      let plutus = alwaysFailsWithDatum slang
       produceScript $ hashPlutusScript plutus
 
     -- produce a utxo with a succeeding script

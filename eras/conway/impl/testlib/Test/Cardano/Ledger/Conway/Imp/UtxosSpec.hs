@@ -185,243 +185,132 @@ conwayFeaturesPlutusV1V2FailureSpec ::
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayFeaturesPlutusV1V2FailureSpec = do
-  describe "Conway features fail in Plutusdescribe v1 and v2" $ do
-    describe "Unsupported Fields" $ do
-      describe "CurrentTreasuryValue" $ do
-        it "V1" $ do
-          donation <- arbitrary
-          submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
-          passEpoch
-          testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-            (SJust donation)
-            currentTreasuryValueTxBodyL
-            $ inject (CurrentTreasuryFieldNotSupported @era donation)
-        it "V2" $ do
-          donation <- arbitrary
-          submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
-          passEpoch
-          testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-            (SJust donation)
-            currentTreasuryValueTxBodyL
-            $ inject (CurrentTreasuryFieldNotSupported @era donation)
-      describe "VotingProcedures" $ do
-        it "V1" $ do
-          action <- mkMinFeeUpdateGovAction SNothing
-          (ccCred :| _) <- registerInitialCommittee
-          proposal <- submitGovAction action
-          let badField =
-                VotingProcedures
-                  $ Map.singleton
-                    (CommitteeVoter ccCred)
-                  $ Map.singleton proposal
-                  $ VotingProcedure VoteYes SNothing
-          testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-            badField
-            votingProceduresTxBodyL
+  describe "Conway features fail in Plutus" $ do
+    forM_ @[] [PlutusV1 .. PlutusV2] $ \lang ->
+      withSLanguage lang $ \slang -> describe (show slang) $ do
+        describe "Unsupported Fields" $ do
+          it "CurrentTreasuryValue" $ do
+            donation <- arbitrary
+            submitAnyTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+            passEpoch
+            testPlutusV1V2Failure
+              (hashPlutusScript $ redeemerSameAsDatum slang)
+              (SJust donation)
+              currentTreasuryValueTxBodyL
+              $ inject (CurrentTreasuryFieldNotSupported @era donation)
+          it "VotingProcedures" $ do
+            action <- mkMinFeeUpdateGovAction SNothing
+            (ccCred :| _) <- registerInitialCommittee
+            proposal <- submitGovAction action
+            let badField =
+                  VotingProcedures
+                    $ Map.singleton
+                      (CommitteeVoter ccCred)
+                    $ Map.singleton proposal
+                    $ VotingProcedure VoteYes SNothing
+            testPlutusV1V2Failure
+              (hashPlutusScript $ redeemerSameAsDatum slang)
+              badField
+              votingProceduresTxBodyL
+              $ inject
+              $ VotingProceduresFieldNotSupported badField
+          it "ProposalProcedures" $ do
+            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+            accountAddress <- registerAccountAddress
+            let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
+            testPlutusV1V2Failure
+              (hashPlutusScript $ redeemerSameAsDatum slang)
+              badField
+              proposalProceduresTxBodyL
+              $ inject
+              $ ProposalProceduresFieldNotSupported badField
+          it "TreasuryDonation"
+            $ testPlutusV1V2Failure
+              (hashPlutusScript $ redeemerSameAsDatum slang)
+              (Coin 10_000)
+              treasuryDonationTxBodyL
             $ inject
-            $ VotingProceduresFieldNotSupported badField
-        it "V2" $ do
-          action <- mkMinFeeUpdateGovAction SNothing
-          (ccCred :| _) <- registerInitialCommittee
-          proposal <- submitGovAction action
-          let badField =
-                VotingProcedures
-                  $ Map.singleton
-                    (CommitteeVoter ccCred)
-                  $ Map.singleton proposal
-                  $ VotingProcedure VoteYes SNothing
-          testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-            badField
-            votingProceduresTxBodyL
-            $ inject
-            $ VotingProceduresFieldNotSupported badField
-      describe "ProposalProcedures" $ do
-        it "V1" $ do
-          deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          accountAddress <- registerAccountAddress
-          let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
-          testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-            badField
-            proposalProceduresTxBodyL
-            $ inject
-            $ ProposalProceduresFieldNotSupported badField
-        it "V2" $ do
-          deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-          accountAddress <- registerAccountAddress
-          let badField = OSet.singleton $ ProposalProcedure deposit accountAddress InfoAction def
-          testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-            badField
-            proposalProceduresTxBodyL
-            $ inject
-            $ ProposalProceduresFieldNotSupported badField
-      describe "TreasuryDonation" $ do
-        it "V1"
-          $ testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-            (Coin 10_000)
-            treasuryDonationTxBodyL
-          $ inject
-          $ TreasuryDonationFieldNotSupported @era
-          $ Coin 10_000
-        it "V2"
-          $ testPlutusV1V2Failure
-            (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-            (Coin 10_000)
-            treasuryDonationTxBodyL
-          $ inject
-          $ TreasuryDonationFieldNotSupported @era
-          $ Coin 10_000
-    describe "Certificates" $ do
-      describe "Translated" $ do
-        let testCertificateTranslated okCert txIn = do
-              submitAnyTx_
-                ( mkBasicTx mkBasicTxBody
-                    & bodyTxL . inputsTxBodyL
-                      .~ Set.singleton txIn
-                    & bodyTxL . certsTxBodyL
-                      .~ SSeq.singleton okCert
-                )
-        describe "RegDepositTxCert" $ do
-          it "V1" $ do
-            stakingC <- KeyHashObj <$> freshKeyHash
-            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-            let regDepositTxCert = RegDepositTxCert stakingC deposit
-            testCertificateTranslated regDepositTxCert
-              =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-          it "V2" $ do
-            stakingC <- KeyHashObj <$> freshKeyHash
-            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-            let regDepositTxCert = RegDepositTxCert stakingC deposit
-            testCertificateTranslated regDepositTxCert
-              =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-        describe "UnRegDepositTxCert" $ do
-          it "V1" $ do
-            (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000_000_000
-            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-            let unRegDepositTxCert = UnRegDepositTxCert stakingC deposit
-            testCertificateTranslated unRegDepositTxCert
-              =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-          it "V2" $ do
-            (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000_000_000
-            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-            let unRegDepositTxCert = UnRegDepositTxCert stakingC deposit
-            testCertificateTranslated unRegDepositTxCert
-              =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-      describe "Unsupported" $ do
-        let testCertificateNotSupportedV1 badCert =
-              testCertificateNotSupported badCert
-                =<< produceScript @era (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-            testCertificateNotSupportedV2 badCert =
-              testCertificateNotSupported badCert
-                =<< produceScript @era (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-            testCertificateNotSupported badCert txIn = do
-              submitFailingTx
-                ( mkBasicTx mkBasicTxBody
-                    & bodyTxL . inputsTxBodyL
-                      .~ Set.singleton txIn
-                    & bodyTxL . certsTxBodyL
-                      .~ SSeq.singleton badCert
-                )
-                ( pure . injectFailure $
-                    Alonzo.CollectErrors
-                      [ BadTranslation $
-                          inject $
-                            Alonzo.CertificateNotSupported badCert
-                      ]
-                )
-        describe "DelegTxCert" $ do
-          it "V1" $ do
-            (drep, delegator, _) <- setupSingleDRep 1_000_000_000
-            let delegTxCert =
-                  DelegTxCert @era
-                    delegator
-                    (DelegVote (DRepCredential drep))
-            testCertificateNotSupportedV1 delegTxCert
-          it "V2" $ do
-            (drep, delegator, _) <- setupSingleDRep 1_000_000_000
-            let delegTxCert =
-                  DelegTxCert @era
-                    delegator
-                    (DelegVote (DRepCredential drep))
-            testCertificateNotSupportedV2 delegTxCert
-        describe "RegDepositDelegTxCert" $ do
-          it "V1" $ do
-            (drep, _, _) <- setupSingleDRep 1_000_000_000
-            unregisteredDelegatorKH <- freshKeyHash
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            let regDepositDelegTxCert =
-                  RegDepositDelegTxCert @era
-                    (KeyHashObj unregisteredDelegatorKH)
-                    (DelegVote (DRepCredential drep))
-                    (pp ^. ppKeyDepositL)
-            testCertificateNotSupportedV1 regDepositDelegTxCert
-          it "V2" $ do
-            (drep, _, _) <- setupSingleDRep 1_000_000_000
-            unregisteredDelegatorKH <- freshKeyHash
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            let regDepositDelegTxCert =
-                  RegDepositDelegTxCert @era
-                    (KeyHashObj unregisteredDelegatorKH)
-                    (DelegVote (DRepCredential drep))
-                    (pp ^. ppKeyDepositL)
-            testCertificateNotSupportedV2 regDepositDelegTxCert
-        describe "AuthCommitteeHotKeyTxCert" $ do
-          it "V1" $ do
-            coldKey <- elements . Set.toList =<< getCommitteeMembers
-            hotKey <- KeyHashObj <$> freshKeyHash
-            let authCommitteeHotKeyTxCert = AuthCommitteeHotKeyTxCert @era coldKey hotKey
-            testCertificateNotSupportedV1 authCommitteeHotKeyTxCert
-          it "V2" $ do
-            coldKey <- elements . Set.toList =<< getCommitteeMembers
-            hotKey <- KeyHashObj <$> freshKeyHash
-            let authCommitteeHotKeyTxCert = AuthCommitteeHotKeyTxCert @era coldKey hotKey
-            testCertificateNotSupportedV2 authCommitteeHotKeyTxCert
-        describe "ResignCommitteeColdTxCert" $ do
-          it "V1" $ do
-            coldKey <- elements . Set.toList =<< getCommitteeMembers
-            let resignCommitteeColdTxCert = ResignCommitteeColdTxCert @era coldKey SNothing
-            testCertificateNotSupportedV1 resignCommitteeColdTxCert
-          it "V2" $ do
-            coldKey <- elements . Set.toList =<< getCommitteeMembers
-            let resignCommitteeColdTxCert = ResignCommitteeColdTxCert @era coldKey SNothing
-            testCertificateNotSupportedV2 resignCommitteeColdTxCert
-        describe "RegDRepTxCert" $ do
-          it "V1" $ do
-            unregisteredDRepKH <- freshKeyHash
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            testCertificateNotSupportedV1 $
-              RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (pp ^. ppDRepDepositL) SNothing
-          it "V2" $ do
-            unregisteredDRepKH <- freshKeyHash
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            testCertificateNotSupportedV2 $
-              RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (pp ^. ppDRepDepositL) SNothing
-        describe "UnRegDRepTxCert" $ do
-          it "V1" $ do
-            (drepKH, _, _) <- setupSingleDRep 1_000_000_000
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (pp ^. ppDRepDepositL)
-            testCertificateNotSupportedV1 unRegDRepTxCert
-          it "V1" $ do
-            (drepKH, _, _) <- setupSingleDRep 1_000_000_000
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (pp ^. ppDRepDepositL)
-            testCertificateNotSupportedV2 unRegDRepTxCert
-        describe "UpdateDRepTxCert" $ do
-          it "V1" $ do
-            (drepKH, _, _) <- setupSingleDRep 1_000_000_000
-            let updateDRepTxCert = UpdateDRepTxCert @era drepKH SNothing
-            testCertificateNotSupportedV1 updateDRepTxCert
-          it "V2" $ do
-            (drepKH, _, _) <- setupSingleDRep 1_000_000_000
-            let updateDRepTxCert = UpdateDRepTxCert @era drepKH SNothing
-            testCertificateNotSupportedV2 updateDRepTxCert
+            $ TreasuryDonationFieldNotSupported @era
+            $ Coin 10_000
+        describe "Certificates" $ do
+          describe "Translated" $ do
+            let testCertificateTranslated okCert txIn = do
+                  submitAnyTx_
+                    ( mkBasicTx mkBasicTxBody
+                        & bodyTxL . inputsTxBodyL
+                          .~ Set.singleton txIn
+                        & bodyTxL . certsTxBodyL
+                          .~ SSeq.singleton okCert
+                    )
+            it "RegDepositTxCert" $ do
+              stakingC <- KeyHashObj <$> freshKeyHash
+              deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+              let regDepositTxCert = RegDepositTxCert stakingC deposit
+              testCertificateTranslated regDepositTxCert
+                =<< produceScript (hashPlutusScript $ redeemerSameAsDatum slang)
+            it "UnRegDepositTxCert" $ do
+              (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000_000_000
+              deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+              let unRegDepositTxCert = UnRegDepositTxCert stakingC deposit
+              testCertificateTranslated unRegDepositTxCert
+                =<< produceScript (hashPlutusScript $ redeemerSameAsDatum slang)
+          describe "Unsupported" $ do
+            let testCertificateNotSupported badCert = do
+                  txIn <- produceScript @era (hashPlutusScript $ redeemerSameAsDatum slang)
+                  submitFailingTx
+                    ( mkBasicTx mkBasicTxBody
+                        & bodyTxL . inputsTxBodyL
+                          .~ Set.singleton txIn
+                        & bodyTxL . certsTxBodyL
+                          .~ SSeq.singleton badCert
+                    )
+                    ( pure . injectFailure $
+                        Alonzo.CollectErrors
+                          [ BadTranslation $
+                              inject $
+                                Alonzo.CertificateNotSupported badCert
+                          ]
+                    )
+            it "DelegTxCert" $ do
+              (drep, delegator, _) <- setupSingleDRep 1_000_000_000
+              let delegTxCert =
+                    DelegTxCert @era
+                      delegator
+                      (DelegVote (DRepCredential drep))
+              testCertificateNotSupported delegTxCert
+            it "RegDepositDelegTxCert" $ do
+              (drep, _, _) <- setupSingleDRep 1_000_000_000
+              unregisteredDelegatorKH <- freshKeyHash
+              pp <- getsNES $ nesEsL . curPParamsEpochStateL
+              let regDepositDelegTxCert =
+                    RegDepositDelegTxCert @era
+                      (KeyHashObj unregisteredDelegatorKH)
+                      (DelegVote (DRepCredential drep))
+                      (pp ^. ppKeyDepositL)
+              testCertificateNotSupported regDepositDelegTxCert
+            it "AuthCommitteeHotKeyTxCert" $ do
+              coldKey <- elements . Set.toList =<< getCommitteeMembers
+              hotKey <- KeyHashObj <$> freshKeyHash
+              let authCommitteeHotKeyTxCert = AuthCommitteeHotKeyTxCert @era coldKey hotKey
+              testCertificateNotSupported authCommitteeHotKeyTxCert
+            it "ResignCommitteeColdTxCert" $ do
+              coldKey <- elements . Set.toList =<< getCommitteeMembers
+              let resignCommitteeColdTxCert = ResignCommitteeColdTxCert @era coldKey SNothing
+              testCertificateNotSupported resignCommitteeColdTxCert
+            it "RegDRepTxCert" $ do
+              unregisteredDRepKH <- freshKeyHash
+              pp <- getsNES $ nesEsL . curPParamsEpochStateL
+              testCertificateNotSupported $
+                RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (pp ^. ppDRepDepositL) SNothing
+            it "UnRegDRepTxCert" $ do
+              (drepKH, _, _) <- setupSingleDRep 1_000_000_000
+              pp <- getsNES $ nesEsL . curPParamsEpochStateL
+              let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (pp ^. ppDRepDepositL)
+              testCertificateNotSupported unRegDRepTxCert
+            it "UpdateDRepTxCert" $ do
+              (drepKH, _, _) <- setupSingleDRep 1_000_000_000
+              let updateDRepTxCert = UpdateDRepTxCert @era drepKH SNothing
+              testCertificateNotSupported updateDRepTxCert
 
 govPolicySpec ::
   forall era.
@@ -463,50 +352,52 @@ govPolicySpec = do
           tx
           [injectFailure $ Shelley.ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash]
 
-    it "alwaysSucceeds Plutus govPolicy validates" $ whenPostBootstrap $ do
-      let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
-      committeeMembers' <- registerInitialCommittee
-      (dRep, _, _) <- setupSingleDRep 1_000_000
-      anchor <- arbitrary
-      void $
-        enactConstitution
-          SNothing
-          (Constitution anchor (SJust alwaysSucceedsSh))
-          dRep
-          committeeMembers'
-      accountAddress <- registerAccountAddress
+    forM_ [l | l <- eraLanguages @era, l >= PlutusV3] $ \lang ->
+      withSLanguage lang $ \slang -> describe (show slang) $ do
+        it "alwaysSucceeds Plutus govPolicy validates" $ whenPostBootstrap $ do
+          let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum slang)
+          committeeMembers' <- registerInitialCommittee
+          (dRep, _, _) <- setupSingleDRep 1_000_000
+          anchor <- arbitrary
+          void $
+            enactConstitution
+              SNothing
+              (Constitution anchor (SJust alwaysSucceedsSh))
+              dRep
+              committeeMembers'
+          accountAddress <- registerAccountAddress
 
-      impAnn "ParameterChange" $ do
-        let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
-        let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
-        mkProposal govAction >>= submitProposal_
-      impAnn "TreasuryWithdrawals" $ do
-        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
-        let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
-        mkProposal govAction >>= submitProposal_
+          impAnn "ParameterChange" $ do
+            let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
+            let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
+            mkProposal govAction >>= submitProposal_
+          impAnn "TreasuryWithdrawals" $ do
+            let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
+            let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
+            mkProposal govAction >>= submitProposal_
 
-    it "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
-      let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
-      committeeMembers' <- registerInitialCommittee
-      (dRep, _, _) <- setupSingleDRep 1_000_000
-      anchor <- arbitrary
-      void $
-        enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMembers'
+        it "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
+          let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum slang)
+          committeeMembers' <- registerInitialCommittee
+          (dRep, _, _) <- setupSingleDRep 1_000_000
+          anchor <- arbitrary
+          void $
+            enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMembers'
 
-      impAnn "ParameterChange" $ do
-        let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
-        let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysFailsSh)
-        proposal <- mkProposal govAction
-        let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        submitPhase2Invalid_ tx
+          impAnn "ParameterChange" $ do
+            let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
+            let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysFailsSh)
+            proposal <- mkProposal govAction
+            let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+            submitPhase2Invalid_ tx
 
-      impAnn "TreasuryWithdrawals" $ do
-        accountAddress <- registerAccountAddress
-        let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
-        let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
-        proposal <- mkProposal govAction
-        let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        submitPhase2Invalid_ tx
+          impAnn "TreasuryWithdrawals" $ do
+            accountAddress <- registerAccountAddress
+            let withdrawals = Map.fromList [(accountAddress, Coin 1000)]
+            let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
+            proposal <- mkProposal govAction
+            let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+            submitPhase2Invalid_ tx
 
 costModelsSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 costModelsSpec =

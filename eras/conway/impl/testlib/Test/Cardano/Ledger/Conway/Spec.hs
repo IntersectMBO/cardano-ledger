@@ -8,7 +8,6 @@
 
 module Test.Cardano.Ledger.Conway.Spec (spec) where
 
-import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
@@ -41,5 +40,3 @@ spec =
     Regression.spec @era
     describe "TxInfo" $ do
       BabbageTxInfo.spec @era
-      describe "PlutusV3" $
-        BabbageTxInfo.txInfoSpec @era SPlutusV3

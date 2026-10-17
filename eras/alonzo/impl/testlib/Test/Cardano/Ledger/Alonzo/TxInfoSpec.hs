@@ -1,9 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec (spec) where
+module Test.Cardano.Ledger.Alonzo.TxInfoSpec (spec) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
@@ -21,8 +23,8 @@ import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
-spec :: Spec
-spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
+spec :: forall era. AlonzoEraImp era => Spec
+spec = withImpInit @(LedgerSpec era) $ describe "TxInfo" $ do
   describe "PlutusV1" $ do
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxOuts" $ do
       pv <- getProtVer
@@ -33,15 +35,11 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
       utxo <- getUTxO
       let
         byronTxOut = mkBasicTxOut byronAddr . inject $ Coin 1
-        tx :: Tx TopTx AlonzoEra
+        tx :: Tx TopTx era
         tx =
-          mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL
-              . inputsTxBodyL
-              .~ Set.singleton shelleyTxIn
-            & bodyTxL
-              . outputsTxBodyL
-              .~ SSeq.singleton byronTxOut
+          mkBasicTx @era mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ Set.singleton shelleyTxIn
+            & bodyTxL . outputsTxBodyL .~ SSeq.singleton byronTxOut
         lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
@@ -53,14 +51,10 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
       utxo <- getUTxO
       let
         shelleyTxOut = mkBasicTxOut shelleyAddr . inject $ Coin 1
-        tx :: Tx TopTx AlonzoEra
+        tx :: Tx TopTx era
         tx =
-          mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL
-              . inputsTxBodyL
-              .~ Set.singleton byronTxIn
-            & bodyTxL
-              . outputsTxBodyL
-              .~ SSeq.singleton shelleyTxOut
+          mkBasicTx @era mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ Set.singleton byronTxIn
+            & bodyTxL . outputsTxBodyL .~ SSeq.singleton shelleyTxOut
         lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti

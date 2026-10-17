@@ -187,7 +187,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Plutus.Language (Language (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.API (ApplyTxError)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
@@ -339,11 +339,7 @@ instance AllegraEraImp ConwayEra
 
 instance MaryEraImp ConwayEra
 
-instance AlonzoEraImp ConwayEra where
-  scriptTestContexts =
-    plutusTestScripts SPlutusV1
-      <> plutusTestScripts SPlutusV2
-      <> plutusTestScripts SPlutusV3
+instance AlonzoEraImp ConwayEra
 
 instance BabbageEraImp ConwayEra
 

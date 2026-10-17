@@ -18,7 +18,8 @@
 
 module Test.Cardano.Ledger.Alonzo.ImpTest (
   module Test.Cardano.Ledger.Mary.ImpTest,
-  AlonzoEraImp (..),
+  AlonzoEraImp,
+  scriptTestContexts,
   impLookupPlutusScript,
   malformedPlutus,
   addCollateralInput,
@@ -66,6 +67,7 @@ import Cardano.Ledger.Alonzo.Rules (
   scriptFailureToFailureDescription,
  )
 import Cardano.Ledger.Alonzo.Scripts (
+  eraLanguages,
   plutusScriptLanguage,
   toAsItem,
   toAsIx,
@@ -93,6 +95,7 @@ import Cardano.Ledger.Plutus (
   hashData,
   hashPlutusScript,
   plutusLanguage,
+  withSLanguage,
  )
 import Cardano.Ledger.Shelley.API.Mempool (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -142,8 +145,9 @@ class
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   ) =>
   AlonzoEraImp era
-  where
-  scriptTestContexts :: Map ScriptHash ScriptTestContext
+
+scriptTestContexts :: forall era. AlonzoEraImp era => Map ScriptHash ScriptTestContext
+scriptTestContexts = foldMap (`withSLanguage` plutusTestScripts) $ eraLanguages @era
 
 makeCollateralInput :: ShelleyEraImp era => ImpTestM era TxIn
 makeCollateralInput = do
@@ -462,8 +466,7 @@ instance AllegraEraImp AlonzoEra
 
 instance MaryEraImp AlonzoEra
 
-instance AlonzoEraImp AlonzoEra where
-  scriptTestContexts = plutusTestScripts SPlutusV1
+instance AlonzoEraImp AlonzoEra
 
 impLookupScriptContext ::
   forall era.

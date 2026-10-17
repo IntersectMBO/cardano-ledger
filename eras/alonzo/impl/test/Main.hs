@@ -12,8 +12,8 @@ import qualified Test.Cardano.Ledger.Alonzo.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Alonzo.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
-import qualified Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
+import qualified Test.Cardano.Ledger.Alonzo.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Era
@@ -39,4 +39,4 @@ main =
       CostModelsSpec.spec @AlonzoEra
     describe "TxWits" $ do
       TxWitsSpec.spec @AlonzoEra
-    TxInfo.spec
+    TxInfo.spec @AlonzoEra

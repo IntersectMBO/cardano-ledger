@@ -9,6 +9,7 @@
 module Test.Cardano.Ledger.Conway.Imp.UtxowSpec (spec) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage.Tx (ScriptIntegrity (..), getLanguageView)
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -39,7 +40,12 @@ import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Credential (Credential (..), StakeReference)
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
-import Cardano.Ledger.Plutus (Language (..), SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Plutus (
+  PlutusLanguage,
+  SLanguage,
+  hashPlutusScript,
+  withSLanguage,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -55,7 +61,8 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   it "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
-    fixedTx <- fixupTx =<< setupBadPPViewHashTx
+    lang <- elements $ eraLanguages @era
+    fixedTx <- fixupTx =<< withSLanguage lang setupBadPPViewHashTx
     badScriptIntegrityHash <- arbitrary
     tx <- substituteIntegrityHashAndFixWits badScriptIntegrityHash fixedTx
     scriptIntegrityHash <- computeScriptIntegrityHash tx
@@ -74,11 +81,12 @@ spec = describe "UTXOW" $ do
   disableInConformanceIt "Fails with PPViewHashesDontMatchInformative after PV 11"
     . whenMajorVersionAtLeast @11
     $ do
-      fixedTx <- fixupTx =<< setupBadPPViewHashTx
+      lang <- elements $ eraLanguages @era
+      fixedTx <- fixupTx =<< withSLanguage lang setupBadPPViewHashTx
       pp <- getsPParams id
       badScriptIntegrityHash <- arbitrary
       let
-        langView = [getLanguageView pp PlutusV2]
+        langView = [getLanguageView pp lang]
         scriptIntegrity = ScriptIntegrity @era redeemers dats langView
         redeemers = fixedTx ^. witsTxL . rdmrsTxWitsL
         dats = fixedTx ^. witsTxL . datsTxWitsL
@@ -127,17 +135,20 @@ spec = describe "UTXOW" $ do
         ]
 
 setupBadPPViewHashTx ::
-  forall era.
-  ConwayEraImp era =>
+  forall era l.
+  ( ConwayEraImp era
+  , PlutusLanguage l
+  ) =>
+  SLanguage l ->
   ImpTestM era (Tx TopTx era)
-setupBadPPViewHashTx = do
+setupBadPPViewHashTx slang = do
   modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1)
   someKeyHash <- arbitrary @StakeReference
   let scriptTxOut =
         mkBasicTxOut
           ( Addr
               Testnet
-              (ScriptHashObj (hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV2))
+              (ScriptHashObj (hashPlutusScript $ alwaysSucceedsWithDatum slang))
               someKeyHash
           )
           (inject $ Coin 1_000_000)
