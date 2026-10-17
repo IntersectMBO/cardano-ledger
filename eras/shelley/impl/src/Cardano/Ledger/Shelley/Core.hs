@@ -23,6 +23,7 @@ import Cardano.Ledger.Core (
     UpgradePParams,
     applyPPUpdates,
     ppDG,
+    ppMinPoolMarginG,
     ppProtocolVersionL,
     ppuProtocolVersionL
   ),

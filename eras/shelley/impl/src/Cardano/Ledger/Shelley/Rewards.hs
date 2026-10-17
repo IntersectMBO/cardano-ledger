@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.Rewards (
   StakeShare (..),
@@ -30,8 +31,9 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
   NonZero,
-  ProtVer,
+  ProtVer (..),
   UnitInterval,
+  natVersion,
   nonZeroOr,
   (%.),
   (%?),
@@ -269,6 +271,10 @@ notPoolOwner owners = \case
 rewardOnePoolMember ::
   -- | The protocol version
   ProtVer ->
+  -- | The minimum pool cost protocol parameter
+  Coin ->
+  -- | The minimum pool margin protocol parameter
+  UnitInterval ->
   -- | The total amount of stake in the system
   Coin ->
   -- | The set of registered stake credentials
@@ -285,7 +291,7 @@ rewardOnePoolMember ::
   -- This could be Nothing if the credential is no longer registered,
   -- if it is an owner, or if the reward is zero.
   Maybe Coin
-rewardOnePoolMember pv totalStake addrsRew rewardInfo hk (Coin c) =
+rewardOnePoolMember pv minCost minMargin totalStake addrsRew rewardInfo hk (Coin c) =
   if prefilter && notPoolOwner (spssSelfDelegatedOwners (poolPs rewardInfo)) hk && r /= Coin 0
     then Just r
     else Nothing
@@ -296,7 +302,11 @@ rewardOnePoolMember pv totalStake addrsRew rewardInfo hk (Coin c) =
     poolR = poolPot rewardInfo
     -- warning: totalStake could be zero!
     stakeShare = StakeShare $ c % unCoin totalStake
-    r = calcStakePoolMemberReward poolR spssCost spssMargin stakeShare sigma
+    clamp :: forall x. Ord x => x -> x -> x
+    clamp = if pvMajor pv >= natVersion @12 then max else const
+    effectiveCost = clamp spssCost minCost
+    effectiveMargin = clamp spssMargin minMargin
+    r = calcStakePoolMemberReward poolR effectiveCost effectiveMargin stakeShare sigma
 
 -- | Calculate single stake pool specific values for the reward computation.
 --
@@ -340,11 +350,15 @@ mkPoolRewardInfo
                 else mempty
             appPerf = mkApparentPerformance pp_d sigmaA numBlocksMade blocksTotal
             poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
+            clamp :: forall x. Ord x => x -> x -> x
+            clamp = if pvMajor (pp ^. ppProtocolVersionL) >= natVersion @12 then max else const
+            effectiveCost = clamp (spssCost stakePoolSnapShot) (pp ^. ppMinPoolCostL)
+            effectiveMargin = clamp (spssMargin stakePoolSnapShot) (pp ^. ppMinPoolMarginG)
             stakePoolOperatorReward =
               calcStakePoolOperatorReward
                 poolR
-                (spssCost stakePoolSnapShot)
-                (spssMargin stakePoolSnapShot)
+                effectiveCost
+                effectiveMargin
                 (StakeShare poolOwnerRelativeStake)
                 (StakeShare sigma)
             rewardInfo =

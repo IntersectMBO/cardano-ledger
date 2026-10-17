@@ -201,6 +201,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           (Map.keysSet (accounts ^. accountsMapL)) -- TODO optimize. This is an expensive operation
           totalStake
           (pr ^. ppProtocolVersionL)
+          (pr ^. ppMinPoolCostL)
+          (pr ^. ppMinPoolMarginG)
           blockProducingPoolInfo
       pulser :: Pulser
       pulser =
