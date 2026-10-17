@@ -42,7 +42,7 @@ import Cardano.Ledger.Plutus (
   Language (..),
   OrdExUnits (..),
   Plutus,
-  SLanguage (..),
+  PlutusLanguage,
   hashData,
   hashPlutusScript,
   withSLanguage,
@@ -302,40 +302,42 @@ spec = describe "UTXOW" $ do
       submitFailingTx tx [injectFailure $ NotAllowedSupplementalDatums (NES.singleton datumHash) []]
 
   describe "PlutusV4" $ do
-    it "Extra redeemer for a key-locked certificate fails" $ do
-      let plutus = alwaysSucceedsNoDatum SPlutusV4
-      script <- fromPlutusScript <$> mkPlutusScript plutus
-      refAddr <- freshKeyAddrNoPtr_
-      txInitial <-
-        impAnn "Sumbitting initial TX"
-          . submitTx
-          $ mkBasicTx mkBasicTxBody
-            & bodyTxL . outputsTxBodyL
-              .~ [ mkBasicTxOut (mkAddr (hashPlutusScript plutus) StakeRefNull) mempty
-                 , mkBasicTxOut refAddr mempty & referenceScriptTxOutL .~ SJust script
-                 ]
-      stakeCred <- KeyHashObj <$> freshKeyHash
-      deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      redeemerData <- arbitrary @(Data era)
-      let prp = mkCertifyingPurpose $ AsIx 0
-          tx :: forall l. Typeable l => Tx l era
-          tx =
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
-              & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
-              & bodyTxL . certsTxBodyL .~ [RegDepositTxCert stakeCred deposit]
-      -- The extra redeemer resolves to an existing item that is not script-locked. UTXOW
-      -- reports it as ExtraRedeemers and, unlike earlier Plutus versions, PlutusV4 TxInfo
-      -- translation also fails with ScriptHashNotFoundForPurpose.
-      submitFailingTx
-        (tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (redeemerData, ExUnits 0 0))
-        [ injectFailure $ Alonzo.ExtraRedeemers [prp]
-        , injectFailure $
-            CollectErrors
-              [ BadTranslation . inject $ ScriptHashNotFoundForPurpose prp
-              ]
-        ]
-      submitAnyTx_ tx
+    forM_ [l | l <- eraLanguages @era, l >= PlutusV4] $ \lang ->
+      withSLanguage lang $ \slang -> do
+        it "Extra redeemer for a key-locked certificate fails" $ do
+          let plutus = alwaysSucceedsNoDatum slang
+          script <- fromPlutusScript <$> mkPlutusScript plutus
+          refAddr <- freshKeyAddrNoPtr_
+          txInitial <-
+            impAnn "Sumbitting initial TX"
+              . submitTx
+              $ mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL
+                  .~ [ mkBasicTxOut (mkAddr (hashPlutusScript plutus) StakeRefNull) mempty
+                     , mkBasicTxOut refAddr mempty & referenceScriptTxOutL .~ SJust script
+                     ]
+          stakeCred <- KeyHashObj <$> freshKeyHash
+          deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+          redeemerData <- arbitrary @(Data era)
+          let prp = mkCertifyingPurpose $ AsIx 0
+              tx :: forall l. Typeable l => Tx l era
+              tx =
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . inputsTxBodyL .~ [txInAt 0 txInitial]
+                  & bodyTxL . referenceInputsTxBodyL .~ [txInAt 1 txInitial]
+                  & bodyTxL . certsTxBodyL .~ [RegDepositTxCert stakeCred deposit]
+          -- The extra redeemer resolves to an existing item that is not script-locked. UTXOW
+          -- reports it as ExtraRedeemers and, unlike earlier Plutus versions, PlutusV4 TxInfo
+          -- translation also fails with ScriptHashNotFoundForPurpose.
+          submitFailingTx
+            (tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (redeemerData, ExUnits 0 0))
+            [ injectFailure $ Alonzo.ExtraRedeemers [prp]
+            , injectFailure $
+                CollectErrors
+                  [ BadTranslation . inject $ ScriptHashNotFoundForPurpose prp
+                  ]
+            ]
+          submitAnyTx_ tx
 
   describe "ExUnits" $
     forM_ (filter (>= PlutusV4) $ eraLanguages @era) $ \lang ->
@@ -371,34 +373,35 @@ spec = describe "UTXOW" $ do
                        , (goodPurpose, Left . ContextError . inject $ ScriptHashNotFoundForPurpose badPurpose)
                        ]
 
-  describe "Sub-transaction Plutus evaluation" $ do
-    it "Evaluates every sub-transaction script during phase 2" $ do
-      passingSubTx <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum SPlutusV4
-      failingSubTx <- mkPlutusSpendingTx $ alwaysFailsNoDatum SPlutusV4
-      submitPhase2Invalid_ =<< withSubTransactions [passingSubTx, failingSubTx]
+  forM_ [l | l <- eraLanguages @era, l >= PlutusV4] $ \lang -> withSLanguage lang $ \slang ->
+    describe "Sub-transaction Plutus evaluation" $ do
+      it "Evaluates every sub-transaction script during phase 2" $ do
+        passingSubTx <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum slang
+        failingSubTx <- mkPlutusSpendingTx $ alwaysFailsNoDatum slang
+        submitPhase2Invalid_ =<< withSubTransactions [passingSubTx, failingSubTx]
 
-    -- See: https://github.com/IntersectMBO/formal-ledger-specifications/issues/723
-    disableInConformanceIt "Enforces the transaction budget across sub-transactions" $ do
-      subA <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum SPlutusV4
-      subB <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum SPlutusV4
-      tx <- withSubTransactions [subA, subB]
-      let limit = ExUnits 1_500_000 200_000_000
-      modifyPParams $ ppMaxTxExUnitsL .~ limit
-      submitFailingTx
-        tx
-        [ injectFailure $
-            Alonzo.ExUnitsTooBigUTxO $
-              Mismatch
-                { mismatchSupplied = OrdExUnits $ ExUnits 2_000_000 200_000_000
-                , mismatchExpected = OrdExUnits limit
-                }
-        ]
+      -- See: https://github.com/IntersectMBO/formal-ledger-specifications/issues/723
+      disableInConformanceIt "Enforces the transaction budget across sub-transactions" $ do
+        subA <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum slang
+        subB <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum slang
+        tx <- withSubTransactions [subA, subB]
+        let limit = ExUnits 1_500_000 200_000_000
+        modifyPParams $ ppMaxTxExUnitsL .~ limit
+        submitFailingTx
+          tx
+          [ injectFailure $
+              Alonzo.ExUnitsTooBigUTxO $
+                Mismatch
+                  { mismatchSupplied = OrdExUnits $ ExUnits 2_000_000 200_000_000
+                  , mismatchExpected = OrdExUnits limit
+                  }
+          ]
 
 -- Reference scripts avoid the unfinished PlutusV4 witness serialization.
 mkPlutusSpendingTx ::
-  forall era.
-  DijkstraEraImp era =>
-  Plutus 'PlutusV4 ->
+  forall era l.
+  (DijkstraEraImp era, PlutusLanguage l) =>
+  Plutus l ->
   ImpTestM era (Tx SubTx era)
 mkPlutusSpendingTx plutus = do
   script <- fromPlutusScript <$> mkPlutusScript plutus

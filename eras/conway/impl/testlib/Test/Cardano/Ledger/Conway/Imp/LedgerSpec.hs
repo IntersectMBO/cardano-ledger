@@ -8,6 +8,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (hardforkConwayBootstrapPhase)
@@ -16,7 +17,7 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Plutus (Language (..), SLanguage (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -188,7 +189,8 @@ spec = describe "LEDGER" $ do
 
   it "Withdraw from delegated and non-delegated staking script" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-    let scriptHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
+    lang <- elements [l | l <- eraLanguages @era, l >= PlutusV3]
+    let scriptHash = withSLanguage lang $ hashPlutusScript . alwaysSucceedsNoDatum
     let cred = ScriptHashObj scriptHash
     ra <- registerStakeCredential cred
     void $ delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
