@@ -87,10 +87,11 @@ test-suite tests
   build-depends:
     QuickCheck,
     base,
+    cardano-base:testlib,
     containers,
     hspec,
     hspec-core,
-    quickcheck-classes-base,
+    quickcheck-classes,
     vector-map,
 
 benchmark bench

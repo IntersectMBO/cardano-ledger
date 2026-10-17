@@ -9,9 +9,9 @@
 module Test.Cardano.Data.OMap.StrictSpec where
 
 import Data.OMap.Strict
-import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
+import Test.Cardano.Base.QuickCheck (testLawsGroup)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
 import Test.Hspec
@@ -143,16 +143,14 @@ spec =
           snd result `shouldSatisfy` invariantHolds'
     context "CBOR round-trip" $ do
       roundTripCborSpec @(OMap Int Int)
-    context "Typeclass laws" $ do
-      it "Type" $
-        lawsCheckOne
-          (Proxy :: Proxy (OMap Int Int))
-          [ eqLaws
-          , isListLaws
-          , semigroupLaws
-          , monoidLaws
-          , semigroupMonoidLaws
-          ]
+    context "Typeclass laws" $
+      testLawsGroup @(OMap Int Int)
+        [ eqLaws
+        , isListLaws
+        , semigroupLaws
+        , monoidLaws
+        , semigroupMonoidLaws
+        ]
 
 instance HasOKey Int Int where
   toOKey = id
