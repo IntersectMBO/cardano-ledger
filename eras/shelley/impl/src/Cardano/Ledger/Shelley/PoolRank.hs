@@ -18,7 +18,6 @@ module Cardano.Ledger.Shelley.PoolRank (
   getTopRankedPoolsVMap,
   nonMyopicStake,
   calcNonMyopicMemberReward,
-  nonMyopicMemberRew,
   percentile',
   Histogram (..),
   LogWeight (..),
@@ -428,18 +427,3 @@ calcNonMyopicMemberReward pp rPot poolId cost margin s sigma t topPools (Perform
       f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
       fHat = floor (p * fromRational (coinToRational f))
    in calcStakePoolMemberReward (Coin fHat) cost margin t nm
-
-nonMyopicMemberRew ::
-  EraPParams era =>
-  PParams era ->
-  Coin ->
-  StakePoolParams era ->
-  StakeShare ->
-  StakeShare ->
-  StakeShare ->
-  Set (KeyHash StakePool) ->
-  PerformanceEstimate ->
-  Coin
-nonMyopicMemberRew pp rPot pool =
-  calcNonMyopicMemberReward pp rPot (sppId pool) (sppCost pool) (sppMargin pool)
-{-# DEPRECATED nonMyopicMemberRew "In favor of `calcNonMyopicMemberReward`" #-}
