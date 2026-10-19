@@ -84,6 +84,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitFailingBlockM,
   withTxsInBlock_,
   withTxsInBlock,
+  withTxsInModifiedBlock,
   withTxsInFailingBlock,
   withTxsInFailingBlockM,
   modifyBlockBody,
@@ -1644,6 +1645,17 @@ withTxsInBlock ::
   ImpTestM era () ->
   ImpTestM era (Block TestBlockHeader era)
 withTxsInBlock = expectRightDeepExpr <=< withTxsInBlockEither id Nothing
+
+-- | Gather all the txs submitted by @act@, modify the block created from them with the supplied
+-- function and resubmit it as a block that's expected to succeed.
+withTxsInModifiedBlock ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  (Block TestBlockHeader era -> Block TestBlockHeader era) ->
+  ImpTestM era () ->
+  ImpTestM era (Block TestBlockHeader era)
+withTxsInModifiedBlock modifyBlock = expectRightDeepExpr <=< withTxsInBlockEither modifyBlock Nothing
 
 -- | Gather all the txs submitted by @act@ and resubmit them as a block
 -- that's expected to fail with the given predicate failures.
