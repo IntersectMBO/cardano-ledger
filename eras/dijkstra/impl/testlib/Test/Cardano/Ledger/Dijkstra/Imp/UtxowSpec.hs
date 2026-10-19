@@ -380,8 +380,7 @@ spec = describe "UTXOW" $ do
         failingSubTx <- mkPlutusSpendingTx $ alwaysFailsNoDatum slang
         submitPhase2Invalid_ =<< withSubTransactions [passingSubTx, failingSubTx]
 
-      -- See: https://github.com/IntersectMBO/formal-ledger-specifications/issues/723
-      disableInConformanceIt "Enforces the transaction budget across sub-transactions" $ do
+      it "Enforces the transaction budget across sub-transactions" $ do
         subA <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum slang
         subB <- mkPlutusSpendingTx $ alwaysSucceedsNoDatum slang
         tx <- withSubTransactions [subA, subB]
