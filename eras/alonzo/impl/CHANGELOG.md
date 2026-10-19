@@ -6,6 +6,15 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Alonzo.TxInfoSpec` module with:
+  - `genGoodBound`
+  - `genBadBound`
+  - `genOrderedPair`
+  - `genGoodValidityInterval`
+  - `genBadValidityInterval`
+  - `validBetweenEpochInfo`
+  - `testEpochInfo`
+  - `testSystemStart`
 * Change `scriptTestContexts` into a standalone top-level function
 * Change `mkTxWithPlutusAndBootstrapAddress` and `mkTokenMintingTx` to return `AnyLevelTx`
 * Add `DecCBOR` instances for `PlutusData` and `Data`
