@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec (spec) where
+module Test.Cardano.Ledger.Alonzo.TxInfoSpec (spec) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -36,12 +36,8 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
         tx :: Tx TopTx AlonzoEra
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL
-              . inputsTxBodyL
-              .~ Set.singleton shelleyTxIn
-            & bodyTxL
-              . outputsTxBodyL
-              .~ SSeq.singleton byronTxOut
+            & bodyTxL . inputsTxBodyL .~ Set.singleton shelleyTxIn
+            & bodyTxL . outputsTxBodyL .~ SSeq.singleton byronTxOut
         lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
     it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
@@ -56,11 +52,7 @@ spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
         tx :: Tx TopTx AlonzoEra
         tx =
           mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL
-              . inputsTxBodyL
-              .~ Set.singleton byronTxIn
-            & bodyTxL
-              . outputsTxBodyL
-              .~ SSeq.singleton shelleyTxOut
+            & bodyTxL . inputsTxBodyL .~ Set.singleton byronTxIn
+            & bodyTxL . outputsTxBodyL .~ SSeq.singleton shelleyTxOut
         lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
       void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
