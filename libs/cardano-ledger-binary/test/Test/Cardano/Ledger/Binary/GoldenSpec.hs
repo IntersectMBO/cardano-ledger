@@ -21,7 +21,6 @@ import Cardano.Crypto.Leios (
   LeiosSigningKey,
   Weight,
   aggregateLeiosCert,
-  leiosSignContext,
   mkLeiosCommittee,
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
@@ -50,10 +49,10 @@ spec =
           exampleLeiosCert =
             let sk = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0))
                 vk = deriveVerKeyDSIGN sk
-                pop = createPossessionProofDSIGN leiosSignContext sk
+                pop = createPossessionProofDSIGN sk
                 committee = mkLeiosCommittee (V.fromList [(SJust (vk, pop), 1 % 1)])
                 msg = "golden" :: BS.ByteString
-                sigs = Map.singleton (LeiosSeatId 0) (signDSIGN leiosSignContext msg sk)
+                sigs = Map.singleton (LeiosSeatId 0) (signDSIGN () msg sk)
              in case aggregateLeiosCert committee sigs of
                   Right cert -> cert
                   Left e -> error ("exampleLeiosCert: " <> show e)
