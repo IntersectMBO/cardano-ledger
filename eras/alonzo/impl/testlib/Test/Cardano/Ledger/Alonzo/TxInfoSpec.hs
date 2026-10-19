@@ -1,58 +1,65 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.TxInfoSpec (spec) where
+module Test.Cardano.Ledger.Alonzo.TxInfoSpec (
+  txInfoSpec,
+  validBetweenEpochInfo,
+  testEpochInfo,
+  testSystemStart,
+) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusTxInfo (..),
-  LedgerLevelTxInfo (..),
-  PlutusTxInfoResult (..),
- )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), transValidityInterval)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Plutus (SLanguage (..))
-import qualified Data.Sequence.Strict as SSeq
-import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
-import Lens.Micro.Mtl (use)
-import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
+import Cardano.Ledger.Slot (EpochInfo)
+import Cardano.Slotting.EpochInfo (EpochInfo (..), fixedEpochInfo)
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Data.Either (isRight)
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Test.Cardano.Ledger.Alonzo.ImpTest
-import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary (genOrderedPair)
 
-spec :: Spec
-spec = withImpInit @(LedgerSpec AlonzoEra) $ describe "TxInfo" $ do
-  describe "PlutusV1" $ do
-    it "toPlutusTxInfo does not fail when Byron scripts are present in TxOuts" $ do
-      pv <- getProtVer
-      Globals {epochInfo, systemStart} <- use impGlobalsL
-      (_, shelleyAddr) <- freshKeyAddr
-      byronAddr <- AddrBootstrap <$> freshBootstrapAddress
-      shelleyTxIn <- sendCoinTo shelleyAddr mempty
-      utxo <- getUTxO
-      let
-        byronTxOut = mkBasicTxOut byronAddr . inject $ Coin 1
-        tx :: Tx TopTx AlonzoEra
-        tx =
-          mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL . inputsTxBodyL .~ Set.singleton shelleyTxIn
-            & bodyTxL . outputsTxBodyL .~ SSeq.singleton byronTxOut
-        lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
-      void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
-    it "toPlutusTxInfo does not fail when Byron scripts are present in TxIns" $ do
-      pv <- getProtVer
-      Globals {epochInfo, systemStart} <- use impGlobalsL
-      (_, shelleyAddr) <- freshKeyAddr
-      byronAddr <- AddrBootstrap <$> freshBootstrapAddress
-      byronTxIn <- sendCoinTo byronAddr mempty
-      utxo <- getUTxO
-      let
-        shelleyTxOut = mkBasicTxOut shelleyAddr . inject $ Coin 1
-        tx :: Tx TopTx AlonzoEra
-        tx =
-          mkBasicTx @AlonzoEra mkBasicTxBody
-            & bodyTxL . inputsTxBodyL .~ Set.singleton byronTxIn
-            & bodyTxL . outputsTxBodyL .~ SSeq.singleton shelleyTxOut
-        lti = mkTestLedgerTxInfo pv epochInfo systemStart utxo tx $ LedgerTopTxInfo mempty
-      void $ expectRight $ unPlutusTxInfoResult $ toPlutusTxInfo SPlutusV1 lti
+txInfoSpec :: forall era. AlonzoEraImp era => Spec
+txInfoSpec = describe "Alonzo TxInfoSpec" $ do
+  describe "Translation" $ do
+    describe "transValidityInterval" $ do
+      prop "translates successfully if bounds are valid" $ do
+        (hi, lo) <- genOrderedPair
+        validityInterval <- genGoodValidityInterval lo hi
+        pure $
+          transValidityInterval
+            (Proxy @era)
+            (validBetweenEpochInfo lo hi)
+            testSystemStart
+            validityInterval
+            `shouldSatisfy` isRight
+      prop "fails to translate if the bounds are invalid" $ do
+        (hi, lo) <- genOrderedPair
+        validityInterval <- genBadValidityInterval lo hi
+        pure $
+          transValidityInterval
+            (Proxy @era)
+            (validBetweenEpochInfo lo hi)
+            testSystemStart
+            validityInterval
+            `shouldBeLeft` inject (TimeTranslationPastHorizon @era "out of valid range")
+
+validBetweenEpochInfo :: SlotNo -> SlotNo -> EpochInfo (Either Text)
+validBetweenEpochInfo start end =
+  testEpochInfo
+    { epochInfoSlotToRelativeTime_ = \slot ->
+        if slot > end || slot < start
+          then Left "out of valid range"
+          else epochInfoSlotToRelativeTime_ testEpochInfo slot
+    }
+
+testEpochInfo :: EpochInfo (Either a)
+testEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
+
+testSystemStart :: SystemStart
+testSystemStart = SystemStart $ posixSecondsToUTCTime 0

@@ -257,3 +257,12 @@ spec = describe "UTXOS" $ do
             submitTxAnn_ "Withdraw from script-controlled account" $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . withdrawalsTxBodyL .~ Withdrawals (Map.singleton account mempty)
+        describe "Translation" $ do
+          it "Plutus tx with upper bound at SlotNo maxBound is accepted" $ do
+            txIn <- produceScript $ hashPlutusScript (alwaysSucceedsWithDatum slang)
+            -- Triggering `TimeTranslationPastHorizon` is impossible
+            -- without modifying EpochInfo to produce invalid output
+            submitTx_ $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ [txIn]
+                & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing (SJust maxBound)

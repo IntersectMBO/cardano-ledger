@@ -32,6 +32,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   uniformSubSet,
   uniformSubMap,
   uniformSubMapElems,
+  genOrderedPair,
 
   -- * Era-aware generators
   genEraProtVer,
@@ -997,3 +998,9 @@ genericShrinkMemo ::
   a era ->
   [a era]
 genericShrinkMemo = fmap (mkMemoizedEra @era) . genericShrink . getMemoRawType
+
+genOrderedPair :: forall a. (Arbitrary a, Ord a) => Gen (a, a)
+genOrderedPair = do
+  a <- arbitrary
+  b <- arbitrary
+  pure (max a b, min a b)

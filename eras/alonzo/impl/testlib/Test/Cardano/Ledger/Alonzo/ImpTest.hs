@@ -40,6 +40,8 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   computeScriptIntegrity,
   mkTxWithPlutusAndBootstrapAddress,
   mkTokenMintingTx,
+  genGoodValidityInterval,
+  genBadValidityInterval,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -76,7 +78,7 @@ import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity, hashScriptIntegrity, mkScriptI
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), plutusScriptsWithContextStAnnTx)
-import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), PolicyID (..), multiAssetFromList)
@@ -637,3 +639,41 @@ mkTokenMintingTx sh = do
       mkBasicTx mkBasicTxBody
         & bodyTxL . mintTxBodyL .~ ma
         & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]
+
+genGoodBound :: MonadGen m => SlotNo -> SlotNo -> m (StrictMaybe SlotNo)
+genGoodBound slotLo@(SlotNo lo) slotHi@(SlotNo hi) =
+  oneof
+    [ pure SNothing
+    , SJust . SlotNo <$> choose (lo, hi)
+    , pure $ SJust slotLo
+    , pure $ SJust slotHi
+    ]
+
+genBadBound :: MonadGen m => SlotNo -> SlotNo -> m (StrictMaybe SlotNo)
+genBadBound (SlotNo lo) (SlotNo hi) =
+  SJust . SlotNo
+    <$> oneof
+      [ choose (minBound, pred lo)
+      , choose (succ hi, maxBound)
+      , pure $ pred lo
+      , pure $ succ hi
+      ]
+
+-- | Generate a validity interval where none of its end points are outside the
+-- provided range
+genGoodValidityInterval :: MonadGen m => SlotNo -> SlotNo -> m ValidityInterval
+genGoodValidityInterval lo hi =
+  ValidityInterval
+    <$> genGoodBound lo hi
+    <*> genGoodBound lo hi
+
+-- | Generate a validity interval where one or both of its end points are outside the
+-- provided range
+genBadValidityInterval :: MonadGen m => SlotNo -> SlotNo -> m ValidityInterval
+genBadValidityInterval lo hi =
+  uncurry ValidityInterval
+    <$> oneof
+      [ (,) <$> genGoodBound lo hi <*> genBadBound lo hi
+      , (,) <$> genBadBound lo hi <*> genGoodBound lo hi
+      , (,) <$> genBadBound lo hi <*> genBadBound lo hi
+      ]

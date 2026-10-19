@@ -24,6 +24,7 @@ instance EraSpec AlonzoEra where
     Imp.shelleyToBabbageSpec era
     Imp.alonzoToConwaySpec era
     Imp.spec era
+    Imp.alonzoOnlySpec
 
 main :: IO ()
 main =
@@ -39,4 +40,4 @@ main =
       CostModelsSpec.spec @AlonzoEra
     describe "TxWits" $ do
       TxWitsSpec.spec @AlonzoEra
-    TxInfo.spec
+    TxInfo.txInfoSpec @AlonzoEra
