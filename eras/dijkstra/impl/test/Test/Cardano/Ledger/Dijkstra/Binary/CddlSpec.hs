@@ -68,7 +68,8 @@ spec = do
         genNonEmptyAccountBalanceIntervals
         v
         "account_balance_intervals"
-      fullCddlSpec @(Value DijkstraEra) v "value"
+      modifyMaxSize (min 70) $
+        fullCddlSpec @(Value DijkstraEra) v "value"
       fullAnnCddlSpec @(TxBody TopTx DijkstraEra) v "transaction_body"
       fullAnnCddlSpec @(TxBody SubTx DijkstraEra) v "sub_transaction_body"
       fullAnnCddlSpec @(TxAuxData DijkstraEra) v "auxiliary_data"
