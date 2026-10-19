@@ -5,7 +5,7 @@ module Test.Cardano.Ledger.Api.LeiosSpec (spec) where
 
 import Cardano.Crypto.DSIGN (signDSIGN)
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Crypto.Leios (LeiosSeatId (..), aggregateLeiosCert, leiosSignContext)
+import Cardano.Crypto.Leios (LeiosSeatId (..), aggregateLeiosCert)
 import Cardano.Ledger.Api.Era (DijkstraEra)
 import Cardano.Ledger.Api.Leios
 import Cardano.Ledger.BaseTypes
@@ -45,7 +45,7 @@ mkValidLeiosCertWithEnv = do
     expectRightDeep $
       aggregateLeiosCert committee $
         Map.fromList
-          [ (LeiosSeatId i, signDSIGN leiosSignContext msg key)
+          [ (LeiosSeatId i, signDSIGN () msg key)
           | (i, key) <- zip [0 ..] (take 3 keys)
           ]
   pure (env, cert)

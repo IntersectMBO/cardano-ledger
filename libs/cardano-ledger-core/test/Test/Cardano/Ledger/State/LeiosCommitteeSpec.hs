@@ -5,7 +5,6 @@
 module Test.Cardano.Ledger.State.LeiosCommitteeSpec (spec) where
 
 import Cardano.Crypto.DSIGN (createPossessionProofDSIGN, deriveVerKeyDSIGN, genKeyDSIGN)
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (CompactForm (..))
@@ -42,7 +41,7 @@ validKey :: Int -> BlsKey
 validKey i =
   BlsKey
     { blsPubKey = deriveVerKeyDSIGN signKey
-    , blsPossessionProof = createPossessionProofDSIGN minSigPoPDST signKey
+    , blsPossessionProof = createPossessionProofDSIGN signKey
     }
   where
     signKey = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 (fromIntegral i)))

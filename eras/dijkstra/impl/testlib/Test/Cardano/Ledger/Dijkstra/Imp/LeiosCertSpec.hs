@@ -98,7 +98,7 @@ spec = describe "LEIOSCERT" $ do
     let msg = hashToBytes . extractHash $ announcingBlock ^. blockHeaderHashBlockHeaderG
     cert <-
       expectRightDeep $
-        aggregateLeiosCert committee [(LeiosSeatId 0, signDSIGN leiosSignContext msg signKey)]
+        aggregateLeiosCert committee [(LeiosSeatId 0, signDSIGN () msg signKey)]
     replicateM_ 14 passTick
     certifyInFailingBlock cert [injectFailure $ LeiosCertSignersWithoutKey [0]]
 
