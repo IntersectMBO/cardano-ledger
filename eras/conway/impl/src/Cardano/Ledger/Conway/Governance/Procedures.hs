@@ -428,6 +428,9 @@ instance DecCBOR Vote where
 instance EncCBOR Vote where
   encCBOR = encodeEnum
 
+-- TODO Since VotingProcedures requires at least one vote per voter, the inner
+-- type of `VotingProcedures` should use `NonEmptyMap` instead of `Map`. See
+-- https://github.com/IntersectMBO/cardano-ledger/issues/6173
 newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures :: Map Voter (Map GovActionId (VotingProcedure era))
   }

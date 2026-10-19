@@ -50,7 +50,12 @@ spec =
       huddleRoundTripCborSpec @(Timelock BabbageEra) v "native_script"
       huddleRoundTripAnnCborSpec @(Data BabbageEra) v "plutus_data"
       huddleRoundTripCborSpec @(Data BabbageEra) v "plutus_data"
-      huddleRoundTripCborSpec @(TxOut BabbageEra) v "transaction_output"
+      -- The number of assets the generator puts in a `multiasset` grows with roughly
+      -- size^2/4, so near the default max size of 100 it can occasionally exceed the
+      -- limit enforced by `isMultiAssetSmallEnough` and fail to decode with "MultiAsset
+      -- is too big to compact". A max size of 70 keeps it below that limit.
+      modifyMaxSize (min 70) $
+        huddleRoundTripCborSpec @(TxOut BabbageEra) v "transaction_output"
       huddleRoundTripAnnCborSpec @(Script BabbageEra) v "script"
       huddleRoundTripCborSpec @(Script BabbageEra) v "script"
       huddleRoundTripCborSpec @(Datum BabbageEra) v "datum_option"

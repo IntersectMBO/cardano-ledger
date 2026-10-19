@@ -307,6 +307,7 @@ test-suite tests
     Test.Cardano.Ledger.Conway.Binary.CddlSpec
     Test.Cardano.Ledger.Conway.GoldenSpec
     Test.Cardano.Ledger.Conway.GoldenTranslation
+    Test.Cardano.Ledger.Conway.Governance.ProceduresSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -324,7 +325,7 @@ test-suite tests
   build-depends:
     HUnit,
     base,
-    cardano-base:testlib,
+    cardano-base:testlib >=0.1.7.1,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-binary:testlib,
@@ -333,4 +334,6 @@ test-suite tests
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
     cardano-protocol:{cardano-protocol, testlib},
+    containers,
+    quickcheck-classes,
     testlib,

@@ -8,10 +8,10 @@ module Test.Cardano.Data.OSet.StrictSpec where
 import Cardano.Ledger.Binary (natVersion)
 import Control.Monad (forM_)
 import Data.OSet.Strict hiding (empty)
-import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, (><))
 import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set, elems, empty)
+import Test.Cardano.Base.QuickCheck (testLawsGroup)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, embedTripSpec, roundTripCborSpec)
 import Test.Cardano.StrictContainers.Instances ()
@@ -92,14 +92,12 @@ spec =
           \oset set -> set `shouldBe` toSet oset
         embedTripSpec v v (cborTrip @(OSet Word) @(Set Word)) $
           \set oset -> toSet oset `shouldBe` set
-    context "Typeclass laws" $ do
-      it "Type" $
-        lawsCheckOne
-          (Proxy :: Proxy (OSet Int))
-          [ eqLaws
-          , ordLaws
-          , isListLaws
-          , semigroupLaws
-          , monoidLaws
-          , semigroupMonoidLaws
-          ]
+    context "Typeclass laws" $
+      testLawsGroup @(OSet Int)
+        [ eqLaws
+        , ordLaws
+        , isListLaws
+        , semigroupLaws
+        , monoidLaws
+        , semigroupMonoidLaws
+        ]
