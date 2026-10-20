@@ -234,6 +234,8 @@ instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (DijkstraBbodyPredFailure era)
 
+instance ToExpr (DijkstraLeiosCertPredFailure era)
+
 instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (DijkstraMempoolPredFailure era)
