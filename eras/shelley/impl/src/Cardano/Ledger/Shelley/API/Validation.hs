@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curP
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import qualified Cardano.Ledger.Shelley.Rules as STS
-import Cardano.Ledger.Shelley.State ()
+import Cardano.Ledger.Shelley.State (ssLeiosCommitteeL, ssStakeSetL)
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq (NFData, deepseq)
 import Control.Monad.Except
@@ -218,6 +218,7 @@ mkBbodyEnv
     STS.BbodyEnv
       { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
       , STS.bbodyAccount = LedgerState.esChainAccountState nesEs
+      , STS.bbodyLeiosCommittee = nesEs ^. LedgerState.esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
       }
 
 updateNewEpochState ::
