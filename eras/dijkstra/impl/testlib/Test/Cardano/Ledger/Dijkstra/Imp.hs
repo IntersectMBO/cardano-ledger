@@ -43,6 +43,7 @@ spec era = do
   ConwayImp.spec era
   describe "DijkstraEra Onwards" $ withImpInitEachEraVersion era $ do
     BBODY.spec
+    LEIOSCERT.spec
     LEDGER.spec
     MEMPOOL.spec
     SUBLEDGER.spec

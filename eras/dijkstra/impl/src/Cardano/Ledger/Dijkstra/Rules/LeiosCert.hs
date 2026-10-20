@@ -31,7 +31,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, LEIOSCERT)
 import Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoSlotLength)
-import Cardano.Slotting.Time (slotLengthToMillisec)
+import Cardano.Slotting.Time (getSlotLength)
 import Control.DeepSeq (NFData)
 import Control.Monad (void)
 import Control.Monad.Trans.Reader (asks)
@@ -117,12 +117,15 @@ leiosCertTransition :: Era era => TransitionRule (LEIOSCERT era)
 leiosCertTransition = do
   TRC (LeiosCertEnv {..}, (), cert) <- judgmentContext
   ei <- liftSTS $ asks epochInfoPure
-  let slotLengthMs = slotLengthToMillisec $ runIdentity $ epochInfoSlotLength ei lseCurrentSlotNo
+  let slotLengthMs =
+        1000 * toRational (getSlotLength $ runIdentity $ epochInfoSlotLength ei lseCurrentSlotNo)
       delayMs =
         3 * toInteger (unMilliseconds32 lseAnnouncementPeriodLength)
           + toInteger (unMilliseconds32 lseVotePeriodLength)
           + toInteger (unMilliseconds32 lseDiffusionPeriodLength)
-      delaySlots = (delayMs + slotLengthMs - 1) `div` slotLengthMs
+      -- Keep the slot duration exact, including fractional milliseconds. Rational
+      -- arithmetic uses Integers, so neither the periods nor their sum can overflow.
+      delaySlots = ceiling $ fromInteger delayMs / slotLengthMs
       earliestSlot = toInteger (unSlotNo lseAnnouncementSlotNo) + delaySlots
   -- Compare as Integers so a delay near the end of SlotNo's range cannot wrap.
   toInteger (unSlotNo lseCurrentSlotNo)
