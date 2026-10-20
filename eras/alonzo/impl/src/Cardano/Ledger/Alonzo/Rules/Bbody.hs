@@ -193,7 +193,7 @@ bbodyTransition ::
   Shelley.ShelleyBbodyState era ->
   Block h era ->
   TransitionRule (EraRule "BBODY" era)
-bbodyTransition (Shelley.BbodyEnv pp account) (Shelley.BbodyState ls blocksMade) block@Block {blockBody} = do
+bbodyTransition (Shelley.BbodyEnv pp account _) (Shelley.BbodyState ls blocksMade) block@Block {blockBody} = do
   Shelley.validateBlockBodySize block (pp ^. ppProtocolVersionL)
 
   Shelley.validateBlockBodyHash block

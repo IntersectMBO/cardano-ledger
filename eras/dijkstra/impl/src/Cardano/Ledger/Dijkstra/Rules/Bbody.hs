@@ -361,7 +361,7 @@ dijkstraBbodyTransition ::
   TransitionRule (EraRule "BBODY" era)
 dijkstraBbodyTransition = do
   TRC
-    ( Shelley.BbodyEnv pp account
+    ( Shelley.BbodyEnv pp account _
       , Shelley.BbodyState ls blocksMade
       , LeiosBbodySignal block@Block {blockBody}
       ) <-

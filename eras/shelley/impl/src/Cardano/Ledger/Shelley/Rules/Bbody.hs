@@ -64,6 +64,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (slotToEpochBoundary)
+import Cardano.Ledger.State (LeiosCommittee)
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   Embed (..),
@@ -94,6 +95,8 @@ deriving stock instance Eq (State (EraRule "LEDGERS" era)) => Eq (ShelleyBbodySt
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era
   , bbodyAccount :: ChainAccountState
+  , bbodyLeiosCommittee :: LeiosCommittee
+  -- ^ Current epoch's Leios committee; empty before Dijkstra.
   }
 
 data ShelleyBbodyPredFailure era
@@ -226,7 +229,7 @@ bbodyTransition ::
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition = do
-  TRC (BbodyEnv pp account, BbodyState ls blocksMade, TPraosBbodySignal block@Block {blockBody}) <-
+  TRC (BbodyEnv pp account _, BbodyState ls blocksMade, TPraosBbodySignal block@Block {blockBody}) <-
     judgmentContext
 
   validateBlockBodySize block (pp ^. ppProtocolVersionL)
