@@ -6,6 +6,7 @@
 * Add `EbAnnouncement` to `Cardano.Ledger.State`
 * Add `blockHeaderHashBlockHeaderG` to `EraBlockHeader`
 * Add `ToJSON` and `ToKeyValuePairs` instances for `EbReferencesAnnouncement`
+* Change `leiosCommitteeToJSON` to render a Leios `seatVKey` as hex (`null` when keyless) and `seatWeight` as a floating point decimal number. The exact ratio is renamed to `seatWeightRational`.
 * Track the hashes of the BLS keys of stake pools in `PState`:
   - Add `psBlsKeyHashes` to `PState`
   - Add `psBlsKeyHashesL`
