@@ -415,7 +415,7 @@ jobs:
       uses: ./.github/actions/install-binary
       with:
         repo: fourmolu/fourmolu
-        release: v0.17.0.0 # Should match `fourmoluVersion` in flake.nix
+        release: v0.21.0.0 # Should match `fourmoluVersion` in flake.nix
         pattern: '*-linux-x86_64'
         name: fourmolu
 
