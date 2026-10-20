@@ -34,9 +34,20 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   voteSubTx,
   declareTreasurySubTx,
   registerDRepSubTx,
+  setupLeiosCommittee,
+  mkLeiosCert,
 ) where
 
 import Cardano.Base.Typeable (Typeable)
+import Cardano.Crypto.DSIGN (createPossessionProofDSIGN, deriveVerKeyDSIGN, signDSIGN)
+import Cardano.Crypto.Hash.Class (hashToBytes)
+import Cardano.Crypto.Leios (
+  LeiosCert,
+  LeiosSigningKey,
+  aggregateLeiosCert,
+  getLeiosSeatId,
+  leiosSignContext,
+ )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -79,6 +90,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
+import Control.Monad (forM)
 import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
@@ -146,6 +158,7 @@ class
   , DijkstraEraForecast era
   , DijkstraEraBlockBody era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  , InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraPoolPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
@@ -563,3 +576,45 @@ registerDRepSubTx = do
       ]
   expectDRepRegistered drepCred
   pure drepCred
+
+-- | Sets up the given number of stake pools with BLS keys and equal stake delegated to them, and
+-- passes the two epochs it takes for them to be seated in the Leios committee. Returns the keys
+-- the pools vote with.
+setupLeiosCommittee ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  Int ->
+  ImpTestM era [LeiosSigningKey]
+setupLeiosCommittee n = impAnn "Set up Leios committee" $ do
+  signKeys <- replicateM n $ do
+    signKey <- arbitrary
+    let blsKey =
+          BlsKey (deriveVerKeyDSIGN signKey) (createPossessionProofDSIGN leiosSignContext signKey)
+    khPool <- freshKeyHash
+    registerPoolWithParams (\pps -> pps {sppBlsKey = SJust blsKey}) khPool
+      =<< registerAccountAddress
+    stakingCred <- KeyHashObj <$> freshKeyHash
+    _ <- registerStakeCredential stakingCred
+    delegateStake stakingCred khPool
+    paymentKeyHash <- freshKeyHash @Payment
+    sendCoinTo_ (mkAddr paymentKeyHash stakingCred) (Coin 1_000_000_000)
+    pure signKey
+  passNEpochs 2
+  pure signKeys
+
+-- | Certifies the endorser block announced in the given block header with the votes of the
+-- given keys, each of which has to hold a seat in the current Leios committee.
+mkLeiosCert ::
+  HasCallStack =>
+  [LeiosSigningKey] ->
+  SafeHash EraIndependentBlockHeader ->
+  ImpTestM era LeiosCert
+mkLeiosCert signKeys headerHash = do
+  committee <- getsNES $ nesEsL . esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
+  votes <- forM signKeys $ \signKey -> do
+    seatId <- expectJust $ getLeiosSeatId (deriveVerKeyDSIGN signKey) committee
+    pure (seatId, signDSIGN leiosSignContext msg signKey)
+  expectRightDeep . aggregateLeiosCert committee $ Map.fromList votes
+  where
+    msg = hashToBytes $ extractHash headerHash

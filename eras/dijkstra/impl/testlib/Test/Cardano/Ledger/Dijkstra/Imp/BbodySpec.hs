@@ -5,6 +5,7 @@
 
 module Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec (spec) where
 
+import Cardano.Crypto.Leios (LeiosCert)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (
   BlockHeaderVersionInfo (..),
@@ -95,6 +96,18 @@ spec = describe "BBODY" $ do
       passTick
       withTxsInBlock_ (pure ())
       getsNES (nesEsL . esLStateL . lsLastEbAnnouncementL) `shouldReturn` SNothing
+
+    it "Records the announcement of a block that certifies an EB" $ do
+      cert <- announceCertifiableEb
+      replicateM_ 14 passTick
+      protVer <- getProtVer
+      ebRefsAnn <- arbitrary
+      block <-
+        withTxsInModifiedBlock
+          (announceEb ebRefsAnn . modifyBlockBody protVer (leiosCertBlockBodyL .~ SJust cert))
+          (pure ())
+      expectLastEbAnnouncement block ebRefsAnn
+
   it "LeiosCertMissing"
     $ withTxsInModifiedFailingBlockM
       (blockBodyContainsLeiosCertBlockHeaderL .~ True)
@@ -108,3 +121,30 @@ spec = describe "BBODY" $ do
       (modifyBlockBody protVer $ leiosCertBlockBodyL .~ SJust leiosCert)
       (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
       $ \_ -> pure [injectFailure LeiosCertBlockBodyHasTxs]
+
+  it "LeiosCertWithoutEbAnnouncement" $ do
+    protVer <- getProtVer
+    leiosCert <- arbitrary
+    withTxsInModifiedFailingBlockM
+      (modifyBlockBody protVer $ leiosCertBlockBodyL .~ SJust leiosCert)
+      (pure ())
+      $ \_ -> pure [injectFailure LeiosCertWithoutEbAnnouncement]
+
+  it "Cannot certify the same EB twice" $ do
+    cert <- announceCertifiableEb
+    replicateM_ 14 passTick
+    protVer <- getProtVer
+    let certify = modifyBlockBody protVer $ leiosCertBlockBodyL .~ SJust cert
+    _ <- withTxsInModifiedBlock certify (pure ())
+    passTick
+    withTxsInModifiedFailingBlockM certify (pure ()) $
+      \_ -> pure [injectFailure LeiosCertWithoutEbAnnouncement]
+
+-- | Seats a Leios committee, announces an EB and certifies it with enough votes for the quorum.
+-- The certificate can be included 14 slots later.
+announceCertifiableEb :: DijkstraEraImp era => ImpTestM era LeiosCert
+announceCertifiableEb = do
+  signKeys <- setupLeiosCommittee 4
+  ebRefsAnn <- arbitrary
+  block <- withTxsInModifiedBlock (ebReferencesAnnouncementBlockHeaderL .~ SJust ebRefsAnn) (pure ())
+  mkLeiosCert (take 3 signKeys) $ block ^. blockHeaderHashBlockHeaderG
