@@ -2,6 +2,11 @@
 
 ## 0.5.0.0
 
+* Add `LEIOSCERT` rule, `LeiosCertEnv` and `DijkstraLeiosCertPredFailure`
+* Add `LeiosCertFailure` and `LeiosCertWithoutEbAnnouncement` constructors to `DijkstraBbodyPredFailure`
+* Add `PredicateFailure (EraRule "LEIOSCERT" era)` constraints to the `Eq`, `Ord`, `Show`, `NFData`, `EncCBOR` and `DecCBOR` instances for `DijkstraBbodyPredFailure`
+* Replace the `ConwayEraPParams era` constraint on the `STS (BBODY era)` instance with `DijkstraEraPParams era`, and add `Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)` and the `Environment`, `State` and `Signal` equalities for `EraRule "LEIOSCERT" era` to it
+* Replace the generic `Embed ledgers (BBODY era)` instance with `Embed (Babbage.LEDGERS era) (BBODY era)`, and add `Embed (LEIOSCERT era) (BBODY era)`
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
 * Add `LeiosCertMissing` and `LeiosCertBlockBodyHasTxs` constructors to `DijkstraBbodyPredFailure`
@@ -38,6 +43,11 @@
 
 ### `testlib`
 
+* Add `mkLeiosCert`
+* Add `InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era` superclass to `DijkstraEraImp`
+* Add `Arbitrary` and `ToExpr` instances for `DijkstraLeiosCertPredFailure`
+* Add `Arbitrary (PredicateFailure (EraRule "LEIOSCERT" era))` and `ToExpr (PredicateFailure (EraRule "LEIOSCERT" era))` constraints to the respective instances for `DijkstraBbodyPredFailure`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec`
 * Add `ToExpr` instances for `DijkstraTopTx DijkstraEra` and `DijkstraTopTxRaw DijkstraEra`
 * Add the `SafeToHash (Tx TopTx era)` constraint to `genSmallDijkstraTxsBlockBody`, and replace the `AlonzoEraTx era` constraint with it on `genSmallDijkstraCertBlockBody`
 * Replace the `EraBlockBody era`, `AlonzoEraTx era` and `SafeToHash (TxWits era)` constraints on `Arbitrary (DijkstraBlockBody era)` with `SafeToHash (Tx TopTx era)`
