@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `bbodyLeiosCommittee` field to `BbodyEnv`, populated from the current epoch's Set snapshot
 * Add `lsLastEbAnnouncement` field to `LedgerState` and `lsLastEbAnnouncementL`:
   - `LedgerState` encodes `lsLastEbAnnouncement`, so the on-disk ledger state format changes and requires replay
 * Add `nesLastTickSlotNo` field to `NewEpochState` and `nesLastTickSlotNoL`:
