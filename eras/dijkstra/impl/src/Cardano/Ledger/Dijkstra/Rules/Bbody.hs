@@ -96,6 +96,8 @@ data DijkstraBbodyPredFailure era
   | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | PerasCertValidationFailed PerasCert Nonce
   | HeaderProtVerTooLow (Mismatch RelGTEQ Word32)
+  | LeiosCertMissing
+  | LeiosCertBlockBodyHasTxs
   deriving (Generic)
 
 instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (DijkstraBbodyPredFailure era)
@@ -128,6 +130,8 @@ instance
       PerasCertValidationFailed cert nonce ->
         Sum PerasCertValidationFailed 5 !> To cert !> To nonce
       HeaderProtVerTooLow mm -> Sum HeaderProtVerTooLow 6 !> To mm
+      LeiosCertMissing -> Sum LeiosCertMissing 7
+      LeiosCertBlockBodyHasTxs -> Sum LeiosCertBlockBodyHasTxs 8
 
 instance
   ( Era era
@@ -143,6 +147,8 @@ instance
     4 -> SumD BodyRefScriptsSizeTooBig <! From
     5 -> SumD PerasCertValidationFailed <! From <! From
     6 -> SumD HeaderProtVerTooLow <! From
+    7 -> SumD LeiosCertMissing
+    8 -> SumD LeiosCertBlockBodyHasTxs
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -400,6 +406,11 @@ dijkstraBbodyTransition = do
     SJust cert ->
       let nonce = block ^. prevNonceBlockHeaderL
        in validatePerasCert nonce PerasKey cert ?! injectFailure (PerasCertValidationFailed cert nonce)
+
+  case blockBody ^. leiosCertBlockBodyL of
+    SNothing ->
+      not (block ^. blockBodyContainsLeiosCertBlockHeaderL) ?! injectFailure LeiosCertMissing
+    SJust _ -> null txs ?! injectFailure LeiosCertBlockBodyHasTxs
 
   -- Record the EB announced in this block's header, if any. A block that announces nothing
   -- removes any prior announcement.

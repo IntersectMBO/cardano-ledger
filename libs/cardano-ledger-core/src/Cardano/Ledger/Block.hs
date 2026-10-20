@@ -152,6 +152,8 @@ class Era era => LeiosEraBlockHeader h era where
 
   ebReferencesAnnouncementBlockHeaderL :: Lens' (Block h era) (StrictMaybe EbReferencesAnnouncement)
 
+  blockBodyContainsLeiosCertBlockHeaderL :: Lens' (Block h era) Bool
+
 -- | Version information reported by the block producer in the block header.
 --
 -- It has the same wire format as 'ProtVer', but neither field is validated upon decoding.

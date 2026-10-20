@@ -21,11 +21,12 @@ data TestBlockHeader
   { tbhIssuer :: KeyHash BlockIssuer
   , tbhBSize :: Word32
   , tbhHSize :: Int
+  , tbhHash :: SafeHash EraIndependentBlockHeader
   , tbhBHash :: Hash HASH EraIndependentBlockBody
   , tbhSlot :: SlotNo
   , tbhVersionInfo :: BlockHeaderVersionInfo
   , tbhEbRefsAnn :: StrictMaybe EbReferencesAnnouncement
-  , tbhHash :: SafeHash EraIndependentBlockHeader
+  , tbhBlockBodyContainsLeiosCert :: Bool
   }
   deriving (Generic)
 
@@ -55,6 +56,8 @@ instance Era era => LeiosEraBlockHeader TestBlockHeader era where
   versionInfoBlockHeaderL = blockHeaderL . lens tbhVersionInfo (\bh vi -> bh {tbhVersionInfo = vi})
   ebReferencesAnnouncementBlockHeaderL =
     blockHeaderL . lens tbhEbRefsAnn (\hb ma -> hb {tbhEbRefsAnn = ma})
+  blockBodyContainsLeiosCertBlockHeaderL =
+    blockHeaderL . lens tbhBlockBodyContainsLeiosCert (\bh b -> bh {tbhBlockBodyContainsLeiosCert = b})
 
 mkTestBlockHeaderNoNonce ::
   forall era h.
@@ -63,10 +66,11 @@ mkTestBlockHeaderNoNonce block =
   TestBlockHeader
     { tbhIssuer = block ^. blockIssuerBlockHeaderG
     , tbhHSize = block ^. blockHeaderSizeBlockHeaderG
+    , tbhHash = block ^. blockHeaderHashBlockHeaderG
     , tbhBSize = block ^. blockBodySizeBlockHeaderL
     , tbhBHash = block ^. blockBodyHashBlockHeaderL
     , tbhSlot = block ^. slotNoBlockHeaderL
     , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 (eraProtVerLow @era)) 0
     , tbhEbRefsAnn = SNothing
-    , tbhHash = block ^. blockHeaderHashBlockHeaderG
+    , tbhBlockBodyContainsLeiosCert = False
     }
