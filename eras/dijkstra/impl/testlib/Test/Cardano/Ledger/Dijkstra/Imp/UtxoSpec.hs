@@ -578,25 +578,37 @@ spec = describe "UTXO" $ do
 
   describe "minFee calculation" $ do
     it "reference scripts in subtransactions, as reference inputs" $ do
-      scripts <- freshNativeScripts 3
+      scripts <- freshNativeScriptsWithDuplicates
       refIns <- produceRefScripts (NE.fromList scripts)
       topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] (NE.toList refIns)]
       expectRefScriptsFee topTx scripts
 
     it "reference scripts in subtransactions, as spend inputs" $ do
-      scripts <- freshNativeScripts 3
+      scripts <- freshNativeScriptsWithDuplicates
       refIns <- produceRefScripts (NE.fromList scripts)
       topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs (NE.toList refIns) []]
       expectRefScriptsFee topTx scripts
 
+    it "reference scripts in subtransactions, same txIn as both input and refInput" $ do
+      script <- freshNativeScript
+      refIn <- produceRefScript script
+      topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [refIn] [refIn]]
+      expectRefScriptsFee
+        topTx
+        -- counted just once
+        [script]
+
     it "reference scripts at both levels" $ do
-      topScripts <- freshNativeScripts 2
-      subScripts <- freshNativeScripts 3
+      topScripts <- freshNativeScriptsWithDuplicates
+      subScripts <- freshNativeScriptsWithDuplicates
       topRefIns <- produceRefScripts (NE.fromList topScripts)
       subRefIns <- produceRefScripts (NE.fromList subScripts)
       topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] (NE.toList subRefIns)]
       expectRefScriptsFee
-        (topTx & bodyTxL . referenceInputsTxBodyL .~ Set.fromList (NE.toList topRefIns))
+        ( topTx
+            & bodyTxL . referenceInputsTxBodyL .~ Set.fromList (NE.toList topRefIns)
+            & bodyTxL . inputsTxBodyL .~ Set.fromList (NE.toList topRefIns)
+        )
         (topScripts <> subScripts)
 
     it "the same reference script at both levels" $ do
@@ -617,32 +629,130 @@ spec = describe "UTXO" $ do
         (topTx & bodyTxL . collateralInputsTxBodyL .~ [collateralIn])
         [subScript]
 
-    it "a fee that does not cover a sub-transaction's reference scripts is rejected" $ do
+    it "fee does not cover a sub-tx's reference scripts" $ do
       -- large enough that the reference script charge exceeds the 10% padding `fixupFees` adds
       modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ (100_000 %! 1)
       pp <- getsPParams id
-      refIn <- freshFundedTxIn
-      let topTx = mkTopTxWithSubTxs [mkTxWithInputsAndRefInputs [] [refIn]]
+      let freshTopTx = do
+            refIn <- freshFundedTxIn
+            pure $ mkTopTxWithSubTxs [mkTxWithInputsAndRefInputs [] [refIn]]
+
+      submitTx_ =<< freshTopTx
+
+      topTx <- freshTopTx
       plutus <- mkPlutusScript $ alwaysSucceedsWithDatum SPlutusV4
       actualRefTxIn <- produceRefScript (fromPlutusScript plutus)
 
-      withPostFixupSubTxs
-        ( \subTx ->
-            rederiveAddrTxWits
-              ( -- attach scripts to reference inputs after the fixup, so they're not accounted for in the fee
-                subTx & bodyTxL . referenceInputsTxBodyL .~ [actualRefTxIn]
-              )
-        )
-        $ do
-          submitFailingTxM topTx $ \fixedUpTx -> do
-            pure
-              [ injectFailure $
-                  FeeTooSmallUTxO
-                    Mismatch
-                      { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
-                      , mismatchExpected = getMinFeeTx pp fixedUpTx (originalBytesSize (fromPlutusScript plutus))
-                      }
-              ]
+      -- we replace the reference inputs with ones that actually point to scripts only after the fixup
+      -- so that they are not included by the minFee calculation
+      withPostFixupSubTxs (replaceRefInputs [actualRefTxIn]) $ do
+        submitFailingTxM topTx $ \fixedUpTx -> do
+          pure
+            [ injectFailure $
+                FeeTooSmallUTxO
+                  Mismatch
+                    { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
+                    , mismatchExpected = getMinFeeTx pp fixedUpTx (originalBytesSize (fromPlutusScript plutus))
+                    }
+            ]
+
+    it "fee covers just one of duplicate reference scripts" $ do
+      modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ (100_000 %! 1)
+      pp <- getsPParams id
+      plutus <- mkPlutusScript $ alwaysSucceedsWithDatum SPlutusV4
+      let duplicationFactor = 3
+          refScript = fromPlutusScript plutus
+          -- the sub-transaction references the script once, so the fixup pays for one copy
+          freshTopTx = do
+            refIn <- produceRefScript refScript
+            pure $ mkTopTxWithSubTxs [mkTxWithInputsAndRefInputs [] [refIn]]
+
+      -- one occurrence: the fee the fixup paid covers it
+      submitTx_ =<< freshTopTx
+
+      -- the same script at three inputs, at that same fee: rejected, because every
+      -- occurrence needs to be is paid for.
+      topTx <- freshTopTx
+      actualRefTxIns <- produceRefScripts (NE.fromList (replicate duplicationFactor refScript))
+      withPostFixupSubTxs (replaceRefInputs actualRefTxIns) $
+        submitFailingTxM topTx $ \fixedUpTx -> do
+          pure
+            [ injectFailure $
+                FeeTooSmallUTxO
+                  Mismatch
+                    { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
+                    , mismatchExpected =
+                        getMinFeeTx pp fixedUpTx (duplicationFactor * originalBytesSize refScript)
+                    }
+            ]
+
+    it "fee does not cover a sub-tx's reference scripts - duplicate scripts in sub-tx" $ do
+      modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ (100_000 %! 1)
+      pp <- getsPParams id
+      let duplicationFactor = 3
+      let freshTopTx = do
+            refIns <- replicateM duplicationFactor freshFundedTxIn
+            pure $ mkTopTxWithSubTxs [mkTxWithInputsAndRefInputs [] refIns]
+
+      submitTx_ =<< freshTopTx
+
+      topTx <- freshTopTx
+      plutus <- mkPlutusScript $ alwaysSucceedsWithDatum SPlutusV4
+      actualRefTxIns <-
+        produceRefScripts (NE.fromList (replicate duplicationFactor (fromPlutusScript plutus)))
+
+      withPostFixupSubTxs (replaceRefInputs actualRefTxIns) $ do
+        submitFailingTxM topTx $ \fixedUpTx -> do
+          pure
+            [ injectFailure $
+                FeeTooSmallUTxO
+                  Mismatch
+                    { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
+                    , mismatchExpected =
+                        getMinFeeTx
+                          pp
+                          fixedUpTx
+                          -- the fee is expected to cover each of the duplicate scripts
+                          (duplicationFactor * originalBytesSize (fromPlutusScript plutus))
+                    }
+            ]
+
+    it "fee does not cover a sub-tx's reference scripts - duplicate scripts across levels" $ do
+      modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ (100_000 %! 1)
+      pp <- getsPParams id
+      let duplicationFactor = 3
+      let freshTopTx = do
+            subRefIns <- replicateM duplicationFactor freshFundedTxIn
+            topRefIns <- replicateM duplicationFactor freshFundedTxIn
+            pure $
+              mkTopTxWithSubTxs [mkTxWithInputsAndRefInputs [] subRefIns]
+                & bodyTxL . referenceInputsTxBodyL .~ Set.fromList topRefIns
+
+      submitTx_ =<< freshTopTx
+
+      topTx <- freshTopTx
+      plutus <- mkPlutusScript $ alwaysSucceedsWithDatum SPlutusV4
+      actualTopRefTxIns <-
+        produceRefScripts (NE.fromList (replicate duplicationFactor (fromPlutusScript plutus)))
+      actualSubRefTxIns <-
+        produceRefScripts (NE.fromList (replicate duplicationFactor (fromPlutusScript plutus)))
+
+      withPostFixup
+        (traverseSubTxs (replaceRefInputs actualSubRefTxIns) >=> replaceRefInputs actualTopRefTxIns)
+        $ submitFailingTxM topTx
+        $ \fixedUpTx -> do
+          pure
+            [ injectFailure $
+                FeeTooSmallUTxO
+                  Mismatch
+                    { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
+                    , mismatchExpected =
+                        getMinFeeTx
+                          pp
+                          fixedUpTx
+                          (2 * duplicationFactor * originalBytesSize (fromPlutusScript plutus))
+                    }
+            ]
 
     it "execution units from subtransaction redeemers are accounted for in minFee" $ do
       modifyPParams $ ppTxFeePerByteL .~ CoinPerByte mempty
@@ -779,8 +889,15 @@ spec = describe "UTXO" $ do
           (floor $ fromIntegral @Int @Rational refScriptsSize * unboundRational costPerByte)
     freshNativeScript :: ImpTestM era (Script era)
     freshNativeScript = fromNativeScript . RequireSignature <$> freshKeyHash
-    freshNativeScripts :: Int -> ImpTestM era [Script era]
-    freshNativeScripts n = replicateM n freshNativeScript
+    freshNativeScriptsWithDuplicates = do
+      m <- choose (1, 5)
+      n <- choose (0, 3)
+      let freshNativeScripts = replicateM m freshNativeScript
+          duplicateNativeScripts = replicate n <$> freshNativeScript
+      (<>) <$> freshNativeScripts <*> duplicateNativeScripts
+    replaceRefInputs :: NonEmpty TxIn -> Tx l era -> ImpTestM era (Tx l era)
+    replaceRefInputs refIns tx =
+      rederiveAddrTxWits $ tx & bodyTxL . referenceInputsTxBodyL .~ Set.fromList (NE.toList refIns)
 
 noBalanceFixup ::
   ( HasCallStack
