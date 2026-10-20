@@ -156,6 +156,7 @@ class
   , DijkstraEraForecast era
   , DijkstraEraBlockBody era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  , InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraPoolPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
