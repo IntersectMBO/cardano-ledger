@@ -45,6 +45,7 @@ instance EraTest DijkstraEra where
        , "GOV"
        , "LEDGER"
        , "LEDGERS"
+       , "LEIOSCERT"
        , "MEMPOOL"
        , "POOL"
        , "UTXO"

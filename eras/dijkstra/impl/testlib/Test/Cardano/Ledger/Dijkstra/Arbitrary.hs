@@ -428,3 +428,6 @@ instance Arbitrary EbReferences where
       . filter (not . SimpleOMap.null)
       . shrink
       . getEbReferences
+
+instance Arbitrary (DijkstraLeiosCertPredFailure era) where
+  arbitrary = genericArbitraryU
