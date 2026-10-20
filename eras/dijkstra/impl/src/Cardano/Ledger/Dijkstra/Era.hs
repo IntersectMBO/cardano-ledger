@@ -18,6 +18,7 @@ module Cardano.Ledger.Dijkstra.Era (
   GOV,
   GOVCERT,
   LEDGER,
+  LEIOSCERT,
   MEMPOOL,
   POOL,
   POOLREAP,
@@ -286,6 +287,10 @@ data POOLREAP era
 type instance EraRule "POOLREAP" DijkstraEra = POOLREAP DijkstraEra
 
 type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
+
+data LEIOSCERT era
+
+type instance EraRule "LEIOSCERT" DijkstraEra = LEIOSCERT DijkstraEra
 
 data SNAP era
 

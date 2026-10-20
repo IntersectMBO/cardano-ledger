@@ -215,6 +215,9 @@ instance
   where
   arbitrary = genericArbitraryU
 
+instance Arbitrary (DijkstraLeiosCertPredFailure era) where
+  arbitrary = genericArbitraryU
+
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXOW" era))
