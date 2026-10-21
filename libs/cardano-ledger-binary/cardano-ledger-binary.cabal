@@ -10,6 +10,7 @@ category: Network
 build-type: Simple
 data-files:
   golden/*.cbor
+  test/golden/LeiosCert
 
 source-repository head
   type: git

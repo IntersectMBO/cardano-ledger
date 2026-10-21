@@ -27,6 +27,7 @@ spec = do
     GoldenSpec.spec
     Failure.spec
     Success.spec
+  GoldenSpec.spec
 
 main :: IO ()
 main = do
