@@ -1786,11 +1786,12 @@ tryTxsInBlock modifyBlock txs finalState blockIssuer = do
         { tbhIssuer = blockIssuer
         , tbhBSize = fromIntegral $ blockBodySize (ProtVer (eraProtVerLow @era) 0) blockBody
         , tbhHSize = 0
+        , tbhHash = blockHeaderHash
         , tbhBHash = hashBlockBody blockBody
         , tbhSlot = slotNo
         , tbhVersionInfo = BlockHeaderVersionInfo (getVersion32 curMajor) curMinor
         , tbhEbRefsAnn = SNothing
-        , tbhHash = blockHeaderHash
+        , tbhBlockBodyContainsLeiosCert = False
         }
     block = modifyBlock Block {blockHeader, blockBody}
 

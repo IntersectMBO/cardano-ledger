@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec (spec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (
   BlockHeaderVersionInfo (..),
+  blockBodyContainsLeiosCertBlockHeaderL,
   blockHeaderHashBlockHeaderG,
   ebReferencesAnnouncementBlockHeaderL,
   prevNonceBlockHeaderL,
@@ -94,3 +95,16 @@ spec = describe "BBODY" $ do
       passTick
       withTxsInBlock_ (pure ())
       getsNES (nesEsL . esLStateL . lsLastEbAnnouncementL) `shouldReturn` SNothing
+  it "LeiosCertMissing"
+    $ withTxsInModifiedFailingBlockM
+      (blockBodyContainsLeiosCertBlockHeaderL .~ True)
+      (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
+    $ \_ -> pure [injectFailure LeiosCertMissing]
+
+  it "LeiosCertBlockBodyHasTxs" $ do
+    protVer <- getProtVer
+    leiosCert <- arbitrary
+    withTxsInModifiedFailingBlockM
+      (modifyBlockBody protVer $ leiosCertBlockBodyL .~ SJust leiosCert)
+      (submitAnyTx_ $ mkBasicTx mkBasicTxBody)
+      $ \_ -> pure [injectFailure LeiosCertBlockBodyHasTxs]

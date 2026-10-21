@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Add `blockBodyContainsLeiosCertBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `EbAnnouncement` to `Cardano.Ledger.State`
 * Add `blockHeaderHashBlockHeaderG` to `EraBlockHeader`
 * Add `ToJSON` and `ToKeyValuePairs` instances for `EbReferencesAnnouncement`
@@ -25,6 +26,7 @@
 
 ### `testlib`
 
+* Add `tbhBlockBodyContainsLeiosCert` to `TestBlockHeader`
 * Add `tbhHash` field to `TestBlockHeader`
 * Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
 * Add `ToExpr` instance for `EbAnnouncement`
