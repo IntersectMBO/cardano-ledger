@@ -830,14 +830,14 @@
         "maxBlockHeaderSize": 1100,
         "maxCollateralInputs": 3,
         "maxEndorserBlockExecutionUnits": {
-            "memory": 7000000000,
-            "steps": 2000000000000
+            "memory": 720000000,
+            "steps": 200000000000
         },
-        "maxEndorserBlockReferencesSize": 524288,
-        "maxEndorserBlockTxsSize": 12582912,
+        "maxEndorserBlockReferencesSize": 100000,
+        "maxEndorserBlockTxsSize": 1000000,
         "maxPledgeLeverage": null,
         "maxRefScriptSizePerBlock": 1048576,
-        "maxRefScriptSizePerEndorserBlock": 12582912,
+        "maxRefScriptSizePerEndorserBlock": 4194304,
         "maxRefScriptSizePerTx": 204800,
         "maxTxExecutionUnits": {
             "memory": 14000000,
