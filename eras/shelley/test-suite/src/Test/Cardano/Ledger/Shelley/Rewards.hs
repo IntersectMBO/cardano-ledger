@@ -403,13 +403,17 @@ rewardOnePool
       poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
       tot = fromIntegral totalStake
       pv = pp ^. ppProtocolVersionL
+      clamp :: forall x. Ord x => x -> x -> x
+      clamp = if pvMajor (pp ^. ppProtocolVersionL) >= natVersion @12 then max else const
+      effectiveCost = clamp (spssCost stakePoolSnapShot) (pp ^. ppMinPoolCostL)
+      effectiveMargin = clamp (spssMargin stakePoolSnapShot) (pp ^. ppMinPoolMarginG)
       mRewards =
         Map.fromList
           [ ( hk
             , calcStakePoolMemberReward
                 poolR
-                (spssCost stakePoolSnapShot)
-                (spssMargin stakePoolSnapShot)
+                effectiveCost
+                effectiveMargin
                 (StakeShare (unCoin (fromCompact c) % tot))
                 (StakeShare sigma)
             )
@@ -421,8 +425,8 @@ rewardOnePool
       lReward =
         calcStakePoolOperatorReward
           poolR
-          (spssCost stakePoolSnapShot)
-          (spssMargin stakePoolSnapShot)
+          effectiveCost
+          effectiveMargin
           (StakeShare $ fromIntegral ostake % tot)
           (StakeShare sigma)
       f =
@@ -818,6 +822,8 @@ tests =
         newEpochProp chainlen (oldEqualsNew @ShelleyEra (ProtVer (natVersion @3) 0))
     , testProperty "compare with reference impl, no provenance, v7" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @ShelleyEra (ProtVer (natVersion @7) 0))
+    , testProperty "compare with reference impl, no provenance, v12" . noShrinking $
+        newEpochProp chainlen (oldEqualsNew @ShelleyEra (ProtVer (natVersion @12) 0))
     , testProperty "compare with reference impl, with provenance" . noShrinking $
         newEpochProp chainlen (oldEqualsNewOn @ShelleyEra (ProtVer (natVersion @3) 0))
     , testProperty "delta events mirror reward updates" $
