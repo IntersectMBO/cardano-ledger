@@ -2,39 +2,42 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.TxInfoSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (..),
   EraPlutusTxInfo (..),
   LedgerLevelTxInfo (..),
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
   toPlutusTxInfoForPurpose,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..))
 import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), toAsPurpose)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.Alonzo.UTxO
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Inject (..),
   Network (..),
   ProtVer (..),
+  SlotNo (..),
+  StrictMaybe (..),
   TxIx (..),
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
  )
 import Cardano.Ledger.Dijkstra.State (UTxO (..))
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError (..))
+import qualified Cardano.Ledger.Dijkstra.TxInfo as Dijkstra
 import Cardano.Ledger.Plutus (
   Language (..),
   SLanguage (..),
@@ -48,10 +51,10 @@ import Cardano.Ledger.Plutus (
   transScriptHash,
   transTxIx,
  )
-import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Fail.String (errorFail)
+import Data.Either (isRight)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
@@ -60,31 +63,51 @@ import Data.Proxy (Proxy (..))
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
+import Test.Cardano.Ledger.Alonzo.TxInfoSpec (
+  testEpochInfo,
+  testSystemStart,
+  validBetweenEpochInfo,
+ )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary (genOrderedPair)
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
+import Test.Cardano.Ledger.Dijkstra.ImpTest (
+  DijkstraEraImp,
+  genBadValidityInterval,
+  genGoodValidityInterval,
+ )
 import qualified Test.Cardano.Ledger.Plutus.Examples as Plutus
 
-spec ::
-  forall era.
-  ( EraPlutusTxInfo PlutusV1 era
-  , EraPlutusTxInfo PlutusV2 era
-  , EraPlutusTxInfo PlutusV3 era
-  , EraPlutusTxInfo PlutusV4 era
-  , Inject (DijkstraContextError era) (ContextError era)
-  , Inject (BabbageContextError era) (ContextError era)
-  , DijkstraEraTxBody era
-  , EraUTxO era
-  , Arbitrary (Value era)
-  , AlonzoEraTxWits era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  ) =>
-  Spec
+spec :: forall era. DijkstraEraImp era => Spec
 spec = describe "TxInfo" $ do
   let mkLocalLedgerTxInfo utxo tx =
         let ei = epochInfo testGlobals
             ss = systemStart testGlobals
          in mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss utxo tx
+  describe "Translation" $ do
+    describe "transValidityInterval" $ do
+      it "validity interval's upper bound is open" transVITimeUpperBoundIsOpen
+      prop "translates successfully if bounds are valid" $ do
+        (hi, lo) <- genOrderedPair
+        validityInterval <- genGoodValidityInterval lo hi
+        pure $
+          Dijkstra.transValidityInterval
+            (Proxy @era)
+            (validBetweenEpochInfo lo hi)
+            testSystemStart
+            validityInterval
+            `shouldSatisfy` isRight
+      prop "fails to translate if the bounds are invalid" $ do
+        (hi, lo) <- genOrderedPair
+        validityInterval <- genBadValidityInterval lo hi
+        pure $
+          Dijkstra.transValidityInterval
+            (Proxy @era)
+            (validBetweenEpochInfo lo hi)
+            testSystemStart
+            validityInterval
+            `shouldBeLeft` inject (TimeTranslationPastHorizon @era "out of valid range")
   describe "PlutusV4" $ do
     prop "Threads the sub-transaction index into txInfoSubTxIx" $ \(txIx :: TxIx) -> do
       let
@@ -325,3 +348,11 @@ spec = describe "TxInfo" $ do
           txInfoResult
             `shouldBeLeft` inject
               (RequiredTopLevelGuardsNotSupported @era $ NEM.keysSet neRequiredTopLevelGuards)
+
+-- | The test checks that since protocol version 9 'transVITime' works correctly,
+-- by returning open upper bound of the validaty interval.
+transVITimeUpperBoundIsOpen :: Expectation
+transVITimeUpperBoundIsOpen = do
+  let interval = ValidityInterval SNothing (SJust (SlotNo 40))
+  Dijkstra.transValidityInterval (Proxy @DijkstraEra) testEpochInfo testSystemStart interval
+    `shouldBeRight` PV4.POSIXTimeRange Nothing (Just $ PV4.POSIXTime 40000)

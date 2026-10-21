@@ -57,6 +57,8 @@ import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
+import qualified Test.Cardano.Ledger.Alonzo.TxInfoSpec as Alonzo
+import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCredential, mkKeyPair)
@@ -269,18 +271,7 @@ translatedOutputEx2 =
   errorTranslate @era "translatedOutputEx2" $
     transTxOutV2 @era (TxOutFromOutput minBound) refScriptOutput
 
-txInfoSpec ::
-  forall era l.
-  ( EraUTxO era
-  , EraPlutusTxInfo l era
-  , EraPlutusTxInfo 'PlutusV2 era
-  , BabbageEraTxBody era
-  , Value era ~ MaryValue
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Inject (BabbageContextError era) (ContextError era)
-  ) =>
-  SLanguage l ->
-  Spec
+txInfoSpec :: forall era l. (BabbageEraImp era, EraPlutusTxInfo l era) => SLanguage l -> Spec
 txInfoSpec slang =
   describe (show slang) $ do
     it "translation error on byron txout" $
@@ -337,18 +328,10 @@ txInfoSpec slang =
           (txBare shelleyInput refScriptOutput)
           (expectOneOutput (translatedOutputEx2 @era))
 
-spec ::
-  forall era.
-  ( EraUTxO era
-  , BabbageEraTxBody era
-  , Value era ~ MaryValue
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Inject (BabbageContextError era) (ContextError era)
-  , EraPlutusTxInfo 'PlutusV2 era
-  ) =>
-  Spec
+spec :: forall era. BabbageEraImp era => Spec
 spec =
   describe "txInfo translation" $ do
+    Alonzo.txInfoSpec @era
     forM_ (supportedLanguages @era) $ \(SupportedLanguage slang) ->
       txInfoSpec @era slang
     it "use reference input starting in Babbage" $
