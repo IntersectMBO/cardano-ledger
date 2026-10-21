@@ -317,8 +317,8 @@ getDijkstraMinFeeTxUtxo pparams tx utxo =
   getMinFeeTx pparams tx $
     withBothTxLevels
       tx
-      (batchNonDistinctRefScriptsSize utxo)
-      (txNonDistinctRefScriptsSize utxo)
+      (batchDistinctRefScriptsSize utxo)
+      (txDistinctRefScriptsSize utxo)
 
 -- | Total size of reference scripts across a top-level transaction and all its subtransactions.
 batchNonDistinctRefScriptsSize ::

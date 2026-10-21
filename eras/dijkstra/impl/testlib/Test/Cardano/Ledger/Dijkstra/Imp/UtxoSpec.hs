@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, produced)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.Val
+import Data.Containers.ListUtils (nubOrd)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -617,7 +618,7 @@ spec = describe "UTXO" $ do
       topTx <- mkTopTxWithDistinctSubTxs [mkTxWithInputsAndRefInputs [] [subRefIn]]
       expectRefScriptsFee
         (topTx & bodyTxL . referenceInputsTxBodyL .~ [topRefIn])
-        [script, script]
+        [script]
 
     it "reference scripts on collateral inputs are not paid for" $ do
       subScript <- freshNativeScript
@@ -675,16 +676,7 @@ spec = describe "UTXO" $ do
       topTx <- freshTopTx
       actualRefTxIns <- produceRefScripts (NE.fromList (replicate duplicationFactor refScript))
       withPostFixupSubTxs (replaceRefInputs actualRefTxIns) $
-        submitFailingTxM topTx $ \fixedUpTx -> do
-          pure
-            [ injectFailure $
-                FeeTooSmallUTxO
-                  Mismatch
-                    { mismatchSupplied = fixedUpTx ^. bodyTxL . feeTxBodyL
-                    , mismatchExpected =
-                        getMinFeeTx pp fixedUpTx (duplicationFactor * originalBytesSize refScript)
-                    }
-            ]
+        submitTx_ topTx
 
     it "fee does not cover a sub-tx's reference scripts - duplicate scripts in sub-tx" $ do
       modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ (100_000 %! 1)
@@ -712,8 +704,8 @@ spec = describe "UTXO" $ do
                         getMinFeeTx
                           pp
                           fixedUpTx
-                          -- the fee is expected to cover each of the duplicate scripts
-                          (duplicationFactor * originalBytesSize (fromPlutusScript plutus))
+                          -- the fee is expected to cover once each distinct
+                          (originalBytesSize (fromPlutusScript plutus))
                     }
             ]
 
@@ -750,7 +742,7 @@ spec = describe "UTXO" $ do
                         getMinFeeTx
                           pp
                           fixedUpTx
-                          (2 * duplicationFactor * originalBytesSize (fromPlutusScript plutus))
+                          (originalBytesSize (fromPlutusScript plutus))
                     }
             ]
 
@@ -875,7 +867,7 @@ spec = describe "UTXO" $ do
     expectRefScriptsFee tx scripts = do
       pp <- getsPParams id
       utxo <- getUTxO
-      let refScriptsSize = sum $ originalBytesSize <$> scripts
+      let refScriptsSize = sum $ originalBytesSize <$> nubOrd scripts
           costPerByte = pp ^. ppMinFeeRefScriptCostPerByteL
 
       -- the ledger counted our scripts' bytes: the same fee function on both sides,
