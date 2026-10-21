@@ -18,6 +18,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   getDijkstraMinFeeTxUtxo,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
+  batchDistinctRefScriptsSize,
   localProducedValue,
 ) where
 
@@ -32,6 +33,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  getReferenceScripts,
  )
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
@@ -57,6 +59,7 @@ import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro (SimpleGetter, to, (^.))
 import Lens.Micro.Extras (view)
 
@@ -332,3 +335,25 @@ batchNonDistinctRefScriptsSize utxo tx =
           (Sum . txNonDistinctRefScriptsSize utxo)
           (tx ^. bodyTxL . subTransactionsTxBodyL)
       )
+
+-- | Total size of distinct reference scripts across a top-level transaction and all its subtransactions.
+batchDistinctRefScriptsSize ::
+  ( EraTx era
+  , DijkstraEraTxBody era
+  ) =>
+  UTxO era ->
+  Tx TopTx era ->
+  Int
+batchDistinctRefScriptsSize utxo topTx =
+  txDistinctRefScriptsSize utxo topTx
+    + getSum
+      ( foldMap'
+          (Sum . txDistinctRefScriptsSize utxo)
+          (topTx ^. bodyTxL . subTransactionsTxBodyL)
+      )
+
+txDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx l era -> Int
+txDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize) refScripts
+  where
+    refScripts = getReferenceScripts utxo inputs
+    inputs = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
