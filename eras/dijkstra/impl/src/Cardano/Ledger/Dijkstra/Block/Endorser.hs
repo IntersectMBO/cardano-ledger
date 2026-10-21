@@ -21,7 +21,6 @@ module Cardano.Ledger.Dijkstra.Block.Endorser (
   EraEndorserBlock (..),
 ) where
 
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR, Version)
 import Cardano.Ledger.Core (EraTx, TopTx, Tx)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -29,8 +28,8 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Hashes (
   EraIndependentEbReferences,
   EraIndependentTx,
-  HASH,
   HashAnnotated,
+  SafeHash,
   SafeToHash,
   hashAnnotated,
  )
@@ -56,7 +55,7 @@ import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
 newtype EbReferencesRaw = EbReferencesRaw
-  { unEbReferencesRaw :: OMap (Hash HASH EraIndependentTx) Word32
+  { unEbReferencesRaw :: OMap (SafeHash EraIndependentTx) Word32
   }
   deriving newtype (Eq, Show, NFData, NoThunks, EncCBOR)
 
@@ -81,10 +80,10 @@ instance HashAnnotated EbReferences EraIndependentEbReferences where
 
 instance EqRaw EbReferences
 
-mkEbReferences :: Version -> OMap (Hash HASH EraIndependentTx) Word32 -> EbReferences
+mkEbReferences :: Version -> OMap (SafeHash EraIndependentTx) Word32 -> EbReferences
 mkEbReferences v = mkMemoized v . EbReferencesRaw
 
-getEbReferences :: EbReferences -> OMap (Hash HASH EraIndependentTx) Word32
+getEbReferences :: EbReferences -> OMap (SafeHash EraIndependentTx) Word32
 getEbReferences = unEbReferencesRaw . getMemoRawType
 
 newtype EbTransactions era = EbTransactions
