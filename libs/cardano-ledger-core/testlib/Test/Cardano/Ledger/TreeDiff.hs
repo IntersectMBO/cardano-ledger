@@ -358,3 +358,5 @@ instance (ToExpr h, ToExpr (BlockBody era)) => ToExpr (Block h era)
 instance ToExpr TestBlockHeader
 
 instance ToExpr EbReferencesAnnouncement
+
+instance ToExpr EbAnnouncement

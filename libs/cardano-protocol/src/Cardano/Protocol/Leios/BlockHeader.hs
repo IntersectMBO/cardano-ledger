@@ -363,6 +363,8 @@ headerBodyRawL p = headerBodyL p . memoRawTypeL @era
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockHeaderSizeBlockHeaderG =
     blockHeaderL . to originalBytesSize
+  blockHeaderHashBlockHeaderG =
+    blockHeaderL . to hashAnnotated
   blockIssuerBlockHeaderG =
     blockHeaderL . headerBodyL (Proxy @era) . to (hashKey . hbVk)
   blockBodySizeBlockHeaderL =

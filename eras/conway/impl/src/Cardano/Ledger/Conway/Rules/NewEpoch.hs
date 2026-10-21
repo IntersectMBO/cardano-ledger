@@ -119,6 +119,7 @@ instance
   initialRules =
     [ pure $
         NewEpochState
+          minBound
           (EpochNo 0)
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
@@ -153,7 +154,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , nes@(NewEpochState eL _ bcur es0 ru _)
+      , nes@(NewEpochState _ eL _ bcur es0 ru _)
       , eNo
       ) <-
     judgmentContext

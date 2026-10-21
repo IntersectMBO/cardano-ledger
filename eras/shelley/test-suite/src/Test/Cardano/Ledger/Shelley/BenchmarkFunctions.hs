@@ -158,7 +158,7 @@ ledgerSpendOneUTxO :: Integer -> ()
 ledgerSpendOneUTxO n = testLEDGER (initLedgerState n) txSpendOneUTxO ledgerEnv
 
 ledgerSpendOneGivenUTxO :: UTxOState ShelleyEra -> ()
-ledgerSpendOneGivenUTxO state = testLEDGER (LedgerState state def) txSpendOneUTxO ledgerEnv
+ledgerSpendOneGivenUTxO state = testLEDGER (LedgerState state def SNothing) txSpendOneUTxO ledgerEnv
 
 -- ===========================================================================
 --
@@ -213,7 +213,7 @@ txRegStakeKeys ix keys =
     [asWitness alicePay]
 
 initLedgerState :: Integer -> LedgerState ShelleyEra
-initLedgerState n = LedgerState (initUTxO n) def
+initLedgerState n = LedgerState (initUTxO n) def SNothing
 
 makeLEDGERState ::
   HasCallStack => LedgerState ShelleyEra -> Tx TopTx ShelleyEra -> LedgerState ShelleyEra

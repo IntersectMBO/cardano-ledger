@@ -10,7 +10,13 @@
 module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), unNonZero, unsafeNonZero)
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
+  StrictMaybe (..),
+  unNonZero,
+  unsafeNonZero,
+ )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (TxOut, emptyPParams)
@@ -600,6 +606,7 @@ getLedgerState utxo LedgerState {..} dstate = do
           def
             & certPStateL .~ ledgerStatePstateBin
             & certDStateL .~ dstate
+      , Shelley.lsLastEbAnnouncement = SNothing
       }
 
 getDStateNoSharing ::

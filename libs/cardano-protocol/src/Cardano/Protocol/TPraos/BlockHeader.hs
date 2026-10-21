@@ -485,6 +485,8 @@ makeHeaderView bh@(BHeader bhb _) nonce =
 instance (Crypto c, Era era) => EraBlockHeader (BHeader c) era where
   blockHeaderSizeBlockHeaderG =
     blockHeaderL . to originalBytesSize
+  blockHeaderHashBlockHeaderG =
+    blockHeaderL . to hashAnnotated
   blockIssuerBlockHeaderG =
     blockHeaderL . headerBodyL . to (hashKey . bheaderVk)
   blockBodySizeBlockHeaderL =

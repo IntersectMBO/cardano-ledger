@@ -58,6 +58,7 @@ instance TranslateEra AlonzoEra NewEpochState where
         , nesEs = translateEra' ctxt $ nesEs nes
         , nesRu = nesRu nes
         , stashedAVVMAddresses = ()
+        , nesLastTickSlotNo = nesLastTickSlotNo nes
         }
 
 instance TranslateEra AlonzoEra PParams where
@@ -131,6 +132,7 @@ instance TranslateEra AlonzoEra LedgerState where
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
         , lsCertState = translateEra' ctxt $ lsCertState ls
+        , lsLastEbAnnouncement = lsLastEbAnnouncement ls
         }
 
 instance TranslateEra AlonzoEra UTxOState where

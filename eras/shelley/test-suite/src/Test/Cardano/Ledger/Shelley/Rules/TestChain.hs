@@ -191,10 +191,10 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
     txIns = neededTxInsForBlock block
-    LedgerState utxoSt delegationSt = ledgerSt0
+    LedgerState utxoSt delegationSt lastEbAnnouncement = ledgerSt0
     utxo = unUTxO . utxosUtxo $ utxoSt
     (relevantUTxO, irrelevantUTxO) = Map.partitionWithKey (const . (`Set.member` txIns)) utxo
-    restrictedSt0 = LedgerState (utxoSt {utxosUtxo = UTxO relevantUTxO}) delegationSt
+    restrictedSt0 = LedgerState (utxoSt {utxosUtxo = UTxO relevantUTxO}) delegationSt lastEbAnnouncement
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::

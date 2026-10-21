@@ -2,6 +2,9 @@
 
 ## 1.23.0.0
 
+* Add `EbAnnouncement` to `Cardano.Ledger.State`
+* Add `blockHeaderHashBlockHeaderG` to `EraBlockHeader`
+* Add `ToJSON` and `ToKeyValuePairs` instances for `EbReferencesAnnouncement`
 * Track the hashes of the BLS keys of stake pools in `PState`:
   - Add `psBlsKeyHashes` to `PState`
   - Add `psBlsKeyHashesL`
@@ -22,6 +25,9 @@
 
 ### `testlib`
 
+* Add `tbhHash` field to `TestBlockHeader`
+* Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
+* Add `ToExpr` instance for `EbAnnouncement`
 * Add `Arbitrary` and `ToExpr` instances for `BlsVerKeyHash`
 
 ## 1.22.0.0

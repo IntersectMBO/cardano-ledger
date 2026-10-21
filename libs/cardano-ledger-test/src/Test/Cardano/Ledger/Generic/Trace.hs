@@ -168,6 +168,7 @@ initialMockChainState gstate =
         , nesEs = makeEpochState gstate ledgerstate
         , nesRu = SNothing
         , stashedAVVMAddresses = stashedAVVMAddressesZero (reify @era)
+        , nesLastTickSlotNo = minBound
         }
         & nesEsL . esSnapshotsL . ssStakeSetL
           %~ (\ss -> ss {ssStakePoolDistr = PoolDistr (gsInitialPoolDistr gstate) (knownNonZeroCoin @1)})
@@ -190,7 +191,7 @@ makeEpochState gstate ledgerstate =
 
 snaps ::
   (EraTxOut era, EraCertState era, ShelleyEraAccounts era) => LedgerState era -> SnapShots era
-snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
+snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState _) =
   SnapShots mark set (mkGoSnapShot set) f
   where
     pstate = certState ^. certPStateL
@@ -307,7 +308,7 @@ instance
   envGen _gstate = pure ()
 
   sigGen (Gen1 txss gs) () mcs@(MockChainState newepoch _ (SlotNo lastSlot) count) = do
-    let NewEpochState epochnum _ _ epochstate _ _ = newepoch
+    let NewEpochState _ epochnum _ _ epochstate _ _ = newepoch
     issuerkey <- chooseIssuer epochnum lastSlot count (newepoch ^. nesStakePoolDistrG)
     let (txs, nextSlotNo) = txss ! count
     -- Assmble it into a MockBlock

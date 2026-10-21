@@ -74,16 +74,18 @@ import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.API (incrBlocks)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxoL)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsLastEbAnnouncementL, utxoL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (slotToEpochBoundary)
+import Cardano.Ledger.State (EbAnnouncement (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition
+import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (fromStrict)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 
 data DijkstraBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
@@ -399,7 +401,20 @@ dijkstraBbodyTransition = do
       let nonce = block ^. prevNonceBlockHeaderL
        in validatePerasCert nonce PerasKey cert ?! injectFailure (PerasCertValidationFailed cert nonce)
 
-  pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
+  -- Record the EB announced in this block's header, if any. A block that announces nothing
+  -- removes any prior announcement.
+  let ls'' =
+        ls'
+          & lsLastEbAnnouncementL
+            .~ ( (block ^. ebReferencesAnnouncementBlockHeaderL) <&> \ebRefsAnn ->
+                   EbAnnouncement
+                     { ebAnnouncement = ebRefsAnn
+                     , ebAnnouncementSlotNo = bhSlot
+                     , ebAnnouncedInBlockHeader = block ^. blockHeaderHashBlockHeaderG
+                     }
+               )
+
+  pure $ Shelley.BbodyState ls'' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
 -- | Validate that Peras certificate is in the block body.
 conwayToDijkstraBbodyPredFailure ::

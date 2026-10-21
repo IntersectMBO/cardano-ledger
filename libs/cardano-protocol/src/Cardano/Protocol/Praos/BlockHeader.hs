@@ -241,6 +241,8 @@ headerBodyL = lens headerBody (\h b -> h {headerBody = b})
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockHeaderSizeBlockHeaderG =
     blockHeaderL . to originalBytesSize
+  blockHeaderHashBlockHeaderG =
+    blockHeaderL . to hashAnnotated
   blockIssuerBlockHeaderG =
     blockHeaderL . headerBodyL . to (hashKey . hbVk)
   blockBodySizeBlockHeaderL =

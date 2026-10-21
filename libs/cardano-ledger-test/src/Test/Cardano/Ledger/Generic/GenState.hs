@@ -651,7 +651,7 @@ instance (Reflect era, ShelleyEraTest era) => Show (GenState era) where
 -- logically be applied one after another)
 
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
-initialLedgerState gstate = LedgerState utxostate dpstate
+initialLedgerState gstate = LedgerState utxostate dpstate SNothing
   where
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
     dpstate =

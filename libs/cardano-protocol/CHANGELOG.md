@@ -12,6 +12,7 @@
 
 ### `testlib`
 
+* Move the `Arbitrary` instance for `EbReferencesAnnouncement` to `cardano-ledger-core:testlib`
 * Add `genHeaderBody` to `Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary`
 * Add non-annotator `DecCBOR` instances for the Leios `HeaderBody` and `HeaderRaw`
 

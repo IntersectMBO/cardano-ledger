@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   natVersion,
  )
-import Cardano.Ledger.Block (Block (Block), EbReferencesAnnouncement (EbReferencesAnnouncement))
+import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core (BlockBody, EraBlockBody)
 import Cardano.Ledger.MemoBytes (mkMemoized)
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
@@ -38,9 +38,6 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Protocol.Praos.BlockHeader.Arbitrary ()
 import Test.Crypto.Instances ()
-
-instance Arbitrary EbReferencesAnnouncement where
-  arbitrary = EbReferencesAnnouncement <$> arbitrary <*> arbitrary
 
 genHeaderBody ::
   (Crypto c, VRF.Signable (VRF c) ~ SignableRepresentation) =>
