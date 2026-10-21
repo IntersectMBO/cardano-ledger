@@ -4,13 +4,14 @@
 
 module Test.Cardano.Data.SimpleOMap.StrictSpec where
 
+import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR), encodeMapLen)
 import Data.Map.Strict qualified as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
 import Data.SimpleOMap.Strict
 import Test.Cardano.Data.Arbitrary ()
-import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
+import Test.Cardano.Ledger.Binary.RoundTrip (embedTripFailureExpectation, mkTrip, roundTripCborSpec)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Classes
@@ -133,6 +134,14 @@ spec =
           snd result `shouldSatisfy` invariantHolds'
     context "CBOR round-trip" $ do
       roundTripCborSpec @(OMap Int Int)
+      prop "duplicate keys fail to decode" $
+        \((omap, key, value1, value2) :: (OMap Int Int, Int, Int, Int)) -> do
+          let encodeAsMap kvs =
+                encodeMapLen (fromIntegral (length kvs))
+                  <> foldMap (\(k, v) -> encCBOR k <> encCBOR v) kvs
+          embedTripFailureExpectation
+            (mkTrip encodeAsMap (decCBOR @(OMap Int Int)))
+            ((key, value1) : assocList omap <> [(key, value2)])
     context "Typeclass laws" $ do
       it "Type" $
         lawsCheckOne

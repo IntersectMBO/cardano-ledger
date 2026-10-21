@@ -26,7 +26,6 @@ import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Leios.BlockHeader as Leios
 import Data.OSet.Strict (OSet)
-import Data.Word (Word32)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genDatumPresent, genNonEmptyRedeemers)
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleDecoderEquivalenceSpec,
@@ -101,6 +100,5 @@ spec = do
         genLeiosBlock
         v
         "block"
-      fullCddlSpec @(Hash HASH EraIndependentTx, Word32) v "eb_reference"
       fullCddlSpec @EbReferences v "eb_references"
       fullCddlSpec @EbReferencesAnnouncement v "eb_references_announcement"
