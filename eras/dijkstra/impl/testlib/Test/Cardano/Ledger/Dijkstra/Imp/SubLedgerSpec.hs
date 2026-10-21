@@ -38,12 +38,12 @@ spec = describe "SUBLEDGER" $ do
         (mkTopTxWithSubTxs [declareTreasurySubTx declaredFirst, declareTreasurySubTx declaredSecond])
         [ injectFailure . SubTreasuryValueMismatch $
             Mismatch
-              { mismatchSupplied = declaredFirst
+              { mismatchSupplied = declaredSecond
               , mismatchExpected = actualTreasury
               }
         , injectFailure . SubTreasuryValueMismatch $
             Mismatch
-              { mismatchSupplied = declaredSecond
+              { mismatchSupplied = declaredFirst
               , mismatchExpected = actualTreasury
               }
         ]

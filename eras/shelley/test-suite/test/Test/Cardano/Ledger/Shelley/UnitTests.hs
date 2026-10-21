@@ -397,10 +397,10 @@ testWitnessWrongUTxO =
       txwits = NES.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
+            MissingVKeyWitnessesUTXOW txwits
+        , UtxowFailure $
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay]
-        , UtxowFailure $
-            MissingVKeyWitnessesUTXOW txwits
         ]
         tx
 

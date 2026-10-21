@@ -113,7 +113,7 @@ predicateFailuresSpec =
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap
           FailBoth
-            { bootstrapFailures = [disallowedProposalFailure proposal, expectedFailure]
+            { bootstrapFailures = [expectedFailure, disallowedProposalFailure proposal]
             , postBootstrapFailures = [expectedFailure]
             }
 
@@ -150,7 +150,7 @@ predicateFailuresSpec =
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrapAndPostBootstrap $
           FailBoth
-            { bootstrapFailures = [disallowedProposalFailure proposal, expectedFailure]
+            { bootstrapFailures = [expectedFailure, disallowedProposalFailure proposal]
             , postBootstrapFailures = [expectedFailure]
             }
   where
@@ -755,8 +755,8 @@ votingSpec =
           submitFailingVote
             (CommitteeVoter hotCred)
             gaId
-            [ injectFailure $ UnelectedCommitteeVoters [hotCred]
-            , injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]
+            [ injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]
+            , injectFailure $ UnelectedCommitteeVoters [hotCred]
             ]
         else
           submitFailingVote
@@ -1095,12 +1095,12 @@ networkIdSpec =
                 ]
             , postBootstrapFailures =
                 [ injectFailure $
-                    ProposalReturnAccountDoesNotExist
-                      badAccountAddress
-                , injectFailure $
                     ProposalProcedureNetworkIdMismatch
                       badAccountAddress
                       Testnet
+                , injectFailure $
+                    ProposalReturnAccountDoesNotExist
+                      badAccountAddress
                 ]
             }
 
@@ -1151,8 +1151,8 @@ withdrawalsSpec =
         submitBootstrapAwareFailingProposal proposal $
           FailBootstrapAndPostBootstrap $
             FailBoth
-              { bootstrapFailures = [disallowedProposalFailure proposal, idMismatch]
-              , postBootstrapFailures = [returnAddress, idMismatch]
+              { bootstrapFailures = [idMismatch, disallowedProposalFailure proposal]
+              , postBootstrapFailures = [idMismatch, returnAddress]
               }
 
     it "Fails for empty withdrawals" $ do
@@ -1178,8 +1178,8 @@ withdrawalsSpec =
           FailBootstrapAndPostBootstrap $
             FailBoth
               { bootstrapFailures =
-                  [ disallowedProposalFailure proposal
-                  , injectFailure $ ZeroTreasuryWithdrawals wdrls
+                  [ injectFailure $ ZeroTreasuryWithdrawals wdrls
+                  , disallowedProposalFailure proposal
                   ]
               , postBootstrapFailures = [injectFailure $ ZeroTreasuryWithdrawals wdrls]
               }

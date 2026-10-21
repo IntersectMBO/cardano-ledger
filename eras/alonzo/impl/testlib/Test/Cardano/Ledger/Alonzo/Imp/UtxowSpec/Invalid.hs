@@ -81,9 +81,9 @@ spec = describe "Invalid transactions" $ do
             submitFailingTx
               tx
               [ injectFailure $
-                  MissingRedeemers [(missingRedeemer, scriptHash)]
-              , injectFailure $
                   CollectErrors [NoRedeemer missingRedeemer]
+              , injectFailure $
+                  MissingRedeemers [(missingRedeemer, scriptHash)]
               ]
 
         it "MissingRequiredDatums" $ do
@@ -195,11 +195,11 @@ spec = describe "Invalid transactions" $ do
             submitFailingTx
               tx
               [ injectFailure $
-                  ExtraRedeemers [mkMintingPurpose $ AsIx 0]
+                  CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
               , injectFailure $
                   MissingRedeemers [(mkSpendingPurpose $ AsItem txIn, scriptHash)]
               , injectFailure $
-                  CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
+                  ExtraRedeemers [mkMintingPurpose $ AsIx 0]
               ]
 
         it "Missing witness for collateral input" $ do

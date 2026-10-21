@@ -322,9 +322,9 @@ spec = describe "SUBUTXO" $ do
           outsideValiditySubTx = mkBasicTx $ mkBasicTxBody & vldtTxBodyL .~ validityInterval
       submitFailingTx
         (mkTopTxWithSubTxs [wrongNetworkSubTx, outsideValiditySubTx])
-        [ injectFailure . SubWrongNetworkInTxBody @era $
+        [ injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
+        , injectFailure . SubWrongNetworkInTxBody @era $
             Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
-        , injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
         ]
 
   describe "Accepted at the boundary" $ do
