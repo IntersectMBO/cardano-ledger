@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Add `psStakePoolDistrG`
 * Change `TICKF` to run the `SNAP` rule at the epoch boundary:
   - Add `SNAP` related constraints to the `STS` instance of `TICKF`
   - Add `Embed (SNAP era) (TICKF era)` instance for Shelley's `SNAP` rule

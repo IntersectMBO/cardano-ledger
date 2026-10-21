@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -29,6 +28,7 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   finishDRepPulser,
   computeDRepDistr,
   psDRepDistrG,
+  psStakePoolDistrG,
   PulsingSnapshot (..),
   psProposalsL,
   psDRepDistrL,
@@ -457,6 +457,14 @@ psDRepDistrG = to get
   where
     get (DRComplete x _) = psDRepDistr x
     get x = psDRepDistr . fst $ finishDRepPulser x
+
+psStakePoolDistrG ::
+  (EraStake era, ConwayEraAccounts era) =>
+  SimpleGetter (DRepPulsingState era) (Map (KeyHash StakePool) (CompactForm Coin))
+psStakePoolDistrG = to get
+  where
+    get (DRComplete x _) = psPoolDistr x
+    get x = psPoolDistr . fst $ finishDRepPulser x
 
 instance (ConwayEraAccounts era, EraStake era, EraPParams era) => Eq (DRepPulsingState era) where
   x == y = finishDRepPulser x == finishDRepPulser y

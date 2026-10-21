@@ -148,6 +148,7 @@ module Cardano.Ledger.Conway.Governance (
   getRatifyState,
   conwayGovStateDRepDistrG,
   psDRepDistrG,
+  psStakePoolDistrG,
   PulsingSnapshot (..),
   setCompleteDRepPulsingState,
   setFreshDRepPulsingState,
