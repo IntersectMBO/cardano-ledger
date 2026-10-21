@@ -107,7 +107,7 @@ import Data.Bifunctor (Bifunctor (second), first)
 import Data.Coerce (Coercible, coerce)
 import Data.Data (Data, Typeable)
 import Data.Default (Default, def)
-import Data.Foldable as F (find, toList, traverse_)
+import Data.Foldable as F (find, toList)
 import Data.Functor (($>), (<&>))
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -730,7 +730,7 @@ applyRuleInternal isAlreadyFailing ep vp goSTS jc r = do
           sevs :: [Event sub]
           (ss, sfails) = discardEvents ep @sub s
           sevs = getEvents ep @sub @(State sub, [PredicateFailure sub]) s
-      traverse_ (\a -> modify (first (a :))) $ wrapFailed @sub @s <$> sfails
+      modify $ first (fmap (wrapFailed @sub @s) sfails <>)
       runClause $ Writer (wrapEvent @sub @s <$> sevs) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
