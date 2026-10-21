@@ -147,6 +147,9 @@ getBabbageScriptsProvided utxo tx = ScriptsProvided ans
     ans = getReferenceScripts utxo ins `Map.union` (tx ^. witsTxL . scriptTxWitsL)
 
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
+--
+-- Keyed by script hash, so the same script is included only once, even when it is attached
+-- to more than one output.
 getReferenceScripts ::
   BabbageEraTxOut era =>
   UTxO era ->
