@@ -13,10 +13,12 @@ module Cardano.Ledger.Huddle (
   HuddleGroup (..),
   HuddleGRule (..),
   HuddleRule1 (..),
+  HuddleRule2 (..),
   huddleRule,
   huddleGroup,
   huddleGRule,
   huddleRule1,
+  huddleRule2,
   (=.=),
   (=.~),
   Era,
@@ -43,6 +45,9 @@ class (KnownSymbol name, Era era) => HuddleGRule (name :: Symbol) era where
 class (KnownSymbol name, Era era) => HuddleRule1 (name :: Symbol) era where
   huddleRule1Named :: IsType0 a => Proxy name -> Proxy era -> a -> GRuleCall
 
+class (KnownSymbol name, Era era) => HuddleRule2 (name :: Symbol) era where
+  huddleRule2Named :: (IsType0 a, IsType0 b) => Proxy name -> Proxy era -> a -> b -> GRuleCall
+
 huddleRule :: forall name era. HuddleRule name era => Proxy era -> Rule
 huddleRule = huddleRuleNamed (Proxy @name)
 
@@ -54,6 +59,11 @@ huddleGRule = huddleGRuleNamed (Proxy @name)
 
 huddleRule1 :: forall name era a. (HuddleRule1 name era, IsType0 a) => Proxy era -> a -> GRuleCall
 huddleRule1 = huddleRule1Named (Proxy @name)
+
+huddleRule2 ::
+  forall name era a b.
+  (HuddleRule2 name era, IsType0 a, IsType0 b) => Proxy era -> a -> b -> GRuleCall
+huddleRule2 = huddleRule2Named (Proxy @name)
 
 (=.=) :: (KnownSymbol name, IsType0 t) => Proxy (name :: Symbol) -> t -> Rule
 (=.=) pname t = Name (T.pack (symbolVal pname)) =:= t
