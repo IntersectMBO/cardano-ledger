@@ -23,6 +23,7 @@
 * Add `lookupDRepState`, `expectDRepRegistered`, `expectDelegatedVote`, `expectNotDelegatedVote` and `expectReverseDRepDelegation`
 * Add `goldenMapRedeemers` to test redeemer map decoding across protocol versions
 * Add `ToExpr` instance for `ConwayTickfEvent`
+* Change `Arbitrary ConwayGovCert` to generate every constructor
 
 ## 1.24.0.0
 
