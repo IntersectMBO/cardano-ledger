@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `getShelleyWitsVKeyNeededNoGovWith`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 * Add `LedgerStateWithLimits`, `lswlLedgerState`, `lswlBlockBodyLimits`, `lswlLedgerStateL`, `lswlBlockBodyLimitsL`
 * Add `ShelleyBlockBodyLimits` and `sbblTxsSize`
@@ -29,6 +30,9 @@
 
 ### `testlib`
 
+* Add `impWitsPState` method to `ShelleyEraImp`
+* Add `updateAddrTxWitsWith`
+* Add a `PState` argument and the `EraCertState` constraint to `impWitsVKeyNeeded`
 * Export `runShelleyBase` from `Test.Cardano.Ledger.Shelley.ImpTest`
 * Add `Test.Cardano.Ledger.Shelley.Imp.TickSpec`
 * Add `withTxsInModifiedBlock`

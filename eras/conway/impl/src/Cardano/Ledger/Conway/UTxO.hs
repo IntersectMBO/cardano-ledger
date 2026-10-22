@@ -12,6 +12,7 @@
 module Cardano.Ledger.Conway.UTxO (
   conwayProducedValue,
   getConwayWitsVKeyNeeded,
+  getConwayWitsVKeyNeededWith,
   getConwayScriptsNeeded,
   txNonDistinctRefScriptsSize,
   getConwayMinFeeTxUtxo,
@@ -51,7 +52,7 @@ import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
+import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGovWith)
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -174,8 +175,18 @@ getConwayWitsVKeyNeeded ::
   UTxO era ->
   TxBody l era ->
   Set.Set (KeyHash Witness)
-getConwayWitsVKeyNeeded utxo txBody =
-  getShelleyWitsVKeyNeededNoGov utxo txBody
+getConwayWitsVKeyNeeded = getConwayWitsVKeyNeededWith (const True)
+
+getConwayWitsVKeyNeededWith ::
+  (EraTx era, ConwayEraTxBody era) =>
+  -- | Predicate that decides if the owners listed in a pool registration
+  -- certificate must sign the transaction
+  (StakePoolParams era -> Bool) ->
+  UTxO era ->
+  TxBody l era ->
+  Set.Set (KeyHash Witness)
+getConwayWitsVKeyNeededWith ownersWitnessRequired utxo txBody =
+  getShelleyWitsVKeyNeededNoGovWith ownersWitnessRequired utxo txBody
     `Set.union` Set.map asWitness (txBody ^. reqSignerHashesTxBodyG)
     `Set.union` voterWitnesses txBody
 

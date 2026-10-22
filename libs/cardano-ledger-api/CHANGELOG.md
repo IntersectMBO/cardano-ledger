@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add a `PState` argument to `calcMinFeeTx`
 * Add `Cardano.Ledger.Api.Leios` for standalone Leios certificate validation:
   - Add `validateLeiosCert`
   - Re-export `LeiosCertEnv`, `DijkstraLeiosCertPredFailure` and `LeiosCert`

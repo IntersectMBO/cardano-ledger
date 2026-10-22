@@ -101,7 +101,7 @@ import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
-import Control.Monad (forM)
+import Control.Monad (foldM, forM)
 import Control.Monad.State (gets)
 import Control.State.Transition (STS (..))
 import Data.Foldable
@@ -111,6 +111,7 @@ import qualified Data.OMap.Strict as OMap
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Set as Set
 import qualified Data.SimpleOMap.Strict as SimpleOMap
+import Data.Traversable (mapAccumM)
 import Data.Word (Word32)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -136,6 +137,11 @@ instance ShelleyEraImp DijkstraEra where
   modifyPParams = conwayModifyPParams
 
   fixupTx = dijkstraFixupTx
+  impWitsPState txBody = do
+    pState <- getPState
+    case toSTxLevel txBody of
+      STopTx -> foldM applyPoolRegistrations pState (txBody ^. subTransactionsTxBodyL)
+      SSubTx -> pure pState
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert
@@ -468,6 +474,25 @@ dijkstraFixupTx tx = do
   balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
   babbageFixupTx balancedInLegacy
 
+applyPoolRegistrations ::
+  DijkstraEraImp era =>
+  PState era ->
+  Tx l era ->
+  ImpTestM era (PState era)
+applyPoolRegistrations pState tx = do
+  epochNo <- getsNES nesELL
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppPoolDepositCompactL
+  let register ps = \case
+        RegPoolTxCert spp
+          | Map.member (sppId spp) (psStakePools ps) ->
+              ps & psFutureStakePoolParamsL %~ Map.insert (sppId spp) spp
+          | otherwise ->
+              ps
+                & psStakePoolsL
+                  %~ Map.insert (sppId spp) (mkStakePoolState epochNo SNothing deposit mempty spp)
+        _ -> ps
+  pure $ foldl' register pState (tx ^. bodyTxL . certsTxBodyL)
+
 detectLegacyMode ::
   DijkstraEraImp era =>
   Tx TopTx era ->
@@ -510,13 +535,16 @@ fixupSubTransactions ::
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
-  fixedup <-
-    traverse
-      fixupSubTransaction
-      (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
-  pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable fixedup
+  pState <- getPState
+  (_, fixedUp) <-
+    mapAccumM fixupSubTransaction pState (OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL))
+  pure $ tx & bodyTxL . subTransactionsTxBodyL .~ OMap.fromFoldable fixedUp
   where
-    fixupSubTransaction =
+    fixupSubTransaction pState subTx = do
+      fixedUp <- fixupSubTransactionSteps pState subTx
+      pStateAfter <- applyPoolRegistrations pState fixedUp
+      pure (pStateAfter, fixedUp)
+    fixupSubTransactionSteps pState =
       addSubTxIn
         >=> addNativeScriptTxWits
         >=> fixupAuxDataHash
@@ -526,7 +554,7 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
         >=> fixupTxOuts
         >=> addMissingRedeemers
         >=> fixupPPHash
-        >=> updateAddrTxWits
+        >=> updateAddrTxWitsWith pState
     addMissingRedeemers subTx = do
       let originalRedeemers = subTx ^. witsTxL . rdmrsTxWitsL
       withMaxRedeemers <- txWithMaxRedeemers subTx
