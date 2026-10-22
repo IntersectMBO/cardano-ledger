@@ -28,7 +28,7 @@ data TestBlockHeader
   , tbhEbRefsAnn :: StrictMaybe EbReferencesAnnouncement
   , tbhBlockBodyContainsLeiosCert :: Bool
   }
-  deriving (Generic)
+  deriving (Generic, Eq, Show)
 
 instance NFData TestBlockHeader
 

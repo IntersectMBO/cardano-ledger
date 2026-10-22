@@ -338,3 +338,11 @@ instance
 instance ToExpr (AccountBalanceInterval era)
 
 instance ToExpr (AccountBalanceIntervals era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "EBLEDGERS" era)) =>
+  ToExpr (EbPredFailure era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
+  ToExpr (EbLedgersPredFailure era)

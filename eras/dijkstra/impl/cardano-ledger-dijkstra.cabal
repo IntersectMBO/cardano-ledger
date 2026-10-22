@@ -59,6 +59,8 @@ library
     Cardano.Ledger.Dijkstra.Rules.Cert
     Cardano.Ledger.Dijkstra.Rules.Certs
     Cardano.Ledger.Dijkstra.Rules.Deleg
+    Cardano.Ledger.Dijkstra.Rules.Eb
+    Cardano.Ledger.Dijkstra.Rules.EbLedgers
     Cardano.Ledger.Dijkstra.Rules.Entities
     Cardano.Ledger.Dijkstra.Rules.Epoch
     Cardano.Ledger.Dijkstra.Rules.Gov
@@ -160,6 +162,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp
     Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.EbSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec

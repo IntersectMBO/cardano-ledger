@@ -179,6 +179,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   shelleyGenUnRegTxCert,
   shelleyDelegStakeTxCert,
   shelleyTopTxFromAnyLevel,
+  runShelleyBase,
 
   -- * Logging
   Doc,
