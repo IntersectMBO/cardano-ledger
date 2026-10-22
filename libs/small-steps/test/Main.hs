@@ -3,6 +3,7 @@
 import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import qualified Test.Control.State.Transition.Examples.CommitReveal as CommitReveal
 import qualified Test.Control.State.Transition.Examples.GlobalSum as GSum
+import qualified Test.Control.State.Transition.Examples.RecRule as RecRule
 import qualified Test.Control.State.Transition.Examples.Sum as Sum
 import Test.Hspec
 import Test.Hspec.QuickCheck
@@ -27,6 +28,7 @@ spec = describe "All" $ do
     prop "a counterexample of an invalid signal should be found" $
       expectFailure CommitReveal.prop_qc_OnlyValidSignals
   GSum.spec
+  RecRule.spec
 
 main :: IO ()
 main = do
