@@ -58,6 +58,7 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV3
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV4
     goldenDuplicatePlutusDataDisallowed @era version
+    goldenDuplicateRedeemersDisallowed @era version
     goldenEmptyFields @era version
   describe "Subtransactions" $ do
     goldenSubTransactions @era
@@ -177,6 +178,25 @@ witsDuplicatePlutusData =
   where
     dat = E @Int 0
 
+witsDuplicateRedeemers :: Enc
+witsDuplicateRedeemers =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int 5
+    , Em
+        [ E $ TkMapLen 2
+        , redeemer
+        , redeemer
+        ]
+    ]
+  where
+    -- [spend, index 10] => [data 20, ex_units [30, 40]]
+    redeemer =
+      mconcat
+        [ Em [E $ TkListLen 2, E @Int 0, E @Int 10]
+        , Em [E $ TkListLen 2, E @Int 20, Em [E $ TkListLen 2, E @Int 30, E @Int 40]]
+        ]
+
 goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
 goldenListRedeemersDisallowed version =
   it "Decoding Redeemers encoded as a list fails" $
@@ -241,6 +261,20 @@ goldenDuplicatePlutusDataDisallowed version =
       ( DecoderErrorCustom
           "Annotator"
           "Duplicates found, expected no duplicates"
+      )
+
+goldenDuplicateRedeemersDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenDuplicateRedeemersDisallowed version =
+  it "Decoding a TxWits with duplicate redeemer keys fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      version
+      witsDuplicateRedeemers
+      ( DecoderErrorDeserialiseFailure
+          (Binary.label $ Proxy @(Annotator (TxWits era)))
+          ( DeserialiseFailure
+              23
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
       )
 
 goldenSubTransactions :: forall era. DijkstraEraTest era => Spec
