@@ -142,6 +142,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectTreasury,
   disableTreasuryExpansion,
   updateAddrTxWits,
+  updateAddrTxWitsWith,
   rederiveAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
@@ -662,6 +663,9 @@ class
 
   topTxFromAnyLevel :: (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
 
+  impWitsPState :: Tx l era -> ImpTestM era (PState era)
+  impWitsPState _ = getPState
+
 data AnyLevelTx era = AnyLevelTx (forall l. Typeable l => Tx l era)
 
 impSatisfySignature ::
@@ -999,14 +1003,15 @@ shelleyTopTxFromAnyLevel atx = pure $ atx @TopTx
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
 impWitsVKeyNeeded ::
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
+  PState era ->
   TxBody l era ->
   ImpTestM
     era
     ( Set.Set BootstrapAddress -- Byron Based Addresses
     , Set.Set (KeyHash Witness) -- Shelley Based KeyHashes
     )
-impWitsVKeyNeeded txBody = do
+impWitsVKeyNeeded pState txBody = do
   ls <- getsNES (nesEsL . esLStateL)
   utxo <- getUTxO
   let toBootAddr txIn = do
@@ -1015,7 +1020,7 @@ impWitsVKeyNeeded txBody = do
       bootAddrs = Set.fromList $ mapMaybe toBootAddr $ Set.toList (txBody ^. spendableInputsTxBodyF)
       bootKeyHashes = Set.map (coerceKeyRole . bootstrapKeyHash) bootAddrs
       allKeyHashes =
-        getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. utxoL) txBody
+        getWitsVKeyNeeded (ls ^. lsCertStateL & certPStateL .~ pState) (ls ^. utxoL) txBody
   pure (bootAddrs, allKeyHashes Set.\\ bootKeyHashes)
 
 data ImpTestEnv era = ImpTestEnv
@@ -1199,10 +1204,21 @@ updateAddrTxWits ::
   ) =>
   Tx l era ->
   ImpTestM era (Tx l era)
-updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
+updateAddrTxWits tx = do
+  pState <- impWitsPState tx
+  updateAddrTxWitsWith pState tx
+
+updateAddrTxWitsWith ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  PState era ->
+  Tx l era ->
+  ImpTestM era (Tx l era)
+updateAddrTxWitsWith pState tx = impAnn "updateAddrTxWits" $ do
   let txBody = tx ^. bodyTxL
       txBodyHash = hashAnnotated txBody
-  (bootAddrs, witsVKeyNeeded) <- impWitsVKeyNeeded txBody
+  (bootAddrs, witsVKeyNeeded) <- impWitsVKeyNeeded pState txBody
   -- Shelley Based Addr Witnesses
   let curAddrWitHashes = Set.map witVKeyHash $ tx ^. witsTxL . addrTxWitsL
   extraKeyPairs <- mapM getKeyPair $ Set.toList (witsVKeyNeeded Set.\\ curAddrWitHashes)
@@ -1294,6 +1310,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  witsPState <- impWitsPState tx
   addr <-
     if eraProtVerLow @era < natVersion @12
       then freshKeyAddr_
@@ -1320,7 +1337,8 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     suppliedFee = txOriginal ^. bodyTxL . feeTxBodyL
     fee0
-      | suppliedFee == zero = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
+      | suppliedFee == zero =
+          calcMinFeeTxNativeScriptWits utxo pp witsPState txNoWits nativeScriptKeyWits
       | otherwise = suppliedFee
     fee = rationalToCoinViaCeiling $ coinToRational fee0 * (11 % 10)
   logString "Validating change"

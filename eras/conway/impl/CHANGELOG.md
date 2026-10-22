@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Add `getConwayWitsVKeyNeededWith`
 * Replace `TranslateEra ConwayEra (Tx TopTx)` with `TranslateEra ConwayEra MempoolTx`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l ConwayEra` to `MempoolTx ConwayEra`
 * Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Conway.Core`

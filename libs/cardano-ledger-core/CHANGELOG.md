@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Add a `PState` argument to `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`
 * Add `Cardano.Ledger.MempoolTx` with the abstract `MempoolTx` wrapper and `unwrapMempoolTx`
 * Add `Cardano.Ledger.MempoolTx.Internal` with the `UnsafeMkMempoolTx` constructor
 * Generalize `wireSizeTxF` to accept an era-indexed transaction representation

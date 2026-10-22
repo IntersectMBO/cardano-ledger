@@ -41,7 +41,7 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
-import Cardano.Ledger.State (EraCertState)
+import Cardano.Ledger.State (EraCertState (..), PState)
 import Cardano.Ledger.State.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
@@ -112,6 +112,8 @@ calcMinFeeTxNativeScriptWits ::
   UTxO era ->
   -- | The current protocol parameters.
   PParams era ->
+  -- | The current state of stake pools
+  PState era ->
   -- | The transaction.
   Tx TopTx era ->
   -- | KeyHash witnesses that will be supplied for satisfying native scripts. It is
@@ -121,8 +123,14 @@ calcMinFeeTxNativeScriptWits ::
   Set.Set (KeyHash Witness) ->
   -- | The required minimum fee.
   Coin
-calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
-  calcMinFeeTxInternal utxo pp tx (Set.size nativeScriptsKeyWitsHashes) nativeScriptsKeyWitsHashes
+calcMinFeeTxNativeScriptWits utxo pp pState tx nativeScriptsKeyWitsHashes =
+  calcMinFeeTxInternal
+    utxo
+    pp
+    pState
+    tx
+    (Set.size nativeScriptsKeyWitsHashes)
+    nativeScriptsKeyWitsHashes
 
 -- | This is a more accurate version `estimateMinFeeTx` that looks into transaction and
 -- figures out how many and what kind of key witnesses this transaction needs. It requires
@@ -134,7 +142,7 @@ calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
 -- ====__Example__
 --
 -- > let relevantUtxo = txInsFilter utxo (tx ^. bodyTxL . allInputsTxBodyF)
--- > calcMinFeeTx relevantUtxo pp tx 5
+-- > calcMinFeeTx relevantUtxo pp pState tx 5
 calcMinFeeTx ::
   forall era.
   (EraUTxO era, EraCertState era) =>
@@ -143,6 +151,9 @@ calcMinFeeTx ::
   UTxO era ->
   -- | The current protocol parameters.
   PParams era ->
+  -- | The current state of stake pools, which is used for figuring out if the owners
+  -- of a pool need to witness its updates.
+  PState era ->
   -- | The transaction.
   Tx TopTx era ->
   -- | Number of extra KeyHash witnesses that will be supplied for satisfying native
@@ -155,8 +166,8 @@ calcMinFeeTx ::
   Int ->
   -- | The required minimum fee.
   Coin
-calcMinFeeTx utxo pp tx extraKeyWitsCount =
-  calcMinFeeTxInternal utxo pp tx extraKeyWitsCount Set.empty
+calcMinFeeTx utxo pp pState tx extraKeyWitsCount =
+  calcMinFeeTxInternal utxo pp pState tx extraKeyWitsCount Set.empty
 
 calcMinFeeTxInternal ::
   forall era.
@@ -166,6 +177,8 @@ calcMinFeeTxInternal ::
   UTxO era ->
   -- | The current protocol parameters.
   PParams era ->
+  -- | The current state of stake pools
+  PState era ->
   -- | The transaction.
   Tx TopTx era ->
   -- | Number of KeyHash witnesses that will be supplied for native scripts
@@ -173,7 +186,7 @@ calcMinFeeTxInternal ::
   -- | KeyHash witnesses that will be supplied for native scripts
   Set.Set (KeyHash Witness) ->
   Coin
-calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
+calcMinFeeTxInternal utxo pp pState tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
   setMinFeeTxUtxo pp tx' utxo ^. bodyTxL . feeTxBodyL
   where
     txBody = tx ^. bodyTxL
@@ -185,7 +198,7 @@ calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
       pure (asWitness (bootstrapKeyHash ba), Byron.addrAttributes bootAddr)
     byronAttributes = Map.fromList $ mapMaybe getByronAttrs inputs
     requiredKeyHashes =
-      getWitsVKeyNeeded def utxo txBody Set.\\ nativeScriptsKeyWitsHashes
+      getWitsVKeyNeeded (def & certPStateL .~ pState) utxo txBody Set.\\ nativeScriptsKeyWitsHashes
     numKeyWitsRequired =
       getGenesisKeyHashCountTxBody txBody
         + extraKeyWitsCount
