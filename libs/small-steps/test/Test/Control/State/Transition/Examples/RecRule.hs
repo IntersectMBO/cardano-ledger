@@ -34,12 +34,12 @@ spec = describe "RecRule" $ do
   it "Predicate failures happen in the right order" $ do
     runIdentity (applySTS @RecRule $ TRC ((), (), 5))
       `shouldBe` Left
-        [ "0 is less than 3"
-        , "1 is less than 3"
-        , "1 is not even"
-        , "2 is less than 3"
-        , "3 is not even"
-        , "bar"
+        [ "5 is not even"
         , "foo"
-        , "5 is not even"
+        , "bar"
+        , "3 is not even"
+        , "2 is less than 3"
+        , "1 is not even"
+        , "1 is less than 3"
+        , "0 is less than 3"
         ]

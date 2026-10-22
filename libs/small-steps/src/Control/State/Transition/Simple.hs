@@ -12,6 +12,8 @@ module Control.State.Transition.Simple (
 import Control.Monad.Identity (Identity (..))
 import Control.State.Transition.Extended as Extended hiding (applySTS, applySTSIndifferently)
 import qualified Control.State.Transition.Extended as X
+import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 
 applySTSIndifferently ::
@@ -19,7 +21,7 @@ applySTSIndifferently ::
   (STS s, RuleTypeRep rtype, Identity ~ BaseM s) =>
   RuleContext rtype s ->
   (State s, [PredicateFailure s])
-applySTSIndifferently ctx = runIdentity $ X.applySTSIndifferently ctx
+applySTSIndifferently ctx = second toList . runIdentity $ X.applySTSIndifferently ctx
 
 applySTS ::
   forall s rtype.
