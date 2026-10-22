@@ -2,6 +2,9 @@
 
 ## 1.16.0.0
 
+* Add `Cardano.Ledger.Api.Leios` for standalone Leios certificate validation:
+  - Add `validateLeiosCert`
+  - Re-export `LeiosCertEnv`, `DijkstraLeiosCertPredFailure` and `LeiosCert`
 * Add `queryStakePoolState` with the `QueryResultStakePoolState` result type
 * Add `queryLeiosCommittee` (`GetLeiosCommittee`) with the `QueryResultLeiosCommittee` result type
 * Add methods to `AnyEraTxBody`:
