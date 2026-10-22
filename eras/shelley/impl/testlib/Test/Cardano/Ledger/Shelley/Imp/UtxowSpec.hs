@@ -137,8 +137,8 @@ spec = describe "UTXOW" $ do
           [ injectFailure $ ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash
           ]
         else
-          [ injectFailure $ ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash
-          , injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash
+          [ injectFailure $ ScriptWitnessNotValidatingUTXOW $ NES.singleton scriptHash
+          , injectFailure $ ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash
           ]
   it "A malformed metadatum does nothing" $ do
     invalidMetadatum <- genInvalidMetadata

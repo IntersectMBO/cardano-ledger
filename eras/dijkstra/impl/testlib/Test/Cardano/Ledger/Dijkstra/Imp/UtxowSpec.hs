@@ -331,11 +331,11 @@ spec = describe "UTXOW" $ do
           -- translation also fails with ScriptHashNotFoundForPurpose.
           submitFailingTx
             (tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (redeemerData, ExUnits 0 0))
-            [ injectFailure $
+            [ injectFailure $ Alonzo.ExtraRedeemers [prp]
+            , injectFailure $
                 CollectErrors
                   [ BadTranslation . inject $ ScriptHashNotFoundForPurpose prp
                   ]
-            , injectFailure $ Alonzo.ExtraRedeemers [prp]
             ]
           submitAnyTx_ tx
 

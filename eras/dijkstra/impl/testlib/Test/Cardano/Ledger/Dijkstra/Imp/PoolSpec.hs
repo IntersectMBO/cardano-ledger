@@ -618,8 +618,8 @@ spec = describe "POOL" $ do
       -- the key is rejected twice: its public key is taken and its proof is not valid
       submitFailingTx
         (registerPoolTx pps)
-        [ injectFailure $ BlsKeyAlreadyRegistered kh bogusKey
-        , injectFailure $ BlsKeyInvalidProofOfPossession kh bogusKey
+        [ injectFailure $ BlsKeyInvalidProofOfPossession kh bogusKey
+        , injectFailure $ BlsKeyAlreadyRegistered kh bogusKey
         ]
       expectBlsKeys [key]
 

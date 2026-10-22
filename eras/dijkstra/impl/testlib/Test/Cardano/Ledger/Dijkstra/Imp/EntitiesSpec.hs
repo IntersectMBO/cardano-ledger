@@ -349,15 +349,15 @@ spec = describe "ENTITIES" $ do
               & withdrawalsTxBodyL .~ Withdrawals [(account3, amountY)]
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyWithdrawal])
-      [ injectFailure . WithdrawalAccountsMissingFromOriginal @era $
+      [ injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
           Withdrawals [(account1, amountX), (account2, zero)]
-      , injectFailure . SubWithdrawalAccountsMissing @era $
-          Withdrawals [(account3, amountY)]
-      , injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
-          Withdrawals [(account3, amountY)]
       , injectFailure . SubWithdrawalAccountsMissing @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       , injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
+          Withdrawals [(account3, amountY)]
+      , injectFailure . SubWithdrawalAccountsMissing @era $
+          Withdrawals [(account3, amountY)]
+      , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
           Withdrawals [(account1, amountX), (account2, zero)]
       ]
 
@@ -430,11 +430,11 @@ spec = describe "ENTITIES" $ do
             mkBasicTxBody & directDepositsTxBodyL .~ DirectDeposits [(account, amountY), (account2, amountZ)]
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody, subTxOnlyDirectDeposit])
-      [ injectFailure . DirectDepositAccountsMissing @era $
+      [ injectFailure . SubDirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountX)]
       , injectFailure . SubDirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountY), (account2, amountZ)]
-      , injectFailure . SubDirectDepositAccountsMissing @era $
+      , injectFailure . DirectDepositAccountsMissing @era $
           DirectDeposits [(account, amountX)]
       ]
 
@@ -452,32 +452,32 @@ spec = describe "ENTITIES" $ do
 
     submitFailingTx
       (mkBasicTx txBody)
-      [ injectFailure . DirectDepositAccountsMissing @era $ dd
-      , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
-          Withdrawals [(wrongNetworkAccount, mempty)]
+      [ injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $ NES.singleton wrongNetworkAccount
       , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
-      , injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $ NES.singleton wrongNetworkAccount
+      , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
     submitFailingTx
       (mkBasicTx $ txBody & subTransactionsTxBodyL .~ [mkBasicTx txBody])
-      [ injectFailure . DirectDepositAccountsMissing @era $ dd
-      , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
-          Withdrawals [(wrongNetworkAccount, mempty)]
-      , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
+      [ injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
-      , injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $
-          NES.singleton wrongNetworkAccount
-      , injectFailure . SubDirectDepositAccountsMissing @era $ dd
-      , injectFailure . SubWithdrawalAccountsMissing @era $
-          Withdrawals [(wrongNetworkAccount, mempty)]
-      , injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
-          Withdrawals [(wrongNetworkAccount, mempty)]
       , injectFailure . SubDirectDepositAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
-      , injectFailure . SubWithdrawalAddressesWithWrongNetwork @era Testnet $
+      , injectFailure . SubWithdrawalAccountsMissingFromOriginal @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubWithdrawalAccountsMissing @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . SubDirectDepositAccountsMissing @era $ dd
+      , injectFailure . WithdrawalAddressesWithWrongNetwork @era Testnet $
           NES.singleton wrongNetworkAccount
+      , injectFailure . DirectDepositAddressesWithWrongNetwork @era Testnet $
+          NES.singleton wrongNetworkAccount
+      , injectFailure . WithdrawalAccountsMissingFromOriginal @era $
+          Withdrawals [(wrongNetworkAccount, mempty)]
+      , injectFailure . DirectDepositAccountsMissing @era $ dd
       ]
 
   it "Direct deposits cannot fund withdrawals in subsequent sub-transactions" $ do
@@ -651,12 +651,12 @@ spec = describe "ENTITIES" $ do
                   ]
         )
         [ injectFailure $
-            BalancesOutsideAccountBalanceIntervals @era
-              (NEM.singleton accountAddr (balance, violated))
+            WrongNetworkInAccountBalanceIntervals @era Testnet (NES.singleton onWrongNetwork)
         , injectFailure $
             MissingAccountsInAccountBalanceIntervals @era (NEM.singleton unregistered violated)
         , injectFailure $
-            WrongNetworkInAccountBalanceIntervals @era Testnet (NES.singleton onWrongNetwork)
+            BalancesOutsideAccountBalanceIntervals @era
+              (NEM.singleton accountAddr (balance, violated))
         ]
 
     it
@@ -741,10 +741,10 @@ spec = describe "ENTITIES" $ do
         submitFailingTx
           (txWithIntervals drained original)
           [ injectFailure $
+              BalancesOutsideAccountBalanceIntervals @era (NEM.singleton accountAddr (zero, original))
+          , injectFailure $
               BalancesOutsideStartingAccountBalanceIntervals @era
                 (NEM.singleton accountAddr (balance, drained))
-          , injectFailure $
-              BalancesOutsideAccountBalanceIntervals @era (NEM.singleton accountAddr (zero, original))
           ]
         submitTx_ $ txWithIntervals original drained
   where

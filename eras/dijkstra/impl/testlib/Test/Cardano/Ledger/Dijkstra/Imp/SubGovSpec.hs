@@ -261,9 +261,9 @@ spec = describe "SUBGOV" $ do
       submitFailingSubTx
         (voteSubTx VoteYes (CommitteeVoter hotCredential) govActionId)
         [ injectFailure . DijkstraSubGovPredFailure $
-            VotersDoNotExist [CommitteeVoter hotCredential]
-        , injectFailure . DijkstraSubGovPredFailure $
             UnelectedCommitteeVoters [hotCredential]
+        , injectFailure . DijkstraSubGovPredFailure $
+            VotersDoNotExist [CommitteeVoter hotCredential]
         ]
 
   describe "VotersDoNotExist" $
@@ -372,9 +372,9 @@ spec = describe "SUBGOV" $ do
       submitFailingSubTx
         subTx
         [ injectFailure . DijkstraSubGovPredFailure $
-            ProposalReturnAccountDoesNotExist secondAccount
-        , injectFailure . DijkstraSubGovPredFailure $
             ProposalReturnAccountDoesNotExist firstAccount
+        , injectFailure . DijkstraSubGovPredFailure $
+            ProposalReturnAccountDoesNotExist secondAccount
         ]
 
     it "two failures of one committee update, in the order the rule checks them" $ do
@@ -388,10 +388,10 @@ spec = describe "SUBGOV" $ do
           (1 %! 1)
       submitFailingSubTx
         (proposeSubTx proposal)
-        [ injectFailure . DijkstraSubGovPredFailure . ExpirationEpochTooSmall $
-            NEM.singleton committeeCredential currentEpochNo
-        , injectFailure . DijkstraSubGovPredFailure . ConflictingCommitteeUpdate $
+        [ injectFailure . DijkstraSubGovPredFailure . ConflictingCommitteeUpdate $
             NES.singleton committeeCredential
+        , injectFailure . DijkstraSubGovPredFailure . ExpirationEpochTooSmall $
+            NEM.singleton committeeCredential currentEpochNo
         ]
 
     it "seven failures of one proposal, in the order the rule checks them" $ do
@@ -413,19 +413,19 @@ spec = describe "SUBGOV" $ do
               }
       submitFailingSubTx
         (proposeSubTx proposal)
-        [ injectFailure . DijkstraSubGovPredFailure $ ZeroTreasuryWithdrawals govAction
+        [ injectFailure . DijkstraSubGovPredFailure $
+            ProposalReturnAccountDoesNotExist onWrongNetwork
         , injectFailure . DijkstraSubGovPredFailure $
-            InvalidGuardrailsScriptHash (SJust wrongScriptHash) guardrailsScriptHash
-        , injectFailure . DijkstraSubGovPredFailure $
-            TreasuryWithdrawalsNetworkIdMismatch (NES.singleton onWrongNetwork) Testnet
-        , injectFailure . DijkstraSubGovPredFailure $
-            ProposalProcedureNetworkIdMismatch onWrongNetwork Testnet
+            TreasuryWithdrawalReturnAccountsDoNotExist [onWrongNetwork]
         , injectFailure . DijkstraSubGovPredFailure . ProposalDepositIncorrect $
             Mismatch {mismatchSupplied = suppliedDeposit, mismatchExpected = expectedDeposit}
         , injectFailure . DijkstraSubGovPredFailure $
-            TreasuryWithdrawalReturnAccountsDoNotExist [onWrongNetwork]
+            ProposalProcedureNetworkIdMismatch onWrongNetwork Testnet
         , injectFailure . DijkstraSubGovPredFailure $
-            ProposalReturnAccountDoesNotExist onWrongNetwork
+            TreasuryWithdrawalsNetworkIdMismatch (NES.singleton onWrongNetwork) Testnet
+        , injectFailure . DijkstraSubGovPredFailure $
+            InvalidGuardrailsScriptHash (SJust wrongScriptHash) guardrailsScriptHash
+        , injectFailure . DijkstraSubGovPredFailure $ ZeroTreasuryWithdrawals govAction
         ]
 
     it "failures of several sub-transactions, in sub-transaction order" $ do
@@ -436,21 +436,21 @@ spec = describe "SUBGOV" $ do
       submitFailingTx
         (mkTopTxWithSubTxs [proposeSubTx firstProposal, proposeSubTx secondProposal])
         [ injectFailure . DijkstraSubGovPredFailure $
-            ProposalReturnAccountDoesNotExist secondAccount
-        , injectFailure . DijkstraSubGovPredFailure $
             ProposalReturnAccountDoesNotExist firstAccount
+        , injectFailure . DijkstraSubGovPredFailure $
+            ProposalReturnAccountDoesNotExist secondAccount
         ]
 
-    it "the top-level failure precedes the same failure from a sub-transaction" $ do
+    it "a sub-transaction failure precedes the same failure from the top level" $ do
       account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
       submitFailingTx
         ( mkTopTxWithSubTxs [proposeSubTx proposal]
             & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         )
-        [ injectFailure $ ProposalReturnAccountDoesNotExist account
-        , injectFailure . DijkstraSubGovPredFailure $
+        [ injectFailure . DijkstraSubGovPredFailure $
             ProposalReturnAccountDoesNotExist account
+        , injectFailure $ ProposalReturnAccountDoesNotExist account
         ]
 
   describe "Unreachable in Dijkstra" $ do

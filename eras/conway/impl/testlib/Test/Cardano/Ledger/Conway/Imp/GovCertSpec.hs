@@ -262,6 +262,6 @@ spec = describe "GOVCERT" $ do
         submitFailingVote
           (CommitteeVoter proposedMemberHotKey)
           gaiWithdrawal
-          [ injectFailure $ VotersDoNotExist [CommitteeVoter proposedMemberHotKey]
-          , injectFailure $ UnelectedCommitteeVoters [proposedMemberHotKey]
+          [ injectFailure $ UnelectedCommitteeVoters [proposedMemberHotKey]
+          , injectFailure $ VotersDoNotExist [CommitteeVoter proposedMemberHotKey]
           ]

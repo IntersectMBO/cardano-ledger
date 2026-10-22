@@ -106,9 +106,9 @@ spec = describe "Invalid" $ do
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (dt, ExUnits 0 0)
           submitFailingTx
             tx
-            [ injectFailure $
+            [ injectFailure $ Alonzo.ExtraRedeemers [prp]
+            , injectFailure $
                 Alonzo.CollectErrors [BadTranslation (inject $ RedeemerPointerPointsToNothing prp)]
-            , injectFailure $ Alonzo.ExtraRedeemers [prp]
             ]
 
         it "Inline datum with a failing script" $ do
