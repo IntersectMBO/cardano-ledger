@@ -29,6 +29,11 @@
 * Change `eraMaxLanguage` to `PlutusV4`
 * Rename `requiredTopLevelGuardsL` to `requiredTopLevelGuardsTxBodyL`
 
+### `cddl`
+
+* Add the `nonempty_omap` generic rule, with `nonemptyOMap` and a `HuddleRule2 "nonempty_omap"` instance
+* Add the `eb_references` rule, a `nonempty_omap` from transaction hash to transaction size
+
 ### `testlib`
 
 * Add `ToExpr` instances for `DijkstraTopTx DijkstraEra` and `DijkstraTopTxRaw DijkstraEra`

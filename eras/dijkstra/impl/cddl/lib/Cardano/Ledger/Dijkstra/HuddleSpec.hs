@@ -30,8 +30,8 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   scriptRequireGuardGroup,
   dijkstraRedeemerTagRule,
   auxiliaryDataMapRule,
-  ebReferenceRule,
   ebReferencesRule,
+  nonemptyOMap,
 ) where
 
 import Cardano.Crypto.Leios (leiosSignatureSize, leiosSignatureToBytes)
@@ -46,15 +46,18 @@ import Cardano.Ledger.Huddle.Gen (
   antiChoose,
   faultyBool,
   genArrayTerm,
+  genMapTerm,
   genRule,
+  generateFromGRef,
   generateFromName,
   liftAntiGen,
-  replicateMNorm,
   scale,
   unwrapSingle,
+  unwrapSingleOrError,
   validateArrayTerm,
-  validateBytesTerm,
+  validateFromGRef,
   validateFromName,
+  validateMapTerm,
   withAntiGen,
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
@@ -62,11 +65,11 @@ import Cardano.Ledger.State (
   BlsKey (..),
  )
 import Codec.CBOR.Term (Term (..))
-import Control.Monad (unless, when)
+import Control.Monad (replicateM, unless, when)
 import Data.Bits (finiteBitSize)
+import Data.Containers.ListUtils (nubOrd)
 import Data.Foldable (traverse_)
 import Data.Function ((&))
-import Data.List (nub)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.String (fromString)
@@ -94,47 +97,46 @@ dijkstraCDDL =
     , HIRule $ huddleRule @"eb_references" (Proxy @DijkstraEra)
     ]
 
-ebReferenceRule ::
-  HuddleRule "hash32" era => Proxy "eb_reference" -> Proxy era -> Rule
-ebReferenceRule pname p =
-  pname
-    =.= arr
-      [ "transaction_hash" ==> huddleRule @"hash32" p
-      , "transaction_size" ==> VUInt `sized` (4 :: Word64)
-      ]
-
 ebReferencesRule ::
   forall era.
-  HuddleRule "eb_reference" era => Proxy "eb_references" -> Proxy era -> Rule
+  ( HuddleRule "hash32" era
+  , HuddleRule2 "nonempty_omap" era
+  ) =>
+  Proxy "eb_references" ->
+  Proxy era ->
+  Rule
 ebReferencesRule pname p =
-  comment "We only accept non-empty reference maps" $
-    withCBORGen generate $
-      withValidator validator $
-        pname =.= arr [1 <+ a (huddleRule @"eb_reference" p)]
-  where
-    -- we exercise uniqueness checks by adding a duplicate when zapping since
-    -- it's unlikely to happen randomly
-    generate = do
-      n <- liftAntiGen . Gen.sized $ \sz -> antiChoose (1, max 1 sz) (0, 0)
-      entries <-
-        withAntiGen (replicateMNorm n) . scale (`div` (n + 1)) $ genRule @"eb_reference" @era
-      repeatFirst <- liftAntiGen $ faultyBool False
-      SingleTerm <$> genArrayTerm (if repeatFirst then entries <> take 1 entries else entries)
-    validator term = do
-      entries <- unwrapSingle term >>= validateArrayTerm
-      when (null entries) $ fail "empty endorser-block references"
-      hashes <- traverse validateEntry entries
-      unless (length hashes == length (nub hashes)) $
-        fail "duplicate endorser-block transaction hashes"
-    validateEntry entry = do
-      validateFromName (Name "eb_reference") entry
-      fields <- validateArrayTerm entry
-      case fields of
-        [h, _] -> validateBytesTerm h
-        _ -> fail "expected an endorser-block reference pair"
+  comment "Transaction hash to transaction size in bytes" $
+    pname
+      =.= huddleRule2 @"nonempty_omap" p (huddleRule @"hash32" p) (VUInt `sized` (4 :: Word64))
 
-instance HuddleRule "eb_reference" DijkstraEra where
-  huddleRuleNamed = ebReferenceRule
+nonemptyOMap :: (IsType0 k, IsType0 v) => Proxy "nonempty_omap" -> k -> v -> GRuleCall
+nonemptyOMap pname = binding2 $ \k v ->
+  comment
+    [str| A non-empty map in which the order of entries is significant
+        | and must be preserved. Duplicate keys are not allowed.
+        |]
+    . withCBORGen (generator k v)
+    . withValidator (validator k v)
+    $ pname =.= mp [1 <+ asKey k ==> v]
+  where
+    generator kRef vRef = do
+      n <- liftAntiGen . Gen.sized $ \sz -> antiChoose (1, max 1 sz) (0, 0)
+      let genTerm ref = scale (`div` (n + 1)) $ unwrapSingleOrError <$> generateFromGRef ref
+      uniqueKeys <- nubOrd <$> replicateM n (genTerm kRef)
+      -- random keys rarely collide, so when zapping we repeat the first key to
+      -- exercise the duplicate key check
+      repeatFirst <- liftAntiGen $ faultyBool False
+      let keys = if repeatFirst then uniqueKeys <> take 1 uniqueKeys else uniqueKeys
+      values <- replicateM (length keys) (genTerm vRef)
+      SingleTerm <$> genMapTerm (zip keys values)
+    validator kRef vRef term = do
+      entries <- unwrapSingle term >>= validateMapTerm
+      when (null entries) $ fail "empty map"
+      unless (length entries == length (nubOrd (map fst entries))) $
+        fail "duplicate keys"
+      traverse_ (validateFromGRef kRef . fst) entries
+      traverse_ (validateFromGRef vRef . snd) entries
 
 instance HuddleRule "eb_references" DijkstraEra where
   huddleRuleNamed = ebReferencesRule
@@ -180,7 +182,7 @@ subTransactionsRule pname p =
         validateInner t = do
           elems <- validateArrayTerm t
           let bodies = mapMaybe bodyOf elems
-          unless (length bodies == length (nub bodies)) $
+          unless (length bodies == length (nubOrd bodies)) $
             fail "duplicate sub_transaction bodies"
           traverse_ (validateFromName (Name "sub_transaction")) elems
       case term_ of
@@ -1340,6 +1342,9 @@ instance HuddleRule1 "nonempty_set" DijkstraEra where
 
 instance HuddleRule1 "nonempty_oset" DijkstraEra where
   huddleRule1Named pname _ = maybeTaggedNonemptyOset pname
+
+instance HuddleRule2 "nonempty_omap" DijkstraEra where
+  huddleRule2Named pname _ = nonemptyOMap pname
 
 instance HuddleRule1 "multiasset" DijkstraEra where
   huddleRule1Named = dijkstraMultiasset

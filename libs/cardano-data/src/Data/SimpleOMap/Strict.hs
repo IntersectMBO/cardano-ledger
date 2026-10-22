@@ -52,9 +52,9 @@ import Cardano.Ledger.Binary (
   DecCBOR,
   Decoder,
   EncCBOR (encCBOR),
-  decodeListLenOrIndef,
   decodeListLikeEnforceNoDuplicates,
-  encodeStrictSeq,
+  decodeMapLenOrIndef,
+  encodeMapLen,
  )
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Control.DeepSeq (NFData (..))
@@ -368,18 +368,22 @@ instance Ord k => Foldable (OMap k) where
   {-# INLINE null #-}
 
 instance (EncCBOR k, EncCBOR v, Ord k) => EncCBOR (OMap k v) where
-  encCBOR omap = encodeStrictSeq encCBOR (toStrictSeqOfPairs omap)
+  encCBOR omap =
+    encodeMapLen (fromIntegral (size omap))
+      <> foldMap (\(k, v) -> encCBOR k <> encCBOR v) (toStrictSeqOfPairs omap)
 
 instance (Ord k, DecCBOR k, DecCBOR v, Eq v) => DecCBOR (OMap k v) where
-  decCBOR = decodeOMap decCBOR
+  decCBOR = decodeOMap decCBOR decCBOR
 
-decodeOMap :: Ord k => Decoder s (k, v) -> Decoder s (OMap k v)
-decodeOMap decKeyValue =
+-- | Decode a CBOR map of definite or indefinite length, keeping the entries in the order
+-- they appear on the wire. Fails on duplicate keys.
+decodeOMap :: Ord k => Decoder s k -> Decoder s v -> Decoder s (OMap k v)
+decodeOMap decKey decValue =
   decodeListLikeEnforceNoDuplicates
-    decodeListLenOrIndef
+    decodeMapLenOrIndef
     (flip (|>))
     (\omap -> (size omap, omap))
-    decKeyValue
+    ((,) <$> decKey <*> decValue)
 
 -- | \( O(n \log n) \)
 filter :: Ord k => (v -> Bool) -> OMap k v -> OMap k v

@@ -24,6 +24,10 @@
 * Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
 * Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
 
+### `cddl`
+
+* Add `HuddleRule2` and `huddleRule2`
+
 ### `testlib`
 
 * Add `tbhBlockBodyContainsLeiosCert` to `TestBlockHeader`
