@@ -26,6 +26,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
   validateGuardDatums,
+  validateDijkstraNeededWitnesses,
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
@@ -56,6 +57,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeededWith)
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
@@ -65,7 +67,7 @@ import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (CertState, EraUTxO (..), ScriptsProvided (..), UTxO)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
@@ -233,7 +235,7 @@ dijkstraUtxowTransition ::
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 dijkstraUtxowTransition = do
-  TRC (UtxoEnv slot pp pState originalCertState originalUtxo, u, stAnnTx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState originalCertState originalUtxo, u, stAnnTx) <- judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       scriptsProvided = scriptsProvidedStAnnTx stAnnTx
 
@@ -294,7 +296,13 @@ dijkstraUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {- witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes originalCertState originalUtxo txBody
+  runTest $
+    validateDijkstraNeededWitnesses
+      (tx ^. isPhase2ValidTxL)
+      witsKeyHashes
+      certState
+      originalUtxo
+      txBody
 
   -- check metadata hash
   {- ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad) -}
@@ -322,7 +330,7 @@ dijkstraUtxowTransition = do
 
   -- Pass through to UTXO sub-rule, carrying the original UTxO
   trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp pState originalCertState originalUtxo, u, stAnnTx)
+    TRC (UtxoEnv slot pp certState originalCertState originalUtxo, u, stAnnTx)
 
 instance
   forall era.
@@ -493,3 +501,20 @@ validateGuardDatums (ScriptsProvided scripts) txBody =
                     SJust _ -> acc
                     SNothing -> Set.insert cred acc
             Nothing -> acc
+
+-- | Like `Shelley.validateNeededWitnesses`, except that the owners of a pool
+-- are not required to witness a phase-2 invalid transaction.
+validateDijkstraNeededWitnesses ::
+  (EraUTxO era, ConwayEraTxBody era) =>
+  IsPhase2Valid ->
+  Set (KeyHash Witness) ->
+  CertState era ->
+  UTxO era ->
+  TxBody l era ->
+  Test (Shelley.ShelleyUtxowPredFailure era)
+validateDijkstraNeededWitnesses Phase2Valid witsKeyHashes certState utxo txBody =
+  Shelley.validateNeededWitnesses witsKeyHashes certState utxo txBody
+validateDijkstraNeededWitnesses Phase2Invalid witsKeyHashes _ utxo txBody =
+  failureOnNonEmptySet
+    (getConwayWitsVKeyNeededWith (const False) utxo txBody `Set.difference` witsKeyHashes)
+    Shelley.MissingVKeyWitnessesUTXOW

@@ -2,6 +2,9 @@
 
 ## 0.5.0.0
 
+* Do not require the witnesses of the owners for a stake pool re-registration that changes nothing but the BLS key:
+  - Replace the `uePState` field of `UtxoEnv` with `uePostSubTxsCertState`, which holds the `CertState` after all sub-transactions were applied
+  - Add `validateDijkstraNeededWitnesses`
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
 * Add `LeiosCertMissing` and `LeiosCertBlockBodyHasTxs` constructors to `DijkstraBbodyPredFailure`

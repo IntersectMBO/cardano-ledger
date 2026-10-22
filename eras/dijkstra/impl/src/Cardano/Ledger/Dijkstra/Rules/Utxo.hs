@@ -101,7 +101,7 @@ import Validation (failureUnless)
 data UtxoEnv era = UtxoEnv
   { ueSlot :: SlotNo
   , uePParams :: PParams era
-  , uePState :: PState era
+  , uePostSubTxsCertState :: CertState era
   , ueOriginalCertState :: CertState era
   , ueOriginalUtxo :: UTxO era
   }
@@ -324,10 +324,11 @@ dijkstraUtxoTransition ::
   ) =>
   TransitionRule (EraRule "UTXO" era)
 dijkstraUtxoTransition = do
-  TRC (UtxoEnv slot pp postSubsPState originalCertState originalUtxo, utxos, stAnnTx) <-
+  TRC (UtxoEnv slot pp postSubsCertState originalCertState originalUtxo, utxos, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
   let originalPState = originalCertState ^. certPStateL
+      postSubsPState = postSubsCertState ^. certPStateL
 
   let txBody = tx ^. bodyTxL
 

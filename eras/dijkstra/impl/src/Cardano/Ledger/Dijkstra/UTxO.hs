@@ -33,12 +33,12 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
  )
-import Cardano.Ledger.BaseTypes (inject)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   getConwayScriptsNeeded,
-  getConwayWitsVKeyNeeded,
+  getConwayWitsVKeyNeededWith,
   txNonDistinctRefScriptsSize,
  )
 import Cardano.Ledger.Credential (Credential, credScriptHash)
@@ -53,7 +53,7 @@ import Cardano.Ledger.Plutus (Language, PlutusWithContext)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Sum (..))
 import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
@@ -158,9 +158,35 @@ instance EraUTxO DijkstraEra where
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
-  getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
+  getWitsVKeyNeeded certState =
+    getConwayWitsVKeyNeededWith (poolOwnersWitnessRequired (certState ^. certPStateL))
 
   getMinFeeTxUtxo = getDijkstraMinFeeTxUtxo
+
+-- | The pool owners are required to witness a transaction, unless the certificate
+-- is re-registering an already registered pool and matches the latest params
+-- (that includes future updates that are signed and pending) for everything
+-- except the BLS key.
+-- That is, the owners are not required to sign if only the BLS key is being updated.
+-- Note: this predicate will also exempt owners from signing either (a) re-registrations
+-- where all params match since they are no-op, and (b) unretiring a pool
+poolOwnersWitnessRequired :: PState era -> StakePoolParams era -> Bool
+poolOwnersWitnessRequired PState {psStakePools, psFutureStakePoolParams} stakePoolParams =
+  case Map.lookup poolId psStakePools of
+    -- new pool
+    Nothing -> True
+    Just stakePoolState ->
+      let activeParams =
+            stakePoolStateToStakePoolParams
+              (aaNetworkId (sppAccountAddress stakePoolParams))
+              poolId
+              stakePoolState
+          -- if there are params that are pending then we select those instead
+          latestParams = fromMaybe activeParams $ Map.lookup poolId psFutureStakePoolParams
+       in withoutBlsKey stakePoolParams /= withoutBlsKey latestParams
+  where
+    poolId = sppId stakePoolParams
+    withoutBlsKey params = params {sppBlsKey = SNothing}
 
 -- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
 -- scripts from all subtransactions.
