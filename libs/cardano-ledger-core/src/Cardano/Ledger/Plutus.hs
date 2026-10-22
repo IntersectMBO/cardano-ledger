@@ -4,6 +4,7 @@ module Cardano.Ledger.Plutus (
   module Cardano.Ledger.Plutus.ExUnits,
   module Cardano.Ledger.Plutus.Language,
   module Cardano.Ledger.Plutus.TxInfo,
+  module Cardano.Ledger.Plutus.ToPlutusData,
   module Cardano.Ledger.Plutus.Evaluate,
   assocMapToList,
   assocMapKeys,
@@ -15,6 +16,7 @@ import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Evaluate
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language
+import Cardano.Ledger.Plutus.ToPlutusData
 import Cardano.Ledger.Plutus.TxInfo
 import qualified PlutusTx.AssocMap as AssocMap
 

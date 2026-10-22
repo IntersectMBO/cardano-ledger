@@ -2,6 +2,7 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,19 +16,26 @@ import Cardano.Ledger.BaseTypes (
   NonZero,
   PositiveInterval,
   ProtVer (..),
+  StrictMaybe,
   UnitInterval,
+  getVersion,
+  strictMaybeToMaybe,
+  unboundRational,
  )
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.Coin (Coin, CoinPerByte, CompactForm)
-import Cardano.Ledger.Core (MaxPledgeLeverage)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Slotting.Slot (SlotInterval (..))
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Word
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec)
+import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec, sameAsToBuiltinDataSpec)
 
 spec :: Spec
 spec = do
@@ -82,8 +90,8 @@ exBudgetToExUnitsRoundTrip = do
     $ result == Just e
 
 dataSpec :: Spec
-dataSpec = do
-  describe "RoundTrip ToPlutusData" $ do
+dataSpec = describe "ToPlutusData" $ do
+  describe "RoundTrip" $ do
     roundTripPlutusDataSpec @Version
     roundTripPlutusDataSpec @ProtVer
     roundTripPlutusDataSpec @Rational
@@ -109,3 +117,25 @@ dataSpec = do
     roundTripPlutusDataSpec @[Word]
     roundTripPlutusDataSpec @[Word8]
     roundTripPlutusDataSpec @(Map Word Version)
+  describe "Same as ToData" $ do
+    describe "PlutusV4" $ do
+      sameAsToBuiltinDataSpec @Integer id
+      sameAsToBuiltinDataSpec @Word8 toInteger
+      sameAsToBuiltinDataSpec @Word16 toInteger
+      sameAsToBuiltinDataSpec @Word32 toInteger
+      sameAsToBuiltinDataSpec @Natural toInteger
+      sameAsToBuiltinDataSpec @Rational PV4.fromHaskellRatio
+      sameAsToBuiltinDataSpec @UnitInterval (PV4.fromHaskellRatio . unboundRational)
+      sameAsToBuiltinDataSpec @NonNegativeInterval (PV4.fromHaskellRatio . unboundRational)
+      sameAsToBuiltinDataSpec @PositiveInterval (PV4.fromHaskellRatio . unboundRational)
+      sameAsToBuiltinDataSpec @MaxPledgeLeverage $
+        fmap (PV4.fromHaskellRatio . unboundRational)
+          . strictMaybeToMaybe
+          . unMaxPledgeLeverage
+      sameAsToBuiltinDataSpec @Coin (PV4.Lovelace . unCoin)
+      sameAsToBuiltinDataSpec @(CompactForm Coin) (PV4.Lovelace . unCoin . fromCompact)
+      sameAsToBuiltinDataSpec @CoinPerByte (PV4.Lovelace . unCoin . fromCompact . unCoinPerByte)
+      sameAsToBuiltinDataSpec @(StrictMaybe Integer) strictMaybeToMaybe
+      sameAsToBuiltinDataSpec @[Integer] id
+      sameAsToBuiltinDataSpec @(Map Integer Integer) (PV4.unsafeFromList . Map.toList)
+      sameAsToBuiltinDataSpec $ \ProtVer {pvMajor, pvMinor} -> PV4.ProtocolVersion (getVersion pvMajor) (toInteger pvMinor)

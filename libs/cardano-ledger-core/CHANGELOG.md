@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Re-export `Cardano.Ledger.Plutus.ToPlutusData` module from `Cardano.Ledger.Plutus`
 * Add `blockBodyContainsLeiosCertBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `EbAnnouncement` to `Cardano.Ledger.State`
 * Add `blockHeaderHashBlockHeaderG` to `EraBlockHeader`
@@ -31,6 +32,7 @@
 
 ### `testlib`
 
+* Add `sameAsToBuiltinDataSpec`
 * Add `tbhBlockBodyContainsLeiosCert` to `TestBlockHeader`
 * Add `tbhHash` field to `TestBlockHeader`
 * Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
