@@ -585,7 +585,21 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
         mapTraverseableDecoderA
           nonEmptyDecoder
           (RedeemersRaw . Map.fromList . NE.toList)
-      decodeMapRedeemers = decodeRedeemersWith $ do
+      decodeMapRedeemers =
+        ifDecoderVersionAtLeast
+          (natVersion @12)
+          decodeMapRedeemersNoDuplicates
+          decodeMapRedeemersLastWins
+      -- Starting with protocol version 12 a duplicate key is a decoding failure
+      decodeMapRedeemersNoDuplicates = do
+        redeemers <- decodeMapLikeEnforceNoDuplicates decodeMapLenOrIndef $ do
+          ptr <- decCBOR
+          (annData, exUnits) <- decCBOR
+          pure (ptr, (\d -> (d, exUnits)) <$> annData)
+        when (Map.null redeemers) $ fail "Expected redeemers map to be non-empty"
+        pure $ RedeemersRaw <$> sequenceA redeemers
+      -- Before protocol version 12 a duplicate key overwrites the earlier entry
+      decodeMapRedeemersLastWins = decodeRedeemersWith $ do
         (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
           ptr <- decCBOR
           (annData, exUnits) <- decCBOR
