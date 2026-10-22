@@ -9,21 +9,24 @@ module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec, dijkstraOnlySpec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.PParams (ppMaxPledgeLeverageL)
+import Cardano.Ledger.Dijkstra.PParams (ppMaxPledgeLeverageL, ppMinPoolMarginL)
 import Cardano.Ledger.Dijkstra.Rules
+import Cardano.Ledger.Keys (coerceKeyRole)
+import Cardano.Ledger.Plutus.CostModels (emptyCostModels)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Data.Coerce (coerce)
-import Data.Foldable (fold)
+import Data.Foldable (fold, for_)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Word
-import Lens.Micro ((%~), (&), (.~))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -41,7 +44,7 @@ delegatorStake = Coin 90_000_000_000_000
 registerPoolWithPledge ::
   DijkstraEraImp era =>
   Coin ->
-  ImpTestM era (KeyHash StakePool, [Credential Staking])
+  ImpTestM era (KeyHash StakePool, (Credential Staking, Credential Staking))
 registerPoolWithPledge pledge = do
   poolId <- freshKeyHash
   ownerKeyHash <- freshKeyHash
@@ -70,11 +73,12 @@ registerPoolWithPledge pledge = do
     ownerAccountAddress
   delegateStake owner poolId
   delegateStake delegator poolId
-  pure (poolId, [owner, delegator])
+  pure (poolId, (owner, delegator))
 
--- | The total rewards that have been paid out to a stake pool and its delegators.
-poolRewards :: (HasCallStack, EraCertState era) => [Credential Staking] -> ImpTestM era Coin
-poolRewards = fmap fold . traverse getBalance
+-- | The total rewards that have been paid out to a stake pool and its delegator.
+poolRewards ::
+  (HasCallStack, EraCertState era) => (Credential Staking, Credential Staking) -> ImpTestM era Coin
+poolRewards (o, d) = fold <$> traverse @[] getBalance [o, d]
 
 -- | Register two pools that are identical, except that the second one declares a pledge
 -- that is a thousandth of the pledge of the first one, then have both of them mint the
@@ -618,6 +622,48 @@ spec = describe "POOL" $ do
         , injectFailure $ BlsKeyInvalidProofOfPossession kh bogusKey
         ]
       expectBlsKeys [key]
+
+  describe "CIP-23" $ do
+    for_ @[] [minBound, maxBound] $ \margin -> do
+      it ("minimum pool margin (" <> show margin <> ")") $ do
+        (poolId, (poolOwner, poolDelegator)) <- registerPoolWithPledge $ Coin 0
+
+        pools <- psStakePools <$> getPState
+        poolState <- expectJust $ Map.lookup poolId pools
+        poolState ^. spsMarginL `shouldBe` minBound
+
+        modifyPParams $ ppMinPoolMarginL .~ margin
+        pParams <- getsNES $ nesEsL . curPParamsEpochStateL
+        logToExpr $ pParams & ppCostModelsL .~ emptyCostModels
+
+        passEpoch
+        withIssuerAndTxsInBlock_ (coerceKeyRole poolId) $
+          pure ()
+        passEpoch
+        replicateM_ 100 $
+          withIssuerAndTxsInBlock_ (coerceKeyRole poolId) $
+            pure ()
+        passNEpochs 2
+
+        certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+        logToExpr certState
+
+        let accountsMap = certState ^. certDStateL . accountsG . accountsMapL
+        ownerState <- expectJust $ Map.lookup poolOwner accountsMap
+        delegatorState <- expectJust $ Map.lookup poolDelegator accountsMap
+
+        -- The owner always gets some rewards
+        let ownerBalance = fromCompact $ ownerState ^. balanceAccountStateL
+        ownerBalance `shouldNotBe` Coin 0
+
+        -- Unless the margin is 1, the delegator should get a share of the
+        -- remainder rewards that are left after the cost is subtracted.
+        -- When the margin is 1, the delegator gets nothing because the pool
+        -- takes everything, both the cost and the remainder.
+        let delegatorBalance = fromCompact $ delegatorState ^. balanceAccountStateL
+        if margin /= maxBound
+          then delegatorBalance `shouldNotBe` Coin 0
+          else delegatorBalance `shouldBe` Coin 0
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
