@@ -72,20 +72,6 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Conway.TxInfo (
-  ConwayContextError (..),
-  ConwayEraPlutusTxInfo (..),
-  transColdCommitteeCred,
-  transDRepCred,
-  transDelegatee,
-  transHotCommitteeCred,
-  transMap,
-  transSlotToPOSIXTime,
-  transTxInInfoV1,
-  transTxInInfoV3,
-  transVote,
-  transVoter,
- )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
@@ -153,7 +139,7 @@ import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
 
 data DijkstraContextError era
-  = ConwayContextError (ConwayContextError era)
+  = ConwayContextError (Conway.ConwayContextError era)
   | -- | Failure translating sub-transactions for Guarding purpose at the top level
     SubTxContextError TxId (ContextError era)
   | -- | From Dijkstra onwards, attempt to use a script when there are stake ref pointers present in any outputs will result in this failure
@@ -287,7 +273,7 @@ instance
       ScriptHashNotFoundForPurpose purpose ->
         Sum ScriptHashNotFoundForPurpose 24 !> To purpose
 
-instance Inject (ConwayContextError era) (DijkstraContextError era) where
+instance Inject (Conway.ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
 
 instance Inject (Babbage.BabbageContextError era) (DijkstraContextError era) where
@@ -365,7 +351,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
-  toPlutusTxInInfo _ = transTxInInfoV1
+  toPlutusTxInInfo _ = Conway.transTxInInfoV1
 
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
@@ -481,7 +467,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
 
   toPlutusArgs = Conway.toPlutusV3Args
 
-  toPlutusTxInInfo _ = transTxInInfoV3
+  toPlutusTxInInfo _ = Conway.transTxInInfoV3
 
 guardDijkstraFeaturesForPlutusV1toV3 ::
   forall era.
@@ -565,10 +551,10 @@ transTxCertV3 = \case
     PV3.TxCertUpdateDRep (Conway.transDRepCred drepCred)
   _ -> error "Impossible: All TxCerts should have been accounted for"
 
-instance ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
+instance Conway.ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
-instance ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
+instance Conway.ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
@@ -690,10 +676,10 @@ transTxOutV4 txOutSource txOut = do
       }
 
 transWithdrawals :: Withdrawals -> PV4.Map PV4.Credential PV4.Lovelace
-transWithdrawals (Withdrawals withdrawals) = transMap transAccountAddressToCredential transCoinToLovelace withdrawals
+transWithdrawals (Withdrawals withdrawals) = Conway.transMap transAccountAddressToCredential transCoinToLovelace withdrawals
 
 transDirectDeposits :: DirectDeposits -> PV4.Map PV4.Credential PV4.Lovelace
-transDirectDeposits (DirectDeposits deposits) = transMap transAccountAddressToCredential transCoinToLovelace deposits
+transDirectDeposits (DirectDeposits deposits) = Conway.transMap transAccountAddressToCredential transCoinToLovelace deposits
 
 transCredToAccountId :: Credential r -> PV4.AccountId
 transCredToAccountId = PV4.AccountId . transCred
@@ -711,27 +697,29 @@ transTxCertV4 = \case
   UnRegDepositTxCert stakeCred refund ->
     PV4.TxCertUnRegAccount (transCredToAccountId stakeCred) (transCoinToLovelace refund)
   DelegTxCert stakeCred delegatee ->
-    PV4.TxCertDelegAccount (transCredToAccountId stakeCred) (transDelegatee delegatee)
+    PV4.TxCertDelegAccount (transCredToAccountId stakeCred) (Conway.transDelegatee delegatee)
   RegDepositDelegTxCert stakeCred delegatee deposit ->
     PV4.TxCertRegAccountDeleg
       (transCredToAccountId stakeCred)
-      (transDelegatee delegatee)
+      (Conway.transDelegatee delegatee)
       (transCoinToLovelace deposit)
   AuthCommitteeHotKeyTxCert coldCred hotCred ->
-    PV4.TxCertAuthHotCommittee (transColdCommitteeCred coldCred) (transHotCommitteeCred hotCred)
+    PV4.TxCertAuthHotCommittee
+      (Conway.transColdCommitteeCred coldCred)
+      (Conway.transHotCommitteeCred hotCred)
   ResignCommitteeColdTxCert coldCred _anchor ->
-    PV4.TxCertResignColdCommittee (transColdCommitteeCred coldCred)
+    PV4.TxCertResignColdCommittee (Conway.transColdCommitteeCred coldCred)
   RegDRepTxCert drepCred deposit _anchor ->
-    PV4.TxCertRegDRep (transDRepCred drepCred) (transCoinToLovelace deposit)
+    PV4.TxCertRegDRep (Conway.transDRepCred drepCred) (transCoinToLovelace deposit)
   UnRegDRepTxCert drepCred refund ->
-    PV4.TxCertUnRegDRep (transDRepCred drepCred) (transCoinToLovelace refund)
+    PV4.TxCertUnRegDRep (Conway.transDRepCred drepCred) (transCoinToLovelace refund)
   UpdateDRepTxCert drepCred _anchor ->
-    PV4.TxCertUpdateDRep (transDRepCred drepCred)
+    PV4.TxCertUpdateDRep (Conway.transDRepCred drepCred)
   _ -> error "Impossible: All TxCerts should have been accounted for"
 
 transTxBodyRequiredTopLevelGuards ::
   DijkstraEraTxBody era => TxBody l era -> PV4.Map PV4.Credential (Maybe PV4.Datum)
-transTxBodyRequiredTopLevelGuards txb = transMap transCred (fmap transDatum . strictMaybeToMaybe) requiredGuards
+transTxBodyRequiredTopLevelGuards txb = Conway.transMap transCred (fmap transDatum . strictMaybeToMaybe) requiredGuards
   where
     requiredGuards = txb ^. requiredTopLevelGuardsTxBodyL
 
@@ -750,7 +738,7 @@ transValidityInterval ::
   ValidityInterval ->
   Either (ContextError era) PV4.POSIXTimeRange
 transValidityInterval era epochInfo systemStart (ValidityInterval from to) = do
-  let transSlot = transSlotToPOSIXTime era epochInfo systemStart
+  let transSlot = Conway.transSlotToPOSIXTime era epochInfo systemStart
   pFrom <- traverse transSlot from
   pTo <- traverse transSlot to
   pure $ PV4.POSIXTimeRange (strictMaybeToMaybe pFrom) (strictMaybeToMaybe pTo)
@@ -765,7 +753,7 @@ transAccountBalanceInterval = \case
 transAccountBalanceIntervals :: AccountBalanceIntervals era -> PV4.AccountBalanceIntervals
 transAccountBalanceIntervals (AccountBalanceIntervals balanceIntervals) =
   PV4.AccountBalanceIntervals $
-    transMap transAccountAddressToAccountId transAccountBalanceInterval balanceIntervals
+    Conway.transMap transAccountAddressToAccountId transAccountBalanceInterval balanceIntervals
 
 transTxBodyGuards :: DijkstraEraTxBody era => TxBody l era -> [PV4.Credential]
 transTxBodyGuards txb = fmap transCred . F.toList $ txb ^. guardsTxBodyL
@@ -919,7 +907,7 @@ transGuardingTopTxInfo proxy txInfo guardingScriptHash lti@(LedgerTxInfo {ltiTx,
   pure $
     PV4.TopTxInfo
       { topTxInfoSubTransactions = subTransactions
-      , topTxInfoDatums = transMap Conway.transTxId transDatum batchGuardDatums
+      , topTxInfoDatums = Conway.transMap Conway.transTxId transDatum batchGuardDatums
       , topTxInfoStartingAccountBalanceIntervals = startingAccountBalanceIntervals
       , topTxInfoSimplified = topTxInfoSimplified
       }
@@ -958,7 +946,7 @@ toPlutusV4Args proxy lti@LedgerTxInfo {..} txInfo plutusPurpose redeemerData = d
 transPlutusPurposeV4 ::
   forall era proxy level.
   ( DijkstraEraScript era
-  , ConwayEraPlutusTxInfo PlutusV4 era
+  , Conway.ConwayEraPlutusTxInfo PlutusV4 era
   , Inject (Alonzo.AlonzoContextError era) (ContextError era)
   , Inject (DijkstraContextError era) (ContextError era)
   ) =>
@@ -982,7 +970,7 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
       PV4.Certifying sh (toInteger ix) <$> toPlutusTxCert proxy pv cert
     WithdrawingPurpose (AsIxItem _ (AccountAddress _ (AccountId c))) ->
       pure $ PV4.Withdrawing sh (transCred c)
-    VotingPurpose (AsIxItem _ voter) -> pure $ PV4.Voting sh (transVoter voter)
+    VotingPurpose (AsIxItem _ voter) -> pure $ PV4.Voting sh (Conway.transVoter voter)
     ProposingPurpose (AsIxItem ix proc) ->
       pure $ PV4.Proposing sh (toInteger ix) (transProposal proxy proc)
     GuardingPurpose (AsIxItem ix _) -> pure $ PV4.Guarding sh (toInteger ix)
@@ -992,10 +980,11 @@ transPlutusPurposeV4 proxy lti plutusPurpose = do
 transVotingProcedures ::
   VotingProcedures era -> PV4.Map PV4.Voter (PV4.Map PV4.GovernanceActionId PV4.Vote)
 transVotingProcedures =
-  transMap transVoter (transMap transGovActionId (transVote . vProcVote)) . unVotingProcedures
+  Conway.transMap Conway.transVoter (Conway.transMap transGovActionId (Conway.transVote . vProcVote))
+    . unVotingProcedures
 
 transProposal ::
-  ConwayEraPlutusTxInfo l era =>
+  Conway.ConwayEraPlutusTxInfo l era =>
   proxy l ->
   ProposalProcedure era ->
   PV4.ProposalProcedure
@@ -1013,12 +1002,13 @@ transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
     , PV4.gaidGovActionIx = toInteger $ unGovActionIx gaidGovActionIx
     }
 
-transGovAction :: ConwayEraPlutusTxInfo l era => proxy l -> GovAction era -> PV4.GovernanceAction
+transGovAction ::
+  Conway.ConwayEraPlutusTxInfo l era => proxy l -> GovAction era -> PV4.GovernanceAction
 transGovAction proxy = \case
   ParameterChange pGovActionId ppu govPolicy ->
     PV4.ParameterChange
       (transPrevGovActionId pGovActionId)
-      (toPlutusChangedParameters proxy ppu)
+      (Conway.toPlutusChangedParameters proxy ppu)
       (transGovPolicy govPolicy)
   HardForkInitiation pGovActionId protVer ->
     PV4.HardForkInitiation
@@ -1026,14 +1016,14 @@ transGovAction proxy = \case
       (transProtVer protVer)
   TreasuryWithdrawals withdrawals govPolicy ->
     PV4.TreasuryWithdrawals
-      (transMap transAccountAddress transCoinToLovelace withdrawals)
+      (Conway.transMap transAccountAddress transCoinToLovelace withdrawals)
       (transGovPolicy govPolicy)
   NoConfidence pGovActionId -> PV4.NoConfidence (transPrevGovActionId pGovActionId)
   UpdateCommittee pGovActionId ccToRemove ccToAdd threshold ->
     PV4.UpdateCommittee
       (transPrevGovActionId pGovActionId)
       (map (PV4.ColdCommitteeCredential . transCred) $ Set.toList ccToRemove)
-      (transMap (PV4.ColdCommitteeCredential . transCred) transEpochNo ccToAdd)
+      (Conway.transMap (PV4.ColdCommitteeCredential . transCred) transEpochNo ccToAdd)
       (transBoundedRational threshold)
   NewConstitution pGovActionId constitution ->
     PV4.NewConstitution
