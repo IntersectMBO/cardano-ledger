@@ -37,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ShelleyBase,
   ToKeyValuePairs (..),
+  UnitInterval,
   unNonZero,
  )
 import Cardano.Ledger.Binary (
@@ -211,6 +212,8 @@ data FreeVars = FreeVars
   { fvAddrsRew :: !(Set (Credential Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
+  , fvMinPoolCost :: !Coin
+  , fvMinPoolMargin :: !UnitInterval
   , fvPoolRewardInfo :: !(VMap VB VB (KeyHash StakePool) PoolRewardInfo)
   }
   deriving (Eq, Show, Generic)
@@ -224,6 +227,8 @@ instance EncCBOR FreeVars where
       { fvAddrsRew
       , fvTotalStake
       , fvProtVer
+      , fvMinPoolCost
+      , fvMinPoolMargin
       , fvPoolRewardInfo
       } =
       encode
@@ -231,6 +236,8 @@ instance EncCBOR FreeVars where
             !> To fvAddrsRew
             !> To fvTotalStake
             !> To fvProtVer
+            !> To fvMinPoolCost
+            !> To fvMinPoolMargin
             !> To fvPoolRewardInfo
         )
 
@@ -240,7 +247,9 @@ instance DecCBOR FreeVars where
       ( RecD FreeVars
           <! From {- fvAddrsRew -}
           <! From {- fvTotalStake -}
-          <! From {- fvProtver -}
+          <! From {- fvProtVer -}
+          <! From {- fvMinPoolCost -}
+          <! From {- fvMinPoolMargin -}
           <! From {- fvPoolRewardInfo -}
       )
 
@@ -260,11 +269,13 @@ rewardStakePoolMember freeVars inputAnswer@(RewardAns accum recent) cred swd =
           , fvTotalStake
           , fvPoolRewardInfo
           , fvProtVer
+          , fvMinPoolCost
+          , fvMinPoolMargin
           } = freeVars
         poolId = swdDelegation swd
     poolRI <- VMap.lookup poolId fvPoolRewardInfo
     r <-
-      rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred $
+      rewardOnePoolMember fvProtVer fvMinPoolCost fvMinPoolMargin fvTotalStake fvAddrsRew poolRI cred $
         fromCompact $
           unNonZero $
             swdStake swd

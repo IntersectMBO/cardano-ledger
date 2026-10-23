@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Add `fvMinPoolCost` and `fvMinPoolMargin` fields to `Cardano.Ledger.Shelley.RewardUpdate.FreeVars`
+* Remove deprecated `leaderRew`, `memberRew` and `nonMyopicMemberRew` functions
 * Add `lsLastEbAnnouncement` field to `LedgerState` and `lsLastEbAnnouncementL`:
   - `LedgerState` encodes `lsLastEbAnnouncement`, so the on-disk ledger state format changes and requires replay
 * Add `nesLastTickSlotNo` field to `NewEpochState` and `nesLastTickSlotNoL`:

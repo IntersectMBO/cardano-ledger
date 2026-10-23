@@ -11,9 +11,10 @@ module Test.Cardano.Ledger.Shelley.Imp.PoolSpec (spec) where
 import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys (asWitness, witVKeyHash)
+import Cardano.Ledger.Keys (asWitness, coerceKeyRole, witVKeyHash)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Rules
@@ -39,25 +40,37 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
-    it "register a pool with too low cost" $ do
+    disableInConformanceIt "register a pool with too low cost" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
       minPoolCost <- getsPParams ppMinPoolCostL
       tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
       pps <- poolParams kh vrf
-      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
-      submitFailingTx
-        tx
-        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+      let tx :: forall l. Typeable l => Tx l era
+          tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
+      if pvMajor pv >= natVersion @12
+        then
+          submitAnyTx_ tx
+        else
+          submitFailingTx
+            tx
+            [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
-    it "re-register a pool with too low cost" $ do
+    disableInConformanceIt "re-register a pool with too low cost" $ do
+      pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       pps <- poolParams kh vrf
       minPoolCost <- getsPParams ppMinPoolCostL
       tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
-      let tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
-      submitFailingTx
-        tx
-        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+      let tx :: forall l. Typeable l => Tx l era
+          tx = registerPoolTx (pps & sppCostL .~ tooLowCost)
+      if pvMajor pv >= natVersion @12
+        then
+          submitAnyTx_ tx
+        else
+          submitFailingTx
+            tx
+            [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
     it "register a pool with a staking address having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL
@@ -456,6 +469,48 @@ spec = describe "POOL" $ do
       expectPool khNew (Just vrf)
       expectRetiring False khNew
       expectVRFs [vrf]
+
+  describe "CIP-23" $ do
+    it "minimum pool cost" $ do
+      payCred <- KeyHashObj <$> freshKeyHash @Payment
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      _ <- registerStakeCredential stakeCred
+      sendCoinTo_ (mkAddr payCred stakeCred) $ Coin 10_000_000_000
+      poolId <- freshKeyHash
+      poolAccount <- registerAccountAddress
+      registerPoolWithZeroPledge poolId poolAccount
+      delegateStake stakeCred poolId
+
+      logToExpr =<< getsNES (nesEsL . esLStateL . lsCertStateL)
+
+      modifyPParams $ ppMinPoolCostL .~ Coin 10_000_000_000
+      pParams <- getsNES $ nesEsL . curPParamsEpochStateL
+      logToExpr pParams
+
+      passEpoch
+      withIssuerAndTxsInBlock_ (coerceKeyRole poolId) $
+        pure ()
+      passEpoch
+      replicateM_ 100 $
+        withIssuerAndTxsInBlock_ (coerceKeyRole poolId) $
+          pure ()
+      passNEpochs 2
+
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      logToExpr certState
+
+      let
+        accountsMap = certState ^. certDStateL . accountsG . accountsMapL
+        poolRewardCred = unAccountId $ aaId poolAccount
+      poolState <- expectJust $ Map.lookup poolRewardCred accountsMap
+
+      let poolBalance = fromCompact $ poolState ^. balanceAccountStateL
+      poolBalance `shouldNotBe` Coin 0
+      poolBalance
+        `shouldSatisfy` if pvMajor (pParams ^. ppProtocolVersionL) >= natVersion @12
+          then (>= pParams ^. ppMinPoolCostL)
+          else (< pParams ^. ppMinPoolCostL)
+
   -- \| Example demonstrating a particular delegation scenario involving two pools.
   -- Both pools select an account address which is *not* a pool owner, and which
   -- delegates to one of the pools.

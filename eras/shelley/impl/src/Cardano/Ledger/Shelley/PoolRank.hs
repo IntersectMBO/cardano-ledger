@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -18,7 +19,6 @@ module Cardano.Ledger.Shelley.PoolRank (
   getTopRankedPoolsVMap,
   nonMyopicStake,
   calcNonMyopicMemberReward,
-  nonMyopicMemberRew,
   percentile',
   Histogram (..),
   LogWeight (..),
@@ -39,7 +39,9 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
   knownNonZero,
   knownNonZeroBounded,
+  natVersion,
   nonZeroOr,
+  pvMajor,
   toIntegerNonZero,
   (%.),
  )
@@ -56,7 +58,15 @@ import Cardano.Ledger.Binary (
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
-import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
+import Cardano.Ledger.Core (
+  EraPParams,
+  PParams,
+  ppA0L,
+  ppMinPoolCostL,
+  ppMinPoolMarginG,
+  ppNOptL,
+  ppProtocolVersionL,
+ )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), calcStakePoolMemberReward)
 import Cardano.Ledger.State (StakePoolParams (..), StakePoolSnapShot (..), maxPool)
@@ -427,19 +437,8 @@ calcNonMyopicMemberReward pp rPot poolId cost margin s sigma t topPools (Perform
   let nm = nonMyopicStake pp s sigma t poolId topPools
       f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
       fHat = floor (p * fromRational (coinToRational f))
-   in calcStakePoolMemberReward (Coin fHat) cost margin t nm
-
-nonMyopicMemberRew ::
-  EraPParams era =>
-  PParams era ->
-  Coin ->
-  StakePoolParams era ->
-  StakeShare ->
-  StakeShare ->
-  StakeShare ->
-  Set (KeyHash StakePool) ->
-  PerformanceEstimate ->
-  Coin
-nonMyopicMemberRew pp rPot pool =
-  calcNonMyopicMemberReward pp rPot (sppId pool) (sppCost pool) (sppMargin pool)
-{-# DEPRECATED nonMyopicMemberRew "In favor of `calcNonMyopicMemberReward`" #-}
+      clamp :: forall x. Ord x => x -> x -> x
+      clamp = if pvMajor (pp ^. ppProtocolVersionL) >= natVersion @12 then max else const
+      effectiveCost = clamp cost $ pp ^. ppMinPoolCostL
+      effectiveMargin = clamp margin $ pp ^. ppMinPoolMarginG
+   in calcStakePoolMemberReward (Coin fHat) effectiveCost effectiveMargin t nm
