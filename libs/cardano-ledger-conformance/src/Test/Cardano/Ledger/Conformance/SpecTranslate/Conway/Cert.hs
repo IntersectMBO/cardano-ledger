@@ -12,6 +12,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert () where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -129,6 +130,14 @@ instance SpecTranslate ConwayEra (LedgerState ConwayEra) where
       <*> toSpecRep lsCertState
     where
       props = utxosGovState lsUTxOState ^. proposalsGovStateL
+
+instance EncCBOR (LedgerStateWithLimits ConwayEra) where
+  encCBOR = encCBOR . lswlLedgerState
+
+instance SpecTranslate ConwayEra (LedgerStateWithLimits ConwayEra) where
+  type SpecRep ConwayEra (LedgerStateWithLimits ConwayEra) = Agda.LState
+
+  toSpecRep = toSpecRep . lswlLedgerState
 
 instance SpecTranslate ConwayEra (EpochState ConwayEra) where
   type SpecRep ConwayEra (EpochState ConwayEra) = Agda.EpochState

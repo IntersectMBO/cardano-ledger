@@ -116,20 +116,24 @@ instance ExecSpecRule "LEDGER" ConwayEra where
     let externalFunctions' = externalFunctions {Agda.extValidPlutusScript = Agda.isValid (strcSignal trc)}
      in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
 
-  extraInfo globals ConwayLedgerExecContext {..} (TRC (Shelley.LedgerEnv {..}, LedgerState {..}, sig)) _ =
-    extraInfo @"UTXOW" @ConwayEra
-      globals
-      clecUtxoExecContext
-      (TRC (utxoEnv, lsUTxOState, sig))
-      stFinal
-    where
-      utxoEnv = Shelley.UtxoEnv ledgerSlotNo ledgerPp lsCertState
-      stFinal =
-        first (T.pack . show) $
-          runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig
+  extraInfo
+    globals
+    ConwayLedgerExecContext {..}
+    (TRC (Shelley.LedgerEnv {..}, LedgerStateWithLimits LedgerState {..} _, sig))
+    _ =
+      extraInfo @"UTXOW" @ConwayEra
+        globals
+        clecUtxoExecContext
+        (TRC (utxoEnv, lsUTxOState, sig))
+        stFinal
+      where
+        utxoEnv = Shelley.UtxoEnv ledgerSlotNo ledgerPp lsCertState
+        stFinal =
+          first (T.pack . show) $
+            runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig
 
 instance ExecSpecTopLevelRule "LEDGER" ConwayEra where
-  mkRuleExecContext _ (TRC (env, state, signal)) =
+  mkRuleExecContext _ (TRC (env, LedgerStateWithLimits state _, signal)) =
     ConwayLedgerExecContext
       { clecGuardrailsScriptHash =
           state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL
