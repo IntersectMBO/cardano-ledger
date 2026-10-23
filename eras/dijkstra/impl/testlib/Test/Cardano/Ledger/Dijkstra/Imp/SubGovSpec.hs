@@ -441,16 +441,16 @@ spec = describe "SUBGOV" $ do
             ProposalReturnAccountDoesNotExist secondAccount
         ]
 
-    it "the top-level failure precedes the same failure from a sub-transaction" $ do
+    it "a sub-transaction failure precedes the same failure from the top level" $ do
       account <- freshUnregisteredAccount
       proposal <- mkProposalWithAccountAddress InfoAction account
       submitFailingTx
         ( mkTopTxWithSubTxs [proposeSubTx proposal]
             & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         )
-        [ injectFailure $ ProposalReturnAccountDoesNotExist account
-        , injectFailure . DijkstraSubGovPredFailure $
+        [ injectFailure . DijkstraSubGovPredFailure $
             ProposalReturnAccountDoesNotExist account
+        , injectFailure $ ProposalReturnAccountDoesNotExist account
         ]
 
   describe "Unreachable in Dijkstra" $ do

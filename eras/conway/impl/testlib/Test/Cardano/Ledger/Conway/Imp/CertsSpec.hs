@@ -105,7 +105,7 @@ conwayOnlySpec = describe "CERTS" $ do
             injectFailure . WrongNetworkWithdrawal @era Testnet $ NES.singleton wrongNetworkAccount
       void $ delegateToDRep (KeyHashObj stakeKey) (Coin 1_000_000) DRepAlwaysAbstain
       -- when the network is wrong, missing account failure is emitted even if the stake credential is registered
-      submitFailingTx tx [wrongNetworkFailure, notInRewardsFailure]
+      submitFailingTx tx [notInRewardsFailure, wrongNetworkFailure]
 
 spec ::
   forall era.

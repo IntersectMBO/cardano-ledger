@@ -73,8 +73,8 @@ spec = describe "LEDGER" $ do
 
       submitFailingTx
         tx
-        [ injectFailure $ BadInputsUTxO $ NES.singleton badInput
-        , injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
+        [ injectFailure $ SubBadInputsUTxO $ NES.singleton badInput
+        , injectFailure $ BadInputsUTxO $ NES.singleton badInput
         ]
 
     it "Fails when top-level transaction spends an input its sub-transaction spends" $ do
@@ -172,7 +172,7 @@ spec = describe "LEDGER" $ do
         mkBasicTxBody & referenceInputsTxBodyL .~ Set.singleton refTxIn
 
   describe "Composite tests" $ do
-    it "both levels are checked, and the top level failure is reported first" $ do
+    it "both levels are checked, and the sub-transaction failure is reported first" $ do
       actualTreasury <- getsNES treasuryL
       let declaredInSubTx = actualTreasury <> Coin 1
           declaredInTopTx = actualTreasury <> Coin 2
@@ -180,19 +180,19 @@ spec = describe "LEDGER" $ do
         ( mkTopTxWithSubTxs [declareTreasurySubTx declaredInSubTx]
             & bodyTxL . currentTreasuryValueTxBodyL .~ SJust declaredInTopTx
         )
-        [ injectFailure . DijkstraTreasuryValueMismatch $
-            Mismatch
-              { mismatchSupplied = declaredInTopTx
-              , mismatchExpected = actualTreasury
-              }
-        , injectFailure . SubTreasuryValueMismatch $
+        [ injectFailure . SubTreasuryValueMismatch $
             Mismatch
               { mismatchSupplied = declaredInSubTx
               , mismatchExpected = actualTreasury
               }
+        , injectFailure . DijkstraTreasuryValueMismatch $
+            Mismatch
+              { mismatchSupplied = declaredInTopTx
+              , mismatchExpected = actualTreasury
+              }
         ]
 
-    it "the reference script size is reported before the treasury value" $ do
+    it "the treasury value is reported before the reference script size" $ do
       actualTreasury <- getsNES treasuryL
       (size, refTxIn) <- refScriptInput
       modifyPParams $ ppMaxRefScriptSizePerTxL .~ fromIntegral (size - 1)
@@ -204,17 +204,17 @@ spec = describe "LEDGER" $ do
               & currentTreasuryValueTxBodyL .~ SJust declaredTreasury
               & referenceInputsTxBodyL .~ Set.singleton refTxIn
         )
-        [ injectFailure $
+        [ injectFailure . DijkstraTreasuryValueMismatch $
+            Mismatch
+              { mismatchSupplied = declaredTreasury
+              , mismatchExpected = actualTreasury
+              }
+        , injectFailure $
             DijkstraTxRefScriptsSizeTooBig
               Mismatch
                 { mismatchSupplied = size
                 , mismatchExpected = size - 1
                 }
-        , injectFailure . DijkstraTreasuryValueMismatch $
-            Mismatch
-              { mismatchSupplied = declaredTreasury
-              , mismatchExpected = actualTreasury
-              }
         ]
 
   describe "A phase-2 invalid top level transaction" $ do

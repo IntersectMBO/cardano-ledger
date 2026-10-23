@@ -322,8 +322,8 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO $ Mismatch (Coin 0) (Coin 10000)))
-    , UtxowFailure (UtxoFailure $ BadInputsUTxO (NES.singleton $ mkGenesisTxIn 42))
+    [ UtxowFailure (UtxoFailure $ BadInputsUTxO (NES.singleton $ mkGenesisTxIn 42))
+    , UtxowFailure (UtxoFailure (ValueNotConservedUTxO $ Mismatch (Coin 0) (Coin 10000)))
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob

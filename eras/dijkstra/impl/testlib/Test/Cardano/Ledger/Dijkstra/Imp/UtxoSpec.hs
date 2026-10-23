@@ -514,16 +514,16 @@ spec = describe "UTXO" $ do
         submitFailingTx
           topTxLegacy
           [ injectFailure $
-              ValueNotConservedInLegacyMode
-                Mismatch
-                  { mismatchSupplied = inject (bbTopConsumed balances)
-                  , mismatchExpected = inject (bbTopProduced balances)
-                  }
-          , injectFailure $
               ValueNotConservedUTxO
                 Mismatch
                   { mismatchSupplied = inject (bbBatchConsumed balances)
                   , mismatchExpected = inject (bbBatchProduced balances)
+                  }
+          , injectFailure $
+              ValueNotConservedInLegacyMode
+                Mismatch
+                  { mismatchSupplied = inject (bbTopConsumed balances)
+                  , mismatchExpected = inject (bbTopProduced balances)
                   }
           ]
 

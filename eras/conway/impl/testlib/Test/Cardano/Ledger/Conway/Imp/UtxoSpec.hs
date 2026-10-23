@@ -136,12 +136,12 @@ spec = describe "UTXO" $ do
       withPostFixup (updateAddrTxWits . addUnRegDRepTxCert) $
         submitFailingTx
           (mkBasicTx txBody)
-          [ injectFailure $
+          [ injectFailure $ Conway.ConwayDRepNotRegistered dRepCred
+          , injectFailure $
               Shelley.ValueNotConservedUTxO $
                 Mismatch
                   (rootTxOutValue <> inject txAmount <> inject dRepDeposit)
                   (rootTxOutValue <> inject txAmount)
-          , injectFailure $ Conway.ConwayDRepNotRegistered dRepCred
           ]
   describe "Reference scripts" $ do
     let

@@ -125,8 +125,8 @@ spec = describe "SUBUTXO" $ do
       let badInput = neverSubmittedTxIn @era 0
       submitFailingSubTx
         (mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [badInput])
-        [ injectFailure . BadInputsUTxO @era $ NES.singleton badInput
-        , injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
+        [ injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
+        , injectFailure . BadInputsUTxO @era $ NES.singleton badInput
         ]
 
     it
@@ -140,9 +140,9 @@ spec = describe "SUBUTXO" $ do
                 & inputsTxBodyL .~ [badInput]
                 & referenceInputsTxBodyL .~ [badReferenceInput]
           )
-          [ injectFailure . BadInputsUTxO @era $
+          [ injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
+          , injectFailure . BadInputsUTxO @era $
               NES.singleton badInput <> NES.singleton badReferenceInput
-          , injectFailure . SubBadInputsUTxO @era $ NES.singleton badInput
           ]
 
   describe "Inputs produced or spent within the batch" $ do
@@ -174,8 +174,8 @@ spec = describe "SUBUTXO" $ do
             , producingSubTx
             ]
         )
-        [ injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn
-        , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        , injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn
         ]
 
     it "referencing an out that another sub-tx spends is accepted" $ do
@@ -281,7 +281,7 @@ spec = describe "SUBUTXO" $ do
 
   describe "Composite tests" $ do
     it
-      "seven failures of one sub-transaction, in the reverse of the order the rule checks them"
+      "seven failures of one sub-transaction, in the order the rule checks them"
       $ do
         restrictMaxValSizeToAdaOnly
         pp <- getsPParams id
@@ -303,16 +303,16 @@ spec = describe "SUBUTXO" $ do
                 & outputsTxBodyL .~ [tooBigTxOut, bootstrapAttrsTxOut, tooSmallTxOut]
                 & networkIdTxBodyL .~ SJust Mainnet
           )
-          [ injectFailure . BadInputsUTxO @era $ NES.singleton badReferenceInput
-          , injectFailure . SubWrongNetworkInTxBody @era $
-              Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
-          , injectFailure . SubWrongNetwork @era Testnet $ NES.singleton mainnetAddr
+          [ injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
+          , injectFailure $ SubOutputTooBigUTxO @era [outputTooBigEntry pp tooBigTxOut]
+          , injectFailure $ SubOutputBootAddrAttrsTooBig @era [bootstrapAttrsTxOut]
           , injectFailure $
               SubBabbageOutputTooSmallUTxO @era
                 [(tooSmallTxOut, getMinCoinTxOut pp tooSmallTxOut)]
-          , injectFailure $ SubOutputBootAddrAttrsTooBig @era [bootstrapAttrsTxOut]
-          , injectFailure $ SubOutputTooBigUTxO @era [outputTooBigEntry pp tooBigTxOut]
-          , injectFailure $ SubOutsideValidityIntervalUTxO @era validityInterval currentSlot
+          , injectFailure . SubWrongNetwork @era Testnet $ NES.singleton mainnetAddr
+          , injectFailure . SubWrongNetworkInTxBody @era $
+              Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
+          , injectFailure . BadInputsUTxO @era $ NES.singleton badReferenceInput
           ]
 
     it "failures of several sub-transactions, in sub-transaction order" $ do
@@ -371,8 +371,8 @@ spec = describe "SUBUTXO" $ do
           ]
       submitFailingTx
         (topTx & isPhase2ValidTxL .~ Phase2Invalid)
-        [ injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn
-        , injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        [ injectFailure . SubBadInputsUTxO @era $ NES.singleton producedTxIn
+        , injectFailure . BadInputsUTxO @era $ NES.singleton producedTxIn
         ]
 
 freshSubTxProducingOutput ::
