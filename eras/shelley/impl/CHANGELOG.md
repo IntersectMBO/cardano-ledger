@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `LedgerStateWithLimits`, `lswlLedgerState`, `lswlBlockBodyLimits`, `lswlLedgerStateL`, `lswlBlockBodyLimitsL`
 * Add `ShelleyBlockBodyLimits` and `sbblTxsSize`
 * Add `bbodyLeiosCommittee` field to `BbodyEnv`
 * Add `fvMinPoolCost` and `fvMinPoolMargin` fields to `Cardano.Ledger.Shelley.RewardUpdate.FreeVars`
