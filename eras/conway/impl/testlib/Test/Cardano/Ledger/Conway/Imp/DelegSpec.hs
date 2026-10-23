@@ -332,10 +332,10 @@ spec = describe "DELEG" $ do
       expectDelegatedVote cred (DRepCredential drepCred2)
 
       impAnn "Check that in bootstrap phase the previous reverse delegation is maintained" $ do
-        expecteReverseDRepDelegation cred drepCred2 True
+        expectReverseDRepDelegation cred drepCred2 True
         ifBootstrap
-          (expecteReverseDRepDelegation cred drepCred True)
-          (expecteReverseDRepDelegation cred drepCred False)
+          (expectReverseDRepDelegation cred drepCred True)
+          (expectReverseDRepDelegation cred drepCred False)
 
       impAnn "Check that unregistration of previous delegation does not affect current delegation" $ do
         unRegisterDRep drepCred
@@ -345,7 +345,7 @@ spec = describe "DELEG" $ do
               -- we cannot `expectNotDelegatedVote` because the delegation is still in the DRepState of the other drep
               accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
               expectNothingExpr (lookupDRepDelegation cred accounts)
-              expecteReverseDRepDelegation cred drepCred2 True
+              expectReverseDRepDelegation cred drepCred2 True
           )
           (expectDelegatedVote cred (DRepCredential drepCred2))
 
@@ -359,7 +359,7 @@ spec = describe "DELEG" $ do
           & bodyTxL . certsTxBodyL
             .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
       expectDelegatedVote cred (DRepCredential drepCred)
-      expecteReverseDRepDelegation cred drepCred True
+      expectReverseDRepDelegation cred drepCred True
 
       -- redelegate to a predefined DRep
       predefinedDRep <- oneof [pure DRepAlwaysAbstain, pure DRepAlwaysNoConfidence]
@@ -370,7 +370,7 @@ spec = describe "DELEG" $ do
       expectDelegatedVote cred predefinedDRep
 
       -- unlike for credential dreps, the cleanup of reverse delegations is correct both in bootstrap and post-bootstrap
-      expecteReverseDRepDelegation cred drepCred False
+      expectReverseDRepDelegation cred drepCred False
 
       -- unregister original drep
       unRegisterDRep drepCred
@@ -541,6 +541,27 @@ spec = describe "DELEG" $ do
       passNEpochs $ fromIntegral poolLifetime
       expectDelegatedToPool cred poolKh
   describe "Delegate both stake and vote" $ do
+    it "Fails to delegate to unregistered delegatees" $ do
+      cred <- KeyHashObj <$> freshKeyHash
+      regTxCert <- genRegTxCert cred
+      submitAnyTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [regTxCert]
+      poolKh <- freshKeyHash
+      drepCred <- KeyHashObj <$> freshKeyHash
+      let tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [DelegTxCert cred (DelegStakeVote poolKh (DRepCredential drepCred))]
+          poolFailure = injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh
+          drepFailure = injectFailure $ DelegateeDRepNotRegisteredDELEG drepCred
+      -- The DRep registration check is only performed after the bootstrap phase
+      ifBootstrap
+        (submitFailingTx tx [poolFailure])
+        (submitFailingTx tx [poolFailure, drepFailure])
+      expectNotDelegatedToAnyPool cred
+
     it "Delegate and unregister credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
@@ -614,49 +635,6 @@ spec = describe "DELEG" $ do
     getDelegs deleg2 updatedNES `shouldReturn` Just pool1
     getDelegs deleg3 updatedNES `shouldReturn` Just pool2
   where
-    expectDelegatedVote :: HasCallStack => Credential Staking -> DRep -> ImpTestM era ()
-    expectDelegatedVote cred drep = do
-      accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-      dreps <- getsNES $ nesEsL . epochStateRegDrepL
-      impAnn (show cred <> " expected to have delegated to " <> show drep) $ do
-        accountState <- expectJust $ lookupAccountState cred accounts
-        accountState ^. dRepDelegationAccountStateL `shouldBe` Just drep
-        case drep of
-          DRepCredential drepCred ->
-            case Map.lookup drepCred dreps of
-              Nothing ->
-                whenPostBootstrap $
-                  assertFailure $
-                    "Expected DRep: " <> show drepCred <> " to be registered"
-              Just drepState ->
-                assertBool
-                  "Expected DRep delegations to contain the stake credential"
-                  (cred `Set.member` drepDelegs drepState)
-          _ -> pure ()
-
-    expectNotDelegatedVote :: Credential Staking -> ImpTestM era ()
-    expectNotDelegatedVote cred = do
-      accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-      dreps <- getsNES $ nesEsL . epochStateRegDrepL
-      impAnn (show cred <> " expected to not have their vote delegated") $ do
-        expectNothingExpr (lookupDRepDelegation cred accounts)
-        assertBool
-          ("Expected no drep state delegation to contain the stake credential: " <> show cred)
-          (all (Set.notMember cred . drepDelegs) dreps)
-
-    expecteReverseDRepDelegation ::
-      HasCallStack => Credential Staking -> Credential DRepRole -> Bool -> ImpTestM era ()
-    expecteReverseDRepDelegation cred drepCred expected = do
-      dreps <- getsNES $ nesEsL . epochStateRegDrepL
-      case Map.lookup drepCred dreps of
-        Just drepState -> do
-          let member = cred `Set.member` drepDelegs drepState
-          assertBool msg (member == expected)
-        Nothing -> do
-          assertBool msg (expected == False)
-      where
-        msg = "Reverse delegation mismatch. Expected " <> show expected
-
     getDelegs kh nes = do
       let accounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
       pure $ Map.lookup (KeyHashObj kh) accounts >>= (^. stakePoolDelegationAccountStateL)

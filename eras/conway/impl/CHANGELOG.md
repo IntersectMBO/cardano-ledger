@@ -11,6 +11,7 @@
 
 ### `testlib`
 
+* Add `lookupDRepState`, `expectDRepRegistered`, `expectDelegatedVote`, `expectNotDelegatedVote` and `expectReverseDRepDelegation`
 * Add `ToExpr` instance for `ConwayTickfEvent`
 
 ## 1.24.0.0
