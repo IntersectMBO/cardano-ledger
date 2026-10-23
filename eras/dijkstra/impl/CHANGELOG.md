@@ -4,6 +4,7 @@
 
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
+* Add `DecCBOR (Annotator EbReferences)` and `ToCBOR EbReferences`, so that `EbReferences` can be decoded without the full input at hand, eg from the network
 * Add `LeiosCertMissing` and `LeiosCertBlockBodyHasTxs` constructors to `DijkstraBbodyPredFailure`
 * Rename `decodeDijkstraTopTx` to `decodeDijkstraTopTxInMempool`
 * Remove the `DijkstraEraTx` type class and its `hashTx` method in favour of `HashAnnotated (Tx TopTx DijkstraEra) EraIndependentTx`
