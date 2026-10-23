@@ -51,6 +51,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (LEDGER, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
   utxosDepositedL,
  )
@@ -262,19 +263,19 @@ instance
 shelleyLedgerAssertions ::
   ( EraGov era
   , EraCertState era
-  , State (rule era) ~ LedgerState era
+  , State (rule era) ~ LedgerStateWithLimits era
   ) =>
   [Assertion (rule era)]
 shelleyLedgerAssertions =
   [ PostCondition
       "Deposit pot must equal obligation (LEDGER)"
       ( \(TRC (_, _, _))
-         (LedgerState utxoSt dpstate _) -> potEqualsObligation dpstate utxoSt
+         (LedgerStateWithLimits (LedgerState utxoSt dpstate _) _) -> potEqualsObligation dpstate utxoSt
       )
   , PostCondition
       "Reverse stake pool delegations must match"
       ( \(TRC (_, _, _))
-         (LedgerState _ certState _) ->
+         (LedgerStateWithLimits (LedgerState _ certState _) _) ->
             uncurry (==) $ calculateDelegatorsPerStakePool certState
       )
   ]
@@ -298,7 +299,7 @@ instance
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
@@ -332,7 +333,7 @@ ledgerTransition ::
 ledgerTransition = do
   TRC
     ( LedgerEnv slot mbCurEpochNo txIx pp account
-      , LedgerState utxoSt certState lastEbAnnouncement
+      , LedgerStateWithLimits (LedgerState utxoSt certState lastEbAnnouncement) blockBodyLimits
       , stAnnTx
       ) <-
     judgmentContext
@@ -355,7 +356,7 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure (LedgerState utxoSt' certState' lastEbAnnouncement)
+  pure (LedgerStateWithLimits (LedgerState utxoSt' certState' lastEbAnnouncement) blockBodyLimits)
 
 testIncompleteAndMissingWithdrawals ::
   ( EraAccounts era
@@ -406,7 +407,7 @@ renderDepositEqualsObligationViolation ::
   , EraCertState era
   , Environment t ~ LedgerEnv era
   , Signal t ~ StAnnTx TopTx era
-  , State t ~ LedgerState era
+  , State t ~ LedgerStateWithLimits era
   ) =>
   AssertionViolation t ->
   String
@@ -415,7 +416,7 @@ renderDepositEqualsObligationViolation
     let tx = stAnnTx ^. txStAnnTxG
      in case avState of
           Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
-          Just lstate
+          Just (LedgerStateWithLimits lstate _)
             | avMsg == "Deposit pot must equal obligation (LEDGER)" ->
                 let certstate = lsCertState lstate
                     utxoSt = lsUTxOState lstate
