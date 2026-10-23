@@ -24,7 +24,6 @@ import Cardano.Crypto.DSIGN (
   verifyPossessionProofDSIGN,
   verifySignedDSIGN,
  )
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Ledger.Core (HASH, Hash)
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Data.ByteString (ByteString)
@@ -68,7 +67,7 @@ externalFunctions = Agda.MkExternalFunctions {..}
 
     extIsValidPoP vk pop =
       isRight $
-        verifyPossessionProofDSIGN minSigPoPDST verkey proofofpossesion
+        verifyPossessionProofDSIGN verkey proofofpossesion
       where
         verkey :: VerKeyDSIGN BLS12381MinSigDSIGN
         verkey =
