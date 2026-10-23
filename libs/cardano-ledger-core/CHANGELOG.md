@@ -2,6 +2,7 @@
 
 ## 1.23.0.0
 
+* Add `BlockBodyLimits` type to `EraBlockBody` typeclass
 * Re-export `Cardano.Ledger.Plutus.ToPlutusData` module from `Cardano.Ledger.Plutus`
 * Add `sppIdL`, `sppAccountAddressL`, `sppBlsKeyL`, `sppPledgeL`, `sppMarginL`, `sppOwnersL` and `sppRelaysL` to `Cardano.Ledger.State.StakePool`
 * Add `blockBodyContainsLeiosCertBlockHeaderL` to `LeiosEraBlockHeader`

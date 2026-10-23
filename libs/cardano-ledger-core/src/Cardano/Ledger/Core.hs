@@ -633,10 +633,13 @@ class
   , Show (BlockBody era)
   , Typeable (BlockBody era)
   , DecCBOR (Annotator (BlockBody era))
+  , Monoid (BlockBodyLimits era)
   ) =>
   EraBlockBody era
   where
   type BlockBody era = (r :: Type) | r -> era
+
+  type BlockBodyLimits era = (r :: Type) | r -> era
 
   type ProtocolEraBlockHeader h era :: Constraint
 

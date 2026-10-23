@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `AlonzoBlockBodyLimits`, `abblTxsSize`, `abblExUnits`
 * Reject duplicate keys in the map encoding of `Redeemers`, starting with protocol version 12
 
 ### `testlib`

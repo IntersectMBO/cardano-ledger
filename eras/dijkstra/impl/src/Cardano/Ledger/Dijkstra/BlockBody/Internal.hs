@@ -52,6 +52,7 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Block (LeiosEraBlockHeader)
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx (
@@ -112,6 +113,7 @@ type instance MemoHashIndex (DijkstraBlockBodyRaw era) = EraIndependentBlockBody
 
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = DijkstraBlockBody DijkstraEra
+  type BlockBodyLimits DijkstraEra = ConwayBlockBodyLimits DijkstraEra
   type ProtocolEraBlockHeader h DijkstraEra = LeiosEraBlockHeader h DijkstraEra
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
   txSeqBlockBodyL = lensMemoRawType @DijkstraEra dbbrTxs (\bb p -> bb {dbbrTxs = p})

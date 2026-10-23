@@ -29,6 +29,7 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Shelley.BlockBody (
   ShelleyBlockBody,
+  ShelleyBlockBodyLimits,
   mkBasicBlockBodyShelley,
   shelleyBlockBodyHash,
   txSeqBlockBodyShelleyL,
@@ -38,6 +39,7 @@ import Data.Typeable (Typeable)
 
 instance EraBlockBody MaryEra where
   type BlockBody MaryEra = ShelleyBlockBody MaryEra
+  type BlockBodyLimits MaryEra = ShelleyBlockBodyLimits MaryEra
   type ProtocolEraBlockHeader h MaryEra = TPraosEraBlockHeader h MaryEra
   mkBasicBlockBody = mkBasicBlockBodyShelley
   txSeqBlockBodyL = txSeqBlockBodyShelleyL

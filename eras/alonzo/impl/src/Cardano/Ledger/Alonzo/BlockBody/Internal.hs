@@ -25,6 +25,7 @@
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Alonzo.BlockBody.Internal (
   AlonzoBlockBody (AlonzoBlockBody, ..),
+  AlonzoBlockBodyLimits (..),
   hashAlonzoSegWits,
   alignedValidFlags,
   mkBasicBlockBodyAlonzo,
@@ -49,6 +50,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Block (TPraosEraBlockHeader)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -62,6 +64,7 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -95,9 +98,26 @@ data AlonzoBlockBody era = AlonzoBlockBodyInternal
 
 instance NFData (Tx TopTx era) => NFData (AlonzoBlockBody era)
 
+data AlonzoBlockBodyLimits era = AlonzoBlockBodyLimits
+  { abblTxsSize :: !Word32
+  , abblExUnits :: !ExUnits
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance NFData (AlonzoBlockBodyLimits era)
+
+instance Semigroup (AlonzoBlockBodyLimits era) where
+  AlonzoBlockBodyLimits s1 ex1 <> AlonzoBlockBodyLimits s2 ex2 =
+    AlonzoBlockBodyLimits (s1 + s2) (ex1 <> ex2)
+
+instance Monoid (AlonzoBlockBodyLimits era) where
+  mempty = AlonzoBlockBodyLimits 0 mempty
+
 instance EraBlockBody AlonzoEra where
   type BlockBody AlonzoEra = AlonzoBlockBody AlonzoEra
+  type BlockBodyLimits AlonzoEra = AlonzoBlockBodyLimits AlonzoEra
   type ProtocolEraBlockHeader h AlonzoEra = TPraosEraBlockHeader h AlonzoEra
+
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
   hashBlockBody = abbHash
