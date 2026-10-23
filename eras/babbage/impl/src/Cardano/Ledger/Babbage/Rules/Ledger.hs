@@ -22,7 +22,7 @@ import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure, UTXOW)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
-  LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -100,7 +100,7 @@ instance
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = Shelley.LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase

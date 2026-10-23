@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `ConwayBlockBodyLimits`, `cbblTxsSize`, `cbblExUnits`, `cbblRefScriptsSize`
 * Add `psStakePoolDistrG`
 * Change `TICKF` to run the `SNAP` rule at the epoch boundary:

@@ -81,6 +81,7 @@ import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), batchNonDistinctRefSc
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
   lsCertState,
   lsUTxOStateL,
@@ -333,7 +334,7 @@ instance
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = Shelley.LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
@@ -394,7 +395,11 @@ dijkstraLedgerTransition ::
   ) =>
   TransitionRule (LEDGER era)
 dijkstraLedgerTransition = do
-  TRC (Shelley.LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState, ledgerState, stAnnTx) <-
+  TRC
+    ( Shelley.LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState
+      , LedgerStateWithLimits ledgerState blockBodyLimits
+      , stAnnTx
+      ) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -488,7 +493,8 @@ dijkstraLedgerTransition = do
         , utxoStateBeforeUtxow
         , stAnnTx
         )
-  pure $ LedgerState utxoStateFinal certStateFinal lastEbAnnouncement
+  pure $
+    LedgerStateWithLimits (LedgerState utxoStateFinal certStateFinal lastEbAnnouncement) blockBodyLimits
 
 instance
   ( AlonzoEraTx era

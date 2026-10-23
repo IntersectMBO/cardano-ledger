@@ -97,6 +97,7 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
   utxosGovStateL,
  )
@@ -318,7 +319,7 @@ instance
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = Shelley.LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
@@ -339,7 +340,7 @@ conwayLedgerTransitionTRC ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , Signal (someLEDGER era) ~ StAnnTx TopTx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ LedgerStateWithLimits era
   , Environment (someLEDGER era) ~ Shelley.LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)
@@ -365,7 +366,7 @@ conwayLedgerTransitionTRC ::
 conwayLedgerTransitionTRC
   ( TRC
       ( Shelley.LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState
-        , LedgerState utxoState certState lastEbAnnouncement
+        , LedgerStateWithLimits (LedgerState utxoState certState lastEbAnnouncement) blockBodyLimits
         , stAnnTx
         )
     ) = do
@@ -448,7 +449,10 @@ conwayLedgerTransitionTRC
           , utxoState'
           , stAnnTx
           )
-    pure $ LedgerState utxoState'' certStateAfterCERTS lastEbAnnouncement
+    pure $
+      LedgerStateWithLimits
+        (LedgerState utxoState'' certStateAfterCERTS lastEbAnnouncement)
+        blockBodyLimits
 
 validateTreasuryValue ::
   ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)
@@ -504,7 +508,7 @@ conwayLedgerTransition ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , Signal (someLEDGER era) ~ StAnnTx TopTx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ LedgerStateWithLimits era
   , Environment (someLEDGER era) ~ Shelley.LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)

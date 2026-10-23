@@ -23,7 +23,11 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, systemStart)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
+  LedgerStateWithLimits (..),
+  lswlLedgerStateL,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -85,12 +89,13 @@ instance InjectRuleFailure "LEDGERS" Shelley.ShelleyDelegPredFailure AlonzoEra w
 
 instance
   ( ApplyTx era
+  , EraBlockBody era
   , EraGov era
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Default (LedgerState era)
   ) =>
@@ -108,12 +113,13 @@ instance
 alonzoLedgersTransition ::
   forall era.
   ( ApplyTx era
+  , EraBlockBody era
   , EraGov era
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (LEDGERS era)
@@ -121,10 +127,10 @@ alonzoLedgersTransition = do
   TRC (Shelley.LedgersEnv slot epochNo pp account, initLedgerState, txs) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sysStart <- liftSTS $ asks systemStart
-  (finalLedgerState, _) <-
+  (LedgerStateWithLimits finalLedgerState _, _) <-
     foldM -- cache is lazy on purpose, since it is unused when validation is off
       ( \(!curLedgerState, stAnnTxCache) (ix, tx) -> do
-          let utxo = curLedgerState ^. utxoL
+          let utxo = curLedgerState ^. lswlLedgerStateL . utxoL
               stAnnTx =
                 mkStAnnTx (unsafeLinearExtendEpochInfo slot ei) sysStart pp utxo stAnnTxCache tx
           newLedgerState <-
@@ -132,7 +138,7 @@ alonzoLedgersTransition = do
               TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
           pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
-      (initLedgerState, mempty)
+      (LedgerStateWithLimits initLedgerState mempty, mempty)
       $ zip [minBound ..]
       $ toList txs
   pure finalLedgerState
