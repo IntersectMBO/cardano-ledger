@@ -33,7 +33,13 @@ import Cardano.Ledger.BaseTypes (
   addEpochInterval,
   strictMaybeToMaybe,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  decodeRecordNamed,
+  encodeListLen,
+  rawEncodeFixedSized,
+ )
 import Cardano.Ledger.Block (EbReferencesAnnouncement)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Hashes (EraIndependentBlockHeader, SafeHash)
@@ -42,8 +48,10 @@ import Cardano.Ledger.Slot (EpochNo, SlotNo)
 import Cardano.Ledger.State.StakePool (BlsKey (..), BlsKeyState (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value, object, toJSON, (.=))
+import qualified Data.ByteString.Base16 as B16
 import Data.Function ((&))
 import Data.Ord (Down (..))
+import qualified Data.Text.Encoding as Text
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Intro as Intro
@@ -115,9 +123,11 @@ leiosCommitteeToJSON =
   where
     leiosSeatToJSON (LeiosSeat weight vkey) =
       object
-        [ "seatWeight" .= weight
-        , "seatVKey" .= show (strictMaybeToMaybe vkey)
+        [ "seatVKey" .= fmap vkeyToHex (strictMaybeToMaybe vkey)
+        , "seatWeight" .= weight
         ]
+
+    vkeyToHex = Text.decodeLatin1 . B16.encode . rawEncodeFixedSized
 
 -- | Endorser Block (EB) references announcement together with the block header that made it.
 data EbAnnouncement = EbAnnouncement
