@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -21,7 +22,7 @@ module Cardano.Ledger.Dijkstra.Block.Endorser (
   EraEndorserBlock (..),
 ) where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR, Version)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR, Version)
 import Cardano.Ledger.Core (EraTx, TopTx, Tx)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx ()
@@ -35,6 +36,7 @@ import Cardano.Ledger.Hashes (
  )
 import Cardano.Ledger.MemoBytes (
   EqRaw,
+  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -59,21 +61,27 @@ newtype EbReferencesRaw = EbReferencesRaw
   }
   deriving newtype (Eq, Show, NFData, NoThunks, EncCBOR)
 
+instance DecCBOR EbReferencesRaw where
+  decCBOR = do
+    refs <- decCBOR
+    EbReferencesRaw refs <$ when (null refs) (fail "Empty EbReferences are not allowed")
+
+instance DecCBOR (Annotator EbReferencesRaw) where
+  decCBOR = pure <$> decCBOR
+
 type instance MemoHashIndex EbReferencesRaw = EraIndependentEbReferences
 
 newtype EbReferences = MkEbReferences (MemoBytes EbReferencesRaw)
   deriving stock (Generic)
-  deriving newtype (Eq, Show, NFData, NoThunks, EncCBOR, SafeToHash)
+  deriving newtype (Eq, Show, NFData, NoThunks, EncCBOR, ToCBOR, SafeToHash)
 
 instance Memoized EbReferences where
   type RawType EbReferences = EbReferencesRaw
 
 instance DecCBOR EbReferences where
-  decCBOR = MkEbReferences <$> decodeMemoized decodeNonEmpty
-    where
-      decodeNonEmpty = do
-        refs <- decCBOR
-        EbReferencesRaw refs <$ when (null refs) (fail "Empty EbReferences are not allowed")
+  decCBOR = MkEbReferences <$> decodeMemoized decCBOR
+
+deriving via Mem EbReferencesRaw instance DecCBOR (Annotator EbReferences)
 
 instance HashAnnotated EbReferences EraIndependentEbReferences where
   hashAnnotated = getMemoSafeHash

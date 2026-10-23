@@ -17,6 +17,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
   roundTripAnnEraExpectation,
+  roundTripAnnEraSpec,
   roundTripEraExpectation,
   roundTripEraSpec,
  )
@@ -45,6 +46,7 @@ main =
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
       roundTripEraSpec @DijkstraEra @EbReferences
+      roundTripAnnEraSpec @DijkstraEra @EbReferences
       prop "Block (Leios.Header)" $
         BaseQC.withNumTests 25 $
           forAll (Block <$> arbitrary <*> genSmallDijkstraTxsBlockBody) $ \block ->
