@@ -27,6 +27,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -95,7 +96,7 @@ ledgerTransition ::
   ( STS (someLEDGER era)
   , BaseM (someLEDGER era) ~ ShelleyBase
   , Signal (someLEDGER era) ~ StAnnTx TopTx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ LedgerStateWithLimits era
   , Environment (someLEDGER era) ~ Shelley.LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
@@ -114,7 +115,7 @@ ledgerTransition ::
 ledgerTransition = do
   TRC
     ( Shelley.LedgerEnv slot mbCurEpochNo txIx pp account
-      , LedgerState utxoSt certState lastEbAnnouncement
+      , LedgerStateWithLimits (LedgerState utxoSt certState lastEbAnnouncement) blockBodyLimits
       , stAnnTx
       ) <-
     judgmentContext
@@ -143,7 +144,7 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure $ LedgerState utxoSt' certState' lastEbAnnouncement
+  pure $ LedgerStateWithLimits (LedgerState utxoSt' certState' lastEbAnnouncement) blockBodyLimits
 
 instance
   ( AlonzoEraTx era
@@ -164,7 +165,7 @@ instance
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = Shelley.LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
