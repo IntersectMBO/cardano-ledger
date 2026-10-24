@@ -65,6 +65,7 @@ library
     Cardano.Ledger.Dijkstra.Rules.GovCert
     Cardano.Ledger.Dijkstra.Rules.Ledger
     Cardano.Ledger.Dijkstra.Rules.Ledgers
+    Cardano.Ledger.Dijkstra.Rules.LeiosCert
     Cardano.Ledger.Dijkstra.Rules.Mempool
     Cardano.Ledger.Dijkstra.Rules.Pool
     Cardano.Ledger.Dijkstra.Rules.PoolReap
@@ -161,6 +162,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec
     Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec
@@ -201,7 +203,7 @@ library testlib
     bytestring,
     cardano-base,
     cardano-crypto-class,
-    cardano-crypto-leios,
+    cardano-crypto-leios:{cardano-crypto-leios, testlib},
     cardano-data,
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},

@@ -28,6 +28,7 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
   conwayToDijkstraBbodyPredFailure,
 ) where
 
+import Cardano.Crypto.Leios (LeiosCert)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -54,7 +55,6 @@ import Cardano.Ledger.Block (
   LeiosBbodySignal (..),
   LeiosEraBlockHeader (..),
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.BlockBody (
@@ -67,10 +67,22 @@ import Cardano.Ledger.Dijkstra.Era (
   BBODY,
   DijkstraEra,
  )
+import Cardano.Ledger.Dijkstra.PParams (
+  DijkstraEraPParams,
+  ppLeiosAnnouncementPeriodLengthL,
+  ppLeiosDiffusionPeriodLengthL,
+  ppLeiosQuorumStakeThresholdL,
+  ppLeiosVotePeriodLengthL,
+ )
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
+import Cardano.Ledger.Dijkstra.Rules.LeiosCert (
+  DijkstraLeiosCertPredFailure,
+  LEIOSCERT,
+  LeiosCertEnv (..),
+ )
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.API (incrBlocks)
@@ -83,6 +95,7 @@ import Control.State.Transition
 import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (fromStrict)
+import Data.Void (absurd)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
@@ -98,25 +111,41 @@ data DijkstraBbodyPredFailure era
   | HeaderProtVerTooLow (Mismatch RelGTEQ Word32)
   | LeiosCertMissing
   | LeiosCertBlockBodyHasTxs
+  | LeiosCertFailure (PredicateFailure (EraRule "LEIOSCERT" era))
+  | LeiosCertWithoutEbAnnouncement
   deriving (Generic)
 
-instance NFData (PredicateFailure (EraRule "LEDGERS" era)) => NFData (DijkstraBbodyPredFailure era)
+instance
+  ( NFData (PredicateFailure (EraRule "LEDGERS" era))
+  , NFData (PredicateFailure (EraRule "LEIOSCERT" era))
+  ) =>
+  NFData (DijkstraBbodyPredFailure era)
 
 deriving instance
-  (Era era, Show (PredicateFailure (EraRule "LEDGERS" era))) =>
+  ( Era era
+  , Show (PredicateFailure (EraRule "LEDGERS" era))
+  , Show (PredicateFailure (EraRule "LEIOSCERT" era))
+  ) =>
   Show (DijkstraBbodyPredFailure era)
 
 deriving instance
-  (Era era, Eq (PredicateFailure (EraRule "LEDGERS" era))) =>
+  ( Era era
+  , Eq (PredicateFailure (EraRule "LEDGERS" era))
+  , Eq (PredicateFailure (EraRule "LEIOSCERT" era))
+  ) =>
   Eq (DijkstraBbodyPredFailure era)
 
 deriving instance
-  (Era era, Ord (PredicateFailure (EraRule "LEDGERS" era))) =>
+  ( Era era
+  , Ord (PredicateFailure (EraRule "LEDGERS" era))
+  , Ord (PredicateFailure (EraRule "LEIOSCERT" era))
+  ) =>
   Ord (DijkstraBbodyPredFailure era)
 
 instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "LEDGERS" era))
+  , EncCBOR (PredicateFailure (EraRule "LEIOSCERT" era))
   ) =>
   EncCBOR (DijkstraBbodyPredFailure era)
   where
@@ -132,14 +161,17 @@ instance
       HeaderProtVerTooLow mm -> Sum HeaderProtVerTooLow 6 !> To mm
       LeiosCertMissing -> Sum LeiosCertMissing 7
       LeiosCertBlockBodyHasTxs -> Sum LeiosCertBlockBodyHasTxs 8
+      LeiosCertFailure f -> Sum (LeiosCertFailure @era) 9 !> To f
+      LeiosCertWithoutEbAnnouncement -> Sum LeiosCertWithoutEbAnnouncement 10
 
 instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "LEDGERS" era))
+  , DecCBOR (PredicateFailure (EraRule "LEIOSCERT" era))
   ) =>
   DecCBOR (DijkstraBbodyPredFailure era)
   where
-  decCBOR = decode . Summands "ConwayBbodyPred" $ \case
+  decCBOR = decode . Summands "DijkstraBbodyPred" $ \case
     0 -> SumD WrongBlockBodySizeBBODY <! From
     1 -> SumD InvalidBodyHashBBODY <! From
     2 -> SumD LedgersFailure <! From
@@ -149,6 +181,8 @@ instance
     6 -> SumD HeaderProtVerTooLow <! From
     7 -> SumD LeiosCertMissing
     8 -> SumD LeiosCertBlockBodyHasTxs
+    9 -> SumD LeiosCertFailure <! From
+    10 -> SumD LeiosCertWithoutEbAnnouncement
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -156,6 +190,9 @@ type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure Dijk
 type instance EraRuleEvent "BBODY" DijkstraEra = Alonzo.AlonzoBbodyEvent DijkstraEra
 
 instance InjectRuleFailure "BBODY" DijkstraBbodyPredFailure DijkstraEra
+
+instance InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure DijkstraEra where
+  injectFailure = LeiosCertFailure
 
 instance InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraBbodyPredFailure
@@ -318,7 +355,11 @@ instance
   , EraRule "BBODY" era ~ BBODY era
   , AlonzoEraTx era
   , BabbageEraTxBody era
-  , ConwayEraPParams era
+  , DijkstraEraPParams era
+  , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
+  , Environment (EraRule "LEIOSCERT" era) ~ LeiosCertEnv
+  , State (EraRule "LEIOSCERT" era) ~ ()
+  , Signal (EraRule "LEIOSCERT" era) ~ LeiosCert
   , DijkstraEraBlockBody era
   ) =>
   STS (BBODY era)
@@ -356,12 +397,16 @@ dijkstraBbodyTransition ::
   , AlonzoEraTx era
   , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
-  , ConwayEraPParams era
+  , DijkstraEraPParams era
+  , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
+  , Environment (EraRule "LEIOSCERT" era) ~ LeiosCertEnv
+  , State (EraRule "LEIOSCERT" era) ~ ()
+  , Signal (EraRule "LEIOSCERT" era) ~ LeiosCert
   ) =>
   TransitionRule (EraRule "BBODY" era)
 dijkstraBbodyTransition = do
   TRC
-    ( Shelley.BbodyEnv pp account
+    ( Shelley.BbodyEnv pp account leiosCommittee
       , Shelley.BbodyState ls blocksMade
       , LeiosBbodySignal block@Block {blockBody}
       ) <-
@@ -410,7 +455,27 @@ dijkstraBbodyTransition = do
   case blockBody ^. leiosCertBlockBodyL of
     SNothing ->
       not (block ^. blockBodyContainsLeiosCertBlockHeaderL) ?! injectFailure LeiosCertMissing
-    SJust _ -> null txs ?! injectFailure LeiosCertBlockBodyHasTxs
+    SJust cert -> do
+      null txs ?! injectFailure LeiosCertBlockBodyHasTxs
+      whenFailureFree $
+        case ls ^. lsLastEbAnnouncementL of
+          SNothing -> failBecause $ injectFailure LeiosCertWithoutEbAnnouncement
+          SJust EbAnnouncement {ebAnnouncementSlotNo, ebAnnouncedInBlockHeader} ->
+            trans @(EraRule "LEIOSCERT" era) $
+              TRC
+                ( LeiosCertEnv
+                    { lseCurrentSlotNo = bhSlot
+                    , lseAnnouncementSlotNo = ebAnnouncementSlotNo
+                    , lseAnnouncedInBlockHeader = ebAnnouncedInBlockHeader
+                    , lseLeiosCommittee = leiosCommittee
+                    , lseThreshold = pp ^. ppLeiosQuorumStakeThresholdL
+                    , lseAnnouncementPeriodLength = pp ^. ppLeiosAnnouncementPeriodLengthL
+                    , lseVotePeriodLength = pp ^. ppLeiosVotePeriodLengthL
+                    , lseDiffusionPeriodLength = pp ^. ppLeiosDiffusionPeriodLengthL
+                    }
+                , ()
+                , cert
+                )
 
   -- Record the EB announced in this block's header, if any. A block that announces nothing
   -- removes any prior announcement.
@@ -439,11 +504,20 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
-  ( BaseM ledgers ~ ShelleyBase
-  , ledgers ~ EraRule "LEDGERS" era
-  , STS ledgers
+  ( BaseM (Babbage.LEDGERS era) ~ ShelleyBase
+  , Babbage.LEDGERS era ~ EraRule "LEDGERS" era
+  , STS (Babbage.LEDGERS era)
   ) =>
-  Embed ledgers (BBODY era)
+  Embed (Babbage.LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
+
+instance
+  ( Era era
+  , PredicateFailure (EraRule "LEIOSCERT" era) ~ DijkstraLeiosCertPredFailure era
+  ) =>
+  Embed (LEIOSCERT era) (BBODY era)
+  where
+  wrapFailed = LeiosCertFailure
+  wrapEvent = absurd

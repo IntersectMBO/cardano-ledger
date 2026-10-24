@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec as LEIOSCERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.SnapSpec as SNAP
@@ -60,3 +61,4 @@ dijkstraOnlySpec :: Spec
 dijkstraOnlySpec =
   describe "DijkstraEra Specific" $ withImpInitEachEraVersion (Proxy @DijkstraEra) $ do
     POOL.dijkstraOnlySpec
+    LEIOSCERT.dijkstraOnlySpec

@@ -302,7 +302,7 @@ bbodyTransition ::
   Rule (EraRule "BBODY" era) 'Transition ()
 bbodyTransition = do
   TRC
-    ( Shelley.BbodyEnv pp _
+    ( Shelley.BbodyEnv pp _ _
       , Shelley.BbodyState ls _
       , PraosBbodySignal block@Block {blockBody}
       ) <-

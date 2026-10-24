@@ -210,9 +210,13 @@ instance
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "LEDGERS" era))
+  , Arbitrary (PredicateFailure (EraRule "LEIOSCERT" era))
   ) =>
   Arbitrary (DijkstraBbodyPredFailure era)
   where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (DijkstraLeiosCertPredFailure era) where
   arbitrary = genericArbitraryU
 
 instance

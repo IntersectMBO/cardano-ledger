@@ -33,9 +33,19 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   expectMempoolRejection,
   voteSubTx,
   declareTreasurySubTx,
+  mkLeiosCert,
 ) where
 
 import Cardano.Base.Typeable (Typeable)
+import Cardano.Crypto.DSIGN (signDSIGN)
+import Cardano.Crypto.Hash.Class (hashToBytes)
+import Cardano.Crypto.Leios (
+  LeiosCert,
+  LeiosSeatId (..),
+  LeiosSigningKey,
+  aggregateLeiosCert,
+  leiosSignContext,
+ )
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
@@ -84,6 +94,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
+import Data.Word (Word16)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
@@ -145,6 +156,7 @@ class
   , DijkstraEraForecast era
   , DijkstraEraBlockBody era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  , InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraPoolPredFailure era
   , InjectRuleFailure "LEDGER" EntitiesPredFailure era
@@ -532,3 +544,21 @@ mkBalancerSubTx consumed produced = do
               & bodyTxL . inputsTxBodyL .~ [newTxIn]
               & bodyTxL . outputsTxBodyL .~ [changeOut]
       Just <$> updateAddrTxWits subTx
+
+-- | Aggregate the signatures of the given committee seats over the hash of the block
+-- header that announced an endorser block.
+mkLeiosCert ::
+  HasCallStack =>
+  LeiosCommittee ->
+  [LeiosSigningKey] ->
+  [Word16] ->
+  SafeHash EraIndependentBlockHeader ->
+  ImpTestM era LeiosCert
+mkLeiosCert committee keys seats headerHash =
+  expectRightDeep . aggregateLeiosCert committee $
+    Map.fromList
+      [ (LeiosSeatId seat, signDSIGN leiosSignContext msg (keys !! fromIntegral seat))
+      | seat <- seats
+      ]
+  where
+    msg = hashToBytes $ extractHash headerHash
