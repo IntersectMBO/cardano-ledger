@@ -51,6 +51,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
+  validateDijkstraNeededWitnesses,
   validateGuardDatums,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
@@ -229,7 +230,7 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(SubUtxoEnv _ pp certState originalUtxo _), utxoState, stAnnTx) <-
+  TRC (env@(SubUtxoEnv _ pp certState originalUtxo topIsPhase2Valid), utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -246,7 +247,8 @@ dijkstraSubUtxowTransition = do
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
+  runTest $
+    validateDijkstraNeededWitnesses topIsPhase2Valid witsKeyHashes certState originalUtxo txBody
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx

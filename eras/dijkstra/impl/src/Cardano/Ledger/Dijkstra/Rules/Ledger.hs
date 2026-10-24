@@ -471,14 +471,14 @@ dijkstraLedgerTransition = do
       else pure (utxoStateAfterSubLedgers, certStateAfterSubLedgers)
 
   -- Call UTXOW with UtxoEnv, passing the original UTxO, the original certState,
-  -- and the PState updated by all sub-ledgers
+  -- and the certState updated by all sub-ledgers
   utxoStateFinal <-
     trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv
             slot
             pp
-            (certStateAfterSubLedgers ^. certPStateL)
+            certStateAfterSubLedgers
             (lsCertState ledgerState)
             originalUtxo
         , utxoStateBeforeUtxow

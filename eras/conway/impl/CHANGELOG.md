@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Add `getConwayWitsVKeyNeededWith`
 * Add `psStakePoolDistrG`
 * Change `TICKF` to run the `SNAP` rule at the epoch boundary:
   - Add `SNAP` related constraints to the `STS` instance of `TICKF`
