@@ -38,6 +38,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (LEDGER, LedgerEnv (..))
@@ -130,7 +131,8 @@ testLEDGER ::
   LedgerEnv ShelleyEra ->
   ()
 testLEDGER initSt tx env = do
-  let st = runShelleyBase $ applySTS @(LEDGER ShelleyEra) (TRC (env, initSt, tx))
+  let st =
+        runShelleyBase $ applySTS @(LEDGER ShelleyEra) (TRC (env, LedgerStateWithLimits initSt mempty, tx))
   case st of
     Right _ -> ()
     Left e -> error $ show e
@@ -218,9 +220,9 @@ initLedgerState n = LedgerState (initUTxO n) def SNothing
 makeLEDGERState ::
   HasCallStack => LedgerState ShelleyEra -> Tx TopTx ShelleyEra -> LedgerState ShelleyEra
 makeLEDGERState start tx =
-  let st = applySTS @(LEDGER ShelleyEra) (TRC (ledgerEnv, start, tx))
+  let st = applySTS @(LEDGER ShelleyEra) (TRC (ledgerEnv, LedgerStateWithLimits start mempty, tx))
    in case runShelleyBase st of
-        Right st' -> st'
+        Right st' -> lswlLedgerState st'
         Left e -> error $ show e
 
 -- Create a ledger state that has registered stake credentials that

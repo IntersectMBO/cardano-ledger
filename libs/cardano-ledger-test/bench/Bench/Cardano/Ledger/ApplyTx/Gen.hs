@@ -16,7 +16,10 @@ import Cardano.Ledger.Shelley.API (
   MempoolEnv,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState,
+  LedgerStateWithLimits (..),
+ )
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..))
@@ -76,7 +79,7 @@ generateApplyTxEnvForEra ::
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , EraStake era
   , EraGov era
   ) =>
@@ -98,6 +101,6 @@ generateApplyTxEnvForEra eraProxy seed =
    in ApplyTxEnv
         { ateGlobals = testGlobals
         , ateMempoolEnv = applyTxMempoolEnv (ledgerPp (_traceEnv tr))
-        , ateState = source sst
+        , ateState = lswlLedgerState (source sst)
         , ateTx = signal sst ^. txStAnnTxG
         }

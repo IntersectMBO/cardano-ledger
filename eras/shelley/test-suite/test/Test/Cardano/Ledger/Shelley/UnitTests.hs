@@ -25,6 +25,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -227,12 +228,15 @@ testLEDGER ::
   LedgerState ShelleyEra ->
   Tx TopTx ShelleyEra ->
   LedgerEnv ShelleyEra ->
-  Either (NonEmpty (PredicateFailure (LEDGER ShelleyEra))) (LedgerState ShelleyEra) ->
+  Either (NonEmpty (PredicateFailure (LEDGER ShelleyEra))) (LedgerStateWithLimits ShelleyEra) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @(LEDGER ShelleyEra) runShelleyBase env $ pure initSt .- tx .->> expectedSt
+  checkTrace @(LEDGER ShelleyEra) runShelleyBase env $
+    pure (LedgerStateWithLimits initSt mempty) .- tx .->> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTSTest @(LEDGER ShelleyEra) (TRC (env, initSt, tx))
+  let st =
+        runShelleyBase $
+          applySTSTest @(LEDGER ShelleyEra) (TRC (env, LedgerStateWithLimits initSt mempty, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
@@ -622,7 +626,8 @@ testProducedOverMaxWord64 =
       tx = mkBasicTx @ShelleyEra txbody & witsTxL .~ txwits
       st =
         runShelleyBase $
-          applySTSTest @(LEDGER ShelleyEra) (TRC (ledgerEnv, ledgerState, tx))
+          applySTSTest @(LEDGER ShelleyEra)
+            (TRC (ledgerEnv, LedgerStateWithLimits ledgerState mempty, tx))
    in -- We test that the predicate failure does not return bottom
       pure $! rnf st
 

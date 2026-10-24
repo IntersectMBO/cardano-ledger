@@ -10,7 +10,12 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
+  LedgerStateWithLimits (..),
+  UTxOState (..),
+  smartUTxOState,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -24,9 +29,9 @@ import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 ignoreAllButUTxO ::
-  Either (NonEmpty (PredicateFailure (Shelley.LEDGER MaryEra))) (LedgerState MaryEra) ->
+  Either (NonEmpty (PredicateFailure (Shelley.LEDGER MaryEra))) (LedgerStateWithLimits MaryEra) ->
   Either (NonEmpty (PredicateFailure (Shelley.LEDGER MaryEra))) (UTxO MaryEra)
-ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _ _) _ _) -> utxo)
+ignoreAllButUTxO = fmap (\(LedgerStateWithLimits (LedgerState (UTxOState utxo _ _ _ _ _) _ _) _) -> utxo)
 
 testMaryNoDelegLEDGER ::
   HasCallStack =>
@@ -35,12 +40,13 @@ testMaryNoDelegLEDGER ::
   LedgerEnv MaryEra ->
   Either (NonEmpty (PredicateFailure (Shelley.LEDGER MaryEra))) (UTxO MaryEra) ->
   Assertion
-testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
-  checkTrace @(Shelley.LEDGER MaryEra) runShelleyBase env $
-    pure (LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def SNothing)
-      .- tx
-      .->> expectedSt'
+testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) =
+  checkTrace @(Shelley.LEDGER MaryEra) runShelleyBase env $ do
+    st <- pure (LedgerStateWithLimits initSt mempty) .- tx
+    _ <- pure (lswlLedgerState st) .->> expectedSt'
+    pure st
   where
+    initSt = LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def SNothing
     txFee = tx ^. bodyTxL . feeTxBodyL
     expectedSt' = LedgerState (smartUTxOState (ledgerPp env) expectedUTxO (Coin 0) txFee def mempty) def SNothing
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
@@ -49,7 +55,9 @@ testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
           applySTSTest @(Shelley.LEDGER MaryEra)
             ( TRC
                 ( env
-                , LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def SNothing
+                , LedgerStateWithLimits
+                    (LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def SNothing)
+                    mempty
                 , tx
                 )
             )

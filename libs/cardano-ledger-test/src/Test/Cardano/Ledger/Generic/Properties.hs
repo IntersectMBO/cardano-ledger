@@ -25,9 +25,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   NewEpochState,
   PulsingRewUpdate,
   UTxOState,
+  lswlLedgerState,
   utxosUtxo,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -85,7 +87,7 @@ import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 genTxAndUTXOState ::
   ( ApplyTx era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -95,13 +97,13 @@ genTxAndUTXOState ::
   GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState gsize = do
   (TRC (Shelley.LedgerEnv slotNo _ _ pp _, ledgerState, vtx), genState) <- genTxAndLEDGERState gsize
-  pure (TRC (Shelley.UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (Shelley.UtxoEnv slotNo pp def, lsUTxOState (lswlLedgerState ledgerState), vtx), genState)
 
 genTxAndLEDGERState ::
   forall era.
   ( ApplyTx era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , EraGenericGen era
   ) =>
@@ -126,7 +128,7 @@ genTxAndLEDGERState sizes = do
                 (utxosUtxo (lsUTxOState ledgerState))
                 mempty
                 tx
-        pure $ TRC (ledgerEnv, ledgerState, stAnnTx)
+        pure $ TRC (ledgerEnv, LedgerStateWithLimits ledgerState mempty, stAnnTx)
   (trc, genstate) <- runGenRS sizes (initStableFields >> genT)
   pure (trc, genstate)
 
@@ -137,20 +139,21 @@ testTxValidForLEDGER ::
   forall era.
   ( Reflect era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , EraTest era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , STS (EraRule "LEDGER" era)
   , ToExpr (Environment (EraRule "LEDGER" era))
+  , ToExpr (BlockBodyLimits era)
   ) =>
   (TRC (EraRule "LEDGER" era), GenState era) ->
   Property
-testTxValidForLEDGER (trc@(TRC (env, ledgerState, vstAnnTx)), _genstate) =
+testTxValidForLEDGER (trc@(TRC (env, LedgerStateWithLimits ledgerState _, vstAnnTx)), _genstate) =
   -- trc encodes the initial (generated) state, vstAnnTx is the transaction
   let vtx = vstAnnTx ^. txStAnnTxG
    in case runSTSWithContext @era trc of
-        Right ledgerState' ->
+        Right (LedgerStateWithLimits ledgerState' _) ->
           -- UTxOState and CertState after applying the transaction $$$
           classify (isValid' (reify @era) vtx == Phase2Valid) "TxValid" $
             totalAda ledgerState' === totalAda ledgerState
@@ -267,7 +270,7 @@ adaIsPreservedInEachEpoch ::
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , State (EraRule "TICK" era) ~ NewEpochState era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , Environment (EraRule "RUPD" era) ~ Shelley.RupdEnv era
