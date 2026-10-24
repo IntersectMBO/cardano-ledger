@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -27,11 +29,29 @@ import Cardano.Ledger.Block (Block (..), PraosEraBlockHeader)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import qualified Data.ByteString as BS
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
+import GHC.Generics (Generic)
+
+data ConwayBlockBodyLimits era = ConwayBlockBodyLimits
+  { cbblSize :: !Word32
+  , cbblExUnits :: !ExUnits
+  , cbblRefScriptSize :: !Word32
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance Semigroup (ConwayBlockBodyLimits era) where
+  ConwayBlockBodyLimits s1 ex1 rss1 <> ConwayBlockBodyLimits s2 ex2 rss2 =
+    ConwayBlockBodyLimits (s1 + s2) (ex1 <> ex2) (rss1 + rss2)
+
+instance Monoid (ConwayBlockBodyLimits era) where
+  mempty = ConwayBlockBodyLimits 0 mempty 0
 
 instance EraBlockBody ConwayEra where
   type BlockBody ConwayEra = AlonzoBlockBody ConwayEra
+  type BlockBodyLimits ConwayEra = ConwayBlockBodyLimits ConwayEra
   type ProtocolEraBlockHeader h ConwayEra = PraosEraBlockHeader h ConwayEra
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
