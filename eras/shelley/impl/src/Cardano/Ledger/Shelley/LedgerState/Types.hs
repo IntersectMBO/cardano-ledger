@@ -554,6 +554,30 @@ instance
         , "lastEbAnnouncement" .= lsLastEbAnnouncement
         ]
 
+data LedgerStateWithLimits era = LedgerStateWithLimits
+  { lswlLedgerState :: !(LedgerState era)
+  , lswlBlockBodyLimits :: !(BlockBodyLimits era)
+  }
+  deriving (Generic)
+
+deriving stock instance
+  ( Eq (BlockBodyLimits era)
+  , Eq (LedgerState era)
+  ) =>
+  Eq (LedgerStateWithLimits era)
+
+deriving stock instance
+  ( Show (BlockBodyLimits era)
+  , Show (LedgerState era)
+  ) =>
+  Show (LedgerStateWithLimits era)
+
+lswlLedgerStateL :: Lens' (LedgerStateWithLimits era) (LedgerState era)
+lswlLedgerStateL = lens lswlLedgerState (\x y -> x {lswlLedgerState = y})
+
+lswlBlockBodyLimitsL :: Lens' (LedgerStateWithLimits era) (BlockBodyLimits era)
+lswlBlockBodyLimitsL = lens lswlBlockBodyLimits (\x y -> x {lswlBlockBodyLimits = y})
+
 -- ====================================================
 
 --------------------------------------------------------------------------------
@@ -571,6 +595,9 @@ instance
 
 instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerState era) where
   def = LedgerState def def SNothing
+
+instance (EraBlockBody era, Default (LedgerState era)) => Default (LedgerStateWithLimits era) where
+  def = LedgerStateWithLimits def mempty
 
 -- =============================================================
 -- Lenses for types found inside NewEpochState and its fields

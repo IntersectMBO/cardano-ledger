@@ -264,6 +264,7 @@ import Cardano.Ledger.Shelley.Genesis (
  )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   NewEpochState (..),
   curPParamsEpochStateL,
   esLStateL,
@@ -524,7 +525,7 @@ class
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Ord (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
@@ -1421,6 +1422,7 @@ trySubmitTx tx = do
   lEnv <- impLedgerEnv st
   globals <- use impGlobalsL
   let lState = st ^. nesEsL . esLStateL
+      lStateWithLimits = LedgerStateWithLimits lState mempty
       stAnnTx =
         mkStAnnTx
           (epochInfo globals)
@@ -1429,10 +1431,11 @@ trySubmitTx tx = do
           (utxosUtxo (lsUTxOState lState))
           mempty
           txFixed
-  res <- tryRunImpRule @"LEDGER" lEnv lState stAnnTx
+
+  res <- tryRunImpRule @"LEDGER" lEnv lStateWithLimits stAnnTx
 
   -- Check for conformance
-  let trc = TRC (lEnv, lState, stAnnTx)
+  let trc = TRC (lEnv, lStateWithLimits, stAnnTx)
   asks itePostSubmitTxHook >>= (\f -> f globals trc res)
 
   case res of
@@ -1440,7 +1443,7 @@ trySubmitTx tx = do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
       liftIO $ forM_ predFailures $ roundTripEraExpectation @era
       pure $ Left (predFailures, txFixed)
-    Right (newState, events) -> do
+    Right (LedgerStateWithLimits newState _, events) -> do
       impNESL . nesEsL . esLStateL .= newState
       tell . Seq.fromList $ SomeSTSEvent @era @"LEDGER" <$> events
 

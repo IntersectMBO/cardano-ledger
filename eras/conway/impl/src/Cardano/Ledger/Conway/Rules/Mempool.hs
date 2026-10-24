@@ -65,14 +65,14 @@ import Data.Text as T (pack)
 import Lens.Micro ((^.))
 
 instance
-  ( EraTx era
+  ( EraBlockBody era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , EraStake era
   , EraCertState era
   , Embed (EraRule "LEDGER" era) (MEMPOOL era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Ord (PredicateFailure (EraRule "CERTS" era))
   , Ord (PredicateFailure (EraRule "GOV" era))
   , Ord (PredicateFailure (EraRule "UTXOW" era))
@@ -84,7 +84,7 @@ instance
   ) =>
   STS (MEMPOOL era)
   where
-  type State (MEMPOOL era) = LedgerState era
+  type State (MEMPOOL era) = LedgerStateWithLimits era
   type Signal (MEMPOOL era) = StAnnTx TopTx era
   type Environment (MEMPOOL era) = Shelley.LedgerEnv era
   type BaseM (MEMPOOL era) = ShelleyBase
@@ -95,18 +95,18 @@ instance
 
 mempoolTransition ::
   forall era.
-  ( EraTx era
+  ( EraBlockBody era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , Embed (EraRule "LEDGER" era) (MEMPOOL era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (MEMPOOL era)
 mempoolTransition = do
-  TRC trc@(ledgerEnv, ledgerState, stAnnTx) <-
+  TRC trc@(ledgerEnv, state@(LedgerStateWithLimits ledgerState _), stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -123,7 +123,7 @@ mempoolTransition = do
       "All inputs are spent. Transaction has probably already been included"
 
   -- Skip all other checks if the transaction is probably a duplicate
-  whenFailureFreeDefault ledgerState $ do
+  whenFailureFreeDefault state $ do
     let protVer = ledgerEnv ^. Shelley.ledgerPpL . ppProtocolVersionL
     unless (hardforkConwayDisallowUnelectedCommitteeFromVoting protVer) $
       -- This check can completely be removed once mainnet switches to protocol
@@ -159,7 +159,7 @@ instance
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era

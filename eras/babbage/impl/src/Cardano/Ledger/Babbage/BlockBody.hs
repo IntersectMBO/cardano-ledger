@@ -32,6 +32,7 @@ import Data.Typeable (Typeable)
 
 instance EraBlockBody BabbageEra where
   type BlockBody BabbageEra = AlonzoBlockBody BabbageEra
+  type BlockBodyLimits BabbageEra = AlonzoBlockBodyLimits BabbageEra
   type ProtocolEraBlockHeader h BabbageEra = PraosEraBlockHeader h BabbageEra
   mkBasicBlockBody = mkBasicBlockBodyAlonzo
   txSeqBlockBodyL = txSeqBlockBodyAlonzoL
