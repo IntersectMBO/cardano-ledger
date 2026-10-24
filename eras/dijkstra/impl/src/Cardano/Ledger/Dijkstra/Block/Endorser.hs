@@ -14,7 +14,7 @@
 
 -- | Endorser blocks and references
 module Cardano.Ledger.Dijkstra.Block.Endorser (
-  EbReferences,
+  EbReferences (MkEbReferences),
   mkEbReferences,
   getEbReferences,
   EbTransactions (..),
@@ -40,7 +40,6 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
-  decodeMemoized,
   getMemoRawType,
   getMemoSafeHash,
   mkMemoized,
@@ -77,9 +76,6 @@ newtype EbReferences = MkEbReferences (MemoBytes EbReferencesRaw)
 
 instance Memoized EbReferences where
   type RawType EbReferences = EbReferencesRaw
-
-instance DecCBOR EbReferences where
-  decCBOR = MkEbReferences <$> decodeMemoized decCBOR
 
 deriving via Mem EbReferencesRaw instance DecCBOR (Annotator EbReferences)
 
