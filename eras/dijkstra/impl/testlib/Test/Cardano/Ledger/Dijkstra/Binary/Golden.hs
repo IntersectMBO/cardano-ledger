@@ -28,8 +28,10 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTx)
+import Cardano.Ledger.Keys (WitVKey (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Data.ByteString as BS
 import Data.Data (Proxy (..))
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
@@ -53,6 +55,7 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     conwayDecodeDuplicateDelegCertFails @era version
   describe "TxWits" $ do
     goldenDuplicateVKeyWitsDisallowed @era version
+    goldenBootstrapDuplicateWitsDisallowed @era version
     goldenDuplicateNativeScriptsDisallowed @era version
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV1
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV2
@@ -126,6 +129,27 @@ witsDuplicateVKeyWits =
     ]
   where
     vkeywit = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
+
+bootstrapDuplicateWits :: Enc
+bootstrapDuplicateWits =
+  Em
+    [ E $ TkMapLen 1
+    , E @Int 2
+    , E $ TkTag 258
+    , E $ TkListLen 2
+    , bootstrapWitness
+    , bootstrapWitness
+    ]
+  where
+    WitVKey vkey signature = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
+    bootstrapWitness =
+      Em
+        [ E $ TkListLen 4
+        , Ev shelleyProtVer vkey
+        , Ev shelleyProtVer signature
+        , E $ BS.replicate 32 0
+        , E BS.empty
+        ]
 
 witsDuplicateNativeScripts :: Enc
 witsDuplicateNativeScripts =
@@ -219,6 +243,21 @@ goldenDuplicateVKeyWitsDisallowed version =
           (Binary.label $ Proxy @(Annotator (TxWits era)))
           ( DeserialiseFailure
               208
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
+      )
+
+goldenBootstrapDuplicateWitsDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenBootstrapDuplicateWitsDisallowed version =
+  it "Decoding a TxWits with duplicate bootstrap witnesses fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      version
+      bootstrapDuplicateWits
+      ( DecoderErrorDeserialiseFailure
+          (Binary.label $ Proxy @(Annotator (TxWits era)))
+          -- Six bytes of framing followed by two 136-byte witnesses.
+          ( DeserialiseFailure
+              278
               "Final number of elements: 1 does not match the total count that was decoded: 2"
           )
       )
