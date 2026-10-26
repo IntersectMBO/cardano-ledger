@@ -38,7 +38,7 @@ module Cardano.Ledger.Dijkstra.BlockBody.Internal (
 
 import Cardano.Crypto.Leios (LeiosCert)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
-import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
+import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
@@ -50,7 +50,6 @@ import Cardano.Ledger.Binary (
   encodeFoldableEncoder,
   encodeListLen,
   encodeNullStrictMaybe,
-  serialize',
  )
 import Cardano.Ledger.Block (LeiosEraBlockHeader)
 import Cardano.Ledger.Core
@@ -75,7 +74,6 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Array.Byte (ByteArray)
-import qualified Data.ByteString as BS
 import Data.Coerce (Coercible, coerce)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
@@ -118,7 +116,8 @@ instance EraBlockBody DijkstraEra where
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
   txSeqBlockBodyL = lensMemoRawType @DijkstraEra dbbrTxs (\bb p -> bb {dbbrTxs = p})
   hashBlockBody (MkDijkstraBlockBody m) = extractHash $ getMemoBytesHash m
-  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
+
+deriving newtype instance SafeToHash (DijkstraBlockBody era)
 
 mkBasicBlockBodyDijkstra ::
   forall era. (Era era, SafeToHash (Tx TopTx era)) => DijkstraBlockBody era
