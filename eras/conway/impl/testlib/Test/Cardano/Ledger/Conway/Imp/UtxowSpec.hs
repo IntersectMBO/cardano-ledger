@@ -38,12 +38,14 @@ import Cardano.Ledger.Conway.Core (
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure (..))
 import Cardano.Ledger.Conway.TxBody
-import Cardano.Ledger.Credential (Credential (..), StakeReference)
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Plutus (
+  Language (..),
   PlutusLanguage,
   SLanguage,
   hashPlutusScript,
+  plutusLanguage,
   withSLanguage,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -143,13 +145,16 @@ setupBadPPViewHashTx ::
   ImpTestM era (Tx TopTx era)
 setupBadPPViewHashTx slang = do
   modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1)
-  someKeyHash <- arbitrary @StakeReference
+  stakeRef <-
+    if plutusLanguage slang >= PlutusV4
+      then oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
+      else arbitrary @StakeReference
   let scriptTxOut =
         mkBasicTxOut
           ( Addr
               Testnet
               (ScriptHashObj (hashPlutusScript $ alwaysSucceedsWithDatum slang))
-              someKeyHash
+              stakeRef
           )
           (inject $ Coin 1_000_000)
   scriptTxIn <-
