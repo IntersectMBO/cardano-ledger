@@ -11,6 +11,7 @@
 
 ### `testlib`
 
+* Add `goldenMapRedeemers` to test redeemer map decoding across protocol versions
 * Add `ToExpr` instance for `ConwayTickfEvent`
 
 ## 1.24.0.0

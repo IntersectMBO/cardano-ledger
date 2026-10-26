@@ -48,6 +48,7 @@ spec :: forall era. (DijkstraEraTest era, ToExpr (BlockBody era)) => Spec
 spec = describe "Golden" . forEachEraVersion @era $ \version -> do
   describe "Redeemers" $ do
     goldenListRedeemersDisallowed @era version
+    goldenMapRedeemers @era version
   describe "TxCert" $ do
     conwayDecodeDuplicateDelegCertFails @era version
   describe "TxWits" $ do
