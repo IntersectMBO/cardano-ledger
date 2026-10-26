@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Mempool (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
   LEDGER,
@@ -170,6 +171,7 @@ instance
   , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   Embed (LEDGER era) (MEMPOOL era)
   where

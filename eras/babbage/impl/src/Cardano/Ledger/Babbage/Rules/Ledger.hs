@@ -13,6 +13,7 @@
 module Cardano.Ledger.Babbage.Rules.Ledger (LEDGER) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, LEDGER)
@@ -97,6 +98,7 @@ instance
   , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   STS (LEDGER era)
   where

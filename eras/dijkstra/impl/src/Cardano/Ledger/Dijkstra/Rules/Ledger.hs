@@ -41,6 +41,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -331,6 +332,7 @@ instance
   , InjectRuleFailure "LEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   STS (LEDGER era)
   where
@@ -392,6 +394,7 @@ dijkstraLedgerTransition ::
   , EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
   , InjectRuleFailure "LEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   TransitionRule (LEDGER era)
 dijkstraLedgerTransition = do
@@ -494,7 +497,15 @@ dijkstraLedgerTransition = do
         , stAnnTx
         )
   pure $
-    LedgerStateWithLimits (LedgerState utxoStateFinal certStateFinal lastEbAnnouncement) blockBodyLimits
+    LedgerStateWithLimits
+      (LedgerState utxoStateFinal certStateFinal lastEbAnnouncement)
+      ( blockBodyLimits
+          <> ConwayBlockBodyLimits
+            { cbblTxsSize = 0
+            , cbblExUnits = getTotalExUnits tx
+            , cbblRefScriptsSize = 0
+            }
+      )
 
 instance
   ( AlonzoEraTx era

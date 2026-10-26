@@ -51,6 +51,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
   CERTS,
@@ -316,6 +317,7 @@ instance
   , EraRule "LEDGER" era ~ LEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   STS (LEDGER era)
   where
@@ -360,6 +362,7 @@ conwayLedgerTransitionTRC ::
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   TRC (someLEDGER era) ->
   TransitionRule (someLEDGER era)
@@ -452,7 +455,13 @@ conwayLedgerTransitionTRC
     pure $
       LedgerStateWithLimits
         (LedgerState utxoState'' certStateAfterCERTS lastEbAnnouncement)
-        blockBodyLimits
+        ( blockBodyLimits
+            <> ConwayBlockBodyLimits
+              { cbblTxsSize = 0
+              , cbblExUnits = getTotalExUnits tx
+              , cbblRefScriptsSize = 0
+              }
+        )
 
 validateTreasuryValue ::
   ConwayEraTxBody era => TxBody l era -> Coin -> Test (ConwayLedgerPredFailure era)
@@ -528,6 +537,7 @@ conwayLedgerTransition ::
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   TransitionRule (someLEDGER era)
 conwayLedgerTransition = judgmentContext >>= conwayLedgerTransitionTRC
@@ -594,6 +604,7 @@ instance
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   Embed (LEDGER era) (Babbage.LEDGERS era)
   where

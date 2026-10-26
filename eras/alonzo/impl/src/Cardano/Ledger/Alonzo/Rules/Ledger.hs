@@ -16,6 +16,7 @@ module Cardano.Ledger.Alonzo.Rules.Ledger (
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, LEDGER)
 import Cardano.Ledger.Alonzo.Rules.Delegs ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
@@ -110,6 +111,7 @@ ledgerTransition ::
   , EraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -144,7 +146,15 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure $ LedgerStateWithLimits (LedgerState utxoSt' certState' lastEbAnnouncement) blockBodyLimits
+  pure $
+    LedgerStateWithLimits
+      (LedgerState utxoSt' certState' lastEbAnnouncement)
+      ( blockBodyLimits
+          <> AlonzoBlockBodyLimits
+            { abblTxsSize = 0
+            , abblExUnits = getTotalExUnits tx
+            }
+      )
 
 instance
   ( AlonzoEraTx era
@@ -162,6 +172,7 @@ instance
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , EraCertState era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   STS (LEDGER era)
   where
