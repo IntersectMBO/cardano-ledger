@@ -28,8 +28,10 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTx)
+import Cardano.Ledger.Keys (WitVKey (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Data.ByteString as BS
 import Data.Data (Proxy (..))
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
@@ -48,16 +50,19 @@ spec :: forall era. (DijkstraEraTest era, ToExpr (BlockBody era)) => Spec
 spec = describe "Golden" . forEachEraVersion @era $ \version -> do
   describe "Redeemers" $ do
     goldenListRedeemersDisallowed @era version
+    goldenMapRedeemers @era version
   describe "TxCert" $ do
     conwayDecodeDuplicateDelegCertFails @era version
   describe "TxWits" $ do
     goldenDuplicateVKeyWitsDisallowed @era version
+    goldenBootstrapDuplicateWitsDisallowed @era version
     goldenDuplicateNativeScriptsDisallowed @era version
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV1
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV2
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV3
     goldenDuplicatePlutusScriptsDisallowed @era version SPlutusV4
     goldenDuplicatePlutusDataDisallowed @era version
+    goldenDuplicateRedeemersDisallowed @era version
     goldenEmptyFields @era version
   describe "Subtransactions" $ do
     goldenSubTransactions @era
@@ -125,6 +130,27 @@ witsDuplicateVKeyWits =
   where
     vkeywit = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
 
+bootstrapDuplicateWits :: Enc
+bootstrapDuplicateWits =
+  Em
+    [ E $ TkMapLen 1
+    , E @Int 2
+    , E $ TkTag 258
+    , E $ TkListLen 2
+    , bootstrapWitness
+    , bootstrapWitness
+    ]
+  where
+    WitVKey vkey signature = mkWitnessVKey (mkDummySafeHash 0) (mkKeyPair 0)
+    bootstrapWitness =
+      Em
+        [ E $ TkListLen 4
+        , Ev shelleyProtVer vkey
+        , Ev shelleyProtVer signature
+        , E $ BS.replicate 32 0
+        , E BS.empty
+        ]
+
 witsDuplicateNativeScripts :: Enc
 witsDuplicateNativeScripts =
   mconcat
@@ -177,6 +203,25 @@ witsDuplicatePlutusData =
   where
     dat = E @Int 0
 
+witsDuplicateRedeemers :: Enc
+witsDuplicateRedeemers =
+  mconcat
+    [ E $ TkMapLen 1
+    , E @Int 5
+    , Em
+        [ E $ TkMapLen 2
+        , redeemer
+        , redeemer
+        ]
+    ]
+  where
+    -- [spend, index 10] => [data 20, ex_units [30, 40]]
+    redeemer =
+      mconcat
+        [ Em [E $ TkListLen 2, E @Int 0, E @Int 10]
+        , Em [E $ TkListLen 2, E @Int 20, Em [E $ TkListLen 2, E @Int 30, E @Int 40]]
+        ]
+
 goldenListRedeemersDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
 goldenListRedeemersDisallowed version =
   it "Decoding Redeemers encoded as a list fails" $
@@ -198,6 +243,21 @@ goldenDuplicateVKeyWitsDisallowed version =
           (Binary.label $ Proxy @(Annotator (TxWits era)))
           ( DeserialiseFailure
               208
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
+      )
+
+goldenBootstrapDuplicateWitsDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenBootstrapDuplicateWitsDisallowed version =
+  it "Decoding a TxWits with duplicate bootstrap witnesses fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      version
+      bootstrapDuplicateWits
+      ( DecoderErrorDeserialiseFailure
+          (Binary.label $ Proxy @(Annotator (TxWits era)))
+          -- Six bytes of framing followed by two 136-byte witnesses.
+          ( DeserialiseFailure
+              278
               "Final number of elements: 1 does not match the total count that was decoded: 2"
           )
       )
@@ -241,6 +301,20 @@ goldenDuplicatePlutusDataDisallowed version =
       ( DecoderErrorCustom
           "Annotator"
           "Duplicates found, expected no duplicates"
+      )
+
+goldenDuplicateRedeemersDisallowed :: forall era. DijkstraEraTest era => Version -> Spec
+goldenDuplicateRedeemersDisallowed version =
+  it "Decoding a TxWits with duplicate redeemer keys fails" $
+    expectDecoderFailureAnn @(TxWits era)
+      version
+      witsDuplicateRedeemers
+      ( DecoderErrorDeserialiseFailure
+          (Binary.label $ Proxy @(Annotator (TxWits era)))
+          ( DeserialiseFailure
+              23
+              "Final number of elements: 1 does not match the total count that was decoded: 2"
+          )
       )
 
 goldenSubTransactions :: forall era. DijkstraEraTest era => Spec

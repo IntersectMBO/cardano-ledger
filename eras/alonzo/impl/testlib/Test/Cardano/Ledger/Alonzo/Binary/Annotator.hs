@@ -281,6 +281,22 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
     where
       decodeMapRedeemers :: Decoder s (RedeemersRaw era)
       decodeMapRedeemers =
+        ifDecoderVersionAtLeast
+          (natVersion @12)
+          decodeMapRedeemersNoDuplicates
+          decodeMapRedeemersLastWins
+      {-# INLINE decodeMapRedeemers #-}
+      -- Starting with protocol version 12 a duplicate key is a decoding failure
+      decodeMapRedeemersNoDuplicates :: Decoder s (RedeemersRaw era)
+      decodeMapRedeemersNoDuplicates = do
+        redeemers <- decodeMapLikeEnforceNoDuplicates decodeMapLenOrIndef $ (,) <$> decCBOR <*> decCBOR
+        if Map.null redeemers
+          then fail "Expected redeemers map to be non-empty"
+          else pure $ RedeemersRaw redeemers
+      {-# INLINE decodeMapRedeemersNoDuplicates #-}
+      -- Before protocol version 12 a duplicate key overwrites the earlier entry
+      decodeMapRedeemersLastWins :: Decoder s (RedeemersRaw era)
+      decodeMapRedeemersLastWins =
         RedeemersRaw . Map.fromList . NE.toList <$> do
           (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
             ptr <- decCBOR
@@ -289,7 +305,7 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
           case NE.nonEmpty xs of
             Nothing -> fail "Expected redeemers map to be non-empty"
             Just neList -> pure $ NE.reverse neList
-      {-# INLINE decodeMapRedeemers #-}
+      {-# INLINE decodeMapRedeemersLastWins #-}
       decodeListRedeemers :: Decoder s (RedeemersRaw era)
       decodeListRedeemers =
         RedeemersRaw . Map.fromList . NE.toList
