@@ -60,7 +60,8 @@ module Cardano.Ledger.Core (
 
   -- * Era
   module Cardano.Ledger.Core.Era,
-  -- $erablockbody
+
+  -- * EraBlockBody
   EraBlockBody (..),
 
   -- * Re-exports
@@ -623,25 +624,9 @@ hashScript =
 -- EraBlockBody
 --------------------------------------------------------------------------------
 
--- $erablockbody
--- * EraBlockBody
---
--- The idea of EraBlockBody is to alter the encoding of transactions in
--- a block such that the witnesses (the information needed to verify the
--- validity of the transactions) can be stored separately from the body (the
--- information needed to update the ledger state). In this way, a node which
--- only cares about replaying transactions need not even decode the witness
--- information.
---
--- In order to do this, we introduce two concepts:
--- - A 'BlockBody`, which represents the decoded structure of a sequence of
---   transactions as represented in the encoded block; that is, with witnessing,
---   metadata and other non-body parts split separately.
-
--- | Indicates that an era supports segregated witnessing.
---
---   This class embodies an isomorphism between 'BlockBody era' and 'StrictSeq
---   (Tx l era)', witnessed by the `txSeqBlockBodyL` lens.
+-- | Provides era-independent access to the contents of a block body: everything
+-- the rest of the ledger and consensus need from it without knowing which era
+-- it belongs to.
 class
   ( EraTx era
   , Eq (BlockBody era)
@@ -657,11 +642,14 @@ class
 
   mkBasicBlockBody :: BlockBody era
 
+  -- | Access the sequence of top level transactions in the block body.
   txSeqBlockBodyL :: Lens' (BlockBody era) (StrictSeq (Tx TopTx era))
 
-  -- | Get the block body hash from the BlockBody. Note that this is not a regular
-  -- "hash the stored bytes" function since the block body hash forms a small
-  -- Merkle tree.
+  -- | The hash of the block body that the block header commits to.
+  --
+  -- It is not in general the hash of the block body's encoding, so it must
+  -- always be obtained through this function rather than computed from the
+  -- bytes.
   hashBlockBody :: BlockBody era -> Hash.Hash HASH EraIndependentBlockBody
 
   blockBodySize :: ProtVer -> BlockBody era -> Int

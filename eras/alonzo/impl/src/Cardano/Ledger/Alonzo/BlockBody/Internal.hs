@@ -187,7 +187,6 @@ instance Era era => EncCBORGroup (AlonzoBlockBody era) where
   listLen _ = 4
 
 hashAlonzoSegWits ::
-  BSL.ByteString ->
   -- | Bytes for transaction bodies
   BSL.ByteString ->
   -- | Bytes for transaction witnesses
@@ -195,6 +194,7 @@ hashAlonzoSegWits ::
   -- | Bytes for transaction auxiliary datas
   BSL.ByteString ->
   -- | Bytes for transaction phase-2 validity flags
+  BSL.ByteString ->
   Hash HASH EraIndependentBlockBody
 hashAlonzoSegWits txSeqBodies txSeqWits txAuxData txSeqIsValids =
   coerce . hashLazy . toLazyByteString $
