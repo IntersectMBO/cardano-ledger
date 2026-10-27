@@ -103,6 +103,7 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
           pure $ collateralInputsDijkstraTxBodyRawL .~ x $ acc
         14 -> Just $ do
           x <- decodeGuards
+          when (OSet.null x) $ fail (emptyFailure "Guards" "non-empty")
           pure $ guardsDijkstraTxBodyRawL .~ x $ acc
         15 -> Just $ do
           x <- decCBOR

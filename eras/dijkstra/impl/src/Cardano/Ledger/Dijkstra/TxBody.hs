@@ -397,8 +397,12 @@ instance
                     failOnNull x $ emptyNamedFailure "Collateral Inputs" "non-empty"
                     pure x
         14 ->
-          -- plain field - initial accumulator already holds the omit-default
-          Just $ decodeAccA acc (guardsDijkstraTxBodyRawL .~) (pure <$> decodeGuards)
+          Just $
+            decodeAccA acc (guardsDijkstraTxBodyRawL .~) $
+              pure <$> do
+                x <- decodeGuards
+                failOnNull x $ emptyNamedFailure "Guards" "non-empty"
+                pure x
         15 -> Just $ decodeAccA acc (networkIdDijkstraTxBodyRawL .~) (pure . SJust <$> decCBOR)
         16
           | STopTx <- sTxLevel ->
