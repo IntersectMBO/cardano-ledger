@@ -444,7 +444,13 @@ dijkstraBbodyTransition = do
 
   Alonzo.validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
 
-  Conway.validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
+  Conway.validateBodyRefScriptsSizeTooBig @era
+    pp
+    ( Conway.totalRefScriptSizeInBlock
+        (pp ^. ppProtocolVersionL)
+        (blockBody ^. txSeqBlockBodyL)
+        (ls ^. utxoL)
+    )
 
   case blockBody ^. perasCertBlockBodyL of
     SNothing -> pure ()

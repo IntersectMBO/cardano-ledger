@@ -2,6 +2,8 @@
 
 ## 1.25.0.0
 
+* Change `validateBodyRefScriptsSizeTooBig` to take an `Int` parameter instead of `BlockBody` and `UTxO`
+* Add `totalRefScriptSizeInBlockWith`
 * Add `psStakePoolDistrG`
 * Change `TICKF` to run the `SNAP` rule at the epoch boundary:
   - Add `SNAP` related constraints to the `STS` instance of `TICKF`
