@@ -60,6 +60,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   StashedAVVMAddresses,
   curPParamsEpochStateL,
+  esSnapshotsL,
   futurePParamsEpochStateL,
   nesEpochStateL,
   nesStakePoolDistrG,
@@ -371,7 +372,11 @@ chainTransition =
 
         BbodyState ls' bcur' <-
           trans @(EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, TPraosBbodySignal blk)
+            TRC
+              ( BbodyEnv pp' account (nes' ^. nesEpochStateL . esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL)
+              , BbodyState ls bcur
+              , TPraosBbodySignal blk
+              )
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh

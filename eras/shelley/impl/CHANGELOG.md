@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `bbodyLeiosCommittee` field to `BbodyEnv`
 * Add `fvMinPoolCost` and `fvMinPoolMargin` fields to `Cardano.Ledger.Shelley.RewardUpdate.FreeVars`
 * Remove deprecated `leaderRew`, `memberRew` and `nonMyopicMemberRew` functions
 * Add `lsLastEbAnnouncement` field to `LedgerState` and `lsLastEbAnnouncementL`:

@@ -231,8 +231,12 @@ instance
 instance ToExpr (DijkstraGovCertPredFailure era)
 
 instance
-  ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
+  ( ToExpr (PredicateFailure (EraRule "LEDGERS" era))
+  , ToExpr (PredicateFailure (EraRule "LEIOSCERT" era))
+  ) =>
   ToExpr (DijkstraBbodyPredFailure era)
+
+instance ToExpr (DijkstraLeiosCertPredFailure era)
 
 instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
