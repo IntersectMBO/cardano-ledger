@@ -47,6 +47,7 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBodyLimits (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (LEDGER, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -296,6 +297,8 @@ instance
   , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ ShelleyBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   STS (LEDGER era)
   where
@@ -328,6 +331,8 @@ ledgerTransition ::
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , EraRule "LEDGER" era ~ LEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ ShelleyBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
@@ -356,7 +361,12 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure (LedgerStateWithLimits (LedgerState utxoSt' certState' lastEbAnnouncement) blockBodyLimits)
+  pure $
+    LedgerStateWithLimits
+      (LedgerState utxoSt' certState' lastEbAnnouncement)
+      ( blockBodyLimits
+          <> ShelleyBlockBodyLimits {sbblTxsSize = sizeTxForFeeCalculation tx}
+      )
 
 testIncompleteAndMissingWithdrawals ::
   ( EraAccounts era

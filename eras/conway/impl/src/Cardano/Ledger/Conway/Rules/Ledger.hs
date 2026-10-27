@@ -318,6 +318,7 @@ instance
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   STS (LEDGER era)
   where
@@ -363,6 +364,7 @@ conwayLedgerTransitionTRC ::
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   TRC (someLEDGER era) ->
   TransitionRule (someLEDGER era)
@@ -458,7 +460,7 @@ conwayLedgerTransitionTRC
         (LedgerState utxoState'' certStateAfterCERTS lastEbAnnouncement)
         ( blockBodyLimits
             <> ConwayBlockBodyLimits
-              { cbblTxsSize = 0
+              { cbblTxsSize = sizeTxForFeeCalculation tx
               , cbblExUnits = getTotalExUnits tx
               , -- Check before using for pv <= 10, see `totalRefScriptSizeInBlock`
                 cbblRefScriptsSize = refScriptsSize
@@ -536,6 +538,7 @@ conwayLedgerTransition ::
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (someLEDGER era)
 conwayLedgerTransition = judgmentContext >>= conwayLedgerTransitionTRC
@@ -603,6 +606,7 @@ instance
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   Embed (LEDGER era) (Babbage.LEDGERS era)
   where

@@ -172,6 +172,7 @@ instance
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   Embed (LEDGER era) (MEMPOOL era)
   where

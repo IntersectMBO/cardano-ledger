@@ -33,11 +33,7 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage (BabbageTxOut)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.BaseTypes (
-  Mismatch (..),
-  Relation (..),
-  ShelleyBase,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
@@ -92,6 +88,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended
 import Data.Word (Word32)
 import GHC.Generics (Generic (..))
@@ -333,6 +330,7 @@ instance
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (Tx TopTx era)
   ) =>
   STS (LEDGER era)
   where
@@ -389,6 +387,7 @@ dijkstraLedgerTransition ::
   , InjectRuleFailure "LEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , SafeToHash (Tx TopTx era)
   ) =>
   TransitionRule (LEDGER era)
 dijkstraLedgerTransition = do
@@ -497,7 +496,7 @@ dijkstraLedgerTransition = do
       (LedgerState utxoStateFinal certStateFinal lastEbAnnouncement)
       ( blockBodyLimits
           <> ConwayBlockBodyLimits
-            { cbblTxsSize = 0
+            { cbblTxsSize = errorFail . integralToBounded @Int @Word32 $ originalBytesSize tx
             , cbblExUnits = getTotalExUnits tx
             , cbblRefScriptsSize = totalRefScriptsSize
             }

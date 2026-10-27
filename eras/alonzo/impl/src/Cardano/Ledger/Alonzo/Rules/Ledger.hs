@@ -112,6 +112,7 @@ ledgerTransition ::
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -151,7 +152,7 @@ ledgerTransition = do
       (LedgerState utxoSt' certState' lastEbAnnouncement)
       ( blockBodyLimits
           <> AlonzoBlockBodyLimits
-            { abblTxsSize = 0
+            { abblTxsSize = sizeTxForFeeCalculation tx
             , abblExUnits = getTotalExUnits tx
             }
       )
@@ -173,6 +174,7 @@ instance
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , EraCertState era
   , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   STS (LEDGER era)
   where
