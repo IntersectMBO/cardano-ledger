@@ -6,12 +6,13 @@
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (Mismatch (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
-import Cardano.Ledger.Val (inject)
+import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Tools
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Set.NonEmpty as NES
 import Lens.Micro
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -19,6 +20,17 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec :: ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
+    it "InputSetEmptyUTxO" $ do
+      (_, rootTxOut) <- getImpRootTxOut
+      -- Without the root input that the fixup balanced the transaction with,
+      -- nothing pays for the fee and the change output
+      withPostFixup (rederiveAddrTxWits . (bodyTxL . inputsTxBodyL .~ mempty)) $
+        submitFailingTx
+          (mkBasicTx mkBasicTxBody)
+          [ injectFailure InputSetEmptyUTxO
+          , injectFailure . ValueNotConservedUTxO $ Mismatch mempty (rootTxOut ^. valueTxOutL)
+          ]
+
     it "ValueNotConservedUTxO" $ do
       addr1 <- freshKeyAddr_
       let txAmount = Coin 2000000
@@ -47,3 +59,17 @@ spec = describe "UTXO" $ do
                   (rootTxOutValue <> inject txAmount)
                   (rootTxOutValue <> inject (txAmount <> extra))
           ]
+
+    it "WrongNetwork" $ do
+      addr <- freshMainnetKeyAddr_
+      submitFailingTx
+        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [mkBasicTxOut addr mempty])
+        [injectFailure . WrongNetwork Testnet $ NES.singleton addr]
+
+    it "OutputBootAddrAttrsTooBig" $ do
+      pp <- getsPParams id
+      bootAddr <- freshBootstrapAddressOversizedPayload
+      let txOut = setMinCoinTxOut pp $ mkBasicTxOut (AddrBootstrap bootAddr) mempty
+      submitFailingTx
+        (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [txOut])
+        [injectFailure $ OutputBootAddrAttrsTooBig [txOut]]
