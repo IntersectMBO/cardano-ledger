@@ -18,6 +18,7 @@ instance EraSpec MaryEra where
   eraImpSpec era = do
     Imp.shelleyToBabbageSpec era
     Imp.spec era
+    Imp.maryOnlySpec
 
 main :: IO ()
 main =
