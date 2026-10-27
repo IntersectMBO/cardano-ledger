@@ -8,6 +8,7 @@
 
 ### `testlib`
 
+* Add `freshAssetOutput`, `restrictMaxValSizeToAdaOnly` and `outputTooBigEntry`
 * Add `Test.Cardano.Ledger.Alonzo.TxInfoSpec` module with:
   - `genGoodBound`
   - `genBadBound`
