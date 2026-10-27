@@ -113,6 +113,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   isDRepExpired,
   expectDRepExpiry,
   expectActualDRepExpiry,
+  lookupDRepState,
+  expectDRepRegistered,
   expectDRepNotRegistered,
   expectCurrentProposals,
   expectNoCurrentProposals,
@@ -136,6 +138,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   delegateSPORewardAddressToDRep_,
   getCommittee,
   conwayDelegStakeTxCert,
+  expectDelegatedVote,
+  expectNotDelegatedVote,
+  expectReverseDRepDelegation,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -1602,13 +1607,26 @@ submitConstitution prevGovId = do
   (proposal, _) <- mkConstitutionProposal prevGovId
   submitProposal proposal
 
+lookupDRepState :: ConwayEraCertState era => Credential DRepRole -> ImpTestM era (Maybe DRepState)
+lookupDRepState cred = do
+  dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
+  pure $ Map.lookup cred dsMap
+
 expectDRepNotRegistered ::
   (HasCallStack, ConwayEraCertState era) =>
   Credential DRepRole ->
   ImpTestM era ()
-expectDRepNotRegistered drep = do
-  dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
-  Map.lookup drep dsMap `shouldBe` Nothing
+expectDRepNotRegistered drep = lookupDRepState drep `shouldReturn` Nothing
+
+expectDRepRegistered ::
+  (HasCallStack, ConwayEraCertState era) =>
+  Credential DRepRole ->
+  ImpTestM era ()
+expectDRepRegistered drep = do
+  res <- lookupDRepState drep
+  case res of
+    Nothing -> expectationFailure "DRep is not registered"
+    Just _ -> pure ()
 
 isDRepExpired ::
   (HasCallStack, ConwayEraCertState era) =>
@@ -1932,3 +1950,59 @@ instance InjectRuleFailure "DELEG" Shelley.ShelleyDelegPredFailure ConwayEra whe
 
 getCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (Committee era))
 getCommittee = getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
+
+expectDelegatedVote ::
+  ( HasCallStack
+  , ConwayEraCertState era
+  , EraGov era
+  ) =>
+  Credential Staking ->
+  DRep ->
+  ImpTestM era ()
+expectDelegatedVote cred drep = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  dreps <- getsNES $ nesEsL . epochStateRegDrepL
+  impAnn (show cred <> " expected to have delegated to " <> show drep) $ do
+    accountState <- expectJust $ lookupAccountState cred accounts
+    accountState ^. dRepDelegationAccountStateL `shouldBe` Just drep
+    case drep of
+      DRepCredential drepCred ->
+        case Map.lookup drepCred dreps of
+          Nothing ->
+            whenPostBootstrap $
+              assertFailure $
+                "Expected DRep: " <> show drepCred <> " to be registered"
+          Just drepState ->
+            assertBool
+              "Expected DRep delegations to contain the stake credential"
+              (cred `Set.member` drepDelegs drepState)
+      _ -> pure ()
+
+expectNotDelegatedVote :: ConwayEraCertState era => Credential Staking -> ImpTestM era ()
+expectNotDelegatedVote cred = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  dreps <- getsNES $ nesEsL . epochStateRegDrepL
+  impAnn (show cred <> " expected to not have their vote delegated") $ do
+    expectNothingExpr (lookupDRepDelegation cred accounts)
+    assertBool
+      ("Expected no drep state delegation to contain the stake credential: " <> show cred)
+      (all (Set.notMember cred . drepDelegs) dreps)
+
+expectReverseDRepDelegation ::
+  ( HasCallStack
+  , ConwayEraCertState era
+  ) =>
+  Credential Staking ->
+  Credential DRepRole ->
+  Bool ->
+  ImpTestM era ()
+expectReverseDRepDelegation cred drepCred expected = do
+  dreps <- getsNES $ nesEsL . epochStateRegDrepL
+  case Map.lookup drepCred dreps of
+    Just drepState -> do
+      let member = cred `Set.member` drepDelegs drepState
+      assertBool msg $ member == expected
+    Nothing -> do
+      assertBool msg $ not expected
+  where
+    msg = "Reverse delegation mismatch. Expected " <> show expected

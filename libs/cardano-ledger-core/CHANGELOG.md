@@ -3,6 +3,7 @@
 ## 1.23.0.0
 
 * Re-export `Cardano.Ledger.Plutus.ToPlutusData` module from `Cardano.Ledger.Plutus`
+* Add `sppIdL`, `sppAccountAddressL`, `sppBlsKeyL`, `sppPledgeL`, `sppMarginL`, `sppOwnersL` and `sppRelaysL` to `Cardano.Ledger.State.StakePool`
 * Add `blockBodyContainsLeiosCertBlockHeaderL` to `LeiosEraBlockHeader`
 * Add `EbAnnouncement` to `Cardano.Ledger.State`
 * Add `blockHeaderHashBlockHeaderG` to `EraBlockHeader`
