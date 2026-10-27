@@ -20,13 +20,21 @@ module Test.Cardano.Ledger.Dijkstra.Examples (
   exampleDijkstraOnwardsEraPParamsUpdate,
   exampleDijkstraGenesis,
   exampleBlsKey,
+  exampleLeiosVerificationKey,
 ) where
 
 import Cardano.Crypto.DSIGN (
-  BLS12381MinSigDSIGN,
   DSIGNAggregatable (createPossessionProofDSIGN),
-  DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGNWithContext),
+  DSIGNAlgorithm (genKeyDSIGNWithContext),
   seedSizeDSIGN,
+ )
+import Cardano.Crypto.Leios (
+  LeiosDSIGN,
+  LeiosSigningKey,
+  LeiosVerificationKey,
+  ProvenPossession,
+  coerceLeiosVerificationKey,
+  deriveLeiosVerificationKey,
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address (DirectDeposits (..))
@@ -410,10 +418,15 @@ exampleDijkstraOnwardsEraPParamsUpdate =
 exampleBlsKey :: BlsKey
 exampleBlsKey =
   BlsKey
-    { blsPubKey = vk
-    , blsPossessionProof = createPossessionProofDSIGN sk
+    { blsPubKey = coerceLeiosVerificationKey exampleLeiosVerificationKey
+    , blsPossessionProof = createPossessionProofDSIGN exampleLeiosSigningKey
     }
-  where
-    seed = mkSeedFromBytes $ Strict.replicate (fromIntegral $ seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN)) 42
-    sk = genKeyDSIGNWithContext @BLS12381MinSigDSIGN Nothing seed
-    vk = deriveVerKeyDSIGN sk
+
+exampleLeiosVerificationKey :: LeiosVerificationKey ProvenPossession
+exampleLeiosVerificationKey = deriveLeiosVerificationKey exampleLeiosSigningKey
+
+exampleLeiosSigningKey :: LeiosSigningKey
+exampleLeiosSigningKey =
+  genKeyDSIGNWithContext @LeiosDSIGN Nothing $
+    mkSeedFromBytes $
+      Strict.replicate (fromIntegral $ seedSizeDSIGN (Proxy @LeiosDSIGN)) 42

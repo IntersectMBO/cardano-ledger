@@ -95,6 +95,7 @@ import Cardano.Ledger.State.StakePool (
   StakePoolParams (..),
   StakePoolState (..),
   hashBlsKey,
+  hashLeiosVerificationKey,
   spsDelegatorsL,
  )
 import Control.DeepSeq (NFData (..))
@@ -565,6 +566,6 @@ populateBlsKeyHashes ps@PState {psStakePools, psFutureStakePoolParams} =
   ps {psBlsKeyHashes = Set.fromList $ activeBlsKeyHashes <> futureBlsKeyHashes}
   where
     activeBlsKeyHashes =
-      [hashBlsKey (bksKey bks) | SJust bks <- spsBlsKey <$> Map.elems psStakePools]
+      [hashLeiosVerificationKey (bksKey bks) | SJust bks <- spsBlsKey <$> Map.elems psStakePools]
     futureBlsKeyHashes =
       [hashBlsKey blsKey | SJust blsKey <- sppBlsKey <$> Map.elems psFutureStakePoolParams]

@@ -9,6 +9,11 @@
 
 module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
 
+import Cardano.Crypto.DSIGN (createPossessionProofDSIGN)
+import Cardano.Crypto.Leios (
+  coerceLeiosVerificationKey,
+  deriveLeiosVerificationKey,
+ )
 import Cardano.Ledger.Api.State.Query (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
@@ -34,7 +39,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State (BlsKeyState (..), StakePoolParams (..))
+import Cardano.Ledger.State (BlsKey (..), BlsKeyState (..), StakePoolParams (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Set as Set
@@ -488,8 +493,11 @@ stakePoolStateSpec = withImpInitEachEraVersion (Proxy @era) $
   describe "StakePoolState" $
     it "reports a pool through registration, delegation, re-registration and retirement" $ do
       stakePoolParams <- freshStakePool
-      blsKey <- freshBlsKey
+      signing <- arbitrary
       let poolId = sppId stakePoolParams
+          verificationKey = deriveLeiosVerificationKey signing
+          proof = createPossessionProofDSIGN signing
+          blsKey = BlsKey (coerceLeiosVerificationKey verificationKey) proof
           registeredStakePoolParams = stakePoolParams {sppBlsKey = SJust blsKey}
       submitPoolCert $ RegPoolTxCert registeredStakePoolParams
       currentEpochNo <- getsNES nesELL
@@ -497,7 +505,7 @@ stakePoolStateSpec = withImpInitEachEraVersion (Proxy @era) $
       let registeredStakePoolState =
             QueryResultStakePoolState
               { qrspsVrf = sppVrf stakePoolParams
-              , qrspsBlsKey = SJust $ BlsKeyState blsKey currentEpochNo
+              , qrspsBlsKey = SJust $ BlsKeyState verificationKey currentEpochNo
               , qrspsPledge = sppPledge stakePoolParams
               , qrspsCost = sppCost stakePoolParams
               , qrspsMargin = sppMargin stakePoolParams

@@ -6,7 +6,9 @@
 
 module Test.Cardano.Ledger.State.StakePoolSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, StrictMaybe (..))
+import Cardano.Crypto.DSIGN (createPossessionProofDSIGN)
+import Cardano.Crypto.Leios (deriveLeiosVerificationKey, unLeiosVerificationKey)
+import Cardano.Ledger.BaseTypes (EpochNo, StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -29,7 +31,11 @@ spec = do
               network = aaNetworkId $ sppAccountAddress stakePoolParams
               stakePoolState = mkStakePoolState epochNo blsKeyState deposit delegs stakePoolParams
               stakePoolParams' = stakePoolStateToStakePoolParams network poolId stakePoolState
-           in stakePoolParams === stakePoolParams'
+              -- The BLS key doesn't round trip because the state doesn't store the proof-of-possession
+              stakePoolParams'' = stakePoolParams' {sppBlsKey = sppBlsKey stakePoolParams}
+              stateKey = unLeiosVerificationKey . bksKey <$> spsBlsKey stakePoolState
+              paramsKey = unLeiosVerificationKey . blsPubKey <$> sppBlsKey stakePoolParams
+           in (stateKey === paramsKey) .&&. (stakePoolParams'' === stakePoolParams)
 
   describe "BLS key registration epoch" $ do
     blsKeyUpdateProp "No key in the state, none in the params" NoStateKey NoParamsKey NoKeyRegistration
@@ -48,22 +54,28 @@ data ExpectedStateOutcome = NoKeyRegistration | OriginalRegistration | FreshRegi
 blsKeyUpdateProp :: String -> StateKey -> ParamsKey -> ExpectedStateOutcome -> Spec
 blsKeyUpdateProp msg keyInStateSpec keyInParamsSpec expectedOutcome =
   prop msg $
-    \epochNo (blsKeyState :: BlsKeyState) freshBlsKey deposit delegs spp ->
-      bksKey blsKeyState
-        /= freshBlsKey
+    \prevEpoch epochDiff currentSigningKey freshSigningKey deposit delegs spp ->
+      currentSigningKey
+        /= freshSigningKey
           ==> let
+                newEpoch = prevEpoch `addEpochInterval` epochDiff
+                deriveBlsKey sk = BlsKey (deriveLeiosVerificationKey sk) (createPossessionProofDSIGN sk)
+                currentVerifiedKey = deriveLeiosVerificationKey currentSigningKey
+                freshVerifiedKey = deriveLeiosVerificationKey freshSigningKey
+                currentBlsKey = deriveBlsKey currentSigningKey
+                freshBlsKey = deriveBlsKey freshSigningKey
                 keyInParams = case keyInParamsSpec of
                   NoParamsKey -> SNothing
-                  SameAsStateKey -> SJust $ bksKey blsKeyState
+                  SameAsStateKey -> SJust currentBlsKey
                   FreshKey -> SJust freshBlsKey
                 mbBlsKeyState = case keyInStateSpec of
                   NoStateKey -> SNothing
-                  HasStateKey -> SJust blsKeyState
+                  HasStateKey -> SJust $ BlsKeyState currentVerifiedKey prevEpoch
                 updatedBlsKeyState =
-                  spsBlsKey $ mkStakePoolState epochNo mbBlsKeyState deposit delegs (spp {sppBlsKey = keyInParams})
+                  spsBlsKey $ mkStakePoolState newEpoch mbBlsKeyState deposit delegs $ spp {sppBlsKey = keyInParams}
                 expectedBlsKeyState = case expectedOutcome of
                   NoKeyRegistration -> SNothing
                   OriginalRegistration -> mbBlsKeyState
-                  FreshRegistration -> SJust (BlsKeyState freshBlsKey epochNo)
+                  FreshRegistration -> SJust $ BlsKeyState freshVerifiedKey newEpoch
                in
                 updatedBlsKeyState === expectedBlsKeyState

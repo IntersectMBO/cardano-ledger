@@ -135,7 +135,7 @@ instance ToExpr (TxBody l DijkstraEra)
 
 instance ToExpr PerasCert
 
--- Manual ToExpr to avoid an orphan 'ToExpr (SigDSIGN BLS12381MinSigDSIGN)':
+-- Manual ToExpr to avoid an orphan 'ToExpr (SigDSIGN LeiosDSIGN)':
 -- show the BLS signature as its raw byte representation, and the bitfield
 -- as its CBOR encoding (since the wire-format bytes aren't separately
 -- observable through the public API).
