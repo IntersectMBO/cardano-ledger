@@ -209,13 +209,16 @@ instance Era era => EncCBORGroup (ShelleyBlockBody era) where
         bodyBytes <> witsBytes <> metadataBytes
   listLen _ = 3
 
+-- | Compute the Shelley block body hash as a small Merkle tree: the parts of
+-- the encoded block body are hashed individually and those hashes are then
+-- hashed together.
 hashShelleySegWits ::
-  BSL.ByteString ->
   -- | Bytes for transaction bodies
   BSL.ByteString ->
   -- | Bytes for transaction witnesses
   BSL.ByteString ->
   -- | Bytes for transaction auxiliary datas
+  BSL.ByteString ->
   Hash HASH EraIndependentBlockBody
 hashShelleySegWits bodies wits md =
   coerce . hashLazy . toLazyByteString $

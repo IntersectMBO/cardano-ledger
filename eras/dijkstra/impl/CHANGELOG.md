@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `SafeToHash` instance for `DijkstraBlockBody`
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
 * Add `DecCBOR (Annotator EbReferences)` and `ToCBOR EbReferences`, so that `EbReferences` can be decoded without the full input at hand, eg from the network
