@@ -3,40 +3,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.SubUtxoSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (
-  Mismatch (..),
-  Network (..),
-  ProtVer,
-  StrictMaybe (..),
-  pvMajor,
- )
-import Cardano.Ledger.Binary (EncCBOR, serialize)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.Rules (
-  DijkstraSubUtxoPredFailure (..),
-  DijkstraUtxoPredFailure (..),
- )
-import Cardano.Ledger.Mary.Value (
-  AssetName,
-  MaryValue (..),
-  MultiAsset,
-  PolicyID (..),
-  multiAssetFromList,
- )
-import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Tools (setMinCoinTxOut)
-import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
-import Cardano.Ledger.Val (inject)
+import Cardano.Ledger.Dijkstra.Rules
+import Cardano.Ledger.Tools
+import Cardano.Ledger.TxIn
 import Control.Monad.State (gets)
-import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
@@ -44,7 +23,6 @@ import Data.Maybe (isNothing)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set.NonEmpty as NES
-import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (<>~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -394,14 +372,6 @@ subTxOutputs topTx =
   expectJust . NE.nonEmpty . foldMap (toList . (^. bodyTxL . outputsTxBodyL)) . OMap.elems $
     topTx ^. bodyTxL . subTransactionsTxBodyL
 
-freshAssetOutput :: DijkstraEraImp era => ImpTestM era (MultiAsset, TxOut era)
-freshAssetOutput = do
-  policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
-  assetName <- arbitrary @AssetName
-  addr <- freshKeyAddr_
-  let multiAsset = multiAssetFromList [(policyId, assetName, 1)]
-  pure (multiAsset, mkBasicTxOut addr $ MaryValue mempty multiAsset)
-
 subTxsSpendingOneInput :: DijkstraEraImp era => ImpTestM era (TxIn, [Tx SubTx era])
 subTxsSpendingOneInput = do
   sharedTxIn <- freshFundedTxIn
@@ -416,20 +386,3 @@ subTxsSpendingOneInput = do
 
 neverSubmittedTxIn :: forall era. DijkstraEraImp era => Integer -> TxIn
 neverSubmittedTxIn = mkTxInPartial . txIdTx $ (mkBasicTx mkBasicTxBody :: Tx TopTx era)
-
-restrictMaxValSizeToAdaOnly :: forall era. DijkstraEraImp era => ImpTestM era ()
-restrictMaxValSizeToAdaOnly = do
-  protVer <- getProtVer
-  let largestAdaOnlyValue = inject . Coin . toInteger $ (maxBound :: Word64) :: Value era
-      largestAdaOnlyValueSize = serializedValueSize protVer largestAdaOnlyValue
-  modifyPParams $ ppMaxValSizeL .~ fromIntegral largestAdaOnlyValueSize
-
-serializedValueSize :: EncCBOR value => ProtVer -> value -> Int
-serializedValueSize protVer = fromIntegral . BSL.length . serialize (pvMajor protVer)
-
-outputTooBigEntry :: DijkstraEraImp era => PParams era -> TxOut era -> (Int, Int, TxOut era)
-outputTooBigEntry pp txOut =
-  ( serializedValueSize (pp ^. ppProtocolVersionL) $ txOut ^. valueTxOutL
-  , fromIntegral $ pp ^. ppMaxValSizeL
-  , txOut
-  )
