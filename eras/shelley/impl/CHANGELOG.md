@@ -29,6 +29,7 @@
 
 ### `testlib`
 
+* Export `runShelleyBase` from `Test.Cardano.Ledger.Shelley.ImpTest`
 * Add `Test.Cardano.Ledger.Shelley.Imp.TickSpec`
 * Add `withTxsInModifiedBlock`
 * Add `initTransitionConfig` to `ShelleyEraImp`
