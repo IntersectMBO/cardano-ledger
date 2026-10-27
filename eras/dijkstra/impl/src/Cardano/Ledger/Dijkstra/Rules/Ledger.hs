@@ -351,20 +351,14 @@ instance
   assertions = Shelley.shelleyLedgerAssertions @era @LEDGER
 
 validateAllRefScriptSize ::
-  ( EraTx era
-  , DijkstraEraTxBody era
-  ) =>
-  PParams era ->
-  UTxO era ->
-  Tx TopTx era ->
-  Test (DijkstraLedgerPredFailure era)
-validateAllRefScriptSize pp utxo tx =
-  let totalRefScriptSize = batchNonDistinctRefScriptsSize utxo tx
-      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+  DijkstraEraTxBody era =>
+  PParams era -> Int -> Test (DijkstraLedgerPredFailure era)
+validateAllRefScriptSize pp totalRefScriptsSize =
+  let maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (totalRefScriptsSize <= maxRefScriptSizePerTx) $
         DijkstraTxRefScriptsSizeTooBig
           Mismatch
-            { mismatchSupplied = totalRefScriptSize
+            { mismatchSupplied = totalRefScriptsSize
             , mismatchExpected = maxRefScriptSizePerTx
             }
 
@@ -413,6 +407,8 @@ dijkstraLedgerTransition = do
       subStAnnTxs = subTransactionsStAnnTx stAnnTx
       originalAccounts = lsCertState ledgerState ^. certDStateL . accountsL
 
+  let totalRefScriptsSize = batchNonDistinctRefScriptsSize originalUtxo tx
+
   -- Process all subtransactions first
   LedgerState utxoStateAfterSubLedgers certStateAfterSubLedgers lastEbAnnouncement <-
     trans @(EraRule "SUBLEDGERS" era) $
@@ -433,7 +429,7 @@ dijkstraLedgerTransition = do
 
   let txBody = tx ^. bodyTxL
   runTest $ Conway.validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-  runTest $ validateAllRefScriptSize pp originalUtxo tx
+  runTest $ validateAllRefScriptSize pp totalRefScriptsSize
 
   (utxoStateBeforeUtxow, certStateFinal) <-
     if tx ^. isPhase2ValidTxL == Phase2Valid
@@ -503,7 +499,7 @@ dijkstraLedgerTransition = do
           <> ConwayBlockBodyLimits
             { cbblTxsSize = 0
             , cbblExUnits = getTotalExUnits tx
-            , cbblRefScriptsSize = 0
+            , cbblRefScriptsSize = totalRefScriptsSize
             }
       )
 

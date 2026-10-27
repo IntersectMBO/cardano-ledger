@@ -375,13 +375,14 @@ conwayLedgerTransitionTRC
     ) = do
     let tx = stAnnTx ^. txStAnnTxG
     curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
+    let refScriptsSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
 
     (utxoState', certStateAfterCERTS) <-
       if tx ^. isPhase2ValidTxL == Phase2Valid
         then do
           let txBody = tx ^. bodyTxL
           runTest $ validateTreasuryValue txBody (chainAccountState ^. casTreasuryL)
-          runTest $ validateRefScriptSize pp (utxoState ^. utxoL) tx
+          runTest $ validateRefScriptSize pp refScriptsSize
 
           let govState = utxoState ^. utxosGovStateL
               committee = govState ^. committeeGovStateL
@@ -459,7 +460,8 @@ conwayLedgerTransitionTRC
             <> ConwayBlockBodyLimits
               { cbblTxsSize = 0
               , cbblExUnits = getTotalExUnits tx
-              , cbblRefScriptsSize = 0
+              , -- Check before using for pv <= 10, see `totalRefScriptSizeInBlock`
+                cbblRefScriptsSize = refScriptsSize
               }
         )
 
@@ -478,18 +480,14 @@ validateTreasuryValue txBody actualTreasuryValue =
           )
 
 validateRefScriptSize ::
-  ( EraTx era
-  , BabbageEraTxBody era
-  , ConwayEraPParams era
-  ) =>
-  PParams era -> UTxO era -> Tx l era -> Test (ConwayLedgerPredFailure era)
-validateRefScriptSize pp utxo tx =
-  let totalRefScriptSize = txNonDistinctRefScriptsSize utxo tx
-      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-   in failureUnless (totalRefScriptSize <= maxRefScriptSizePerTx) $
+  ConwayEraPParams era =>
+  PParams era -> Int -> Test (ConwayLedgerPredFailure era)
+validateRefScriptSize pp refScriptsSize =
+  let maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+   in failureUnless (refScriptsSize <= maxRefScriptSizePerTx) $
         ConwayTxRefScriptsSizeTooBig
           Mismatch
-            { mismatchSupplied = totalRefScriptSize
+            { mismatchSupplied = refScriptsSize
             , mismatchExpected = maxRefScriptSizePerTx
             }
 
