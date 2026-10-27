@@ -9,31 +9,29 @@
 module Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..))
-import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
-import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..), StrictMaybe (..))
-import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
+import Cardano.Ledger.Alonzo.Rules
+import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.TxAuxData
+import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin
+import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Metadata as M
-import Cardano.Ledger.Plutus (
-  Data (..),
-  ExUnits (..),
-  OrdExUnits (..),
-  hashPlutusScript,
-  withSLanguage,
- )
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
-import Cardano.Ledger.TxIn (mkTxInPartial)
+import Cardano.Ledger.Plutus
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Tools
+import Cardano.Ledger.TxIn
 import Control.Monad (forM)
+import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro (to, (%~), (&), (.~), (<>~), (^.))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples
 
 spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
@@ -65,6 +63,18 @@ spec = describe "UTXO" $ do
     submitFailingTx
       tx
       [injectFailure $ BadInputsUTxO (NES.singleton spentTxIn)]
+
+  it "OutputTooBigUTxO" $ do
+    restrictMaxValSizeToAdaOnly
+    pp <- getsPParams id
+    (multiAsset, txOut) <- freshAssetOutput
+    let tooBigTxOut = setMinCoinTxOut pp txOut
+    submitFailingTx
+      ( mkBasicTx mkBasicTxBody
+          & bodyTxL . mintTxBodyL .~ multiAsset
+          & bodyTxL . outputsTxBodyL .~ [tooBigTxOut]
+      )
+      [injectFailure $ OutputTooBigUTxO [outputTooBigEntry pp tooBigTxOut]]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -113,3 +123,48 @@ spec = describe "UTXO" $ do
             let expectedCollateral =
                   Coin . ceiling $ txFixed ^. bodyTxL . feeTxBodyL . to unCoin * percentage % 100
             pure [injectFailure $ InsufficientCollateral (toDeltaCoin collateral) expectedCollateral]
+
+        it "ScriptsNotPaidUTxO" $ do
+          let scriptHash = hashPlutusScript $ alwaysSucceedsWithDatum slang
+          scriptInput <- produceScript scriptHash
+          collateralInput <- sendCoinTo (mkAddr scriptHash StakeRefNull) (Coin 30_000_000)
+          collateralTxOut <- impGetUTxO collateralInput
+          submitFailingTx
+            ( mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ [scriptInput]
+                & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
+            )
+            [injectFailure . ScriptsNotPaidUTxO $ NEM.singleton collateralInput collateralTxOut]
+
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        disableInConformanceIt "CollateralContainsNonADA" $ do
+          scriptInput <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum slang
+          (multiAsset, txOut) <- freshAssetOutput
+          let collateralTxOut = txOut & coinTxOutL .~ Coin 30_000_000
+          collateralInput <-
+            txInAt 0
+              <$> submitTx
+                ( mkBasicTx mkBasicTxBody
+                    & bodyTxL . mintTxBodyL .~ multiAsset
+                    & bodyTxL . outputsTxBodyL .~ [collateralTxOut]
+                )
+          submitFailingTx
+            ( mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ [scriptInput]
+                & bodyTxL . collateralInputsTxBodyL .~ [collateralInput]
+            )
+            [injectFailure $ CollateralContainsNonADA (collateralTxOut ^. valueTxOutL)]
+
+        it "NoCollateralInputs" $ do
+          scriptInput <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum slang
+          percentage <- toInteger <$> getsPParams ppCollateralPercentageL
+          withPostFixup (rederiveAddrTxWits . (bodyTxL . collateralInputsTxBodyL .~ mempty)) $
+            submitFailingTxM (mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [scriptInput]) $
+              \txFixed -> do
+                let expectedCollateral =
+                      Coin . ceiling $ txFixed ^. bodyTxL . feeTxBodyL . to unCoin * percentage % 100
+                pure
+                  [ injectFailure $ InsufficientCollateral (DeltaCoin 0) expectedCollateral
+                  , injectFailure NoCollateralInputs
+                  ]
