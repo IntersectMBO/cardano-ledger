@@ -5,8 +5,6 @@
 module Test.Cardano.Ledger.Binary.GoldenSpec (spec) where
 
 import Cardano.Crypto.DSIGN (
-  createPossessionProofDSIGN,
-  deriveVerKeyDSIGN,
   genKeyDSIGN,
   seedSizeDSIGN,
   signDSIGN,
@@ -21,6 +19,7 @@ import Cardano.Crypto.Leios (
   LeiosSigningKey,
   Weight,
   aggregateLeiosCert,
+  deriveLeiosVerificationKey,
   mkLeiosCommittee,
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
@@ -48,29 +47,32 @@ spec =
       let fileName = "golden/LeiosCertPV" <> show (getVersion @Word32 version) <> ".cbor"
           exampleLeiosCert =
             let sk = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0))
-                vk = deriveVerKeyDSIGN sk
-                pop = createPossessionProofDSIGN sk
-                committee = mkLeiosCommittee (V.fromList [(SJust (vk, pop), 1 % 1)])
+                vk = deriveLeiosVerificationKey sk
+                committee = mkLeiosCommittee (V.fromList [(1 % 1, SJust vk)])
                 msg = "golden" :: BS.ByteString
                 sigs = Map.singleton (LeiosSeatId 0) (signDSIGN () msg sk)
              in case aggregateLeiosCert committee sigs of
                   Right cert -> cert
-                  Left e -> error ("exampleLeiosCert: " <> show e)
+                  Left e -> error $ "exampleLeiosCert: " <> show e
        in cborGoldenSpec getDataFileName fileName version exampleLeiosCert
       let fileName = "golden/LeiosSeatPV" <> show (getVersion @Word32 version) <> ".cbor"
           exampleLeiosSeat =
-            LeiosSeat
-              { seatWeight = 1 % 3
-              , seatVKey = SJust (deriveVerKeyDSIGN (genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0))))
-              }
+            let sk = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0))
+                pvk = deriveLeiosVerificationKey sk
+             in LeiosSeat
+                  { seatWeight = 1 % 3
+                  , seatVKey = SJust pvk
+                  }
        in cborGoldenSpec getDataFileName fileName version exampleLeiosSeat
       let fileName = "golden/LeiosCommitteePV" <> show (getVersion @Word32 version) <> ".cbor"
           exampleLeiosCommittee =
-            UnsafeLeiosCommittee $
-              V.fromList
-                [ LeiosSeat (1 % 2) SNothing
-                , LeiosSeat (1 % 2) (SJust (deriveVerKeyDSIGN (genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0)))))
-                ]
+            let sk = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 0))
+                pvk = deriveLeiosVerificationKey sk
+             in LeiosCommittee $
+                  V.fromList
+                    [ LeiosSeat (1 % 2) SNothing
+                    , LeiosSeat (1 % 2) (SJust pvk)
+                    ]
        in cborGoldenSpec getDataFileName fileName version exampleLeiosCommittee
       cborGoldenSpec getDataFileName "test/golden/LeiosCert" version exampleCert
 
@@ -92,14 +94,11 @@ exampleCert = case aggregateLeiosCert committee contributions of
 fixedCommittee :: Int -> (NonEmpty LeiosSigningKey, LeiosCommittee)
 fixedCommittee n =
   ( sks
-  , mkLeiosCommittee
-      ( V.fromList
-          [ ( SJust (deriveVerKeyDSIGN sk, createPossessionProofDSIGN sk)
-            , 1 / fromIntegral @Int @Weight n
-            )
-          | sk <- toList sks
-          ]
-      )
+  , mkLeiosCommittee $
+      V.fromList
+        [ (1 / fromIntegral @Int @Weight n, SJust $ deriveLeiosVerificationKey sk)
+        | sk <- toList sks
+        ]
   )
   where
     seedLen = fromIntegral @Word @Int (seedSizeDSIGN (Proxy @LeiosDSIGN))

@@ -43,10 +43,10 @@ import Cardano.Crypto.DSIGN (
   BLS12381MinSigDSIGN,
   DSIGNAggregatable (PossessionProofDSIGN, createPossessionProofDSIGN),
   DSIGNAlgorithm (genKeyDSIGNWithContext),
-  deriveVerKeyDSIGN,
   seedSizeDSIGN,
  )
 import Cardano.Crypto.Hash.Class
+import Cardano.Crypto.Leios (deriveLeiosVerificationKey)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
@@ -522,10 +522,7 @@ instance Arbitrary PoolMetadata where
 instance Arbitrary BlsKey where
   arbitrary = do
     signingKey <- arbitrary
-    pure $
-      BlsKey
-        (deriveVerKeyDSIGN signingKey)
-        (createPossessionProofDSIGN signingKey)
+    pure $ BlsKey $ deriveLeiosVerificationKey signingKey
 
 instance Arbitrary BlsKeyState where
   arbitrary = BlsKeyState <$> arbitrary <*> arbitrary

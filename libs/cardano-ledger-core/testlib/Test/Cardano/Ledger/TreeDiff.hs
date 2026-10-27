@@ -22,6 +22,7 @@ import Cardano.Crypto.DSIGN (
   DSIGNAlgorithm,
   VerKeyDSIGN,
  )
+import Cardano.Crypto.Leios (LeiosVerificationKey (unLeiosVerificationKey))
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (rawEncodeFixedSized)
@@ -300,6 +301,9 @@ instance ToExpr (Datum era) where
   toExpr NoDatum = App "NoDatum" []
   toExpr (DatumHash x) = App "DatumHash" [toExpr x]
   toExpr (Datum bd) = App "Datum" [toExpr bd]
+
+instance ToExpr (LeiosVerificationKey pp) where
+  toExpr = toExpr . unLeiosVerificationKey
 
 -- EpochBoundary
 instance ToExpr LeiosSeat where

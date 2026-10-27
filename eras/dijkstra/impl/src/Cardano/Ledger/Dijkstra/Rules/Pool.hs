@@ -21,7 +21,6 @@ module Cardano.Ledger.Dijkstra.Rules.Pool (
   poolTransition,
 ) where
 
-import Cardano.Crypto.DSIGN (verifyPossessionProofDSIGN)
 import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
@@ -32,7 +31,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
-import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust, checkFailOnJustStatic)
+import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
@@ -236,17 +235,6 @@ poolTransition = do
          in s
               <= fromIntegral (hashSize ([] @HASH))
                 ?! injectFailure (PoolMedataHashTooBig sppId s)
-
-      -- Returns the BlsKey wrapped in 'SJust' if it is invalid. A valid 'BlsKey' returns 'SNothing'.
-      let invalidBlsKey = do
-            SJust blsKey@BlsKey {blsPubKey, blsPossessionProof} <- pure newBlsKey
-            Left _ <-
-              pure $
-                verifyPossessionProofDSIGN
-                  blsPubKey
-                  blsPossessionProof
-            pure (sppId, blsKey)
-      checkFailOnJustStatic invalidBlsKey $ uncurry BlsKeyInvalidProofOfPossession
 
       let newBlsKeyHash = hashBlsKey <$> newBlsKey
           -- Returns the BLS key if another pool uses its public key, which is the case when

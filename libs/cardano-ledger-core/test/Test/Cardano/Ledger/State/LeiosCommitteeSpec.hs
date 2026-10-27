@@ -4,7 +4,8 @@
 
 module Test.Cardano.Ledger.State.LeiosCommitteeSpec (spec) where
 
-import Cardano.Crypto.DSIGN (createPossessionProofDSIGN, deriveVerKeyDSIGN, genKeyDSIGN)
+import Cardano.Crypto.DSIGN (genKeyDSIGN)
+import Cardano.Crypto.Leios (deriveLeiosVerificationKey)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (CompactForm (..))
@@ -39,12 +40,9 @@ candidateWith poolId stake =
 -- | A valid voting key derived from a seed, carrying its own proof of possession.
 validKey :: Int -> BlsKey
 validKey i =
-  BlsKey
-    { blsPubKey = deriveVerKeyDSIGN signKey
-    , blsPossessionProof = createPossessionProofDSIGN signKey
-    }
-  where
-    signKey = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 (fromIntegral i)))
+  BlsKey . deriveLeiosVerificationKey $
+    genKeyDSIGN . mkSeedFromBytes . BS.replicate 32 $
+      fromIntegral i
 
 -- | A valid voting key stamped with its registration epoch.
 keyState :: Int -> EpochNo -> BlsKeyState
@@ -101,17 +99,11 @@ spec = describe "selectLeiosCommittee" $ do
               [(candidateWith i 1 (SJust (keyState i (EpochNo 0))), validKey i) | i <- [1 .. n]]
           candidates = map fst keyed
           seated = [vk | LeiosSeat _ (SJust vk) <- seatsOf (fromIntegral n) candidates]
-       in seated === [blsPubKey key | (_, key) <- keyed]
+       in seated === map (unBlsKey . snd) keyed
 
   prop "a pool with no registered key gets a keyless seat" $
     \(poolId :: Int) ->
       map seatVKey (seatsOf 1 [candidateWith poolId 1 SNothing]) === [SNothing]
-
-  it "a key whose proof of possession does not verify is seated keyless" $
-    -- A key built from one seed carrying another seed's proof of possession.
-    let mismatched = (validKey 1) {blsPossessionProof = blsPossessionProof (validKey 2)}
-        candidate = candidateWith 0 1 (SJust (BlsKeyState mismatched (EpochNo 0)))
-     in map seatVKey (seatsOf 1 [candidate]) `shouldBe` [SNothing]
 
   prop "a key is seated while honoured and keyless once it ages out" $
     \(poolId :: Int) (registeredIn :: EpochNo) (Positive ageWord) ->
@@ -124,7 +116,7 @@ spec = describe "selectLeiosCommittee" $ do
               $ selectLeiosCommittee e maxKeyAge 1 (V.fromList [candidate])
           boundary = addEpochInterval registeredIn maxKeyAge
        in conjoin
-            [ keysAt registeredIn === [SJust (blsPubKey (validKey 7))]
+            [ keysAt registeredIn === [SJust . unBlsKey $ validKey 7]
                 & counterexample "not honoured in its registration epoch"
             , keysAt boundary === [SNothing]
                 & counterexample "still honoured at the expiry boundary"
