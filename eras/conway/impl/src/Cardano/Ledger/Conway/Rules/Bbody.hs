@@ -28,6 +28,7 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
   totalRefScriptSizeInBlock,
+  totalRefScriptSizeInBlockWith,
   bbodyTransition,
   validateBodyRefScriptsSizeTooBig,
 ) where
@@ -327,7 +328,13 @@ bbodyTransition = do
     failOnJust checkHeaderProtVerTooHigh $
       injectFailure . HeaderProtVerTooHigh @era
 
-  validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
+  validateBodyRefScriptsSizeTooBig @era
+    pp
+    ( totalRefScriptSizeInBlock
+        (pp ^. ppProtocolVersionL)
+        (blockBody ^. txSeqBlockBodyL)
+        (ls ^. utxoL)
+    )
 
 instance
   ( Era era
@@ -343,36 +350,40 @@ instance
 -- | Validate that total reference script size does not exceed block limit.
 validateBodyRefScriptsSizeTooBig ::
   forall era.
-  ( AlonzoEraTx era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , EraBlockBody era
+  ( InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , ConwayEraPParams era
   ) =>
   PParams era ->
-  BlockBody era ->
-  UTxO era ->
+  Int ->
   Rule (EraRule "BBODY" era) 'Transition ()
-validateBodyRefScriptsSizeTooBig pp blockBody utxo =
-  let protVer = pp ^. ppProtocolVersionL
-      txs = blockBody ^. txSeqBlockBodyL
-      totalSize = totalRefScriptSizeInBlock protVer txs utxo
-      maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-   in totalSize
+validateBodyRefScriptsSizeTooBig pp refScriptsSizeInBlock =
+  let maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+   in refScriptsSizeInBlock
         <= maxSize
           ?! injectFailure
             ( BodyRefScriptsSizeTooBig $
                 Mismatch
-                  { mismatchSupplied = totalSize
+                  { mismatchSupplied = refScriptsSizeInBlock
                   , mismatchExpected = maxSize
                   }
             )
 
 totalRefScriptSizeInBlock ::
   (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int
-totalRefScriptSizeInBlock protVer txs (UTxO utxo)
+totalRefScriptSizeInBlock = totalRefScriptSizeInBlockWith txNonDistinctRefScriptsSize
+
+-- | Total size of the reference scripts used by the transactions in a block, where the
+-- size used by a single transaction is given by the supplied function
+totalRefScriptSizeInBlockWith ::
+  (AlonzoEraTx era, BabbageEraTxBody era) =>
+  (UTxO era -> Tx TopTx era -> Int) ->
+  ProtVer ->
+  StrictSeq (Tx TopTx era) ->
+  UTxO era ->
+  Int
+totalRefScriptSizeInBlockWith refScriptsSizeInTx protVer txs (UTxO utxo)
   | pvMajor protVer <= natVersion @10 =
-      getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize (UTxO utxo)) txs
+      getSum $ foldMap' (Monoid.Sum . refScriptsSizeInTx (UTxO utxo)) txs
   | otherwise =
       snd $ F.foldl' accum (utxo, 0) txs
   where
@@ -381,4 +392,4 @@ totalRefScriptSizeInBlock protVer txs (UTxO utxo)
           toAdd
             | Phase2Valid <- tx ^. isPhase2ValidTxL = txouts $ tx ^. bodyTxL
             | otherwise = collOuts $ tx ^. bodyTxL
-       in (updatedUtxo, accSum + txNonDistinctRefScriptsSize (UTxO accUtxo) tx)
+       in (updatedUtxo, accSum + refScriptsSizeInTx (UTxO accUtxo) tx)

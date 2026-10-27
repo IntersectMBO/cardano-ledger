@@ -30,12 +30,8 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
 
 import Cardano.Crypto.Leios (LeiosCert)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (OrdExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -56,13 +52,13 @@ import Cardano.Ledger.Block (
   LeiosEraBlockHeader (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.BlockBody (
   DijkstraEraBlockBody (..),
   PerasCert,
   PerasKey (..),
   validatePerasCert,
  )
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (
   BBODY,
   DijkstraEra,
@@ -85,6 +81,7 @@ import Cardano.Ledger.Dijkstra.Rules.LeiosCert (
  )
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
+import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
 import Cardano.Ledger.Shelley.API (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsLastEbAnnouncementL, utxoL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -354,7 +351,7 @@ instance
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ BBODY era
   , AlonzoEraTx era
-  , BabbageEraTxBody era
+  , DijkstraEraTxBody era
   , DijkstraEraPParams era
   , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEIOSCERT" era) ~ LeiosCertEnv
@@ -388,7 +385,7 @@ dijkstraBbodyTransition ::
   , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , DijkstraEraBlockBody era
-  , BabbageEraTxBody era
+  , DijkstraEraTxBody era
   , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , STS (EraRule "BBODY" era)
@@ -444,7 +441,14 @@ dijkstraBbodyTransition = do
 
   Alonzo.validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
 
-  Conway.validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
+  Conway.validateBodyRefScriptsSizeTooBig @era
+    pp
+    ( Conway.totalRefScriptSizeInBlockWith
+        batchNonDistinctRefScriptsSize
+        (pp ^. ppProtocolVersionL)
+        (blockBody ^. txSeqBlockBodyL)
+        (ls ^. utxoL)
+    )
 
   case blockBody ^. perasCertBlockBodyL of
     SNothing -> pure ()

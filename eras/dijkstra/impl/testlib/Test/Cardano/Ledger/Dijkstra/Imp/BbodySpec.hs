@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec (spec) where
 
@@ -18,12 +19,19 @@ import Cardano.Ledger.Block (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody (..))
+import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.PParams (
+  ppMaxRefScriptSizePerBlockL,
+  ppMaxRefScriptSizePerTxL,
+ )
 import Cardano.Ledger.Dijkstra.Rules (DijkstraBbodyPredFailure (..))
+import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (esLStateL, lsLastEbAnnouncementL, nesEsL)
 import Cardano.Ledger.State (EbAnnouncement (..))
-import Lens.Micro ((%~), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (purposeIsWellformedNoDatum)
 
 spec ::
   forall era.
@@ -63,6 +71,38 @@ spec = describe "BBODY" $ do
                   , mismatchExpected = getVersion32 curMajor
                   }
           ]
+
+  it "BodyRefScriptsSizeTooBig counts reference scripts of sub-transactions" $ do
+    plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV3
+    let script = fromPlutusScript plutusScript
+        refScriptSize = originalBytesSize script
+    refTxIn <- produceRefScript script
+
+    -- Each of the three top-level transactions references the script once itself and once
+    -- from its sub-transaction, so each accounts for twice the script size and stays
+    -- within the per-transaction limit.
+    -- Together they stay within the per-block limit as long as only top-level transactions are counted
+    -- and exceed it as soon as the sub-transactions are counted as well.
+    modifyPParams $ \pp ->
+      pp
+        & ppMaxRefScriptSizePerTxL .~ fromIntegral (4 * refScriptSize)
+        & ppMaxRefScriptSizePerBlockL .~ fromIntegral (5 * refScriptSize)
+
+    let subTx :: Tx SubTx era
+        subTx = mkBasicTx $ mkBasicTxBody & referenceInputsTxBodyL .~ [refTxIn]
+        mkTopTx = do
+          topTx <- mkTopTxWithDistinctSubTxs [subTx]
+          pure $ topTx & bodyTxL . referenceInputsTxBodyL .~ [refTxIn]
+    txs <- replicateM 3 mkTopTx
+    submitFailingBlock
+      txs
+      [ injectFailure $
+          BodyRefScriptsSizeTooBig
+            Mismatch
+              { mismatchSupplied = 6 * refScriptSize
+              , mismatchExpected = 5 * refScriptSize
+              }
+      ]
 
   describe "EB announcement" $ do
     let
