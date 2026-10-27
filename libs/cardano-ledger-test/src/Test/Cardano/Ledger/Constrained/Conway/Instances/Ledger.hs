@@ -714,6 +714,17 @@ instance Era era => HasSimpleRep (PoolCert era)
 
 instance Era era => HasSpec (PoolCert era)
 
+instance Typeable pp => HasSpec (LeiosVerificationKey pp) where
+  type TypeSpec (LeiosVerificationKey pp) = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ _ = []
+  fixupWithTypeSpec _ _ = Nothing
+  conformsTo _ _ = True
+  toPreds _ _ = assert True
+
 instance HasSpec BlsKey where
   type TypeSpec BlsKey = ()
   emptySpec = ()

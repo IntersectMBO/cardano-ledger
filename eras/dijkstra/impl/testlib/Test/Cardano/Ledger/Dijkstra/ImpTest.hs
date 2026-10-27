@@ -44,12 +44,13 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
 ) where
 
 import Cardano.Base.Typeable (Typeable)
-import Cardano.Crypto.DSIGN (createPossessionProofDSIGN, deriveVerKeyDSIGN, signDSIGN)
+import Cardano.Crypto.DSIGN (createPossessionProofDSIGN, signDSIGN)
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Crypto.Leios (
   LeiosCert,
   LeiosSigningKey,
   aggregateLeiosCert,
+  deriveLeiosVerificationKey,
   getLeiosSeatId,
  )
 import Cardano.Ledger.Allegra.Scripts (
@@ -674,7 +675,7 @@ setupLeiosCommittee n = impAnn "Set up Leios committee" $ do
   signKeys <- replicateM n $ do
     signKey <- arbitrary
     let blsKey =
-          BlsKey (deriveVerKeyDSIGN signKey) (createPossessionProofDSIGN signKey)
+          BlsKey (deriveLeiosVerificationKey signKey) (createPossessionProofDSIGN signKey)
     khPool <- freshKeyHash
     registerPoolWithParams (\pps -> pps {sppBlsKey = SJust blsKey}) khPool
       =<< registerAccountAddress
@@ -697,7 +698,7 @@ mkLeiosCert ::
 mkLeiosCert signKeys headerHash = do
   committee <- getsNES $ nesEsL . esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
   votes <- forM signKeys $ \signKey -> do
-    seatId <- expectJust $ getLeiosSeatId (deriveVerKeyDSIGN signKey) committee
+    seatId <- expectJust $ getLeiosSeatId (deriveLeiosVerificationKey signKey) committee
     pure (seatId, signDSIGN () msg signKey)
   expectRightDeep . aggregateLeiosCert committee $ Map.fromList votes
   where

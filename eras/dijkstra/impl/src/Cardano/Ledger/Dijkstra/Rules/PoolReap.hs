@@ -168,7 +168,7 @@ poolReapTransition = do
         `Set.difference` Set.fromList
           [ blsKeyHash
           | SJust blsKeyHash <-
-              releasedKeys (fmap (hashBlsKey . bksKey) . spsBlsKey) (fmap hashBlsKey . sppBlsKey)
+              releasedKeys (fmap (hashLeiosVerificationKey . bksKey) . spsBlsKey) (fmap hashBlsKey . sppBlsKey)
           ]
 
     -- collect all of the potential refunds

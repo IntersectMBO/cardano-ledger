@@ -1,11 +1,18 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.Arbitrary (
   genVersion,
 ) where
 
-import Cardano.Crypto.DSIGN (deriveVerKeyDSIGN)
-import Cardano.Crypto.Leios (LeiosCert, LeiosCommittee (..), LeiosSeat (..))
+import Cardano.Crypto.Leios (
+  LeiosCert,
+  LeiosCommittee (..),
+  LeiosSeat (..),
+  LeiosVerificationKey,
+  deriveLeiosVerificationKey,
+ )
 import Cardano.Ledger.Binary.Version
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Vector.Strict as V
@@ -27,8 +34,11 @@ genVersion minVersion maxVersion =
     genVersion32 minVersion32 maxVersion32 = do
       v32 <- choose (minVersion32, maxVersion32)
       case mkVersion32 v32 of
-        Nothing -> error $ "Impossible: Invalid version generated: " ++ show v32
+        Nothing -> error $ "Impossible: Invalid version generated: " <> show v32
         Just v -> pure v
+
+instance Arbitrary (LeiosVerificationKey pp) where
+  arbitrary = deriveLeiosVerificationKey <$> genLeiosSigningKey
 
 instance Arbitrary LeiosCert where
   arbitrary = genLeiosCert
@@ -38,10 +48,10 @@ instance Arbitrary LeiosSeat where
     weight <- arbitrary
     vkey <-
       oneof
-        [ SJust . deriveVerKeyDSIGN <$> genLeiosSigningKey
+        [ SJust <$> arbitrary
         , pure SNothing
         ]
     pure (LeiosSeat weight vkey)
 
 instance Arbitrary LeiosCommittee where
-  arbitrary = UnsafeLeiosCommittee . V.fromList <$> arbitrary
+  arbitrary = LeiosCommittee . V.fromList <$> arbitrary

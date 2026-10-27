@@ -21,8 +21,8 @@ module Cardano.Ledger.Dijkstra.Rules.Pool (
   poolTransition,
 ) where
 
-import Cardano.Crypto.DSIGN (verifyPossessionProofDSIGN)
 import Cardano.Crypto.Hash.Class (hashSize)
+import Cardano.Crypto.Leios (verifyLeiosPossessionProof)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -237,14 +237,17 @@ poolTransition = do
               <= fromIntegral (hashSize ([] @HASH))
                 ?! injectFailure (PoolMedataHashTooBig sppId s)
 
+      let leiosKey = do
+            BlsKey {blsPubKey, blsPossessionProof} <- newBlsKey
+            either (const SNothing) SJust $
+              verifyLeiosPossessionProof
+                blsPubKey
+                blsPossessionProof
+
       -- Returns the BlsKey wrapped in 'SJust' if it is invalid. A valid 'BlsKey' returns 'SNothing'.
       let invalidBlsKey = do
-            SJust blsKey@BlsKey {blsPubKey, blsPossessionProof} <- pure newBlsKey
-            Left _ <-
-              pure $
-                verifyPossessionProofDSIGN
-                  blsPubKey
-                  blsPossessionProof
+            SJust blsKey <- pure newBlsKey
+            SNothing <- pure leiosKey
             pure (sppId, blsKey)
       checkFailOnJustStatic invalidBlsKey $ uncurry BlsKeyInvalidProofOfPossession
 
@@ -303,7 +306,7 @@ poolTransition = do
                           | otherwise = id
                      in addNewOccurrence . removeOldOccurrence
                 | otherwise = id
-              activeBlsKeyHash = hashBlsKey . bksKey <$> stakePoolState ^. spsBlsKeyL
+              activeBlsKeyHash = hashLeiosVerificationKey . bksKey <$> stakePoolState ^. spsBlsKeyL
               newFutureBlsKeyHash =
                 hashBlsKey <$> (sppBlsKey =<< maybeToStrictMaybe mbFutureParams)
               -- The re-registration replaces the future parameters, which releases their BLS key,

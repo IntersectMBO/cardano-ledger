@@ -40,13 +40,12 @@ module Test.Cardano.Ledger.Core.Arbitrary (
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN (
-  BLS12381MinSigDSIGN,
-  DSIGNAggregatable (PossessionProofDSIGN, createPossessionProofDSIGN),
+  DSIGNAggregatable (createPossessionProofDSIGN),
   DSIGNAlgorithm (genKeyDSIGNWithContext),
-  deriveVerKeyDSIGN,
   seedSizeDSIGN,
  )
 import Cardano.Crypto.Hash.Class
+import Cardano.Crypto.Leios (LeiosDSIGN, LeiosProofOfPossession, deriveLeiosVerificationKey)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
@@ -524,21 +523,21 @@ instance Arbitrary BlsKey where
     signingKey <- arbitrary
     pure $
       BlsKey
-        (deriveVerKeyDSIGN signingKey)
+        (deriveLeiosVerificationKey signingKey)
         (createPossessionProofDSIGN signingKey)
 
 instance Arbitrary BlsKeyState where
   arbitrary = BlsKeyState <$> arbitrary <*> arbitrary
 
-instance Arbitrary (PossessionProofDSIGN BLS12381MinSigDSIGN) where
+instance Arbitrary LeiosProofOfPossession where
   arbitrary = genBlsPossessionProof
 
 -- TODO: Replace with `defaultPossessionProofGen` once cardano-crypto-class
 -- exports it from the public API.
-genBlsPossessionProof :: Gen (PossessionProofDSIGN BLS12381MinSigDSIGN)
+genBlsPossessionProof :: Gen LeiosProofOfPossession
 genBlsPossessionProof = do
-  seed <- arbitrarySeedOfSize (seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN))
-  let sk = genKeyDSIGNWithContext @BLS12381MinSigDSIGN Nothing seed
+  seed <- arbitrarySeedOfSize (seedSizeDSIGN (Proxy @LeiosDSIGN))
+  let sk = genKeyDSIGNWithContext @LeiosDSIGN Nothing seed
   pure $ createPossessionProofDSIGN sk
 
 instance Arbitrary StakePoolRelay where

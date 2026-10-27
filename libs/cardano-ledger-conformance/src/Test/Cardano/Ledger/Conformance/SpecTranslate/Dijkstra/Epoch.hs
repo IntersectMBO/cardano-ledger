@@ -30,7 +30,6 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Base (
   toSpecRepMap,
   withCtxSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (verkeyToInteger)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Ledger ()
@@ -125,11 +124,6 @@ instance SpecTranslate DijkstraEra Weight where
   type SpecRep DijkstraEra Weight = Agda.Rational
 
   toSpecRep = pure
-
-instance SpecTranslate DijkstraEra LeiosVerificationKey where
-  type SpecRep DijkstraEra LeiosVerificationKey = Integer
-
-  toSpecRep = pure . verkeyToInteger
 
 instance SpecTranslate DijkstraEra LeiosSeat where
   type SpecRep DijkstraEra LeiosSeat = Agda.LeiosSeat
