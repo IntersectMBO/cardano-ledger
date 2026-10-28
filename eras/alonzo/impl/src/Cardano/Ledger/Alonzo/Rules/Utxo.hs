@@ -579,6 +579,7 @@ utxoTransition = do
   runTest $ validateExUnitsTooBigUTxO pp tx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
+  runTest $ validateTooManyCollateralInputs pp txBody
 
   updatedGovState <-
     trans @(EraRule "UTXOS" era) $

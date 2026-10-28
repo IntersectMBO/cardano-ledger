@@ -25,6 +25,7 @@ import Control.Monad (forM)
 import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro (to, (%~), (&), (.~), (<>~), (^.))
 import qualified PlutusLedgerApi.Common as P
@@ -75,6 +76,23 @@ spec = describe "UTXO" $ do
           & bodyTxL . outputsTxBodyL .~ [tooBigTxOut]
       )
       [injectFailure $ OutputTooBigUTxO [outputTooBigEntry pp tooBigTxOut]]
+
+  -- The formal specification does not check the number of collateral inputs
+  -- TODO: Re-enable once it does, by removing this override
+  disableInConformanceIt "TooManyCollateralInputs" $ do
+    maxCollateralInputs <- getsPParams ppMaxCollateralInputsL
+    collateralInputs <- replicateM (fromIntegral maxCollateralInputs + 1) freshFundedTxIn
+    submitFailingTx
+      ( mkBasicTx mkBasicTxBody
+          & bodyTxL . collateralInputsTxBodyL .~ Set.fromList collateralInputs
+      )
+      [ injectFailure $
+          TooManyCollateralInputs
+            Mismatch
+              { mismatchSupplied = maxCollateralInputs + 1
+              , mismatchExpected = maxCollateralInputs
+              }
+      ]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
