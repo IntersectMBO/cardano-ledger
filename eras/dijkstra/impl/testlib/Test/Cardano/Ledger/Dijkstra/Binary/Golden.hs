@@ -26,22 +26,27 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary as Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTx)
 import Cardano.Ledger.Keys (WitVKey (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import Control.Monad (forM_)
 import qualified Data.ByteString as BS
 import Data.Data (Proxy (..))
+import Data.List (isSuffixOf)
 import qualified Data.OMap.Strict as OMap
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceedsLang)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
-import Test.Cardano.Ledger.Common (Spec, ToExpr, describe, expectRight, it, shouldBe)
+import Test.Cardano.Ledger.Common (Spec, ToExpr, describe, expectRight, it, shouldBe, shouldSatisfy)
 import Test.Cardano.Ledger.Conway.Binary.Golden hiding (spec)
-import Test.Cardano.Ledger.Core.KeyPair (mkKeyPair, mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkKeyHash, mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
 import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
@@ -64,12 +69,76 @@ spec = describe "Golden" . forEachEraVersion @era $ \version -> do
     goldenDuplicatePlutusDataDisallowed @era version
     goldenDuplicateRedeemersDisallowed @era version
     goldenEmptyFields @era version
+  goldenGuards @era version
   describe "Subtransactions" $ do
     goldenSubTransactions @era
   describe "IsPhase2Valid flag" $ do
     goldenIsPhase2ValidFlag @era
   describe "Block transactions" $ do
     goldenBlockTransaction @era
+
+goldenGuards :: forall era. DijkstraEraTest era => Version -> Spec
+goldenGuards version = describe "Guards" $ do
+  describe "TopTx" $ atLevel @TopTx STopTx
+  describe "SubTx" $ atLevel @SubTx SSubTx
+  where
+    atLevel :: forall l. Typeable l => STxBothLevels l era -> Spec
+    atLevel level = do
+      let
+        keyHash = mkKeyHash @Guard 0
+        credential = KeyHashObj keyHash
+        expected = mkBasicTxBody @era @l & guardsTxBodyL .~ OSet.singleton credential
+        txBodyEnc guards =
+          let
+            fields =
+              [ Em [E @Int 0, Ev version $ Set.empty @TxIn]
+              , Em [E @Int 1, E $ TkListLen 0]
+              ]
+                <> (case level of STopTx -> [Em [E @Int 2, E $ Coin 0]]; SSubTx -> [])
+                <> maybe [] (\value -> [Em [E @Int 14, value]]) guards
+           in
+            Em $ E (TkMapLen $ fromIntegral $ length fields) : fields
+        tagForms =
+          [ ("Untagged", id)
+          , ("Tagged", \value -> Em [E $ TkTag 258, value])
+          ]
+        listForms =
+          [ ("Definite", \values -> Em [E $ TkListLen $ fromIntegral $ length values, Em values])
+          , ("Indefinite", \values -> Em [E TkListBegin, Em values, E TkBreak])
+          ]
+        elementForms =
+          [ ("Legacy key hashes", Ev version keyHash)
+          , ("Credentials", Ev version credential)
+          ]
+      it "Omitted guards retain the empty default" $
+        expectDecoderResultOn @(TxBody l era)
+          version
+          (txBodyEnc Nothing)
+          (mkBasicTxBody @era @l)
+          (^. guardsTxBodyL)
+      forM_ tagForms $ \(tagName, tag) ->
+        describe tagName $
+          forM_ listForms $ \(listName, list) ->
+            describe listName $ do
+              it "Explicitly empty guards are rejected" $
+                decodeEnc @(TxBody l era) version (txBodyEnc $ Just $ tag $ list [])
+                  `shouldSatisfy` isFailureWith "TxBody: 'Guards' must be non-empty when supplied"
+              forM_ elementForms $ \(elementName, element) ->
+                describe elementName $ do
+                  it "Nonempty guards decode as expected" $
+                    expectDecoderResultOn @(TxBody l era)
+                      version
+                      (txBodyEnc $ Just $ tag $ list [element])
+                      expected
+                      (^. guardsTxBodyL)
+                  it "Duplicate guards are rejected" $
+                    decodeEnc @(TxBody l era) version (txBodyEnc $ Just $ tag $ list [element, element])
+                      `shouldSatisfy` isFailureWith
+                        "Final number of elements: 1 does not match the total count that was decoded: 2"
+    isFailureWith :: String -> Either DecoderError a -> Bool
+    isFailureWith expected (Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ message))) =
+      expected `isSuffixOf` message
+    isFailureWith _ _ = False
 
 goldenEmptyFields :: forall era. DijkstraEraTest era => Version -> Spec
 goldenEmptyFields version =

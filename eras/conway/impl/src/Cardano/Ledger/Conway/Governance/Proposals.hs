@@ -401,8 +401,15 @@ instance EraPParams era => DecShareCBOR (Proposals era) where
   decSharePlusCBOR = do
     decodeRecordNamedT "Proposals" (const 2) $ do
       gaid <- lift decCBOR
-      (_, omap) <- decodeListLikeWithCountT (lift decodeListLenOrIndef) (flip (OMap.|>)) $ \_ ->
+      (count, omap) <- decodeListLikeWithCountT (lift decodeListLenOrIndef) (flip (OMap.|>)) $ \_ ->
         decSharePlusCBOR
+      let len = OMap.size omap
+      unless (len == count) $
+        fail $
+          "Final number of elements: "
+            <> show len
+            <> " does not match the total count that was decoded: "
+            <> show count
       mkProposals gaid omap
 
 -- | Add a vote to an existing `GovActionState`. This is a no-op if the
