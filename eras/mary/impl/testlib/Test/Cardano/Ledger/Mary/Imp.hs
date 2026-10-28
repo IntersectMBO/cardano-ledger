@@ -1,13 +1,16 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Mary.Imp (spec, Allegra.shelleyToBabbageSpec) where
+module Test.Cardano.Ledger.Mary.Imp (spec, Allegra.shelleyToBabbageSpec, maryOnlySpec) where
 
 import Cardano.Ledger.Core
+import Cardano.Ledger.Mary
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
+import Data.Proxy (Proxy (..))
 import qualified Test.Cardano.Ledger.Allegra.Imp as Allegra
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as UTXO
@@ -24,3 +27,8 @@ spec era = do
   describe "MaryEra Onwards" $
     withImpInitEachEraVersion era $ do
       UTXO.spec
+
+maryOnlySpec :: Spec
+maryOnlySpec =
+  describe "MaryEra Specific" $ withImpInitEachEraVersion (Proxy @MaryEra) $ do
+    UTXO.maryOnlySpec

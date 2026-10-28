@@ -2,22 +2,22 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
+module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec, maryOnlySpec) where
 
-import Cardano.Ledger.BaseTypes (Mismatch (..))
+import Cardano.Ledger.Allegra.Rules
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Scripts (
-  pattern RequireSignature,
- )
+import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.Tools
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
 import Lens.Micro
-import Test.Cardano.Ledger.Core.Utils (txInAt)
+import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
@@ -75,3 +75,22 @@ spec = describe "UTXO" $ do
                 (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
                 (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)
         ]
+
+maryOnlySpec :: SpecWith (ImpInit (LedgerSpec MaryEra))
+maryOnlySpec = describe "UTXO" $
+  describe "AllegraUtxoPredFailure" $
+    it "OutputTooBigUTxO" $ do
+      pp <- getsPParams id
+      policyId <- PolicyID <$> (impAddNativeScript . RequireSignature =<< freshKeyHash)
+      -- Serialized, 125 asset names of 32 bytes exceed the 4000 bytes allowed for a `Value`
+      assetNames <- replicateM 125 $ AssetName <$> uniformShortByteStringM 32
+      addr <- freshKeyAddr_
+      let multiAsset = multiAssetFromList [(policyId, assetName, 1) | assetName <- assetNames]
+          txOut = setMinCoinTxOut pp . mkBasicTxOut addr $ MaryValue mempty multiAsset
+      submitFailingTx
+        ( mkBasicTx $
+            mkBasicTxBody
+              & mintTxBodyL .~ multiAsset
+              & outputsTxBodyL .~ [txOut]
+        )
+        [injectFailure $ OutputTooBigUTxO [txOut]]
