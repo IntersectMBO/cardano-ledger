@@ -13,6 +13,7 @@
 module Cardano.Ledger.Babbage.Rules.Ledger (LEDGER) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, LEDGER)
@@ -22,7 +23,7 @@ import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure, UTXOW)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
-  LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -97,10 +98,12 @@ instance
   , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = Shelley.LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase

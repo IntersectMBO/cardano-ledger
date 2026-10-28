@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
+* Add `LedgerStateWithLimits`, `lswlLedgerState`, `lswlBlockBodyLimits`, `lswlLedgerStateL`, `lswlBlockBodyLimitsL`
+* Add `ShelleyBlockBodyLimits` and `sbblTxsSize`
 * Add `bbodyLeiosCommittee` field to `BbodyEnv`
 * Add `fvMinPoolCost` and `fvMinPoolMargin` fields to `Cardano.Ledger.Shelley.RewardUpdate.FreeVars`
 * Remove deprecated `leaderRew`, `memberRew` and `nonMyopicMemberRew` functions

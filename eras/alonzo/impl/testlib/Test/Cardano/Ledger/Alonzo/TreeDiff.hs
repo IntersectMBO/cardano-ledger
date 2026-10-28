@@ -246,3 +246,5 @@ instance
   ToExpr (TransactionScriptFailure era)
 
 deriving newtype instance ToExpr (Tx TopTx AlonzoEra)
+
+instance ToExpr (AlonzoBlockBodyLimits era)

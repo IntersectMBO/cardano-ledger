@@ -29,6 +29,7 @@ import Cardano.Ledger.Block (Block (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Core (EraBlockBody (..), eraProtVerLow)
 import Cardano.Ledger.Shelley.BlockBody (
   ShelleyBlockBody,
+  ShelleyBlockBodyLimits,
   mkBasicBlockBodyShelley,
   shelleyBlockBodyHash,
   txSeqBlockBodyShelleyL,
@@ -38,6 +39,7 @@ import Data.Typeable (Typeable)
 
 instance EraBlockBody AllegraEra where
   type BlockBody AllegraEra = ShelleyBlockBody AllegraEra
+  type BlockBodyLimits AllegraEra = ShelleyBlockBodyLimits AllegraEra
   type ProtocolEraBlockHeader h AllegraEra = TPraosEraBlockHeader h AllegraEra
   mkBasicBlockBody = mkBasicBlockBodyShelley
   txSeqBlockBodyL = txSeqBlockBodyShelleyL

@@ -26,10 +26,10 @@ import Cardano.Ledger.Shelley.API (
   ApplyTx,
   Globals,
   LedgerEnv,
-  LedgerState,
   applyTxWithFullValidation,
  )
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
@@ -66,7 +66,7 @@ benchWithGenState ::
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , EraStake era
   , EraGov era
   ) =>
@@ -85,7 +85,7 @@ benchApplyTx ::
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , EraStake era
   , EraGov era
   ) =>
@@ -114,7 +114,7 @@ deserialiseTxEra ::
   ( EraGen era
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraStake era
@@ -134,7 +134,7 @@ deserialiseAnnTxEra ::
   ( EraGen era
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraStake era

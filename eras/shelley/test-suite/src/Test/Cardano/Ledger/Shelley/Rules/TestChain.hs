@@ -35,11 +35,13 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
+  LedgerStateWithLimits (..),
   NewEpochState (..),
   UTxOState (..),
   curPParamsEpochStateL,
   lsCertStateL,
   lsUTxOStateL,
+  lswlLedgerStateL,
  )
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.State
@@ -131,7 +133,7 @@ ledgerTraceFromBlock ::
   , STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   ChainState era ->
@@ -142,13 +144,13 @@ ledgerTraceFromBlock chainSt block =
   , runShelleyBase $
       Trace.closureWith @(EraRule "LEDGER" era)
         ledgerEnv
-        ledgerSt0
+        (LedgerStateWithLimits ledgerSt0 mempty)
         ( \ls ->
             mkStAnnTx
               (epochInfo testGlobals)
               (systemStart testGlobals)
               (ledgerEnv ^. ledgerPpL)
-              (ls ^. lsUTxOStateL . utxoG)
+              (ls ^. lswlLedgerStateL . lsUTxOStateL . utxoG)
               mempty
         )
         txs
@@ -166,7 +168,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
   , STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   ChainState era ->
@@ -177,13 +179,13 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   , runShelleyBase $
       Trace.closureWith @(EraRule "LEDGER" era)
         ledgerEnv
-        restrictedSt0
+        (LedgerStateWithLimits restrictedSt0 mempty)
         ( \ls ->
             mkStAnnTx
               (epochInfo testGlobals)
               (systemStart testGlobals)
               (ledgerEnv ^. ledgerPpL)
-              (ls ^. lsUTxOStateL . utxoG)
+              (ls ^. lswlLedgerStateL . lsUTxOStateL . utxoG)
               mempty
         )
         txs

@@ -16,6 +16,7 @@ module Cardano.Ledger.Alonzo.Rules.Ledger (
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, LEDGER)
 import Cardano.Ledger.Alonzo.Rules.Delegs ()
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
@@ -27,6 +28,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -95,7 +97,7 @@ ledgerTransition ::
   ( STS (someLEDGER era)
   , BaseM (someLEDGER era) ~ ShelleyBase
   , Signal (someLEDGER era) ~ StAnnTx TopTx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ LedgerStateWithLimits era
   , Environment (someLEDGER era) ~ Shelley.LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
@@ -109,12 +111,14 @@ ledgerTransition ::
   , EraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
   TRC
     ( Shelley.LedgerEnv slot mbCurEpochNo txIx pp account
-      , LedgerState utxoSt certState lastEbAnnouncement
+      , LedgerStateWithLimits (LedgerState utxoSt certState lastEbAnnouncement) blockBodyLimits
       , stAnnTx
       ) <-
     judgmentContext
@@ -143,7 +147,15 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure $ LedgerState utxoSt' certState' lastEbAnnouncement
+  pure $
+    LedgerStateWithLimits
+      (LedgerState utxoSt' certState' lastEbAnnouncement)
+      ( blockBodyLimits
+          <> AlonzoBlockBodyLimits
+            { abblTxsSize = sizeTxForFeeCalculation tx
+            , abblExUnits = getTotalExUnits tx
+            }
+      )
 
 instance
   ( AlonzoEraTx era
@@ -161,10 +173,12 @@ instance
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
   , EraCertState era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = Shelley.LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase

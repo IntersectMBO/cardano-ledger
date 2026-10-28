@@ -32,7 +32,11 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Era (LEDGERS, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
+  LedgerStateWithLimits (..),
+  lswlLedgerStateL,
+ )
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -174,11 +178,12 @@ instance
 instance
   ( ApplyTx era
   , EraGov era
+  , EraBlockBody era
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Default (LedgerState era)
   ) =>
@@ -196,12 +201,13 @@ instance
 ledgersTransition ::
   forall era.
   ( ApplyTx era
+  , EraBlockBody era
   , EraGov era
   , EraStake era
   , Default (CertState era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (LEDGERS era)
@@ -209,17 +215,19 @@ ledgersTransition = do
   TRC (LedgersEnv slot epochNo pp account, initLedgerState, txs) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sysStart <- liftSTS $ asks systemStart
-  foldM
-    ( \ !curLedgerState (ix, tx) ->
-        -- build the annotations against the same utxo snapshot that the rule will validate against
-        let utxo = curLedgerState ^. utxoL
-            stAnnTx = mkStAnnTx ei sysStart pp utxo mempty tx
-         in trans @(EraRule "LEDGER" era) $
-              TRC (LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
-    )
-    initLedgerState
-    $ zip [minBound ..]
-    $ toList txs
+  (LedgerStateWithLimits ledgerState _) <-
+    foldM
+      ( \ !curLedgerState (ix, tx) ->
+          -- build the annotations against the same utxo snapshot that the rule will validate against
+          let utxo = curLedgerState ^. lswlLedgerStateL . utxoL
+              stAnnTx = mkStAnnTx ei sysStart pp utxo mempty tx
+           in trans @(EraRule "LEDGER" era) $
+                TRC (LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
+      )
+      (LedgerStateWithLimits initLedgerState mempty)
+      $ zip [minBound ..]
+      $ toList txs
+  pure ledgerState
 
 instance
   ( Era era

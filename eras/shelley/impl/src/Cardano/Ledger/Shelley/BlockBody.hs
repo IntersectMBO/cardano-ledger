@@ -1,5 +1,6 @@
 module Cardano.Ledger.Shelley.BlockBody (
   ShelleyBlockBody (ShelleyBlockBody),
+  ShelleyBlockBodyLimits (..),
   txSeqBlockBodyShelleyL,
   mkBasicBlockBodyShelley,
   shelleyBlockBodyHash,

@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `LEIOSCERT` rule, `LeiosCertEnv` and `DijkstraLeiosCertPredFailure`
 * Add `LeiosCertFailure` and `LeiosCertWithoutEbAnnouncement` constructors to `DijkstraBbodyPredFailure`
 * Add `PredicateFailure (EraRule "LEIOSCERT" era)` constraints to the `Eq`, `Ord`, `Show`, `NFData`, `EncCBOR` and `DecCBOR` instances for `DijkstraBbodyPredFailure`

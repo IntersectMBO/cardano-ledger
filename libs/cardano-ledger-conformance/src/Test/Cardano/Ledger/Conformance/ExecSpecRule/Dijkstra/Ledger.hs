@@ -230,7 +230,7 @@ instance ExecSpecRule "LEDGER" DijkstraEra where
      in runFromAgdaFunction (Agda.ledgerStep externalFunctions') trc
 
 instance ExecSpecTopLevelRule "LEDGER" DijkstraEra where
-  mkRuleExecContext globals (TRC (env, state, signal)) =
+  mkRuleExecContext globals (TRC (env, LedgerStateWithLimits state _, signal)) =
     DijkstraLedgerExecContext
       { dlecGuardrailsScriptHash =
           state ^. lsUTxOStateL . utxosGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL

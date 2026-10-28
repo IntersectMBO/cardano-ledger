@@ -174,6 +174,14 @@ instance
   ToExpr (LedgerState era)
 
 instance
+  ( ToExpr (LedgerState era)
+  , ToExpr (BlockBodyLimits era)
+  ) =>
+  ToExpr (LedgerStateWithLimits era)
+
+instance ToExpr (ShelleyBlockBodyLimits era)
+
+instance
   ( ToExpr (TxOut era)
   , ToExpr (GovState era)
   , ToExpr (InstantStake era)

@@ -146,14 +146,14 @@ instance
   NFData (DijkstraMempoolEvent era)
 
 instance
-  ( EraTx era
+  ( EraBlockBody era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , ConwayEraCertState era
   , EraStake era
   , EraCertState era
   , Embed (EraRule "LEDGER" era) (MEMPOOL era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Eq (PredicateFailure (EraRule "CERTS" era))
   , Eq (PredicateFailure (EraRule "GOV" era))
   , Eq (PredicateFailure (EraRule "UTXOW" era))
@@ -168,7 +168,7 @@ instance
   ) =>
   STS (MEMPOOL era)
   where
-  type State (MEMPOOL era) = LedgerState era
+  type State (MEMPOOL era) = LedgerStateWithLimits era
   type Signal (MEMPOOL era) = StAnnTx TopTx era
   type Environment (MEMPOOL era) = Shelley.LedgerEnv era
   type BaseM (MEMPOOL era) = ShelleyBase
@@ -181,13 +181,13 @@ mempoolTransition ::
   forall era.
   ( EraTx era
   , Embed (EraRule "LEDGER" era) (MEMPOOL era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
   TransitionRule (MEMPOOL era)
 mempoolTransition = do
-  TRC trc@(_ledgerEnv, ledgerState, stAnnTx) <-
+  TRC trc@(_ledgerEnv, state@(LedgerStateWithLimits ledgerState _), stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
 
@@ -203,7 +203,7 @@ mempoolTransition = do
     ?! AllInputsAreSpent
 
   -- Continue with LEDGER rules if the transaction is not a duplicate,
-  whenFailureFreeDefault ledgerState $ do
+  whenFailureFreeDefault state $ do
     trans @(EraRule "LEDGER" era) $ TRC trc
 
 instance

@@ -13,6 +13,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Ledger () where
 
 import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -78,6 +79,16 @@ instance SpecTranslate DijkstraEra (LedgerState DijkstraEra) where
       <$> withCtxSpecTransM () (toSpecRep lsUTxOState)
       <*> withCtxSpecTransM () (toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL))
       <*> toSpecRep lsCertState
+
+instance EncCBOR (LedgerStateWithLimits DijkstraEra) where
+  encCBOR = encCBOR . lswlLedgerState
+
+instance SpecTranslate DijkstraEra (LedgerStateWithLimits DijkstraEra) where
+  type SpecRep DijkstraEra (LedgerStateWithLimits DijkstraEra) = Agda.LedgerState
+
+  type SpecContext DijkstraEra (LedgerStateWithLimits DijkstraEra) = Network
+
+  toSpecRep = toSpecRep . lswlLedgerState
 
 instance SpecTranslate DijkstraEra (TxBody TopTx DijkstraEra) where
   type SpecRep DijkstraEra (TxBody TopTx DijkstraEra) = Agda.TxBodyTop

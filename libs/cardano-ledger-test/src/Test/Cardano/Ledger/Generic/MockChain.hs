@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
+  LedgerStateWithLimits,
   NewEpochState (..),
   StashedAVVMAddresses,
   curPParamsEpochStateL,
@@ -131,7 +132,7 @@ instance
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Ord (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
@@ -187,7 +188,7 @@ instance
 
 instance
   ( STS (Shelley.LEDGERS era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
@@ -198,7 +199,7 @@ instance
 
 instance
   ( STS (Alonzo.LEDGERS era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>
@@ -209,7 +210,7 @@ instance
 
 instance
   ( STS (Babbage.LEDGERS era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   ) =>

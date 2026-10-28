@@ -17,13 +17,13 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Shelley.API (LedgerState)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Internal (compareAdaPots)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
+  LedgerStateWithLimits (..),
   NewEpochState (..),
   UTxOState (..),
   completeRupd,
@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   deltaT,
   esLStateL,
   lsCertStateL,
+  lswlLedgerStateL,
   nesEsL,
   prevPParamsEpochStateL,
   rs,
@@ -99,7 +100,7 @@ tests ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , GovState era ~ ShelleyGovState era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -121,7 +122,7 @@ adaPreservationProps ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , GovState era ~ ShelleyGovState era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -319,7 +320,7 @@ utxoDepositsIncreaseByFeesWithdrawals ::
   , ApplyTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -362,7 +363,7 @@ potsSumIncreaseWithdrawalsPerTx ::
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -378,9 +379,15 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
     sumIncreaseWithdrawals :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     sumIncreaseWithdrawals
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f} _ _
+        { source =
+          LedgerStateWithLimits
+            (LedgerState UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f} _ _)
+            _
         , signal = stAnnTx
-        , target = LedgerState UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'} _ _
+        , target =
+          LedgerStateWithLimits
+            (LedgerState UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'} _ _)
+            _
         } =
         let tx = stAnnTx ^. txStAnnTxG
          in property (hasFailedScripts tx)
@@ -396,7 +403,7 @@ potsSumIncreaseByRewardsPerTx ::
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -411,14 +418,20 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
     sumIncreaseRewards
       SourceSignalTarget
         { source =
-          LedgerState
-            UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f}
-            cState1
+          LedgerStateWithLimits
+            ( LedgerState
+                UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f}
+                cState1
+                _
+              )
             _
         , target =
-          LedgerState
-            UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
-            cState2
+          LedgerStateWithLimits
+            ( LedgerState
+                UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
+                cState2
+                _
+              )
             _
         } =
         (sumCoinUTxO u' <+> d' <+> f') <-> (sumCoinUTxO u <+> d <+> f)
@@ -431,7 +444,7 @@ potsRewardsDecreaseByWithdrawalsPerTx ::
   , ChainProperty era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
   , STS (EraRule "LEDGER" era)
@@ -447,9 +460,9 @@ potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, sign
     (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     rewardsDecreaseByWithdrawals
       SourceSignalTarget
-        { source = LedgerState _ dpstate _
+        { source = LedgerStateWithLimits (LedgerState _ dpstate _) _
         , signal = stAnnTx
-        , target = LedgerState _ dpstate' _
+        , target = LedgerStateWithLimits (LedgerState _ dpstate' _) _
         } =
         let tx = stAnnTx ^. txStAnnTxG
             totalRewards = sumAccountsBalances dpstate
@@ -476,7 +489,7 @@ preserveBalance ::
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -498,8 +511,8 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
       where
         tx = stAnnTx ^. txStAnnTxG
         failedScripts = property $ hasFailedScripts tx
-        LedgerState (UTxOState {utxosUtxo = u}) certState _ = ledgerSt
-        LedgerState (UTxOState {utxosUtxo = u'}) _ _ = ledgerSt'
+        LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = u}) certState _) _ = ledgerSt
+        LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = u'}) _ _) _ = ledgerSt'
         txb = tx ^. bodyTxL
         created =
           sumCoinUTxO u'
@@ -519,7 +532,7 @@ preserveBalanceRestricted ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -535,7 +548,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
 
     createdIsConsumed
       SourceSignalTarget
-        { source = LedgerState (UTxOState {utxosUtxo = utxo}) certState _
+        { source = LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = utxo}) certState _) _
         , signal = stAnnTx
         } =
         inps === outs
@@ -559,7 +572,7 @@ preserveOutputsTx ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -573,7 +586,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     outputPreserved
       SourceSignalTarget
-        { target = LedgerState (UTxOState {utxosUtxo = UTxO utxo}) _ _
+        { target = LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = UTxO utxo}) _ _) _
         , signal = stAnnTx
         } =
         let tx = stAnnTx ^. txStAnnTxG
@@ -588,7 +601,7 @@ canRestrictUTxO ::
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
   ) =>
@@ -606,8 +619,12 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
     (UTxO irrelevantUTxO, ledgerTrRestr) =
       ledgerTraceFromBlockWithRestrictedUTxO @era chainSt block
     outputPreserved
-      SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uFull}) _ _}
-      SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uRestr}) _ _} =
+      SourceSignalTarget
+        { target = (LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = UTxO uFull}) _ _) _)
+        }
+      SourceSignalTarget
+        { target = (LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = UTxO uRestr}) _ _) _)
+        } =
         counterexample
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
           (uRestr `Map.disjoint` irrelevantUTxO)
@@ -633,14 +650,16 @@ txFees ::
   ( EraGen era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   ) =>
   Trace (EraRule "LEDGER" era) ->
   Coin
 txFees ledgerTr =
   foldMap
     ( \sst ->
-        feeOrCollateral @era (signal sst ^. txStAnnTxG :: Tx TopTx era) (source sst ^. utxoL :: UTxO era)
+        feeOrCollateral @era
+          (signal sst ^. txStAnnTxG :: Tx TopTx era)
+          (source sst ^. lswlLedgerStateL . utxoL :: UTxO era)
     )
     (sourceSignalTargets ledgerTr)
 

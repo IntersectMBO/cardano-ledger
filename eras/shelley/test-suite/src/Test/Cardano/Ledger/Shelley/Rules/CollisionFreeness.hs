@@ -19,6 +19,7 @@ import Cardano.Ledger.Keys (witVKeyHash)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
@@ -67,7 +68,7 @@ tests ::
   , ChainProperty era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
@@ -97,7 +98,7 @@ eliminateTxInputs ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -111,7 +112,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     inputsEliminated
       SourceSignalTarget
-        { target = LedgerState (UTxOState {utxosUtxo = (UTxO u')}) _ _
+        { target = LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = (UTxO u')}) _ _) _
         , signal = stAnnTx
         } =
         let tx = stAnnTx ^. txStAnnTxG
@@ -129,7 +130,7 @@ newEntriesAndUniqueTxIns ::
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , STS (EraRule "LEDGER" era)
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -143,9 +144,9 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era chainSt block
     newEntryPresent
       SourceSignalTarget
-        { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) _ _
+        { source = LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = UTxO u}) _ _) _
         , signal = stAnnTx
-        , target = LedgerState (UTxOState {utxosUtxo = UTxO u'}) _ _
+        , target = LedgerStateWithLimits (LedgerState (UTxOState {utxosUtxo = UTxO u'}) _ _) _
         } =
         let tx = stAnnTx ^. txStAnnTxG
             UTxO outs = txouts @era (tx ^. bodyTxL)
@@ -165,7 +166,7 @@ requiredMSigSignaturesSubset ::
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , STS (EraRule "LEDGER" era)
   ) =>

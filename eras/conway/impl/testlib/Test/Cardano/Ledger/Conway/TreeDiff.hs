@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ApplyTxError (..), ConwayEra)
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
@@ -239,6 +240,8 @@ instance
   ToExpr (ConwayCertsPredFailure era)
 
 -- Rules/Ledger
+instance ToExpr (ConwayBlockBodyLimits era)
+
 instance
   ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , ToExpr (PredicateFailure (EraRule "GOV" era))

@@ -21,6 +21,7 @@ import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState,
   genesisState,
   lsUTxOState,
@@ -107,7 +108,7 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen ge ledgerEnv@(LedgerEnv _ _ _ pParams _) ls = do
+  sigGen ge ledgerEnv@(LedgerEnv _ _ _ pParams _) (LedgerStateWithLimits ls _) = do
     tx <- genTx ge ledgerEnv ls
     pure $
       mkStAnnTx
@@ -172,10 +173,10 @@ ledgersSigGen
             res =
               runShelleyBase $
                 applySTSTest @(EraRule "LEDGER" era)
-                  (TRC (ledgerEnv, ls', stAnnTx))
+                  (TRC (ledgerEnv, LedgerStateWithLimits ls' mempty, stAnnTx))
         case res of
           Left pf -> error ("LEDGER sigGen: " <> show pf)
-          Right ls'' -> pure (ls'', tx : txs)
+          Right (LedgerStateWithLimits ls'' _) -> pure (ls'', tx : txs)
 
 instance
   ( Crypto c
@@ -224,6 +225,6 @@ mkGenesisLedgerState ::
   ) =>
   GenEnv c era ->
   IRC ledger ->
-  Gen (Either a (LedgerState era))
+  Gen (Either a (LedgerStateWithLimits era))
 mkGenesisLedgerState ge@(GenEnv _ _ c) _ =
-  Right . genesisState (genesisDelegs0 c) <$> genUtxo0 ge
+  Right . (`LedgerStateWithLimits` mempty) . genesisState (genesisDelegs0 c) <$> genUtxo0 ge

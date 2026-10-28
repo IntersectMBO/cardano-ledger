@@ -25,6 +25,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
+  LedgerStateWithLimits (..),
   NewEpochState (..),
   UTxOState (..),
   curPParamsEpochStateL,
@@ -82,7 +83,7 @@ incrStakeComputationTest ::
   , STS (EraRule "LEDGER" era)
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   ) =>
   TestTree
 incrStakeComputationTest =
@@ -99,7 +100,7 @@ incrStakeComp ::
   , STS (EraRule "LEDGER" era)
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , ApplyTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , ShelleyEraAccounts era
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -113,9 +114,11 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
     checkIncrStakeComp :: SourceSignalTarget (EraRule "LEDGER" era) -> Property
     checkIncrStakeComp
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp _
+        { source =
+          LedgerStateWithLimits (LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp _) _
         , signal = stAnnTx
-        , target = LedgerState UTxOState {utxosUtxo = u', utxosInstantStake = is'} dp' _
+        , target =
+          LedgerStateWithLimits (LedgerState UTxOState {utxosUtxo = u', utxosInstantStake = is'} dp' _) _
         } =
         let tx = stAnnTx ^. txStAnnTxG
          in counterexample

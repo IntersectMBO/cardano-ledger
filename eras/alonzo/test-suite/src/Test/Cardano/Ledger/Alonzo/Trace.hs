@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (LEDGER, LEDGERS)
 import Cardano.Ledger.BaseTypes (Globals, epochInfo, systemStart)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
-import Cardano.Ledger.Shelley.LedgerState (UTxOState, lsUTxOState, utxosUtxo)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState, lsUTxOState, lswlLedgerState, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto (Crypto)
@@ -77,13 +77,13 @@ instance
       <*> genAccountState geConstants
 
   sigGen ge ledgerEnv@(Shelley.LedgerEnv _ _ _ pParams _) ls = do
-    tx <- genTx ge ledgerEnv ls
+    tx <- genTx ge ledgerEnv (lswlLedgerState ls)
     pure $
       mkStAnnTx
         (epochInfo testGlobals)
         (systemStart testGlobals)
         pParams
-        (utxosUtxo (lsUTxOState ls))
+        (utxosUtxo (lsUTxOState (lswlLedgerState ls)))
         mempty
         tx
 

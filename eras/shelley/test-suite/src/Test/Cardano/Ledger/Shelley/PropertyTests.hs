@@ -18,7 +18,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyEraForecast)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState, LedgerStateWithLimits, NewEpochState)
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
@@ -78,7 +78,7 @@ commonTests ::
   , QC.BaseEnv (EraRule "LEDGER" era) ~ Globals
   , QC.HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , State (EraRule "TICK" era) ~ NewEpochState era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era

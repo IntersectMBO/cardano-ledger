@@ -229,11 +229,11 @@ class
 
 ruleApplyTxValidation ::
   forall rule era.
-  ( EraTx era
+  ( EraBlockBody era
   , STS (EraRule rule era)
   , BaseM (EraRule rule era) ~ ShelleyBase
   , Environment (EraRule rule era) ~ LedgerEnv era
-  , State (EraRule rule era) ~ MempoolState era
+  , State (EraRule rule era) ~ LedgerStateWithLimits era
   , Signal (EraRule rule era) ~ StAnnTx TopTx era
   ) =>
   ValidationPolicy ->
@@ -252,14 +252,14 @@ ruleApplyTxValidation validationPolicy globals env state stAnnTx =
       result =
         flip runReader globals
           . applySTSOptsEither @(EraRule rule era) opts
-          $ TRC (env, state, stAnnTx)
+          $ TRC (env, LedgerStateWithLimits state mempty, stAnnTx)
       validatedTx =
         ValidatedTx
           { vtStAnnTx = stAnnTx
           , vtProtocolVersion = env ^. ledgerPpL . ppProtocolVersionL
           , vtSlotNo = env ^. ledgerSlotNoL
           }
-   in fmap (,validatedTx) result
+   in fmap ((,validatedTx) . lswlLedgerState) result
 
 -- | A default implementation for 'internalApplyTxWithValidation', parameterised by the
 -- STS rule to run and a wrapper that lifts predicate failures into the era's
@@ -267,10 +267,11 @@ ruleApplyTxValidation validationPolicy globals env state stAnnTx =
 defaultApplyTxWithValidation ::
   forall rule era.
   ( ApplyTx era
+  , EraBlockBody era
   , STS (EraRule rule era)
   , BaseM (EraRule rule era) ~ ShelleyBase
   , Environment (EraRule rule era) ~ LedgerEnv era
-  , State (EraRule rule era) ~ MempoolState era
+  , State (EraRule rule era) ~ LedgerStateWithLimits era
   , Signal (EraRule rule era) ~ StAnnTx TopTx era
   ) =>
   (NonEmpty (PredicateFailure (EraRule rule era)) -> ApplyTxError era) ->
@@ -297,11 +298,11 @@ defaultApplyTxWithValidation wrap validationPolicy globals env state tx =
 -- 'ApplyTxError'.
 defaultReapplyValidatedTx ::
   forall rule era.
-  ( ApplyTx era
+  ( EraBlockBody era
   , STS (EraRule rule era)
   , BaseM (EraRule rule era) ~ ShelleyBase
   , Environment (EraRule rule era) ~ LedgerEnv era
-  , State (EraRule rule era) ~ MempoolState era
+  , State (EraRule rule era) ~ LedgerStateWithLimits era
   , Signal (EraRule rule era) ~ StAnnTx TopTx era
   ) =>
   (NonEmpty (PredicateFailure (EraRule rule era)) -> ApplyTxError era) ->

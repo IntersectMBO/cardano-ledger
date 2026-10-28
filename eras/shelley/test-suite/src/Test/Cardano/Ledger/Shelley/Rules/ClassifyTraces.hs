@@ -24,7 +24,7 @@ import Cardano.Ledger.Binary.Plain as Plain (serialize')
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import Cardano.Ledger.Shelley.PParams (
   Update (..),
   pattern ProposedPPUpdates,
@@ -304,7 +304,7 @@ onlyValidLedgerSignalsAreGenerated ::
   , EraStake era
   , QC.HasTrace ledger (GenEnv MockCrypto era)
   , QC.BaseEnv ledger ~ Globals
-  , State ledger ~ LedgerState era
+  , State ledger ~ LedgerStateWithLimits era
   , Show (Environment ledger)
   , Show (Signal ledger)
   , EraGov era

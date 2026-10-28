@@ -47,10 +47,12 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.BlockBody (ShelleyBlockBodyLimits (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (LEDGER, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
+  LedgerStateWithLimits (..),
   UTxOState (..),
   utxosDepositedL,
  )
@@ -262,19 +264,19 @@ instance
 shelleyLedgerAssertions ::
   ( EraGov era
   , EraCertState era
-  , State (rule era) ~ LedgerState era
+  , State (rule era) ~ LedgerStateWithLimits era
   ) =>
   [Assertion (rule era)]
 shelleyLedgerAssertions =
   [ PostCondition
       "Deposit pot must equal obligation (LEDGER)"
       ( \(TRC (_, _, _))
-         (LedgerState utxoSt dpstate _) -> potEqualsObligation dpstate utxoSt
+         (LedgerStateWithLimits (LedgerState utxoSt dpstate _) _) -> potEqualsObligation dpstate utxoSt
       )
   , PostCondition
       "Reverse stake pool delegations must match"
       ( \(TRC (_, _, _))
-         (LedgerState _ certState _) ->
+         (LedgerStateWithLimits (LedgerState _ certState _) _) ->
             uncurry (==) $ calculateDelegatorsPerStakePool certState
       )
   ]
@@ -295,10 +297,12 @@ instance
   , EraRule "LEDGER" era ~ LEDGER era
   , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ ShelleyBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   STS (LEDGER era)
   where
-  type State (LEDGER era) = LedgerState era
+  type State (LEDGER era) = LedgerStateWithLimits era
   type Signal (LEDGER era) = StAnnTx TopTx era
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
@@ -327,12 +331,14 @@ ledgerTransition ::
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , EraRule "LEDGER" era ~ LEDGER era
   , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
+  , BlockBodyLimits era ~ ShelleyBlockBodyLimits era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
   TRC
     ( LedgerEnv slot mbCurEpochNo txIx pp account
-      , LedgerState utxoSt certState lastEbAnnouncement
+      , LedgerStateWithLimits (LedgerState utxoSt certState lastEbAnnouncement) blockBodyLimits
       , stAnnTx
       ) <-
     judgmentContext
@@ -355,7 +361,12 @@ ledgerTransition = do
         , utxoSt
         , stAnnTx
         )
-  pure (LedgerState utxoSt' certState' lastEbAnnouncement)
+  pure $
+    LedgerStateWithLimits
+      (LedgerState utxoSt' certState' lastEbAnnouncement)
+      ( blockBodyLimits
+          <> ShelleyBlockBodyLimits {sbblTxsSize = sizeTxForFeeCalculation tx}
+      )
 
 testIncompleteAndMissingWithdrawals ::
   ( EraAccounts era
@@ -406,7 +417,7 @@ renderDepositEqualsObligationViolation ::
   , EraCertState era
   , Environment t ~ LedgerEnv era
   , Signal t ~ StAnnTx TopTx era
-  , State t ~ LedgerState era
+  , State t ~ LedgerStateWithLimits era
   ) =>
   AssertionViolation t ->
   String
@@ -415,7 +426,7 @@ renderDepositEqualsObligationViolation
     let tx = stAnnTx ^. txStAnnTxG
      in case avState of
           Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
-          Just lstate
+          Just (LedgerStateWithLimits lstate _)
             | avMsg == "Deposit pot must equal obligation (LEDGER)" ->
                 let certstate = lsCertState lstate
                     utxoSt = lsUTxOState lstate
