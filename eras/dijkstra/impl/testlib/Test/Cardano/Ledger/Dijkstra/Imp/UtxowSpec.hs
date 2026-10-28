@@ -220,7 +220,7 @@ spec = describe "UTXOW" $ do
     let datum = Data @era $ P.I 30
         datumHash = hashData datum
 
-    disableInConformanceIt "Datum of a sub-transaction output" $ do
+    it "Datum of a sub-transaction output" $ do
       addr <- freshKeyAddr_
       submitTx_ $
         mkTopTxWithSubTxs
@@ -230,7 +230,7 @@ spec = describe "UTXOW" $ do
           ]
           & witsTxL . hashDataTxWitsL .~ [datum]
 
-    disableInConformanceIt "Datum of a sub-transaction reference input spent by another sub-transaction" $ do
+    it "Datum of a sub-transaction reference input spent by another sub-transaction" $ do
       txIn <- produceDatumHashOutput datumHash
       submitTx_ $
         mkTopTxWithSubTxs
