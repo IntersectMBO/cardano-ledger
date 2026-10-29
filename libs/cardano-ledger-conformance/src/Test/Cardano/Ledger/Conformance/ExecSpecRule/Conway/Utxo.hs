@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo () where
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.Rules (utxoEnvCertStateL)
 import Control.State.Transition.Extended (TRC (..))
 import Lens.Micro.Extras (view)
@@ -46,5 +47,6 @@ instance ExecSpecRule "UTXO" ConwayEra where
 
   runAgdaRule = runFromAgdaFunction (Agda.utxoStep externalFunctions)
 
-instance EncCBOR (Tx l era) => EncCBOR (AlonzoStAnnTx l era) where
-  encCBOR AlonzoStAnnTx {asatTx} = encCBOR asatTx
+-- | The transaction is serialized in its mempool format.
+instance EncCBOR (MempoolTx era) => EncCBOR (AlonzoStAnnTx l era) where
+  encCBOR AlonzoStAnnTx {asatTx} = encCBOR (UnsafeMkMempoolTx asatTx)

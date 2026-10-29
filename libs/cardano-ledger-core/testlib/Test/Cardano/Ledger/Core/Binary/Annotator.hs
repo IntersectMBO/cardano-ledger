@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Core.Binary.Annotator (
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Plutus
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Common
@@ -36,11 +37,13 @@ decoderEquivalenceEraSpec = decoderEquivalenceSpec @t (eraProtVerLow @era) (eraP
 decoderEquivalenceCoreEraTypesSpec ::
   forall era.
   ( EraTx era
-  , Arbitrary (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
+  , DecCBOR (Annotator (MempoolTx era))
   , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
+  , Arbitrary (MempoolTx era)
   , HasCallStack
   ) =>
   Spec
@@ -51,4 +54,4 @@ decoderEquivalenceCoreEraTypesSpec =
     decoderEquivalenceEraSpec @era @(TxAuxData era)
     decoderEquivalenceEraSpec @era @(TxWits era)
     decoderEquivalenceEraSpec @era @(TxBody TopTx era)
-    decoderEquivalenceEraSpec @era @(Tx TopTx era)
+    decoderEquivalenceEraSpec @era @(MempoolTx era)

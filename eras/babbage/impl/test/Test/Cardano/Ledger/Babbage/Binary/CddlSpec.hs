@@ -10,6 +10,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.HuddleSpec (babbageCDDL)
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
@@ -65,8 +66,8 @@ spec =
       huddleRoundTripCborSpec @CostModels v "cost_models"
       huddleRoundTripAnnCborSpec @(Redeemers BabbageEra) v "redeemers"
       huddleRoundTripCborSpec @(Redeemers BabbageEra) v "redeemers"
-      huddleRoundTripAnnCborSpec @(Tx TopTx BabbageEra) v "transaction"
-      huddleRoundTripCborSpec @(Tx TopTx BabbageEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(MempoolTx BabbageEra) v "transaction"
+      huddleRoundTripCborSpec @(MempoolTx BabbageEra) v "transaction"
       huddleRoundTripAnnCborSpec @(Praos.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Praos.Header StandardCrypto) v "header"
       huddleRoundTripCborSpec @(Praos.HeaderBody StandardCrypto) v "header_body"
@@ -79,5 +80,5 @@ spec =
         huddleDecoderEquivalenceSpec @(Script BabbageEra) v "script"
         huddleDecoderEquivalenceSpec @(TxWits BabbageEra) v "transaction_witness_set"
         huddleDecoderEquivalenceSpec @(Redeemers BabbageEra) v "redeemers"
-        huddleDecoderEquivalenceSpec @(Tx TopTx BabbageEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(MempoolTx BabbageEra) v "transaction"
         huddleDecoderEquivalenceSpec @(Praos.Header StandardCrypto) v "header"

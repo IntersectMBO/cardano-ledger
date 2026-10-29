@@ -2,6 +2,10 @@
 
 ## 0.5.0.0
 
+* Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Dijkstra.Core`
+* Replace `TranslateEra DijkstraEra (Tx TopTx)` with `TranslateEra DijkstraEra MempoolTx`
+* Add `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances for `MempoolTx DijkstraEra` using the mempool transaction format
+* Change the `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances for `Tx TopTx DijkstraEra` and `DijkstraTx TopTx era` to use the block transaction format
 * Remove `certsTx` from `SubCertsEnv`
 * Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `LEIOSCERT` rule, `LeiosCertEnv` and `DijkstraLeiosCertPredFailure`
@@ -50,6 +54,8 @@
 
 ### `testlib`
 
+* Add `Arbitrary` and `DecCBOR` instances for `MempoolTx DijkstraEra`
+* Change the `DecCBOR` instances for `Tx TopTx DijkstraEra` and `DijkstraTx TopTx DijkstraEra` to use the block transaction format
 * Add `setupLeiosCommittee` and `mkLeiosCert`
 * Add `InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era` superclass to `DijkstraEraImp`
 * Add `Arbitrary` and `ToExpr` instances for `DijkstraLeiosCertPredFailure`

@@ -53,6 +53,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
@@ -193,15 +194,18 @@ instance
             <*! From
             <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
 
-instance Typeable l => DecCBOR (Annotator (Tx l ShelleyEra)) where
-  decCBOR = fmap MkShelleyTx <$> decCBOR
+instance EncCBOR (MempoolTx ShelleyEra) where
+  encCBOR = encCBOR . unShelleyTx . unwrapMempoolTx
+
+instance DecCBOR (Annotator (MempoolTx ShelleyEra)) where
+  decCBOR = fmap (UnsafeMkMempoolTx . MkShelleyTx) <$> decCBOR
 
 instance HasEraTxLevel Tx ShelleyEra where
   toSTxLevel (MkShelleyTx ShelleyTx {}) = STopTxOnly @ShelleyEra
 
 instance EraTx ShelleyEra where
   newtype Tx l ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx l ShelleyEra}
-    deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
+    deriving newtype (Eq, NFData, NoThunks, Show)
     deriving (Generic)
 
   type StAnnTx l ShelleyEra = Tx l ShelleyEra

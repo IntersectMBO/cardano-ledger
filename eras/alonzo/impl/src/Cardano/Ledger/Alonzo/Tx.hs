@@ -128,6 +128,7 @@ import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Tx (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Plutus (Data, Language, PlutusWithContext, hashData, nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided (..))
@@ -218,7 +219,7 @@ instance HasEraTxLevel Tx AlonzoEra where
 
 instance EraTx AlonzoEra where
   newtype Tx l AlonzoEra = MkAlonzoTx {unAlonzoTx :: AlonzoTx l AlonzoEra}
-    deriving newtype (Eq, NFData, EncCBOR, ToCBOR, NoThunks, Show)
+    deriving newtype (Eq, NFData, NoThunks, Show)
     deriving (Generic)
 
   type StAnnTx l AlonzoEra = AlonzoStAnnTx l AlonzoEra
@@ -332,8 +333,11 @@ class
 
 {-# DEPRECATED isValidTxL "In favor of `isPhase2ValidTxL`" #-}
 
-instance Typeable l => DecCBOR (Annotator (Tx l AlonzoEra)) where
-  decCBOR = fmap MkAlonzoTx <$> decCBOR
+instance EncCBOR (MempoolTx AlonzoEra) where
+  encCBOR = encCBOR . unAlonzoTx . unwrapMempoolTx
+
+instance DecCBOR (Annotator (MempoolTx AlonzoEra)) where
+  decCBOR = fmap (UnsafeMkMempoolTx . MkAlonzoTx) <$> decCBOR
 
 instance AlonzoEraTx AlonzoEra where
   isPhase2ValidTxL = alonzoTxL . isPhase2ValidAlonzoTxL

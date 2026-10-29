@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Core.Binary.RoundTrip (
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.State
 import Data.Typeable
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -176,7 +177,7 @@ roundTripCoreEraTypesSpec ::
   forall era.
   ( EraTx era
   , EraCertState era
-  , Arbitrary (Tx TopTx era)
+  , Arbitrary (MempoolTx era)
   , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxCert era)
@@ -193,7 +194,9 @@ roundTripCoreEraTypesSpec ::
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody TopTx era)
-  , DecCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
+  , DecCBOR (MempoolTx era)
+  , DecCBOR (Annotator (MempoolTx era))
   , Typeable (CertState era)
   , HasCallStack
   ) =>
@@ -214,8 +217,8 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(TxWits era)
     roundTripAnnEraSpec @era @(TxBody TopTx era)
     roundTripEraSpec @era @(TxBody TopTx era)
-    roundTripAnnEraSpec @era @(Tx TopTx era)
-    roundTripEraSpec @era @(Tx TopTx era)
+    roundTripAnnEraSpec @era @(MempoolTx era)
+    roundTripEraSpec @era @(MempoolTx era)
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)

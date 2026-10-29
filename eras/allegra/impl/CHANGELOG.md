@@ -1,8 +1,15 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.10.2.1
+## 1.11.0.0
 
-*
+* Replace `TranslateEra AllegraEra (Tx TopTx)` with `TranslateEra AllegraEra MempoolTx`
+* Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l AllegraEra` to `MempoolTx AllegraEra`
+* Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Allegra.Core`
+
+### `testlib`
+
+* Add `Arbitrary` instance for `MempoolTx AllegraEra`
+* Replace the `DecCBOR` instance for `Tx TopTx AllegraEra` with one for `MempoolTx AllegraEra`
 
 ## 1.10.2.0
 

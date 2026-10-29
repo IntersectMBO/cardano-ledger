@@ -25,7 +25,7 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary (genSmallDijkstraTxsBlockBody)
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Dijkstra.Binary.Golden as GoldenBinary
-import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip ()
+import Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip (roundTripDijkstraTxSpec)
 import qualified Test.Cardano.Ledger.Dijkstra.GenesisSpec as GenesisSpec
 import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
@@ -45,6 +45,7 @@ main =
   ledgerEraTestMain @DijkstraEra $ do
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
+      roundTripDijkstraTxSpec
       roundTripEraSpec @DijkstraEra @EbReferences
       roundTripAnnEraSpec @DijkstraEra @EbReferences
       prop "Block (Leios.Header)" $

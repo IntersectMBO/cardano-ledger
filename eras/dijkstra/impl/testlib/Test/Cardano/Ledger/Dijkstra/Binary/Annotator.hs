@@ -38,6 +38,7 @@ import Cardano.Ledger.Dijkstra.Tx (
  )
 import Cardano.Ledger.Dijkstra.TxBody
 import Cardano.Ledger.MemoBytes (decodeMemoized, mkMemoizedEra)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Control.Monad (when)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
@@ -205,7 +206,7 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   decCBOR =
     withSTxBothLevels @l $ \case
-      STopTx -> decodeDijkstraTopTxInMempool
+      STopTx -> decodeDijkstraTopTxInBlock
       SSubTx -> decodeRecordNamed "DijkstraSubTx" (const 3) $ do
         body <- decCBOR
         wits <- decCBOR
@@ -214,6 +215,9 @@ instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
   {-# INLINE decCBOR #-}
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
+
+instance DecCBOR (MempoolTx DijkstraEra) where
+  decCBOR = UnsafeMkMempoolTx . MkDijkstraTx <$> decodeDijkstraTopTxInMempool
 
 decodeDijkstraTopTxInMempool :: Decoder s (DijkstraTx TopTx DijkstraEra)
 decodeDijkstraTopTxInMempool =

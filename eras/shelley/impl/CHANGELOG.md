@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l ShelleyEra` to `MempoolTx ShelleyEra`
+* Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Shelley.Core`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 * Add `LedgerStateWithLimits`, `lswlLedgerState`, `lswlBlockBodyLimits`, `lswlLedgerStateL`, `lswlBlockBodyLimitsL`
 * Add `ShelleyBlockBodyLimits` and `sbblTxsSize`
@@ -29,6 +31,8 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `MempoolTx ShelleyEra`
+* Replace the `DecCBOR` instance for `Tx TopTx ShelleyEra` with one for `MempoolTx ShelleyEra`
 * Export `runShelleyBase` from `Test.Cardano.Ledger.Shelley.ImpTest`
 * Add `Test.Cardano.Ledger.Shelley.Imp.TickSpec`
 * Add `withTxsInModifiedBlock`

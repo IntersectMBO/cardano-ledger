@@ -17,6 +17,7 @@ import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -71,8 +72,8 @@ instance TranslateEra AllegraEra NewEpochState where
         , nesLastTickSlotNo = nesLastTickSlotNo nes
         }
 
-instance TranslateEra AllegraEra (Tx TopTx) where
-  type TranslationError AllegraEra (Tx TopTx) = DecoderError
+instance TranslateEra AllegraEra MempoolTx where
+  type TranslationError AllegraEra MempoolTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 --------------------------------------------------------------------------------

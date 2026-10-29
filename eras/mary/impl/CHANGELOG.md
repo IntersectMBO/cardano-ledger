@@ -2,10 +2,14 @@
 
 ## 1.12.0.0
 
-*
+* Replace `TranslateEra MaryEra (Tx TopTx)` with `TranslateEra MaryEra MempoolTx`
+* Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l MaryEra` to `MempoolTx MaryEra`
+* Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Mary.Core`
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `MempoolTx MaryEra`
+* Replace the `DecCBOR` instance for `Tx TopTx MaryEra` with one for `MempoolTx MaryEra`
 * Move `mkTokenMintingTx` to `cardano-ledger-alonzo:testlib`
 
 ## 1.11.1.0

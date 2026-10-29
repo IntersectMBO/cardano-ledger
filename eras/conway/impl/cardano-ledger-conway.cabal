@@ -107,7 +107,7 @@ library
     bytestring,
     cardano-crypto-class,
     cardano-data >=1.4,
-    cardano-ledger-allegra ^>=1.10,
+    cardano-ledger-allegra ^>=1.11,
     cardano-ledger-alonzo ^>=1.18,
     cardano-ledger-babbage ^>=1.16,
     cardano-ledger-binary ^>=1.10,

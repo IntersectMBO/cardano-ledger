@@ -9,8 +9,10 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers () where
 
+import Cardano.Ledger.Binary (EncCBOR (encCBOR))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (EnactState)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Control.State.Transition.Extended (TRC (..))
 import qualified MAlonzo.Code.Ledger.Conway.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
@@ -30,6 +32,9 @@ import Test.Cardano.Ledger.Conway.ImpTest ()
 
 instance ExecSpecRule "LEDGERS" ConwayEra where
   type ExecContext "LEDGERS" ConwayEra = EnactState ConwayEra
+
+  -- Failure dumps use the mempool encoding for each transaction.
+  encodeSignal = encCBOR . fmap UnsafeMkMempoolTx
 
   translateInputs (TRC (env, st, sig)) = do
     agdaEnv <- toSpecRep env

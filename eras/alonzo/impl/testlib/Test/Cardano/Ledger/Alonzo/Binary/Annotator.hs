@@ -29,6 +29,7 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.BlockBody (auxDataSeqDecoder)
 import qualified Codec.Serialise as Cborg
@@ -380,7 +381,8 @@ instance Era era => DecCBOR (TxDatsRaw era) where
 
 deriving newtype instance Era era => DecCBOR (TxDats era)
 
-deriving newtype instance DecCBOR (Tx TopTx AlonzoEra)
+instance DecCBOR (MempoolTx AlonzoEra) where
+  decCBOR = UnsafeMkMempoolTx . MkAlonzoTx <$> decCBOR
 
 instance DecCBOR h => DecCBOR (Block h AlonzoEra) where
   decCBOR =
