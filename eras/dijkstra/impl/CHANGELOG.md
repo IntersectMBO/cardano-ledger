@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Remove `certsTx` from `SubCertsEnv`
 * Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `LEIOSCERT` rule, `LeiosCertEnv` and `DijkstraLeiosCertPredFailure`
 * Add `LeiosCertFailure` and `LeiosCertWithoutEbAnnouncement` constructors to `DijkstraBbodyPredFailure`

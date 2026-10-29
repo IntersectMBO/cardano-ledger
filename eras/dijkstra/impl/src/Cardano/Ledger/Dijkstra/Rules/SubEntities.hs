@@ -255,7 +255,7 @@ dijkstraSubEntitiesTransition = do
   let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       directDeposits = tx ^. bodyTxL . directDepositsTxBodyL
       accounts = certState ^. certDStateL . accountsL
-      subCertsEnv = SubCertsEnv tx pp curEpoch committee committeeProposals
+      subCertsEnv = SubCertsEnv pp curEpoch committee committeeProposals
 
   network <- liftSTS $ asks networkId
 
