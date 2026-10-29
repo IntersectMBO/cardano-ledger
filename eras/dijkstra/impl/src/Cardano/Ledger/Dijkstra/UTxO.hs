@@ -32,6 +32,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  txNonDistinctRefScriptsSize,
  )
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
@@ -39,7 +40,6 @@ import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
-  txNonDistinctRefScriptsSize,
  )
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Core

@@ -41,6 +41,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
+import Cardano.Ledger.Babbage.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network (..),
@@ -72,7 +73,6 @@ import Cardano.Ledger.Conway.Rules.Ledgers ()
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
-import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxoL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley

@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `txNonDistinctRefScriptsSize`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 
 ## 1.15.0.0

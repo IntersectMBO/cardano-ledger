@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+import Cardano.Ledger.Babbage.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -90,7 +91,6 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.Rules.ValidationMode (
   Test,
