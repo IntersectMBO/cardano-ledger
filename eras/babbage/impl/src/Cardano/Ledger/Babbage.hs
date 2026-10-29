@@ -48,7 +48,7 @@ import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.Tx (Tx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut, TxBody (BabbageTxBody))
 import Cardano.Ledger.Babbage.TxInfo ()
-import Cardano.Ledger.Babbage.UTxO ()
+import Cardano.Ledger.Babbage.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader, PraosBbodySignal (..), PraosEraBlockHeader)
 import Cardano.Ledger.Shelley.API
@@ -62,7 +62,8 @@ instance ApplyTx BabbageEra where
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
 
-  mkStAnnTx = mkAlonzoStAnnTx
+  mkStAnnTx ei sysStart pp utxo stAnnTxCache tx =
+    mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache (txNonDistinctRefScriptsSize utxo tx) tx
 
   internalApplyTxWithValidation = defaultApplyTxWithValidation @"LEDGER" BabbageApplyTxError
 
