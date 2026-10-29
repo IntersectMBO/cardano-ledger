@@ -133,7 +133,7 @@ dijkstraSubCertsTransition ::
   TransitionRule (EraRule "SUBCERTS" era)
 dijkstraSubCertsTransition = do
   TRC
-    ( env@(SubCertsEnv _tx pp currentEpoch committee committeeProposals)
+    ( env@(SubCertsEnv pp currentEpoch committee committeeProposals)
       , certState
       , certificates
       ) <-
@@ -156,10 +156,8 @@ instance
   wrapFailed = SubCertFailure
   wrapEvent = SubCertEvent
 
--- TODO: instead of duplicating this, parameterize on TxLevel
 data SubCertsEnv era = SubCertsEnv
-  { certsTx :: Tx SubTx era
-  , certsPParams :: PParams era
+  { certsPParams :: PParams era
   , certsCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , certsCurrentCommittee :: StrictMaybe (Committee era)
@@ -168,11 +166,10 @@ data SubCertsEnv era = SubCertsEnv
   deriving (Generic)
 
 instance EraTx era => EncCBOR (SubCertsEnv era) where
-  encCBOR x@(SubCertsEnv {}) =
+  encCBOR x@(SubCertsEnv _ _ _ _) =
     let SubCertsEnv {..} = x
      in encode $
           Rec SubCertsEnv
-            !> To certsTx
             !> To certsPParams
             !> To certsCurrentEpoch
             !> To certsCurrentCommittee
