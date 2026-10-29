@@ -37,10 +37,9 @@ import Cardano.Ledger.Address (accountAddressCredentialL)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..), refScriptsSizeStAnnTx)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.Babbage.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -298,6 +297,7 @@ instance
 
 instance
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
@@ -339,6 +339,7 @@ instance
 conwayLedgerTransitionTRC ::
   forall (someLEDGER :: Type -> Type) era.
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
@@ -377,7 +378,7 @@ conwayLedgerTransitionTRC
     ) = do
     let tx = stAnnTx ^. txStAnnTxG
     curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
-    let refScriptsSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
+    let refScriptsSize = refScriptsSizeStAnnTx stAnnTx
 
     (utxoState', certStateAfterCERTS) <-
       if tx ^. isPhase2ValidTxL == Phase2Valid
@@ -513,6 +514,7 @@ validateWithdrawalsDelegated accounts tx =
 conwayLedgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
@@ -590,6 +592,7 @@ instance
   , Embed (EraRule "GOV" era) (LEDGER era)
   , ConwayEraGov era
   , AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraPParams era
   , GovState era ~ ConwayGovState era

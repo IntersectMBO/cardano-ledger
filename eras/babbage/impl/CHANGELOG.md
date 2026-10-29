@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Replace `Tx TopTx era` argument with `StAnnTx TopTx era` in `feesOK`
 * Add `txNonDistinctRefScriptsSize`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 
