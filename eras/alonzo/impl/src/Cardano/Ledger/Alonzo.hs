@@ -82,7 +82,7 @@ instance ApplyTx AlonzoEra where
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
 
-  mkStAnnTx = mkAlonzoStAnnTx
+  mkStAnnTx ei sysStart pp utxo stAnnTxCache = mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache 0
 
   internalApplyTxWithValidation validationPolicy globals env state tx =
     let stAnnTx =
@@ -135,9 +135,11 @@ mkAlonzoStAnnTx ::
   PParams era ->
   UTxO era ->
   Map.Map ScriptHash (SupportedPlutusRunnable era) ->
+  -- | Size in bytes of reference scripts used by this transaction
+  Int ->
   Tx TopTx era ->
   AlonzoStAnnTx TopTx era
-mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
+mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache refScriptsSize tx =
   let
     protVer = pp ^. ppProtocolVersionL
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -158,6 +160,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache tx =
    in
     AlonzoStAnnTx
       { asatTx = tx
+      , asatRefScriptsSize = refScriptsSize
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
       , asatPlutusRunnableCache = newStAnnTxCache

@@ -60,7 +60,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
-import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..), refScriptsSizeAlonzoStAnnTx)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Credential (credScriptHash)
@@ -161,6 +161,14 @@ class EraUTxO era => AlonzoEraUTxO era where
 
   plutusLanguagesUsedStAnnTx :: StAnnTx l era -> Set.Set Language
 
+  -- | Total size in bytes of the reference scripts used by the whole transaction,
+  -- including sub-transactions where supported.
+  -- Zero in eras in which there are no reference scripts limits or pricing (i.e. for pre-Conway eras).
+  --
+  -- This value can only become stale if an input or reference input is no longer in the UTXO,
+  -- in which case the transaction is rejected for a missing input.
+  refScriptsSizeStAnnTx :: StAnnTx TopTx era -> Int
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
@@ -173,6 +181,8 @@ instance AlonzoEraUTxO AlonzoEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
+
+  refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era

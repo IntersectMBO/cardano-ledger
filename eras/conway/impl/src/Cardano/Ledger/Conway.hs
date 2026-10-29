@@ -40,7 +40,7 @@ import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (Tx (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
-import Cardano.Ledger.Conway.UTxO ()
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.List.NonEmpty (NonEmpty)
@@ -51,7 +51,8 @@ instance ApplyTx ConwayEra where
     deriving (Eq, Show)
     deriving newtype (EncCBOR, DecCBOR, Semigroup, Generic)
 
-  mkStAnnTx = mkAlonzoStAnnTx
+  mkStAnnTx ei sysStart pp utxo stAnnTxCache tx =
+    mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache (txNonDistinctRefScriptsSize utxo tx) tx
 
   internalApplyTxWithValidation = defaultApplyTxWithValidation @"MEMPOOL" ConwayApplyTxError
 

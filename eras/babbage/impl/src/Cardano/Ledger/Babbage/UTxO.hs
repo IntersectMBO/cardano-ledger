@@ -11,6 +11,7 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScriptsNonDistinct,
 ) where
 
+import Cardano.Ledger.Alonzo.Tx (refScriptsSizeAlonzoStAnnTx)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
@@ -70,6 +71,8 @@ instance AlonzoEraUTxO BabbageEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
+
+  refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
 
 getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>
