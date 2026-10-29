@@ -330,17 +330,7 @@ instance ApplyTx ShelleyEra where
 
   mkStAnnTx _ _ _ _ _ = id
 
-  internalApplyTxWithValidation validationPolicy globals env state tx =
-    let stAnnTx =
-          mkStAnnTx
-            (epochInfo globals)
-            (systemStart globals)
-            (env ^. ledgerPpL)
-            (state ^. utxoG)
-            mempty
-            tx
-     in first ShelleyApplyTxError $
-          ruleApplyTxValidation @"LEDGER" validationPolicy globals env state stAnnTx
+  internalApplyTxWithValidation = defaultApplyTxWithValidation @"LEDGER" ShelleyApplyTxError
 
   internalReapplyValidatedTx = defaultReapplyValidatedTx @"LEDGER" ShelleyApplyTxError
 
