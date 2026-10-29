@@ -2,6 +2,8 @@
 
 ## 1.23.0.0
 
+* Add `Cardano.Ledger.MempoolTx` with the abstract `MempoolTx` wrapper and `unwrapMempoolTx`
+* Add `Cardano.Ledger.MempoolTx.Internal` with the `UnsafeMkMempoolTx` constructor
 * Add `BlockBodyLimits` type to `EraBlockBody` typeclass
 * Re-export `Cardano.Ledger.Plutus.ToPlutusData` module from `Cardano.Ledger.Plutus`
 * Add `sppIdL`, `sppAccountAddressL`, `sppBlsKeyL`, `sppPledgeL`, `sppMarginL`, `sppOwnersL` and `sppRelaysL` to `Cardano.Ledger.State.StakePool`
@@ -34,6 +36,10 @@
 
 ### `testlib`
 
+* Replace the `DecCBOR (Tx TopTx era)` constraint on `roundTripCoreEraTypesSpec` with `EncCBOR (MempoolTx era)`, `DecCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`
+* Add `EncCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))` constraints to `decoderEquivalenceCoreEraTypesSpec`
+* Replace the `DecCBOR (Tx TopTx era)` superclass of `EraTest` with `EncCBOR (MempoolTx era)`, `DecCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`
+* Add `Arbitrary` and `ToExpr` instances for `MempoolTx era`
 * Add `Eq` and `Show` instances for `TestBlockHeader`
 * Add `sameAsToBuiltinDataSpec`
 * Add `tbhBlockBodyContainsLeiosCert` to `TestBlockHeader`

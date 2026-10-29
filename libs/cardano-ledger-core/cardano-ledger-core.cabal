@@ -71,6 +71,8 @@ library
     Cardano.Ledger.Keys.WitVKey
     Cardano.Ledger.MemoBytes
     Cardano.Ledger.MemoBytes.Internal
+    Cardano.Ledger.MempoolTx
+    Cardano.Ledger.MempoolTx.Internal
     Cardano.Ledger.Metadata
     Cardano.Ledger.Orphans
     Cardano.Ledger.Plutus
