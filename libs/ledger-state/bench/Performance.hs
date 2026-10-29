@@ -14,7 +14,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
-import Cardano.Ledger.MempoolTx (unwrapMempoolTx)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
@@ -89,6 +89,7 @@ main = do
         -- TODO: revert this to `either (error . show) seqTuple` after tx's are fixed
         bimap restrictError seqTuple
           . applyTxWithFullValidation globals mempoolEnv mempoolState
+          . UnsafeMkMempoolTx
       reapplyTx' mempoolEnv mempoolState =
         either (error . show) id
           . internalReapplyValidatedTx globals mempoolEnv mempoolState

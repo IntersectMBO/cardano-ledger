@@ -23,8 +23,11 @@ module Cardano.Ledger.Shelley.API.Mempool (
   reapplyTx,
   ApplyTx (..),
   ApplyTxError (..),
+  MempoolTx,
+  unwrapMempoolTx,
   Validated,
   ValidatedTx,
+  getValidatedMempoolTx,
   getValidatedTxStAnnTx,
   getValidatedTxProtocolVersion,
   getValidatedTxSlotNo,
@@ -51,6 +54,7 @@ module Cardano.Ledger.Shelley.API.Mempool (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState
@@ -95,6 +99,10 @@ deriving instance Show (StAnnTx TopTx era) => Show (ValidatedTx era)
 instance NFData (StAnnTx TopTx era) => NFData (ValidatedTx era)
 
 instance NoThunks (StAnnTx TopTx era) => NoThunks (ValidatedTx era)
+
+-- | Recover the mempool representation of a transaction validated by the ledger.
+getValidatedMempoolTx :: EraTx era => ValidatedTx era -> MempoolTx era
+getValidatedMempoolTx = UnsafeMkMempoolTx . extractValidatedTx
 
 getValidatedTxStAnnTx :: ValidatedTx era -> StAnnTx TopTx era
 getValidatedTxStAnnTx = vtStAnnTx
@@ -399,9 +407,10 @@ applyTxWithFullValidation ::
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
-  Tx TopTx era ->
+  MempoolTx era ->
   Either (ApplyTxError era) (MempoolState era, ValidatedTx era)
-applyTxWithFullValidation = internalApplyTxWithValidation ValidateAll
+applyTxWithFullValidation globals env state (UnsafeMkMempoolTx tx) =
+  internalApplyTxWithValidation ValidateAll globals env state tx
 
 -- | Reapply a previously validated transaction, skipping static checks.
 -- Use the state-derived annotations in `StAnnTx` if the current protocol version

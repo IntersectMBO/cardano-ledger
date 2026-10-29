@@ -2,6 +2,8 @@
 
 ## 1.21.0.0
 
+* Change `applyTxWithFullValidation` to accept `MempoolTx era`
+* Export `MempoolTx`, `unwrapMempoolTx` and `getValidatedMempoolTx` from `Cardano.Ledger.Shelley.API.Mempool`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l ShelleyEra` to `MempoolTx ShelleyEra`
 * Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Shelley.Core`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`

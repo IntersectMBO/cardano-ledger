@@ -106,7 +106,7 @@ benchApplyTx px =
               either
                 (error . show)
                 fst
-                (applyTxWithFullValidation ateGlobals ateMempoolEnv st ateTx)
+                (applyTxWithFullValidation ateGlobals ateMempoolEnv st (UnsafeMkMempoolTx ateTx))
           )
           ateState
 
