@@ -137,11 +137,16 @@ instance ShelleyEraImp DijkstraEra where
   modifyPParams = conwayModifyPParams
 
   fixupTx = dijkstraFixupTx
-  impWitsPState txBody = do
+  impWitsPState tx = do
     pState <- getPState
-    case toSTxLevel txBody of
-      STopTx -> foldM applyPoolRegistrations pState (txBody ^. subTransactionsTxBodyL)
-      SSubTx -> pure pState
+    withBothTxLevels
+      tx
+      ( \topTx ->
+          if topTx ^. isPhase2ValidTxL == Phase2Valid
+            then foldM applyPoolRegistrations pState (topTx ^. bodyTxL . subTransactionsTxBodyL)
+            else pure pState
+      )
+      (const (pure pState))
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert
@@ -542,7 +547,11 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
   where
     fixupSubTransaction pState subTx = do
       fixedUp <- fixupSubTransactionSteps pState subTx
-      pStateAfter <- applyPoolRegistrations pState fixedUp
+      -- Certificates of a phase-2 invalid transaction are not applied
+      pStateAfter <-
+        if tx ^. isPhase2ValidTxL == Phase2Valid
+          then applyPoolRegistrations pState fixedUp
+          else pure pState
       pure (pStateAfter, fixedUp)
     fixupSubTransactionSteps pState =
       addSubTxIn

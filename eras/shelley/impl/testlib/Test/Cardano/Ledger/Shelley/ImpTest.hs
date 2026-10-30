@@ -662,7 +662,7 @@ class
 
   topTxFromAnyLevel :: (forall l. Typeable l => Tx l era) -> ImpTestM era (Tx TopTx era)
 
-  impWitsPState :: TxBody l era -> ImpTestM era (PState era)
+  impWitsPState :: Tx l era -> ImpTestM era (PState era)
   impWitsPState _ = getPState
 
 data AnyLevelTx era = AnyLevelTx (forall l. Typeable l => Tx l era)
@@ -1204,7 +1204,7 @@ updateAddrTxWits ::
   Tx l era ->
   ImpTestM era (Tx l era)
 updateAddrTxWits tx = do
-  pState <- impWitsPState (tx ^. bodyTxL)
+  pState <- impWitsPState tx
   updateAddrTxWitsWith pState tx
 
 updateAddrTxWitsWith ::
@@ -1309,7 +1309,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  witsPState <- impWitsPState (tx ^. bodyTxL)
+  witsPState <- impWitsPState tx
   addr <-
     if eraProtVerLow @era < natVersion @12
       then freshKeyAddr_
