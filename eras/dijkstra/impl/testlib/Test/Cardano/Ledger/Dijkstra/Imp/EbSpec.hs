@@ -13,6 +13,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (EbPredFailure (..))
+import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Control.Monad.State.Strict (MonadState (..))
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -29,12 +30,13 @@ spec = describe "EB" $ do
     let
       genSimpleTx :: ImpTestM era (AnyLevelTx era)
       genSimpleTx = do
+        pp <- getsPParams id
         addr <- freshKeyAddr_
         amnt <- inject . Coin <$> choose (100, 1000000000)
         pure $
           AnyLevelTx $
             mkBasicTx @era mkBasicTxBody
-              & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr amnt]
+              & bodyTxL . outputsTxBodyL .~ [ensureMinCoinTxOut pp $ mkBasicTxOut addr amnt]
 
       genRBandEB = simulateThenRestore $ do
         nBlockTxs <- choose (0, 10)
