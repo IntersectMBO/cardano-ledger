@@ -377,7 +377,7 @@ utxoInductive = do
   runTest $ validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
-  runTest $ validateFeeTooSmallUTxO pp tx utxo
+  runTest $ validateFeeTooSmallUTxO pp tx 0
 
   {- txins txb ⊆ dom utxo -}
   runTest $ validateBadInputsUTxO utxo $ txBody ^. inputsTxBodyL
@@ -445,12 +445,13 @@ validateInputSetEmptyUTxO txb =
 --
 -- > minfee pp tx ≤ txfee txb
 validateFeeTooSmallUTxO ::
-  EraUTxO era =>
+  EraTx era =>
   PParams era ->
   Tx TopTx era ->
-  UTxO era ->
+  -- | Size in bytes of reference scripts used by this transaction
+  Int ->
   Test (ShelleyUtxoPredFailure era)
-validateFeeTooSmallUTxO pp tx utxo =
+validateFeeTooSmallUTxO pp tx refScriptsSize =
   failureUnless (minFee <= txFee) $
     FeeTooSmallUTxO
       Mismatch
@@ -458,7 +459,7 @@ validateFeeTooSmallUTxO pp tx utxo =
         , mismatchExpected = minFee
         }
   where
-    minFee = getMinFeeTxUtxo pp tx utxo
+    minFee = getMinFeeTx pp tx refScriptsSize
     txFee = txb ^. feeTxBodyL
     txb = tx ^. bodyTxL
 
