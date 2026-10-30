@@ -210,6 +210,8 @@ instance AlonzoEraUTxO DijkstraEra where
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedDijkstraStAnnTx
 
+  refScriptsSizeStAnnTx = refScriptsSizeDijkstraStAnnTx
+
 getDijkstraSupplementalDataHashes ::
   ( EraTx era
   , DijkstraEraTxBody era
@@ -316,6 +318,18 @@ getDijkstraMinFeeTxUtxo pparams tx utxo =
       tx
       (batchNonDistinctRefScriptsSize utxo)
       (txNonDistinctRefScriptsSize utxo)
+
+-- | Total reference script size for a transaction.
+--
+-- | For a top-level transaction this is the total across the whole batch.
+refScriptsSizeDijkstraStAnnTx :: DijkstraStAnnTx l DijkstraEra -> Int
+refScriptsSizeDijkstraStAnnTx stAnnTx =
+  withBothTxLevels
+    stAnnTx
+    ( \DijkstraStAnnTopTx {dsattRefScriptsSize, dsattSubTransactions} ->
+        dsattRefScriptsSize + getSum (foldMap' (Sum . refScriptsSizeDijkstraStAnnTx) dsattSubTransactions)
+    )
+    (\DijkstraStAnnSubTx {dsastRefScriptsSize} -> dsastRefScriptsSize)
 
 -- | Total size of reference scripts across a top-level transaction and all its subtransactions.
 batchNonDistinctRefScriptsSize ::

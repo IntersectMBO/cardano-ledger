@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
  )
+import Cardano.Ledger.Babbage.UTxO
 import Cardano.Ledger.BaseTypes (Inject (inject), TxIx (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader, LeiosBbodySignal (..), LeiosEraBlockHeader)
@@ -158,6 +159,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
+      , dsattRefScriptsSize = txNonDistinctRefScriptsSize utxo tx
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
       , dsattPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed
@@ -171,6 +173,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
 mkDijkstraStAnnSubTx ::
   ( AlonzoEraUTxO era
   , AlonzoEraTx era
+  , BabbageEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
@@ -204,6 +207,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache txIx
    in
     DijkstraStAnnSubTx
       { dsastTx = tx
+      , dsastRefScriptsSize = txNonDistinctRefScriptsSize utxo tx
       , dsastScriptsNeeded = scriptsNeeded
       , dsastScriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
       , dsastScriptsProvided = scriptsProvided

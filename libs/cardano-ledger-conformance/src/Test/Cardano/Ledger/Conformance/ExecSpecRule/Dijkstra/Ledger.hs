@@ -128,16 +128,17 @@ instance
   ) =>
   NFData (DijkstraStAnnTx TopTx era)
   where
-  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _) =
+  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in dsattTx `deepseq`
-          dsattScriptsNeeded `deepseq`
-            dsattScriptsProvided `deepseq`
-              dsattPlutusLegacyMode `deepseq`
-                dsattPlutusLanguagesUsed `deepseq`
-                  dsattPlutusRunnableCache `deepseq`
-                    dsattPlutusScriptsWithContext `deepseq`
-                      rnf dsattSubTransactions
+          dsattRefScriptsSize `deepseq`
+            dsattScriptsNeeded `deepseq`
+              dsattScriptsProvided `deepseq`
+                dsattPlutusLegacyMode `deepseq`
+                  dsattPlutusLanguagesUsed `deepseq`
+                    dsattPlutusRunnableCache `deepseq`
+                      dsattPlutusScriptsWithContext `deepseq`
+                        rnf dsattSubTransactions
 
 instance
   ( AlonzoEraTx era
@@ -148,16 +149,17 @@ instance
   ) =>
   NFData (DijkstraStAnnTx SubTx era)
   where
-  rnf stAnnTx@(DijkstraStAnnSubTx _ _ _ _ _ _ _ _) =
+  rnf stAnnTx@(DijkstraStAnnSubTx _ _ _ _ _ _ _ _ _) =
     let DijkstraStAnnSubTx {..} = stAnnTx
      in dsastTx `deepseq`
-          dsastScriptsNeeded `deepseq`
-            dsastScriptsHashesNeeded `deepseq`
-              dsastScriptsProvided `deepseq`
-                dsastTxInfoResult `seq`
-                  dsastPlutusLanguagesUsed `deepseq`
-                    dsastPlutusRunnableCache `deepseq`
-                      rnf dsastPlutusScriptsWithContext
+          dsastRefScriptsSize `deepseq`
+            dsastScriptsNeeded `deepseq`
+              dsastScriptsHashesNeeded `deepseq`
+                dsastScriptsProvided `deepseq`
+                  dsastTxInfoResult `seq`
+                    dsastPlutusLanguagesUsed `deepseq`
+                      dsastPlutusRunnableCache `deepseq`
+                        rnf dsastPlutusScriptsWithContext
 
 instance EncCBOR (Tx TopTx era) => EncCBOR (DijkstraStAnnTx TopTx era) where
   encCBOR DijkstraStAnnTopTx {dsattTx} = encCBOR dsattTx
@@ -173,11 +175,12 @@ instance
   ) =>
   ToExpr (DijkstraStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _) =
+  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in TD.Rec "DijkstraStAnnTopTx" $
           OMap.fromList
             [ ("dsattTx", toExpr dsattTx)
+            , ("dsattRefScriptsSize", toExpr dsattRefScriptsSize)
             , ("dsattScriptsNeeded", toExpr dsattScriptsNeeded)
             , ("dsattScriptsProvided", toExpr dsattScriptsProvided)
             , ("dsattPlutusLegacyMode", toExpr dsattPlutusLegacyMode)
@@ -199,11 +202,12 @@ instance
   ) =>
   ToExpr (DijkstraStAnnTx SubTx era)
   where
-  toExpr stAnnTx@(DijkstraStAnnSubTx _ _ _ _ _ _ _ _) =
+  toExpr stAnnTx@(DijkstraStAnnSubTx _ _ _ _ _ _ _ _ _) =
     let DijkstraStAnnSubTx {..} = stAnnTx
      in TD.Rec "DijkstraStAnnSubTx" $
           OMap.fromList
             [ ("dsastTx", toExpr dsastTx)
+            , ("dsastRefScriptsSize", toExpr dsastRefScriptsSize)
             , ("dsastScriptsNeeded", toExpr dsastScriptsNeeded)
             , ("dsastScriptsHashesNeeded", toExpr dsastScriptsHashesNeeded)
             , ("dsastScriptsProvided", toExpr dsastScriptsProvided)

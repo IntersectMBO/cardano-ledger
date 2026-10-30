@@ -578,6 +578,7 @@ toCBORForBlockInclusion = encodePreEncoded . originalBytes
 data DijkstraStAnnTx l era where
   DijkstraStAnnTopTx ::
     { dsattTx :: !(Tx TopTx era)
+    , dsattRefScriptsSize :: Int
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
     , dsattPlutusLegacyMode :: Bool
@@ -589,6 +590,7 @@ data DijkstraStAnnTx l era where
     DijkstraStAnnTx TopTx era
   DijkstraStAnnSubTx ::
     { dsastTx :: !(Tx SubTx era)
+    , dsastRefScriptsSize :: Int
     , dsastScriptsNeeded :: ScriptsNeeded era
     , dsastScriptsHashesNeeded :: Set ScriptHash
     , dsastScriptsProvided :: ScriptsProvided era

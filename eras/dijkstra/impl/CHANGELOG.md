@@ -2,6 +2,7 @@
 
 ## 0.5.0.0
 
+* Add `dsattRefScriptsSize` to `DijkstraStAnnTopTx` and `dsastRefScriptsSize` to `DijkstraStAnnSubTx`
 * Remove `certsTx` from `SubCertsEnv`
 * Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `LEIOSCERT` rule, `LeiosCertEnv` and `DijkstraLeiosCertPredFailure`
