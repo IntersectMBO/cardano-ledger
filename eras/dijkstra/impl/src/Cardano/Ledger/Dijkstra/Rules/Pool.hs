@@ -86,9 +86,6 @@ data DijkstraPoolPredFailure era
       (KeyHash StakePool)
       -- | BLS key attempted to use, whose public key has already been registered
       BlsKey
-  | StakePoolUpdateConflictsWithPendingUpdate
-      -- | Stake Pool ID
-      (KeyHash StakePool)
   deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Era era => EncCBOR (DijkstraPoolPredFailure era) where
@@ -110,8 +107,6 @@ instance Era era => EncCBOR (DijkstraPoolPredFailure era) where
       encodeListLen 3 <> encCBOR (7 :: Word8) <> encCBOR a <> encCBOR b
     BlsKeyAlreadyRegistered a b ->
       encodeListLen 3 <> encCBOR (8 :: Word8) <> encCBOR a <> encCBOR b
-    StakePoolUpdateConflictsWithPendingUpdate kh ->
-      encodeListLen 2 <> encCBOR (9 :: Word8) <> encCBOR kh
 
 instance Era era => DecCBOR (DijkstraPoolPredFailure era) where
   decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
@@ -143,9 +138,6 @@ instance Era era => DecCBOR (DijkstraPoolPredFailure era) where
         poolID <- decCBOR
         blsKey <- decCBOR
         pure (3, BlsKeyAlreadyRegistered poolID blsKey)
-      9 -> do
-        kh <- decCBOR
-        pure (2, StakePoolUpdateConflictsWithPendingUpdate kh)
       k -> invalidKey k
 
 type instance EraRuleFailure "POOL" DijkstraEra = DijkstraPoolPredFailure DijkstraEra
@@ -325,21 +317,6 @@ poolTransition = do
                 _ -> id
           checkFailOnJust (blsKeyUsedByAnotherPool [activeBlsKeyHash, newFutureBlsKeyHash]) $
             BlsKeyAlreadyRegistered sppId
-          let activeParams =
-                stakePoolStateToStakePoolParams (aaNetworkId sppAccountAddress) sppId stakePoolState
-              withoutBlsKey params = params {sppBlsKey = SNothing}
-              -- if there is a pending update that changes something else than the BLS key,
-              -- and another one comes in that changes only the BLS key (while being on top
-              -- of the active parameters and not the pending ones), is rejected as it would
-              -- discard the pending update
-              rejectDueToPendingUpdate = case mbFutureParams of
-                Just pendingParams ->
-                  withoutBlsKey pendingParams /= withoutBlsKey activeParams
-                    && withoutBlsKey stakePoolParams == withoutBlsKey activeParams
-                    && newBlsKey /= sppBlsKey activeParams
-                Nothing -> False
-          not rejectDueToPendingUpdate
-            ?! injectFailure (StakePoolUpdateConflictsWithPendingUpdate sppId)
           tellEvent $ injectEvent $ Shelley.ReregisterPool sppId
           -- This `sppId` is already registered, so we want to reregister it.
           -- That means adding it to the futureStakePoolParams or overriding it  with the new 'poolParams'.
