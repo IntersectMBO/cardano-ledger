@@ -2,6 +2,8 @@
 
 ## 0.6.0.0
 
+* Add `refScriptsSizeDijkstraStAnnTx`
+* Add `dsattRefScriptsSize` to `DijkstraStAnnTopTx`
 * Change `Environment` of `BBODY` rule from `Shelley.BbodyEnv` to the Dijkstra-specific `BbodyEnv`
 * Add `BbodyEnv`
 * Add `mkDijkstraBlockEnv`
