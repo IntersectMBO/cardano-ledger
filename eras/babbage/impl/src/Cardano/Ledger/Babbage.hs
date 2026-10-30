@@ -71,4 +71,6 @@ instance ApplyTx BabbageEra where
 instance ApplyTick BabbageEra
 
 instance (EraBlockHeader h BabbageEra, PraosEraBlockHeader h BabbageEra) => ApplyBlock h BabbageEra where
+  type BlockEnv BabbageEra = Shelley.BbodyEnv BabbageEra
+  mkBlockEnv = mkShelleyBlockEnv
   wrapBlockSignal = PraosBbodySignal

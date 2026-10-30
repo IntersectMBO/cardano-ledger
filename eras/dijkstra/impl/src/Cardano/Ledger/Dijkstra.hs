@@ -64,6 +64,7 @@ import Cardano.Ledger.Dijkstra.Rules (
   DijkstraLedgerPredFailure,
   DijkstraMempoolPredFailure (LedgerFailure),
  )
+import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import Cardano.Ledger.Dijkstra.Scripts ()
 import Cardano.Ledger.Dijkstra.State.CertState ()
 import Cardano.Ledger.Dijkstra.State.Stake ()
@@ -82,7 +83,8 @@ import Cardano.Ledger.Shelley.API (
   defaultApplyTxWithValidation,
   defaultReapplyValidatedTx,
  )
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided, UTxO)
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Foldable (toList)
@@ -107,6 +109,8 @@ instance ApplyTx DijkstraEra where
 instance ApplyTick DijkstraEra
 
 instance (EraBlockHeader h DijkstraEra, LeiosEraBlockHeader h DijkstraEra) => ApplyBlock h DijkstraEra where
+  type BlockEnv DijkstraEra = Dijkstra.BbodyEnv DijkstraEra
+  mkBlockEnv = mkDijkstraBlockEnv
   wrapBlockSignal = LeiosBbodySignal
 
 instance
@@ -120,6 +124,17 @@ instance Inject (NonEmpty (DijkstraMempoolPredFailure DijkstraEra)) (ApplyTxErro
 
 instance Inject (NonEmpty (DijkstraLedgerPredFailure DijkstraEra)) (ApplyTxError DijkstraEra) where
   inject = DijkstraApplyTxError . fmap LedgerFailure
+
+mkDijkstraBlockEnv ::
+  EraGov era =>
+  NewEpochState era ->
+  Dijkstra.BbodyEnv era
+mkDijkstraBlockEnv NewEpochState {nesEs} =
+  Dijkstra.BbodyEnv
+    { Dijkstra.bbePParams = nesEs ^. curPParamsEpochStateL
+    , Dijkstra.bbeChainAccountState = esChainAccountState nesEs
+    , Dijkstra.bbeLeiosCommittee = nesEs ^. esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
+    }
 
 mkDijkstraStAnnTopTx ::
   ( AlonzoEraUTxO era

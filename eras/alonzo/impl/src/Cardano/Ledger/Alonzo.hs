@@ -120,6 +120,8 @@ instance ApplyTx AlonzoEra where
 instance ApplyTick AlonzoEra
 
 instance (EraBlockHeader h AlonzoEra, TPraosEraBlockHeader h AlonzoEra) => ApplyBlock h AlonzoEra where
+  type BlockEnv AlonzoEra = Shelley.BbodyEnv AlonzoEra
+  mkBlockEnv = mkShelleyBlockEnv
   wrapBlockSignal = TPraosBbodySignal
 
 mkAlonzoStAnnTx ::

@@ -2,6 +2,9 @@
 
 ## 1.21.0.0
 
+* Deprecated `mkBbodyEnv` in favor of `mkBlockEnv`
+* Add `mkShelleyBlockEnv`
+* Add `BlockEnv` and `mkBlockEnv` type family to `ApplyBlock`
 * Add `getShelleyWitsVKeyNeededNoGovWith`
 * Change `applyTxWithFullValidation` to accept `MempoolTx era`
 * Export `MempoolTx`, `unwrapMempoolTx` and `getValidatedMempoolTx` from `Cardano.Ledger.Shelley.API.Mempool`
@@ -10,7 +13,6 @@
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 * Add `LedgerStateWithLimits`, `lswlLedgerState`, `lswlBlockBodyLimits`, `lswlLedgerStateL`, `lswlBlockBodyLimitsL`
 * Add `ShelleyBlockBodyLimits` and `sbblTxsSize`
-* Add `bbodyLeiosCommittee` field to `BbodyEnv`
 * Add `fvMinPoolCost` and `fvMinPoolMargin` fields to `Cardano.Ledger.Shelley.RewardUpdate.FreeVars`
 * Remove deprecated `leaderRew`, `memberRew` and `nonMyopicMemberRew` functions
 * Add `lsLastEbAnnouncement` field to `LedgerState` and `lsLastEbAnnouncementL`:
