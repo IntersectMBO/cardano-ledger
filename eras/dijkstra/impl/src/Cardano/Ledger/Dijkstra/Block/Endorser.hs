@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -23,7 +24,7 @@ module Cardano.Ledger.Dijkstra.Block.Endorser (
 ) where
 
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR, Version)
-import Cardano.Ledger.Core (EraTx, TopTx, Tx)
+import Cardano.Ledger.Core (Era, EraTx, TopTx, Tx, eraProtVerLow)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Hashes (
@@ -121,10 +122,16 @@ deriving anyclass instance
 class EraTx era => EraEndorserBlock era where
   type EndorserBlock era = (r :: Type) | r -> era
 
+  mkBasicEndorserBlock :: EndorserBlock era
   referencesEndorserBlockL :: Lens' (EndorserBlock era) EbReferences
   transactionsEndorserBlockL :: Lens' (EndorserBlock era) (EbTransactions era)
 
+mkBasicEndorserBlockDijkstra :: forall era. Era era => DijkstraEndorserBlock era
+mkBasicEndorserBlockDijkstra =
+  DijkstraEndorserBlock (mkEbReferences (eraProtVerLow @era) mempty) $ EbTransactions mempty
+
 instance EraEndorserBlock DijkstraEra where
   type EndorserBlock DijkstraEra = DijkstraEndorserBlock DijkstraEra
+  mkBasicEndorserBlock = mkBasicEndorserBlockDijkstra
   referencesEndorserBlockL = lens debReferences $ \b r -> b {debReferences = r}
   transactionsEndorserBlockL = lens debTransactions $ \b t -> b {debTransactions = t}

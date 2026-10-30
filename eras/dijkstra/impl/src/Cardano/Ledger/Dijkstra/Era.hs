@@ -13,6 +13,8 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   BBODY,
   CERT,
+  EB,
+  EBLEDGERS,
   ENTITIES,
   EPOCH,
   GOV,
@@ -291,6 +293,14 @@ type instance EraRule "HARDFORK" DijkstraEra = Conway.HARDFORK DijkstraEra
 data LEIOSCERT era
 
 type instance EraRule "LEIOSCERT" DijkstraEra = LEIOSCERT DijkstraEra
+
+data EB era
+
+type instance EraRule "EB" DijkstraEra = EB DijkstraEra
+
+data EBLEDGERS era
+
+type instance EraRule "EBLEDGERS" DijkstraEra = EBLEDGERS DijkstraEra
 
 data SNAP era
 

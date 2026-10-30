@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -15,6 +16,7 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbSpec as EB
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec as LEIOSCERT
@@ -39,6 +41,7 @@ spec ::
   , Event (EraRule "NEWEPOCH" era) ~ Conway.ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ Conway.ConwayHardForkEvent era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
   ) =>
   proxy era ->
   Spec
@@ -63,6 +66,7 @@ spec era = do
     SUBDELEG.spec
     SUBPOOL.spec
     SUBGOVCERT.spec
+    EB.spec
 
 dijkstraOnlySpec :: Spec
 dijkstraOnlySpec =

@@ -11,6 +11,8 @@
 * Replace the generic `Embed ledgers (BBODY era)` instance with `Embed (Babbage.LEDGERS era) (BBODY era)`, and add `Embed (LEIOSCERT era) (BBODY era)`
 * Add `InjectRuleFailure` instances that inject `DijkstraSubPoolPredFailure` into the `SUBCERTS`, `SUBENTITIES`, `SUBLEDGER`, `SUBLEDGERS` and `LEDGER` rules
 * Add `SafeToHash` instance for `DijkstraBlockBody`
+* Add the `EB` and `EBLEDGERS` rules
+* Add `mkBasicEndorserBlock` to `EraEndorserBlock`
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
 * Add `DecCBOR (Annotator EbReferences)` and `ToCBOR EbReferences`, so that `EbReferences` can be decoded without the full input at hand, eg from the network
@@ -58,6 +60,10 @@
 * Add `InjectRuleFailure` instances that inject `DijkstraSubGovCertPredFailure` into the `SUBCERTS`, `SUBENTITIES`, `SUBLEDGER`, `SUBLEDGERS` and `LEDGER` rules
 * Add `registerDRepSubTx`
 * Re-export `goldenMapRedeemers` from `Test.Cardano.Ledger.Conway.Binary.Golden`
+* Add `applyEndorserBlock`, `applyFailingEndorserBlock`, `makeEndorserBlock` and `mkEbReferencesAnnouncement`
+* Add missing superclasses to `DijkstraEraImp`
+* Add `ToExpr` instances for `EbPredFailure` and `EbLedgersPredFailure`
+* Add `Test.Cardano.Ledger.Dijkstra.Imp.EbSpec`
 * Add `ToExpr` instances for `DijkstraTopTx DijkstraEra` and `DijkstraTopTxRaw DijkstraEra`
 * Add the `SafeToHash (Tx TopTx era)` constraint to `genSmallDijkstraTxsBlockBody`, and replace the `AlonzoEraTx era` constraint with it on `genSmallDijkstraCertBlockBody`
 * Replace the `EraBlockBody era`, `AlonzoEraTx era` and `SafeToHash (TxWits era)` constraints on `Arbitrary (DijkstraBlockBody era)` with `SafeToHash (Tx TopTx era)`

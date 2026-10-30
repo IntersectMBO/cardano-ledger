@@ -34,6 +34,7 @@
 
 ### `testlib`
 
+* Add `Eq` and `Show` instances for `TestBlockHeader`
 * Add `sameAsToBuiltinDataSpec`
 * Add `tbhBlockBodyContainsLeiosCert` to `TestBlockHeader`
 * Add `tbhHash` field to `TestBlockHeader`

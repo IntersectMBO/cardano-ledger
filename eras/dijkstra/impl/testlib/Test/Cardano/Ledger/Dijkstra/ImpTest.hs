@@ -36,6 +36,10 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   registerDRepSubTx,
   setupLeiosCommittee,
   mkLeiosCert,
+  applyEndorserBlock,
+  applyFailingEndorserBlock,
+  makeEndorserBlock,
+  mkEbReferencesAnnouncement,
 ) where
 
 import Cardano.Base.Typeable (Typeable)
@@ -53,6 +57,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Block (EbReferencesAnnouncement (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance (
@@ -68,6 +73,11 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra, DijkstraEraForecast)
+import Cardano.Ledger.Dijkstra.Block.Endorser (
+  EbTransactions (..),
+  EraEndorserBlock (..),
+  mkEbReferences,
+ )
 import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules
@@ -78,7 +88,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
  )
 import Cardano.Ledger.Dijkstra.UTxO
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.API (mkStAnnTx)
+import Cardano.Ledger.Shelley.API (ShelleyLedgersEnv (..), mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
@@ -87,16 +97,21 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
 import Control.Monad (forM)
 import Control.Monad.State (gets)
+import Control.State.Transition (STS (..))
 import Data.Foldable
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Set as Set
+import qualified Data.SimpleOMap.Strict as SimpleOMap
+import Data.Word (Word32)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Dijkstra.Era
@@ -157,6 +172,7 @@ class
   , DijkstraEraTest era
   , DijkstraEraForecast era
   , DijkstraEraBlockBody era
+  , EraEndorserBlock era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
@@ -175,7 +191,16 @@ class
   , InjectRuleFailure "LEDGER" DijkstraSubDelegPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure era
+  , InjectRuleFailure "EB" EbPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
+  , STS (EraRule "EB" era)
+  , BaseM (EraRule "EB" era) ~ ShelleyBase
+  , Environment (EraRule "EB" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "EB" era) ~ NewEpochState era
+  , Signal (EraRule "EB" era) ~ EndorserBlock era
+  , ToExpr (PredicateFailure (EraRule "EB" era))
+  , STS (EraRule "EBLEDGERS" era)
+  , EraRuleFailure "EB" era ~ PredicateFailure (EraRule "EB" era)
   ) =>
   DijkstraEraImp era
 
@@ -618,3 +643,77 @@ mkLeiosCert signKeys headerHash = do
   expectRightDeep . aggregateLeiosCert committee $ Map.fromList votes
   where
     msg = hashToBytes $ extractHash headerHash
+
+tryApplyEndorserBlock ::
+  forall era.
+  DijkstraEraImp era =>
+  EndorserBlock era ->
+  ImpTestM era [PredicateFailure (EraRule "EB" era)]
+tryApplyEndorserBlock eb = do
+  st <- getsNES id
+  slotNo <- getCurSlotNo
+  epochNo <- runShelleyBase $ epochFromSlot slotNo
+  pp <- getsPParams id
+  let
+    env =
+      LedgersEnv
+        { ledgersSlotNo = slotNo
+        , ledgersPp = pp
+        , ledgersEpochNo = epochNo
+        , ledgersAccount = st ^. chainAccountStateG
+        }
+  res <- tryRunImpRule @"EB" env st eb
+  case res of
+    Right (newSt, _) -> do
+      modifyNES $ const newSt
+      pure []
+    Left failures -> pure $ toList failures
+
+applyEndorserBlock ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  EndorserBlock era ->
+  ImpTestM era ()
+applyEndorserBlock eb = do
+  res <- tryApplyEndorserBlock eb
+  case res of
+    [] -> pure ()
+    _ : _ -> expectationFailure $ "Expected success, got\n" <> showExpr res
+
+applyFailingEndorserBlock ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  EndorserBlock era ->
+  NonEmpty (PredicateFailure (EraRule "EB" era)) ->
+  ImpTestM era ()
+applyFailingEndorserBlock eb expected = do
+  res <- tryApplyEndorserBlock eb
+  case res of
+    [] -> expectationFailure "Expected a failure, got success"
+    e : es -> (e :| es) `shouldBeExpr` expected
+
+makeEndorserBlock ::
+  ( DijkstraEraImp era
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
+  ) =>
+  StrictSeq (Tx TopTx era) ->
+  ImpTestM era (EndorserBlock era)
+makeEndorserBlock txs = do
+  pv <- getProtVer
+  let
+    refs = SimpleOMap.fromFoldable $ (\tx -> (hashAnnotated tx, tx ^. sizeTxF)) <$> txs
+  pure $
+    mkBasicEndorserBlock
+      & transactionsEndorserBlockL .~ EbTransactions txs
+      & referencesEndorserBlockL .~ mkEbReferences (pvMajor pv) refs
+
+mkEbReferencesAnnouncement :: EraEndorserBlock era => EndorserBlock era -> EbReferencesAnnouncement
+mkEbReferencesAnnouncement eb =
+  EbReferencesAnnouncement
+    { ebReferencesAnnouncementSize = fromIntegral @Int @Word32 $ originalBytesSize references
+    , ebReferencesAnnouncementHash = hashAnnotated references
+    }
+  where
+    references = eb ^. referencesEndorserBlockL
