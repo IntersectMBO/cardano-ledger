@@ -2,6 +2,8 @@
 
 ## 0.6.0.0
 
+* Add `refScriptsSizeDijkstraStAnnTx`
+* Add `dsattRefScriptsSize` to `DijkstraStAnnTopTx`
 * Do not require the witnesses of the owners for a stake pool re-registration that changes nothing but the BLS key:
   - Add `validateDijkstraNeededWitnesses`
   - Add `poolOwnersWitnessRequired`

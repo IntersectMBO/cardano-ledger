@@ -31,6 +31,7 @@ module Cardano.Ledger.Dijkstra.Tx (
   decodeDijkstraTopTxInMempool,
   decodeDijkstraTopTxInBlock,
   toCBORForBlockInclusion,
+  refScriptsSizeDijkstraStAnnTx,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
@@ -528,6 +529,9 @@ validateDijkstraNativeScript tx =
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateDijkstraNativeScript #-}
 
+refScriptsSizeDijkstraStAnnTx :: DijkstraStAnnTx TopTx era -> Int
+refScriptsSizeDijkstraStAnnTx DijkstraStAnnTopTx {dsattRefScriptsSize} = dsattRefScriptsSize
+
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
 --
@@ -589,6 +593,7 @@ toCBORForBlockInclusion = encodePreEncoded . originalBytes
 data DijkstraStAnnTx l era where
   DijkstraStAnnTopTx ::
     { dsattTx :: !(Tx TopTx era)
+    , dsattRefScriptsSize :: Int
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
     , dsattPlutusLegacyMode :: Bool
