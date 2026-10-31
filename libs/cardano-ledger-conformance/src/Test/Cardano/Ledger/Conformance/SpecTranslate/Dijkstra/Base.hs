@@ -385,18 +385,14 @@ instance SpecTranslate DijkstraEra (AlonzoTxAuxData DijkstraEra) where
   toSpecRep = toSpecRep . hashAnnotated
 
 instance SpecTranslate DijkstraEra BlsKey where
-  type SpecRep DijkstraEra BlsKey = (Integer, Integer)
+  type SpecRep DijkstraEra BlsKey = Integer
 
-  toSpecRep (BlsKey key pop) =
-    pure
-      ( toInteger . bytesToNatural . rawEncodeFixedSized $ key
-      , toInteger . bytesToNatural . rawEncodeFixedSized $ pop
-      )
+  toSpecRep = pure . toInteger . bytesToNatural . rawEncodeFixedSized . unBlsKey
 
 instance SpecTranslate DijkstraEra BlsKeyState where
-  type SpecRep DijkstraEra BlsKeyState = (Integer, SpecRep DijkstraEra EpochNo)
+  type SpecRep DijkstraEra BlsKeyState = (SpecRep DijkstraEra BlsKey, SpecRep DijkstraEra EpochNo)
 
-  toSpecRep (BlsKeyState bls e) = ((,) . fst <$> toSpecRep bls) <*> toSpecRep e
+  toSpecRep (BlsKeyState bls e) = (,) <$> toSpecRep bls <*> toSpecRep e
 
 instance SpecTranslate DijkstraEra (StakePoolParams DijkstraEra) where
   type SpecRep DijkstraEra (StakePoolParams DijkstraEra) = Agda.StakePoolParams
@@ -409,7 +405,8 @@ instance SpecTranslate DijkstraEra (StakePoolParams DijkstraEra) where
       <*> toSpecRep sppPledge
       <*> toSpecRep sppAccountAddress
       <*> toSpecRep sppVrf
-      <*> toSpecRep sppBlsKey
+      -- TODO: remove the zero when the spec is updated
+      <*> (fmap (,0) <$> toSpecRep sppBlsKey)
 
 instance SpecTranslate DijkstraEra StakePoolState where
   type SpecRep DijkstraEra StakePoolState = Agda.StakePoolState

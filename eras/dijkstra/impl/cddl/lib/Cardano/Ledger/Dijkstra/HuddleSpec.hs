@@ -671,14 +671,7 @@ instance HuddleRule "bls_key" DijkstraEra where
       )
         //- "BLS key"
     where
-      blsKeyGen = do
-        lk <- liftGen Gen.arbitrary
-        pure $
-          SingleTerm $
-            TList
-              [ TBytes (rawEncodeFixedSized $ blsPubKey lk)
-              , TBytes (rawEncodeFixedSized $ blsPossessionProof lk)
-              ]
+      blsKeyGen = SingleTerm . TBytes . rawEncodeFixedSized . unBlsKey <$> liftGen Gen.arbitrary
 
 instance HuddleGroup "pool_params" DijkstraEra where
   huddleGroupNamed pname p =

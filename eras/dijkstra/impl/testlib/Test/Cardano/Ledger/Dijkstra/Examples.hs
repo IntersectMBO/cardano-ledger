@@ -24,11 +24,10 @@ module Test.Cardano.Ledger.Dijkstra.Examples (
 
 import Cardano.Crypto.DSIGN (
   BLS12381MinSigDSIGN,
-  DSIGNAggregatable (createPossessionProofDSIGN),
-  DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGNWithContext),
+  DSIGNAlgorithm (genKeyDSIGNWithContext),
   seedSizeDSIGN,
  )
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
+import Cardano.Crypto.Leios (deriveLeiosVerificationKey)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address (DirectDeposits (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
@@ -409,12 +408,8 @@ exampleDijkstraOnwardsEraPParamsUpdate =
     & ppuPerasQuorumThresholdSafetyMarginL .~ SJust (1 %! 20)
 
 exampleBlsKey :: BlsKey
-exampleBlsKey =
-  BlsKey
-    { blsPubKey = vk
-    , blsPossessionProof = createPossessionProofDSIGN minSigPoPDST sk
-    }
+exampleBlsKey = BlsKey vk
   where
     seed = mkSeedFromBytes $ Strict.replicate (fromIntegral $ seedSizeDSIGN (Proxy @BLS12381MinSigDSIGN)) 42
     sk = genKeyDSIGNWithContext @BLS12381MinSigDSIGN Nothing seed
-    vk = deriveVerKeyDSIGN sk
+    vk = deriveLeiosVerificationKey sk

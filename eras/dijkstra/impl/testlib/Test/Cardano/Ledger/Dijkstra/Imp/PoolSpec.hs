@@ -343,7 +343,7 @@ spec = describe "POOL" $ do
       ownerBlsKey <- freshBlsKey
       pps <- registerPoolWithBlsKey (SJust ownerBlsKey)
       pStateBefore <- getPools
-      invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
+      invalidOwnerBlsKey <- BlsKey <$> arbitrary
       submitFailingTx
         (registerPoolTx pps {sppBlsKey = SJust invalidOwnerBlsKey})
         [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
@@ -352,7 +352,7 @@ spec = describe "POOL" $ do
 
     it "fails to register a new pool with an invalid BLS proof of possession" $ do
       pps <- freshStakePool
-      invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
+      invalidOwnerBlsKey <- BlsKey <$> arbitrary
       submitFailingTx
         (registerPoolTx pps {sppBlsKey = SJust invalidOwnerBlsKey})
         [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) invalidOwnerBlsKey]
@@ -607,21 +607,6 @@ spec = describe "POOL" $ do
       _ <- registerBlsPool (SJust key)
       _ <- registerBlsPool (SJust newKey)
       expectBlsKeys [key, newKey]
-
-    it "only the public key counts, not the proof of possession" $ do
-      key <- freshBlsKey
-      _ <- registerBlsPool (SJust key)
-      bogusProof <- arbitrary
-      let bogusKey = key {blsPossessionProof = bogusProof}
-      kh <- freshKeyHash
-      pps <- blsPoolParams kh (SJust bogusKey)
-      -- the key is rejected twice: its public key is taken and its proof is not valid
-      submitFailingTx
-        (registerPoolTx pps)
-        [ injectFailure $ BlsKeyInvalidProofOfPossession kh bogusKey
-        , injectFailure $ BlsKeyAlreadyRegistered kh bogusKey
-        ]
-      expectBlsKeys [key]
 
   describe "CIP-23" $ do
     for_ @[] [minBound, maxBound] $ \margin -> do

@@ -752,6 +752,6 @@ queryLeiosCommitteeExamples =
     exampleLeiosCommittee =
       mkLeiosCommittee $
         VS.fromList
-          [ (SJust (blsPubKey exampleBlsKey, blsPossessionProof exampleBlsKey), 3 % 8)
-          , (SNothing, 1 % 4)
+          [ (3 % 8, SJust $ unBlsKey exampleBlsKey)
+          , (1 % 4, SNothing)
           ]
