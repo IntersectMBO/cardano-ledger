@@ -42,6 +42,7 @@
 * Add `Embed (SNAP era) (TICKF era)` instance, so that `TICKF` runs the Dijkstra `SNAP` rule
 * Change `eraMaxLanguage` to `PlutusV4`
 * Rename `requiredTopLevelGuardsL` to `requiredTopLevelGuardsTxBodyL`
+* Export `transGuardingTopTxInfo`, `transProposal`, `transVotingProcedures`, `transTxInInfoV4`, `transTxOutV4`, `transWithdrawals` and `transDirectDeposits` from `Cardano.Ledger.Dijkstra.TxInfo`
 
 ### `cddl`
 
@@ -69,6 +70,7 @@
 * Replace the `EraBlockBody era`, `AlonzoEraTx era` and `SafeToHash (TxWits era)` constraints on `Arbitrary (DijkstraBlockBody era)` with `SafeToHash (Tx TopTx era)`
 * Add `Arbitrary` instance for `EbReferences`
 * Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
+* Add `Test.Cardano.Ledger.Dijkstra.Translation.TranslatableGen` module with `genTranslatableTxWithNestedTxs`
 
 ## 0.4.0.0
 
