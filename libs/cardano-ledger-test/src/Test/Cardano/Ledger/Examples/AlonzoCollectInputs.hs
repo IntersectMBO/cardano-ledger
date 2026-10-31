@@ -17,14 +17,13 @@
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext,
   EraPlutusTxInfo,
   LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
   toPlutusArgs,
   toPlutusTxInfoForPurpose,
  )
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Scripts (
   AsIx (..),
   AsIxItem (..),
@@ -36,7 +35,6 @@ import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (AlonzoEraScript, AlonzoEraTxBody (..))
@@ -48,13 +46,12 @@ import Cardano.Ledger.Plutus (
   PlutusWithContext (..),
   decodePlutusRunnable,
   hashData,
+  toLanguageCostModel,
  )
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
@@ -90,7 +87,12 @@ tests =
 collectTwoPhaseScriptInputsOutputOrdering ::
   Expectation
 collectTwoPhaseScriptInputsOutputOrdering = do
-  collectInputs @AlonzoEra testEpochInfo testSystemStart defaultPParams validatingTx initUTxO
+  collectPlutusScriptsWithContext @AlonzoEra
+    testEpochInfo
+    testSystemStart
+    defaultPParams
+    validatingTx
+    initUTxO
     `shouldBe` Right
       [ PlutusWithContext
           { pwcProtocolVersion = pvMajor protVer
@@ -106,7 +108,8 @@ collectTwoPhaseScriptInputsOutputOrdering = do
                 spendingPurpose1
                 (redeemer @AlonzoEra)
           , pwcExUnits = ExUnits 5000 5000
-          , pwcCostModel = zeroTestingCostModel PlutusV1
+          , pwcLanguageCostModel =
+              either (error . show) id $ toLanguageCostModel $ zeroTestingCostModel PlutusV1
           }
       ]
   where
@@ -162,22 +165,6 @@ validatingTx =
 -- Babbage and Alonzo. How do we do that? We identify functions that are
 -- only well typed in those Eras, and we make versions which are parameterized
 -- by a proof. But which raise an error in other Eras.
-
-collectInputs ::
-  forall era.
-  ( AlonzoEraTxBody era
-  , AlonzoEraTxWits era
-  , AlonzoEraUTxO era
-  , EraPlutusContext era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  ) =>
-  EpochInfo (Either Text) ->
-  SystemStart ->
-  PParams era ->
-  Tx TopTx era ->
-  UTxO era ->
-  Either (NonEmpty (CollectError era)) [PlutusWithContext]
-collectInputs = collectPlutusScriptsWithContext
 
 testEpochInfo :: EpochInfo (Either Text)
 testEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

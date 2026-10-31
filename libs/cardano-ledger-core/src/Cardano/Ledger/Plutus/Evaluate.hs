@@ -46,17 +46,16 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Plutus.CostModels (
-  CostModel,
-  decodeCostModel,
-  encodeCostModel,
-  getCostModelLanguage,
-  getCostModelParams,
-  getEvaluationContext,
+  LanguageCostModel,
+  decodeLanguageCostModel,
+  encodeLanguageCostModel,
+  languageCostModelEvaluationContext,
+  languageCostModelParams,
   mkCostModel,
+  toLanguageCostModel,
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
-  Language,
   Plutus (..),
   PlutusBinary (..),
   PlutusLanguage (..),
@@ -68,6 +67,7 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.Plutus.TxInfo
 import Codec.Extras.SerialiseViaFlat (DeserialiseFailureInfo (..), DeserialiseFailureReason (..))
 import Control.DeepSeq (NFData (..), deepseq, ($!!))
+import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base64 as B64
@@ -109,7 +109,7 @@ data PlutusWithContext where
     -- Plutus context that was obtained from the transaction translation
     , pwcExUnits :: !ExUnits
     -- ^ Limit on the execution units
-    , pwcCostModel :: !CostModel
+    , pwcLanguageCostModel :: !(LanguageCostModel l)
     -- ^ `CostModel` to be used during script evaluation. It must match the language
     -- version in the `pwcScript`
     } ->
@@ -123,15 +123,15 @@ instance NFData PlutusWithContext where
       rnf pwcScript `seq`
         rnf pwcArgs `seq`
           rnf pwcExUnits `seq`
-            rnf pwcCostModel
+            rnf pwcLanguageCostModel
 
 instance Eq PlutusWithContext where
-  pwc1@(PlutusWithContext {pwcScript = s1, pwcArgs = args1})
-    == pwc2@(PlutusWithContext {pwcScript = s2, pwcArgs = args2}) =
+  pwc1@(PlutusWithContext {pwcScript = s1, pwcArgs = args1, pwcLanguageCostModel = lcm1})
+    == pwc2@(PlutusWithContext {pwcScript = s2, pwcArgs = args2, pwcLanguageCostModel = lcm2}) =
       pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
         && fromMaybe False (withSamePlutusLanguage args1 args2 (==))
         && pwcExUnits pwc1 == pwcExUnits pwc2
-        && pwcCostModel pwc1 == pwcCostModel pwc2
+        && fromMaybe False (withSamePlutusLanguage lcm1 lcm2 (==))
         && eqScripts s1 s2
       where
         eqScripts p1 p2 =
@@ -190,17 +190,16 @@ instance ToCBOR PlutusWithContext where
       <> toPlainEncoding pwcProtocolVersion (encCBOR (plutusRunnableBinary pwcScript))
       <> toPlainEncoding pwcProtocolVersion (encCBOR pwcArgs)
       <> toPlainEncoding pwcProtocolVersion (encCBOR pwcExUnits)
-      <> toPlainEncoding pwcProtocolVersion (encodeCostModel pwcCostModel)
+      <> toPlainEncoding pwcProtocolVersion (encodeLanguageCostModel pwcLanguageCostModel)
 
 instance FromCBOR PlutusWithContext where
   fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 5) $ do
     pwcProtocolVersion <- fromCBOR
     toPlainDecoder Nothing pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
-      let lang = plutusLanguage plutus
-          pwcScript = decodePlutusRunnable pwcProtocolVersion plutus
+      let pwcScript = decodePlutusRunnable pwcProtocolVersion plutus
       pwcArgs <- decCBOR
       pwcExUnits <- decCBOR
-      pwcCostModel <- decodeCostModel lang
+      pwcLanguageCostModel <- decodeLanguageCostModel
       pure PlutusWithContext {..}
 
 data PlutusDebugInfo
@@ -269,8 +268,6 @@ data PlutusDebugOverrides = PlutusDebugOverrides
   -- ^ Hex encoded version of the script
   , pdoProtocolVersion :: !(Maybe Version)
   -- ^ Protocol version to be used for decoding and exection
-  , pdoLanguage :: !(Maybe Language)
-  -- ^ Plutus ledger language version
   , pdoCostModelValues :: !(Maybe [Int64])
   -- ^ Cost model to be used for deciding execution units
   , pdoExUnitsMem :: !(Maybe Natural)
@@ -288,7 +285,6 @@ defaultPlutusDebugOverrides =
   PlutusDebugOverrides
     { pdoScript = Nothing
     , pdoProtocolVersion = Nothing
-    , pdoLanguage = Nothing
     , pdoCostModelValues = Nothing
     , pdoExUnitsMem = Nothing
     , pdoExUnitsSteps = Nothing
@@ -305,7 +301,7 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
     { pwcProtocolVersion = overrideProtocolVersion
     , pwcScript = overrideScript
     , pwcExUnits = overrideExUnits
-    , pwcCostModel = overrideCostModel
+    , pwcLanguageCostModel = overrideCostModel
     , ..
     }
   where
@@ -315,10 +311,14 @@ overrideContext PlutusWithContext {..} PlutusDebugOverrides {..} =
         (fromMaybe (exUnitsMem pwcExUnits) pdoExUnitsMem)
         (fromMaybe (exUnitsSteps pwcExUnits) pdoExUnitsSteps)
     overrideCostModel =
-      fromRight pwcCostModel $
-        mkCostModel
-          (fromMaybe (getCostModelLanguage pwcCostModel) pdoLanguage)
-          (fromMaybe (getCostModelParams pwcCostModel) pdoCostModelValues)
+      fromRight pwcLanguageCostModel $ do
+        cm <-
+          first (const ()) $
+            mkCostModel
+              (plutusLanguage pwcLanguageCostModel)
+              (fromMaybe (languageCostModelParams pwcLanguageCostModel) pdoCostModelValues)
+        first (const ()) $ toLanguageCostModel cm
+
     overrideScript =
       case pdoScript of
         Nothing -> pwcScript
@@ -348,7 +348,8 @@ debugPlutusUnbounded scriptsWithContext opts =
         Left e -> DebugCannotDecode $ show e
         Right pwcOriginal ->
           let pwc = overrideContext pwcOriginal opts
-              cm = getEvaluationContext $ pwcCostModel pwc
+              cm = case pwc of
+                PlutusWithContext {pwcLanguageCostModel} -> languageCostModelEvaluationContext pwcLanguageCostModel
               eu = transExUnits $ pwcExUnits pwc
               onDecoderError err = DebugFailure [] err pwc Nothing
            in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
@@ -388,7 +389,7 @@ evaluatePlutusWithContext mode pwc@PlutusWithContext {..} =
     evaluatePlutusRunnable
       pwcProtocolVersion
       mode
-      (getEvaluationContext pwcCostModel)
+      (languageCostModelEvaluationContext pwcLanguageCostModel)
       (transExUnits pwcExUnits)
 
 -- | Explain why a script might fail. Scripts come in three flavors:

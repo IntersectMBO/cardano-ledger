@@ -88,18 +88,22 @@ import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM, guard)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
+import Data.Bifunctor (first)
 import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, isNothing, mapMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
+import qualified Data.Text as T (pack)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
 mkPlutusWithContext ::
+  forall era level.
+  Inject (AlonzoContextError era) (ContextError era) =>
   SupportedPlutusRunnable era ->
   PlutusPurpose AsIxItem era ->
   LedgerTxInfo level era ->
@@ -120,13 +124,15 @@ mkPlutusWithContext script plutusPurpose lti@LedgerTxInfo {ltiProtVer} txInfoRes
           txInfo
           plutusPurpose
           redeemerData
+      languageCostModel <-
+        first (inject . ImpossibleContextError @era . T.pack . show) $ toLanguageCostModel costModel
       pure $
         PlutusWithContext
           { pwcProtocolVersion = pvMajor ltiProtVer
           , pwcScript = plutusRunnable
           , pwcArgs = plutusArgs
           , pwcExUnits = exUnits
-          , pwcCostModel = costModel
+          , pwcLanguageCostModel = languageCostModel
           }
 
 instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where

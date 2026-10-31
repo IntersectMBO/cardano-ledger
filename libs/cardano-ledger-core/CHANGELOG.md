@@ -1,5 +1,20 @@
 # Version history for `cardano-ledger-core`
 
+## 1.23.0.0
+
+* Remove `pdoLanguage` as no longer an option that can be overriden.
+* Replace `pwcCostModel` with `pwcLanguageCostModel` in `PlutusWithContext`
+* Change type signature of `getCostModelEvaluationContext`
+* Add:
+  - `LanguageCostModel`
+  - `LanguageCostModelError`
+  - `toLanguageCostModel`
+  - `encodeLanguageCostModel`
+  - `decodeLanguageCostModel`
+  - `languageCostModelParams`
+  - `languageCostModelEvaluationContext`
+* Remove `getEvaluationContext` as duplicate of `getCostModelEvaluationContext`
+
 ## 1.22.0.0
 
 * Move `allInputsTxBodyF` from `EraTxBody` to `EraTx` in order to workaround a GHC bug

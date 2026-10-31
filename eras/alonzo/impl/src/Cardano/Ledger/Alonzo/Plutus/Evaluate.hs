@@ -40,7 +40,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedPlutusRunnable (..),
   toScriptHashByPurpose,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (mkPlutusWithContext)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError, mkPlutusWithContext)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (
@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded (..),
   resolveNeededPlutusScriptsWithPurpose,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (Inject, ProtVer (..))
 import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
@@ -85,8 +85,9 @@ collectPlutusScriptsWithContext ::
   ( AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraPlutusContext era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -121,6 +122,7 @@ scriptsWithContextFromLedgerTxInfo ::
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , EraPlutusContext era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   LedgerTxInfo level era ->
   CostModels ->
@@ -131,6 +133,7 @@ scriptsWithContextFromLedgerTxInfo lti =
 scriptsWithContextFromLedgerTxInfoWithResult ::
   ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   LedgerTxInfo level era ->
   TxInfoResult era ->
@@ -151,7 +154,7 @@ scriptsWithContextFromLedgerTxInfoWithResult lti txInfoResult costModels =
     apply (plutusScriptRunnable, plutusPurpose, redeemerData, exUnits) = do
       let lang =
             case plutusScriptRunnable of
-              SupportedPlutusRunnable srp -> plutusLanguage srp
+              SupportedPlutusRunnable spr -> plutusLanguage spr
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang $ costModelsValid costModels
       first BadTranslation $
         mkPlutusWithContext
@@ -283,6 +286,7 @@ evalTxExUnits ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   PParams era ->
   -- | The transaction.
@@ -310,6 +314,7 @@ evalTxExUnitsWithLogs ::
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   PParams era ->
   -- | The transaction.

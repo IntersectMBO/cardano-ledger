@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,11 +17,11 @@ module Cardano.Ledger.Plutus.CostModels (
   CostModel,
   mkCostModel,
   mkCostModelsLenient,
+  mkCostModelsLenientLazy,
   encodeCostModel,
   getCostModelLanguage,
   getCostModelParams,
   getCostModelEvaluationContext,
-  getEvaluationContext,
   costModelParamNames,
   costModelToMap,
   costModelFromMap,
@@ -30,10 +31,20 @@ module Cardano.Ledger.Plutus.CostModels (
   parseCostModelAsMap,
   parseCostModelAsArray,
 
+  -- * CostModel for Evaluation
+  LanguageCostModel,
+  LanguageCostModelError (..),
+  toLanguageCostModel,
+  encodeLanguageCostModel,
+  decodeLanguageCostModel,
+  languageCostModelParams,
+  languageCostModelEvaluationContext,
+
   -- * Cost Models
   CostModels,
   CostModelsUpdate (..),
   mkCostModels,
+  decodeCostModels,
   emptyCostModels,
   updateCostModels,
   parseCostModels,
@@ -56,12 +67,17 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
+  PlutusLanguage,
+  asSLanguage,
   languageToText,
   mkLanguageEnum,
   nonNativeLanguages,
+  plutusLanguage,
+  toSLanguage,
  )
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (forM, unless, when)
+import Control.Monad.Trans.Fail (runFail)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.Aeson (
   Array,
@@ -75,10 +91,12 @@ import Data.Aeson (
  )
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
+import Data.Bifunctor (first)
 import Data.Int
 import Data.List.NonEmpty as NE (toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Text as T (Text, pack)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -97,6 +115,53 @@ import qualified PlutusLedgerApi.V2 as PV2 (ParamName, mkEvaluationContext)
 import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
 import Validation (failure, validationToEither)
 
+-- | CostModel that is ready for evaluation for a concrete plutus language specified at the type level.
+data LanguageCostModel (l :: Language) = LanguageCostModel
+  { lcmValues :: ![Int64]
+  , lcmEvaluationContext :: !P.EvaluationContext
+  }
+  deriving (Generic)
+
+instance Eq (LanguageCostModel l) where
+  LanguageCostModel vs1 _ == LanguageCostModel vs2 _ = vs1 == vs2
+
+instance PlutusLanguage l => Show (LanguageCostModel l) where
+  show (LanguageCostModel vs _) = "LanguageCostModel " <> show (plutusLanguage (Proxy @l)) <> " " <> show vs
+
+instance NFData (LanguageCostModel l) where
+  rnf (LanguageCostModel vs ec) = vs `deepseq` rnf ec
+
+data LanguageCostModelError
+  = LanguageCostModelContextError P.CostModelApplyError
+  | LanguageCostModelLanguageError String
+  deriving (Eq, Show)
+
+toLanguageCostModel ::
+  PlutusLanguage l => CostModel -> Either LanguageCostModelError (LanguageCostModel l)
+toLanguageCostModel CostModel {cmLanguage, cmValues, cmEvaluationContext} = do
+  slang <- first LanguageCostModelLanguageError $ runFail $ toSLanguage cmLanguage
+  ec <- first LanguageCostModelContextError cmEvaluationContext
+  pure $
+    asSLanguage slang $
+      LanguageCostModel
+        { lcmValues = cmValues
+        , lcmEvaluationContext = ec
+        }
+
+languageCostModelParams :: LanguageCostModel l -> [Int64]
+languageCostModelParams = lcmValues
+
+languageCostModelEvaluationContext :: LanguageCostModel l -> P.EvaluationContext
+languageCostModelEvaluationContext = lcmEvaluationContext
+
+encodeLanguageCostModel :: LanguageCostModel l -> Encoding
+encodeLanguageCostModel = encodeFoldableAsDefLenList encCBOR . lcmValues
+
+decodeLanguageCostModel :: forall l s. PlutusLanguage l => Decoder s (LanguageCostModel l)
+decodeLanguageCostModel = do
+  cm <- decodeCostModel (plutusLanguage (Proxy @l))
+  either (fail . show) pure $ toLanguageCostModel cm
+
 -- | A language dependent cost model for the Plutus evaluator.
 -- Note that the `P.EvaluationContext` is entirely dependent on the
 -- cost model parameters (ie the `Map` `Text` `Integer`) and that
@@ -111,7 +176,8 @@ data CostModel = CostModel
   -- expects. This functionality is intentional for allowing the addition of new
   -- primitives on a hardfork boundary. When less than the expected number is
   -- supplied, `maxBound` will be used instead by the Plutus smart constructor.
-  , cmEvalCtx :: !P.EvaluationContext
+  , cmEvaluationContext :: Either P.CostModelApplyError P.EvaluationContext
+  -- ^ Actual CostModel construction action. Lazy on purpose
   }
   deriving (Generic)
 
@@ -276,10 +342,12 @@ validateCostModel lang cmps =
 --
 -- Note that we always retain the original values that were supplied.
 mkCostModel :: Language -> [Int64] -> Either P.CostModelApplyError CostModel
-mkCostModel lang cm =
-  case eCostModel of
-    Right (evalCtx, _) -> Right (CostModel lang cm evalCtx)
-    Left e -> Left e
+mkCostModel lang ps =
+  let cm = mkCostModelLazy lang ps
+   in cm <$ cmEvaluationContext cm
+
+mkCostModelLazy :: Language -> [Int64] -> CostModel
+mkCostModelLazy lang cm = CostModel lang cm (fst <$> eCostModel)
   where
     mkEvaluationContext =
       case lang of
@@ -296,12 +364,16 @@ getCostModelLanguage (CostModel lang _ _) = lang
 getCostModelParams :: CostModel -> [Int64]
 getCostModelParams (CostModel _ cm _) = cm
 
-getCostModelEvaluationContext :: CostModel -> P.EvaluationContext
-getCostModelEvaluationContext = cmEvalCtx
+getCostModelEvaluationContext :: CostModel -> Either P.CostModelApplyError P.EvaluationContext
+getCostModelEvaluationContext = cmEvaluationContext
 
 decodeCostModelsLenient :: Decoder s CostModels
 decodeCostModelsLenient = decCBOR >>= mkCostModelsLenient
 {-# INLINE decodeCostModelsLenient #-}
+
+decodeCostModelsLenientLazy :: Decoder s CostModels
+decodeCostModelsLenientLazy = mkCostModelsLenientLazy <$> decCBOR
+{-# INLINE decodeCostModelsLenientLazy #-}
 
 decodeCostModelsFailing :: Decoder s CostModels
 decodeCostModelsFailing =
@@ -312,7 +384,7 @@ decodeCostModels :: Decoder s CostModels
 decodeCostModels =
   ifDecoderVersionAtLeast
     (natVersion @9)
-    decodeCostModelsLenient
+    decodeCostModelsLenientLazy
     decodeCostModelsFailing
 {-# INLINEABLE decodeCostModels #-}
 
@@ -360,9 +432,6 @@ decodeCostModel lang = do
         Left e -> fail $ show e
         Right cm -> pure cm
 {-# INLINEABLE decodeCostModel #-}
-
-getEvaluationContext :: CostModel -> P.EvaluationContext
-getEvaluationContext (CostModel _ _ ec) = ec
 
 -- | For a known version of Plutus, attempting to construct a cost model with
 -- too few parameters (depending on the version) will result in an error.
@@ -438,6 +507,15 @@ mkCostModelsLenient = Map.foldrWithKey addRawCostModel (pure (CostModels mempty 
             Right cm -> pure $ CostModels (Map.insert lang cm validCostModels) unknownCostModels
             Left err -> fail $ "CostModel construction failure: " ++ show err
         Nothing -> pure $ CostModels validCostModels (Map.insert langW8 cmIds unknownCostModels)
+
+mkCostModelsLenientLazy :: Map Word8 [Int64] -> CostModels
+mkCostModelsLenientLazy = Map.foldrWithKey addRawCostModel (CostModels mempty mempty)
+  where
+    addRawCostModel :: Word8 -> [Int64] -> CostModels -> CostModels
+    addRawCostModel langW8 cmIds (CostModels validCostModels unknownCostModels) = do
+      case mkLanguageEnum (fromIntegral langW8) of
+        Just lang -> CostModels (Map.insert lang (mkCostModelLazy lang cmIds) validCostModels) unknownCostModels
+        Nothing -> CostModels validCostModels (Map.insert langW8 cmIds unknownCostModels)
 
 -- | Turn a 'CostModels' into a mapping of potential language versions and cost model
 -- values, with no distinction between valid and unknown cost models. This is used for

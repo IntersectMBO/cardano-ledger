@@ -117,8 +117,8 @@ testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesti
 testingCostModelV4 :: HasCallStack => CostModel
 testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> PV3.costModelParamsForTesting
 
-testingEvaluationContext :: Language -> PV1.EvaluationContext
-testingEvaluationContext = getCostModelEvaluationContext . testingCostModel
+testingEvaluationContext :: HasCallStack => Language -> PV1.EvaluationContext
+testingEvaluationContext = either (error . show) id . getCostModelEvaluationContext . testingCostModel
 
 alwaysSucceedsPlutus :: Natural -> Plutus l
 alwaysSucceedsPlutus n = Plutus (PlutusBinary (P.alwaysSucceedingNAryFunction n))

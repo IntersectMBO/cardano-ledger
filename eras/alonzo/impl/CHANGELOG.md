@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.18.0.0
+
+* Require `Inject (AlonzoContextError era) (ContextError era)` constraint on `mkAlonzoStAnnTx`, `mkPlutusWithContext`, `collectPlutusScriptsWithContext`, `scriptsWithContextFromLedgerTxInfo`, `scriptsWithContextFromLedgerTxInfoWithResult`, `evalTxExUnits`, `evalTxExUnitsWithLogs`
+
 ## 1.17.0.0
 
 * Add `alonzoSpendableInputsTxBodyF`

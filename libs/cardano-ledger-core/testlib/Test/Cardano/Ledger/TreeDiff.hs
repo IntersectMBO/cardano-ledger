@@ -38,6 +38,7 @@ import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Cardano.Slotting.Slot (SlotInterval (..))
 import Data.Functor.Identity
+import Data.Proxy (Proxy (..))
 import qualified Data.TreeDiff.OMap as OMap
 import GHC.TypeLits
 import Prettyprinter
@@ -131,8 +132,15 @@ instance
         [ ("pwcProtocolVersion", toExpr pwcProtocolVersion)
         , ("pwcScript", toExpr (plutusRunnableScriptHash pwcScript))
         , ("pwcExUnits", toExpr pwcExUnits)
-        , ("pwcCostModel", toExpr pwcCostModel)
+        , ("pwcLanguageCostModel", toExpr pwcLanguageCostModel)
         ]
+
+instance PlutusLanguage l => ToExpr (LanguageCostModel l) where
+  toExpr costModel =
+    App
+      ("LanguageCostModel " <> show (plutusLanguage (Proxy @l)))
+      [ toExpr (languageCostModelParams costModel)
+      ]
 
 -- MemoBytes
 instance ToExpr t => ToExpr (MemoBytes t)

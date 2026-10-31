@@ -35,13 +35,6 @@ overridesParser =
           <> help "Major protocol version"
       )
     <*> option
-      (Just <$> auto)
-      ( long "language"
-          <> short 'l'
-          <> value Nothing
-          <> help "Plutus language version"
-      )
-    <*> option
       (mapM readMaybe . words <$> str)
       ( long "cost-model-values"
           <> short 'c'

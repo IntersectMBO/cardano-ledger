@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
   EraPlutusContext (mkTxInfoResult),
   LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
@@ -29,6 +30,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   scriptsWithContextFromLedgerTxInfo,
   scriptsWithContextFromLedgerTxInfoWithResult,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
@@ -108,6 +110,7 @@ mkDijkstraStAnnTopTx ::
   , DijkstraEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -167,6 +170,7 @@ mkDijkstraStAnnSubTx ::
   , AlonzoEraTx era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->

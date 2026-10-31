@@ -1,5 +1,9 @@
 # Revision history for `cardano-ledger-dijkstra`
 
+## 0.5.0.0
+
+* Require `Inject (AlonzoContextError era) (ContextError era)` constraint on `mkDijkstraStAnnTopTx`
+
 ## 0.4.0.0
 
 * Introduce `DijkstraPoolPredFailure` as the predicate failure type for the Dijkstra era's

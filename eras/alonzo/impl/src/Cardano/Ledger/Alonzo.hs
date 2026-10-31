@@ -32,6 +32,7 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Forecast ()
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
   EraPlutusContext,
   LedgerLevelTxInfo (..),
   LedgerTxInfo (..),
@@ -41,7 +42,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   scriptsWithContextFromLedgerTxInfo,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo ()
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.State ()
@@ -56,6 +57,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoScriptsNeeded,
   resolveNeededPlutusScriptsWithPurpose,
  )
+import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader, TPraosBbodySignal (..), TPraosEraBlockHeader)
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -127,6 +129,7 @@ mkAlonzoStAnnTx ::
   , AlonzoEraTx era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Inject (AlonzoContextError era) (ContextError era)
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
