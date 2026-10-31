@@ -2,6 +2,10 @@
 
 ## 0.5.0.0
 
+* Do not require the witnesses of the owners for a stake pool re-registration that changes nothing but the BLS key:
+  - Add `validateDijkstraNeededWitnesses`
+  - Add `poolOwnersWitnessRequired`
+  - Add the `EraCertState` constraint to the `STS` instance of `SUBUTXOW`
 * Remove `certsTx` from `SubCertsEnv`
 * Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `LEIOSCERT` rule, `LeiosCertEnv` and `DijkstraLeiosCertPredFailure`

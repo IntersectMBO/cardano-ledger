@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Add `getConwayWitsVKeyNeededWith`
 * Change `validateRefScriptSize` to take an `Int` parameter instead of `UTxO` and `Tx`
 * Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
 * Add `ConwayBlockBodyLimits`, `cbblTxsSize`, `cbblExUnits`, `cbblRefScriptsSize`

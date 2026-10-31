@@ -51,6 +51,7 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
+  validateDijkstraNeededWitnesses,
   validateGuardDatums,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
@@ -59,7 +60,7 @@ import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -186,6 +187,7 @@ instance NFData (Event (EraRule "SUBUTXO" era)) => NFData (DijkstraSubUtxowEvent
 instance
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
+  , EraCertState era
   , BabbageEraTxOut era
   , ConwayEraGov era
   , ConwayEraTxBody era
@@ -217,6 +219,7 @@ dijkstraSubUtxowTransition ::
   ( AlonzoEraTx era
   , DijkstraEraUTxO era
   , DijkstraEraTxBody era
+  , EraCertState era
   , StAnnTxCache era ~ Map.Map ScriptHash (SupportedPlutusRunnable era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
   , EraRule "SUBUTXOW" era ~ SUBUTXOW era
@@ -229,7 +232,7 @@ dijkstraSubUtxowTransition ::
   ) =>
   TransitionRule (EraRule "SUBUTXOW" era)
 dijkstraSubUtxowTransition = do
-  TRC (env@(SubUtxoEnv _ pp certState originalUtxo _), utxoState, stAnnTx) <-
+  TRC (env@(SubUtxoEnv _ pp certState originalUtxo topIsPhase2Valid), utxoState, stAnnTx) <-
     judgmentContext
   let tx = stAnnTx ^. txStAnnTxG
       txBody = tx ^. bodyTxL
@@ -246,7 +249,9 @@ dijkstraSubUtxowTransition = do
   runTest $ Babbage.validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- vKeyHashesNeeded ⊆ vKeyHashesProvided -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes certState originalUtxo txBody
+  let pState = certState ^. certPStateL
+  runTest $
+    validateDijkstraNeededWitnesses topIsPhase2Valid witsKeyHashes pState originalUtxo txBody
 
   {- dataHashesNeeded ⊆ mapˢ hash dataProvided -}
   runTest $ Alonzo.missingRequiredDatums scriptsProvided originalUtxo tx
