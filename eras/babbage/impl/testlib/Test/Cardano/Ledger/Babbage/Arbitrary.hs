@@ -20,10 +20,12 @@ import Cardano.Ledger.Babbage.Transition (TransitionConfig (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Plutus
 import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
 import Generic.Random (genericArbitraryU)
+import Lens.Micro ((.~))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary (genEraProtVer, genValidCostModels)
 import Test.QuickCheck
@@ -149,6 +151,9 @@ instance Arbitrary (TxBody TopTx BabbageEra) where
       <*> arbitrary
 
 deriving newtype instance Arbitrary (TransitionConfig BabbageEra)
+
+instance Arbitrary (MempoolTx BabbageEra) where
+  arbitrary = UnsafeMkMempoolTx . (isPhase2ValidTxL .~ Phase2Valid) <$> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx BabbageEra)
 

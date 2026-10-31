@@ -13,6 +13,7 @@ import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -52,7 +53,7 @@ maryTranslationTests :: TestTree
 maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @(Tx TopTx))
+    [ testProperty "Tx compatibility" (test @MempoolTx)
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" (test @S.ShelleyGovState)
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)

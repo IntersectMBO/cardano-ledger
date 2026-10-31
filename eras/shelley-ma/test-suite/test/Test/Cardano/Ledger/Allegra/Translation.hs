@@ -12,6 +12,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -48,7 +49,7 @@ allegraTranslationTests :: TestTree
 allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (testTranslation @(Tx TopTx))
+    [ testProperty "Tx compatibility" (testTranslation @MempoolTx)
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" (testTranslation @S.ShelleyGovState)
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)

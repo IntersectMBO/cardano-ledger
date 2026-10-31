@@ -9,6 +9,7 @@ import Cardano.Ledger.Alonzo.HuddleSpec (alonzoCDDL)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Plutus.Data (Data)
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Binary.Cuddle (
@@ -40,8 +41,8 @@ spec =
       huddleRoundTripCborSpec @(PParamsUpdate AlonzoEra) v "protocol_param_update"
       huddleRoundTripAnnCborSpec @(Redeemers AlonzoEra) v "redeemers"
       huddleRoundTripCborSpec @(Redeemers AlonzoEra) v "redeemers"
-      huddleRoundTripAnnCborSpec @(Tx TopTx AlonzoEra) v "transaction"
-      huddleRoundTripCborSpec @(Tx TopTx AlonzoEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(MempoolTx AlonzoEra) v "transaction"
+      huddleRoundTripCborSpec @(MempoolTx AlonzoEra) v "transaction"
       huddleRoundTripCborSpec @CostModels v "cost_models"
       describe "DecCBOR instances equivalence via CDDL" $ do
         huddleDecoderEquivalenceSpec @(TxBody TopTx AlonzoEra) v "transaction_body"
@@ -50,4 +51,4 @@ spec =
         huddleDecoderEquivalenceSpec @(Data AlonzoEra) v "plutus_data"
         huddleDecoderEquivalenceSpec @(AlonzoTxWits AlonzoEra) v "transaction_witness_set"
         huddleDecoderEquivalenceSpec @(Redeemers AlonzoEra) v "redeemers"
-        huddleDecoderEquivalenceSpec @(Tx TopTx AlonzoEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(MempoolTx AlonzoEra) v "transaction"

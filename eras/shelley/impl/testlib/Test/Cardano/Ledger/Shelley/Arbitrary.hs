@@ -30,6 +30,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
 import qualified Cardano.Chain.UTxO as Byron
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTx (..),
@@ -752,6 +753,9 @@ instance
   Arbitrary (ShelleyTx TopTx era)
   where
   arbitrary = genTx
+
+instance Arbitrary (MempoolTx ShelleyEra) where
+  arbitrary = UnsafeMkMempoolTx <$> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx ShelleyEra)
 

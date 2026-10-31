@@ -14,7 +14,7 @@ module Cardano.Ledger.Mary.Tx (
 ) where
 
 import Cardano.Ledger.Allegra.Tx (Tx (..), validateTimelock)
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
@@ -22,6 +22,7 @@ import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.TxWits ()
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
   auxDataShelleyTxL,
@@ -34,7 +35,6 @@ import Cardano.Ledger.Shelley.Tx (
  )
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks)
@@ -46,7 +46,7 @@ instance HasEraTxLevel Tx MaryEra where
 
 instance EraTx MaryEra where
   newtype Tx t MaryEra = MkMaryTx {unMaryTx :: ShelleyTx t MaryEra}
-    deriving newtype (Eq, NFData, NoThunks, Show, ToCBOR, EncCBOR)
+    deriving newtype (Eq, NFData, NoThunks, Show)
     deriving (Generic)
 
   type StAnnTx l MaryEra = Tx l MaryEra
@@ -91,5 +91,8 @@ instance FromJSON (Tx TopTx MaryEra) where
 maryTxL :: Lens' (Tx t MaryEra) (ShelleyTx t MaryEra)
 maryTxL = lens unMaryTx (\x y -> x {unMaryTx = y})
 
-instance Typeable t => DecCBOR (Annotator (Tx t MaryEra)) where
-  decCBOR = fmap MkMaryTx <$> decCBOR
+instance EncCBOR (MempoolTx MaryEra) where
+  encCBOR = encCBOR . unMaryTx . unwrapMempoolTx
+
+instance DecCBOR (Annotator (MempoolTx MaryEra)) where
+  decCBOR = fmap (UnsafeMkMempoolTx . MkMaryTx) <$> decCBOR

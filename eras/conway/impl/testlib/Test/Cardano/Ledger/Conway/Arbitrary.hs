@@ -56,6 +56,7 @@ import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
 import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (Event))
@@ -897,6 +898,9 @@ instance Arbitrary (ConwayAccountState era) where
 
 instance Arbitrary (TransitionConfig ConwayEra) where
   arbitrary = ConwayTransitionConfig <$> arbitrary <*> arbitrary
+
+instance Arbitrary (MempoolTx ConwayEra) where
+  arbitrary = UnsafeMkMempoolTx . (isPhase2ValidTxL .~ Phase2Valid) <$> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx ConwayEra)
 

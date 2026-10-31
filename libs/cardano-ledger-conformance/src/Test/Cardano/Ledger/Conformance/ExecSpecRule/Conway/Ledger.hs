@@ -28,6 +28,7 @@ import Cardano.Ledger.Conway.Core (
  )
 import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended (TRC (..))
@@ -92,7 +93,7 @@ instance
   ( EraPParams era
   , EraCertState era
   , EncCBOR (TxOut era)
-  , EncCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
   ) =>
   EncCBOR (ConwayLedgerExecContext era)
   where

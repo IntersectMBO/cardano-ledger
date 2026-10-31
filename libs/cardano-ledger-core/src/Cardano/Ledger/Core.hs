@@ -51,7 +51,6 @@ module Cardano.Ledger.Core (
   EraPParams (..),
   mkCoinTxOut,
   wireSizeTxF,
-  binaryUpgradeTx,
   binaryUpgradeTxBody,
   binaryUpgradeTxWits,
   binaryUpgradeTxAuxData,
@@ -155,9 +154,6 @@ class
   , HasEraTxLevel Tx era
   , Monoid (StAnnTxCache era)
   , forall l. Typeable l => NoThunks (Tx l era)
-  , forall l. Typeable l => DecCBOR (Annotator (Tx l era))
-  , forall l. Typeable l => ToCBOR (Tx l era)
-  , forall l. EncCBOR (Tx l era)
   , forall l. NFData (Tx l era)
   , forall l. Show (Tx l era)
   , forall l. Eq (Tx l era)
@@ -665,8 +661,12 @@ txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 txIdTxBody :: EraTxBody era => TxBody l era -> TxId
 txIdTxBody = TxId . hashAnnotated
 
--- | txsize computes the length of the serialised bytes (actual size)
-wireSizeTxF :: forall era l. EraTx era => SimpleGetter (Tx l era) Word32
+-- | Size of a transaction in its chosen wire representation. Use `MempoolTx` for the
+-- mempool format and `Tx` for the block format where its codec is available.
+wireSizeTxF ::
+  forall era tx.
+  (Era era, EncCBOR (tx era)) =>
+  SimpleGetter (tx era) Word32
 wireSizeTxF =
   to $
     checkedFromIntegral
@@ -679,14 +679,6 @@ wireSizeTxF =
         then fromIntegral n
         else error $ "Impossible: Size of the transaction is too big: " ++ show n
 {-# INLINEABLE wireSizeTxF #-}
-
--- | Translate a transaction through its binary representation from previous to current era.
-binaryUpgradeTx ::
-  forall era l.
-  (Era era, ToCBOR (Tx l (PreviousEra era)), DecCBOR (Annotator (Tx l era))) =>
-  Tx l (PreviousEra era) ->
-  Except DecoderError (Tx l era)
-binaryUpgradeTx = translateViaCBORAnnotator (eraProtVerLow @era) (withEraName @era "Tx")
 
 -- | Translate a tx body through its binary representation from previous to current era.
 binaryUpgradeTxBody ::

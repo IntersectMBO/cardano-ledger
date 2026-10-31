@@ -64,6 +64,7 @@ import Cardano.Ledger.Keys (
   asWitness,
   signedDSIGN,
  )
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
 import Cardano.Ledger.Shelley.Core
@@ -796,8 +797,9 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_min"
-            ( mkBasicTx @ShelleyEra txb
-                & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ Set.singleton w)
+            ( UnsafeMkMempoolTx $
+                mkBasicTx @ShelleyEra txb
+                  & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ Set.singleton w)
             )
             ( T (TkListLen 3)
                 <> S txb
@@ -822,9 +824,10 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_full"
-            ( mkBasicTx @ShelleyEra txb
-                & witsTxL .~ txwits
-                & auxDataTxL .~ SJust md
+            ( UnsafeMkMempoolTx $
+                mkBasicTx @ShelleyEra txb
+                  & witsTxL .~ txwits
+                  & auxDataTxL .~ SJust md
             )
             ( T (TkListLen 3)
                 <> S txb

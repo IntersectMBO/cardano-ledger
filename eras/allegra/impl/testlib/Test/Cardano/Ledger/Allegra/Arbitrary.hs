@@ -32,6 +32,7 @@ import Cardano.Ledger.Allegra.Transition
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (pattern AllegraTxBody)
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
@@ -130,6 +131,9 @@ instance Arbitrary ValidityInterval where
   shrink = genericShrink
 
 deriving newtype instance Arbitrary (TransitionConfig AllegraEra)
+
+instance Arbitrary (MempoolTx AllegraEra) where
+  arbitrary = UnsafeMkMempoolTx <$> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx AllegraEra)
 

@@ -20,6 +20,7 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -60,8 +61,8 @@ instance TranslateEra MaryEra NewEpochState where
         , nesLastTickSlotNo = nesLastTickSlotNo nes
         }
 
-instance TranslateEra MaryEra (Tx TopTx) where
-  type TranslationError MaryEra (Tx TopTx) = DecoderError
+instance TranslateEra MaryEra MempoolTx where
+  type TranslationError MaryEra MempoolTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "AllegraTx"
 
 --------------------------------------------------------------------------------

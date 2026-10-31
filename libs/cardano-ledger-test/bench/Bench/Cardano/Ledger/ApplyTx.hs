@@ -18,9 +18,16 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Binary (DecCBOR (decCBOR), decodeFull, decodeFullAnnotator)
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecCBOR (decCBOR),
+  EncCBOR,
+  decodeFull,
+  decodeFullAnnotator,
+ )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTx,
@@ -99,7 +106,7 @@ benchApplyTx px =
               either
                 (error . show)
                 fst
-                (applyTxWithFullValidation ateGlobals ateMempoolEnv st ateTx)
+                (applyTxWithFullValidation ateGlobals ateMempoolEnv st (UnsafeMkMempoolTx ateTx))
           )
           ateState
 
@@ -119,13 +126,14 @@ deserialiseTxEra ::
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraStake era
   , EraGov era
-  , DecCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
+  , DecCBOR (MempoolTx era)
   ) =>
   Proxy era ->
   Benchmark
 deserialiseTxEra px =
-  benchWithGenState px (pure . Plain.serialize . ateTx) $
-    nf (either (error . show) (id @(Tx TopTx era)) . decodeFull v)
+  benchWithGenState px (pure . Plain.serialize . UnsafeMkMempoolTx . ateTx) $
+    nf (either (error . show) (id @(MempoolTx era)) . decodeFull v)
   where
     v = eraProtVerHigh @era
 
@@ -139,12 +147,14 @@ deserialiseAnnTxEra ::
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , EraStake era
   , EraGov era
+  , EncCBOR (MempoolTx era)
+  , DecCBOR (Annotator (MempoolTx era))
   ) =>
   Proxy era ->
   Benchmark
 deserialiseAnnTxEra px =
-  benchWithGenState px (pure . Plain.serialize . ateTx) $
-    nf (either (error . show) (id @(Tx TopTx era)) . decodeFullAnnotator v "tx" decCBOR)
+  benchWithGenState px (pure . Plain.serialize . UnsafeMkMempoolTx . ateTx) $
+    nf (either (error . show) (id @(MempoolTx era)) . decodeFullAnnotator v "tx" decCBOR)
   where
     v = eraProtVerHigh @era
 

@@ -12,9 +12,10 @@ module Test.Cardano.Ledger.Api.Upgrade (
 ) where
 
 import Cardano.Ledger.Api.Era (EraApi (..))
-import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
+import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Data.Default (Default (def))
 import Data.Typeable (Typeable)
 import qualified Prettyprinter as Pretty
@@ -203,21 +204,27 @@ specTxBodyUpgrade = do
             expectRawEqual "TxBody" curTxBody upgradedTxBody
         | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
 
+-- | Transactions are serialized in their mempool format, since that is the format that
+-- is shared by all eras.
 specTxUpgrade ::
-  forall era l.
-  ( Typeable l
-  , EraApi era
+  forall era.
+  ( EraApi era
   , EraTx (PreviousEra era)
-  , Arbitrary (Tx l (PreviousEra era))
+  , Arbitrary (Tx TopTx (PreviousEra era))
   , HasCallStack
-  , ToExpr (Tx l era)
-  , DecCBOR (Tx l era)
-  , EqRaw (Tx l era)
+  , ToExpr (Tx TopTx era)
+  , EncCBOR (MempoolTx (PreviousEra era))
+  , DecCBOR (MempoolTx era)
+  , DecCBOR (Annotator (MempoolTx era))
+  , EqRaw (Tx TopTx era)
   ) =>
   Spec
 specTxUpgrade = do
   prop "upgradeTx is preserved through serialization (Annotator)" $ \prevTx -> do
-    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTx of
+    case embedTripAnn
+      (eraProtVerHigh @(PreviousEra era))
+      (eraProtVerLow @era)
+      (UnsafeMkMempoolTx prevTx) of
       Left err
         | Right _ <- upgradeTx prevTx ->
             -- We expect deserialization to succeed, when upgrade is possible
@@ -225,12 +232,16 @@ specTxUpgrade = do
               "Expected to deserialize: =======================================================\n"
                 ++ show err
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
-      Right (curTx :: Tx l era)
+      Right (curTx :: MempoolTx era)
         | Right upgradedTx <- upgradeTx prevTx ->
-            expectRawEqual "Tx" curTx upgradedTx
+            expectRawEqual "Tx" (unwrapMempoolTx curTx) upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
   prop "upgradeTx is preserved through serialization" $ \prevTx -> do
-    case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevTx of
+    case embedTrip
+      (eraProtVerHigh @(PreviousEra era))
+      (eraProtVerLow @era)
+      cborTrip
+      (UnsafeMkMempoolTx prevTx) of
       Left err
         | Right _ <- upgradeTx prevTx ->
             -- We expect deserialization to succeed, when upgrade is possible
@@ -238,9 +249,9 @@ specTxUpgrade = do
               "Expected to deserialize: =======================================================\n"
                 ++ show err
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
-      Right (curTx :: Tx l era)
+      Right (curTx :: MempoolTx era)
         | Right upgradedTx <- upgradeTx prevTx ->
-            expectRawEqual "Tx" curTx upgradedTx
+            expectRawEqual "Tx" (unwrapMempoolTx curTx) upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
 
 spec ::
@@ -263,7 +274,9 @@ spec ::
   , DecCBOR (Script era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody TopTx era)
-  , DecCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx (PreviousEra era))
+  , DecCBOR (MempoolTx era)
+  , DecCBOR (Annotator (MempoolTx era))
   , EqRaw (Tx TopTx era)
   ) =>
   BinaryUpgradeOpts ->
@@ -276,7 +289,7 @@ spec BinaryUpgradeOpts {isScriptUpgradeable, isTxUpgradeable} =
     specTxWitsUpgrade @era
     specTxBodyUpgrade @era @TopTx
     when isTxUpgradeable $
-      specTxUpgrade @era @TopTx
+      specTxUpgrade @era
     when isScriptUpgradeable $
       specScriptUpgrade @era
     -- This is a test that ensures that binary version of a TxOut is backwards compatible as it is

@@ -36,6 +36,7 @@ import Cardano.Ledger.Mary.Value (
   isMultiAssetSmallEnough,
  )
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Maybe (fromMaybe)
@@ -243,6 +244,9 @@ hashOfDigitByteStrings :: HashAlgorithm h => [Hash h a]
 hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
 
 deriving newtype instance Arbitrary (TransitionConfig MaryEra)
+
+instance Arbitrary (MempoolTx MaryEra) where
+  arbitrary = UnsafeMkMempoolTx <$> arbitrary
 
 deriving newtype instance Arbitrary (Tx TopTx MaryEra)
 

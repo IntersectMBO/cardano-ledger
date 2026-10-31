@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.Governance
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided)
@@ -104,7 +105,7 @@ instance
   ( EraPParams era
   , EraCertState era
   , EncCBOR (TxOut era)
-  , EncCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
   ) =>
   EncCBOR (DijkstraLedgerExecContext era)
   where
@@ -159,6 +160,8 @@ instance
                     dsastPlutusRunnableCache `deepseq`
                       rnf dsastPlutusScriptsWithContext
 
+-- | The transaction is serialized in its block format, so that the dump is
+-- lossless about the phase 2 validity flag.
 instance EncCBOR (Tx TopTx era) => EncCBOR (DijkstraStAnnTx TopTx era) where
   encCBOR DijkstraStAnnTopTx {dsattTx} = encCBOR dsattTx
 
