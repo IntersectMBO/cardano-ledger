@@ -30,6 +30,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -354,7 +355,7 @@ dijkstraUtxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxos) inputs
 
   {- minfee pp txTop utxo₀ ≤ txfee txb -}
-  runTest $ Shelley.validateFeeTooSmallUTxO pp tx originalUtxo
+  runTest $ Shelley.validateFeeTooSmallUTxO pp tx (refScriptsSizeStAnnTx stAnnTx)
 
   {- (RedeemersOf txTop ≠ ∅ ⊎ Any (λ txSub → RedeemersOf txSub ≠ ∅) subtxs) → collateralCheck -}
   validate $ validateBatchCollateral pp tx originalUtxo

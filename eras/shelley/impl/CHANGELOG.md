@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Replace `UTxO` argument with `Int` in `validateFeeTooSmallUTxO`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 * Add `LedgerStateWithLimits`, `lswlLedgerState`, `lswlBlockBodyLimits`, `lswlLedgerStateL`, `lswlBlockBodyLimitsL`
 * Add `ShelleyBlockBodyLimits` and `sbblTxsSize`

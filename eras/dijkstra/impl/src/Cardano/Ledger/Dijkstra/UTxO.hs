@@ -32,6 +32,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  txNonDistinctRefScriptsSize,
  )
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin)
@@ -39,7 +40,6 @@ import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   getConwayScriptsNeeded,
   getConwayWitsVKeyNeeded,
-  txNonDistinctRefScriptsSize,
  )
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Core
@@ -210,6 +210,8 @@ instance AlonzoEraUTxO DijkstraEra where
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedDijkstraStAnnTx
 
+  refScriptsSizeStAnnTx = refScriptsSizeDijkstraStAnnTx
+
 getDijkstraSupplementalDataHashes ::
   ( EraTx era
   , DijkstraEraTxBody era
@@ -316,6 +318,18 @@ getDijkstraMinFeeTxUtxo pparams tx utxo =
       tx
       (batchNonDistinctRefScriptsSize utxo)
       (txNonDistinctRefScriptsSize utxo)
+
+-- | Total reference script size for a transaction.
+--
+-- | For a top-level transaction this is the total across the whole batch.
+refScriptsSizeDijkstraStAnnTx :: DijkstraStAnnTx l DijkstraEra -> Int
+refScriptsSizeDijkstraStAnnTx stAnnTx =
+  withBothTxLevels
+    stAnnTx
+    ( \DijkstraStAnnTopTx {dsattRefScriptsSize, dsattSubTransactions} ->
+        dsattRefScriptsSize + getSum (foldMap' (Sum . refScriptsSizeDijkstraStAnnTx) dsattSubTransactions)
+    )
+    (\DijkstraStAnnSubTx {dsastRefScriptsSize} -> dsastRefScriptsSize)
 
 -- | Total size of reference scripts across a top-level transaction and all its subtransactions.
 batchNonDistinctRefScriptsSize ::

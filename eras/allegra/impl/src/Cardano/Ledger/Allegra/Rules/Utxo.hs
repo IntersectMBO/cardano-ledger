@@ -186,7 +186,7 @@ utxoTransition = do
   runTest $ Shelley.validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
-  runTest $ Shelley.validateFeeTooSmallUTxO pp tx utxo
+  runTest $ Shelley.validateFeeTooSmallUTxO pp tx 0
 
   {- txins txb ⊆ dom utxo -}
   runTest $ Shelley.validateBadInputsUTxO utxo $ txBody ^. inputsTxBodyL

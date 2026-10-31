@@ -38,6 +38,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, UTXO)
@@ -182,23 +183,24 @@ instance
 --   embeds BabbageUtxoPred era. This makes it possibly useful in future Eras.
 feesOK ::
   forall era rule.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , InjectRuleFailure rule Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure rule BabbageUtxoPredFailure era
   ) =>
   PParams era ->
-  Tx TopTx era ->
+  StAnnTx TopTx era ->
   UTxO era ->
   Test (EraRuleFailure rule era)
-feesOK pp tx u@(UTxO utxo) =
-  let txBody = tx ^. bodyTxL
+feesOK pp stAnnTx (UTxO utxo) =
+  let tx = stAnnTx ^. txStAnnTxG
+      txBody = tx ^. bodyTxL
       collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = Map.restrictKeys utxo collateral
       theFee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
-      minFee = getMinFeeTxUtxo pp tx u
+      minFee = getMinFeeTx pp tx $ refScriptsSizeStAnnTx stAnnTx
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txBody
           failureUnless
@@ -339,7 +341,7 @@ validateOutputTooSmallUTxO pp outs =
 
 babbageUtxoValidation ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
@@ -383,7 +385,7 @@ babbageUtxoValidation = do
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
   {-   feesOK pp tx utxo   -}
-  validate $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+  validate $ feesOK pp stAnnTx utxo -- Generalizes the fee to small from earlier Era's
 
   {- allInputs = spendInputs txb ∪ collInputs txb ∪ refInputs txb -}
   {- (spendInputs txb ∪ collInputs txb ∪ refInputs txb) ⊆ dom utxo   -}
@@ -429,7 +431,7 @@ babbageUtxoValidation = do
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , EraCertState era
@@ -508,7 +510,7 @@ updateUTxOState pp certState tx utxoState =
 instance
   forall era.
   ( EraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , AlonzoEraTxWits era

@@ -47,6 +47,9 @@ module Cardano.Ledger.Alonzo.UTxO (
 
   -- * WitsVKey needed
   getAlonzoWitsVKeyNeeded,
+
+  -- * Ref scripts size
+  refScriptsSizeAlonzoStAnnTx,
 ) where
 
 import Cardano.Ledger.Address (accountAddressCredentialL)
@@ -161,6 +164,13 @@ class EraUTxO era => AlonzoEraUTxO era where
 
   plutusLanguagesUsedStAnnTx :: StAnnTx l era -> Set.Set Language
 
+  -- | Total size in bytes of the reference scripts used by this transaction, including any
+  -- sub-transactions. Zero in eras without reference scripts.
+  --
+  -- This value can only become stale if an input or reference input is no longer in the UTXO,
+  -- in which case the transaction is rejected for a missing input.
+  refScriptsSizeStAnnTx :: StAnnTx l era -> Int
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
@@ -173,6 +183,8 @@ instance AlonzoEraUTxO AlonzoEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
+
+  refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era
@@ -212,6 +224,16 @@ plutusLanguagesUsedAlonzoStAnnTx ::
 plutusLanguagesUsedAlonzoStAnnTx stAnnTx =
   withTopTxLevelOnly stAnnTx $
     \AlonzoStAnnTx {asatPlutusLanguagesUsed} -> asatPlutusLanguagesUsed
+
+refScriptsSizeAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> Int
+refScriptsSizeAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $
+    \AlonzoStAnnTx {asatRefScriptsSize} -> asatRefScriptsSize
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>

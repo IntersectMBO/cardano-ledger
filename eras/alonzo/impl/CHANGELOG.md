@@ -2,6 +2,10 @@
 
 ## 1.18.0.0
 
+* Add `asatRefScriptsSize` field to `AlonzoStAnnTx`
+* Add `Int` argument to the signature of `mkAlonzoStAnnTx`
+* Add `refScriptsSizeStAnnTx` method to `AlonzoEraUTxO`
+* Add `refScriptsSizeAlonzoStAnnTx`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 * Add `AlonzoBlockBodyLimits`, `abblTxsSize`, `abblExUnits`
 * Reject duplicate keys in the map encoding of `Redeemers`, starting with protocol version 12

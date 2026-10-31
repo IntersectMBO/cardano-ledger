@@ -607,6 +607,7 @@ instance
 data AlonzoStAnnTx l era where
   AlonzoStAnnTx ::
     { asatTx :: !(Tx TopTx era)
+    , asatRefScriptsSize :: Int
     , asatScriptsNeeded :: ScriptsNeeded era
     , asatScriptsProvided :: ScriptsProvided era
     , asatPlutusLanguagesUsed :: Set Language
@@ -648,11 +649,12 @@ instance
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
-  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
+  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in asatTx `deepseq`
-          asatScriptsNeeded `deepseq`
-            asatScriptsProvided `deepseq`
-              asatPlutusRunnableCache `deepseq`
-                asatPlutusLanguagesUsed `deepseq`
-                  rnf asatPlutusScriptsWithContext
+          asatRefScriptsSize `deepseq`
+            asatScriptsNeeded `deepseq`
+              asatScriptsProvided `deepseq`
+                asatPlutusRunnableCache `deepseq`
+                  asatPlutusLanguagesUsed `deepseq`
+                    rnf asatPlutusScriptsWithContext

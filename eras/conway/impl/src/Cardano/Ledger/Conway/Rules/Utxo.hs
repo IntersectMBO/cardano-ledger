@@ -31,6 +31,7 @@ module Cardano.Ledger.Conway.Rules.Utxo (
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Alonzo.UTxO
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -60,7 +61,7 @@ import Cardano.Ledger.Conway.Rules.Utxos (
 import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraCertState (..), EraStake, EraUTxO)
+import Cardano.Ledger.State (EraCertState (..), EraStake)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
@@ -225,7 +226,7 @@ updateTreasuryDonation tx utxos =
 
 conwayUtxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , EraCertState era
   , AlonzoEraTx era
   , ConwayEraTxBody era
@@ -265,7 +266,7 @@ conwayUtxoTransition = do
 instance
   forall era.
   ( EraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , AlonzoEraTx era
   , EraStake era
