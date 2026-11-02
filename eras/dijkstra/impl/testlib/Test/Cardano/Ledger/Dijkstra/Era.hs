@@ -13,7 +13,9 @@ module Test.Cardano.Ledger.Dijkstra.Era (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..), EraPlutusTxInfo)
 import Cardano.Ledger.BaseTypes (Inject)
+import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript)
 import Cardano.Ledger.Dijkstra.State
@@ -23,6 +25,7 @@ import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
 import Paths_cardano_ledger_dijkstra (getDataFileName)
+import Test.Cardano.Ledger.Common (Arbitrary)
 import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
@@ -83,8 +86,11 @@ class
   , DijkstraEraTxBody era
   , DijkstraEraScript era
   , DijkstraEraUTxO era
+  , EraEndorserBlock era
   , EraPlutusTxInfo PlutusV4 era
   , Inject (DijkstraContextError era) (ContextError era)
+  , Arbitrary (EbReferences era)
+  , DecCBOR (EbReferences era)
   ) =>
   DijkstraEraTest era
 

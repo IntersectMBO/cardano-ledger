@@ -18,7 +18,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Block.Endorser (EbReferences)
+import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (EbReferences))
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
@@ -103,5 +103,5 @@ spec = do
         genLeiosBlock
         v
         "block"
-      fullCddlSpec @EbReferences v "eb_references"
+      fullCddlSpec @(EbReferences DijkstraEra) v "eb_references"
       fullCddlSpec @EbReferencesAnnouncement v "eb_references_announcement"

@@ -430,11 +430,6 @@ instance Arbitrary (AccountBalanceInterval era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary EbReferences where
-  arbitrary =
-    mkEbReferences (eraProtVerLow @DijkstraEra) . SimpleOMap.fromFoldable <$> listOf1 arbitrary
-  shrink =
-    map (mkEbReferences (eraProtVerLow @DijkstraEra))
-      . filter (not . SimpleOMap.null)
-      . shrink
-      . getEbReferences
+instance Arbitrary (DijkstraEbReferences DijkstraEra) where
+  arbitrary = EbReferences . SimpleOMap.fromFoldable <$> listOf1 arbitrary
+  shrink (EbReferences refs) = EbReferences <$> filter (not . SimpleOMap.null) (shrink refs)

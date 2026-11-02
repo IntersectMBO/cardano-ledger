@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -12,19 +13,19 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Endorser blocks and references
 module Cardano.Ledger.Dijkstra.Block.Endorser (
-  EbReferences (MkEbReferences),
-  mkEbReferences,
-  getEbReferences,
+  DijkstraEbReferences (MkDijkstraEbReferences),
   EbTransactions (..),
   DijkstraEndorserBlock (..),
   EraEndorserBlock (..),
+  pattern EbReferences,
 ) where
 
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR, Version)
-import Cardano.Ledger.Core (Era, EraTx, TopTx, Tx, eraProtVerLow)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
+import Cardano.Ledger.Core (EraTx, TopTx, Tx)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Hashes (
@@ -43,7 +44,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
@@ -53,43 +54,44 @@ import Data.SimpleOMap.Strict (OMap)
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks)
 
-newtype EbReferencesRaw = EbReferencesRaw
-  { unEbReferencesRaw :: OMap (SafeHash EraIndependentTx) Word32
+newtype DijkstraEbReferencesRaw era = DijkstraEbReferencesRaw
+  { unDijkstraEbReferencesRaw :: OMap (SafeHash EraIndependentTx) Word32
   }
   deriving newtype (Eq, Show, NFData, NoThunks, EncCBOR)
 
-instance DecCBOR EbReferencesRaw where
+instance Typeable era => DecCBOR (DijkstraEbReferencesRaw era) where
   decCBOR = do
     refs <- decCBOR
-    EbReferencesRaw refs <$ when (null refs) (fail "Empty EbReferences are not allowed")
+    DijkstraEbReferencesRaw refs <$ when (null refs) (fail "Empty EbReferences are not allowed")
 
-instance DecCBOR (Annotator EbReferencesRaw) where
+instance Typeable era => DecCBOR (Annotator (DijkstraEbReferencesRaw era)) where
   decCBOR = pure <$> decCBOR
 
-type instance MemoHashIndex EbReferencesRaw = EraIndependentEbReferences
+type instance MemoHashIndex (DijkstraEbReferencesRaw era) = EraIndependentEbReferences
 
-newtype EbReferences = MkEbReferences (MemoBytes EbReferencesRaw)
+newtype DijkstraEbReferences era = MkDijkstraEbReferences (MemoBytes (DijkstraEbReferencesRaw era))
   deriving stock (Generic)
-  deriving newtype (Eq, Show, NFData, NoThunks, EncCBOR, ToCBOR, SafeToHash)
+  deriving newtype (Eq, Show, NFData, EncCBOR, SafeToHash)
 
-instance Memoized EbReferences where
-  type RawType EbReferences = EbReferencesRaw
+deriving newtype instance Typeable era => NoThunks (DijkstraEbReferences era)
 
-deriving via Mem EbReferencesRaw instance DecCBOR (Annotator EbReferences)
+deriving newtype instance Typeable era => ToCBOR (DijkstraEbReferences era)
 
-instance HashAnnotated EbReferences EraIndependentEbReferences where
+instance Memoized (DijkstraEbReferences era) where
+  type RawType (DijkstraEbReferences era) = DijkstraEbReferencesRaw era
+
+deriving via
+  Mem (DijkstraEbReferencesRaw era)
+  instance
+    Typeable era => DecCBOR (Annotator (DijkstraEbReferences era))
+
+instance HashAnnotated (DijkstraEbReferences era) EraIndependentEbReferences where
   hashAnnotated = getMemoSafeHash
 
-instance EqRaw EbReferences
-
-mkEbReferences :: Version -> OMap (SafeHash EraIndependentTx) Word32 -> EbReferences
-mkEbReferences v = mkMemoized v . EbReferencesRaw
-
-getEbReferences :: EbReferences -> OMap (SafeHash EraIndependentTx) Word32
-getEbReferences = unEbReferencesRaw . getMemoRawType
+instance EqRaw (DijkstraEbReferences era)
 
 newtype EbTransactions era = EbTransactions
   { unEbTransactions :: StrictSeq (Tx TopTx era)
@@ -105,33 +107,65 @@ deriving newtype instance NFData (Tx TopTx era) => NFData (EbTransactions era)
 deriving newtype instance NoThunks (Tx TopTx era) => NoThunks (EbTransactions era)
 
 data DijkstraEndorserBlock era = DijkstraEndorserBlock
-  { debReferences :: !EbReferences
+  { debReferences :: !(EbReferences era)
   , debTransactions :: !(EbTransactions era)
   }
   deriving stock (Generic)
 
-deriving stock instance Eq (Tx TopTx era) => Eq (DijkstraEndorserBlock era)
+deriving stock instance
+  (Eq (EbReferences era), Eq (Tx TopTx era)) => Eq (DijkstraEndorserBlock era)
 
-deriving stock instance Show (Tx TopTx era) => Show (DijkstraEndorserBlock era)
-
-deriving anyclass instance NFData (Tx TopTx era) => NFData (DijkstraEndorserBlock era)
+deriving stock instance
+  (Show (EbReferences era), Show (Tx TopTx era)) => Show (DijkstraEndorserBlock era)
 
 deriving anyclass instance
-  (Typeable era, NoThunks (Tx TopTx era)) => NoThunks (DijkstraEndorserBlock era)
+  (NFData (EbReferences era), NFData (Tx TopTx era)) => NFData (DijkstraEndorserBlock era)
 
-class EraTx era => EraEndorserBlock era where
+deriving anyclass instance
+  (Typeable era, NoThunks (EbReferences era), NoThunks (Tx TopTx era)) =>
+  NoThunks (DijkstraEndorserBlock era)
+
+class
+  ( EraTx era
+  , Eq (EbReferences era)
+  , Show (EbReferences era)
+  , NFData (EbReferences era)
+  , NoThunks (EbReferences era)
+  , EqRaw (EbReferences era)
+  , EncCBOR (EbReferences era)
+  , ToCBOR (EbReferences era)
+  , DecCBOR (Annotator (EbReferences era))
+  , HashAnnotated (EbReferences era) EraIndependentEbReferences
+  ) =>
+  EraEndorserBlock era
+  where
+  type EbReferences era = (r :: Type) | r -> era
   type EndorserBlock era = (r :: Type) | r -> era
 
   mkBasicEndorserBlock :: EndorserBlock era
-  referencesEndorserBlockL :: Lens' (EndorserBlock era) EbReferences
+  mkEbReferences :: OMap (SafeHash EraIndependentTx) Word32 -> EbReferences era
+  txRefsEbReferencesG :: SimpleGetter (EbReferences era) (OMap (SafeHash EraIndependentTx) Word32)
+
+  referencesEndorserBlockL :: Lens' (EndorserBlock era) (EbReferences era)
   transactionsEndorserBlockL :: Lens' (EndorserBlock era) (EbTransactions era)
 
-mkBasicEndorserBlockDijkstra :: forall era. Era era => DijkstraEndorserBlock era
+pattern EbReferences ::
+  EraEndorserBlock era => OMap (SafeHash EraIndependentTx) Word32 -> EbReferences era
+pattern EbReferences refs <- ((^. txRefsEbReferencesG) -> refs)
+  where
+    EbReferences refs = mkEbReferences refs
+
+{-# COMPLETE EbReferences #-}
+
+mkBasicEndorserBlockDijkstra :: EraEndorserBlock era => DijkstraEndorserBlock era
 mkBasicEndorserBlockDijkstra =
-  DijkstraEndorserBlock (mkEbReferences (eraProtVerLow @era) mempty) $ EbTransactions mempty
+  DijkstraEndorserBlock (mkEbReferences mempty) $ EbTransactions mempty
 
 instance EraEndorserBlock DijkstraEra where
+  type EbReferences DijkstraEra = DijkstraEbReferences DijkstraEra
   type EndorserBlock DijkstraEra = DijkstraEndorserBlock DijkstraEra
   mkBasicEndorserBlock = mkBasicEndorserBlockDijkstra
+  mkEbReferences = mkMemoizedEra @DijkstraEra . DijkstraEbReferencesRaw
+  txRefsEbReferencesG = to (unDijkstraEbReferencesRaw . getMemoRawType)
   referencesEndorserBlockL = lens debReferences $ \b r -> b {debReferences = r}
   transactionsEndorserBlockL = lens debTransactions $ \b t -> b {debTransactions = t}
