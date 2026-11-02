@@ -15,11 +15,12 @@ module Test.Cardano.Ledger.Era (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Genesis
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.State
 import Data.Aeson (FromJSON, ToJSON)
@@ -46,6 +47,7 @@ class
   , EraGenesis era
   , -- Arbitrary Core
     Arbitrary (Tx TopTx era)
+  , Arbitrary (MempoolTx era)
   , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxOut era)
@@ -88,7 +90,10 @@ class
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody TopTx era)
-  , DecCBOR (Tx TopTx era)
+  , DecCBOR (MempoolTx era)
+  , -- Mempool transaction codec
+    EncCBOR (MempoolTx era)
+  , DecCBOR (Annotator (MempoolTx era))
   , -- TranslationContext
     Eq (TranslationContext era)
   , Show (TranslationContext era)
@@ -166,7 +171,7 @@ ledgerEraTestMain extraEraSpec =
             (mkEraFullPath @era)
             "golden/tx.cbor"
             (eraProtVerLow @era)
-            (exampleTx @era)
+            (UnsafeMkMempoolTx (exampleTx @era))
       describe "JSON" $ do
         prop (show $ typeRep $ Proxy @(NativeScript era)) $
           roundTripAesonProperty @(NativeScript era)

@@ -2,12 +2,20 @@
 
 ## 1.18.0.0
 
+* Replace `TranslateEra AlonzoEra (Tx TopTx)` with `TranslateEra AlonzoEra MempoolTx`
+* Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l AlonzoEra` to `MempoolTx AlonzoEra`
+* Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Alonzo.Core`
 * Change the `STS` state of `LEDGER` rule to `LedgerStateWithLimits`
 * Add `AlonzoBlockBodyLimits`, `abblTxsSize`, `abblExUnits`
 * Reject duplicate keys in the map encoding of `Redeemers`, starting with protocol version 12
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `MempoolTx AlonzoEra`
+* Replace the `DecCBOR` instance for `Tx TopTx AlonzoEra` with one for `MempoolTx AlonzoEra`
+* Change the CBOR instance constraints of `TranslationInstance` to use `MempoolTx era` instead of `Tx TopTx era`
+* Add an `EncCBOR (MempoolTx era)` constraint to `generateGoldenFile`
+* Replace the `DecCBOR (Tx TopTx era)` constraint on `assertTranslationResultsMatchGolden` and `deserializeTranslationInstances` with `DecCBOR (MempoolTx era)`
 * Add `freshAssetOutput`, `restrictMaxValSizeToAdaOnly` and `outputTooBigEntry`
 * Add `Test.Cardano.Ledger.Alonzo.TxInfoSpec` module with:
   - `genGoodBound`

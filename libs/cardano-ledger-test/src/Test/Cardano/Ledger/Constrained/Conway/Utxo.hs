@@ -40,6 +40,7 @@ import Cardano.Ledger.Conway.Core (
  )
 import Cardano.Ledger.Conway.Governance (GovActionId)
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.API.Types
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
@@ -191,10 +192,11 @@ instance
   ) =>
   ToExpr (UtxoExecContext era)
 
+-- | The transaction is serialized in its mempool format.
 instance
   ( EraPParams era
   , EncCBOR (TxOut era)
-  , EncCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
   , EraCertState era
   ) =>
   EncCBOR (UtxoExecContext era)
@@ -202,7 +204,7 @@ instance
   encCBOR x@(UtxoExecContext _ _ _) =
     let UtxoExecContext {..} = x
      in encodeListLen 3
-          <> encCBOR uecTx
+          <> encCBOR (UnsafeMkMempoolTx uecTx)
           <> encCBOR uecUTxO
           <> encCBOR uecUtxoEnv
 

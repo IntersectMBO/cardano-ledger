@@ -21,6 +21,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockBody.Internal
 import Cardano.Ledger.Shelley.Scripts
@@ -92,7 +93,8 @@ instance
 
 deriving newtype instance DecCBOR (TxBody TopTx ShelleyEra)
 
-deriving newtype instance DecCBOR (Tx TopTx ShelleyEra)
+instance DecCBOR (MempoolTx ShelleyEra) where
+  decCBOR = UnsafeMkMempoolTx . MkShelleyTx <$> decCBOR
 
 deriving newtype instance Era era => DecCBOR (ShelleyTxAuxData era)
 

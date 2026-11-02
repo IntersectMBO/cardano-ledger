@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.10.0.1
+## 1.11.0.0
 
-*
+* Add an `EncCBOR (MempoolTx era)` constraint to `propAbstractSizeBoundsBytes` and `propAbstractSizeNotTooBig`
 
 ## 1.10.0.0
 

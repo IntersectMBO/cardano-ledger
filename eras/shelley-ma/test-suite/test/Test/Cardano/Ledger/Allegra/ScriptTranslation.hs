@@ -9,6 +9,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.Core
@@ -74,7 +75,9 @@ testScriptPostTranslation =
               & ttlTxBodyL .~ SlotNo 1
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
           txs = mkBasicTx txb & witsTxL .~ wits
-          txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs
+          txa =
+            unwrapMempoolTx . fromRight . runExcept $
+              translateEra @AllegraEra NoGenesis (UnsafeMkMempoolTx txs)
           result =
             runShelleyBase $
               applySTSTest @(Shelley.LEDGER AllegraEra)

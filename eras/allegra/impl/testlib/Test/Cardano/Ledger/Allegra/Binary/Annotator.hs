@@ -23,6 +23,7 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (decodeMemoized)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Binary.Annotator
@@ -82,7 +83,8 @@ instance Era era => DecCBOR (TimelockRaw era) where
 instance Era era => DecCBOR (Timelock era) where
   decCBOR = MkTimelock <$> decodeMemoized decCBOR
 
-deriving newtype instance DecCBOR (Tx TopTx AllegraEra)
+instance DecCBOR (MempoolTx AllegraEra) where
+  decCBOR = UnsafeMkMempoolTx . MkAllegraTx <$> decCBOR
 
 instance DecCBOR h => DecCBOR (Block h AllegraEra) where
   decCBOR =

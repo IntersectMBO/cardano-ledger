@@ -78,6 +78,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (TxDats),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Plutus.Data (Datum (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Plutus.Language (
@@ -95,6 +96,7 @@ import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Word
 import Generic.Random (genericArbitraryU)
+import Lens.Micro ((.~))
 import Numeric.Natural (Natural)
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Common
@@ -193,6 +195,9 @@ instance Arbitrary (TxBody TopTx AlonzoEra) where
 
 instance Arbitrary IsPhase2Valid where
   arbitrary = elements [Phase2Invalid, Phase2Valid]
+
+instance Arbitrary (MempoolTx AlonzoEra) where
+  arbitrary = UnsafeMkMempoolTx . (isPhase2ValidTxL .~ Phase2Valid) <$> arbitrary
 
 instance
   ( Arbitrary (TxWits era)

@@ -235,6 +235,7 @@ import Cardano.Ledger.Keys (
   makeBootstrapWitness,
   witVKeyHash,
  )
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
 import Cardano.Ledger.Shelley.API.Forecast (EraForecast)
@@ -1545,7 +1546,7 @@ trySubmitMempoolTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
   withMempoolContext $ \globals mempoolEnv mempoolState ->
-    applyTxWithFullValidation globals mempoolEnv mempoolState txFixed
+    applyTxWithFullValidation globals mempoolEnv mempoolState (UnsafeMkMempoolTx txFixed)
 
 -- | Reapply a transaction that the mempool has already validated.
 tryReapplyMempoolTx ::

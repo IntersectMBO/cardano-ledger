@@ -36,6 +36,7 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -51,18 +52,17 @@ import Lens.Micro ((&), (.~), (^.))
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis
 
-instance TranslateEra DijkstraEra (Tx TopTx) where
-  type TranslationError DijkstraEra (Tx TopTx) = DecoderError
-  translateEra _ctxt tx = case toSTxLevel tx of
+instance TranslateEra DijkstraEra MempoolTx where
+  type TranslationError DijkstraEra MempoolTx = DecoderError
+  translateEra _ctxt (UnsafeMkMempoolTx tx) = case toSTxLevel tx of
     STopTxOnly -> do
-      -- Note that this does not preserve the hidden bytes field of the transaction.
-      -- This is under the premise that this is irrelevant for TxInBlocks, which are
-      -- not transmitted as contiguous chunks.
+      -- Translate the memoized components separately, retaining the bytes used by
+      -- transaction signatures and auxiliary-data hashes.
       txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
       txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
       auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
       let isPhase2ValidTx = tx ^. isPhase2ValidTxL
-      pure $
+      pure . UnsafeMkMempoolTx $
         mkBasicTx txBody
           & witsTxL .~ txWits
           & isPhase2ValidTxL .~ isPhase2ValidTx

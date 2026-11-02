@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Shelley.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Credential,
@@ -70,10 +71,10 @@ spec =
       huddleRoundTripCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
       xdescribe "fix protver decoder" $
         huddleAntiCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
-      huddleRoundTripAnnCborSpec @(Tx TopTx ShelleyEra) v "transaction"
-      huddleRoundTripCborSpec @(Tx TopTx ShelleyEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(MempoolTx ShelleyEra) v "transaction"
+      huddleRoundTripCborSpec @(MempoolTx ShelleyEra) v "transaction"
       xdescribe "fix transaction fields" $
-        huddleAntiCborSpec @(Tx TopTx ShelleyEra) v "transaction"
+        huddleAntiCborSpec @(MempoolTx ShelleyEra) v "transaction"
       huddleRoundTripAnnCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
       huddleAntiCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
@@ -81,4 +82,4 @@ spec =
         huddleDecoderEquivalenceSpec @(TxBody TopTx ShelleyEra) v "transaction_body"
         huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "metadata"
         huddleDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "native_script"
-        huddleDecoderEquivalenceSpec @(Tx TopTx ShelleyEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(MempoolTx ShelleyEra) v "transaction"

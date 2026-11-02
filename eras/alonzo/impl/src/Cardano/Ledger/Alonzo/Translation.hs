@@ -19,6 +19,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -70,18 +71,17 @@ instance TranslateEra AlonzoEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance TranslateEra AlonzoEra (Tx TopTx) where
-  type TranslationError AlonzoEra (Tx TopTx) = DecoderError
-  translateEra _ctxt tx = do
-    -- Note that this does not preserve the hidden bytes field of the transaction.
-    -- This is under the premise that this is irrelevant for TxInBlocks, which are
-    -- not transmitted as contiguous chunks.
+instance TranslateEra AlonzoEra MempoolTx where
+  type TranslationError AlonzoEra MempoolTx = DecoderError
+  translateEra _ctxt (UnsafeMkMempoolTx tx) = do
+    -- Translate the memoized components separately, retaining the bytes used by
+    -- transaction signatures and auxiliary-data hashes.
     txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
     txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
     txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
     let validating = Phase2Valid
-    pure $
+    pure . UnsafeMkMempoolTx $
       mkBasicTx txBody
         & witsTxL .~ txWits
         & auxDataTxL .~ txAuxData

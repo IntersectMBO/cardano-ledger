@@ -20,9 +20,11 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
+import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import Cardano.Ledger.Shelley.PParams (
@@ -333,12 +335,13 @@ propAbstractSizeBoundsBytes ::
   ( EraGen era
   , EraGov era
   , EraStake era
+  , EncCBOR (MempoolTx era)
   , QC.HasTrace (LEDGER era) (GenEnv MockCrypto era)
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
-      numBytes = toInteger . BS.length . Plain.serialize'
+      numBytes = toInteger . BS.length . Plain.serialize' . UnsafeMkMempoolTx
   forAllTraceFromInitState @(LEDGER era)
     testGlobals
     tl
@@ -361,6 +364,7 @@ propAbstractSizeNotTooBig ::
   ( EraGen era
   , EraGov era
   , EraStake era
+  , EncCBOR (MempoolTx era)
   , QC.HasTrace (LEDGER era) (GenEnv MockCrypto era)
   ) =>
   Property
@@ -372,7 +376,7 @@ propAbstractSizeNotTooBig = property $ do
       -- It will be interesting to see the test fail with
       -- an acceptableMagnitude of three, though.
       acceptableMagnitude = (3 :: Integer)
-      numBytes = toInteger . BS.length . Plain.serialize'
+      numBytes = toInteger . BS.length . Plain.serialize' . UnsafeMkMempoolTx
       notTooBig tx = txSizeBound tx <= acceptableMagnitude * numBytes tx
   forAllTraceFromInitState @(LEDGER era)
     testGlobals

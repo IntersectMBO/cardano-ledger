@@ -33,7 +33,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Binary (EncCBOR)
+import Cardano.Ledger.Binary (EncCBOR (..), Encoding)
 import Cardano.Ledger.Core (Era, EraRule, eraProtVerLow)
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Bifunctor (Bifunctor (..))
@@ -109,7 +109,8 @@ class
   , ForAllExecSpecRep ToExpr rule era
   , ForAllExecTypes NFData rule era
   , ForAllExecTypes ToExpr rule era
-  , ForAllExecTypes EncCBOR rule era
+  , EncCBOR (Environment (EraRule rule era))
+  , EncCBOR (State (EraRule rule era))
   , EncCBOR (ExecContext rule era)
   , Eq (SpecState rule era)
   , SpecNormalize (SpecState rule era)
@@ -132,6 +133,13 @@ class
 
   type SpecSignal rule era
   type SpecSignal rule era = SpecRep era (Signal (EraRule rule era))
+
+  -- | Encode the implementation signal for conformance failure dumps.
+  encodeSignal :: Signal (EraRule rule era) -> Encoding
+  default encodeSignal ::
+    EncCBOR (Signal (EraRule rule era)) =>
+    Signal (EraRule rule era) -> Encoding
+  encodeSignal = encCBOR
 
   runAgdaRule ::
     HasCallStack =>
@@ -244,14 +252,7 @@ diffConformance implRes agdaRes =
 checkConformance ::
   forall rule era.
   ( HasCallStack
-  , Era era
-  , EncCBOR (ExecContext rule era)
-  , EncCBOR (Environment (EraRule rule era))
-  , EncCBOR (State (EraRule rule era))
-  , EncCBOR (Signal (EraRule rule era))
-  , ToExpr (SpecState rule era)
-  , Eq (SpecState rule era)
-  , SpecNormalize (SpecState rule era)
+  , ExecSpecRule rule era
   ) =>
   ExecContext rule era ->
   TRC (EraRule rule era) ->
@@ -280,7 +281,7 @@ checkConformance ctx (TRC (env, st, sig)) implResTest agdaResTest = do
           dumpCbor path ctx "conformance_dump_ctx"
           dumpCbor path env "conformance_dump_env"
           dumpCbor path st "conformance_dump_st"
-          dumpCbor path sig "conformance_dump_sig"
+          dumpCbor path (encodeSignal @rule @era sig) "conformance_dump_sig"
           logDoc $ "Dumped the CBOR files to " <> ansiExpr path
         Nothing ->
           logDoc $

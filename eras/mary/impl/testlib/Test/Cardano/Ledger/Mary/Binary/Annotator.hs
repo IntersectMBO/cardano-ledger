@@ -14,11 +14,13 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core (TxLevel (..))
 import Cardano.Ledger.Mary (MaryEra, Tx (..))
 import Cardano.Ledger.Mary.TxBody
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Test.Cardano.Ledger.Allegra.Binary.Annotator
 
 deriving newtype instance DecCBOR (TxBody TopTx MaryEra)
 
-deriving newtype instance DecCBOR (Tx TopTx MaryEra)
+instance DecCBOR (MempoolTx MaryEra) where
+  decCBOR = UnsafeMkMempoolTx . MkMaryTx <$> decCBOR
 
 instance DecCBOR h => DecCBOR (Block h MaryEra) where
   decCBOR =

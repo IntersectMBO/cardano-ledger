@@ -151,8 +151,8 @@ class
   -- however it will not preserve the binary representation for memoized types.
   -- If binary representation and validity of signatures, scriptIntegrityHash and
   --  auxDataHash must be retained, then the corresponding
-  -- `binaryUpgradeTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxAuxData` and `binaryUpgradeTxWits` functions
-  -- should be used instead.
+  -- `binaryUpgradeMempoolTx`, `binaryUpgradeTxBody`, `binaryUpgradeTxAuxData` and `binaryUpgradeTxWits` functions
+  -- should be used instead, with `MempoolTx` as the transaction representation.
   -- Compare the two types of upgrade:
   -- - `upgrade[Tx, TxBody, TxAuxData, TxWits]` will use the Haskell representation, but will not
   --   preserve the serialised form. However, they will be suitable for iterated
@@ -199,7 +199,7 @@ class
 
   -- | Upgrade a transaction from the previous era.
   -- /Warning/ - This may not preserve the underlying binary representation.
-  -- Use `binaryUpgradeTx` instead, if you need to preserve the serialised form.
+  -- Use `binaryUpgradeMempoolTx` with `MempoolTx` instead, if you need to preserve the serialised form.
   upgradeTx ::
     EraTx (PreviousEra era) =>
     Tx l (PreviousEra era) ->

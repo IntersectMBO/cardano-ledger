@@ -33,6 +33,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
 import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
@@ -88,17 +89,16 @@ instance TranslateEra ConwayEra NewEpochState where
         , nesLastTickSlotNo = nesLastTickSlotNo nes
         }
 
-instance TranslateEra ConwayEra (Tx TopTx) where
-  type TranslationError ConwayEra (Tx TopTx) = DecoderError
-  translateEra _ctxt tx = do
-    -- Note that this does not preserve the hidden bytes field of the transaction.
-    -- This is under the premise that this is irrelevant for TxInBlocks, which are
-    -- not transmitted as contiguous chunks.
+instance TranslateEra ConwayEra MempoolTx where
+  type TranslationError ConwayEra MempoolTx = DecoderError
+  translateEra _ctxt (UnsafeMkMempoolTx tx) = do
+    -- Translate the memoized components separately, retaining the bytes used by
+    -- transaction signatures and auxiliary-data hashes.
     txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
     txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
     auxData <- mapM (translateEraThroughCBOR "AuxData") (tx ^. auxDataTxL)
     let isPhase2ValidTx = tx ^. isPhase2ValidTxL
-    pure $
+    pure . UnsafeMkMempoolTx $
       mkBasicTx txBody
         & witsTxL .~ txWits
         & isPhase2ValidTxL .~ isPhase2ValidTx

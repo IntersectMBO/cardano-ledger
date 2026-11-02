@@ -22,10 +22,11 @@ import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), Timelock, evalTime
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
   Tx (..),
@@ -40,7 +41,6 @@ import Cardano.Ledger.Shelley.Tx (
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Set as Set (map)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
@@ -49,7 +49,7 @@ import NoThunks.Class (NoThunks)
 
 instance EraTx AllegraEra where
   newtype Tx t AllegraEra = MkAllegraTx {unAllegraTx :: ShelleyTx t AllegraEra}
-    deriving newtype (Eq, NFData, NoThunks, Show, ToCBOR, EncCBOR)
+    deriving newtype (Eq, NFData, NoThunks, Show)
     deriving (Generic)
 
   type StAnnTx l AllegraEra = Tx l AllegraEra
@@ -94,8 +94,11 @@ instance ToJSON (Tx TopTx AllegraEra) where
 instance FromJSON (Tx TopTx AllegraEra) where
   parseJSON v = MkAllegraTx <$> parseJSON v
 
-instance Typeable t => DecCBOR (Annotator (Tx t AllegraEra)) where
-  decCBOR = fmap MkAllegraTx <$> decCBOR
+instance EncCBOR (MempoolTx AllegraEra) where
+  encCBOR = encCBOR . unAllegraTx . unwrapMempoolTx
+
+instance DecCBOR (Annotator (MempoolTx AllegraEra)) where
+  decCBOR = fmap (UnsafeMkMempoolTx . MkAllegraTx) <$> decCBOR
 
 allegraTxL :: Lens' (Tx t AllegraEra) (ShelleyTx t AllegraEra)
 allegraTxL = lens unAllegraTx (\x y -> x {unAllegraTx = y})

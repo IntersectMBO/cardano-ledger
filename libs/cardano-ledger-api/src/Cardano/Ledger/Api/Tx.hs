@@ -74,8 +74,12 @@ module Cardano.Ledger.Api.Tx (
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
 
+  -- * Mempool
+  MempoolTx,
+  unwrapMempoolTx,
+
   -- * Upgrade
-  binaryUpgradeTx,
+  binaryUpgradeMempoolTx,
   upgradeTx,
 
   -- * Deprecated
@@ -105,7 +109,8 @@ import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
 import Cardano.Ledger.Babbage.Collateral (mkCollateralTxIn)
-import Cardano.Ledger.Core (EraTx (..), TxLevel (..), binaryUpgradeTx, txIdTx)
+import Cardano.Ledger.Core (EraTx (..), TxLevel (..), txIdTx)
+import Cardano.Ledger.MempoolTx (MempoolTx, binaryUpgradeMempoolTx, unwrapMempoolTx)
 import Cardano.Ledger.State (UTxO (..), txouts)
 import Cardano.Ledger.Tools (calcMinFeeTx, estimateMinFeeTx, setMinFeeTx, setMinFeeTxUtxo)
 import Control.Monad (join)

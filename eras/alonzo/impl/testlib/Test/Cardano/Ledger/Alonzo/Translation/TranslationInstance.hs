@@ -32,6 +32,7 @@ import Cardano.Ledger.Binary (
   fromPlainEncoding,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.State (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
@@ -209,10 +210,11 @@ instance EncCBOR VersionedTxInfo where
 instance DecCBOR VersionedTxInfo where
   decCBOR = fromPlainDecoder Cborg.decode
 
+-- | The transaction is serialized in its mempool format.
 instance
   ( AlonzoEraScript era
   , EncCBOR (UTxO era)
-  , EncCBOR (Tx TopTx era)
+  , EncCBOR (MempoolTx era)
   ) =>
   EncCBOR (TranslationInstance era)
   where
@@ -221,14 +223,14 @@ instance
       <> encCBOR pp
       <> encCBOR l
       <> encCBOR u
-      <> encCBOR tx
+      <> encCBOR (UnsafeMkMempoolTx tx)
       <> encCBOR p
       <> encCBOR r
 
 instance
   ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Tx TopTx era)
+  , DecCBOR (MempoolTx era)
   , EraPlutusContext era
   ) =>
   DecCBOR (TranslationInstance era)
@@ -239,7 +241,7 @@ instance
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
-        <*> decCBOR
+        <*> (unwrapMempoolTx <$> decCBOR)
         <*> decCBOR
         <*> decCBOR
 
@@ -247,7 +249,7 @@ deserializeTranslationInstances ::
   forall era.
   ( DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Tx TopTx era)
+  , DecCBOR (MempoolTx era)
   , EraPlutusContext era
   ) =>
   BSL.ByteString ->

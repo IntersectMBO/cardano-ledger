@@ -33,6 +33,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys
 import Cardano.Ledger.MemoBytes
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
@@ -360,3 +361,6 @@ instance ToExpr TestBlockHeader
 instance ToExpr EbReferencesAnnouncement
 
 instance ToExpr EbAnnouncement
+
+instance ToExpr (Tx TopTx era) => ToExpr (MempoolTx era) where
+  toExpr (UnsafeMkMempoolTx tx) = App "UnsafeMkMempoolTx" [toExpr tx]

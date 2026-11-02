@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
 import Cardano.Ledger.Alonzo.Plutus.Context (LedgerLevelTxInfo (..), SupportedLanguage (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
@@ -34,7 +35,7 @@ import Test.HUnit (Assertion, assertEqual)
 -- and serializes both arguments and result to golden/translations.cbor file
 generateGoldenFile ::
   forall era.
-  TranslatableGen era =>
+  (TranslatableGen era, EncCBOR (MempoolTx era)) =>
   FilePath ->
   IO ()
 generateGoldenFile file = do
@@ -46,7 +47,7 @@ generateGoldenFile file = do
 assertTranslationResultsMatchGolden ::
   forall era.
   ( TranslatableGen era
-  , DecCBOR (Tx TopTx era)
+  , DecCBOR (MempoolTx era)
   , HasCallStack
   ) =>
   IO FilePath ->

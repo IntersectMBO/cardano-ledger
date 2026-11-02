@@ -18,6 +18,7 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (Version)
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR,
   DecoderError (..),
   DeserialiseFailure (..),
   Tokens (..),
@@ -30,6 +31,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTx)
 import Cardano.Ledger.Keys (WitVKey (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..))
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Monad (forM_)
@@ -51,7 +53,10 @@ import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
 import Test.Cardano.Ledger.Imp.Common (forEachEraVersion)
 
-spec :: forall era. (DijkstraEraTest era, ToExpr (BlockBody era)) => Spec
+spec ::
+  forall era.
+  (DijkstraEraTest era, ToExpr (BlockBody era), DecCBOR (Annotator (Tx TopTx era))) =>
+  Spec
 spec = describe "Golden" . forEachEraVersion @era $ \version -> do
   describe "Redeemers" $ do
     goldenListRedeemersDisallowed @era version
@@ -440,29 +445,31 @@ goldenSubTransactions = do
 
 goldenIsPhase2ValidFlag :: forall era. DijkstraEraTest era => Spec
 goldenIsPhase2ValidFlag = do
-  it "Deserialize transactions with missing `isPhase2Valid` flag" $
-    expectDecoderResultOn @(Tx TopTx era)
+  it "Deserialize mempool transactions with missing `isPhase2Valid` flag" $
+    expectDecoderResultOn @(MempoolTx era)
       version
       txWithoutFlagEnc
       basicValidTx
       id
-  it "Deserialize transactions with `isPhase2Valid` flag set to true" $
-    expectDecoderResultOn @(Tx TopTx era)
+  it "Deserialize mempool transactions with `isPhase2Valid` flag set to true" $
+    expectDecoderResultOn @(MempoolTx era)
       version
       txWithFlagTrueEnc
       basicValidTx
       id
-  it "Fail to deserialize transactions with `isPhase2Valid` flag set to false" $
-    expectDecoderFailureAnn @(Tx TopTx era)
+  it "Fail to deserialize mempool transactions with `isPhase2Valid` flag set to false" $
+    expectDecoderFailureAnn @(MempoolTx era)
       version
       txWithFlagFalseEnc
       ( DecoderErrorDeserialiseFailure
-          "Annotator (Tx TopTx DijkstraEra)"
+          "Annotator (MempoolTx DijkstraEra)"
           (DeserialiseFailure 13 "Value `false` not allowed for `isPhase2Valid`")
       )
   where
     version = eraProtVerLow @era
-    basicValidTx = mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isPhase2ValidTxL .~ Phase2Valid
+    basicValidTx =
+      UnsafeMkMempoolTx $
+        mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isPhase2ValidTxL .~ Phase2Valid
     txWithoutFlagEnc =
       mconcat
         [ E $ TkListLen 3
@@ -495,7 +502,9 @@ goldenIsPhase2ValidFlag = do
         ]
 
 goldenBlockTransaction ::
-  forall era. (DijkstraEraTest era, ToExpr (BlockBody era)) => Spec
+  forall era.
+  (DijkstraEraTest era, ToExpr (BlockBody era), DecCBOR (Annotator (Tx TopTx era))) =>
+  Spec
 goldenBlockTransaction = do
   it "Deserialize a block body with a valid transaction" $
     expectDecoderResultOn @(BlockBody era)
@@ -508,6 +517,12 @@ goldenBlockTransaction = do
       version
       (blockBodyEnc False)
       (blockBodyWithFlag Phase2Invalid)
+      id
+  it "Deserialize a transaction in the block format with `isPhase2Valid` set to false" $
+    expectDecoderResultOn @(Tx TopTx era)
+      version
+      (txInBlockEnc False)
+      (mkBasicTx @era @TopTx (mkBasicTxBody @era @TopTx) & isPhase2ValidTxL .~ Phase2Invalid)
       id
   it "Fail to deserialize a block transaction with `isPhase2Valid` before auxiliary data" $
     expectDecoderFailureAnn @(BlockBody era)

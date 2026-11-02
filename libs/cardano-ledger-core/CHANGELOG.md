@@ -2,6 +2,11 @@
 
 ## 1.23.0.0
 
+* Add `Cardano.Ledger.MempoolTx` with the abstract `MempoolTx` wrapper and `unwrapMempoolTx`
+* Add `Cardano.Ledger.MempoolTx.Internal` with the `UnsafeMkMempoolTx` constructor
+* Generalize `wireSizeTxF` to accept an era-indexed transaction representation
+* Replace `binaryUpgradeTx` with new function `binaryUpgradeMempoolTx`
+* Remove the `EncCBOR`, `ToCBOR` and annotator `DecCBOR` superclass requirements for `Tx l era` from `EraTx`
 * Add `BlockBodyLimits` type to `EraBlockBody` typeclass
 * Re-export `Cardano.Ledger.Plutus.ToPlutusData` module from `Cardano.Ledger.Plutus`
 * Add `sppIdL`, `sppAccountAddressL`, `sppBlsKeyL`, `sppPledgeL`, `sppMarginL`, `sppOwnersL` and `sppRelaysL` to `Cardano.Ledger.State.StakePool`
@@ -34,6 +39,10 @@
 
 ### `testlib`
 
+* Replace the `Arbitrary (Tx TopTx era)` and `DecCBOR (Tx TopTx era)` constraints on `roundTripCoreEraTypesSpec` with `Arbitrary (MempoolTx era)`, `EncCBOR (MempoolTx era)`, `DecCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`
+* Replace the `Arbitrary (Tx TopTx era)` constraint on `decoderEquivalenceCoreEraTypesSpec` with `Arbitrary (MempoolTx era)`, `EncCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`
+* Replace the `DecCBOR (Tx TopTx era)` superclass of `EraTest` with `EncCBOR (MempoolTx era)`, `DecCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`, and add an `Arbitrary (MempoolTx era)` superclass
+* Add `Arbitrary` and `ToExpr` instances for `MempoolTx era`
 * Add `Eq` and `Show` instances for `TestBlockHeader`
 * Add `sameAsToBuiltinDataSpec`
 * Add `tbhBlockBodyContainsLeiosCert` to `TestBlockHeader`

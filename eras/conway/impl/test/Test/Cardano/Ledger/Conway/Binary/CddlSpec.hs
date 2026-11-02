@@ -15,6 +15,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.HuddleSpec (conwayCDDL)
 import Cardano.Ledger.Core
+import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Praos.BlockHeader as Praos
@@ -114,11 +115,11 @@ spec = do
       huddleRoundTripCborSpec @(Redeemers ConwayEra) v "redeemers"
       huddleAntiCborSpec @(Redeemers ConwayEra) v "redeemers"
       -- Tx
-      huddleRoundTripAnnCborSpec @(Tx TopTx ConwayEra) v "transaction"
-      huddleRoundTripCborSpec @(Tx TopTx ConwayEra) v "transaction"
+      huddleRoundTripAnnCborSpec @(MempoolTx ConwayEra) v "transaction"
+      huddleRoundTripCborSpec @(MempoolTx ConwayEra) v "transaction"
       xdescribe "fix txbody" $ do
-        huddleRoundTripArbitraryValidate @(Tx TopTx ConwayEra) v "transaction"
-        huddleAntiCborSpec @(Tx TopTx ConwayEra) v "transaction"
+        huddleRoundTripArbitraryValidate @(MempoolTx ConwayEra) v "transaction"
+        huddleAntiCborSpec @(MempoolTx ConwayEra) v "transaction"
       -- VotingProcedure
       huddleRoundTripCborSpec @(VotingProcedure ConwayEra) v "voting_procedure"
       huddleRoundTripArbitraryValidate @(VotingProcedure ConwayEra) v "voting_procedure"
@@ -152,4 +153,4 @@ spec = do
         huddleDecoderEquivalenceSpec @(Script ConwayEra) v "script"
         huddleDecoderEquivalenceSpec @(TxWits ConwayEra) v "transaction_witness_set"
         huddleDecoderEquivalenceSpec @(Redeemers ConwayEra) v "redeemers"
-        huddleDecoderEquivalenceSpec @(Tx TopTx ConwayEra) v "transaction"
+        huddleDecoderEquivalenceSpec @(MempoolTx ConwayEra) v "transaction"

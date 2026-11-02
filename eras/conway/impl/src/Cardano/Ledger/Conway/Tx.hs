@@ -39,7 +39,7 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
  )
 import Cardano.Ledger.Babbage.TxBody (babbageAllInputsTxBodyF)
 import Cardano.Ledger.BaseTypes (NonZero (..), unboundRational)
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ppMinFeeRefScriptCostPerByteL)
@@ -47,11 +47,11 @@ import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -63,7 +63,7 @@ instance HasEraTxLevel Tx ConwayEra where
 
 instance EraTx ConwayEra where
   newtype Tx l ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx l ConwayEra}
-    deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
+    deriving newtype (Eq, Show, NFData, NoThunks)
     deriving (Generic)
 
   type StAnnTx l ConwayEra = AlonzoStAnnTx l ConwayEra
@@ -149,8 +149,11 @@ instance AlonzoEraTx ConwayEra where
   isPhase2ValidTxL = conwayTxL . isPhase2ValidAlonzoTxL
   {-# INLINE isPhase2ValidTxL #-}
 
-instance Typeable l => DecCBOR (Annotator (Tx l ConwayEra)) where
-  decCBOR = fmap MkConwayTx <$> decCBOR
+instance EncCBOR (MempoolTx ConwayEra) where
+  encCBOR = encCBOR . unConwayTx . unwrapMempoolTx
+
+instance DecCBOR (Annotator (MempoolTx ConwayEra)) where
+  decCBOR = fmap (UnsafeMkMempoolTx . MkConwayTx) <$> decCBOR
 
 instance ToJSON (Tx TopTx ConwayEra) where
   toJSON (MkConwayTx tx) = toJSON tx

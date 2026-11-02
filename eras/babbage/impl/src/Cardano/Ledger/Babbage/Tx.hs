@@ -23,13 +23,13 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (TxBody (..), babbageAllInputsTxBodyF)
 import Cardano.Ledger.Babbage.TxWits ()
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR, ToCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, to)
 import NoThunks.Class (NoThunks)
@@ -39,7 +39,7 @@ instance HasEraTxLevel Tx BabbageEra where
 
 instance EraTx BabbageEra where
   newtype Tx l BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx l BabbageEra}
-    deriving newtype (Eq, NFData, Show, NoThunks, ToCBOR, EncCBOR)
+    deriving newtype (Eq, NFData, Show, NoThunks)
     deriving (Generic)
 
   type StAnnTx l BabbageEra = AlonzoStAnnTx l BabbageEra
@@ -79,8 +79,11 @@ instance AlonzoEraTx BabbageEra where
   isPhase2ValidTxL = babbageTxL . isPhase2ValidAlonzoTxL
   {-# INLINE isPhase2ValidTxL #-}
 
-instance Typeable l => DecCBOR (Annotator (Tx l BabbageEra)) where
-  decCBOR = fmap MkBabbageTx <$> decCBOR
+instance EncCBOR (MempoolTx BabbageEra) where
+  encCBOR = encCBOR . unBabbageTx . unwrapMempoolTx
+
+instance DecCBOR (Annotator (MempoolTx BabbageEra)) where
+  decCBOR = fmap (UnsafeMkMempoolTx . MkBabbageTx) <$> decCBOR
 
 babbageTxL :: Lens' (Tx l BabbageEra) (AlonzoTx l BabbageEra)
 babbageTxL = lens unBabbageTx (\x y -> x {unBabbageTx = y})
