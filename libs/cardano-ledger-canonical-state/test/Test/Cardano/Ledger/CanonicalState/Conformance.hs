@@ -13,7 +13,7 @@ import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
 import Codec.CBOR.Cuddle.CBOR.Validator.Trace (Evidenced (..), SValidity (..), showValidationTrace)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
-import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen)
+import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen, twiddleNothing)
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import Codec.CBOR.Cuddle.IndexMappable (mapIndex)
 import Codec.CBOR.Term (encodeTerm)
@@ -48,9 +48,11 @@ generateCBORFromCDDL ::
   IO BS.ByteString
 generateCBORFromCDDL spec = do
   term <-
-    generate . runAntiGen $
-      runCBORGen (GenConfig {gcTwiddle = False, gcRoot = mapIndex spec}) . generateFromName $
-        Name (T.pack "record_entry")
+    generate . runAntiGen
+      $ runCBORGen
+        (GenConfig {gcTwiddle = twiddleNothing, gcRoot = mapIndex spec})
+        . generateFromName
+      $ Name (T.pack "record_entry")
   pure $ toStrictByteString $ encodeTerm term
 
 -- | Test if a reference CDDL accepts CBOR generated from another spec

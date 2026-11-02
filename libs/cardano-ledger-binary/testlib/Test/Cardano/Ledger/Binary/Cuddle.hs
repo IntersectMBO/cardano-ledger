@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   HuddleEnv (..),
   toGenConfig,
   resolveHuddle,
+  cardanoTwiddleConfig,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -53,7 +54,14 @@ import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
  )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
-import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen)
+import Codec.CBOR.Cuddle.CDDL.Custom.Generator (
+  GenConfig (..),
+  TwiddleConfig (..),
+  TwiddlePolicy (..),
+  runCBORGen,
+  twiddleAll,
+  twiddleNothing,
+ )
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
@@ -186,7 +194,7 @@ huddleRoundTripAnnCborSpec version ruleName =
         huddleRoundTripAnnCborProp @a version ruleName
 
 data HuddleEnv = HuddleEnv
-  { heTwiddle :: Bool
+  { heTwiddle :: TwiddleConfig
   , heRoot :: CTreeRoot MonoReferenced
   }
 
@@ -254,15 +262,18 @@ huddleAntiCborSpec version ruleName =
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
         $ huddleAntiCborProp @a version ruleName
 
+cardanoTwiddleConfig :: TwiddleConfig
+cardanoTwiddleConfig = twiddleAll {tcBytes = DefiniteOnly}
+
 specWithHuddle :: Cuddle.Huddle -> SpecWith HuddleEnv -> Spec
 specWithHuddle h =
   beforeAll $
     case resolveHuddle h of
-      Right ct -> pure $ HuddleEnv True ct
+      Right ct -> pure $ HuddleEnv cardanoTwiddleConfig ct
       Left err -> error err
 
 noTwiddle :: SpecWith HuddleEnv -> SpecWith HuddleEnv
-noTwiddle = mapSubject $ \env -> env {heTwiddle = False}
+noTwiddle = mapSubject $ \env -> env {heTwiddle = twiddleNothing}
 
 -- | Verify that random data generated is:
 --

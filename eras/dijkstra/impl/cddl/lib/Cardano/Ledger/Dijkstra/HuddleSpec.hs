@@ -45,13 +45,13 @@ import Cardano.Ledger.Huddle.Gen (
   RuleTerm (..),
   antiChoose,
   faultyBool,
-  genArrayTerm,
-  genMapTerm,
   genRule,
   generateFromGRef,
   generateFromName,
   liftAntiGen,
   scale,
+  twiddleArray,
+  twiddleMap,
   unwrapSingle,
   unwrapSingleOrError,
   validateArrayTerm,
@@ -129,7 +129,7 @@ nonemptyOMap pname = binding2 $ \k v ->
       repeatFirst <- liftAntiGen $ faultyBool False
       let keys = if repeatFirst then uniqueKeys <> take 1 uniqueKeys else uniqueKeys
       values <- replicateM (length keys) (genTerm vRef)
-      SingleTerm <$> genMapTerm (zip keys values)
+      SingleTerm <$> twiddleMap (zip keys values)
     validator kRef vRef term = do
       entries <- unwrapSingle term >>= validateMapTerm
       when (null entries) $ fail "empty map"
@@ -192,7 +192,7 @@ subTransactionsRule pname p =
       nElems <- Gen.sized $ \sz -> choose (1, max 1 (min sz 3))
       let subTxGen = scale (`div` 2) $ genRule @"sub_transaction" @era
       txs <- uniqueByBody nElems subTxGen
-      elemsArr <- genArrayTerm txs
+      elemsArr <- twiddleArray txs
       tagged <- Gen.arbitrary
       pure $ SingleTerm $ if tagged then TTagged 258 elemsArr else elemsArr
     uniqueByBody :: Int -> CBORGen Term -> CBORGen [Term]
@@ -1194,12 +1194,12 @@ blockBodyGen = do
             generateFromName "block_transaction"
       )
       [0 .. numTxs - 1]
-  txsTerm <- withAntiGen (withAnnotation "transactions") $ genArrayTerm txs
+  txsTerm <- withAntiGen (withAnnotation "transactions") $ twiddleArray txs
   -- NOTE: This would not be a valid block because txs are not allowed when a
   -- leios cert is also included
   leiosCertTerm <- generateFromName "leios_certificate"
   perasCertTerm <- generateFromName "peras_certificate"
-  SingleTerm <$> genArrayTerm [txsTerm, leiosCertTerm, perasCertTerm]
+  SingleTerm <$> twiddleArray [txsTerm, leiosCertTerm, perasCertTerm]
 
 instance HuddleRule "auxiliary_scripts" DijkstraEra where
   huddleRuleNamed = auxiliaryScriptsRule
