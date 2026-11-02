@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove `feesOK`
 * Replace `TranslateEra BabbageEra (Tx TopTx)` with `TranslateEra BabbageEra MempoolTx`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l BabbageEra` to `MempoolTx BabbageEra`
 * Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Babbage.Core`
