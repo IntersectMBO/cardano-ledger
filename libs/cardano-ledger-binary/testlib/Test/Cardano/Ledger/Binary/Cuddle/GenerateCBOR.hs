@@ -125,7 +125,7 @@ generateCBORMain eraCDDLs = do
     Left err -> die $ "Failed to resolve CDDL: " <> err
     Right root -> do
       when (gcboBinary opts) $ hSetBinaryMode stdout True
-      let env = HuddleEnv {heTwiddle = True, heRoot = root}
+      let env = HuddleEnv {heTwiddle = cardanoTwiddleConfig, heRoot = root}
           multipleRules = length (gcboRuleNames opts) > 1
       forM_ (gcboRuleNames opts) $ \ruleName -> do
         when (multipleRules && not (gcboBinary opts)) $

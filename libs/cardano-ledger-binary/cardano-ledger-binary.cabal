@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-binary
-version: 1.10.2.0
+version: 1.11.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -118,7 +118,7 @@ library testlib
   build-depends:
     ImpSpec,
     QuickCheck,
-    antigen ^>=0.4,
+    antigen ^>=0.5,
     base,
     base16-bytestring,
     bytestring,
@@ -132,7 +132,7 @@ library testlib
     cardano-strict-containers,
     cborg,
     containers,
-    cuddle >=1.8,
+    cuddle >=1.9,
     directory,
     filepath,
     formatting,

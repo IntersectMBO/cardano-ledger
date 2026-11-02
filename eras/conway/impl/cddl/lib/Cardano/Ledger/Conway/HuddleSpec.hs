@@ -90,14 +90,14 @@ import Cardano.Ledger.Huddle.Gen (
   antiVectorOfUnique,
   arbitrary,
   faultyNum,
-  genArrayTerm,
-  genMapTerm,
   genRule,
   generateFromGRef,
   liftAntiGen,
   oneof,
   replicateMNorm,
   shuffle,
+  twiddleArray,
+  twiddleMap,
   unwrapSingle,
   unwrapSingleOrError,
   validateArrayTerm,
@@ -726,7 +726,7 @@ conwayRedeemer pname p =
 generateMaybeTaggedSet :: Int -> CBORGen Term -> CBORGen Term
 generateMaybeTaggedSet nElems gen = do
   elems <- fromMaybe QC.discard <$> withAntiGen (antiVectorOfUnique nElems) gen
-  elemsArr <- genArrayTerm elems
+  elemsArr <- twiddleArray elems
   tagged <- arbitrary
   if tagged
     then do
@@ -1120,9 +1120,9 @@ conwayCostModelsGenerator = Gen.sized $ \size -> do
   kvs <- forM keys $ \k -> resize (size `div` 2) $ do
     nVals <- Gen.sized $ \sz -> choose (0, sz)
     v <- withAntiGen (replicateMNorm nVals) $ genRule @"int64" @era
-    vs <- genArrayTerm v
+    vs <- twiddleArray v
     pure (TInt k, vs)
-  SingleTerm <$> genMapTerm kvs
+  SingleTerm <$> twiddleMap kvs
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRuleNamed pname p =
