@@ -37,12 +37,12 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose),
   RuleTerm (..),
   Term (..),
-  genArrayTerm,
   generateFromGRef,
   liftAntiGen,
   listOf,
   oneof,
   scale,
+  twiddleArray,
   (|!),
  )
 import Cardano.Ledger.Mary.HuddleSpec
@@ -170,11 +170,11 @@ constr pname =
           if t == 102
             then do
               uInt <- TInt <$> choose (0, 2 ^ (64 :: Int) - 1)
-              elems <- genArrayTerm =<< unwrapElems =<< listOf (generateFromGRef ref)
-              pure . SingleTerm <$> genArrayTerm [uInt, elems]
+              elems <- twiddleArray =<< unwrapElems =<< listOf (generateFromGRef ref)
+              pure . SingleTerm <$> twiddleArray [uInt, elems]
             else listOf $ generateFromGRef ref
       singleElems <- unwrapElems elems
-      SingleTerm . TTagged t <$> genArrayTerm singleElems
+      SingleTerm . TTagged t <$> twiddleArray singleElems
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroupNamed = shelleyOperationalCertGroup

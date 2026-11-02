@@ -27,10 +27,10 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose),
   RuleTerm (..),
   arbitrary,
-  genArrayTerm,
   oneof,
   vectorOf,
  )
+import Codec.CBOR.Cuddle.CBOR.Gen (twiddleArray)
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
@@ -97,7 +97,7 @@ instance Era era => HuddleRule "unit_interval" era where
             , genUnitInterval64 (max64 - 1000) max64
             ]
         SingleTerm . TTagged 30
-          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
+          <$> twiddleArray [TInteger $ toInteger n, TInteger $ toInteger d]
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
