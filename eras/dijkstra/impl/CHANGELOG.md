@@ -2,6 +2,10 @@
 
 ## 0.5.0.0
 
+* Do not require the witnesses of the owners for a stake pool re-registration that changes nothing but the BLS key:
+  - Add `validateDijkstraNeededWitnesses`
+  - Add `poolOwnersWitnessRequired`
+  - Add the `EraCertState` constraint to the `STS` instance of `SUBUTXOW`
 * Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Dijkstra.Core`
 * Replace `TranslateEra DijkstraEra (Tx TopTx)` with `TranslateEra DijkstraEra MempoolTx`
 * Add `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances for `MempoolTx DijkstraEra` using the mempool transaction format

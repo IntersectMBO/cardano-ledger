@@ -26,6 +26,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxow (
   DijkstraUtxowPredFailure (..),
   conwayToDijkstraUtxowPredFailure,
   validateGuardDatums,
+  validateDijkstraNeededWitnesses,
 ) where
 
 import Cardano.Crypto.Hash (ByteString)
@@ -56,16 +57,17 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeededWith)
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..))
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), poolOwnersWitnessRequired)
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..), PState, ScriptsProvided (..), UTxO)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
@@ -294,7 +296,8 @@ dijkstraUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {- witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes -}
-  runTest $ Shelley.validateNeededWitnesses witsKeyHashes originalCertState originalUtxo txBody
+  let isPhase2Valid = tx ^. isPhase2ValidTxL
+  runTest $ validateDijkstraNeededWitnesses isPhase2Valid witsKeyHashes pState originalUtxo txBody
 
   -- check metadata hash
   {- ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad) -}
@@ -493,3 +496,22 @@ validateGuardDatums (ScriptsProvided scripts) txBody =
                     SJust _ -> acc
                     SNothing -> Set.insert cred acc
             Nothing -> acc
+
+-- | Like `Shelley.validateNeededWitnesses`, except that the owners of a pool
+-- are not required to witness a phase-2 invalid transaction.
+validateDijkstraNeededWitnesses ::
+  (EraTx era, ConwayEraTxBody era) =>
+  IsPhase2Valid ->
+  Set (KeyHash Witness) ->
+  PState era ->
+  UTxO era ->
+  TxBody l era ->
+  Test (Shelley.ShelleyUtxowPredFailure era)
+validateDijkstraNeededWitnesses isPhase2Valid witsKeyHashes pState utxo txBody =
+  failureOnNonEmptySet
+    (getConwayWitsVKeyNeededWith ownersWitnessRequired utxo txBody `Set.difference` witsKeyHashes)
+    Shelley.MissingVKeyWitnessesUTXOW
+  where
+    ownersWitnessRequired = case isPhase2Valid of
+      Phase2Valid -> poolOwnersWitnessRequired pState
+      Phase2Invalid -> const False

@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add a `PState` argument to `calcMinFeeTx`
 * Re-export `MempoolTx` and `unwrapMempoolTx` from `Cardano.Ledger.Api.Tx`
 * Replace `binaryUpgradeTx` with new function `binaryUpgradeMempoolTx`
 * Add `Cardano.Ledger.Api.Leios` for standalone Leios certificate validation:

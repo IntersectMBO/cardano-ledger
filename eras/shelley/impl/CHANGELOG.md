@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Add `getShelleyWitsVKeyNeededNoGovWith`
 * Change `applyTxWithFullValidation` to accept `MempoolTx era`
 * Export `MempoolTx`, `unwrapMempoolTx` and `getValidatedMempoolTx` from `Cardano.Ledger.Shelley.API.Mempool`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l ShelleyEra` to `MempoolTx ShelleyEra`
@@ -33,6 +34,9 @@
 
 ### `testlib`
 
+* Add `impWitsPState` method to `ShelleyEraImp`
+* Add `updateAddrTxWitsWith`
+* Add a `PState` argument and the `EraCertState` constraint to `impWitsVKeyNeeded`
 * Add `Arbitrary` instance for `MempoolTx ShelleyEra`
 * Replace the `DecCBOR` instance for `Tx TopTx ShelleyEra` with one for `MempoolTx ShelleyEra`
 * Export `runShelleyBase` from `Test.Cardano.Ledger.Shelley.ImpTest`
