@@ -62,7 +62,11 @@ import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), poolOwnersWitnessRequired)
+import Cardano.Ledger.Dijkstra.UTxO (
+  DijkstraEraUTxO (..),
+  getTxOutsScripts,
+  poolOwnersWitnessRequired,
+ )
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
@@ -263,6 +267,8 @@ dijkstraUtxowTransition = do
 
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   -- Aggregated: missing/extraneous scripts across all levels.
+  -- refScripts also includes the reference scripts in the outputs created by the batch
+  -- (CIP-0172), which the spec does not account for here yet.
   let witnessScripts =
         Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
           <> foldMap (Map.keysSet . (^. witsTxL . scriptTxWitsL)) subTxs
@@ -275,7 +281,10 @@ dijkstraUtxowTransition = do
                   <> subTx ^. bodyTxL . inputsTxBodyL
             )
             subTxs
-      refScripts = Map.keysSet $ getReferenceScripts originalUtxo allRefScriptInputs
+      allTxOuts = txBody ^. outputsTxBodyL <> foldMap (^. bodyTxL . outputsTxBodyL) subTxs
+      refScripts =
+        Map.keysSet $
+          getReferenceScripts originalUtxo allRefScriptInputs <> getTxOutsScripts allTxOuts
   runTest $ Babbage.babbageMissingScripts pp allScriptHashesNeeded refScripts witnessScripts
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
