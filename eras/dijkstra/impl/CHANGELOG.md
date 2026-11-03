@@ -2,6 +2,8 @@
 
 ## 0.6.0.0
 
+* Add `LEDGERS`
+* Change `EraRule "LEDGERS" DijkstraEra` from `Babbage.LEDGERS DijkstraEra` to the Dijkstra-specific `LEDGERS DijkstraEra`
 * Validate the references of an `EndorserBlock` in the `EB` rule and in `applyEndorserBlockNoValidation`:
   - Add `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied` to `Cardano.Ledger.Dijkstra.Rules.Eb`, and `InjectRuleFailure "EB"` instances for them
   - Add `validateEbReferences` and `validateEbAnnouncementSlot` to `Cardano.Ledger.Dijkstra.Rules.Eb`
