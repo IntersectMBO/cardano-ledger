@@ -36,8 +36,8 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   registerDRepSubTx,
   setupLeiosCommittee,
   mkLeiosCert,
-  applyEndorserBlock,
-  applyFailingEndorserBlock,
+  submitEndorserBlock,
+  submitFailingEndorserBlock,
   makeEndorserBlock,
   mkEbReferencesAnnouncement,
 ) where
@@ -57,6 +57,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EbReferencesAnnouncement (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -72,7 +73,14 @@ import Cardano.Ledger.Conway.Governance (
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Dijkstra (ApplyTxError, DijkstraEra, DijkstraEraForecast)
+import Cardano.Ledger.Dijkstra (
+  ApplyTxError,
+  DijkstraApplyBlock,
+  DijkstraEra,
+  DijkstraEraForecast,
+  EndorserBlockTransitionError (..),
+  applyEndorserBlockEither,
+ )
 import Cardano.Ledger.Dijkstra.Block.Endorser (
   EbTransactions (..),
   EraEndorserBlock (..),
@@ -101,8 +109,9 @@ import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
 import Control.Monad (foldM, forM)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (gets)
-import Control.State.Transition (STS (..))
+import Control.State.Transition.Extended (SingEP (..), ValidationPolicy (..))
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
@@ -113,7 +122,9 @@ import qualified Data.SimpleOMap.Strict as SimpleOMap
 import Data.Traversable (mapAccumM)
 import Data.Word (Word32)
 import Lens.Micro
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
@@ -204,13 +215,11 @@ class
   , InjectRuleFailure "EB" EbPredFailure era
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   , STS (EraRule "EB" era)
-  , BaseM (EraRule "EB" era) ~ ShelleyBase
-  , Environment (EraRule "EB" era) ~ ()
-  , State (EraRule "EB" era) ~ NewEpochState era
-  , Signal (EraRule "EB" era) ~ EndorserBlock era
   , ToExpr (PredicateFailure (EraRule "EB" era))
-  , STS (EraRule "EBLEDGERS" era)
+  , EncCBOR (PredicateFailure (EraRule "EB" era))
+  , DecCBOR (PredicateFailure (EraRule "EB" era))
   , EraRuleFailure "EB" era ~ PredicateFailure (EraRule "EB" era)
+  , DijkstraApplyBlock TestBlockHeader era
   ) =>
   DijkstraEraImp era
 
@@ -680,41 +689,46 @@ mkLeiosCert signKeys headerHash = do
   where
     msg = hashToBytes $ extractHash headerHash
 
-tryApplyEndorserBlock ::
+-- | Submit an endorser block through `applyEndorserBlockEither`, the consensus endpoint, instead
+-- of running the EB rule directly.
+trySubmitEndorserBlock ::
   forall era.
   DijkstraEraImp era =>
   EndorserBlock era ->
   ImpTestM era [PredicateFailure (EraRule "EB" era)]
-tryApplyEndorserBlock eb = do
+trySubmitEndorserBlock eb = do
   st <- getsNES id
-  res <- tryRunImpRule @"EB" () st eb
-  case res of
+  globals <- gets (^. impGlobalsL)
+  case applyEndorserBlockEither @TestBlockHeader @era EPDiscard ValidateAll globals st eb of
     Right (newSt, _) -> do
       modifyNES $ const newSt
       pure []
-    Left failures -> pure $ toList failures
+    Left (EndorserBlockTransitionError failures) -> do
+      -- Verify that produced predicate failures are ready for the node-to-client protocol
+      liftIO $ forM_ failures $ roundTripEraExpectation @era
+      pure $ toList failures
 
-applyEndorserBlock ::
+submitEndorserBlock ::
   ( HasCallStack
   , DijkstraEraImp era
   ) =>
   EndorserBlock era ->
   ImpTestM era ()
-applyEndorserBlock eb = do
-  res <- tryApplyEndorserBlock eb
+submitEndorserBlock eb = do
+  res <- trySubmitEndorserBlock eb
   case res of
     [] -> pure ()
     _ : _ -> expectationFailure $ "Expected success, got\n" <> showExpr res
 
-applyFailingEndorserBlock ::
+submitFailingEndorserBlock ::
   ( HasCallStack
   , DijkstraEraImp era
   ) =>
   EndorserBlock era ->
   NonEmpty (PredicateFailure (EraRule "EB" era)) ->
   ImpTestM era ()
-applyFailingEndorserBlock eb expected = do
-  res <- tryApplyEndorserBlock eb
+submitFailingEndorserBlock eb expected = do
+  res <- trySubmitEndorserBlock eb
   case res of
     [] -> expectationFailure "Expected a failure, got success"
     e : es -> (e :| es) `shouldBeExpr` expected
