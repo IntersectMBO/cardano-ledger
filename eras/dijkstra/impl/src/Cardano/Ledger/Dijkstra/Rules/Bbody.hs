@@ -78,7 +78,7 @@ import Cardano.Ledger.Dijkstra.PParams (
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
+import Cardano.Ledger.Dijkstra.Rules.Ledgers (DijkstraLedgersPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.LeiosCert (
   DijkstraLeiosCertPredFailure,
   LEIOSCERT,
@@ -213,7 +213,7 @@ instance InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure DijkstraEra whe
 instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" DijkstraLedgersPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 

@@ -1,20 +1,30 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Dijkstra.Rules.Ledgers (LEDGERS) where
+module Cardano.Ledger.Dijkstra.Rules.Ledgers (
+  LEDGERS,
+  DijkstraLedgersPredFailure,
+) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, systemStart)
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, LEDGER, LEDGERS)
@@ -31,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
+import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
@@ -45,70 +56,116 @@ import Control.State.Transition (
 import Data.Default (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
+import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
-type instance EraRuleFailure "LEDGERS" DijkstraEra = Shelley.ShelleyLedgersPredFailure DijkstraEra
+data DijkstraLedgersPredFailure era
+  = -- | LEDGER rule subtransition failures
+    LedgerFailure (PredicateFailure (EraRule "LEDGER" era))
+  | -- | Total execution units of all transactions exceed the block limit
+    TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
+  | -- | Total reference script size of all transactions exceeds the block limit
+    BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
+  deriving (Generic)
+
+deriving instance
+  (Era era, Show (PredicateFailure (EraRule "LEDGER" era))) =>
+  Show (DijkstraLedgersPredFailure era)
+
+deriving instance
+  (Era era, Eq (PredicateFailure (EraRule "LEDGER" era))) =>
+  Eq (DijkstraLedgersPredFailure era)
+
+deriving instance
+  (Era era, Ord (PredicateFailure (EraRule "LEDGER" era))) =>
+  Ord (DijkstraLedgersPredFailure era)
+
+instance
+  NFData (PredicateFailure (EraRule "LEDGER" era)) =>
+  NFData (DijkstraLedgersPredFailure era)
+
+instance
+  (Era era, EncCBOR (PredicateFailure (EraRule "LEDGER" era))) =>
+  EncCBOR (DijkstraLedgersPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      LedgerFailure x -> Sum (LedgerFailure @era) 0 !> To x
+      TooManyExUnits mm -> Sum TooManyExUnits 1 !> To mm
+      BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 2 !> To mm
+
+instance
+  (Era era, DecCBOR (PredicateFailure (EraRule "LEDGER" era))) =>
+  DecCBOR (DijkstraLedgersPredFailure era)
+  where
+  decCBOR = decode . Summands "DijkstraLedgersPredFailure" $ \case
+    0 -> SumD LedgerFailure <! From
+    1 -> SumD TooManyExUnits <! From
+    2 -> SumD BodyRefScriptsSizeTooBig <! From
+    n -> Invalid n
+
+type instance EraRuleFailure "LEDGERS" DijkstraEra = DijkstraLedgersPredFailure DijkstraEra
 
 type instance EraRuleEvent "LEDGERS" DijkstraEra = Shelley.ShelleyLedgersEvent DijkstraEra
 
-instance InjectRuleFailure "LEDGERS" Shelley.ShelleyLedgersPredFailure DijkstraEra
+instance InjectRuleFailure "LEDGERS" DijkstraLedgersPredFailure DijkstraEra
 
 instance InjectRuleFailure "LEDGERS" DijkstraLedgerPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure
+  injectFailure = LedgerFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Babbage.BabbageUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Alonzo.AlonzoUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Shelley.ShelleyUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Babbage.BabbageUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Alonzo.AlonzoUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Alonzo.AlonzoUtxosPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayUtxosPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Shelley.ShelleyUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Allegra.AllegraUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayCertsPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayCertPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayDelegPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Shelley.ShelleyPoolPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraGovCertPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayGovPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraGovPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = LedgerFailure . injectFailure
 
 instance
   ( ApplyTx era
@@ -128,7 +185,7 @@ instance
   type Signal (LEDGERS era) = Seq (Tx TopTx era)
   type Environment (LEDGERS era) = Shelley.ShelleyLedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
-  type PredicateFailure (LEDGERS era) = Shelley.ShelleyLedgersPredFailure era
+  type PredicateFailure (LEDGERS era) = DijkstraLedgersPredFailure era
   type Event (LEDGERS era) = Shelley.ShelleyLedgersEvent era
 
   transitionRules = [ledgersTransition]
@@ -173,5 +230,5 @@ instance
   ) =>
   Embed (LEDGER era) (LEDGERS era)
   where
-  wrapFailed = Shelley.LedgerFailure
+  wrapFailed = LedgerFailure
   wrapEvent = Shelley.LedgerEvent
