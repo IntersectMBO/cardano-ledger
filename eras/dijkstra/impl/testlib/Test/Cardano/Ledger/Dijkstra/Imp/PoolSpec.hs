@@ -734,6 +734,21 @@ spec = describe "POOL" $ do
           ownerWitsByLevel pps tx `shouldBe` (False, [True, False])
           expectFutureParams rotated
 
+      it "to rotate the BLS key to discard an update made before in the same transaction" $
+        do
+          pps <- registerPoolWithOwners . SJust =<< freshBlsKey
+          newBlsKey <- freshBlsKey
+          owners <- Set.fromList <$> replicateM 2 freshKeyHash
+          -- use a different set of owners so signatures don't overlap
+          let updated = pps {sppCost = sppCost pps <> Coin 1, sppOwners = owners}
+              rotated = pps {sppBlsKey = SJust newBlsKey}
+              tx =
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL
+                    .~ [RegPoolTxCert updated, RegPoolTxCert rotated]
+          withPostFixup (dropOwnerWits rotated) $ submitTx_ tx
+          expectFutureParams rotated
+
       -- None of the certificates are applied in a phase-2 invalid transaction,
       -- so the owners don't need to witness it, whatever it changes
       it
@@ -826,7 +841,7 @@ spec = describe "POOL" $ do
           ownerWitsByLevel pps tx `shouldBe` (True, [])
           expectFutureParams newKeyPps
 
-      disableInConformanceIt
+      it
         "to re-register with the active parameters while an update is pending"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
