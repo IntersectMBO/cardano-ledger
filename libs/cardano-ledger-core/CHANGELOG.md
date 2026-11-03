@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Change the `Tx t era` argument of `getScriptsProvided` to `Tx TopTx era`
 * Add `calcMinFeeStAnnTx` to `EraUTxO`
 * Add a `PState` argument to `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`
 * Add `Cardano.Ledger.MempoolTx` with the abstract `MempoolTx` wrapper and `unwrapMempoolTx`

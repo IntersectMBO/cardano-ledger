@@ -21,6 +21,8 @@
 
 ### `testlib`
 
+* Add `mkTestLedgerTxInfoWithScripts`
+* Restrict `mkTestLedgerTxInfo` to `TopTx` transactions
 * Add `Arbitrary` instance for `MempoolTx AlonzoEra`
 * Replace the `DecCBOR` instance for `Tx TopTx AlonzoEra` with one for `MempoolTx AlonzoEra`
 * Change the CBOR instance constraints of `TranslationInstance` to use `MempoolTx era` instead of `Tx TopTx era`
