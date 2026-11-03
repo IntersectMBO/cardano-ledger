@@ -88,7 +88,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
  )
 import Cardano.Ledger.Dijkstra.UTxO
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.API (ShelleyLedgersEnv (..), mkStAnnTx)
+import Cardano.Ledger.Shelley.API (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (
@@ -97,7 +97,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Cardano.Ledger.Val
@@ -206,7 +205,7 @@ class
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   , STS (EraRule "EB" era)
   , BaseM (EraRule "EB" era) ~ ShelleyBase
-  , Environment (EraRule "EB" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "EB" era) ~ ()
   , State (EraRule "EB" era) ~ NewEpochState era
   , Signal (EraRule "EB" era) ~ EndorserBlock era
   , ToExpr (PredicateFailure (EraRule "EB" era))
@@ -688,18 +687,7 @@ tryApplyEndorserBlock ::
   ImpTestM era [PredicateFailure (EraRule "EB" era)]
 tryApplyEndorserBlock eb = do
   st <- getsNES id
-  slotNo <- getCurSlotNo
-  epochNo <- runShelleyBase $ epochFromSlot slotNo
-  pp <- getsPParams id
-  let
-    env =
-      LedgersEnv
-        { ledgersSlotNo = slotNo
-        , ledgersPp = pp
-        , ledgersEpochNo = epochNo
-        , ledgersAccount = st ^. chainAccountStateG
-        }
-  res <- tryRunImpRule @"EB" env st eb
+  res <- tryRunImpRule @"EB" () st eb
   case res of
     Right (newSt, _) -> do
       modifyNES $ const newSt

@@ -29,11 +29,15 @@ import Cardano.Ledger.Shelley.LedgerState (
   EraCertState,
   LedgerState,
   NewEpochState,
+  curPParamsEpochStateL,
   esLStateL,
   lsLastEbAnnouncementL,
   nesEsL,
+  nesLastTickSlotNoL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..))
+import Cardano.Ledger.Slot (epochFromSlot)
+import Cardano.Ledger.State (EraGov, chainAccountStateG)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -41,6 +45,7 @@ import Control.State.Transition.Extended (
   TRC (..),
   failBecause,
   judgmentContext,
+  liftSTS,
   trans,
   (?!),
  )
@@ -80,6 +85,7 @@ instance (Era era, DecCBOR (PredicateFailure (EraRule "EBLEDGERS" era))) => DecC
 
 instance
   ( EraCertState era
+  , EraGov era
   , EraEndorserBlock era
   , Eq (PredicateFailure (EraRule "EBLEDGERS" era))
   , Ord (PredicateFailure (EraRule "EBLEDGERS" era))
@@ -94,7 +100,7 @@ instance
   where
   type State (EB era) = NewEpochState era
   type Signal (EB era) = EndorserBlock era
-  type Environment (EB era) = ShelleyLedgersEnv era
+  type Environment (EB era) = ()
   type Event (EB era) = DijkstraLedgerEvent era
 
   type PredicateFailure (EB era) = EbPredFailure era
@@ -103,9 +109,12 @@ instance
   initialRules = []
   transitionRules =
     [ do
-        TRC (env, state, eb) <- judgmentContext
+        TRC ((), state, eb) <- judgmentContext
         let ebHash = hashAnnotated (eb ^. referencesEndorserBlockL)
             ledgerState = state ^. nesEsL . esLStateL
+            -- Transactions of an EB are validated at the slot of the block that announced it,
+            -- which is the last slot this state was ticked to
+            slotNo = state ^. nesLastTickSlotNoL
         case ledgerState ^. lsLastEbAnnouncementL of
           SJust EbAnnouncement {ebAnnouncement} -> do
             let expectedHash = ebReferencesAnnouncementHash ebAnnouncement
@@ -117,7 +126,34 @@ instance
                       , mismatchExpected = expectedHash
                       }
                   )
+          -- TODO:
+          --
+          -- Should the EB also be rejected when it is not
+          -- applied at the slot of the block that announced it? YES!
+          --
+          -- \* bind `ebAnnouncementSlotNo` above
+          -- \* `EbAnnouncementSlotMismatch (Mismatch RelEQ SlotNo)` predicate
+          -- failure
+          -- \* Imp tests that tick to the slot of the announcing block, instead
+          -- of the slot before it
+          --
+          -- slotNo
+          --   == ebAnnouncementSlotNo
+          --     ?! EbAnnouncementSlotMismatch
+          --       ( Mismatch
+          --           { mismatchSupplied = slotNo
+          --           , mismatchExpected = ebAnnouncementSlotNo
+          --           }
+          --       )
           SNothing -> failBecause $ EbWasNotAnnounced ebHash
+        epochNo <- liftSTS $ epochFromSlot slotNo
+        let env =
+              LedgersEnv
+                { ledgersSlotNo = slotNo
+                , ledgersEpochNo = epochNo
+                , ledgersPp = state ^. nesEsL . curPParamsEpochStateL
+                , ledgersAccount = state ^. chainAccountStateG
+                }
         newLedgerState <-
           trans @(EraRule "EBLEDGERS" era) $ TRC (env, ledgerState, eb)
         pure $ state & nesEsL . esLStateL .~ newLedgerState
