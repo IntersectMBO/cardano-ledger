@@ -2,6 +2,8 @@
 
 ## 0.6.0.0
 
+* Add `LEDGERS`
+* Change `EraRule "LEDGERS" DijkstraEra` from `Babbage.LEDGERS DijkstraEra` to the Dijkstra-specific `LEDGERS DijkstraEra`
 * Add `dsattUTxO` to `DijkstraStAnnTopTx`
 * Add `exUnitsDijkstraStAnnTx`
 * Add `dsattExUnits` to `DijkstraStAnnTopTx`

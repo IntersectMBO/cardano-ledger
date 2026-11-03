@@ -67,6 +67,7 @@ import Cardano.Ledger.Dijkstra.BlockBody (
 import Cardano.Ledger.Dijkstra.Era (
   BBODY,
   DijkstraEra,
+  LEDGERS,
  )
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
@@ -511,11 +512,11 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
-  ( BaseM (Babbage.LEDGERS era) ~ ShelleyBase
-  , Babbage.LEDGERS era ~ EraRule "LEDGERS" era
-  , STS (Babbage.LEDGERS era)
+  ( BaseM (LEDGERS era) ~ ShelleyBase
+  , LEDGERS era ~ EraRule "LEDGERS" era
+  , STS (LEDGERS era)
   ) =>
-  Embed (Babbage.LEDGERS era) (BBODY era)
+  Embed (LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
