@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -11,7 +12,12 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScriptsNonDistinct,
 ) where
 
-import Cardano.Ledger.Alonzo.Tx (exUnitsAlonzoStAnnTx, refScriptsSizeAlonzoStAnnTx)
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoStAnnTx (..),
+  alonzoMinFeeTx,
+  exUnitsAlonzoStAnnTx,
+  refScriptsSizeAlonzoStAnnTx,
+ )
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
@@ -58,6 +64,8 @@ instance EraUTxO BabbageEra where
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits} = alonzoMinFeeTx pp asatTx asatExUnits
 
 instance AlonzoEraUTxO BabbageEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

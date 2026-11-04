@@ -18,7 +18,11 @@ module Cardano.Ledger.Conway.UTxO (
   getConwayMinFeeTxUtxo,
 ) where
 
-import Cardano.Ledger.Alonzo.Tx (exUnitsAlonzoStAnnTx, refScriptsSizeAlonzoStAnnTx)
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoStAnnTx (..),
+  exUnitsAlonzoStAnnTx,
+  refScriptsSizeAlonzoStAnnTx,
+ )
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
@@ -49,6 +53,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   unVotingProcedures,
  )
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.Tx (getConwayMinFeeTx)
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
@@ -134,6 +139,9 @@ instance EraUTxO ConwayEra where
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatRefScriptsSize, asatExUnits} =
+    getConwayMinFeeTx pp asatTx asatRefScriptsSize asatExUnits
 
 instance AlonzoEraUTxO ConwayEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

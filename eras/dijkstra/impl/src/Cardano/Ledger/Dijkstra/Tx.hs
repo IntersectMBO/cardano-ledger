@@ -339,7 +339,7 @@ instance EraTx DijkstraEra where
   validateNativeScript = validateDijkstraNativeScript
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = getConwayMinFeeTx
+  getMinFeeTx pp tx refScriptSize = getConwayMinFeeTx pp tx refScriptSize (getTotalExUnits tx)
 
   allInputsTxBodyF = dijkstraAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}

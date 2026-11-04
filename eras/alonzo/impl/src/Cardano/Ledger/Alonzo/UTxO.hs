@@ -62,6 +62,7 @@ import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoStAnnTx (..),
+  alonzoMinFeeTx,
   exUnitsAlonzoStAnnTx,
   refScriptsSizeAlonzoStAnnTx,
  )
@@ -130,6 +131,8 @@ instance EraUTxO AlonzoEra where
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits} = alonzoMinFeeTx pp asatTx asatExUnits
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,
