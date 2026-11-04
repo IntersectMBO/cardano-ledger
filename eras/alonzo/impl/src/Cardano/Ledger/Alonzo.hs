@@ -161,6 +161,7 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache refScriptsSize tx =
     AlonzoStAnnTx
       { asatTx = tx
       , asatRefScriptsSize = refScriptsSize
+      , asatExUnits = getTotalExUnits tx
       , asatScriptsNeeded = scriptsNeeded
       , asatScriptsProvided = scriptsProvided
       , asatPlutusRunnableCache = newStAnnTxCache

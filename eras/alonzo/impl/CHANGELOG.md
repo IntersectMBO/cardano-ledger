@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Add `asatExUnits` field to `AlonzoStAnnTx`
+* Add `exUnitsStAnnTx` method to `AlonzoEraUTxO`
+* Add `exUnitsAlonzoStAnnTx`
 * Add `asatRefScriptsSize` field to `AlonzoStAnnTx`
 * Add `Int` argument to the signature of `mkAlonzoStAnnTx`
 * Add `refScriptsSizeStAnnTx` method to `AlonzoEraUTxO`
