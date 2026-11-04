@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-core`
 
-## 1.23.0.0
+## 1.24.0.0
 
 * Add a `PState` argument to `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`
 * Add `Cardano.Ledger.MempoolTx` with the abstract `MempoolTx` wrapper and `unwrapMempoolTx`
@@ -51,6 +51,21 @@
 * Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
 * Add `ToExpr` instance for `EbAnnouncement`
 * Add `Arbitrary` and `ToExpr` instances for `BlsVerKeyHash`
+
+## 1.23.0.0
+
+* Remove `pdoLanguage` as no longer an option that can be overriden.
+* Replace `pwcCostModel` with `pwcLanguageCostModel` in `PlutusWithContext`
+* Change type signature of `getCostModelEvaluationContext`
+* Add:
+  - `LanguageCostModel`
+  - `LanguageCostModelError`
+  - `toLanguageCostModel`
+  - `encodeLanguageCostModel`
+  - `decodeLanguageCostModel`
+  - `languageCostModelParams`
+  - `languageCostModelEvaluationContext`
+* Remove `getEvaluationContext` as duplicate of `getCostModelEvaluationContext`
 
 ## 1.22.0.0
 

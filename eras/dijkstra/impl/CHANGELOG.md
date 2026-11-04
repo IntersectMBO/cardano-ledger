@@ -1,6 +1,6 @@
 # Revision history for `cardano-ledger-dijkstra`
 
-## 0.5.0.0
+## 0.6.0.0
 
 * Do not require the witnesses of the owners for a stake pool re-registration that changes nothing but the BLS key:
   - Add `validateDijkstraNeededWitnesses`
@@ -81,6 +81,10 @@
 * Add `Arbitrary` instance for `EbReferences`
 * Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
 * Add `Test.Cardano.Ledger.Dijkstra.Translation.TranslatableGen` module with `genTranslatableTxWithNestedTxs`
+
+## 0.5.0.0
+
+* Require `Inject (AlonzoContextError era) (ContextError era)` constraint on `mkDijkstraStAnnTopTx`
 
 ## 0.4.0.0
 
