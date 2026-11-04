@@ -47,7 +47,11 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..))
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..), refScriptsSizeDijkstraStAnnTx)
+import Cardano.Ledger.Dijkstra.Tx (
+  DijkstraStAnnTx (..),
+  exUnitsDijkstraStAnnTx,
+  refScriptsSizeDijkstraStAnnTx,
+ )
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
@@ -238,6 +242,7 @@ instance AlonzoEraUTxO DijkstraEra where
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedDijkstraStAnnTx
 
   refScriptsSizeStAnnTx = refScriptsSizeDijkstraStAnnTx
+  exUnitsStAnnTx = exUnitsDijkstraStAnnTx
 
 getDijkstraSupplementalDataHashes ::
   ( EraTx era
