@@ -162,6 +162,8 @@ benchmark bench
   other-modules:
     Bench.Cardano.Ledger.ApplyTx
     Bench.Cardano.Ledger.ApplyTx.Gen
+    Bench.Cardano.Ledger.Dijkstra.PoolReRegistration
+    Bench.Cardano.Ledger.Dijkstra.PoolReRegistration.Gen
     Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
     Bench.Cardano.Ledger.StakeDistr
@@ -183,10 +185,12 @@ benchmark bench
     -O2
 
   build-depends:
+    ImpSpec,
     QuickCheck,
     aeson,
     base,
     bytestring,
+    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
@@ -194,6 +198,7 @@ benchmark bench
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway,
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-ledger-shelley-ma-test,
@@ -212,6 +217,46 @@ benchmark bench
     small-steps:{small-steps, testlib} >=1.1,
     text,
     vector-map,
+
+benchmark pool-reregistration-report
+  type: exitcode-stdio-1.0
+  main-is: PoolReRegistrationReport.hs
+  hs-source-dirs: bench
+  other-modules:
+    Bench.Cardano.Ledger.Dijkstra.PoolReRegistration
+    Bench.Cardano.Ledger.Dijkstra.PoolReRegistration.Gen
+
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -O2
+
+  build-depends:
+    ImpSpec,
+    QuickCheck,
+    base,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-binary,
+    cardano-ledger-core,
+    cardano-ledger-dijkstra:{cardano-ledger-dijkstra, testlib},
+    cardano-ledger-shelley,
+    cardano-strict-containers,
+    criterion,
+    data-default,
+    deepseq,
+    microlens,
+    small-steps,
+    statistics,
 
 benchmark benchProperty
   type: exitcode-stdio-1.0

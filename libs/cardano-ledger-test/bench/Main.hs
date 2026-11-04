@@ -3,6 +3,7 @@ module Main where
 import qualified Bench.Cardano.Ledger.ApplyTx as ApplyTx
 -- TODO: re-enable, once the benchmark is fixed
 -- import qualified Bench.Cardano.Ledger.Balance as Balance
+import qualified Bench.Cardano.Ledger.Dijkstra.PoolReRegistration as PoolReRegistration
 import qualified Bench.Cardano.Ledger.EpochBoundary as Epoch
 import qualified Bench.Cardano.Ledger.Serialisation.Generators as SerGen
 import qualified Bench.Cardano.Ledger.StakeDistr as StakeDistr (tickfRuleBench)
@@ -21,5 +22,6 @@ main =
     , Epoch.aggregateUtxoBench
     , SumStake.sumStakeBenchmarks
     , ConstrainedSTS.stsBenchmarks
+    , PoolReRegistration.poolReRegistrationBenchmarks
     -- Balance.balanceBenchmarks
     ]
