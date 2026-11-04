@@ -37,15 +37,25 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose),
   RuleTerm (..),
   Term (..),
+  TwiddleConfig (..),
+  TwiddlePolicy (..),
+  genNBytes,
   generateFromGRef,
   liftAntiGen,
   listOf,
   oneof,
   scale,
   twiddleArray,
+  twiddleBytes,
+  unwrapSingle,
+  validateBytesTerm,
+  withTwiddle,
   (|!),
  )
+import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Mary.HuddleSpec
+import Control.Monad (when)
+import qualified Data.ByteString as BS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Text.Heredoc
@@ -116,7 +126,25 @@ boundedBytesRule pname =
         |  bytestrings consists of a token #2.31 followed by a sequence
         |  of definite-length encoded bytestrings and a stop code )
         |]
+    $ withValidator validator
+    $ withCBORGen generator
     $ pname =.= VBytes `sized` (0 :: Word64, 64 :: Word64)
+  where
+    -- TODO implement the custom generator/validator properly once this PR gets
+    -- merged: https://github.com/IntersectMBO/cuddle/pull/209
+    --
+    -- specifically the part about chunks, the `cborg` terms don't give us
+    -- control over the chunks.
+    validator term = do
+      sTerm <- unwrapSingle term
+      bytes <- validateBytesTerm sTerm
+      let len = BS.length bytes
+      when (len > 64) $ fail $ "Expected bytes with length at most 64, got " <> show len
+    generator = withTwiddle (\tc -> tc {tcBytes = DefiniteAndIndefinite}) $ do
+      n <- choose (0, 64) |! Gen.sized (\sz -> choose (65, max 65 sz))
+      bytes <- genNBytes n
+      term <- twiddleBytes bytes
+      pure $ SingleTerm term
 
 exUnitPricesRule ::
   forall era.

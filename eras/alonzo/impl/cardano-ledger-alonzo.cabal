@@ -139,6 +139,7 @@ library cddl
 
   build-depends:
     base,
+    bytestring,
     cardano-ledger-alonzo,
     cardano-ledger-core:cddl,
     cardano-ledger-mary:cddl,
