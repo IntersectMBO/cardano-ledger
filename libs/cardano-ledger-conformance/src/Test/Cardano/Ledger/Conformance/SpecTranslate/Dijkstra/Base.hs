@@ -73,6 +73,7 @@ import Data.Foldable (Foldable (..))
 import Data.Functor.Identity (Identity)
 import Data.List (sortOn)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.OMap.Strict (OMap)
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -797,16 +798,24 @@ instance SpecNormalize Agda.Snapshots
 
 instance SpecNormalize Agda.Snapshot where
   specNormalize (Agda.MkSnapshot s d p) =
-    Agda.MkSnapshot (specNormalize s') (specNormalize d') (specNormalize p)
+    Agda.MkSnapshot (specNormalize s') (specNormalize d') (specNormalize p')
     where
       s' = removeZero s
       -- Only keep delegations for credentials that have non-zero stake,
       -- since ActiveStake drops zero-stake credentials
       d' = keepOnlyStaked s' (removeZero d)
+      -- Remove pool owners which haven't delegated to the pool
+      p' = keepOnlySelfDelegatedOwners p
+
       removeZero (Agda.MkHSMap l) = Agda.MkHSMap $ filter ((/= 0) . snd) l
       keepOnlyStaked (Agda.MkHSMap sl) (Agda.MkHSMap dl) =
         let stakeKeys = Set.fromList (map fst sl)
          in Agda.MkHSMap $ filter ((`Set.member` stakeKeys) . fst) dl
+      keepOnlySelfDelegatedOwners (Agda.MkHSMap ps) =
+        Agda.MkHSMap $
+          map (\(kh, sps) -> (kh, sps {Agda.spsOwners = go d' (Agda.spsOwners sps)})) ps
+        where
+          go (Agda.MkHSMap ds) (Agda.MkHSSet owners) = Agda.MkHSSet $ filter (\o -> isJust $ lookup (Agda.KeyHashObj o) ds) owners
 
 instance SpecNormalize Agda.Acnt
 
