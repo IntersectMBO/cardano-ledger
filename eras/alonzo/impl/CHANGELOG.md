@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.18.0.0
+## 1.19.0.0
 
 * Replace `TranslateEra AlonzoEra (Tx TopTx)` with `TranslateEra AlonzoEra MempoolTx`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l AlonzoEra` to `MempoolTx AlonzoEra`
@@ -30,6 +30,10 @@
 * Change `mkTxWithPlutusAndBootstrapAddress` and `mkTokenMintingTx` to return `AnyLevelTx`
 * Add `DecCBOR` instances for `PlutusData` and `Data`
 * Add `mkTokenMintingTx`
+
+## 1.18.0.0
+
+* Require `Inject (AlonzoContextError era) (ContextError era)` constraint on `mkAlonzoStAnnTx`, `mkPlutusWithContext`, `collectPlutusScriptsWithContext`, `scriptsWithContextFromLedgerTxInfo`, `scriptsWithContextFromLedgerTxInfoWithResult`, `evalTxExUnits`, `evalTxExUnitsWithLogs`
 
 ## 1.17.0.0
 
