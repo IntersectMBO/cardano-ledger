@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.Core (
   PParams,
   emptyPParams,
   eraProtVerLow,
+  getTotalExUnits,
   ppCollateralPercentageL,
   ppCostModelsL,
   ppMaxBlockExUnitsL,
@@ -92,7 +93,7 @@ testEstimateMinFee =
     1
     0
     0
-    `shouldBe` alonzoMinFeeTx pparams validatingTx
+    `shouldBe` alonzoMinFeeTx pparams validatingTx (getTotalExUnits validatingTx)
   where
     pparams =
       defaultPPs emptyPParams

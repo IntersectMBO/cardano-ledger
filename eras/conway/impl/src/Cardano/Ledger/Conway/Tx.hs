@@ -111,7 +111,7 @@ getConwayMinFeeTx ::
   Int ->
   Coin
 getConwayMinFeeTx pp tx refScriptsSize =
-  alonzoMinFeeTx pp tx <+> refScriptsFee
+  alonzoMinFeeTx pp tx (getTotalExUnits tx) <+> refScriptsFee
   where
     refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
     refScriptsFee =
