@@ -32,6 +32,7 @@ module Cardano.Ledger.Dijkstra.Tx (
   decodeDijkstraTopTxInBlock,
   toCBORForBlockInclusion,
   refScriptsSizeDijkstraStAnnTx,
+  exUnitsDijkstraStAnnTx,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
@@ -88,6 +89,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..), deepseq)
@@ -532,6 +534,9 @@ validateDijkstraNativeScript tx =
 refScriptsSizeDijkstraStAnnTx :: DijkstraStAnnTx TopTx era -> Int
 refScriptsSizeDijkstraStAnnTx DijkstraStAnnTopTx {dsattRefScriptsSize} = dsattRefScriptsSize
 
+exUnitsDijkstraStAnnTx :: DijkstraStAnnTx TopTx era -> ExUnits
+exUnitsDijkstraStAnnTx DijkstraStAnnTopTx {dsattExUnits} = dsattExUnits
+
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
 --
@@ -594,6 +599,7 @@ data DijkstraStAnnTx l era where
   DijkstraStAnnTopTx ::
     { dsattTx :: !(Tx TopTx era)
     , dsattRefScriptsSize :: Int
+    , dsattExUnits :: ExUnits
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
     , dsattPlutusLegacyMode :: Bool

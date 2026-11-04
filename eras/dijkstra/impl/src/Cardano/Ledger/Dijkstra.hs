@@ -188,6 +188,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
     DijkstraStAnnTopTx
       { dsattTx = tx
       , dsattRefScriptsSize = batchNonDistinctRefScriptsSize utxo tx
+      , dsattExUnits = getTotalExUnits tx
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
       , dsattPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed
