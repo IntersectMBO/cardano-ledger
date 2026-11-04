@@ -7,6 +7,64 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 11.2
+
+* First release to contain all of the [Dijkstra era features](https://github.com/IntersectMBO/cardano-ledger/issues/5604) usable:
+  - PlutusV4 context is now available
+  - CIP-118 Nested transactions are fully functional
+  - CIP-164 Leios committee selection with BLS-keyed stake pool snapshots;
+  - new Leios protocol parameters;
+  - Peras protocol parameters (certificate validation disabled);
+  - sub-transactions with their own execution-unit/fee accounting;
+  - a per-transaction `is_valid` flag in the block body.
+* IPv4 relay addresses are encoded in network byte order (the fix already shipped in 11.1.3).
+* New protocol parameter for future eras: CIP-50 maximum pledge leverage (no effect before it is set).
+* New protocol parameter for future eras: CIP-23 minimum pool margin (no effect until 11.3 and when it is set).
+* From protocol version 12 (Dijkstra): `CertifiedVRF`, `Text` and tuple decoders accept indefinite-length encodings.
+* From protocol version 12 (Dijkstra): `LeiosCert` rejects an oversized signers bitfield.
+* `cardano-ledger-api` adds `queryNonMyopicMemberRewards` and exposes a pool's BLS key.
+
+## 11.1
+
+* Significant performance improvements to Plutus script validation:
+  - A transaction is now threaded through the ledger rules as a state-annotated transaction, carrying the information derived for it from the current state, so rules can reuse it rather than recompute it
+  - Within a block, a Plutus script deserialized for one transaction is reused by all the later ones
+  - Transactions already validated in the mempool keep their results when the mempool is revalidated
+* Made the mempool transaction decoder backwards compatible, so that transactions
+  serialized in pre-Alonzo era formats can be submitted again:
+  [#5946](https://github.com/IntersectMBO/cardano-ledger/pull/5946)
+* Improved handling of legacy pointer addresses in the UTxO, fixing address
+  normalization when deserializing the ledger state:
+  [#5654](https://github.com/IntersectMBO/cardano-ledger/pull/5654)
+* Prevent starting a network in an era that is incompatible with the configured protocol
+  version: [#5719](https://github.com/IntersectMBO/cardano-ledger/pull/5719)
+* New `cardano-protocol` package that consolidates protocol-related functionality (TPraos
+  and Praos block headers, operational certificates, protocol crypto), together with
+  initial groundwork for `Leios` and `Peras` in the Dijkstra era:
+  [#5887](https://github.com/IntersectMBO/cardano-ledger/pull/5887),
+  [#5872](https://github.com/IntersectMBO/cardano-ledger/pull/5872),
+  [#5927](https://github.com/IntersectMBO/cardano-ledger/pull/5927)
+* All remaining ledger state queries have been moved from `ouroboros-consensus` into the
+  ledger API, with golden tests guaranteeing the stability of query result serialization:
+  [#5764](https://github.com/IntersectMBO/cardano-ledger/pull/5764)
+* Support for initializing a testnet with large amounts of initial funds and staking by
+  streaming injection data from external files, without loading everything into memory:
+  [#5572](https://github.com/IntersectMBO/cardano-ledger/pull/5572),
+  [#5777](https://github.com/IntersectMBO/cardano-ledger/pull/5777)
+* Continued progress on the Dijkstra era, which as a whole is not functional yet:
+  - Nested transactions: rules for validating sub-transactions within a top-level
+    transaction, including UTxO, witnessing, fee and script handling
+  - Guards ([CIP-112](https://github.com/cardano-foundation/CIPs/pull/749)): required
+    top-level guards with optional datums
+  - Account balance assertions in the transaction body, including exact balance checks
+  - Direct deposits to reward accounts, with network validation
+  - Withdrawals no longer require the reward account to be delegated to a DRep
+  - Plutus `V1`-`V3` context translation now fails explicitly for Dijkstra features that those language versions cannot represent, rather than producing a wrong context
+  - New block body structure with memoized serialization, following [CIP-0176](https://github.com/cardano-foundation/CIPs/pull/1084)
+* New `generate-cbor` command line tool for producing random CBOR examples of any
+  ledger type in every era: [#5762](https://github.com/IntersectMBO/cardano-ledger/pull/5762)
+* Fixed cost models supplied in the genesis configuration being silently ignored for `PlutusV1` and `PlutusV3`
+
 ## 11.0
 
 * Lift restriction for testnets of having major protocol version in the block header enforced to be equal to the current one or one higher from current major protocol version: [#5785](https://github.com/IntersectMBO/cardano-ledger/pull/5785)
