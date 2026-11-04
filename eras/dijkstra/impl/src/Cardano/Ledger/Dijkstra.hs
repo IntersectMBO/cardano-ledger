@@ -15,6 +15,10 @@
 module Cardano.Ledger.Dijkstra (
   DijkstraEra,
   ApplyTxError (..),
+  DijkstraApplyBlock (..),
+  applyEndorserBlockEither,
+  applyEndorserBlockNoValidation,
+  EndorserBlockTransitionError (EndorserBlockTransitionError),
   mkDijkstraStAnnTopTx,
   DijkstraForecast (..),
   DijkstraEraForecast (..),
@@ -40,7 +44,12 @@ import Cardano.Ledger.BaseTypes (Inject (inject), TxIx (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (EraBlockHeader, LeiosBbodySignal (..), LeiosEraBlockHeader)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify)
-import Cardano.Ledger.Dijkstra.Block ()
+import Cardano.Ledger.Dijkstra.Block (
+  DijkstraApplyBlock (..),
+  EndorserBlockTransitionError (..),
+  applyEndorserBlockEither,
+  applyEndorserBlockNoValidation,
+ )
 import Cardano.Ledger.Dijkstra.Block.Endorser ()
 import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Core
@@ -99,6 +108,10 @@ instance ApplyTick DijkstraEra
 
 instance (EraBlockHeader h DijkstraEra, LeiosEraBlockHeader h DijkstraEra) => ApplyBlock h DijkstraEra where
   wrapBlockSignal = LeiosBbodySignal
+
+instance
+  (EraBlockHeader h DijkstraEra, LeiosEraBlockHeader h DijkstraEra) =>
+  DijkstraApplyBlock h DijkstraEra
 
 instance RunConwayRatify DijkstraEra
 

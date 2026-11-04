@@ -10,12 +10,15 @@ module Test.Cardano.Ledger.Dijkstra.Imp.EbSpec (spec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Block (EbReferencesAnnouncement (..), LeiosEraBlockHeader (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Dijkstra (DijkstraApplyBlock (..), applyEndorserBlockNoValidation)
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (EbPredFailure (..))
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
-import Control.Monad.State.Strict (MonadState (..))
+import Control.Monad.State.Strict (MonadState (..), gets)
+import Control.State.Transition.Extended (SingEP (..), ValidationPolicy (..))
 import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
@@ -50,19 +53,31 @@ spec = describe "EB" $ do
         eb <- makeEndorserBlock ebTxs
         pure (blockTxs, eb)
 
+      submitAnnouncingRB blockTxs announcement = do
+        st <- get
+        issuer <- freshKeyHash
+        impAnn "Submit RB" $
+          expectRightDeepExpr_
+            =<< tryTxsInBlock
+              (ebReferencesAnnouncementBlockHeaderL .~ SJust announcement)
+              blockTxs
+              st
+              issuer
+
     it "Succeeds when EB is announced" $ do
       (blockTxs, eb) <- genRBandEB
-      let announcement = mkEbReferencesAnnouncement eb
-      st <- get
-      issuer <- freshKeyHash
-      impAnn "Submit RB" $
-        expectRightDeepExpr_
-          =<< tryTxsInBlock
-            (ebReferencesAnnouncementBlockHeaderL .~ SJust announcement)
-            blockTxs
-            st
-            issuer
-      impAnn "Submit EB" $ applyEndorserBlock eb
+      submitAnnouncingRB blockTxs $ mkEbReferencesAnnouncement eb
+      impAnn "Submit EB" $ submitEndorserBlock eb
+    it "Produces the same state with and without validation" $ do
+      (blockTxs, eb) <- genRBandEB
+      submitAnnouncingRB blockTxs $ mkEbReferencesAnnouncement eb
+      nes <- getsNES id
+      globals <- gets (^. impGlobalsL)
+      let (validatedNes, failures, _) =
+            applyEndorserBlock @TestBlockHeader @era EPDiscard ValidateAll globals nes eb
+      failures `shouldBeExpr` []
+      applyEndorserBlockNoValidation @TestBlockHeader @era globals nes eb
+        `shouldBeExpr` validatedNes
     it "Fails when the EB is not announced" $ do
       ebTxs <- simulateThenRestore $ do
         nEbTxs <- choose (0, 100)
@@ -71,24 +86,16 @@ spec = describe "EB" $ do
           submitAnyTx tx
       eb <- makeEndorserBlock ebTxs
       impAnn "Submit EB" $
-        applyFailingEndorserBlock
+        submitFailingEndorserBlock
           eb
           [ injectFailure $ EbWasNotAnnounced $ hashAnnotated $ eb ^. referencesEndorserBlockL
           ]
     it "Fails when the EB announcment has a different hash" $ do
       (blockTxs, eb) <- genRBandEB
       announcement <- arbitrary
-      st <- get
-      issuer <- freshKeyHash
-      impAnn "Submit RB" $
-        expectRightDeepExpr_
-          =<< tryTxsInBlock
-            (ebReferencesAnnouncementBlockHeaderL .~ SJust announcement)
-            blockTxs
-            st
-            issuer
+      submitAnnouncingRB blockTxs announcement
       impAnn "Submit EB" $
-        applyFailingEndorserBlock
+        submitFailingEndorserBlock
           eb
           [ injectFailure $
               EbAnnouncementHashMismatch

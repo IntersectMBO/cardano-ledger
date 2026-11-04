@@ -2,6 +2,10 @@
 
 ## 0.6.0.0
 
+* Add `DijkstraApplyBlock` type class, an extension of `ApplyBlock` that applies an `EndorserBlock` with the `EB` rule:
+  - Add `applyEndorserBlock` method
+  - Add `DijkstraApplyBlock h DijkstraEra` instance
+  - Add `applyEndorserBlockEither`, `applyEndorserBlockNoValidation` and `EndorserBlockTransitionError`
 * Do not require the witnesses of the owners for a stake pool re-registration that changes nothing but the BLS key:
   - Add `validateDijkstraNeededWitnesses`
   - Add `poolOwnersWitnessRequired`
@@ -59,6 +63,7 @@
 
 ### `testlib`
 
+* Add `DijkstraApplyBlock TestBlockHeader era`, `EncCBOR (PredicateFailure (EraRule "EB" era))` and `DecCBOR (PredicateFailure (EraRule "EB" era))` superclasses to `DijkstraEraImp`
 * Add `Arbitrary` and `DecCBOR` instances for `MempoolTx DijkstraEra`
 * Change the `DecCBOR` instances for `Tx TopTx DijkstraEra` and `DijkstraTx TopTx DijkstraEra` to use the block transaction format
 * Add `setupLeiosCommittee` and `mkLeiosCert`
@@ -71,7 +76,7 @@
 * Add `InjectRuleFailure` instances that inject `DijkstraSubGovCertPredFailure` into the `SUBCERTS`, `SUBENTITIES`, `SUBLEDGER`, `SUBLEDGERS` and `LEDGER` rules
 * Add `registerDRepSubTx`
 * Re-export `goldenMapRedeemers` from `Test.Cardano.Ledger.Conway.Binary.Golden`
-* Add `applyEndorserBlock`, `applyFailingEndorserBlock`, `makeEndorserBlock` and `mkEbReferencesAnnouncement`
+* Add `submitEndorserBlock`, `submitFailingEndorserBlock`, `makeEndorserBlock` and `mkEbReferencesAnnouncement`
 * Add missing superclasses to `DijkstraEraImp`
 * Add `ToExpr` instances for `EbPredFailure` and `EbLedgersPredFailure`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.EbSpec`
