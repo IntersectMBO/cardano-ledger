@@ -283,3 +283,5 @@ class EraTx era => EraUTxO era where
 
   -- | Minimum fee computation, excluding witnesses and including ref scripts size
   getMinFeeTxUtxo :: PParams era -> Tx t era -> UTxO era -> Coin
+
+  calcMinFeeStAnnTx :: PParams era -> StAnnTx TopTx era -> Coin

@@ -48,6 +48,7 @@ import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
@@ -91,7 +92,7 @@ instance EraTx ConwayEra where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = getConwayMinFeeTx
+  getMinFeeTx pp tx refScriptSize = getConwayMinFeeTx pp tx refScriptSize (getTotalExUnits tx)
 
   allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
@@ -109,9 +110,10 @@ getConwayMinFeeTx ::
   PParams era ->
   Tx l era ->
   Int ->
+  ExUnits ->
   Coin
-getConwayMinFeeTx pp tx refScriptsSize =
-  alonzoMinFeeTx pp tx (getTotalExUnits tx) <+> refScriptsFee
+getConwayMinFeeTx pp tx refScriptsSize totalExUnits =
+  alonzoMinFeeTx pp tx totalExUnits <+> refScriptsFee
   where
     refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
     refScriptsFee =

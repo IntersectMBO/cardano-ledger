@@ -36,3 +36,5 @@ instance EraUTxO AllegraEra where
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+  calcMinFeeStAnnTx = getShelleyMinFeeTxUtxo

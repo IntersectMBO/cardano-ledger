@@ -36,6 +36,7 @@ import Cardano.Ledger.Babbage.UTxO (
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.Tx (getConwayMinFeeTx)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   getConwayScriptsNeeded,
@@ -167,6 +168,9 @@ instance EraUTxO DijkstraEra where
     getConwayWitsVKeyNeededWith (poolOwnersWitnessRequired (certState ^. certPStateL))
 
   getMinFeeTxUtxo = getDijkstraMinFeeTxUtxo
+
+  calcMinFeeStAnnTx pp DijkstraStAnnTopTx {dsattTx, dsattRefScriptsSize, dsattExUnits} =
+    getConwayMinFeeTx pp dsattTx dsattRefScriptsSize dsattExUnits
 
 -- | The pool owners are required to witness a transaction, unless the certificate
 -- is re-registering an already registered pool and matches the latest params

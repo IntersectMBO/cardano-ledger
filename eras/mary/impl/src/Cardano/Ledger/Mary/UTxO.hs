@@ -53,6 +53,8 @@ instance EraUTxO MaryEra where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
+  calcMinFeeStAnnTx = getShelleyMinFeeTxUtxo
+
 -- | Calculate the value consumed by the transation.
 --
 --   This differs from the corresponding Shelley function 'Shelley.coinConsumed'
