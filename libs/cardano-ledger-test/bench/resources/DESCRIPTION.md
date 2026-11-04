@@ -74,3 +74,26 @@ let sst = last $ sourceSignalTargets tr
 BS.writeFile "/tmp/0_ledgerstate.cbor" $ serialize' (source sst)
 BS.writeFile "/tmp/0_tx.cbor" $ serialize' (signal sst)
 ```
+
+# Example 2
+
+Dijkstra era ledger state and two transactions of the maximal mainnet size (16384 bytes), used by
+`Bench.Cardano.Ledger.Dijkstra.PoolReRegistration` (in the `bench` suite) and by the
+`pool-reregistration-report` benchmark to measure the cost of decoding and applying BLS keys in stake pool re-registrations:
+
+* `2_ledgerstate.cbor`: the slot and the `NewEpochState` that both transactions apply to, with one pool registered with a BLS key.
+* `2_tx_bls.cbor`: re-registers the pool above 61 times, each time with a fresh BLS key and otherwise
+  the smallest possible certificate (no owners, relays, metadata, etc).
+* `2_tx_no_bls.cbor`: the control/baseling, re-registers that same pool 140 times without a BLS key.
+
+The transactions are encoded as they are stored in a block.
+
+## Generation
+
+Regen with:
+
+```
+cabal repl cardano-ledger-test:bench:bench
+ghci> import Bench.Cardano.Ledger.Dijkstra.PoolReRegistration.Gen
+ghci> writePoolReRegistrationResources
+```
