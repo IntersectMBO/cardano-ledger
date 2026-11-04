@@ -157,11 +157,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impSetSeed,
   shelleyModifyImpInitProtVer,
   modifyImpInitPostSubmitTxHook,
-  disableImpInitPostSubmitTxHook,
   withPostSubmitTxHook,
   withDisabledPostSubmitTxHook,
   modifyImpInitPostEpochBoundaryHook,
-  disableImpInitPostEpochBoundaryHook,
   enableImpInitRunningInConformance,
   disableInConformanceIt,
   iteExpectedConformanceFailureL,
@@ -863,12 +861,6 @@ withDisabledPostSubmitTxHook ::
   ImpTestM era a
 withDisabledPostSubmitTxHook = withPostSubmitTxHook $ \_ _ _ -> pure ()
 
-disableImpInitPostSubmitTxHook ::
-  SpecWith (ImpInit (LedgerSpec era)) ->
-  SpecWith (ImpInit (LedgerSpec era))
-disableImpInitPostSubmitTxHook =
-  modifyImpInitPostSubmitTxHook $ \_ _ _ -> pure ()
-
 modifyImpInitPostEpochBoundaryHook ::
   forall era.
   ( Globals ->
@@ -884,12 +876,6 @@ modifyImpInitPostEpochBoundaryHook f = modifyImpInit $ \impInit ->
         impInitEnv impInit
           & itePostEpochBoundaryHookL .~ f
     }
-
-disableImpInitPostEpochBoundaryHook ::
-  SpecWith (ImpInit (LedgerSpec era)) ->
-  SpecWith (ImpInit (LedgerSpec era))
-disableImpInitPostEpochBoundaryHook =
-  modifyImpInitPostEpochBoundaryHook $ \_ _ _ -> pure ()
 
 enableImpInitRunningInConformance ::
   SpecWith (ImpInit (LedgerSpec era)) ->
