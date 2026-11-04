@@ -114,7 +114,7 @@ import qualified PlutusLedgerApi.Common as P (
   ExBudget,
   LogOutput,
   MajorProtocolVersion (..),
-  PlutusLedgerLanguage (PlutusV1, PlutusV2, PlutusV3),
+  PlutusLedgerLanguage (PlutusV1, PlutusV2, PlutusV3, PlutusV4),
   ScriptDecodeError (..),
   ScriptForEvaluation,
   VerboseMode,
@@ -585,19 +585,19 @@ instance PlutusLanguage 'PlutusV4 where
   isLanguage = SPlutusV4
   plutusLanguageTag _ = 0x04
   decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
-    PlutusRunnable p (hashPlutusScript p) $ PV3.deserialiseScript (toMajorProtocolVersion pv) bs
+    PlutusRunnable p (hashPlutusScript p) $ PV4.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget rs =
-    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
-      . PV3.toData
+    PV4.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+      . PV4.toData
       . unPlutusV4Args
   evaluatePlutusRunnableBudget pv vm ec rs =
-    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
-      . PV3.toData
+    PV4.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+      . PV4.toData
       . unPlutusV4Args
   mkTermToEvaluate pv rs =
-    P.mkTermToEvaluate P.PlutusV3 (toMajorProtocolVersion pv) rs
+    P.mkTermToEvaluate P.PlutusV4 (toMajorProtocolVersion pv) rs
       . pure
-      . PV3.toData
+      . PV4.toData
       . unPlutusV4Args
 
 toSLanguage :: forall l m. (PlutusLanguage l, MonadFail m) => Language -> m (SLanguage l)

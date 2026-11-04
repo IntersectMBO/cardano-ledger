@@ -95,6 +95,7 @@ import qualified PlutusLedgerApi.V1 as PV1 (
  )
 import qualified PlutusLedgerApi.V2 as PV2 (ParamName, mkEvaluationContext)
 import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
+import qualified PlutusLedgerApi.V4 as PV4 (ParamName, mkEvaluationContext)
 import Validation (failure, validationToEither)
 
 -- | A language dependent cost model for the Plutus evaluator.
@@ -263,7 +264,7 @@ plutusVXParamNames :: Language -> [Text]
 plutusVXParamNames PlutusV1 = P.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
 plutusVXParamNames PlutusV2 = P.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
 plutusVXParamNames PlutusV3 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
-plutusVXParamNames PlutusV4 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
+plutusVXParamNames PlutusV4 = P.showParamName <$> [minBound .. maxBound :: PV4.ParamName]
 
 validateCostModel :: MonadFail m => Language -> [Int64] -> m CostModel
 validateCostModel lang cmps =
@@ -286,7 +287,7 @@ mkCostModel lang cm =
         PlutusV1 -> PV1.mkEvaluationContext
         PlutusV2 -> PV2.mkEvaluationContext
         PlutusV3 -> PV3.mkEvaluationContext
-        PlutusV4 -> PV3.mkEvaluationContext
+        PlutusV4 -> PV4.mkEvaluationContext
     eCostModel :: Either P.CostModelApplyError (P.EvaluationContext, [P.CostModelApplyWarn])
     eCostModel = runWriterT (mkEvaluationContext cm)
 
