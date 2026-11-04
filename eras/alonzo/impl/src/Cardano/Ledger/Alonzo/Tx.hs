@@ -56,6 +56,7 @@ module Cardano.Ledger.Alonzo.Tx (
   sizeAlonzoTxF,
   isPhase2ValidAlonzoTxL,
   refScriptsSizeAlonzoStAnnTx,
+  exUnitsAlonzoStAnnTx,
   txrdmrs,
   TxBody (AlonzoTxBody),
   -- Figure 4
@@ -529,6 +530,16 @@ refScriptsSizeAlonzoStAnnTx stAnnTx =
   withTopTxLevelOnly stAnnTx $
     \AlonzoStAnnTx {asatRefScriptsSize} -> asatRefScriptsSize
 
+exUnitsAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> ExUnits
+exUnitsAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $
+    \AlonzoStAnnTx {asatExUnits} -> asatExUnits
+
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
@@ -623,6 +634,7 @@ data AlonzoStAnnTx l era where
   AlonzoStAnnTx ::
     { asatTx :: !(Tx TopTx era)
     , asatRefScriptsSize :: Int
+    , asatExUnits :: ExUnits
     , asatScriptsNeeded :: ScriptsNeeded era
     , asatScriptsProvided :: ScriptsProvided era
     , asatPlutusLanguagesUsed :: Set Language
@@ -664,12 +676,13 @@ instance
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
-  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _) =
+  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in asatTx `deepseq`
           asatRefScriptsSize `deepseq`
-            asatScriptsNeeded `deepseq`
-              asatScriptsProvided `deepseq`
-                asatPlutusRunnableCache `deepseq`
-                  asatPlutusLanguagesUsed `deepseq`
-                    rnf asatPlutusScriptsWithContext
+            asatExUnits `deepseq`
+              asatScriptsNeeded `deepseq`
+                asatScriptsProvided `deepseq`
+                  asatPlutusRunnableCache `deepseq`
+                    asatPlutusLanguagesUsed `deepseq`
+                      rnf asatPlutusScriptsWithContext
