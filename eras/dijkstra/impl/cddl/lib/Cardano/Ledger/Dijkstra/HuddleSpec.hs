@@ -665,8 +665,8 @@ instance HuddleRule "bls_key" DijkstraEra where
     withCBORGen blsKeyGen $
       ( pname
           =.= arr
-            [ "bls_pubkey" ==> VBytes `sized` (96 :: Word64)
-            , "bls_possession_proof" ==> VBytes `sized` (48 :: Word64)
+            [ "bls_pubkey" ==> VBytes `sized` (192 :: Word64)
+            , "bls_possession_proof" ==> VBytes `sized` (96 :: Word64)
             ]
       )
         //- "BLS key"
