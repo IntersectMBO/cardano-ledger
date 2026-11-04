@@ -667,7 +667,6 @@ spec = describe "POOL" $ do
           else delegatorBalance `shouldBe` Coin 0
 
   describe "Re-registrations that only change the BLS key" $ do
-    -- TODO: Re-enable these in conformance once the spec is up to date
     describe "Owner witnesses are not needed" $ do
       let blsKeyChanges ::
             [(String, ImpTestM era (StrictMaybe BlsKey), ImpTestM era (StrictMaybe BlsKey))]
@@ -677,7 +676,7 @@ spec = describe "POOL" $ do
             , ("to drop the BLS key", SJust <$> freshBlsKey, pure SNothing)
             ]
       forM_ blsKeyChanges $ \(title, mkOldBlsKey, mkNewBlsKey) ->
-        disableInConformanceIt title $ do
+        it title $ do
           pps <- registerPoolWithOwners =<< mkOldBlsKey
           newBlsKey <- mkNewBlsKey
           let rotated = pps {sppBlsKey = newBlsKey}
@@ -686,7 +685,7 @@ spec = describe "POOL" $ do
           passEpoch
           expectActiveBlsKey (sppId pps) newBlsKey
 
-      disableInConformanceIt
+      it
         "to cancel a retirement by re-registering with the same parameters"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
@@ -698,7 +697,7 @@ spec = describe "POOL" $ do
           expectRetiring (sppId pps) False
           expectFutureParams pps
 
-      disableInConformanceIt "to rotate the BLS key on top of a pending update" $ do
+      it "to rotate the BLS key on top of a pending update" $ do
         pps <- registerPoolWithOwners . SJust =<< freshBlsKey
         let updated = pps {sppCost = sppCost pps <> Coin 1}
         submitTx_ $ registerPoolTx updated
@@ -709,7 +708,7 @@ spec = describe "POOL" $ do
         expectNotAllOwnerWits pps =<< submitAnyTx (registerPoolTx rotated)
         expectFutureParams rotated
 
-      disableInConformanceIt
+      it
         "to rotate the BLS key on top of an update made by a sub-transaction"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
@@ -724,7 +723,7 @@ spec = describe "POOL" $ do
           ownerWitsByLevel pps tx `shouldBe` (False, [True])
           expectFutureParams rotated
 
-      disableInConformanceIt
+      it
         "to rotate the BLS key on top of an update made by a preceding sub-transaction"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
@@ -737,7 +736,7 @@ spec = describe "POOL" $ do
 
       -- None of the certificates are applied in a phase-2 invalid transaction,
       -- so the owners don't need to witness it, whatever it changes
-      disableInConformanceIt
+      it
         "to rotate the BLS key on top of an update made by a sub-transaction, in a phase-2 invalid transaction"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
@@ -753,7 +752,7 @@ spec = describe "POOL" $ do
           ownerWitsByLevel pps tx `shouldBe` (False, [True, False])
           expectFuturePool (sppId pps) Nothing
 
-      disableInConformanceIt
+      it
         "to rotate the BLS key on top of an update made by a preceding sub-transaction, in a phase-2 invalid transaction"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
@@ -769,34 +768,49 @@ spec = describe "POOL" $ do
 
     describe "Owner witnesses are needed" $ do
       describe "to rotate the BLS key and change" $ do
-        let changes :: [(String, StakePoolParams era -> ImpTestM era (StakePoolParams era))]
+        let changes :: [(String, StakePoolParams era -> ImpTestM era (StakePoolParams era), Bool)]
             changes =
-              [ ("the VRF", \pps -> (\vrf -> pps {sppVrf = vrf}) <$> freshKeyHashVRF)
-              , ("the pledge", \pps -> pure pps {sppPledge = sppPledge pps <> Coin 1})
-              , ("the cost", \pps -> pure pps {sppCost = sppCost pps <> Coin 1})
-              , ("the margin", \pps -> pure pps {sppMargin = 1 %! 2})
+              [ ("the VRF", \pps -> (\vrf -> pps {sppVrf = vrf}) <$> freshKeyHashVRF, False)
+              , ("the pledge", \pps -> pure pps {sppPledge = sppPledge pps <> Coin 1}, False)
+              , ("the cost", \pps -> pure pps {sppCost = sppCost pps <> Coin 1}, False)
+              , ("the margin", \pps -> pure pps {sppMargin = 1 %! 2}, False)
               ,
                 ( "the reward account"
                 , \pps -> (\accountAddress -> pps {sppAccountAddress = accountAddress}) <$> registerAccountAddress
+                , False
                 )
               ,
                 ( "the owners"
                 , \pps -> (\owner -> pps {sppOwners = Set.insert owner (sppOwners pps)}) <$> freshKeyHash
+                , False
                 )
-              , ("the relays", \pps -> (\relay -> pps {sppRelays = sppRelays pps SSeq.|> relay}) <$> arbitrary)
+              ,
+                ( "the relays"
+                , \pps -> (\relay -> pps {sppRelays = sppRelays pps SSeq.|> relay}) <$> arbitrary
+                , True
+                )
               ,
                 ( "the metadata"
                 , \pps -> (\url -> pps {sppMetadata = SJust (PoolMetadata url mempty)}) <$> arbitrary
+                , True
                 )
               ]
-        forM_ changes $ \(field, change) ->
-          it field $ do
+
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1259
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        forM_ changes $ \(field, change, disableInConformance) -> do
+          let it' =
+                if disableInConformance
+                  then disableInConformanceIt
+                  else it
+          it' field $ do
             pps <- registerPoolWithOwners . SJust =<< freshBlsKey
             newBlsKey <- freshBlsKey
             changed <- change pps
             expectOwnerWitsNeeded changed $ registerPoolTx changed {sppBlsKey = SJust newBlsKey}
 
-      disableInConformanceIt
+      it
         "to rotate the BLS key in one certificate and change the cost in another"
         $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
@@ -829,7 +843,7 @@ spec = describe "POOL" $ do
           expectFutureParams rotated
 
       describe "to rotate the BLS key of the active parameters" $ do
-        disableInConformanceIt "after an update made by a sub-transaction" $ do
+        it "after an update made by a sub-transaction" $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
           newBlsKey <- freshBlsKey
           -- it is possible to overwrite a cost update with a BLS key rotation if
@@ -843,7 +857,7 @@ spec = describe "POOL" $ do
           ownerWitsByLevel pps tx `shouldBe` (True, [True])
           expectFutureParams rotated
 
-        disableInConformanceIt "after an update made by a preceding sub-transaction" $ do
+        it "after an update made by a preceding sub-transaction" $ do
           pps <- registerPoolWithOwners . SJust =<< freshBlsKey
           newBlsKey <- freshBlsKey
           let rotated = pps {sppBlsKey = SJust newBlsKey}
