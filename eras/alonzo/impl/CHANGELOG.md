@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `ExUnits` argument to `alonzoMinFeeTx`
 * Add `asatExUnits` field to `AlonzoStAnnTx`
 * Add `exUnitsStAnnTx` method to `AlonzoEraUTxO`
 * Add `exUnitsAlonzoStAnnTx`

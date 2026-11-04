@@ -265,7 +265,7 @@ goldenMinFee =
               & ppTxFeeFixedL .~ Coin 155381
               & ppPricesL .~ pricesParam
 
-      Coin 1006053 `shouldBe` alonzoMinFeeTx pp firstTx
+      Coin 1006053 `shouldBe` alonzoMinFeeTx pp firstTx (getTotalExUnits firstTx)
 
 fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
 fromRightError errorMsg =

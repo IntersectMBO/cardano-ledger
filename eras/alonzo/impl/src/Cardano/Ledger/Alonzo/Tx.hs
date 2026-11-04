@@ -249,7 +249,7 @@ instance EraTx AlonzoEra where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
+  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx (getTotalExUnits tx)
   {-# INLINE getMinFeeTx #-}
 
   allInputsTxBodyF = alonzoSpendableInputsTxBodyF
@@ -505,13 +505,13 @@ alonzoMinFeeTx ::
   AlonzoEraTx era =>
   PParams era ->
   Tx l era ->
+  -- | Total execution units of the redeemers in this transaction
+  ExUnits ->
   Coin
-alonzoMinFeeTx pp tx =
+alonzoMinFeeTx pp tx allExUnits =
   (tx ^. sizeTxF <×> (fromCompact . unCoinPerByte) (pp ^. ppTxFeePerByteL))
     <+> (pp ^. ppTxFeeFixedL)
-    <+> txscriptfee (pp ^. ppPricesL) allExunits
-  where
-    allExunits = getTotalExUnits tx
+    <+> txscriptfee (pp ^. ppPricesL) allExUnits
 
 totExUnits ::
   AlonzoEraTx era =>
