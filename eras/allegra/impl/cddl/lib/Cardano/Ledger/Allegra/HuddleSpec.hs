@@ -28,7 +28,9 @@ module Cardano.Ledger.Allegra.HuddleSpec (
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Huddle.Gen hiding (sized)
+import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Shelley.HuddleSpec
+import Control.Monad (replicateM)
 import Data.Foldable (forM_)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -367,10 +369,13 @@ instance Era era => HuddleRule1 "assoc_map" era where
         $ withValidator (validator x)
         $ pname =.= mp [0 <+ asKey x ==> x]
     where
-      generator ref = do
+      generator ref = Gen.sized $ \sz -> do
+        n <- choose (0, sz)
         let
-          genData = fmap unwrapSingleOrError . scale (`div` 2) $ generateFromGRef ref
-        assocMap <- listOf $ (,) <$> genData <*> genData
+          genData =
+            fmap unwrapSingleOrError . scale (const (sz `div` max 1 (2 * n))) $
+              generateFromGRef ref
+        assocMap <- replicateM n $ (,) <$> genData <*> genData
         SingleTerm <$> twiddleMap assocMap
       validator ref rTerm = do
         term <- unwrapSingle rTerm
