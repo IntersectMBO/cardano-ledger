@@ -36,7 +36,8 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Huddle.Gen hiding (sized)
 import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Mary.HuddleSpec
-import Control.Monad (when)
+import Control.Monad (unless, when)
+import Data.Bits (shiftR)
 import qualified Data.ByteString as BS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -82,22 +83,48 @@ positiveIntervalRule pname p =
 -- be reported as invalid even though it decodes fine, so we never generate one.
 genBigInt :: Word64 -> Gen.CBORGen RuleTerm
 genBigInt t = do
-  n <- choose (0, 64) |! Gen.sized (\sz -> choose (65, max 65 sz))
+  n <- Gen.sized $ \sz -> antiChoose (0, 64) (0, max 65 sz)
   SingleTerm . TTagged t . TBytes <$> genNBytes n
+
+-- | Validator for a bignum (tag 2 or 3).
+--
+-- TODO implement the custom generator/validator properly once this PR gets
+-- merged: https://github.com/IntersectMBO/cuddle/pull/209
+--
+-- cborg's `decodeTerm` turns bignums into `TInteger`, so cuddle validates them
+-- as integers. For a `Tag 2`/`Tag 3` rule cuddle only checks the inner rule when
+-- it is plain `bytes` (and even then it doesn't look at the bytes), so it can't
+-- reach the custom validator on `bounded_bytes`. Instead we check the integer
+-- here: it must have the right sign, and its magnitude (`n` for tag 2,
+-- `-1 - n` for tag 3) must fit in 64 bytes.
+validateBigInt :: (Integer -> Bool) -> (Integer -> Integer) -> RuleTerm -> Gen.Validator ()
+validateBigInt inRange magnitude rTerm = do
+  term <- unwrapSingle rTerm
+  i <- case term of
+    TInteger i -> pure i
+    TInt i -> pure (toInteger i)
+    _ -> fail "Expected a bignum"
+  unless (inRange i) $ fail "Bignum has the wrong sign"
+  let nBytes = length . takeWhile (> 0) $ iterate (`shiftR` 8) (magnitude i)
+  when (nBytes > 64) $
+    fail $
+      "Bignum needs " <> show nBytes <> " bytes, at most 64 allowed"
 
 bigUintRule ::
   forall era.
   HuddleRule "bounded_bytes" era => Proxy "big_uint" -> Proxy era -> Rule
 bigUintRule pname p =
-  withCBORGen (genBigInt 2) $
-    pname =.= tag 2 (huddleRule @"bounded_bytes" p)
+  withValidator (validateBigInt (>= 0) id) $
+    withCBORGen (genBigInt 2) $
+      pname =.= tag 2 (huddleRule @"bounded_bytes" p)
 
 bigNintRule ::
   forall era.
   HuddleRule "bounded_bytes" era => Proxy "big_nint" -> Proxy era -> Rule
 bigNintRule pname p =
-  withCBORGen (genBigInt 3) $
-    pname =.= tag 3 (huddleRule @"bounded_bytes" p)
+  withValidator (validateBigInt (< 0) (\i -> -1 - i)) $
+    withCBORGen (genBigInt 3) $
+      pname =.= tag 3 (huddleRule @"bounded_bytes" p)
 
 bigIntRule ::
   forall era.
