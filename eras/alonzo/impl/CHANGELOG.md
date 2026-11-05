@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `asatUTxO` field to `AlonzoStAnnTx`
 * Replace the `Tx l era` argument of `validateExUnitsTooBigUTxO` with `StAnnTx TopTx era`
 * Add `ExUnits` argument to `alonzoMinFeeTx`
 * Add `asatExUnits` field to `AlonzoStAnnTx`

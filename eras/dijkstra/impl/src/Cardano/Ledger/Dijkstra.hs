@@ -197,6 +197,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
       , dsattPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
       , dsattSubTransactions = stAnnSubTxs
+      , dsattUTxO = utxo
       }
 
 mkDijkstraStAnnSubTx ::

@@ -169,4 +169,5 @@ mkAlonzoStAnnTx ei sysStart pp utxo stAnnTxCache refScriptsSize tx =
           Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
       , asatPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
+      , asatUTxO = utxo
       }

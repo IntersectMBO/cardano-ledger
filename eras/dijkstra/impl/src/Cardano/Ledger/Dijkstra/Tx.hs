@@ -607,6 +607,7 @@ data DijkstraStAnnTx l era where
     , dsattPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     , dsattSubTransactions :: [DijkstraStAnnTx SubTx era]
+    , dsattUTxO :: UTxO era
     } ->
     DijkstraStAnnTx TopTx era
   DijkstraStAnnSubTx ::
@@ -629,6 +630,7 @@ deriving instance
   , Eq (ScriptsProvided era)
   , Eq (CollectError era)
   , Eq (TxInfoResult era)
+  , Eq (UTxO era)
   ) =>
   Eq (DijkstraStAnnTx l era)
 
@@ -640,6 +642,7 @@ deriving instance
   , Show (ScriptsProvided era)
   , Show (CollectError era)
   , Show (TxInfoResult era)
+  , Show (UTxO era)
   ) =>
   Show (DijkstraStAnnTx l era)
 

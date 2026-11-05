@@ -133,7 +133,7 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Plutus (Data, Language, PlutusWithContext, hashData, nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
-import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided (..))
+import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided (..), UTxO)
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
@@ -640,6 +640,7 @@ data AlonzoStAnnTx l era where
     , asatPlutusLanguagesUsed :: Set Language
     , asatPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , asatPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
+    , asatUTxO :: UTxO era
     } ->
     AlonzoStAnnTx TopTx era
 
@@ -649,6 +650,7 @@ deriving instance
   , Eq (ScriptsNeeded era)
   , Eq (ScriptsProvided era)
   , Eq (CollectError era)
+  , Eq (UTxO era)
   ) =>
   Eq (AlonzoStAnnTx l era)
 
@@ -658,6 +660,7 @@ deriving instance
   , Show (ScriptsNeeded era)
   , Show (ScriptsProvided era)
   , Show (CollectError era)
+  , Show (UTxO era)
   ) =>
   Show (AlonzoStAnnTx l era)
 
@@ -676,7 +679,7 @@ instance
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
-  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _ _) =
+  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in asatTx `deepseq`
           asatRefScriptsSize `deepseq`
@@ -685,4 +688,5 @@ instance
                 asatScriptsProvided `deepseq`
                   asatPlutusRunnableCache `deepseq`
                     asatPlutusLanguagesUsed `deepseq`
-                      rnf asatPlutusScriptsWithContext
+                      asatUTxO `seq`
+                        rnf asatPlutusScriptsWithContext

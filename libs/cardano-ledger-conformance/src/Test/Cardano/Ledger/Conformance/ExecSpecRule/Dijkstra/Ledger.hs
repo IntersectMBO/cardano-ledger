@@ -129,7 +129,7 @@ instance
   ) =>
   NFData (DijkstraStAnnTx TopTx era)
   where
-  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _ _ _) =
+  rnf stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in dsattTx `deepseq`
           dsattRefScriptsSize `deepseq`
@@ -140,7 +140,8 @@ instance
                     dsattPlutusLanguagesUsed `deepseq`
                       dsattPlutusRunnableCache `deepseq`
                         dsattPlutusScriptsWithContext `deepseq`
-                          rnf dsattSubTransactions
+                          dsattUTxO `seq`
+                            rnf dsattSubTransactions
 
 instance
   ( AlonzoEraTx era
@@ -174,11 +175,12 @@ instance
   , ToExpr (ScriptsProvided era)
   , ToExpr (ContextError era)
   , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxOut era)
   , ToExpr (TxCert era)
   ) =>
   ToExpr (DijkstraStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _ _ _) =
+  toExpr stAnnTx@(DijkstraStAnnTopTx _ _ _ _ _ _ _ _ _ _ _) =
     let DijkstraStAnnTopTx {..} = stAnnTx
      in TD.Rec "DijkstraStAnnTopTx" $
           OMap.fromList
@@ -192,6 +194,7 @@ instance
             , ("dsattPlutusLanguagesUsed", toExpr dsattPlutusLanguagesUsed)
             , ("dsattPlutusScriptsWithContext", toExpr dsattPlutusScriptsWithContext)
             , ("dsattSubTransactions", toExpr dsattSubTransactions)
+            , ("dsattUTxO", toExpr dsattUTxO)
             ]
 
 -- | Note: 'dsastTxInfoResult' renders as a placeholder since 'TxInfoResult'
