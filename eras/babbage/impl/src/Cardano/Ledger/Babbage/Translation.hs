@@ -70,7 +70,7 @@ instance TranslateEra BabbageEra MempoolTx where
       SNothing -> pure SNothing
       SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
     let isPhase2ValidTx = tx ^. isPhase2ValidTxL
-    pure . UnsafeMkMempoolTx . asSTxTopLevel $
+    pure . UnsafeMkMempoolTx $
       mkBasicTx txBody
         & witsTxL .~ txWits
         & auxDataTxL .~ auxData
