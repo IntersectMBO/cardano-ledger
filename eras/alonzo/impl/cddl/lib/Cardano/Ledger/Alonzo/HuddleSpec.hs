@@ -41,20 +41,24 @@ import Cardano.Ledger.Huddle.Gen (
   TwiddlePolicy (..),
   genNBytes,
   generateFromGRef,
+  generateFromName,
   liftAntiGen,
   listOf,
   oneof,
   scale,
   twiddleArray,
   twiddleBytes,
+  twiddleMap,
   unwrapSingle,
   validateBytesTerm,
+  validateFromName,
+  validateMapTerm,
   withTwiddle,
   (|!),
  )
 import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Mary.HuddleSpec
-import Control.Monad (when)
+import Control.Monad (forM_, when)
 import qualified Data.ByteString as BS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -88,15 +92,34 @@ positiveIntervalRule pname p =
   pname
     =.= tag 30 (arr [a (huddleRule @"positive_int" p), a (huddleRule @"positive_int" p)])
 
+-- | Generator for a bignum (tag 2 or 3) whose bytes are always encoded with a
+-- definite length. Only the length of the bytes is ever zapped.
+--
+-- TODO implement the custom generator/validator properly once this PR gets
+-- merged: https://github.com/IntersectMBO/cuddle/pull/209
+--
+-- The real decoder (plutus-core) also accepts bignums with indefinite-length
+-- (chunked) bytes, but the validator decodes `.cbor` contents with cborg's
+-- `decodeTerm`, which rejects them. Any generated chunked bignum would therefore
+-- be reported as invalid even though it decodes fine, so we never generate one.
+genBigInt :: Word64 -> Gen.CBORGen RuleTerm
+genBigInt t = do
+  n <- choose (0, 64) |! Gen.sized (\sz -> choose (65, max 65 sz))
+  SingleTerm . TTagged t . TBytes <$> genNBytes n
+
 bigUintRule ::
   forall era.
   HuddleRule "bounded_bytes" era => Proxy "big_uint" -> Proxy era -> Rule
-bigUintRule pname p = pname =.= tag 2 (huddleRule @"bounded_bytes" p)
+bigUintRule pname p =
+  withCBORGen (genBigInt 2) $
+    pname =.= tag 2 (huddleRule @"bounded_bytes" p)
 
 bigNintRule ::
   forall era.
   HuddleRule "bounded_bytes" era => Proxy "big_nint" -> Proxy era -> Rule
-bigNintRule pname p = pname =.= tag 3 (huddleRule @"bounded_bytes" p)
+bigNintRule pname p =
+  withCBORGen (genBigInt 3) $
+    pname =.= tag 3 (huddleRule @"bounded_bytes" p)
 
 bigIntRule ::
   forall era.
@@ -569,13 +592,40 @@ instance HuddleRule "big_int" AlonzoEra where
   huddleRuleNamed = bigIntRule
 
 instance
+  ( Era era
+  , HuddleRule "bounded_bytes" era
+  , HuddleRule "big_int" era
+  ) =>
+  HuddleRule "plutus_data_map" era
+  where
+  huddleRuleNamed pname p =
+    comment
+      [str| The plutus data map is different from all the other maps in that it
+          | allows duplicate keys.
+          |]
+      $ withCBORGen generator
+      $ withValidator validator
+      $ pname =.= mp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
+    where
+      generator = do
+        let
+          genData = scale (`div` 2) $ generateFromName "plutus_data"
+        assocMap <- listOf $ (,) <$> genData <*> genData
+        SingleTerm <$> twiddleMap assocMap
+      validator rTerm = do
+        term <- unwrapSingle rTerm
+        assocMap <- validateMapTerm term
+        let validateData = validateFromName "plutus_data"
+        forM_ assocMap $ \(k, v) -> validateData k >> validateData v
+
+instance
   (Era era, HuddleRule "big_int" era, HuddleRule "bounded_bytes" era, HuddleRule1 "constr" era) =>
   HuddleRule "plutus_data" era
   where
   huddleRuleNamed pname p =
     pname
       =.= huddleRule1 @"constr" p (huddleRule @"plutus_data" p)
-      / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
+      / huddleRule @"plutus_data_map" p
       / sarr [0 <+ a (huddleRule @"plutus_data" p)]
       / huddleRule @"big_int" p
       / huddleRule @"bounded_bytes" p
