@@ -61,21 +61,20 @@ instance TranslateEra BabbageEra NewEpochState where
 
 instance TranslateEra BabbageEra MempoolTx where
   type TranslationError BabbageEra MempoolTx = DecoderError
-  translateEra _ctxt (UnsafeMkMempoolTx tx) =
-    withTopTxLevelOnly tx $ \tx' -> do
-      -- Translate the memoized components separately, retaining the bytes used by
-      -- transaction signatures and auxiliary-data hashes.
-      txBody <- translateEraThroughCBOR "TxBody" $ tx' ^. bodyTxL
-      txWits <- translateEraThroughCBOR "TxWitness" $ tx' ^. witsTxL
-      auxData <- case tx' ^. auxDataTxL of
-        SNothing -> pure SNothing
-        SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
-      let validating = tx' ^. isPhase2ValidTxL
-      pure . UnsafeMkMempoolTx . asSTxTopLevel $
-        mkBasicTx txBody
-          & witsTxL .~ txWits
-          & auxDataTxL .~ auxData
-          & isPhase2ValidTxL .~ validating
+  translateEra _ctxt (UnsafeMkMempoolTx tx) = do
+    -- Translate the memoized components separately, retaining the bytes used by
+    -- transaction signatures and auxiliary-data hashes.
+    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
+    auxData <- case tx ^. auxDataTxL of
+      SNothing -> pure SNothing
+      SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
+    let isPhase2ValidTx = tx ^. isPhase2ValidTxL
+    pure . UnsafeMkMempoolTx . asSTxTopLevel $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ auxData
+        & isPhase2ValidTxL .~ isPhase2ValidTx
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

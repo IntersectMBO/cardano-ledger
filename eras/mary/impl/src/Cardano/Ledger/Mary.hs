@@ -55,4 +55,6 @@ instance ApplyTx MaryEra where
 instance ApplyTick MaryEra
 
 instance (EraBlockHeader h MaryEra, TPraosEraBlockHeader h MaryEra) => ApplyBlock h MaryEra where
+  type BlockEnv MaryEra = Shelley.BbodyEnv MaryEra
+  mkBlockEnv = mkShelleyBlockEnv
   wrapBlockSignal = TPraosBbodySignal

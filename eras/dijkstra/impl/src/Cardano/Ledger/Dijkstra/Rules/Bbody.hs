@@ -24,6 +24,7 @@
 
 module Cardano.Ledger.Dijkstra.Rules.Bbody (
   BBODY,
+  BbodyEnv (..),
   DijkstraBbodyPredFailure (..),
   conwayToDijkstraBbodyPredFailure,
 ) where
@@ -86,10 +87,10 @@ import Cardano.Ledger.Dijkstra.Rules.LeiosCert (
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.API (incrBlocks)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsLastEbAnnouncementL, utxoL)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsLastEbAnnouncementL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (slotToEpochBoundary)
-import Cardano.Ledger.State (EbAnnouncement (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition
 import Data.Functor ((<&>))
@@ -99,6 +100,12 @@ import Data.Void (absurd)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
+
+data BbodyEnv era = BbodyEnv
+  { bbePParams :: PParams era
+  , bbeChainAccountState :: ChainAccountState
+  , bbeLeiosCommittee :: LeiosCommittee
+  }
 
 data DijkstraBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
@@ -368,7 +375,7 @@ instance
 
   type Signal (BBODY era) = LeiosBbodySignal era
 
-  type Environment (BBODY era) = Shelley.BbodyEnv era
+  type Environment (BBODY era) = BbodyEnv era
 
   type BaseM (BBODY era) = ShelleyBase
 
@@ -385,7 +392,7 @@ dijkstraBbodyTransition ::
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
-  , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , DijkstraEraBlockBody era
   , BabbageEraTxBody era
@@ -406,7 +413,7 @@ dijkstraBbodyTransition ::
   TransitionRule (EraRule "BBODY" era)
 dijkstraBbodyTransition = do
   TRC
-    ( Shelley.BbodyEnv pp account leiosCommittee
+    ( BbodyEnv pp account leiosCommittee
       , Shelley.BbodyState ls blocksMade
       , LeiosBbodySignal block@Block {blockBody}
       ) <-

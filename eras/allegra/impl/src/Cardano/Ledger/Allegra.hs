@@ -49,4 +49,6 @@ instance ApplyTx AllegraEra where
 instance ApplyTick AllegraEra
 
 instance (EraBlockHeader h AllegraEra, TPraosEraBlockHeader h AllegraEra) => ApplyBlock h AllegraEra where
+  type BlockEnv AllegraEra = Shelley.BbodyEnv AllegraEra
+  mkBlockEnv = mkShelleyBlockEnv
   wrapBlockSignal = TPraosBbodySignal

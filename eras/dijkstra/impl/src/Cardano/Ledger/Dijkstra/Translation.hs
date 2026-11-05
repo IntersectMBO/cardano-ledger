@@ -54,19 +54,18 @@ type instance TranslationContext DijkstraEra = DijkstraGenesis
 
 instance TranslateEra DijkstraEra MempoolTx where
   type TranslationError DijkstraEra MempoolTx = DecoderError
-  translateEra _ctxt (UnsafeMkMempoolTx tx) = case toSTxLevel tx of
-    STopTxOnly -> do
-      -- Translate the memoized components separately, retaining the bytes used by
-      -- transaction signatures and auxiliary-data hashes.
-      txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
-      txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
-      auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
-      let isPhase2ValidTx = tx ^. isPhase2ValidTxL
-      pure . UnsafeMkMempoolTx $
-        mkBasicTx txBody
-          & witsTxL .~ txWits
-          & isPhase2ValidTxL .~ isPhase2ValidTx
-          & auxDataTxL .~ auxData
+  translateEra _ctxt (UnsafeMkMempoolTx tx) = do
+    -- Translate the memoized components separately, retaining the bytes used by
+    -- transaction signatures and auxiliary-data hashes.
+    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
+    auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
+    let isPhase2ValidTx = tx ^. isPhase2ValidTxL
+    pure . UnsafeMkMempoolTx $
+      mkBasicTx txBody
+        & witsTxL .~ txWits
+        & isPhase2ValidTxL .~ isPhase2ValidTx
+        & auxDataTxL .~ auxData
 
 instance TranslateEra DijkstraEra NewEpochState where
   translateEra ctxt nes = do

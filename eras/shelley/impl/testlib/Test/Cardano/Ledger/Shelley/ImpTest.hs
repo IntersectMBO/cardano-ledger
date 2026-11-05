@@ -251,7 +251,7 @@ import Cardano.Ledger.Shelley.API.Mempool (
   reapplyValidatedTx,
  )
 import Cardano.Ledger.Shelley.API.Validation (
-  ApplyBlock,
+  ApplyBlock (..),
   BlockTransitionError (..),
   applyBlockEither,
  )
@@ -282,7 +282,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (
   AccountAlreadyRegistered,
-  BbodyEnv (..),
   LedgerEnv (..),
   ShelleyBbodyPredFailure,
   ShelleyBbodyState (..),
@@ -508,7 +507,7 @@ class
   , -- For the BBODY rule
     STS (EraRule "BBODY" era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
-  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , Environment (EraRule "BBODY" era) ~ BlockEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Eq (Event (EraRule "BBODY" era))
   , ToExpr (Event (EraRule "BBODY" era))

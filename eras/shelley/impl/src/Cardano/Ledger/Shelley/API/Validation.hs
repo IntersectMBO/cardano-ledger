@@ -3,7 +3,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,7 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -29,6 +28,7 @@ module Cardano.Ledger.Shelley.API.Validation (
   applyTickNoEvents,
   BlockTransitionError (BlockTransitionError),
   chainChecks,
+  mkShelleyBlockEnv,
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
@@ -41,12 +41,12 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curP
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import qualified Cardano.Ledger.Shelley.Rules as STS
-import Cardano.Ledger.Shelley.State (ssLeiosCommitteeL, ssStakeSetL)
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq (NFData, deepseq)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
+import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -94,6 +94,10 @@ class
   ) =>
   ApplyBlock h era
   where
+  type BlockEnv era = (t :: Type) | t -> era
+
+  mkBlockEnv :: NewEpochState era -> BlockEnv era
+
   wrapBlockSignal :: Block h era -> Signal (EraRule "BBODY" era)
 
   -- | Run the `BBODY` rule with `globalAssertionPolicy`. This function always succeeds, but
@@ -110,7 +114,7 @@ class
   default applyBlock ::
     ( STS (EraRule "BBODY" era)
     , BaseM (EraRule "BBODY" era) ~ ShelleyBase
-    , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
+    , Environment (EraRule "BBODY" era) ~ BlockEnv era
     , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
     , State (EraRule "LEDGERS" era) ~ LedgerState era
     ) =>
@@ -132,7 +136,7 @@ class
       STSResult {stsResultState, stsResultFailures, stsResultEvents} =
         flip runReader globals $
           applySTSOptsResult @(EraRule "BBODY" era) opts $
-            TRC (mkBbodyEnv newEpochState, bBodyState, wrapBlockSignal block)
+            TRC (mkBlockEnv @h newEpochState, bBodyState, wrapBlockSignal block)
       bBodyState =
         STS.BbodyState
           (LedgerState.esLState $ LedgerState.nesEs newEpochState)
@@ -195,6 +199,8 @@ applyTickNoEvents globals newEpochState slotNo =
 instance ApplyTick ShelleyEra
 
 instance (EraBlockHeader h ShelleyEra, TPraosEraBlockHeader h ShelleyEra) => ApplyBlock h ShelleyEra where
+  type BlockEnv ShelleyEra = STS.BbodyEnv ShelleyEra
+  mkBlockEnv = mkShelleyBlockEnv
   wrapBlockSignal = TPraosBbodySignal
 
 chainChecks ::
@@ -218,8 +224,14 @@ mkBbodyEnv
     STS.BbodyEnv
       { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
       , STS.bbodyAccount = LedgerState.esChainAccountState nesEs
-      , STS.bbodyLeiosCommittee = nesEs ^. LedgerState.esSnapshotsL . ssStakeSetL . ssLeiosCommitteeL
       }
+{-# DEPRECATED mkBbodyEnv "In favor of `mkBlockEnv`" #-}
+
+mkShelleyBlockEnv ::
+  EraGov era =>
+  NewEpochState era ->
+  STS.BbodyEnv era
+mkShelleyBlockEnv = mkBbodyEnv
 
 updateNewEpochState ::
   (LedgerState era ~ State (EraRule "LEDGERS" era), EraGov era) =>

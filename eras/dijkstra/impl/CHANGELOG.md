@@ -2,6 +2,8 @@
 
 ## 0.6.0.0
 
+* Add `BbodyEnv`
+* Add `mkDijkstraBlockEnv`
 * Add `DijkstraApplyBlock` type class, an extension of `ApplyBlock` that applies an `EndorserBlock` with the `EB` rule:
   - Add `applyEndorserBlock` method
   - Add `DijkstraApplyBlock h DijkstraEra` instance

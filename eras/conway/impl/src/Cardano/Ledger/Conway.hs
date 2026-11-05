@@ -42,6 +42,7 @@ import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Shelley.API
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 
@@ -59,6 +60,8 @@ instance ApplyTx ConwayEra where
 instance ApplyTick ConwayEra
 
 instance (EraBlockHeader h ConwayEra, PraosEraBlockHeader h ConwayEra) => ApplyBlock h ConwayEra where
+  type BlockEnv ConwayEra = Shelley.BbodyEnv ConwayEra
+  mkBlockEnv = mkShelleyBlockEnv
   wrapBlockSignal = PraosBbodySignal
 
 instance RunConwayRatify ConwayEra

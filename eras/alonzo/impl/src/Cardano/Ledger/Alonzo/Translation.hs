@@ -79,13 +79,12 @@ instance TranslateEra AlonzoEra MempoolTx where
     txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
     txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
     txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
-    -- transactions from Mary era always pass script ("phase 2") validation
-    let validating = Phase2Valid
     pure . UnsafeMkMempoolTx $
       mkBasicTx txBody
         & witsTxL .~ txWits
         & auxDataTxL .~ txAuxData
-        & isPhase2ValidTxL .~ validating
+        -- transactions from Mary era always pass script ("phase 2") validation
+        & isPhase2ValidTxL .~ Phase2Valid
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
