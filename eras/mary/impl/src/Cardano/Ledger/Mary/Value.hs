@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -433,10 +434,10 @@ instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
     deriving (Eq, Ord, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
-  fromCompact (CompactValue x) = from x
+  fromCompact (CompactValue x) = uncompactMaryValue x
 
 instance EncCBOR CompactValue where
-  encCBOR = encCBOR . from
+  encCBOR = encCBOR . uncompactMaryValue
 
 instance DecCBOR CompactValue where
   decCBOR = do
@@ -495,10 +496,10 @@ instance NFData CompactValue where
   rnf = rwhnf
 
 instance Eq CompactValue where
-  a == b = from a == from b
+  a == b = uncompactMaryValue a == uncompactMaryValue b
 
 instance Ord CompactValue where
-  compare = comparing from
+  compare = comparing uncompactMaryValue
 
 deriving via
   OnlyCheckWhnfNamed "CompactValue" CompactValue
@@ -760,77 +761,55 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     anameBlockSize =
       getSum $ foldMap' (Sum . SBS.length . assetNameBytes) assetNames
 
-from :: CompactValue -> MaryValue
-from (CompactValueAdaOnly c) = MaryValue (fromCompact c) (MultiAsset Map.empty)
-from (CompactValueMultiAsset c numAssets rep) =
-  let mv@(MaryValue _ ma) = valueFromList (fromCompact c) triples
-   in assert (isMultiAssetSmallEnough ma) mv
-  where
-    n = fromIntegral numAssets
-
-    ba = byteArrayFromShortByteString rep
-
-    getTripleForIndex :: Int -> (Word16, Word16, Word64)
-    getTripleForIndex i =
-      -- indexByteArray indices are in terms of the size of the value being indexed
-      -- rather than byte offsets.
-      -- The corresponding byte offsets are:
-      -- q: 0 + 8i
-      -- pidix: 8n + 2i
-      -- anameix: 8n + 2n + 2i
-      -- Dividing by the sized (resp 8,2,2) yields the indices below
-      let q = BA.indexByteArray ba i
-          pidix = BA.indexByteArray ba (4 * n + i)
-          anameix = BA.indexByteArray ba (5 * n + i)
-       in (pidix, anameix, q)
-
-    -- raw triples :: [(pid offset, asset name offset, quantity)]
-    rawTriples :: [(Word16, Word16, Word64)]
-    rawTriples = map getTripleForIndex [0 .. (fromIntegral $ numAssets - 1)]
-
-    triples :: [(PolicyID, AssetName, Integer)]
-    triples = map convertTriple rawTriples
-
-    -- Asset name length are calculated by subtracting the offset from the
-    -- next greater offset (or from the end of the rep, if there is none.)
-    -- For an index pointing to the end of the array, the associated
-    -- length will be: offset - length(rep) = 0
-    assetLens =
-      -- This assumes that the triples are ordered by nondecreasing asset name offset
-      let ixs = nubOrd $ map (\(_, x, _) -> x) rawTriples
-          ixPairs = zip ixs (drop 1 ixs ++ [fromIntegral $ SBS.length rep])
-       in Map.fromList $ (\(a, b) -> (a, fromIntegral $ b - a)) <$> ixPairs
-    assetLen :: Word16 -> Int
-    assetLen ix = fromJust (Map.lookup ix assetLens)
-
-    convertTriple ::
-      (Word16, Word16, Word64) -> (PolicyID, AssetName, Integer)
-    convertTriple (p, a, i) =
-      ( PolicyID $
-          ScriptHash $
-            Hash.UnsafeHash $
-              readShortByteString
-                rep
-                (fromIntegral p)
-                (fromIntegral $ Hash.hashSize ([] :: [ADDRHASH]))
-      , AssetName $ readShortByteString rep (fromIntegral a) (assetLen a)
-      , fromIntegral i
-      )
-
--- | Strip out duplicates
-nubOrd :: Ord a => [a] -> [a]
-nubOrd =
-  loop mempty
-  where
-    loop _ [] = []
-    loop s (a : as)
-      | a `Set.member` s = loop s as
-      | otherwise =
-          let s' = Set.insert a s in s' `seq` a : loop s' as
-
-readShortByteString :: ShortByteString -> Int -> Int -> ShortByteString
-readShortByteString sbs start len =
-  byteArrayToShortByteString $ BA.cloneByteArray (byteArrayFromShortByteString sbs) start len
+uncompactMaryValue :: CompactValue -> MaryValue
+uncompactMaryValue = \case
+  CompactValueAdaOnly c -> MaryValue (fromCompact c) (MultiAsset Map.empty)
+  CompactValueMultiAsset c numAssets rep ->
+    let mv@(MaryValue _ ma) =
+          MaryValue (fromCompact c) $
+            MultiAsset $
+              goFirst (n - 1) (SBS.length rep) mempty
+     in assert (isMultiAssetSmallEnough ma) mv
+    where
+      n = fromIntegral @Word32 @Int numAssets
+      ba = byteArrayFromShortByteString rep
+      blockOffsetPolicyID = 4 * n
+      blockOffsetAssetName = 5 * n
+      readAndInsertMultiAsset i offsetAssetName offsetEndAssetName ma =
+        let
+          !amount = toInteger @Word64 $ BA.indexByteArray ba i
+          !hashIx = fromIntegral @Word16 @Int $ BA.indexByteArray ba (blockOffsetPolicyID + i)
+          !policyId =
+            PolicyID $ ScriptHash $ fromJust $ Hash.hashFromOffsetBytesShort rep hashIx
+          !aName =
+            AssetName $
+              byteArrayToShortByteString $
+                BA.cloneByteArray ba offsetAssetName (offsetEndAssetName - offsetAssetName)
+         in
+          Map.insertWith (<>) policyId (Map.singleton aName amount) ma
+      {-# INLINE readAndInsertMultiAsset #-}
+      goFirst i offsetEndAssetName !acc
+        | i < 0 = acc
+        | otherwise =
+            let
+              !offsetAssetName =
+                fromIntegral @Word16 @Int $ BA.indexByteArray ba (blockOffsetAssetName + i)
+             in
+              goNext (i - 1) offsetAssetName offsetEndAssetName $
+                readAndInsertMultiAsset i offsetAssetName offsetEndAssetName acc
+      goNext i offsetPrevAssetName offsetEndAssetName !acc
+        | i < 0 = acc
+        | otherwise =
+            let
+              !offsetAssetName =
+                fromIntegral @Word16 @Int $ BA.indexByteArray ba (blockOffsetAssetName + i)
+              !offsetEndActualAssetName =
+                if offsetPrevAssetName == offsetAssetName
+                  then offsetEndAssetName
+                  else offsetPrevAssetName
+             in
+              goNext (i - 1) offsetAssetName offsetEndActualAssetName $
+                readAndInsertMultiAsset i offsetAssetName offsetEndActualAssetName acc
 
 -- ========================================================================
 -- Operations on Values
