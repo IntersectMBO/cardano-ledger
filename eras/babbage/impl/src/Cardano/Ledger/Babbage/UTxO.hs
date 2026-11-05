@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative
+import Control.Exception (assert)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -65,7 +66,10 @@ instance EraUTxO BabbageEra where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
-  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits} = alonzoMinFeeTx pp asatTx asatExUnits
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits, asatUTxO} =
+    assert (getMinFeeTxUtxo pp asatTx asatUTxO == minFee) minFee
+    where
+      minFee = alonzoMinFeeTx pp asatTx asatExUnits
 
 instance AlonzoEraUTxO BabbageEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

@@ -60,6 +60,7 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGovWith)
 import Cardano.Ledger.Val (Val (..), inject)
+import Control.Exception (assert)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
@@ -140,8 +141,10 @@ instance EraUTxO ConwayEra where
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
 
-  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatRefScriptsSize, asatExUnits} =
-    getConwayMinFeeTx pp asatTx asatRefScriptsSize asatExUnits
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatRefScriptsSize, asatExUnits, asatUTxO} =
+    assert (getMinFeeTxUtxo pp asatTx asatUTxO == minFee) minFee
+    where
+      minFee = getConwayMinFeeTx pp asatTx asatRefScriptsSize asatExUnits
 
 instance AlonzoEraUTxO ConwayEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

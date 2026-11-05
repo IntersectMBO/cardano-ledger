@@ -93,6 +93,7 @@ import Cardano.Ledger.State (
  )
 import Cardano.Ledger.TxIn
 import Control.DeepSeq (NFData)
+import Control.Exception (assert)
 import Data.Foldable as F (foldl', toList)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -132,7 +133,10 @@ instance EraUTxO AlonzoEra where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
-  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits} = alonzoMinFeeTx pp asatTx asatExUnits
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits, asatUTxO} =
+    assert (getMinFeeTxUtxo pp asatTx asatUTxO == minFee) minFee
+    where
+      minFee = alonzoMinFeeTx pp asatTx asatExUnits
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,

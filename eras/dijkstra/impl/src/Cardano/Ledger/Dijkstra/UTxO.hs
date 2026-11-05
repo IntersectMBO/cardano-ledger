@@ -56,6 +56,7 @@ import Cardano.Ledger.Dijkstra.Tx (
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
+import Control.Exception (assert)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -169,8 +170,10 @@ instance EraUTxO DijkstraEra where
 
   getMinFeeTxUtxo = getDijkstraMinFeeTxUtxo
 
-  calcMinFeeStAnnTx pp DijkstraStAnnTopTx {dsattTx, dsattRefScriptsSize, dsattExUnits} =
-    getConwayMinFeeTx pp dsattTx dsattRefScriptsSize dsattExUnits
+  calcMinFeeStAnnTx pp DijkstraStAnnTopTx {dsattTx, dsattRefScriptsSize, dsattExUnits, dsattUTxO} =
+    assert (getMinFeeTxUtxo pp dsattTx dsattUTxO == minFee) minFee
+    where
+      minFee = getConwayMinFeeTx pp dsattTx dsattRefScriptsSize dsattExUnits
 
 -- | The pool owners are required to witness a transaction, unless the certificate
 -- is re-registering an already registered pool and matches the latest params
