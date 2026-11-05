@@ -15,6 +15,7 @@ module Cardano.Ledger.Babbage.Rules.Ledger (LEDGER) where
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, LEDGER)
 import Cardano.Ledger.Babbage.Rules.Delegs ()
@@ -84,6 +85,7 @@ instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegPredFailure BabbageEra w
 
 instance
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , EraGov era
   , Embed (EraRule "DELEGS" era) (LEDGER era)
   , Embed (EraRule "UTXOW" era) (LEDGER era)

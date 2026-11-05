@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.Rules.Mempool (
   MEMPOOL,
 ) where
 
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits)
 import Cardano.Ledger.Conway.Core
@@ -145,6 +146,7 @@ mempoolTransition = do
 
 instance
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraGov era
   , BaseM (EraRule "CERTS" era) ~ ShelleyBase
