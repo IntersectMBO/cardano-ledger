@@ -213,11 +213,11 @@ chainChecks ::
   m ()
 chainChecks = STS.chainChecks
 
-mkBbodyEnv ::
+mkShelleyBlockEnv ::
   EraGov era =>
   NewEpochState era ->
   STS.BbodyEnv era
-mkBbodyEnv
+mkShelleyBlockEnv
   LedgerState.NewEpochState
     { LedgerState.nesEs
     } =
@@ -225,13 +225,6 @@ mkBbodyEnv
       { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
       , STS.bbodyAccount = LedgerState.esChainAccountState nesEs
       }
-{-# DEPRECATED mkBbodyEnv "In favor of `mkBlockEnv`" #-}
-
-mkShelleyBlockEnv ::
-  EraGov era =>
-  NewEpochState era ->
-  STS.BbodyEnv era
-mkShelleyBlockEnv = mkBbodyEnv
 
 updateNewEpochState ::
   (LedgerState era ~ State (EraRule "LEDGERS" era), EraGov era) =>
