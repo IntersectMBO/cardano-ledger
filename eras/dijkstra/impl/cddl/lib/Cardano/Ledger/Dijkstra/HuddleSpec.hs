@@ -877,20 +877,7 @@ instance HuddleRule "redeemers" DijkstraEra where
       [str| Dijkstra uses map format only for redeemers.
           | The flat array format has been removed.
           |]
-      $ pname
-        =.= mp
-          [ 1
-              <+ asKey
-                ( arr
-                    [ "tag" ==> huddleRule @"redeemer_tag" p
-                    , "index" ==> VUInt `sized` (4 :: Word64)
-                    ]
-                )
-              ==> arr
-                [ "data" ==> huddleRule @"plutus_data" p
-                , "ex_units" ==> huddleRule @"ex_units" p
-                ]
-          ]
+      $ pname =.= redeemerMapRule p
 
 instance HuddleRule "script_data_hash" DijkstraEra where
   huddleRuleNamed pname p =

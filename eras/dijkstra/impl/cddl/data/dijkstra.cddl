@@ -890,9 +890,9 @@ bootstrap_witness =
 ; Dijkstra uses map format only for redeemers.
 ; The flat array format has been removed.
 redeemers =
-  { + [tag : redeemer_tag, index : uint .size 4] => [ data     : plutus_data
-                                                    , ex_units : ex_units
-                                                    ]
+  { + [tag : redeemer_tag, index : redeemer_index] => [ data     : plutus_data
+                                                      , ex_units : ex_units
+                                                      ]
   }
 
 redeemer_tag =
@@ -903,6 +903,8 @@ redeemer_tag =
   / 4 ; voting
   / 5 ; proposing
   / 6 ; guarding
+
+redeemer_index = uint .size 4
 
 ; auxiliary_data supports three serialization formats:
 ;   1. metadata (raw) - Supported since Shelley
