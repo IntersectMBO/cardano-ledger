@@ -2,6 +2,7 @@
 
 ## 0.6.0.0
 
+* Change `Environment` of `BBODY` rule from `Shelley.BbodyEnv` to the Dijkstra-specific `BbodyEnv`
 * Add `BbodyEnv`
 * Add `mkDijkstraBlockEnv`
 * Add `DijkstraApplyBlock` type class, an extension of `ApplyBlock` that applies an `EndorserBlock` with the `EB` rule:
