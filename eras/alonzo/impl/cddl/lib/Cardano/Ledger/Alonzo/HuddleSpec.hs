@@ -33,32 +33,10 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Huddle.Gen (
-  MonadGen (choose),
-  RuleTerm (..),
-  Term (..),
-  TwiddleConfig (..),
-  TwiddlePolicy (..),
-  genNBytes,
-  generateFromGRef,
-  generateFromName,
-  liftAntiGen,
-  listOf,
-  oneof,
-  scale,
-  twiddleArray,
-  twiddleBytes,
-  twiddleMap,
-  unwrapSingle,
-  validateBytesTerm,
-  validateFromName,
-  validateMapTerm,
-  withTwiddle,
-  (|!),
- )
+import Cardano.Ledger.Huddle.Gen hiding (sized)
 import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Mary.HuddleSpec
-import Control.Monad (forM_, when)
+import Control.Monad (when)
 import qualified Data.ByteString as BS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -592,40 +570,13 @@ instance HuddleRule "big_int" AlonzoEra where
   huddleRuleNamed = bigIntRule
 
 instance
-  ( Era era
-  , HuddleRule "bounded_bytes" era
-  , HuddleRule "big_int" era
-  ) =>
-  HuddleRule "plutus_data_map" era
-  where
-  huddleRuleNamed pname p =
-    comment
-      [str| The plutus data map is different from all the other maps in that it
-          | allows duplicate keys.
-          |]
-      $ withCBORGen generator
-      $ withValidator validator
-      $ pname =.= mp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
-    where
-      generator = do
-        let
-          genData = scale (`div` 2) $ generateFromName "plutus_data"
-        assocMap <- listOf $ (,) <$> genData <*> genData
-        SingleTerm <$> twiddleMap assocMap
-      validator rTerm = do
-        term <- unwrapSingle rTerm
-        assocMap <- validateMapTerm term
-        let validateData = validateFromName "plutus_data"
-        forM_ assocMap $ \(k, v) -> validateData k >> validateData v
-
-instance
   (Era era, HuddleRule "big_int" era, HuddleRule "bounded_bytes" era, HuddleRule1 "constr" era) =>
   HuddleRule "plutus_data" era
   where
   huddleRuleNamed pname p =
     pname
       =.= huddleRule1 @"constr" p (huddleRule @"plutus_data" p)
-      / huddleRule @"plutus_data_map" p
+      / huddleRule1 @"assoc_map" p (huddleRule @"plutus_data" p)
       / sarr [0 <+ a (huddleRule @"plutus_data" p)]
       / huddleRule @"big_int" p
       / huddleRule @"bounded_bytes" p
