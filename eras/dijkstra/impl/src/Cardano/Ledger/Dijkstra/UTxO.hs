@@ -14,7 +14,6 @@ module Cardano.Ledger.Dijkstra.UTxO (
   dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
-  getTxOutsScripts,
   getDijkstraSupplementalDataHashes,
   getDijkstraMinFeeTxUtxo,
   scriptsProvidedDijkstraStAnnTx,
@@ -34,6 +33,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  getTxOutsScripts,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin)
@@ -231,18 +231,6 @@ getDijkstraScriptsProvided utxo tx =
     txScriptsProvided t =
       unScriptsProvided (getBabbageScriptsProvided utxo t)
         `Map.union` getTxOutsScripts (t ^. bodyTxL . outputsTxBodyL)
-
--- | Collect all the reference scripts found in the supplied outputs.
-getTxOutsScripts ::
-  (Foldable f, BabbageEraTxOut era) =>
-  f (TxOut era) ->
-  Map.Map ScriptHash (Script era)
-getTxOutsScripts txOuts =
-  Map.fromList
-    [ (hashScript script, script)
-    | txOut <- toList txOuts
-    , SJust script <- [txOut ^. referenceScriptTxOutL]
-    ]
 
 getDijkstraScriptsNeeded ::
   (DijkstraEraTxBody era, DijkstraEraScript era) =>

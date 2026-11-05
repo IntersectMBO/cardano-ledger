@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
-import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts, getTxOutsScripts)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -62,11 +62,7 @@ import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO, UTXOW)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure, UtxoEnv (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Dijkstra.UTxO (
-  DijkstraEraUTxO (..),
-  getTxOutsScripts,
-  poolOwnersWitnessRequired,
- )
+import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO (..), poolOwnersWitnessRequired)
 import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
