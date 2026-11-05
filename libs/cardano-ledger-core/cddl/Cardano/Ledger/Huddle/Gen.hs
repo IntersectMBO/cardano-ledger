@@ -29,6 +29,7 @@ module Cardano.Ledger.Huddle.Gen (
   genBytes,
   genNBytesText,
   genText,
+  genTerm,
 
   -- * Term validators
   module CustomValidator,
@@ -61,6 +62,7 @@ import Codec.CBOR.Cuddle.CBOR.Gen (
   genBytes,
   genNBytes,
   genNBytesText,
+  genTerm,
   genText,
   generateFromGRef,
   generateFromName,
