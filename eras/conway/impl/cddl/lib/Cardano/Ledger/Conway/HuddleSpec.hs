@@ -1208,7 +1208,7 @@ instance HuddleRule "redeemer_map" ConwayEra where
             _ -> fail "expected 2 elements"
       generator = do
         n <- Gen.sized $ \sz -> antiChoose (1, max 1 sz) (0, sz)
-        kvs <- replicateMNorm n $ do
+        kvs <- replicateMNorm n . Gen.scale (`div` max 1 n) $ do
           t <- generateFromName "redeemer_tag"
           i <- generateFromName "redeemer_index"
           d <- generateFromName "plutus_data"
