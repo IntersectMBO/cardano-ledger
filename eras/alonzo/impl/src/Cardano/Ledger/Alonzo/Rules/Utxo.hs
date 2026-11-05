@@ -62,6 +62,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   MaryEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unRedeemersL)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
@@ -450,18 +451,20 @@ validateWrongNetworkInTxBody netId txBody =
 --
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
-  AlonzoEraTx era =>
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  ) =>
   PParams era ->
-  Tx l era ->
+  StAnnTx TopTx era ->
   Test (AlonzoUtxoPredFailure era)
-validateExUnitsTooBigUTxO pp tx =
+validateExUnitsTooBigUTxO pp stAnnTx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
     ExUnitsTooBigUTxO
       Mismatch {mismatchSupplied = OrdExUnits totalExUnits, mismatchExpected = OrdExUnits maxTxExUnits}
   where
     maxTxExUnits = pp ^. ppMaxTxExUnitsL
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:
-    totalExUnits = getTotalExUnits tx
+    totalExUnits = exUnitsStAnnTx stAnnTx
 
 -- | Ensure that number of collaterals does not exceed the allowed @maxCollInputs@ parameter.
 --
@@ -484,7 +487,7 @@ validateTooManyCollateralInputs pp txBody =
 -- | The UTxO transition rule for the Alonzo eras.
 utxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , AlonzoEraTx era
   , AtMostEra "Babbage" era
   , EraRule "UTXO" era ~ UTXO era
@@ -527,7 +530,7 @@ utxoTransition = do
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
   {-   minfee pp tx ≤ txfee txb   -}
-  runTest $ Shelley.validateFeeTooSmallUTxO pp tx utxo
+  runTest $ Shelley.validateFeeTooSmallUTxO pp stAnnTx
 
   {-   txrdmrs tx ≠ ∅ ⇒ validateCollateral   -}
   runTest $ validateTxCollateral pp tx utxo
@@ -567,7 +570,7 @@ utxoTransition = do
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
-  runTest $ validateExUnitsTooBigUTxO pp tx
+  runTest $ validateExUnitsTooBigUTxO pp stAnnTx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ validateTooManyCollateralInputs pp txBody
@@ -584,7 +587,7 @@ utxoTransition = do
 
 instance
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , AlonzoEraTx era
   , Embed (EraRule "UTXOS" era) (UTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxosEnv era

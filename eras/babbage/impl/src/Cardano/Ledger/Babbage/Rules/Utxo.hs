@@ -37,6 +37,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, UTXO)
@@ -327,7 +328,7 @@ validateOutputTooSmallUTxO pp outs =
 
 babbageUtxoValidation ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
@@ -371,7 +372,7 @@ babbageUtxoValidation = do
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
   {-   minfee pp tx ≤ txfee txb   -}
-  runTest $ Shelley.validateFeeTooSmallUTxO pp tx utxo
+  runTest $ Shelley.validateFeeTooSmallUTxO pp stAnnTx
 
   {-   txrdmrs tx ≠ ∅ ⇒ collateral checks   -}
   validate $ validateTxCollateral pp tx utxo
@@ -412,7 +413,7 @@ babbageUtxoValidation = do
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
-  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
+  runTest $ Alonzo.validateExUnitsTooBigUTxO pp stAnnTx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
@@ -420,7 +421,7 @@ babbageUtxoValidation = do
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , EraCertState era
@@ -499,7 +500,7 @@ updateUTxOState pp certState tx utxoState =
 instance
   forall era.
   ( EraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , AlonzoEraTxWits era

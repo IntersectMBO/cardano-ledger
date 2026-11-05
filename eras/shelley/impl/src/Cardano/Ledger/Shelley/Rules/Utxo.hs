@@ -377,7 +377,7 @@ utxoInductive = do
   runTest $ validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
-  runTest $ validateFeeTooSmallUTxO pp tx utxo
+  runTest $ validateFeeTooSmallUTxO pp stAnnTx
 
   {- txins txb ⊆ dom utxo -}
   runTest $ validateBadInputsUTxO utxo $ txBody ^. inputsTxBodyL
@@ -447,10 +447,9 @@ validateInputSetEmptyUTxO txb =
 validateFeeTooSmallUTxO ::
   EraUTxO era =>
   PParams era ->
-  Tx TopTx era ->
-  UTxO era ->
+  StAnnTx TopTx era ->
   Test (ShelleyUtxoPredFailure era)
-validateFeeTooSmallUTxO pp tx utxo =
+validateFeeTooSmallUTxO pp stAnnTx =
   failureUnless (minFee <= txFee) $
     FeeTooSmallUTxO
       Mismatch
@@ -458,9 +457,8 @@ validateFeeTooSmallUTxO pp tx utxo =
         , mismatchExpected = minFee
         }
   where
-    minFee = getMinFeeTxUtxo pp tx utxo
-    txFee = txb ^. feeTxBodyL
-    txb = tx ^. bodyTxL
+    minFee = calcMinFeeStAnnTx pp stAnnTx
+    txFee = stAnnTx ^. txStAnnTxG . bodyTxL . feeTxBodyL
 
 -- | Ensure all transaction inputs are present in `UTxO`
 --
