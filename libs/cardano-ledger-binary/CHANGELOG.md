@@ -1,9 +1,15 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.10.2.0
+## 1.11.0.0
 
+* Change `decodeBytes` and `decodeByteArray` to accept only definite-length encodings, including starting with protocol version 12
 * Add `decodeNonEmptyMapNoDuplicatesAnn`
 * Rename `decodeMapTraverse` to `decodeMapTraverseWithDuplicates`
+
+### `testlib`
+
+* Change the type of `heTwiddle` in `HuddleEnv` from `Bool` to `TwiddleConfig`
+* Add `cardanoTwiddleConfig`
 
 ## 1.10.1.0
 

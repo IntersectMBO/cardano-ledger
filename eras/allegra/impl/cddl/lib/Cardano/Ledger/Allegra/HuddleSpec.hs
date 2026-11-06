@@ -27,7 +27,11 @@ module Cardano.Ledger.Allegra.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Huddle.Gen hiding (sized)
+import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Shelley.HuddleSpec
+import Control.Monad (replicateM)
+import Data.Foldable (forM_)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Text.Heredoc
@@ -342,12 +346,10 @@ instance HuddleRule "block" AllegraEra where
 instance HuddleRule1 "set" AllegraEra where
   huddleRule1Named pname _ = untaggedSet pname
 
-allegraMetadatumRule :: Era era => Proxy "metadatum" -> Proxy era -> Rule
+allegraMetadatumRule :: HuddleRule "metadatum" era => Proxy "metadatum" -> Proxy era -> Rule
 allegraMetadatumRule pname p =
   pname
-    =.= smp
-      [ 0 <+ asKey (allegraMetadatumRule pname p) ==> allegraMetadatumRule pname p
-      ]
+    =.= huddleRule1 @"assoc_map" p (huddleRule @"metadatum" p)
     / sarr [0 <+ a (allegraMetadatumRule pname p)]
     / VInt
     / (VBytes `sized` (0 :: Word64, 64 :: Word64))
@@ -355,3 +357,28 @@ allegraMetadatumRule pname p =
 
 instance HuddleRule "metadatum" AllegraEra where
   huddleRuleNamed = allegraMetadatumRule
+
+instance Era era => HuddleRule1 "assoc_map" era where
+  huddleRule1Named pname _p =
+    binding $ \x ->
+      comment
+        [str| The plutus data map is different from all the other maps in that it
+          | allows duplicate keys.
+          |]
+        $ withCBORGen (generator x)
+        $ withValidator (validator x)
+        $ pname =.= mp [0 <+ asKey x ==> x]
+    where
+      generator ref = Gen.sized $ \sz -> do
+        n <- choose (0, sz)
+        let
+          genData =
+            fmap unwrapSingleOrError . scale (const (sz `div` max 1 (2 * n))) $
+              generateFromGRef ref
+        assocMap <- replicateM n $ (,) <$> genData <*> genData
+        SingleTerm <$> twiddleMap assocMap
+      validator ref rTerm = do
+        term <- unwrapSingle rTerm
+        assocMap <- validateMapTerm term
+        let validateData = validateFromGRef ref
+        forM_ assocMap $ \(k, v) -> validateData k >> validateData v
