@@ -82,7 +82,8 @@ spec = describe "UTXOW" $ do
             ]
 
       describe "Fails with PPViewHashesDontMatchInformative after PV 11" $ do
-        let test txScriptIntegrityHash = whenMajorVersionAtLeast @11 $ do
+        let test :: StrictMaybe (SafeHash EraIndependentScriptIntegrity) -> ImpTestM era ()
+            test txScriptIntegrityHash = whenMajorVersionAtLeast @11 $ do
               fixedTx <- fixupTx =<< withSLanguage lang setupBadPPViewHashTx
               pp <- getsPParams id
               let
