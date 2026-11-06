@@ -783,42 +783,14 @@ spec = describe "POOL" $ do
 
     describe "Owner witnesses are needed" $ do
       describe "to rotate the BLS key and change" $ do
-        let changes :: [(String, StakePoolParams era -> ImpTestM era (StakePoolParams era), Bool)]
-            changes =
-              [ ("the VRF", \pps -> (\vrf -> pps {sppVrf = vrf}) <$> freshKeyHashVRF, False)
-              , ("the pledge", \pps -> pure pps {sppPledge = sppPledge pps <> Coin 1}, False)
-              , ("the cost", \pps -> pure pps {sppCost = sppCost pps <> Coin 1}, False)
-              , ("the margin", \pps -> pure pps {sppMargin = 1 %! 2}, False)
-              ,
-                ( "the reward account"
-                , \pps -> (\accountAddress -> pps {sppAccountAddress = accountAddress}) <$> registerAccountAddress
-                , False
-                )
-              ,
-                ( "the owners"
-                , \pps -> (\owner -> pps {sppOwners = Set.insert owner (sppOwners pps)}) <$> freshKeyHash
-                , False
-                )
-              ,
-                ( "the relays"
-                , \pps -> (\relay -> pps {sppRelays = sppRelays pps SSeq.|> relay}) <$> arbitrary
-                , True
-                )
-              ,
-                ( "the metadata"
-                , \pps -> (\url -> pps {sppMetadata = SJust (PoolMetadata url mempty)}) <$> arbitrary
-                , True
-                )
-              ]
-
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
         -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1259
         -- TODO: Re-enable after issue is resolved, by removing this override
-        forM_ changes $ \(field, change, disableInConformance) -> do
+        forM_ sppChanges $ \(field, change, supportedInConformance) -> do
           let it' =
-                if disableInConformance
-                  then disableInConformanceIt
-                  else it
+                if supportedInConformance
+                  then it
+                  else disableInConformanceIt
           it' field $ do
             pps <- registerPoolWithOwners . SJust =<< freshBlsKey
             newBlsKey <- freshBlsKey
@@ -883,6 +855,35 @@ spec = describe "POOL" $ do
           tx <- submitTx txWithRotation
           ownerWitsByLevel pps tx `shouldBe` (False, [True, True])
           expectFutureParams rotated
+
+  describe "Owner witnesses are not needed to change" $ do
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1293
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1259
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    forM_ sppChanges $ \(field, change, supportedInConformance) -> do
+      let it' =
+            if supportedInConformance
+              then it
+              else disableInConformanceIt
+      describe field $ do
+        it' "in a phase-2 invalid transaction" $ do
+          pps <- registerPoolWithOwners . SJust =<< freshBlsKey
+          updated <- change pps
+          tx <- switchTxToPhase2InvalidLegacyMode (registerPoolTx updated)
+          expectOwnerWitsNeeded updated tx
+          withPostFixup (dropOwnerWits updated) $
+            submitTx_ (tx & isPhase2ValidTxL .~ Phase2Invalid)
+          expectFuturePool (sppId updated) Nothing
+
+        it' "in a sub-transaction of a phase-2 invalid transaction" $ do
+          pps <- registerPoolWithOwners . SJust =<< freshBlsKey
+          updated <- change pps
+          tx <- switchTxToPhase2InvalidLegacyMode $ mkTopTxWithSubTxs [registerPoolTx updated]
+          expectSubTxOwnerWitsNeeded updated (RegPoolTxCert updated) tx
+          withPostFixupSubTxs (dropOwnerWits updated) $
+            submitTx_
+              (tx & isPhase2ValidTxL .~ Phase2Invalid)
+          expectFuturePool (sppId updated) Nothing
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
@@ -1038,6 +1039,35 @@ spec = describe "POOL" $ do
     expectRetiring :: KeyHash StakePool -> Bool -> ImpTestM era ()
     expectRetiring kh expected =
       Map.member kh . psRetiring <$> getPState `shouldReturn` expected
+
+    -- Changes to spp and whether conformance supports them
+    sppChanges :: [(String, StakePoolParams era -> ImpTestM era (StakePoolParams era), Bool)]
+    sppChanges =
+      [ ("the VRF", \pps -> (\vrf -> pps {sppVrf = vrf}) <$> freshKeyHashVRF, True)
+      , ("the pledge", \pps -> pure pps {sppPledge = sppPledge pps <> Coin 1}, True)
+      , ("the cost", \pps -> pure pps {sppCost = sppCost pps <> Coin 1}, True)
+      , ("the margin", \pps -> pure pps {sppMargin = 1 %! 2}, True)
+      ,
+        ( "the reward account"
+        , \pps -> (\accountAddress -> pps {sppAccountAddress = accountAddress}) <$> registerAccountAddress
+        , True
+        )
+      ,
+        ( "the owners"
+        , \pps -> (\owner -> pps {sppOwners = Set.insert owner (sppOwners pps)}) <$> freshKeyHash
+        , True
+        )
+      ,
+        ( "the relays"
+        , \pps -> (\relay -> pps {sppRelays = sppRelays pps SSeq.|> relay}) <$> arbitrary
+        , False
+        )
+      ,
+        ( "the metadata"
+        , \pps -> (\url -> pps {sppMetadata = SJust (PoolMetadata url mempty)}) <$> arbitrary
+        , False
+        )
+      ]
 
 -- | These need to run the POOL rule on its own, which needs the concrete rule
 -- types of Dijkstra, so can't be bundled in the era-polymorphic ones above
