@@ -10,6 +10,7 @@ module Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getReferenceScripts,
   getReferenceScriptsNonDistinct,
+  getTxOutsScripts,
 ) where
 
 import Cardano.Ledger.Alonzo.Tx (
@@ -169,7 +170,7 @@ getReferenceScripts ::
   UTxO era ->
   Set TxIn ->
   Map.Map ScriptHash (Script era)
-getReferenceScripts utxo ins = Map.fromList (getReferenceScriptsNonDistinct utxo ins)
+getReferenceScripts (UTxO mp) ins = getTxOutsScripts (Map.restrictKeys mp ins)
 
 getReferenceScriptsNonDistinct ::
   BabbageEraTxOut era =>
@@ -181,3 +182,15 @@ getReferenceScriptsNonDistinct (UTxO mp) inputs =
   | txOut <- Map.elems (Map.restrictKeys mp inputs)
   , SJust script <- [txOut ^. referenceScriptTxOutL]
   ]
+
+-- | Collect all the reference scripts found in the supplied outputs.
+getTxOutsScripts ::
+  (Foldable f, BabbageEraTxOut era) =>
+  f (TxOut era) ->
+  Map.Map ScriptHash (Script era)
+getTxOutsScripts txOuts =
+  Map.fromList
+    [ (hashScript script, script)
+    | txOut <- toList txOuts
+    , SJust script <- [txOut ^. referenceScriptTxOutL]
+    ]

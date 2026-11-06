@@ -33,6 +33,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  getTxOutsScripts,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin)
@@ -200,9 +201,12 @@ poolOwnersWitnessRequired PState {psStakePools, psFutureStakePoolParams} stakePo
     poolId = sppId stakePoolParams
     withoutBlsKey params = params {sppBlsKey = SNothing}
 
--- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
--- scripts from all subtransactions.
+-- | Like 'getBabbageScriptsProvided', but also includes the reference scripts of the outputs
+-- being created (CIP-0172). The collateral return output is not included, since it is only
+-- created when phase-2 validation fails. For 'TopTx' it also aggregates scripts from all
+-- subtransactions.
 getDijkstraScriptsProvided ::
+  forall era l.
   ( EraTx era
   , DijkstraEraTxBody era
   , STxLevel l era ~ STxBothLevels l era
@@ -216,12 +220,17 @@ getDijkstraScriptsProvided utxo tx =
     ( \topTx ->
         ScriptsProvided $
           Map.unions $
-            unScriptsProvided (getBabbageScriptsProvided utxo topTx)
-              : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
+            txScriptsProvided topTx
+              : [ txScriptsProvided subTx
                 | subTx <- OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)
                 ]
     )
-    (getBabbageScriptsProvided utxo)
+    (ScriptsProvided . txScriptsProvided)
+  where
+    txScriptsProvided :: forall m. Tx m era -> Map.Map ScriptHash (Script era)
+    txScriptsProvided t =
+      unScriptsProvided (getBabbageScriptsProvided utxo t)
+        `Map.union` getTxOutsScripts (t ^. bodyTxL . outputsTxBodyL)
 
 getDijkstraScriptsNeeded ::
   (DijkstraEraTxBody era, DijkstraEraScript era) =>

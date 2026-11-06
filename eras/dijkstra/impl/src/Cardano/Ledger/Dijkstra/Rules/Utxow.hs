@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
-import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts, getTxOutsScripts)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -263,6 +263,8 @@ dijkstraUtxowTransition = do
 
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   -- Aggregated: missing/extraneous scripts across all levels.
+  -- refScripts also includes the reference scripts in the outputs created by the batch
+  -- (CIP-0172), which the spec does not account for here yet.
   let witnessScripts =
         Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
           <> foldMap (Map.keysSet . (^. witsTxL . scriptTxWitsL)) subTxs
@@ -275,7 +277,10 @@ dijkstraUtxowTransition = do
                   <> subTx ^. bodyTxL . inputsTxBodyL
             )
             subTxs
-      refScripts = Map.keysSet $ getReferenceScripts originalUtxo allRefScriptInputs
+      allTxOuts = txBody ^. outputsTxBodyL <> foldMap (^. bodyTxL . outputsTxBodyL) subTxs
+      refScripts =
+        Map.keysSet $
+          getReferenceScripts originalUtxo allRefScriptInputs <> getTxOutsScripts allTxOuts
   runTest $ Babbage.babbageMissingScripts pp allScriptHashesNeeded refScripts witnessScripts
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
