@@ -2,7 +2,6 @@
 
 ## 1.21.0.0
 
-* Deprecated `mkBbodyEnv` in favor of `mkBlockEnv`
 * Add `mkShelleyBlockEnv`
 * Add `BlockEnv` and `mkBlockEnv` type family to `ApplyBlock`
 * Add `getShelleyWitsVKeyNeededNoGovWith`

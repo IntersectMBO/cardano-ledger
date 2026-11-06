@@ -19,6 +19,7 @@ module Cardano.Ledger.Dijkstra (
   applyEndorserBlockEither,
   applyEndorserBlockNoValidation,
   EndorserBlockTransitionError (EndorserBlockTransitionError),
+  mkDijkstraBlockEnv,
   mkDijkstraStAnnTopTx,
   DijkstraForecast (..),
   DijkstraEraForecast (..),
