@@ -32,9 +32,14 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word
 import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.Common as P (
+  MajorProtocolVersion (..),
+  ledgerLanguageIntroducedIn,
+ )
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec, sameAsToBuiltinDataSpec)
 
 spec :: Spec
@@ -43,6 +48,7 @@ spec = do
     costModelsSpec
     exUnitsSpec
     dataSpec
+    languageAvailabilitySpec
 
 costModelsSpec :: Spec
 costModelsSpec = do
@@ -139,3 +145,17 @@ dataSpec = describe "ToPlutusData" $ do
       sameAsToBuiltinDataSpec @[Integer] id
       sameAsToBuiltinDataSpec @(Map Integer Integer) (PV4.unsafeFromList . Map.toList)
       sameAsToBuiltinDataSpec $ \ProtVer {pvMajor, pvMinor} -> PV4.ProtocolVersion (getVersion pvMajor) (toInteger pvMinor)
+
+languageAvailabilitySpec :: Spec
+languageAvailabilitySpec =
+  describe
+    "Plutus scripts are deserialisable only from the protocol version that introduced their Plutus version" $
+    forM_ [minBound .. maxBound] $ \lang ->
+      describe (show lang) $ do
+        let plutusLang = toEnum (fromEnum lang)
+        withSLanguage lang $ \slang ->
+          forM_ [minBound .. maxBound :: Version] $ \pv ->
+            it (show pv) $
+              isValidPlutus pv (alwaysSucceedsNoDatum slang)
+                `shouldBe` P.MajorProtocolVersion (getVersion pv)
+                >= P.ledgerLanguageIntroducedIn plutusLang
