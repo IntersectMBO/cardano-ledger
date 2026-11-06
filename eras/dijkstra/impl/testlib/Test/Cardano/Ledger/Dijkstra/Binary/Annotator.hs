@@ -23,7 +23,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (decodePositiveCoin)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Block.Endorser (EbReferences (MkEbReferences))
+import Cardano.Ledger.Dijkstra.Block.Endorser (DijkstraEbReferences (MkDijkstraEbReferences))
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (
   DijkstraBlockBody (..),
   DijkstraBlockBodyRaw (..),
@@ -260,8 +260,8 @@ instance DecCBOR (DijkstraBlockBodyRaw DijkstraEra) where
 instance DecCBOR (DijkstraBlockBody DijkstraEra) where
   decCBOR = MkDijkstraBlockBody <$> decodeMemoized decCBOR
 
-instance DecCBOR EbReferences where
-  decCBOR = MkEbReferences <$> decodeMemoized decCBOR
+instance Typeable era => DecCBOR (DijkstraEbReferences era) where
+  decCBOR = MkDijkstraEbReferences <$> decodeMemoized decCBOR
 
 instance DecCBOR h => DecCBOR (Block h DijkstraEra) where
   decCBOR =

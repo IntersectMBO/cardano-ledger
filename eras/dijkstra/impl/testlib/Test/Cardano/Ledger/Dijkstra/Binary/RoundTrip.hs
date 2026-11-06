@@ -1,8 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip (
+  roundTripDijkstraCommonSpec,
+  roundTripDijkstraEraTypesSpec,
   roundTripDijkstraTxSpec,
 ) where
 
@@ -14,9 +17,11 @@ import Cardano.Ledger.Core (
   EraTxBody (mkBasicTxBody),
   SafeToHash (..),
   TxLevel (..),
+  eraName,
   eraProtVerHigh,
  )
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (EbReferences))
 import Cardano.Ledger.Hashes (hashAnnotated)
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..), unwrapMempoolTx)
 import Data.Either (isLeft)
@@ -25,12 +30,27 @@ import Test.Cardano.Ledger.Binary.Golden (decodeEnc)
 import Test.Cardano.Ledger.Binary.Plain.Golden (Enc (..))
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnn)
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
   roundTripAnnEraExpectation,
+  roundTripAnnEraSpec,
   roundTripEraExpectation,
+  roundTripEraSpec,
  )
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
+import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
+
+roundTripDijkstraCommonSpec :: forall era. DijkstraEraTest era => Spec
+roundTripDijkstraCommonSpec = do
+  roundTripDijkstraEraTypesSpec @era
+  roundTripConwayCommonSpec @era
+
+roundTripDijkstraEraTypesSpec :: forall era. DijkstraEraTest era => Spec
+roundTripDijkstraEraTypesSpec =
+  describe (eraName @era <> " Endorser Block Types") $ do
+    roundTripEraSpec @era @(EbReferences era)
+    roundTripAnnEraSpec @era @(EbReferences era)
 
 -- | Round-trip tests for the two serializations of a top-level transaction: the block format
 -- of `Tx`, which carries the `IsPhase2Valid` flag, and the mempool format of `MempoolTx`.

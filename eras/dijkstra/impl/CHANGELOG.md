@@ -30,7 +30,7 @@
 * Add `mkBasicEndorserBlock` to `EraEndorserBlock`
 * Remove the `StakePoolCostTooLowPOOL` predicate failure
 * Add `getDijkstraMinFeeTxUtxo` and use it in `getMinFeeTxUtxo`
-* Add `DecCBOR (Annotator EbReferences)` and `ToCBOR EbReferences`, so that `EbReferences` can be decoded without the full input at hand, eg from the network
+* Add `DecCBOR (Annotator (DijkstraEbReferences era))` and `ToCBOR (DijkstraEbReferences era)`, so that `DijkstraEbReferences` can be decoded without the full input at hand, eg from the network
 * Add `LeiosCertMissing` and `LeiosCertBlockBodyHasTxs` constructors to `DijkstraBbodyPredFailure`
 * Rename `decodeDijkstraTopTx` to `decodeDijkstraTopTxInMempool`
 * Remove the `DijkstraEraTx` type class and its `hashTx` method in favour of `HashAnnotated (Tx TopTx DijkstraEra) EraIndependentTx`
@@ -40,7 +40,7 @@
 * Replace the `AlonzoEraTx era` constraint with `SafeToHash (Tx TopTx era)` on `toCBORForBlockInclusion`, on the `DijkstraBlockBody` pattern and on `EncCBOR (DijkstraBlockBodyRaw era)`, and with `Era era` and `SafeToHash (Tx TopTx era)` on `mkBasicBlockBodyDijkstra`
 * Add `BlsKeyAlreadyRegistered` constructor to `DijkstraPoolPredFailure`
 * Change the field type of `RequiredTopLevelGuardsNotSupported` to `NonEmptySet (Credential Guard)`
-* Add `Cardano.Ledger.Dijkstra.Block.Endorser`, with `DijkstraEndorserBlock` and related types, and the `EraEndorserBlock` class
+* Add `Cardano.Ledger.Dijkstra.Block.Endorser`, with `DijkstraEndorserBlock`, `DijkstraEbReferences` and related types, the `EraEndorserBlock` class with the `EbReferences` and `EndorserBlock` type families, and the `EbReferences` pattern synonym
 * Extend `DijkstraEraForecast` with Peras protocol parameters
 * Validate the treasury value and the reference scripts size in `LEDGER`, and the treasury value in `SUBLEDGER`, regardless of phase-2 validity
 * Add `POOLREAP` rule for Dijkstra:
@@ -66,6 +66,8 @@
 
 ### `testlib`
 
+* Add `roundTripDijkstraCommonSpec` and `roundTripDijkstraEraTypesSpec`
+* Add `EraEndorserBlock`, `Arbitrary (EbReferences era)` and `DecCBOR (EbReferences era)` as superclasses of `DijkstraEraTest`
 * Add `DijkstraApplyBlock TestBlockHeader era`, `EncCBOR (PredicateFailure (EraRule "EB" era))` and `DecCBOR (PredicateFailure (EraRule "EB" era))` superclasses to `DijkstraEraImp`
 * Add `Arbitrary` and `DecCBOR` instances for `MempoolTx DijkstraEra`
 * Change the `DecCBOR` instances for `Tx TopTx DijkstraEra` and `DijkstraTx TopTx DijkstraEra` to use the block transaction format
@@ -86,7 +88,7 @@
 * Add `ToExpr` instances for `DijkstraTopTx DijkstraEra` and `DijkstraTopTxRaw DijkstraEra`
 * Add the `SafeToHash (Tx TopTx era)` constraint to `genSmallDijkstraTxsBlockBody`, and replace the `AlonzoEraTx era` constraint with it on `genSmallDijkstraCertBlockBody`
 * Replace the `EraBlockBody era`, `AlonzoEraTx era` and `SafeToHash (TxWits era)` constraints on `Arbitrary (DijkstraBlockBody era)` with `SafeToHash (Tx TopTx era)`
-* Add `Arbitrary` instance for `EbReferences`
+* Add `Arbitrary` instance for `DijkstraEbReferences DijkstraEra`
 * Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
 * Add `Test.Cardano.Ledger.Dijkstra.Translation.TranslatableGen` module with `genTranslatableTxWithNestedTxs`
 

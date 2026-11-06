@@ -84,7 +84,7 @@ import Cardano.Ledger.Dijkstra (
 import Cardano.Ledger.Dijkstra.Block.Endorser (
   EbTransactions (..),
   EraEndorserBlock (..),
-  mkEbReferences,
+  pattern EbReferences,
  )
 import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody)
 import Cardano.Ledger.Dijkstra.Core
@@ -740,13 +740,12 @@ makeEndorserBlock ::
   StrictSeq (Tx TopTx era) ->
   ImpTestM era (EndorserBlock era)
 makeEndorserBlock txs = do
-  pv <- getProtVer
   let
     refs = SimpleOMap.fromFoldable $ (\tx -> (hashAnnotated tx, tx ^. sizeTxF)) <$> txs
   pure $
     mkBasicEndorserBlock
       & transactionsEndorserBlockL .~ EbTransactions txs
-      & referencesEndorserBlockL .~ mkEbReferences (pvMajor pv) refs
+      & referencesEndorserBlockL .~ EbReferences refs
 
 mkEbReferencesAnnouncement :: EraEndorserBlock era => EndorserBlock era -> EbReferencesAnnouncement
 mkEbReferencesAnnouncement eb =
