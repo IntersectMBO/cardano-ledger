@@ -96,6 +96,7 @@
 * Add `Arbitrary` instance for `DijkstraEbReferences DijkstraEra`
 * Add `DijkstraEraForecast` superclass to `DijkstraEraImp`
 * Add `Test.Cardano.Ledger.Dijkstra.Translation.TranslatableGen` module with `genTranslatableTxWithNestedTxs`
+* Change `Arbitrary (DijkstraTxCert era)` and `Arbitrary DijkstraDelegCert` to generate every constructor
 
 ## 0.5.0.0
 
