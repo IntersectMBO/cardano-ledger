@@ -44,15 +44,7 @@ import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition (
-  Embed (..),
-  STS (..),
-  TRC (..),
-  TransitionRule,
-  judgmentContext,
-  liftSTS,
-  trans,
- )
+import Control.State.Transition
 import Data.Default (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
@@ -209,14 +201,17 @@ ledgersTransition = do
   sysStart <- liftSTS $ asks systemStart
   (LedgerStateWithLimits finalLedgerState _, _) <-
     foldM -- cache is lazy on purpose, since it is unused when validation is off
-      ( \(!curLedgerState, stAnnTxCache) (ix, tx) -> do
-          let
-            utxo = curLedgerState ^. lswlLedgerStateL . utxoL
-            stAnnTx = mkStAnnTx ei sysStart pp utxo stAnnTxCache tx
-          newLedgerState <-
-            trans @(EraRule "LEDGER" era) $
-              TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
-          pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
+      ( \acc@(!curLedgerState, stAnnTxCache) (ix, tx) ->
+          -- Skip the remaining transactions once one has failed, so that a block is
+          -- rejected on its first failure rather than on all of them.
+          whenFailureFreeDefault acc $ do
+            let
+              utxo = curLedgerState ^. lswlLedgerStateL . utxoL
+              stAnnTx = mkStAnnTx ei sysStart pp utxo stAnnTxCache tx
+            newLedgerState <-
+              trans @(EraRule "LEDGER" era) $
+                TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
+            pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
       (LedgerStateWithLimits initLedgerState mempty, mempty)
       $ zip [minBound ..]
