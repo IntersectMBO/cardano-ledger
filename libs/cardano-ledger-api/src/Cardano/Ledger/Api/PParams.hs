@@ -435,12 +435,12 @@ module Cardano.Ledger.Api.PParams (
   ppPerasQuorumThresholdSafetyMarginL,
   ppuPerasQuorumThresholdSafetyMarginL,
 
-  -- ** @RefInputsCostPerMultiAssetPolicy@
+  -- ** @RefInputsCostPerMultiAssetByte@
 
   -- | Fee charged for every multi-asset policy present in the values of a transaction's
   -- reference inputs
-  ppRefInputsCostPerMultiAssetPolicyL,
-  ppuRefInputsCostPerMultiAssetPolicyL,
+  ppRefInputsCostPerMultiAssetByteL,
+  ppuRefInputsCostPerMultiAssetByteL,
 
   -- ** @RefInputsCostPerDatumByte@
 
@@ -606,7 +606,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppPerasQuorumThresholdSafetyMarginL,
   ppPerasTargetCommitteeSizeL,
   ppRefInputsCostPerDatumByteL,
-  ppRefInputsCostPerMultiAssetPolicyL,
+  ppRefInputsCostPerMultiAssetByteL,
   ppRefScriptCostMultiplierL,
   ppRefScriptCostStrideL,
   ppuLeiosAnnouncementPeriodLengthL,
@@ -629,7 +629,7 @@ import Cardano.Ledger.Dijkstra.PParams (
   ppuPerasQuorumThresholdSafetyMarginL,
   ppuPerasTargetCommitteeSizeL,
   ppuRefInputsCostPerDatumByteL,
-  ppuRefInputsCostPerMultiAssetPolicyL,
+  ppuRefInputsCostPerMultiAssetByteL,
   ppuRefScriptCostMultiplierL,
   ppuRefScriptCostStrideL,
  )

@@ -87,7 +87,7 @@
                 "minor": 0
             },
             "refInputsCostPerDatumByte": 0,
-            "refInputsCostPerMultiAssetPolicy": 0,
+            "refInputsCostPerMultiAssetByte": 0,
             "refScriptCostMultiplier": {
                 "denominator": 10000000000000000000,
                 "numerator": 1
@@ -195,7 +195,7 @@
                         "minor": 0
                     },
                     "refInputsCostPerDatumByte": 0,
-                    "refInputsCostPerMultiAssetPolicy": 0,
+                    "refInputsCostPerMultiAssetByte": 0,
                     "refScriptCostMultiplier": {
                         "denominator": 10000000000000000000,
                         "numerator": 1
@@ -295,7 +295,7 @@
                         "minor": 0
                     },
                     "refInputsCostPerDatumByte": 0,
-                    "refInputsCostPerMultiAssetPolicy": 0,
+                    "refInputsCostPerMultiAssetByte": 0,
                     "refScriptCostMultiplier": {
                         "denominator": 10000000000000000000,
                         "numerator": 1
@@ -392,7 +392,7 @@
                 "minor": 0
             },
             "refInputsCostPerDatumByte": 0,
-            "refInputsCostPerMultiAssetPolicy": 0,
+            "refInputsCostPerMultiAssetByte": 0,
             "refScriptCostMultiplier": {
                 "denominator": 10000000000000000000,
                 "numerator": 1
@@ -1203,7 +1203,7 @@
                 "minor": 0
             },
             "refInputsCostPerDatumByte": 0,
-            "refInputsCostPerMultiAssetPolicy": 0,
+            "refInputsCostPerMultiAssetByte": 0,
             "refScriptCostMultiplier": 1.2,
             "refScriptCostStride": 25600,
             "stakeAddressDeposit": 2000000,
@@ -1991,7 +1991,7 @@
                     "minor": 0
                 },
                 "refInputsCostPerDatumByte": 0,
-                "refInputsCostPerMultiAssetPolicy": 0,
+                "refInputsCostPerMultiAssetByte": 0,
                 "refScriptCostMultiplier": 1.2,
                 "refScriptCostStride": 25600,
                 "stakeAddressDeposit": 2000000,
@@ -2095,7 +2095,7 @@
                         "minor": 0
                     },
                     "refInputsCostPerDatumByte": 0,
-                    "refInputsCostPerMultiAssetPolicy": 0,
+                    "refInputsCostPerMultiAssetByte": 0,
                     "refScriptCostMultiplier": {
                         "denominator": 10000000000000000000,
                         "numerator": 1
@@ -2195,7 +2195,7 @@
                         "minor": 0
                     },
                     "refInputsCostPerDatumByte": 0,
-                    "refInputsCostPerMultiAssetPolicy": 0,
+                    "refInputsCostPerMultiAssetByte": 0,
                     "refScriptCostMultiplier": {
                         "denominator": 10000000000000000000,
                         "numerator": 1
@@ -2292,7 +2292,7 @@
                 "minor": 0
             },
             "refInputsCostPerDatumByte": 0,
-            "refInputsCostPerMultiAssetPolicy": 0,
+            "refInputsCostPerMultiAssetByte": 0,
             "refScriptCostMultiplier": {
                 "denominator": 10000000000000000000,
                 "numerator": 1
