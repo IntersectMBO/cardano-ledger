@@ -67,6 +67,7 @@ import Cardano.Ledger.Dijkstra.BlockBody (
 import Cardano.Ledger.Dijkstra.Era (
   BBODY,
   DijkstraEra,
+  LEDGERS,
  )
 import Cardano.Ledger.Dijkstra.PParams (
   DijkstraEraPParams,
@@ -78,7 +79,7 @@ import Cardano.Ledger.Dijkstra.PParams (
 import Cardano.Ledger.Dijkstra.Rules.Gov (DijkstraGovPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
-import Cardano.Ledger.Dijkstra.Rules.Ledgers ()
+import Cardano.Ledger.Dijkstra.Rules.Ledgers (DijkstraLedgersPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.LeiosCert (
   DijkstraLeiosCertPredFailure,
   LEIOSCERT,
@@ -210,7 +211,7 @@ instance InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure DijkstraEra whe
 instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" DijkstraLedgersPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 
@@ -511,11 +512,11 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
-  ( BaseM (Babbage.LEDGERS era) ~ ShelleyBase
-  , Babbage.LEDGERS era ~ EraRule "LEDGERS" era
-  , STS (Babbage.LEDGERS era)
+  ( BaseM (LEDGERS era) ~ ShelleyBase
+  , LEDGERS era ~ EraRule "LEDGERS" era
+  , STS (LEDGERS era)
   ) =>
-  Embed (Babbage.LEDGERS era) (BBODY era)
+  Embed (LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
