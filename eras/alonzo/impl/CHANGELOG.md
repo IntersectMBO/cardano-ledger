@@ -2,6 +2,16 @@
 
 ## 1.19.0.0
 
+* Add `asatUTxO` field to `AlonzoStAnnTx`
+* Replace the `Tx l era` argument of `validateExUnitsTooBigUTxO` with `StAnnTx TopTx era`
+* Add `ExUnits` argument to `alonzoMinFeeTx`
+* Add `asatExUnits` field to `AlonzoStAnnTx`
+* Add `exUnitsStAnnTx` method to `AlonzoEraUTxO`
+* Add `exUnitsAlonzoStAnnTx`
+* Add `asatRefScriptsSize` field to `AlonzoStAnnTx`
+* Add `Int` argument to the signature of `mkAlonzoStAnnTx`
+* Add `refScriptsSizeStAnnTx` method to `AlonzoEraUTxO`
+* Add `refScriptsSizeAlonzoStAnnTx`
 * Replace `TranslateEra AlonzoEra (Tx TopTx)` with `TranslateEra AlonzoEra MempoolTx`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l AlonzoEra` to `MempoolTx AlonzoEra`
 * Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Alonzo.Core`

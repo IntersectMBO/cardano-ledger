@@ -31,6 +31,8 @@ module Cardano.Ledger.Dijkstra.Tx (
   decodeDijkstraTopTxInMempool,
   decodeDijkstraTopTxInBlock,
   toCBORForBlockInclusion,
+  refScriptsSizeDijkstraStAnnTx,
+  exUnitsDijkstraStAnnTx,
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
@@ -87,6 +89,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..), deepseq)
@@ -336,7 +339,7 @@ instance EraTx DijkstraEra where
   validateNativeScript = validateDijkstraNativeScript
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = getConwayMinFeeTx
+  getMinFeeTx pp tx refScriptSize = getConwayMinFeeTx pp tx refScriptSize (getTotalExUnits tx)
 
   allInputsTxBodyF = dijkstraAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
@@ -528,6 +531,12 @@ validateDijkstraNativeScript tx =
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateDijkstraNativeScript #-}
 
+refScriptsSizeDijkstraStAnnTx :: DijkstraStAnnTx TopTx era -> Int
+refScriptsSizeDijkstraStAnnTx DijkstraStAnnTopTx {dsattRefScriptsSize} = dsattRefScriptsSize
+
+exUnitsDijkstraStAnnTx :: DijkstraStAnnTx TopTx era -> ExUnits
+exUnitsDijkstraStAnnTx DijkstraStAnnTopTx {dsattExUnits} = dsattExUnits
+
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
 --
@@ -589,6 +598,8 @@ toCBORForBlockInclusion = encodePreEncoded . originalBytes
 data DijkstraStAnnTx l era where
   DijkstraStAnnTopTx ::
     { dsattTx :: !(Tx TopTx era)
+    , dsattRefScriptsSize :: Int
+    , dsattExUnits :: ExUnits
     , dsattScriptsNeeded :: ScriptsNeeded era
     , dsattScriptsProvided :: ScriptsProvided era
     , dsattPlutusLegacyMode :: Bool
@@ -596,6 +607,7 @@ data DijkstraStAnnTx l era where
     , dsattPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , dsattPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
     , dsattSubTransactions :: [DijkstraStAnnTx SubTx era]
+    , dsattUTxO :: UTxO era
     } ->
     DijkstraStAnnTx TopTx era
   DijkstraStAnnSubTx ::
@@ -618,6 +630,7 @@ deriving instance
   , Eq (ScriptsProvided era)
   , Eq (CollectError era)
   , Eq (TxInfoResult era)
+  , Eq (UTxO era)
   ) =>
   Eq (DijkstraStAnnTx l era)
 
@@ -629,6 +642,7 @@ deriving instance
   , Show (ScriptsProvided era)
   , Show (CollectError era)
   , Show (TxInfoResult era)
+  , Show (UTxO era)
   ) =>
   Show (DijkstraStAnnTx l era)
 

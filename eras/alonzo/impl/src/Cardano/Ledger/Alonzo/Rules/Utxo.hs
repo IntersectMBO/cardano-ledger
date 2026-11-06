@@ -62,6 +62,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   MaryEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unRedeemersL)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
@@ -278,41 +279,29 @@ vKeyLocked txOut =
     Left addr -> isKeyHashAddr addr
     Right cAddr -> isKeyHashCompactAddr cAddr
 
--- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
---   1) The fee paid is >= the minimum fee
---   2) If the total ExUnits are 0 in both Memory and Steps, no further part needs to be checked.
---   3) The collateral consists only of VKey addresses
---   4) The collateral is sufficient to cover the appropriate percentage of the
+-- | The collateral half of the @feesOK@ predicate. Only applies when the transaction
+--   carries redeemers, in which case:
+--   1) The collateral consists only of VKey addresses
+--   2) The collateral is sufficient to cover the appropriate percentage of the
 --      fee marked in the transaction
---   5) The collateral inputs do not contain any non-ADA part
---   6) There is at least one collateral input
---   As a TransitionRule it will return (), and produce a validation failure (rather than
---   return) if any of the required parts are False.
-feesOK ::
+--   3) The collateral inputs do not contain any non-ADA part
+--   4) There is at least one collateral input
+--
+--   The minimum fee half is checked separately by 'Shelley.validateFeeTooSmallUTxO'.
+validateTxCollateral ::
   forall era.
-  ( AlonzoEraTx era
-  , EraUTxO era
-  ) =>
+  AlonzoEraTx era =>
   PParams era ->
   Tx TopTx era ->
   UTxO era ->
   Test (AlonzoUtxoPredFailure era)
-feesOK pp tx u@(UTxO utxo) =
-  let txBody = tx ^. bodyTxL
-      collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
-      -- restrict Utxo to those inputs we use to pay fees.
-      utxoCollateral = Map.restrictKeys utxo collateral
-      theFee = txBody ^. feeTxBodyL
-      minFee = getMinFeeTxUtxo pp tx u
-   in sequenceA_
-        [ -- Part 1: minfee pp tx ≤ txfee txb
-          failureUnless
-            (minFee <= theFee)
-            (FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee})
-        , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
-          unless (null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) $
-            validateCollateral pp txBody utxoCollateral
-        ]
+validateTxCollateral pp tx (UTxO utxo) =
+  -- (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
+  unless (null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) $
+    validateCollateral pp txBody utxoCollateral
+  where
+    txBody = tx ^. bodyTxL
+    utxoCollateral = Map.restrictKeys utxo (txBody ^. collateralInputsTxBodyL)
 
 validateCollateral ::
   ( EraTxBody era
@@ -462,18 +451,20 @@ validateWrongNetworkInTxBody netId txBody =
 --
 -- > totExunits tx ≤ maxTxExUnits pp
 validateExUnitsTooBigUTxO ::
-  AlonzoEraTx era =>
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  ) =>
   PParams era ->
-  Tx l era ->
+  StAnnTx TopTx era ->
   Test (AlonzoUtxoPredFailure era)
-validateExUnitsTooBigUTxO pp tx =
+validateExUnitsTooBigUTxO pp stAnnTx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
     ExUnitsTooBigUTxO
       Mismatch {mismatchSupplied = OrdExUnits totalExUnits, mismatchExpected = OrdExUnits maxTxExUnits}
   where
     maxTxExUnits = pp ^. ppMaxTxExUnitsL
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:
-    totalExUnits = getTotalExUnits tx
+    totalExUnits = exUnitsStAnnTx stAnnTx
 
 -- | Ensure that number of collaterals does not exceed the allowed @maxCollInputs@ parameter.
 --
@@ -496,7 +487,7 @@ validateTooManyCollateralInputs pp txBody =
 -- | The UTxO transition rule for the Alonzo eras.
 utxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , AlonzoEraTx era
   , AtMostEra "Babbage" era
   , EraRule "UTXO" era ~ UTXO era
@@ -538,8 +529,11 @@ utxoTransition = do
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
-  {-   feesOK pp tx utxo   -}
-  runTest $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+  {-   minfee pp tx ≤ txfee txb   -}
+  runTest $ Shelley.validateFeeTooSmallUTxO pp stAnnTx
+
+  {-   txrdmrs tx ≠ ∅ ⇒ validateCollateral   -}
+  runTest $ validateTxCollateral pp tx utxo
 
   {- inputsAndCollateral = txins txb ∪ collateral txb -}
   {- (txins txb) ∪ (collateral txb) ⊆ dom utxo   -}
@@ -576,7 +570,7 @@ utxoTransition = do
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
-  runTest $ validateExUnitsTooBigUTxO pp tx
+  runTest $ validateExUnitsTooBigUTxO pp stAnnTx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ validateTooManyCollateralInputs pp txBody
@@ -593,7 +587,7 @@ utxoTransition = do
 
 instance
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , AlonzoEraTx era
   , Embed (EraRule "UTXOS" era) (UTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxosEnv era

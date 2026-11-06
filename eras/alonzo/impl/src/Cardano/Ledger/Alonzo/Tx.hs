@@ -55,6 +55,8 @@ module Cardano.Ledger.Alonzo.Tx (
   auxDataAlonzoTxL,
   sizeAlonzoTxF,
   isPhase2ValidAlonzoTxL,
+  refScriptsSizeAlonzoStAnnTx,
+  exUnitsAlonzoStAnnTx,
   txrdmrs,
   TxBody (AlonzoTxBody),
   -- Figure 4
@@ -131,7 +133,7 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Cardano.Ledger.Plutus (Data, Language, PlutusWithContext, hashData, nonNativeLanguages)
 import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
-import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided (..))
+import Cardano.Ledger.State (ScriptsNeeded, ScriptsProvided (..), UTxO)
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..), deepseq)
@@ -247,7 +249,7 @@ instance EraTx AlonzoEra where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
+  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx (getTotalExUnits tx)
   {-# INLINE getMinFeeTx #-}
 
   allInputsTxBodyF = alonzoSpendableInputsTxBodyF
@@ -503,13 +505,13 @@ alonzoMinFeeTx ::
   AlonzoEraTx era =>
   PParams era ->
   Tx l era ->
+  -- | Total execution units of the redeemers in this transaction
+  ExUnits ->
   Coin
-alonzoMinFeeTx pp tx =
+alonzoMinFeeTx pp tx allExUnits =
   (tx ^. sizeTxF <×> (fromCompact . unCoinPerByte) (pp ^. ppTxFeePerByteL))
     <+> (pp ^. ppTxFeeFixedL)
-    <+> txscriptfee (pp ^. ppPricesL) allExunits
-  where
-    allExunits = getTotalExUnits tx
+    <+> txscriptfee (pp ^. ppPricesL) allExUnits
 
 totExUnits ::
   AlonzoEraTx era =>
@@ -517,6 +519,26 @@ totExUnits ::
   ExUnits
 totExUnits = getTotalExUnits
 {-# DEPRECATED totExUnits "In favor of `getTotalExUnits`" #-}
+
+refScriptsSizeAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> Int
+refScriptsSizeAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $
+    \AlonzoStAnnTx {asatRefScriptsSize} -> asatRefScriptsSize
+
+exUnitsAlonzoStAnnTx ::
+  ( EraTxLevel era
+  , STxLevel l era ~ STxTopLevel l era
+  , STxLevel TopTx era ~ STxTopLevel TopTx era
+  ) =>
+  AlonzoStAnnTx l era -> ExUnits
+exUnitsAlonzoStAnnTx stAnnTx =
+  withTopTxLevelOnly stAnnTx $
+    \AlonzoStAnnTx {asatExUnits} -> asatExUnits
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -611,11 +633,14 @@ instance
 data AlonzoStAnnTx l era where
   AlonzoStAnnTx ::
     { asatTx :: !(Tx TopTx era)
+    , asatRefScriptsSize :: Int
+    , asatExUnits :: ExUnits
     , asatScriptsNeeded :: ScriptsNeeded era
     , asatScriptsProvided :: ScriptsProvided era
     , asatPlutusLanguagesUsed :: Set Language
     , asatPlutusRunnableCache :: Map.Map ScriptHash (SupportedPlutusRunnable era)
     , asatPlutusScriptsWithContext :: Either (NonEmpty (CollectError era)) [PlutusWithContext]
+    , asatUTxO :: UTxO era
     } ->
     AlonzoStAnnTx TopTx era
 
@@ -625,6 +650,7 @@ deriving instance
   , Eq (ScriptsNeeded era)
   , Eq (ScriptsProvided era)
   , Eq (CollectError era)
+  , Eq (UTxO era)
   ) =>
   Eq (AlonzoStAnnTx l era)
 
@@ -634,6 +660,7 @@ deriving instance
   , Show (ScriptsNeeded era)
   , Show (ScriptsProvided era)
   , Show (CollectError era)
+  , Show (UTxO era)
   ) =>
   Show (AlonzoStAnnTx l era)
 
@@ -652,11 +679,14 @@ instance
   ) =>
   NFData (AlonzoStAnnTx l era)
   where
-  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
+  rnf stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in asatTx `deepseq`
-          asatScriptsNeeded `deepseq`
-            asatScriptsProvided `deepseq`
-              asatPlutusRunnableCache `deepseq`
-                asatPlutusLanguagesUsed `deepseq`
-                  rnf asatPlutusScriptsWithContext
+          asatRefScriptsSize `deepseq`
+            asatExUnits `deepseq`
+              asatScriptsNeeded `deepseq`
+                asatScriptsProvided `deepseq`
+                  asatPlutusRunnableCache `deepseq`
+                    asatPlutusLanguagesUsed `deepseq`
+                      asatUTxO `seq`
+                        rnf asatPlutusScriptsWithContext

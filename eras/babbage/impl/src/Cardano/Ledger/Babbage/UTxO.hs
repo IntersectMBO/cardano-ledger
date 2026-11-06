@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -11,6 +12,12 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScriptsNonDistinct,
 ) where
 
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoStAnnTx (..),
+  alonzoMinFeeTx,
+  exUnitsAlonzoStAnnTx,
+  refScriptsSizeAlonzoStAnnTx,
+ )
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
@@ -34,6 +41,7 @@ import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative
+import Control.Exception (assert)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -58,6 +66,11 @@ instance EraUTxO BabbageEra where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits, asatUTxO} =
+    assert (getMinFeeTxUtxo pp asatTx asatUTxO == minFee) minFee
+    where
+      minFee = alonzoMinFeeTx pp asatTx asatExUnits
+
 instance AlonzoEraUTxO BabbageEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
@@ -70,6 +83,10 @@ instance AlonzoEraUTxO BabbageEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
+
+  refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
+
+  exUnitsStAnnTx = exUnitsAlonzoStAnnTx
 
 getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>

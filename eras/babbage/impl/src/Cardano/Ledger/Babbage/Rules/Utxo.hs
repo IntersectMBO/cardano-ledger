@@ -27,7 +27,6 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   BabbageUtxoPredFailure (..),
   babbageUtxoValidation,
   utxoTransition,
-  feesOK,
   validateTotalCollateral,
   validateCollateralEqBalance,
   validateOutputTooSmallUTxO,
@@ -38,13 +37,13 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, UTXO)
 import Cardano.Ledger.Babbage.Rules.Ppup ()
 import Cardano.Ledger.Babbage.Rules.Utxos (UTXOS)
 import Cardano.Ledger.BaseTypes (
-  Mismatch (..),
   ProtVer (..),
   ShelleyBase,
   epochInfo,
@@ -164,27 +163,27 @@ instance
 
 -- =======================================================
 
--- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
---   1) The fee paid is >= the minimum fee
---   2) If the total ExUnits are 0 in both Memory and Steps, no further part needs to be checked.
---   3) The collateral consists only of VKey addresses
---   4) The collateral inputs do not contain any non-ADA part
---   5) The collateral is sufficient to cover the appropriate percentage of the
+-- | Collateral is the second half of the @feesOK@ predicate of the Babbage
+--   specification. It only applies when the transaction carries redeemers, in which case:
+--   1) The collateral consists only of VKey addresses
+--   2) The collateral inputs do not contain any non-ADA part
+--   3) The collateral is sufficient to cover the appropriate percentage of the
 --      fee marked in the transaction
---   6) The collateral is equivalent to total collateral asserted by the transaction
---   7) There is at least one collateral input
+--   4) The collateral is equivalent to total collateral asserted by the transaction
+--   5) There is at least one collateral input
 --
---   feesOK can differ from Era to Era, as new notions of fees arise. This is the Babbage version
---   See: Figure 2: Functions related to fees and collateral, in the Babbage specification
---   In the spec feesOK is a boolean function. Because wee need to handle predicate failures
---   in the implementaion, it is coded as a Test. Which is a validation.
+--   The minimum fee half of @feesOK@ is unchanged since Shelley and is checked
+--   separately by 'Shelley.validateFeeTooSmallUTxO'.
+--
+--   See: Figure 2: Functions related to fees and collateral, in the Babbage specification.
+--   In the spec this is a boolean function. Because we need to handle predicate failures
+--   in the implementation, it is coded as a Test, which is a validation.
 --   This version is generic in that it can be lifted to any PredicateFailure type that
---   embeds BabbageUtxoPred era. This makes it possibly useful in future Eras.
-feesOK ::
+--   embeds BabbageUtxoPredFailure era. This makes it possibly useful in future Eras.
+validateTxCollateral ::
   forall era rule.
-  ( EraUTxO era
+  ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , AlonzoEraTxWits era
   , InjectRuleFailure rule Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure rule BabbageUtxoPredFailure era
   ) =>
@@ -192,24 +191,14 @@ feesOK ::
   Tx TopTx era ->
   UTxO era ->
   Test (EraRuleFailure rule era)
-feesOK pp tx u@(UTxO utxo) =
-  let txBody = tx ^. bodyTxL
-      collateral = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
-      -- restrict Utxo to those inputs we use to pay fees.
-      utxoCollateral = Map.restrictKeys utxo collateral
-      theFee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
-      minFee = getMinFeeTxUtxo pp tx u
-   in sequenceA_
-        [ -- Part 1: minfee pp tx ≤ txfee txBody
-          failureUnless
-            (minFee <= theFee)
-            ( injectFailure $
-                Alonzo.FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee}
-            )
-        , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
-          unless (null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) $
-            validateTotalCollateral pp txBody utxoCollateral
-        ]
+validateTxCollateral pp tx (UTxO utxo) =
+  -- (txrdmrs tx ≠ ∅ ⇒ validateTotalCollateral)
+  unless (null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) $
+    validateTotalCollateral pp txBody utxoCollateral
+  where
+    txBody = tx ^. bodyTxL
+    -- restrict Utxo to those inputs we use to pay fees.
+    utxoCollateral = Map.restrictKeys utxo (txBody ^. collateralInputsTxBodyL)
 
 -- | Test that inputs and refInpts are disjoint, in Conway and later Eras.
 disjointRefInputs ::
@@ -339,7 +328,7 @@ validateOutputTooSmallUTxO pp outs =
 
 babbageUtxoValidation ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
@@ -382,8 +371,11 @@ babbageUtxoValidation = do
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
-  {-   feesOK pp tx utxo   -}
-  validate $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+  {-   minfee pp tx ≤ txfee txb   -}
+  runTest $ Shelley.validateFeeTooSmallUTxO pp stAnnTx
+
+  {-   txrdmrs tx ≠ ∅ ⇒ collateral checks   -}
+  validate $ validateTxCollateral pp tx utxo
 
   {- allInputs = spendInputs txb ∪ collInputs txb ∪ refInputs txb -}
   {- (spendInputs txb ∪ collInputs txb ∪ refInputs txb) ⊆ dom utxo   -}
@@ -421,7 +413,7 @@ babbageUtxoValidation = do
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
-  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
+  runTest $ Alonzo.validateExUnitsTooBigUTxO pp stAnnTx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
@@ -429,7 +421,7 @@ babbageUtxoValidation = do
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.
-  ( EraUTxO era
+  ( AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , EraCertState era
@@ -508,7 +500,7 @@ updateUTxOState pp certState tx utxoState =
 instance
   forall era.
   ( EraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTx era
   , AlonzoEraTxWits era

@@ -2,6 +2,11 @@
 
 ## 0.6.0.0
 
+* Add `dsattUTxO` to `DijkstraStAnnTopTx`
+* Add `exUnitsDijkstraStAnnTx`
+* Add `dsattExUnits` to `DijkstraStAnnTopTx`
+* Add `refScriptsSizeDijkstraStAnnTx`
+* Add `dsattRefScriptsSize` to `DijkstraStAnnTopTx`
 * Change `Environment` of `BBODY` rule from `Shelley.BbodyEnv` to the Dijkstra-specific `BbodyEnv`
 * Add `BbodyEnv`
 * Add `mkDijkstraBlockEnv`

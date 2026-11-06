@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Replace `Tx TopTx era` and `UTxO era` arguments of `validateFeeTooSmallUTxO` with `StAnnTx TopTx era`
 * Add `mkShelleyBlockEnv`
 * Add `BlockEnv` and `mkBlockEnv` type family to `ApplyBlock`
 * Add `getShelleyWitsVKeyNeededNoGovWith`

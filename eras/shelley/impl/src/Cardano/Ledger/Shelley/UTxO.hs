@@ -179,6 +179,8 @@ instance EraUTxO ShelleyEra where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
+  calcMinFeeStAnnTx = getShelleyMinFeeTxUtxo
+
 -- We don't consider the reference scripts in the calculation before Conway
 getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx l era -> Coin
 getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0

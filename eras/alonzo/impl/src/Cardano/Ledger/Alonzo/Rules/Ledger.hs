@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUtxowEvent, AlonzoUtxowPredFailure, UTXOW)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -108,6 +109,7 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
   , AlonzoEraTx era
+  , AlonzoEraUTxO era
   , EraCertState era
   , EraRule "LEDGER" era ~ someLEDGER era
   , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
@@ -153,12 +155,13 @@ ledgerTransition = do
       ( blockBodyLimits
           <> AlonzoBlockBodyLimits
             { abblTxsSize = sizeTxForFeeCalculation tx
-            , abblExUnits = getTotalExUnits tx
+            , abblExUnits = exUnitsStAnnTx stAnnTx
             }
       )
 
 instance
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , EraGov era
   , Embed (EraRule "DELEGS" era) (LEDGER era)
   , Embed (EraRule "UTXOW" era) (LEDGER era)

@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Add `ExUnits` argument to `getConwayMinFeeTx`
 * Add `getConwayWitsVKeyNeededWith`
 * Replace `TranslateEra ConwayEra (Tx TopTx)` with `TranslateEra ConwayEra MempoolTx`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l ConwayEra` to `MempoolTx ConwayEra`

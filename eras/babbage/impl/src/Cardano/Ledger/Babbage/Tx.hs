@@ -67,7 +67,7 @@ instance EraTx BabbageEra where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
+  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx (getTotalExUnits tx)
 
   allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}

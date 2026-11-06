@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Add `calcMinFeeStAnnTx` to `EraUTxO`
 * Add a `PState` argument to `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`
 * Add `Cardano.Ledger.MempoolTx` with the abstract `MempoolTx` wrapper and `unwrapMempoolTx`
 * Add `Cardano.Ledger.MempoolTx.Internal` with the `UnsafeMkMempoolTx` constructor

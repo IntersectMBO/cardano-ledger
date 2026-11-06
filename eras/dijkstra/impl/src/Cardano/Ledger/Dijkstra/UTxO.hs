@@ -36,6 +36,7 @@ import Cardano.Ledger.Babbage.UTxO (
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.Tx (getConwayMinFeeTx)
 import Cardano.Ledger.Conway.TxBody (conwayProposalsDeposits)
 import Cardano.Ledger.Conway.UTxO (
   getConwayScriptsNeeded,
@@ -47,10 +48,15 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..))
 import Cardano.Ledger.Dijkstra.State
-import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
+import Cardano.Ledger.Dijkstra.Tx (
+  DijkstraStAnnTx (..),
+  exUnitsDijkstraStAnnTx,
+  refScriptsSizeDijkstraStAnnTx,
+ )
 import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
+import Control.Exception (assert)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -164,6 +170,11 @@ instance EraUTxO DijkstraEra where
 
   getMinFeeTxUtxo = getDijkstraMinFeeTxUtxo
 
+  calcMinFeeStAnnTx pp DijkstraStAnnTopTx {dsattTx, dsattRefScriptsSize, dsattExUnits, dsattUTxO} =
+    assert (getMinFeeTxUtxo pp dsattTx dsattUTxO == minFee) minFee
+    where
+      minFee = getConwayMinFeeTx pp dsattTx dsattRefScriptsSize dsattExUnits
+
 -- | The pool owners are required to witness a transaction, unless the certificate
 -- is re-registering an already registered pool and matches the latest params
 -- (that includes future updates that are signed and pending) for everything
@@ -236,6 +247,9 @@ instance AlonzoEraUTxO DijkstraEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextDijkstraStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedDijkstraStAnnTx
+
+  refScriptsSizeStAnnTx = refScriptsSizeDijkstraStAnnTx
+  exUnitsStAnnTx = exUnitsDijkstraStAnnTx
 
 getDijkstraSupplementalDataHashes ::
   ( EraTx era

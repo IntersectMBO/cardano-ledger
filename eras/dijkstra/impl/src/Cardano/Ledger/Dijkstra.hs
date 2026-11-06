@@ -75,7 +75,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
-import Cardano.Ledger.Dijkstra.UTxO ()
+import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
 import Cardano.Ledger.Plutus (Language (..), plutusLanguage)
 import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
@@ -187,6 +187,8 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
    in
     DijkstraStAnnTopTx
       { dsattTx = tx
+      , dsattRefScriptsSize = batchNonDistinctRefScriptsSize utxo tx
+      , dsattExUnits = getTotalExUnits tx
       , dsattScriptsNeeded = scriptsNeeded
       , dsattScriptsProvided = scriptsProvided
       , dsattPlutusLegacyMode = not $ Set.null $ Set.filter (<= PlutusV3) languagesUsed
@@ -195,6 +197,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
       , dsattPlutusScriptsWithContext =
           scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL)
       , dsattSubTransactions = stAnnSubTxs
+      , dsattUTxO = utxo
       }
 
 mkDijkstraStAnnSubTx ::

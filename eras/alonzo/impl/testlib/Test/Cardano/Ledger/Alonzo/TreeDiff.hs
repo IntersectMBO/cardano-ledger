@@ -149,19 +149,23 @@ instance
   , ToExpr (ContextError era)
   , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (TxCert era)
+  , ToExpr (TxOut era)
   ) =>
   ToExpr (AlonzoStAnnTx TopTx era)
   where
-  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _) =
+  toExpr stAnnTx@(AlonzoStAnnTx _ _ _ _ _ _ _ _ _) =
     let AlonzoStAnnTx {..} = stAnnTx
      in Rec "AlonzoStAnnTx" $
           OMap.fromList
             [ ("asatTx", toExpr asatTx)
+            , ("asatRefScriptsSize", toExpr asatRefScriptsSize)
+            , ("asatExUnits", toExpr asatExUnits)
             , ("asatScriptsNeeded", toExpr asatScriptsNeeded)
             , ("asatScriptsProvided", toExpr asatScriptsProvided)
             , ("asatPlutusRunnableCache", toExpr asatPlutusRunnableCache)
             , ("asatPlutusLanguagesUsed", toExpr asatPlutusLanguagesUsed)
             , ("asatPlutusScriptsWithContext", toExpr asatPlutusScriptsWithContext)
+            , ("asatUTxO", toExpr asatUTxO)
             ]
 
 instance ToExpr (SupportedPlutusRunnable era) where

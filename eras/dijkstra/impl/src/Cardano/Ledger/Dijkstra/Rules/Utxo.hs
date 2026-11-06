@@ -354,7 +354,7 @@ dijkstraUtxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO (utxosUtxo utxos) inputs
 
   {- minfee pp txTop utxo₀ ≤ txfee txb -}
-  runTest $ Shelley.validateFeeTooSmallUTxO pp tx originalUtxo
+  runTest $ Shelley.validateFeeTooSmallUTxO pp stAnnTx
 
   {- (RedeemersOf txTop ≠ ∅ ⊎ Any (λ txSub → RedeemersOf txSub ≠ ∅) subtxs) → collateralCheck -}
   validate $ validateBatchCollateral pp tx originalUtxo
@@ -412,7 +412,7 @@ dijkstraUtxoTransition = do
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {- totExunits tx ≤ maxTxExUnits pp -}
-  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
+  runTest $ Alonzo.validateExUnitsTooBigUTxO pp stAnnTx
 
   {- ‖collateral tx‖ ≤ maxCollInputs pp -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody

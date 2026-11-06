@@ -60,7 +60,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.State ()
-import Cardano.Ledger.Alonzo.Tx (AlonzoStAnnTx (..))
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoStAnnTx (..),
+  alonzoMinFeeTx,
+  exUnitsAlonzoStAnnTx,
+  refScriptsSizeAlonzoStAnnTx,
+ )
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Credential (credScriptHash)
@@ -74,6 +79,7 @@ import Cardano.Ledger.Plutus (
   PlutusRunnable (..),
   PlutusWithContext,
  )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
@@ -87,6 +93,7 @@ import Cardano.Ledger.State (
  )
 import Cardano.Ledger.TxIn
 import Control.DeepSeq (NFData)
+import Control.Exception (assert)
 import Data.Foldable as F (foldl', toList)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -126,6 +133,11 @@ instance EraUTxO AlonzoEra where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
+  calcMinFeeStAnnTx pp AlonzoStAnnTx {asatTx, asatExUnits, asatUTxO} =
+    assert (getMinFeeTxUtxo pp asatTx asatUTxO == minFee) minFee
+    where
+      minFee = alonzoMinFeeTx pp asatTx asatExUnits
+
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,
   -- but they can be added to the witness set. In a broaded terms datums corresponding to
@@ -161,6 +173,20 @@ class EraUTxO era => AlonzoEraUTxO era where
 
   plutusLanguagesUsedStAnnTx :: StAnnTx l era -> Set.Set Language
 
+  -- | Total size in bytes of the reference scripts used by the whole transaction,
+  -- including sub-transactions where supported.
+  -- Zero in eras in which there are no reference scripts limits or pricing (i.e. for pre-Conway eras).
+  --
+  -- This value can only become stale if an input or reference input is no longer in the UTXO,
+  -- in which case the transaction is rejected for a missing input.
+  refScriptsSizeStAnnTx :: StAnnTx TopTx era -> Int
+
+  -- | Total execution units of all the redeemers in this transaction across the whole transaction,
+  -- including sub-transactions where supported.
+  --
+  -- Derived from the transaction alone, so it never goes stale.
+  exUnitsStAnnTx :: StAnnTx TopTx era -> ExUnits
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
@@ -173,6 +199,10 @@ instance AlonzoEraUTxO AlonzoEra where
   plutusScriptsWithContextStAnnTx = plutusScriptsWithContextAlonzoStAnnTx
 
   plutusLanguagesUsedStAnnTx = plutusLanguagesUsedAlonzoStAnnTx
+
+  refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
+
+  exUnitsStAnnTx = exUnitsAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era
