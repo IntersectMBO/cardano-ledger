@@ -53,7 +53,6 @@ import qualified PlutusLedgerApi.Test.Examples as P (
 import qualified PlutusLedgerApi.Test.V1.EvaluationContext as PV1
 import qualified PlutusLedgerApi.Test.V2.EvaluationContext as PV2
 import qualified PlutusLedgerApi.Test.V3.EvaluationContext as PV3
-import qualified PlutusLedgerApi.Test.V4.EvaluationContext as PV4
 import PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Plutus.ScriptTestContext (
   PlutusArgs (..),
@@ -116,7 +115,7 @@ testingCostModelV3 :: HasCallStack => CostModel
 testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesting
 
 testingCostModelV4 :: HasCallStack => CostModel
-testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> PV4.costModelParamsForTesting
+testingCostModelV4 = mkCostModel' PlutusV4 $ snd <$> PV3.costModelParamsForTesting
 
 testingEvaluationContext :: Language -> PV1.EvaluationContext
 testingEvaluationContext = getCostModelEvaluationContext . testingCostModel

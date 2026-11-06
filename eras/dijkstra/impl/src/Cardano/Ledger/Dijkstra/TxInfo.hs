@@ -562,7 +562,7 @@ instance Conway.ConwayEraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
 instance Conway.ConwayEraPlutusTxInfo 'PlutusV4 DijkstraEra where
-  toPlutusChangedParameters _ x = PV4.ChangedParameters (PV4.dataToBuiltinData (toPlutusData x))
+  toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
 
 instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
   toPlutusTxCert _proxy _pv = pure . transTxCertV4
@@ -597,7 +597,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
           , PV4.txInfoTxCerts = txCerts
           , PV4.txInfoValidRange = timeRange
           , PV4.txInfoRedeemers = plutusRedeemers
-          , PV4.txInfoData = PV4.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+          , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
           , PV4.txInfoId = Conway.transTxBodyId txBody
           , PV4.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
           , PV4.txInfoProposalProcedures =
