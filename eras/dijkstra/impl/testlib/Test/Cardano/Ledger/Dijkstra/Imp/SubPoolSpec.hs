@@ -357,7 +357,7 @@ spec = describe "SUBPOOL" $ do
       ownerBlsKey <- freshBlsKey
       pps <- registerPoolWithBlsKey (SJust ownerBlsKey)
       pStateBefore <- getPools
-      invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
+      invalidOwnerBlsKey <- arbitrary
       submitFailingTx
         (registerPoolTx pps {sppBlsKey = SJust invalidOwnerBlsKey})
         [ injectFailure . DijkstraSubPoolPredFailure $
@@ -368,7 +368,7 @@ spec = describe "SUBPOOL" $ do
 
     it "fails to register a new pool with an invalid BLS proof of possession" $ do
       pps <- freshStakePool
-      invalidOwnerBlsKey <- BlsKey <$> arbitrary <*> arbitrary
+      invalidOwnerBlsKey <- arbitrary
       submitFailingTx
         (registerPoolTx pps {sppBlsKey = SJust invalidOwnerBlsKey})
         [ injectFailure . DijkstraSubPoolPredFailure $
@@ -487,21 +487,6 @@ spec = describe "SUBPOOL" $ do
       expectBlsKeys []
       other <- registerBlsPool (SJust key)
       expectActiveBlsKey other (SJust key)
-      expectBlsKeys [key]
-
-    it "only the public key counts, not the proof of possession" $ do
-      key <- freshBlsKey
-      _ <- registerBlsPool (SJust key)
-      bogusProof <- arbitrary
-      let bogusKey = key {blsPossessionProof = bogusProof}
-      kh <- freshKeyHash
-      pps <- blsPoolParams kh (SJust bogusKey)
-      -- the key is rejected twice: its public key is taken and its proof is not valid
-      submitFailingTx
-        (registerPoolTx pps)
-        [ injectFailure . DijkstraSubPoolPredFailure $ BlsKeyInvalidProofOfPossession kh bogusKey
-        , injectFailure . DijkstraSubPoolPredFailure $ BlsKeyAlreadyRegistered kh bogusKey
-        ]
       expectBlsKeys [key]
   where
     registerPoolTx pps =

@@ -63,7 +63,7 @@ import NoThunks.Class (NoThunks)
 -- | The committee with no seats: the value for eras before Leios and for a
 -- committee size of zero.
 emptyLeiosCommittee :: LeiosCommittee
-emptyLeiosCommittee = UnsafeLeiosCommittee VS.empty
+emptyLeiosCommittee = LeiosCommittee VS.empty
 
 -- | A stake pool standing for committee selection. Keeps 'selectLeiosCommittee'
 -- independent of the snapshot the candidates are projected from.
@@ -106,14 +106,14 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
     higherStake a b =
       compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
-    toSeat c = (honouredKey c, lcWeight c)
+    toSeat c = (lcWeight c, honouredKey c)
 
     -- The key is offered to the committee only while it is still honoured; an
     -- aged-out key leaves the pool seated but keyless.
     honouredKey c = do
       bks <- lcKey c
       if epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge
-        then let BlsKey vk pop = bksKey bks in SJust (vk, pop)
+        then SJust $ unBlsKey $ bksKey bks
         else SNothing
 
 -- | Render a 'LeiosCommittee' as JSON for ledger purposes.
