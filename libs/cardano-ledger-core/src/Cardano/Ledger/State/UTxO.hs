@@ -267,7 +267,7 @@ class EraTx era => EraUTxO era where
     -- | For some era it is necessary to look into the UTxO to find all of the available
     -- scripts for the transaction
     UTxO era ->
-    Tx t era ->
+    Tx TopTx era ->
     ScriptsProvided era
 
   -- | Produce all the information required for figuring out which scripts are required

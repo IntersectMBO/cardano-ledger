@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Alonzo.Era (
   module Test.Cardano.Ledger.Mary.Era,
   AlonzoEraTest,
   mkTestLedgerTxInfo,
+  mkTestLedgerTxInfoWithScripts,
 ) where
 
 import Cardano.Ledger.Alonzo
@@ -98,12 +99,26 @@ mkTestLedgerTxInfo ::
   EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
+  Tx TopTx era ->
+  LedgerLevelTxInfo TopTx era ->
+  LedgerTxInfo TopTx era
+mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx =
+  mkTestLedgerTxInfoWithScripts protVer epochInfo systemStart utxo (getScriptsProvided utxo tx) tx
+
+-- | Like `mkTestLedgerTxInfo`, but for a transaction of either level, which can use the supplied
+-- scripts. For a sub-transaction these are the scripts provided by the whole batch.
+mkTestLedgerTxInfoWithScripts ::
+  (EraUTxO era, EraPlutusContext era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
+  ProtVer ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  UTxO era ->
+  ScriptsProvided era ->
   Tx level era ->
   LedgerLevelTxInfo level era ->
   LedgerTxInfo level era
-mkTestLedgerTxInfo protVer epochInfo systemStart utxo tx levelTxInfo =
+mkTestLedgerTxInfoWithScripts protVer epochInfo systemStart utxo scriptsProvided tx levelTxInfo =
   let
-    scriptsProvided = getScriptsProvided utxo tx
     scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     (_, plutusScriptsUsed) =
       resolveNeededPlutusScriptsWithPurpose protVer scriptsProvided scriptsNeeded mempty

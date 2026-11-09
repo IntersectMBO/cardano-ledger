@@ -157,6 +157,9 @@ instance ShelleyEraImp DijkstraEra where
             else pure pState
       )
       (const (pure pState))
+  impScriptsProvided utxo tx =
+    withBothTxLevels tx (getScriptsProvided utxo) $ \subTx ->
+      getScriptsProvided utxo (mkTopTxWithSubTxs [subTx])
   expectTxSuccess = impBabbageExpectTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert

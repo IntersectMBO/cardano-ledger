@@ -200,28 +200,19 @@ poolOwnersWitnessRequired PState {psStakePools, psFutureStakePoolParams} stakePo
     poolId = sppId stakePoolParams
     withoutBlsKey params = params {sppBlsKey = SNothing}
 
--- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
--- scripts from all subtransactions.
+-- | Like 'getBabbageScriptsProvided', but also aggregates scripts from all subtransactions.
 getDijkstraScriptsProvided ::
-  ( EraTx era
-  , DijkstraEraTxBody era
-  , STxLevel l era ~ STxBothLevels l era
-  ) =>
+  (EraTx era, DijkstraEraTxBody era) =>
   UTxO era ->
-  Tx l era ->
+  Tx TopTx era ->
   ScriptsProvided era
 getDijkstraScriptsProvided utxo tx =
-  withBothTxLevels
-    tx
-    ( \topTx ->
-        ScriptsProvided $
-          Map.unions $
-            unScriptsProvided (getBabbageScriptsProvided utxo topTx)
-              : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
-                | subTx <- OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)
-                ]
-    )
-    (getBabbageScriptsProvided utxo)
+  ScriptsProvided $
+    Map.unions $
+      unScriptsProvided (getBabbageScriptsProvided utxo tx)
+        : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
+          | subTx <- OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)
+          ]
 
 getDijkstraScriptsNeeded ::
   (DijkstraEraTxBody era, DijkstraEraScript era) =>

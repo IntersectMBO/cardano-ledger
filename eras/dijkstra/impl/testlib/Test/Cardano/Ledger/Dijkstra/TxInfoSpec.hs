@@ -56,7 +56,13 @@ import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (
   AccountBalanceIntervals (..),
  )
-import Cardano.Ledger.Dijkstra.State (EraUTxO, ScriptsNeeded, UTxO (..), getScriptsNeeded)
+import Cardano.Ledger.Dijkstra.State (
+  EraUTxO,
+  ScriptsNeeded,
+  UTxO (..),
+  getScriptsNeeded,
+  getScriptsProvided,
+ )
 import Cardano.Ledger.Dijkstra.TxInfo (
   DijkstraContextError (..),
   transDirectDeposits,
@@ -110,7 +116,7 @@ import qualified PlutusLedgerApi.V4 as PV4
 import qualified PlutusTx.AssocMap as AssocMap
 import qualified PlutusTx.Eq as PlutusTx
 import qualified PlutusTx.Functor as PlutusTx
-import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfo)
+import Test.Cardano.Ledger.Alonzo.Era (mkTestLedgerTxInfoWithScripts)
 import Test.Cardano.Ledger.Alonzo.TxInfoSpec (
   testEpochInfo,
   testSystemStart,
@@ -122,6 +128,7 @@ import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.ImpTest (
   DijkstraEraImp,
+  ShelleyEraImp (..),
   genBadValidityInterval,
   genGoodValidityInterval,
  )
@@ -133,7 +140,13 @@ spec = describe "TxInfo" $ do
   let mkLocalLedgerTxInfo utxo tx =
         let ei = epochInfo testGlobals
             ss = systemStart testGlobals
-         in mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss utxo tx
+         in mkTestLedgerTxInfoWithScripts
+              (ProtVer (eraProtVerLow @era) 0)
+              ei
+              ss
+              utxo
+              (impScriptsProvided utxo tx)
+              tx
   describe "Translation" $ do
     describe "transValidityInterval" $ do
       it "validity interval's upper bound is open" transVITimeUpperBoundIsOpen
@@ -442,7 +455,13 @@ propTopTxInfoMatchesReference =
       $ do
         let mkLedgerTxInfo :: Tx l era -> LedgerLevelTxInfo l era -> LedgerTxInfo l era
             mkLedgerTxInfo =
-              mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) testEpochInfo testSystemStart utxo
+              -- Like the ledger, every transaction of the batch can use the scripts of the batch
+              mkTestLedgerTxInfoWithScripts
+                (ProtVer (eraProtVerLow @era) 0)
+                testEpochInfo
+                testSystemStart
+                utxo
+                (getScriptsProvided utxo topTx)
             mkSubLedgerTxInfo txIx subTx = mkLedgerTxInfo subTx (LedgerSubTxInfo txIx)
             subTxsWithIx = zip [TxIx 0 ..] (OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL))
             subTxInfoResults =
