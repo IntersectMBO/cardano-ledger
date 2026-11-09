@@ -271,7 +271,7 @@ adaIsPreservedInEachEpoch ::
   , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , State (EraRule "TICK" era) ~ NewEpochState era
   , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , Environment (EraRule "RUPD" era) ~ Shelley.RupdEnv era
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era

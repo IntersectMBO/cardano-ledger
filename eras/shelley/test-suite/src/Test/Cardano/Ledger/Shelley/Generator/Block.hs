@@ -18,7 +18,12 @@ import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Block (EraBlockHeader (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL, nesStakePoolDistrG)
+import Cardano.Ledger.Shelley.LedgerState (
+  LedgerStateWithLimits (..),
+  curPParamsEpochStateL,
+  dsGenDelegsL,
+  nesStakePoolDistrG,
+ )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.Crypto (VRF)
 import Cardano.Protocol.TPraos.API
@@ -102,7 +107,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
     genTxs :: TxGen era
     genTxs pp reserves ls s = do
       let ledgerEnv = LedgersEnv @era s (epochFromSlotNo s) pp reserves
-      block <- sigGen @(EraRule "LEDGERS" era) ge ledgerEnv ls
+      block <- sigGen @(EraRule "LEDGERS" era) ge ledgerEnv (LedgerStateWithLimits ls mempty)
       genEraTweakBlock @era pp block
 
 genBlockWithTxGen ::

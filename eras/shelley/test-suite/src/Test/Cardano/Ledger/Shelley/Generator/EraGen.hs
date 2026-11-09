@@ -38,7 +38,6 @@ import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (WitVKey)
 import Cardano.Ledger.Shelley.API (
   LedgerEnv,
-  LedgerState,
   ShelleyLedgersEnv,
  )
 import Cardano.Ledger.Shelley.LedgerState (
@@ -120,7 +119,7 @@ type MinLEDGER_STS era =
   , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , STS (EraRule "LEDGER" era)
   )

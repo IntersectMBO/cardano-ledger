@@ -529,7 +529,6 @@ class
     Eq (Event (EraRule "LEDGERS" era))
   , ToExpr (Event (EraRule "LEDGERS" era))
   , Typeable (Event (EraRule "LEDGERS" era))
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
