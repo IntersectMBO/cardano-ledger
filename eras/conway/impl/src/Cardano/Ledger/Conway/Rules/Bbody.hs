@@ -48,7 +48,6 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   Version,
-  natVersion,
   networkId,
   pvMajor,
   succVersion,
@@ -92,11 +91,8 @@ import Control.State.Transition (
   withJudgmentContext,
   (?!),
  )
-import Data.Foldable (Foldable (foldMap'))
 import qualified Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum (getSum))
-import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Word (Word32)
@@ -353,9 +349,8 @@ validateBodyRefScriptsSizeTooBig ::
   UTxO era ->
   Rule (EraRule "BBODY" era) 'Transition ()
 validateBodyRefScriptsSizeTooBig pp blockBody utxo =
-  let protVer = pp ^. ppProtocolVersionL
-      txs = blockBody ^. txSeqBlockBodyL
-      totalSize = totalRefScriptSizeInBlock protVer txs utxo
+  let txs = blockBody ^. txSeqBlockBodyL
+      totalSize = totalRefScriptSizeInBlock txs utxo
       maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
    in totalSize
         <= maxSize
@@ -368,12 +363,8 @@ validateBodyRefScriptsSizeTooBig pp blockBody utxo =
             )
 
 totalRefScriptSizeInBlock ::
-  (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int
-totalRefScriptSizeInBlock protVer txs (UTxO utxo)
-  | pvMajor protVer <= natVersion @10 =
-      getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize (UTxO utxo)) txs
-  | otherwise =
-      snd $ F.foldl' accum (utxo, 0) txs
+  (AlonzoEraTx era, BabbageEraTxBody era) => StrictSeq (Tx TopTx era) -> UTxO era -> Int
+totalRefScriptSizeInBlock txs (UTxO utxo) = snd $ F.foldl' accum (utxo, 0) txs
   where
     accum (!accUtxo, !accSum) tx =
       let updatedUtxo = accUtxo `Map.union` unUTxO toAdd
