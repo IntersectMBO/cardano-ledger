@@ -37,7 +37,7 @@ import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import qualified Cardano.Ledger.Shelley.Rules as STS
@@ -116,7 +116,6 @@ class
     , BaseM (EraRule "BBODY" era) ~ ShelleyBase
     , Environment (EraRule "BBODY" era) ~ BlockEnv era
     , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
-    , State (EraRule "LEDGERS" era) ~ LedgerState era
     ) =>
     SingEP ep ->
     ValidationPolicy ->
@@ -227,7 +226,7 @@ mkShelleyBlockEnv
       }
 
 updateNewEpochState ::
-  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGov era) =>
+  EraGov era =>
   NewEpochState era ->
   STS.ShelleyBbodyState era ->
   NewEpochState era

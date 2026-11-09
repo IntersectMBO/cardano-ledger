@@ -290,7 +290,6 @@ bbodyTransition ::
   ( Signal (EraRule "BBODY" era) ~ PraosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , STS (EraRule "BBODY" era)

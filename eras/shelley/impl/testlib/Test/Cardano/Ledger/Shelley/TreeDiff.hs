@@ -338,7 +338,7 @@ instance
   ToExpr (ShelleyBbodyPredFailure era)
 
 instance
-  ToExpr (State (EraRule "LEDGERS" era)) =>
+  ToExpr (LedgerState era) =>
   ToExpr (ShelleyBbodyState era)
 
 instance ToExpr (Tx TopTx ShelleyEra)
