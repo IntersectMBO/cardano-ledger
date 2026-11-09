@@ -43,11 +43,9 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network (..),
-  ProtVer (..),
   Relation (..),
   ShelleyBase,
   Version,
-  natVersion,
   networkId,
   pvMajor,
   succVersion,
@@ -94,11 +92,8 @@ import Control.State.Transition (
   validateTrans,
   withJudgmentContext,
  )
-import Data.Foldable (Foldable (foldMap'))
 import qualified Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum (getSum))
-import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import GHC.Generics (Generic)
@@ -331,7 +326,6 @@ bbodyTransition = do
   validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
     validateBodyRefScriptsSizeTooBig pp $
       totalRefScriptSizeInBlock
-        (pp ^. ppProtocolVersionL)
         (blockBody ^. txSeqBlockBodyL)
         (ls ^. utxoL)
 
@@ -347,12 +341,8 @@ instance
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
 
 totalRefScriptSizeInBlock ::
-  (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int
-totalRefScriptSizeInBlock protVer txs (UTxO utxo)
-  | pvMajor protVer <= natVersion @10 =
-      getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize (UTxO utxo)) txs
-  | otherwise =
-      snd $ F.foldl' accum (utxo, 0) txs
+  (AlonzoEraTx era, BabbageEraTxBody era) => StrictSeq (Tx TopTx era) -> UTxO era -> Int
+totalRefScriptSizeInBlock txs (UTxO utxo) = snd $ F.foldl' accum (utxo, 0) txs
   where
     accum (!accUtxo, !accSum) tx =
       let updatedUtxo = accUtxo `Map.union` unUTxO toAdd
