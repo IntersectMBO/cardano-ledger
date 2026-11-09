@@ -14,6 +14,8 @@ module Cardano.Ledger.Dijkstra.UTxO (
   dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
+  getRefScriptsFromCreatedTxOuts,
+  getTxOutsReferenceScripts,
   getDijkstraSupplementalDataHashes,
   getDijkstraMinFeeTxUtxo,
   scriptsProvidedDijkstraStAnnTx,
@@ -200,7 +202,8 @@ poolOwnersWitnessRequired PState {psStakePools, psFutureStakePoolParams} stakePo
     poolId = sppId stakePoolParams
     withoutBlsKey params = params {sppBlsKey = SNothing}
 
--- | Like 'getBabbageScriptsProvided', but also aggregates scripts from all subtransactions.
+-- | Like 'getBabbageScriptsProvided', but also aggregates scripts from all subtransactions, and
+-- includes the reference scripts of all the outputs created by the batch (CIP-0172).
 getDijkstraScriptsProvided ::
   (EraTx era, DijkstraEraTxBody era) =>
   UTxO era ->
@@ -209,10 +212,37 @@ getDijkstraScriptsProvided ::
 getDijkstraScriptsProvided utxo tx =
   ScriptsProvided $
     Map.unions $
-      unScriptsProvided (getBabbageScriptsProvided utxo tx)
+      getRefScriptsFromCreatedTxOuts (tx ^. bodyTxL)
+        : unScriptsProvided (getBabbageScriptsProvided utxo tx)
         : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
           | subTx <- OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)
           ]
+
+-- | Collect the reference scripts of all the outputs created by the batch, which can be used by
+-- any transaction of the batch (CIP-0172). This includes the collateral return output, since its
+-- script is part of the transaction, whether the output is created or not.
+getRefScriptsFromCreatedTxOuts ::
+  (EraTx era, DijkstraEraTxBody era) =>
+  TxBody TopTx era ->
+  Map.Map ScriptHash (Script era)
+getRefScriptsFromCreatedTxOuts txBody =
+  getTxOutsReferenceScripts (txBody ^. outputsTxBodyL)
+    <> getTxOutsReferenceScripts (txBody ^. collateralReturnTxBodyL)
+    <> foldMap
+      (getTxOutsReferenceScripts . (^. bodyTxL . outputsTxBodyL))
+      (txBody ^. subTransactionsTxBodyL)
+
+-- | Collect all the reference scripts found in the supplied outputs.
+getTxOutsReferenceScripts ::
+  (Foldable f, BabbageEraTxOut era) =>
+  f (TxOut era) ->
+  Map.Map ScriptHash (Script era)
+getTxOutsReferenceScripts txOuts =
+  Map.fromList
+    [ (hashScript script, script)
+    | txOut <- toList txOuts
+    , SJust script <- [txOut ^. referenceScriptTxOutL]
+    ]
 
 getDijkstraScriptsNeeded ::
   (DijkstraEraTxBody era, DijkstraEraScript era) =>
