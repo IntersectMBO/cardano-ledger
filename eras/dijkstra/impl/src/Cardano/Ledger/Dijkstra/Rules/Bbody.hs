@@ -454,7 +454,7 @@ dijkstraBbodyTransition = do
 
   validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
     Conway.validateBodyRefScriptsSizeTooBig pp $
-      Conway.totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs (ls ^. utxoL)
+      Conway.totalRefScriptSizeInBlock txs (ls ^. utxoL)
 
   case blockBody ^. perasCertBlockBodyL of
     SNothing -> pure ()

@@ -463,8 +463,7 @@ conwayLedgerTransitionTRC
             <> ConwayBlockBodyLimits
               { cbblTxsSize = sizeTxForFeeCalculation tx
               , cbblExUnits = exUnitsStAnnTx stAnnTx
-              , -- Check before using for pv <= 10, see `totalRefScriptSizeInBlock`
-                cbblRefScriptsSize = refScriptsSize
+              , cbblRefScriptsSize = refScriptsSize
               }
         )
 
