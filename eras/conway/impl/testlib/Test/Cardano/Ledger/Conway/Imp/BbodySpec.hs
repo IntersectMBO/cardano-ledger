@@ -131,7 +131,6 @@ spec = describe "BBODY" $ do
     let scriptSize = originalBytesSize script
     scriptSpendIn <- impAddNativeScript script >>= produceScript
     scriptSpendIn2 <- impAddNativeScript script >>= produceScript
-    protVer <- getsPParams ppProtocolVersionL
 
     -- We want to verify that the total size of reference scripts in a list of transactions
     -- remains unchanged before and after applying them to the ledger state.
@@ -142,7 +141,7 @@ spec = describe "BBODY" $ do
     txsWithSizes <- simulateThenRestore $ do
       let mkTxWithExpectedSize expectedSize txAction = do
             tx <- txAction
-            totalRefScriptSizeInBlock protVer [tx] <$> getUTxO `shouldReturn` expectedSize
+            totalRefScriptSizeInBlock [tx] <$> getUTxO `shouldReturn` expectedSize
             pure (tx, expectedSize)
 
       -- submit reference scripts
@@ -189,19 +188,17 @@ spec = describe "BBODY" $ do
       -- check and return the accumulated reference script size of all transactions,
       -- so we can check that the same sum for the unapplied transactions matches
       let (txs, sizes) = unzip txsWithRefScriptSizes
-      totalRefScriptSizeInBlock protVer (SSeq.fromList txs) <$> getUTxO `shouldReturn` sum sizes
+      totalRefScriptSizeInBlock (SSeq.fromList txs) <$> getUTxO `shouldReturn` sum sizes
 
       pure txsWithRefScriptSizes
 
     -- for each prefix of the list, the accumulated sum should match the sum of the applied transactions
     for_ (drop 1 $ inits txsWithSizes) $ \prefix -> do
       let (txs, sizes) = unzip prefix
-          expectedSize = if isPostV10 protVer then sum sizes else 0
-      totalRefScriptSizeInBlock protVer (SSeq.fromList txs) <$> getUTxO `shouldReturn` expectedSize
+          expectedSize = sum sizes
+      totalRefScriptSizeInBlock (SSeq.fromList txs) <$> getUTxO `shouldReturn` expectedSize
 
   it "Use a reference script in a collateral output" $ do
-    protVer <- getsPParams ppProtocolVersionL
-
     -- produce an utxo with a failing script
     lang <- elements $ eraLanguages @era
     failingPlutusTxIn <- withSLanguage lang $ \slang -> do
@@ -235,20 +232,18 @@ spec = describe "BBODY" $ do
                   & inputsTxBodyL .~ [failingPlutusTxIn]
                   & collateralReturnTxBodyL .~ pure collRefScriptTxOut
               )
-      totalRefScriptSizeInBlock protVer [createCollateralTx] <$> getUTxO `shouldReturn` 0
+      totalRefScriptSizeInBlock [createCollateralTx] <$> getUTxO `shouldReturn` 0
 
       -- consume the script, passing the output from the previous collateral as reference input
       let refScriptTxIn = txInAt 1 createCollateralTx
       useCollateralTx <- submitTx $ mkTxWithInputsAndRefInputs [scriptTxIn] [refScriptTxIn]
-      totalRefScriptSizeInBlock protVer [createCollateralTx, useCollateralTx]
+      totalRefScriptSizeInBlock [createCollateralTx, useCollateralTx]
         <$> getUTxO `shouldReturn` scriptSize
       pure [createCollateralTx, useCollateralTx]
 
-    totalRefScriptSizeInBlock protVer (SSeq.fromList txs)
+    totalRefScriptSizeInBlock (SSeq.fromList txs)
       <$> getUTxO
-        `shouldReturn` (if isPostV10 protVer then scriptSize else 0)
-  where
-    isPostV10 protVer = pvMajor protVer >= natVersion @11
+        `shouldReturn` scriptSize
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed
 -- and each individual value multiplied by the scale is smaller than maxSingle
