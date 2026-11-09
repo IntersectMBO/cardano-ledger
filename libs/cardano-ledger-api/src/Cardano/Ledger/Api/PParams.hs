@@ -437,8 +437,8 @@ module Cardano.Ledger.Api.PParams (
 
   -- ** @RefInputsCostPerMultiAssetByte@
 
-  -- | Fee charged for every multi-asset policy present in the values of a transaction's
-  -- reference inputs
+  -- | Fee charged per byte of binary overhead of the multi-assets present in the values
+  --  of a transaction’s reference inputs.
   ppRefInputsCostPerMultiAssetByteL,
   ppuRefInputsCostPerMultiAssetByteL,
 

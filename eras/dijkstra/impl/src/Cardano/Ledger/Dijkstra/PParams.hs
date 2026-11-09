@@ -289,8 +289,8 @@ data DijkstraPParams f era = DijkstraPParams
   -- ^ Extra safety margin added on top of the 75% quorum threshold baseline.
   -- Must be between 0 and 0.25, inclusive.
   , dppRefInputsCostPerMultiAssetByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
-  -- ^ Fee charged for every multi-asset policy present in the values of a
-  -- transaction's reference inputs. Extracting large amounts of data from disk
+  -- ^ Fee charged per byte of binary overhead of the multi-assets present
+  -- in the values of a transaction’s reference inputs. Extracting large amounts of data from disk
   -- is a bottleneck once ledger state is stored on disk, so this acts as a
   -- monetary deterrent against it.
   , dppRefInputsCostPerDatumByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
