@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Change the `STS` state of `LEDGERS` rule to `LedgerStateWithLimits`
 * Change `ShelleyBbodyState` to hold a `LedgerState era` instead of `State (EraRule "LEDGERS" era)`
 * Replace `Tx TopTx era` and `UTxO era` arguments of `validateFeeTooSmallUTxO` with `StAnnTx TopTx era`
 * Add `mkShelleyBlockEnv`

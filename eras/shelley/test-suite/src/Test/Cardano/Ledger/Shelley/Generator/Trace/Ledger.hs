@@ -138,12 +138,12 @@ ledgersSigGen ::
   ) =>
   GenEnv c era ->
   ShelleyLedgersEnv era ->
-  LedgerState era ->
+  LedgerStateWithLimits era ->
   Gen (Seq (Tx TopTx era))
 ledgersSigGen
   ge@(GenEnv _ _ Constants {maxTxsPerBlock})
   (LedgersEnv slotNo epochNo pParams reserves)
-  ls = do
+  (LedgerStateWithLimits ls _) = do
     (_, txs') <-
       foldM
         genAndApplyTx

@@ -101,7 +101,7 @@ instance
   ) =>
   STS (LEDGERS era)
   where
-  type State (LEDGERS era) = LedgerState era
+  type State (LEDGERS era) = LedgerStateWithLimits era
   type Signal (LEDGERS era) = Seq (Tx TopTx era)
   type Environment (LEDGERS era) = Shelley.ShelleyLedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
@@ -127,7 +127,7 @@ alonzoLedgersTransition = do
   TRC (Shelley.LedgersEnv slot epochNo pp account, initLedgerState, txs) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sysStart <- liftSTS $ asks systemStart
-  (LedgerStateWithLimits finalLedgerState _, _) <-
+  (finalLedgerState, _) <-
     foldM -- cache is lazy on purpose, since it is unused when validation is off
       ( \(!curLedgerState, stAnnTxCache) (ix, tx) -> do
           let utxo = curLedgerState ^. lswlLedgerStateL . utxoL
@@ -138,7 +138,7 @@ alonzoLedgersTransition = do
               TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
           pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
-      (LedgerStateWithLimits initLedgerState mempty, mempty)
+      (initLedgerState, mempty)
       $ zip [minBound ..]
       $ toList txs
   pure finalLedgerState

@@ -53,7 +53,11 @@ import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosBbodySignal 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.Era (BBODY, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (
+  ChainAccountState,
+  LedgerState,
+  LedgerStateWithLimits (..),
+ )
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -195,7 +199,7 @@ instance
   , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   STS (BBODY era)
@@ -222,7 +226,7 @@ bbodyTransition ::
   , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , InjectRuleFailure "BBODY" ShelleyBbodyPredFailure era
   ) =>
@@ -239,11 +243,11 @@ bbodyTransition = do
 
   (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
 
-  ls' <-
+  LedgerStateWithLimits ls' _ <-
     trans @(EraRule "LEDGERS" era) $
       TRC
         ( LedgersEnv bhSlot curEpoch pp account
-        , ls
+        , LedgerStateWithLimits ls mempty
         , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
         )
 
