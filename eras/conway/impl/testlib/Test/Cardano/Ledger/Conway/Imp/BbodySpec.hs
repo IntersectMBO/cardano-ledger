@@ -43,7 +43,8 @@ spec ::
   forall era.
   ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
-  it "BodyRefScriptsSizeTooBig" $ do
+  -- From Dijkstra onwards this limit is enforced by LEDGERS, not BBODY
+  it "BodyRefScriptsSizeTooBig" $ whenMajorVersionAtMost @11 $ do
     lang <- elements $ eraLanguages @era
     plutusScript <- withSLanguage lang $ mkPlutusScript @era . purposeIsWellformedNoDatum
     let scriptSize = originalBytesSize plutusScript
@@ -88,7 +89,7 @@ spec = describe "BBODY" $ do
       ]
 
   it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
-    whenMajorVersionAtLeast @11 $ do
+    whenMajorVersion @11 $ do
       lang <- elements $ eraLanguages @era
       Just plutusScript <- pure $ withSLanguage lang $ \slang ->
         mkPlutusScript @era $ purposeIsWellformedNoDatum slang
