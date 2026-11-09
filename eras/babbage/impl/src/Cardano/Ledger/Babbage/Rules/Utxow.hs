@@ -38,8 +38,9 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, UTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure (..), UTXO)
 import Cardano.Ledger.Babbage.Tx (mkScriptIntegrity)
+import Cardano.Ledger.Babbage.TxOut (getTxOutsReferenceScripts)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
-import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, quorum, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (Mismatch, Relation (..), ShelleyBase, quorum)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -68,10 +69,8 @@ import Control.State.Transition.Extended (
   trans,
  )
 import Data.ByteString (ByteString)
-import Data.Foldable (sequenceA_, toList)
+import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
-import Data.MapExtras as Map (fromElems)
-import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as StrictSeq (singleton)
 import Data.Set (Set)
@@ -80,7 +79,6 @@ import Data.Set.NonEmpty (NonEmptySet)
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
-import Lens.Micro.Extras (view)
 
 data BabbageUtxowPredFailure era
   = AlonzoInBabbageUtxowPredFailure (Alonzo.AlonzoUtxowPredFailure era) -- TODO: embed and translate
@@ -286,9 +284,7 @@ validateScriptsWellFormedTxOuts plutusScriptsCache pp witScripts txOuts =
       Map.keysSet
         . Map.filterWithKey
           (\scriptHash -> not . isValidScript plutusScriptsCache (pp ^. ppProtocolVersionL) scriptHash)
-    refScripts =
-      Map.fromElems hashScript $
-        mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) (toList txOuts)
+    refScripts = getTxOutsReferenceScripts txOuts
 
 -- ==============================================================
 -- Here we define the transition function, using reusable tests.

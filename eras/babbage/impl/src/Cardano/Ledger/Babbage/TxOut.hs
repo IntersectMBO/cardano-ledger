@@ -40,6 +40,7 @@ module Cardano.Ledger.Babbage.TxOut (
   babbageMinUTxOValue,
   getEitherAddrBabbageTxOut,
   internBabbageTxOut,
+  getTxOutsReferenceScripts,
 ) where
 
 import Cardano.Base.Typeable (TypeName (TypeName))
@@ -115,6 +116,8 @@ import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
+import Data.Foldable (toList)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import qualified Data.Text as T
@@ -130,6 +133,18 @@ class (AlonzoEraTxOut era, AlonzoEraScript era) => BabbageEraTxOut era where
   dataTxOutL :: Lens' (TxOut era) (StrictMaybe (Data era))
 
   datumTxOutL :: Lens' (TxOut era) (Datum era)
+
+-- | Collect all the reference scripts found in the supplied outputs.
+getTxOutsReferenceScripts ::
+  (Foldable f, BabbageEraTxOut era) =>
+  f (TxOut era) ->
+  Map.Map ScriptHash (Script era)
+getTxOutsReferenceScripts txOuts =
+  Map.fromList
+    [ (hashScript script, script)
+    | txOut <- toList txOuts
+    , SJust script <- [txOut ^. referenceScriptTxOutL]
+    ]
 
 data BabbageTxOut era
   = TxOutCompact'
