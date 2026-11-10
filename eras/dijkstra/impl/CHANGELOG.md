@@ -79,6 +79,9 @@
 
 ### `testlib`
 
+* Add `announceEndorserBlock`
+* Add `InjectRuleFailure "EB"` superclasses for `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied`, and the `Show (PredicateFailure (EraRule "EBLEDGERS" era))` superclass, to `DijkstraEraImp`
+* Add `Arbitrary` and `ToExpr` instances for `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied`
 * Add `roundTripDijkstraCommonSpec` and `roundTripDijkstraEraTypesSpec`
 * Add `EraEndorserBlock`, `Arbitrary (EbReferences era)` and `DecCBOR (EbReferences era)` as superclasses of `DijkstraEraTest`
 * Add `DijkstraApplyBlock TestBlockHeader era`, `EncCBOR (PredicateFailure (EraRule "EB" era))` and `DecCBOR (PredicateFailure (EraRule "EB" era))` superclasses to `DijkstraEraImp`
@@ -96,7 +99,7 @@
 * Re-export `goldenMapRedeemers` from `Test.Cardano.Ledger.Conway.Binary.Golden`
 * Add `submitEndorserBlock`, `submitFailingEndorserBlock`, `makeEndorserBlock` and `mkEbReferencesAnnouncement`
 * Add missing superclasses to `DijkstraEraImp`
-* Add `ToExpr` instances for `EbPredFailure` and `EbLedgersPredFailure`
+* Add `Arbitrary` and `ToExpr` instances for `EbPredFailure` and `EbLedgersPredFailure`
 * Add `Test.Cardano.Ledger.Dijkstra.Imp.EbSpec`
 * Add `ToExpr` instances for `DijkstraTopTx DijkstraEra` and `DijkstraTopTxRaw DijkstraEra`
 * Add the `SafeToHash (Tx TopTx era)` constraint to `genSmallDijkstraTxsBlockBody`, and replace the `AlonzoEraTx era` constraint with it on `genSmallDijkstraCertBlockBody`

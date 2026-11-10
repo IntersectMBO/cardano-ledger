@@ -45,6 +45,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passNEpochs,
   passNEpochsChecking,
   passTick,
+  tickToCurSlot,
   freshKeyAddr,
   freshKeyAddr_,
   freshMainnetKeyAddr_,
@@ -1945,10 +1946,19 @@ passTick ::
   ) =>
   ImpTestM era ()
 passTick = do
+  tickToCurSlot
+  impCurSlotNoL += 1
+
+tickToCurSlot ::
+  forall era.
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM era ()
+tickToCurSlot = do
   impCurSlotNo <- gets impCurSlotNo
   curNES <- getsNES id
   nes <- runImpRule @"TICK" () curNES impCurSlotNo
-  impCurSlotNoL += 1
   impNESL .= nes
 
 -- | Win with supplied probability

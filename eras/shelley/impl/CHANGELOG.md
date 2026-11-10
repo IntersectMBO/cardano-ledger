@@ -36,6 +36,7 @@
 
 ### `testlib`
 
+* Add `tickToCurSlot`
 * Add `impScriptsProvided` method to `ShelleyEraImp`
 * Add `impWitsPState` method to `ShelleyEraImp`
 * Add `updateAddrTxWitsWith`
