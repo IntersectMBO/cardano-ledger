@@ -83,9 +83,7 @@ spec = describe "UTXOS" $ do
   describe "purposeIsWellformedNoDatum" $
     for_ [l | l <- eraLanguages @era, l >= PlutusV3] $ \lang -> do
       withSLanguage lang $ \slang -> describe (show slang) $ do
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1349
-        -- TODO: Re-enable this after issue is resolved, by removing this override
-        disableInConformanceIt "Passes with voting purpose" $ do
+        it "Passes with voting purpose" $ do
           let sh = hashPlutusScript $ purposeIsWellformedNoDatum slang
           coldCred : _ <- Set.toList <$> getCommitteeMembers
           hotCred :| _ <- registerCommitteeHotKeys (pure $ ScriptHashObj sh) (coldCred :| [])
