@@ -2,6 +2,8 @@
 
 ## 1.24.0.0
 
+* Add `ebReferencesAnnouncementHashL` and `ebReferencesAnnouncementSizeL` to `Cardano.Ledger.Block`
+* Add `ebAnnouncementL`, `ebAnnouncementSlotNoL`, `ebAnnouncedInBlockHeaderL` and `ebIsAppliedL` to `Cardano.Ledger.State`
 * Change the `Tx t era` argument of `getScriptsProvided` to `Tx TopTx era`
 * Add `calcMinFeeStAnnTx` to `EraUTxO`
 * Add a `PState` argument to `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`

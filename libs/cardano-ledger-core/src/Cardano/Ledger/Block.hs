@@ -32,6 +32,8 @@ module Cardano.Ledger.Block (
   BlockHeaderVersionInfo (..),
   neededTxInsForBlock,
   EbReferencesAnnouncement (..),
+  ebReferencesAnnouncementHashL,
+  ebReferencesAnnouncementSizeL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -204,3 +206,10 @@ instance ToKeyValuePairs EbReferencesAnnouncement where
     [ "hash" .= h
     , "size" .= s
     ]
+
+ebReferencesAnnouncementHashL ::
+  Lens' EbReferencesAnnouncement (SafeHash EraIndependentEbReferences)
+ebReferencesAnnouncementHashL = lens ebReferencesAnnouncementHash $ \ebRA x -> ebRA {ebReferencesAnnouncementHash = x}
+
+ebReferencesAnnouncementSizeL :: Lens' EbReferencesAnnouncement Word32
+ebReferencesAnnouncementSizeL = lens ebReferencesAnnouncementSize $ \ebRA x -> ebRA {ebReferencesAnnouncementSize = x}
