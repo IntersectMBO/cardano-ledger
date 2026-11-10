@@ -56,9 +56,11 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (
   Block (..),
+  EraBlockHeader (..),
   PraosBbodySignal (..),
   PraosEraBlockHeader (..),
  )
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits (..))
 import Cardano.Ledger.Conway.Era (BBODY, ConwayEra)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
@@ -73,28 +75,20 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits, utxoL)
+import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
+import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
+import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, when)
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition (
-  Embed (..),
-  Rule,
-  RuleType (..),
-  STS (..),
-  TRC (..),
-  failOnJust,
-  judgmentContext,
-  liftSTS,
-  withJudgmentContext,
-  (?!),
- )
+import Control.State.Transition
 import qualified Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -258,6 +252,7 @@ instance
   , AlonzoEraTx era
   , BabbageEraTxBody era
   , ConwayEraPParams era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
   STS (BBODY era)
   where
@@ -275,30 +270,31 @@ instance
 
   initialRules = []
   transitionRules =
-    [ do
-        bbodyTransition
-        withJudgmentContext $ \env state (PraosBbodySignal block) ->
-          Alonzo.bbodyTransition env state block
-    ]
+    [bbodyTransition]
 
 bbodyTransition ::
   forall era.
   ( Signal (EraRule "BBODY" era) ~ PraosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
+  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , STS (EraRule "BBODY" era)
-  , AlonzoEraTx era
+  , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
+  , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
-  , BabbageEraTxBody era
   , ConwayEraPParams era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   ) =>
-  Rule (EraRule "BBODY" era) 'Transition ()
+  TransitionRule (EraRule "BBODY" era)
 bbodyTransition = do
   TRC
-    ( Shelley.BbodyEnv pp _
-      , Shelley.BbodyState ls _
+    ( Shelley.BbodyEnv pp account
+      , Shelley.BbodyState ls blocksMade
       , PraosBbodySignal block@Block {blockBody}
       ) <-
     judgmentContext
@@ -322,7 +318,27 @@ bbodyTransition = do
     failOnJust checkHeaderProtVerTooHigh $
       injectFailure . HeaderProtVerTooHigh @era
 
-  validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
+  Shelley.validateBlockBodySize block (pp ^. ppProtocolVersionL)
+
+  Shelley.validateBlockBodyHash block
+
+  let bhSlot = block ^. slotNoBlockHeaderL
+
+  (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
+
+  LedgerStateWithLimits ls' ConwayBlockBodyLimits {cbblExUnits, cbblRefScriptsSize} <-
+    trans @(EraRule "LEDGERS" era) $
+      TRC
+        ( Shelley.LedgersEnv bhSlot curEpoch pp account
+        , LedgerStateWithLimits ls mempty
+        , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
+        )
+
+  Alonzo.validateExUnits pp cbblExUnits
+
+  validateBodyRefScriptsSizeTooBig pp cbblRefScriptsSize
+
+  pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
 instance
   ( Era era
@@ -338,20 +354,15 @@ instance
 -- | Validate that total reference script size does not exceed block limit.
 validateBodyRefScriptsSizeTooBig ::
   forall era.
-  ( AlonzoEraTx era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , EraBlockBody era
+  ( InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , ConwayEraPParams era
   ) =>
   PParams era ->
-  BlockBody era ->
-  UTxO era ->
+  -- | Total reference script size of all transactions in the block, as accumulated by LEDGERS.
+  Int ->
   Rule (EraRule "BBODY" era) 'Transition ()
-validateBodyRefScriptsSizeTooBig pp blockBody utxo =
-  let txs = blockBody ^. txSeqBlockBodyL
-      totalSize = totalRefScriptSizeInBlock txs utxo
-      maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+validateBodyRefScriptsSizeTooBig pp totalSize =
+  let maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
    in totalSize
         <= maxSize
           ?! injectFailure

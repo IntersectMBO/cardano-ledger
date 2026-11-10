@@ -29,6 +29,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, BBODY)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
@@ -156,15 +157,15 @@ instance
 -- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp
 validateExUnits ::
   forall era.
-  ( AlonzoEraTx era
+  ( AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   ) =>
-  StrictSeq.StrictSeq (Tx TopTx era) ->
-  -- | Max block exunits protocol parameter.
+  PParams era ->
+  -- | Total execution units of all transactions in the block, as accumulated by LEDGERS.
   ExUnits ->
   Rule (EraRule "BBODY" era) 'Transition ()
-validateExUnits txs ppMax =
-  let txTotal = foldMap getTotalExUnits txs
+validateExUnits pp txTotal =
+  let ppMax = pp ^. ppMaxBlockExUnitsL
    in pointWiseExUnits (<=) txTotal ppMax
         ?! injectFailure
           ( TooManyExUnits $
@@ -186,8 +187,9 @@ bbodyTransition ::
   , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
-  , AlonzoEraTx era
+  , AlonzoEraPParams era
   , EraBlockHeader h era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   Shelley.BbodyEnv era ->
   Shelley.ShelleyBbodyState era ->
@@ -202,17 +204,15 @@ bbodyTransition (Shelley.BbodyEnv pp account) (Shelley.BbodyState ls blocksMade)
 
   (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
 
-  let txs = blockBody ^. txSeqBlockBodyL
-
-  LedgerStateWithLimits ls' _ <-
+  LedgerStateWithLimits ls' AlonzoBlockBodyLimits {abblExUnits} <-
     trans @(EraRule "LEDGERS" era) $
       TRC
         ( Shelley.LedgersEnv bhSlot curEpoch pp account
         , LedgerStateWithLimits ls mempty
-        , StrictSeq.fromStrict txs
+        , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
         )
 
-  validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
+  validateExUnits pp abblExUnits
 
   pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
@@ -227,7 +227,7 @@ instance
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , AlonzoEraTx era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   STS (BBODY era)
   where
