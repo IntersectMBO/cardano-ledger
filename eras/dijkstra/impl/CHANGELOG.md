@@ -2,6 +2,12 @@
 
 ## 0.6.0.0
 
+* Validate the references of an `EndorserBlock` in the `EB` rule and in `applyEndorserBlockNoValidation`:
+  - Add `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied` to `Cardano.Ledger.Dijkstra.Rules.Eb`, and `InjectRuleFailure "EB"` instances for them
+  - Add `validateEbReferences` and `validateEbAnnouncementSlot` to `Cardano.Ledger.Dijkstra.Rules.Eb`
+  - Add `EbWasNotAnnouncedInEB`, `EbReferencesSizeTooBigInEB`, `EbAnnouncementSlotMismatchInEB`, `EbAnnouncementHashMismatchInEB`, `EbAnnouncementSizeMismatchInEB` and `EbAlreadyAppliedInEB` constructors to `EbPredFailure`
+  - Add `InvalidEndorserBlockReferences`, thrown by `applyEndorserBlockNoValidation`
+  - Add `LeiosCertEbNotApplied` constructor to `DijkstraBbodyPredFailure`, so `BBODY` rejects a certificate for an `EndorserBlock` that was not applied
 * Add `getRefScriptsFromCreatedTxOuts`
 * Change the `Tx l era` argument of `getDijkstraScriptsProvided` to `Tx TopTx era`
 * Add `dsattUTxO` to `DijkstraStAnnTopTx`

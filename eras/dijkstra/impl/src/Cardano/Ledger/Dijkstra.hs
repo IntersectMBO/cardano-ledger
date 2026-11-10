@@ -18,6 +18,7 @@ module Cardano.Ledger.Dijkstra (
   DijkstraApplyBlock (..),
   applyEndorserBlockEither,
   applyEndorserBlockNoValidation,
+  InvalidEndorserBlockReferences (..),
   EndorserBlockTransitionError (EndorserBlockTransitionError),
   mkDijkstraBlockEnv,
   mkDijkstraStAnnTopTx,
@@ -48,6 +49,7 @@ import Cardano.Ledger.Conway.Governance (RunConwayRatify)
 import Cardano.Ledger.Dijkstra.Block (
   DijkstraApplyBlock (..),
   EndorserBlockTransitionError (..),
+  InvalidEndorserBlockReferences (..),
   applyEndorserBlockEither,
   applyEndorserBlockNoValidation,
  )

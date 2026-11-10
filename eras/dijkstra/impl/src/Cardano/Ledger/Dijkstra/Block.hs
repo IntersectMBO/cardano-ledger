@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -23,10 +22,11 @@ module Cardano.Ledger.Dijkstra.Block (
   DijkstraApplyBlock (..),
   applyEndorserBlockEither,
   applyEndorserBlockNoValidation,
+  InvalidEndorserBlockReferences (..),
   EndorserBlockTransitionError (EndorserBlockTransitionError),
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -37,13 +37,26 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Core (EraBlockBody, EraRule, eraProtVerLow)
+import Cardano.Ledger.Core (EraBlockBody, EraRule, eraProtVerLow, hashAnnotated)
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.BlockBody.Internal ()
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
+import Cardano.Ledger.Dijkstra.Rules.Eb (
+  EbPredFailure (..),
+  EbWasNotAnnounced (..),
+  validateEbReferences,
+ )
 import Cardano.Ledger.Shelley.API (ApplyBlock)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
+import Cardano.Ledger.Shelley.LedgerState (
+  NewEpochState,
+  curPParamsEpochStateL,
+  esLStateL,
+  lsLastEbAnnouncementL,
+  nesEsL,
+ )
 import Control.DeepSeq (NFData, deepseq)
+import Control.Exception (Exception (..), throw)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (
   ApplySTSOpts (..),
@@ -58,7 +71,10 @@ import Control.State.Transition.Extended (
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import GHC.Stack (CallStack, HasCallStack, callStack, prettyCallStack)
+import Lens.Micro ((^.))
 import NoThunks.Class (AllowThunk (..), NoThunks (..))
+import Validation (failureToMaybe)
 
 class
   ( ApplyBlock h era
@@ -120,21 +136,55 @@ applyEndorserBlockEither eventsPolicy validationPolicy globals newEpochState end
     (newEpochStateResult, failures, events) =
       applyEndorserBlock @h eventsPolicy validationPolicy globals newEpochState endorserBlock
 
--- | Apply an `EndorserBlock` without any validation.
+-- | Apply an `EndorserBlock` without validating its transactions.
 --
--- The caller implicitly guarantees that the `EndorserBlock` is valid for the supplied
--- `NewEpochState`, which is the case once a certificate for it is included in a ranking block.
+-- Throws `InvalidEndorserBlockReferences` if:
+--
+-- * EB was not announced
+-- * EB references size is not the one announced or over the limit
+-- * EB references hash does not match
+-- * EB was already applied
+--
+-- This does not check the slot for the last tick.
 applyEndorserBlockNoValidation ::
   forall h era.
-  DijkstraApplyBlock h era =>
+  ( HasCallStack
+  , DijkstraApplyBlock h era
+  , DijkstraEraPParams era
+  , Show (EbPredFailure era)
+  ) =>
   Globals ->
   NewEpochState era ->
   EndorserBlock era ->
   NewEpochState era
-applyEndorserBlockNoValidation globals newEpochState endorserBlock = newEpochStateResult
+applyEndorserBlockNoValidation globals newEpochState endorserBlock =
+  let ebRefs = endorserBlock ^. referencesEndorserBlockL
+      pp = newEpochState ^. nesEsL . curPParamsEpochStateL
+      referencesValidation =
+        case newEpochState ^. nesEsL . esLStateL . lsLastEbAnnouncementL of
+          SNothing -> Just $ EbWasNotAnnouncedInEB (EbWasNotAnnounced $ hashAnnotated ebRefs) :| []
+          SJust ebA -> failureToMaybe $ validateEbReferences pp ebA ebRefs
+      (newEpochStateResult, _failures, _events) =
+        applyEndorserBlock @h EPDiscard ValidateNone globals newEpochState endorserBlock
+   in case referencesValidation of
+        Nothing -> newEpochStateResult
+        Just failures -> throw $ InvalidEndorserBlockReferences failures callStack
+
+-- | Thrown by `applyEndorserBlockNoValidation`.
+data InvalidEndorserBlockReferences era
+  = InvalidEndorserBlockReferences !(NonEmpty (EbPredFailure era)) !CallStack
+
+deriving stock instance
+  Show (EbPredFailure era) => Show (InvalidEndorserBlockReferences era)
+
+instance
+  (Typeable era, Show (EbPredFailure era)) =>
+  Exception (InvalidEndorserBlockReferences era)
   where
-    (newEpochStateResult, _failures, _events) =
-      applyEndorserBlock @h EPDiscard ValidateNone globals newEpochState endorserBlock
+  displayException (InvalidEndorserBlockReferences failures cs) =
+    "Invalid EndorserBlock references:\n"
+      <> concatMap (\failure -> " * " <> show failure <> "\n") failures
+      <> prettyCallStack cs
 
 newtype EndorserBlockTransitionError era
   = EndorserBlockTransitionErrorInternal (NonEmpty (PredicateFailure (EraRule "EB" era)))
