@@ -128,6 +128,10 @@ conwayOnlySpec = describe "BBODY" $ do
           )
       ]
 
+spec ::
+  forall era.
+  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec = describe "BBODY" $ do
   it "Reference script sizes accumulated by LEDGERS" $ do
     script <- RequireSignature @era <$> freshKeyHash
     let scriptSize = originalBytesSize script
@@ -194,10 +198,6 @@ conwayOnlySpec = describe "BBODY" $ do
     limits <- accumulateBlockBodyLimits txs
     cbblRefScriptsSize limits `shouldBe` sum sizes
 
-spec ::
-  forall era.
-  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
-spec = describe "BBODY" $ do
   it "Use a reference script in a collateral output" $ do
     -- produce an utxo with a failing script
     lang <- elements $ eraLanguages @era
