@@ -166,6 +166,7 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Compactible (Compactible (fromCompact), fromCompact)
 import Cardano.Ledger.Conway (ConwayEra, hardforkConwayBootstrapPhase)
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -375,6 +376,7 @@ class
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   , InjectRuleEvent "TICK" ConwayHardForkEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Inject (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (ApplyTxError era)

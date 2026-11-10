@@ -27,7 +27,6 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   ConwayBbodyPredFailure (..),
   alonzoToConwayBbodyPredFailure,
   shelleyToConwayBbodyPredFailure,
-  totalRefScriptSizeInBlock,
   bbodyTransition,
   validateBodyRefScriptsSizeTooBig,
 ) where
@@ -36,9 +35,8 @@ import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, IsPhase2Valid (..), isPhase2ValidTxL)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -73,21 +71,16 @@ import Cardano.Ledger.Conway.Rules.Ledgers ()
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
-import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), txouts, unUTxO)
 import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-import qualified Data.Foldable as F (foldl')
-import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -372,14 +365,3 @@ validateBodyRefScriptsSizeTooBig pp totalSize =
                   , mismatchExpected = maxSize
                   }
             )
-
-totalRefScriptSizeInBlock ::
-  (AlonzoEraTx era, BabbageEraTxBody era) => StrictSeq (Tx TopTx era) -> UTxO era -> Int
-totalRefScriptSizeInBlock txs (UTxO utxo) = snd $ F.foldl' accum (utxo, 0) txs
-  where
-    accum (!accUtxo, !accSum) tx =
-      let updatedUtxo = accUtxo `Map.union` unUTxO toAdd
-          toAdd
-            | Phase2Valid <- tx ^. isPhase2ValidTxL = txouts $ tx ^. bodyTxL
-            | otherwise = collOuts $ tx ^. bodyTxL
-       in (updatedUtxo, accSum + txNonDistinctRefScriptsSize (UTxO accUtxo) tx)
