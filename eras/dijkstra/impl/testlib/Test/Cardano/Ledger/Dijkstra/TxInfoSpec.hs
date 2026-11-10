@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -20,15 +21,16 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
   mkTxInfoResult,
-  toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), transDatums)
-import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..), toAsIx, toAsPurpose)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDats)
+import Cardano.Ledger.Alonzo.Scripts (toAsIx)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (
+  Exclusive (..),
   Globals (..),
+  Inclusive (..),
   Inject (..),
   Network (..),
   ProtVer (..),
@@ -37,14 +39,20 @@ import Cardano.Ledger.BaseTypes (
   TxIx (..),
   strictMaybeToMaybe,
  )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
-  GovActionId,
-  Vote,
-  Voter,
-  VotingProcedure (vProcVote),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  ProposalProcedure (..),
+  Vote (..),
+  Voter (..),
+  VotingProcedure (..),
+  VotingProcedures (..),
   foldlVotingProcedures,
  )
 import Cardano.Ledger.Conway.TxInfo (
+  ConwayContextError (ReferenceInputsNotDisjointFromInputs),
   ConwayEraPlutusTxInfo,
   transMintValue,
   transTxBodyId,
@@ -54,6 +62,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Scripts (
+  AccountBalanceInterval (..),
   AccountBalanceIntervals (..),
  )
 import Cardano.Ledger.Dijkstra.State (EraUTxO, ScriptsNeeded, UTxO (..), getScriptsNeeded)
@@ -69,12 +78,20 @@ import Cardano.Ledger.Dijkstra.TxInfo (
   transWithdrawals,
  )
 import qualified Cardano.Ledger.Dijkstra.TxInfo as Dijkstra
-import Cardano.Ledger.Mary.Value (AssetName, MaryValue, PolicyID, flattenMultiAsset)
+import Cardano.Ledger.Mary.Value (
+  AssetName (..),
+  MaryValue,
+  MultiAsset (..),
+  PolicyID (..),
+  flattenMultiAsset,
+ )
 import Cardano.Ledger.Plutus (
+  Data,
   Language (..),
+  PlutusArgs (..),
   SLanguage (..),
   TxOutSource (..),
-  getPlutusData,
+  hashData,
   hashPlutusScript,
   plutusLanguage,
   transCoinToLovelace,
@@ -85,10 +102,13 @@ import Cardano.Ledger.Plutus (
   transScriptHash,
   transTxIx,
  )
+import Cardano.Ledger.Plutus.Data (Datum (..), dataToBinaryData, getPlutusData)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
-import Control.Monad (zipWithM)
+import Control.Exception (evaluate)
+import Control.Monad (forM, zipWithM)
 import Control.Monad.Trans.Fail.String (errorFail)
+import qualified Data.ByteString.Short as SBS
 import Data.Either (isRight)
 import Data.Foldable (toList)
 import qualified Data.List as List
@@ -101,9 +121,11 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import Data.Proxy (Proxy (..))
 import Data.Semigroup (Max (..), Min (..))
+import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
+import PlutusLedgerApi.V3.MintValue (MintValue (..))
 import qualified PlutusLedgerApi.V3.MintValue as MintValue
 import PlutusLedgerApi.V4 (TopTxInfoSimplified (..))
 import qualified PlutusLedgerApi.V4 as PV4
@@ -134,6 +156,21 @@ spec = describe "TxInfo" $ do
         let ei = epochInfo testGlobals
             ss = systemStart testGlobals
          in mkTestLedgerTxInfo (ProtVer (eraProtVerLow @era) 0) ei ss utxo tx
+      topLti utxo tx = mkLocalLedgerTxInfo utxo tx $ LedgerTopTxInfo mempty
+      -- Translate with PlutusV4, then check the TxInfo, or fail on a translation error
+      transTxInfo lti = expectRight $ unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 lti)
+      transTxInfoFailsWith lti err = unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 lti) `shouldBeLeft` err
+      genValidStakeRef = oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
+      expectedTransAddr cred stakeRef =
+        PV4.Address (transCred cred) $ case stakeRef of
+          StakeRefBase c -> Just $ PV4.AccountId $ transCred c
+          _ -> Nothing
+      expectedTransTxOut cred stakeRef coin =
+        PV4.TxOut (expectedTransAddr cred stakeRef) (transCoinToValue coin) PV4.NoOutputDatum Nothing
+      expectedTxOutRef (TxIn (TxId txIdHash) (TxIx txIx)) =
+        PV4.TxOutRef (PV4.TxId $ transSafeHash txIdHash) (toInteger txIx)
+      expectedRedeemer :: Data era -> PV4.Redeemer
+      expectedRedeemer = PV4.Redeemer . PV4.dataToBuiltinData . getPlutusData
   describe "Translation" $ do
     describe "transValidityInterval" $ do
       it "validity interval's upper bound is open" transVITimeUpperBoundIsOpen
@@ -158,191 +195,751 @@ spec = describe "TxInfo" $ do
             validityInterval
             `shouldBeLeft` inject (TimeTranslationPastHorizon @era "out of valid range")
   describe "PlutusV4" $ do
-    prop "Threads the sub-transaction index into txInfoSubTxIx" $ \(txIx :: TxIx) -> do
-      let
-        tx = mkBasicTx @era @SubTx mkBasicTxBody
-        ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerSubTxInfo txIx
-      case unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
-        Right txInfo ->
-          PV4.txInfoSubTxIx txInfo `shouldBe` Just (transTxIx txIx)
-        Left failure ->
-          expectationFailure $ "Failed to translate sub-transaction TxInfo: " <> show failure
-    prop "Fails translation when Ptr present in outputs" $ do
-      paymentCred <- arbitrary
-      ptr <- arbitrary
-      val <- arbitrary
-      let
-        txOut = mkBasicTxOut (Addr Testnet paymentCred (StakeRefPtr ptr)) val
-      txIn <- arbitrary
-      paymentCred2 <- arbitrary
-      stakeRef <- oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
-      let
-        utxo =
-          UTxO
-            [ (txIn, mkBasicTxOut (Addr Testnet paymentCred2 stakeRef) val)
-            ]
-        tx =
-          mkBasicTx @era @TopTx $
-            mkBasicTxBody
-              & outputsTxBodyL .~ [txOut]
-              & inputsTxBodyL .~ [txIn]
-        ledgerTxInfo = mkLocalLedgerTxInfo utxo tx $ LedgerTopTxInfo mempty
-      pure $
-        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
-          `shouldBeLeft` inject (PointerPresentInOutput @era (TxOutFromOutput $ TxIx 0))
-    prop "Fails translation when Byron addresses present in outputs" $ do
-      ba0 <- arbitrary
-      ba2 <- arbitrary
-      paymentCred <- arbitrary
-      val0 <- arbitrary
-      val1 <- arbitrary
-      val2 <- arbitrary
-      let
-        txOuts =
-          [ mkBasicTxOut (AddrBootstrap ba0) val0
-          , mkBasicTxOut (Addr Testnet paymentCred StakeRefNull) val1
-          , mkBasicTxOut (AddrBootstrap ba2) val2
-          ]
-        tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
-        ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-      pure $
-        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
-          `shouldBeLeft` inject (ByronTxOutInContext @era (TxOutFromOutput $ TxIx 0))
-    prop "Reports the first error kind when Ptr and Byron outputs are mixed" $ do
-      pc0 <- arbitrary
-      pc2 <- arbitrary
-      ptr0 <- arbitrary
-      ptr2 <- arbitrary
-      bootstrapAddr <- arbitrary
-      val0 <- arbitrary
-      val1 <- arbitrary
-      val2 <- arbitrary
-      let
-        txOuts =
-          [ mkBasicTxOut (Addr Testnet pc0 (StakeRefPtr ptr0)) val0
-          , mkBasicTxOut (AddrBootstrap bootstrapAddr) val1
-          , mkBasicTxOut (Addr Testnet pc2 (StakeRefPtr ptr2)) val2
-          ]
-        tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
-        ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-      pure $
-        toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose)
-          `shouldBeLeft` inject (PointerPresentInOutput @era (TxOutFromOutput $ TxIx 0))
-    prop "Translates outputs in the order they appear in the TxBody" $ do
-      pc0 <- arbitrary
-      pc1 <- arbitrary
-      pc2 <- arbitrary
-      val0 <- arbitrary
-      val1 <- arbitrary
-      val2 <- arbitrary
-      let
-        txOuts =
-          [ mkBasicTxOut (Addr Testnet pc0 StakeRefNull) val0
-          , mkBasicTxOut (Addr Testnet pc1 StakeRefNull) val1
-          , mkBasicTxOut (Addr Testnet pc2 StakeRefNull) val2
-          ]
-        tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
-        ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
-      pure $
-        case toPlutusTxInfoForPurpose SPlutusV4 ledgerTxInfo (SpendingPurpose AsPurpose) of
-          Right txInfo ->
-            map PV4.txOutAddress (PV4.txInfoOutputs txInfo)
-              `shouldBe` [PV4.Address (transCred pc) Nothing | pc <- [pc0, pc1, pc2]]
-          err -> expectationFailure $ "Failed to translate TxInfo: " <> show err
     describe "toPlutusTxInfo" $ do
-      prop "succeeds when purpose points at a script hash" $ do
+      prop "translates a fully populated tx into every TxInfo field" $ do
+        -- Fields that share a Plutus type (inputs and reference inputs, withdrawals and direct
+        -- deposits, treasury amount and donation) get distinct values, so a swap is caught.
+        -- Everything that needs no script uses a key hash, so only the spend needs a redeemer.
         paymentCred1 <- arbitrary
-        stakeRef1 <- oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
-        stakeRef2 <- oneof [StakeRefBase <$> arbitrary, pure StakeRefNull]
+        stakeRef1 <- genValidStakeRef
+        stakeRef2 <- genValidStakeRef
         coin1 <- arbitrary
         coin2 <- arbitrary
         txIn <- arbitrary
         redeemer <- arbitrary
         exUnits <- arbitrary
-        let plutusScript = Plutus.alwaysSucceedsNoDatum SPlutusV4
-            script = errorFail $ mkPlutusScript plutusScript
+        refTxIn <- arbitrary `suchThat` (/= txIn)
+        refCred <- arbitrary
+        refCoin <- arbitrary
+        policyHash <- arbitrary
+        assetName@(AssetName assetNameBs) <- arbitrary
+        certKeyHash <- arbitrary
+        certDeposit <- arbitrary
+        wdrlKeyHash <- arbitrary
+        withdrawal <- arbitrary
+        depositKeyHash <- arbitrary `suchThat` (/= wdrlKeyHash)
+        directDeposit <- arbitrary `suchThat` (/= withdrawal)
+        balanceCred <- arbitrary
+        exactBalance <- arbitrary
+        guardKeyHash <- arbitrary
+        requiredGuardKeyHash <- arbitrary
+        requiredGuardDatum <- arbitrary
+        witnessDatum :: Data era <- arbitrary
+        voterKeyHash <- arbitrary
+        govActionId@(GovActionId (TxId govActionTxId) (GovActionIx govActionIx)) <- arbitrary
+        proposalDeposit <- arbitrary
+        returnAddr <- arbitrary
+        anchor <- arbitrary
+        treasury <- arbitrary
+        donation <- arbitrary `suchThat` (/= treasury)
+        let testPlutusScript = Plutus.alwaysSucceedsNoDatum SPlutusV4
+            testScript = errorFail $ mkPlutusScript testPlutusScript
         let
-          proxy = Proxy @PlutusV4
-          scriptHash = hashPlutusScript plutusScript
-          paymentCred2 = ScriptHashObj scriptHash
-          txOut = mkBasicTxOut (Addr Testnet paymentCred1 stakeRef1) (Val.inject coin1)
+          lovelace (Coin c) = PV4.Lovelace c
+          testScriptHash = hashPlutusScript testPlutusScript
+          outAddr = Addr Testnet paymentCred1 stakeRef1
+          inAddr = Addr Testnet (ScriptHashObj testScriptHash) stakeRef2
+          refAddr = Addr Testnet refCred StakeRefNull
+          txOut = mkBasicTxOut outAddr (Val.inject coin1)
           utxo =
             UTxO
-              [
-                ( txIn
-                , mkBasicTxOut (Addr Testnet paymentCred2 stakeRef2) (Val.inject coin2)
-                )
+              [ (txIn, mkBasicTxOut inAddr (Val.inject coin2))
+              , (refTxIn, mkBasicTxOut refAddr (Val.inject refCoin))
               ]
+          accountAddr = AccountAddress Testnet . AccountId
           tx =
             mkBasicTx @era @TopTx
               ( mkBasicTxBody
-                  & outputsTxBodyL .~ [txOut]
                   & inputsTxBodyL .~ [txIn]
+                  & referenceInputsTxBodyL .~ [refTxIn]
+                  & outputsTxBodyL .~ [txOut]
+                  & mintTxBodyL .~ MultiAsset [(PolicyID policyHash, [(assetName, 1)])]
+                  & certsTxBodyL .~ [RegDepositTxCert (KeyHashObj certKeyHash) certDeposit]
+                  & withdrawalsTxBodyL .~ Withdrawals [(accountAddr $ KeyHashObj wdrlKeyHash, withdrawal)]
+                  & directDepositsTxBodyL
+                    .~ DirectDeposits [(accountAddr $ KeyHashObj depositKeyHash, directDeposit)]
+                  & accountBalanceIntervalsTxBodyL
+                    .~ AccountBalanceIntervals [(accountAddr balanceCred, AccountBalanceExact exactBalance)]
+                  -- testGlobals has 1s slots from POSIX time 0, so slot n is n * 1000 ms
+                  & vldtTxBodyL .~ ValidityInterval (SJust $ SlotNo 10) (SJust $ SlotNo 20)
+                  & guardsTxBodyL .~ OSet.singleton (KeyHashObj guardKeyHash)
+                  & requiredTopLevelGuardsTxBodyL
+                    .~ [(KeyHashObj requiredGuardKeyHash, SJust requiredGuardDatum)]
+                  & votingProceduresTxBodyL
+                    .~ VotingProcedures
+                      [(DRepVoter $ KeyHashObj voterKeyHash, [(govActionId, VotingProcedure VoteYes SNothing)])]
+                  & proposalProceduresTxBodyL
+                    .~ OSet.singleton (ProposalProcedure proposalDeposit returnAddr InfoAction anchor)
+                  & currentTreasuryValueTxBodyL .~ SJust treasury
+                  & treasuryDonationTxBodyL .~ donation
               )
               & witsTxL . rdmrsTxWitsL . unRedeemersL
                 .~ Map.singleton (SpendingPurpose $ AsIx 0) (redeemer, exUnits)
-              & witsTxL . scriptTxWitsL .~ Map.singleton scriptHash (fromPlutusScript script)
-          ledgerTxInfo = mkLocalLedgerTxInfo utxo tx $ LedgerTopTxInfo mempty
-          purpose = SpendingPurpose @era $ AsIxItem 0 txIn
-          TxIn (TxId txIdHash) (TxIx txIx) = txIn
+              & witsTxL . scriptTxWitsL .~ Map.singleton testScriptHash (fromPlutusScript testScript)
+              & witsTxL . datsTxWitsL .~ TxDats [(hashData witnessDatum, witnessDatum)]
+          lti = topLti utxo tx
           TxId txBodyHash = txIdTx tx
-          txInRef = PV4.TxOutRef (PV4.TxId $ transSafeHash txIdHash) (toInteger txIx)
-          transStakeRef (StakeRefBase cred) = Just . PV4.AccountId $ transCred cred
-          transStakeRef _ = Nothing
-          addr1 = PV4.Address (transCred paymentCred1) (transStakeRef stakeRef1)
-          addr2 = PV4.Address (transCred paymentCred2) (transStakeRef stakeRef2)
-        pure $ case toPlutusTxInfoForPurpose proxy ledgerTxInfo (hoistPlutusPurpose toAsPurpose purpose) of
-          Right txInfo ->
-            txInfo
-              `shouldBe` PV4.TxInfo
-                { PV4.txInfoWithdrawals = PV4.unsafeFromList []
-                , PV4.txInfoVotes = PV4.unsafeFromList []
-                , PV4.txInfoValidRange = PV4.POSIXTimeRange Nothing Nothing
-                , PV4.txInfoTxCerts = []
-                , PV4.txInfoTreasuryDonation = PV4.Lovelace 0
-                , PV4.txInfoSubTxIx = Nothing
-                , PV4.txInfoRequiredTopLevelGuards = PV4.unsafeFromList []
-                , PV4.txInfoReferenceInputs = []
-                , PV4.txInfoRedeemers =
+          txInRef = expectedTxOutRef txIn
+        pure $ do
+          txInfo <- transTxInfo lti
+          txInfo
+            `shouldBe` PV4.TxInfo
+              { PV4.txInfoId = PV4.TxId $ transSafeHash txBodyHash
+              , PV4.txInfoSubTxIx = Nothing
+              , PV4.txInfoInputs =
+                  [PV4.TxInInfo txInRef (expectedTransTxOut (ScriptHashObj testScriptHash) stakeRef2 coin2)]
+              , PV4.txInfoReferenceInputs =
+                  [PV4.TxInInfo (expectedTxOutRef refTxIn) (expectedTransTxOut refCred StakeRefNull refCoin)]
+              , PV4.txInfoOutputs = [expectedTransTxOut paymentCred1 stakeRef1 coin1]
+              , PV4.txInfoMint =
+                  UnsafeMintValue $
                     PV4.unsafeFromList
                       [
-                        ( PV4.Spending (transScriptHash scriptHash) txInRef
-                        , PV4.Redeemer . PV4.dataToBuiltinData $ getPlutusData redeemer
+                        ( PV4.CurrencySymbol $ PV4.getScriptHash $ transScriptHash policyHash
+                        , PV4.unsafeFromList [(PV4.TokenName $ PV4.toBuiltin $ SBS.fromShort assetNameBs, 1)]
                         )
                       ]
-                , PV4.txInfoProposalProcedures = []
-                , PV4.txInfoOutputs =
-                    [ PV4.TxOut
-                        addr1
-                        (transCoinToValue coin1)
-                        PV4.NoOutputDatum
-                        Nothing
+              , PV4.txInfoTxCerts =
+                  [PV4.TxCertRegAccount (PV4.AccountId $ transCred $ KeyHashObj certKeyHash) (lovelace certDeposit)]
+              , PV4.txInfoWithdrawals =
+                  PV4.unsafeFromList [(transCred $ KeyHashObj wdrlKeyHash, lovelace withdrawal)]
+              , PV4.txInfoDirectDeposits =
+                  PV4.unsafeFromList [(transCred $ KeyHashObj depositKeyHash, lovelace directDeposit)]
+              , PV4.txInfoAccountBalanceIntervals =
+                  PV4.AccountBalanceIntervals $
+                    PV4.unsafeFromList
+                      [(PV4.AccountId $ transCred balanceCred, PV4.AccountBalanceExact $ lovelace exactBalance)]
+              , PV4.txInfoValidRange =
+                  PV4.POSIXTimeRange (Just $ PV4.POSIXTime 10000) (Just $ PV4.POSIXTime 20000)
+              , PV4.txInfoGuards = [transCred $ KeyHashObj guardKeyHash]
+              , PV4.txInfoRequiredTopLevelGuards =
+                  PV4.unsafeFromList
+                    [(transCred $ KeyHashObj requiredGuardKeyHash, Just $ transDatum requiredGuardDatum)]
+              , PV4.txInfoRedeemers =
+                  PV4.unsafeFromList
+                    [(PV4.Spending (transScriptHash testScriptHash) txInRef, expectedRedeemer redeemer)]
+              , PV4.txInfoData =
+                  PV4.unsafeFromList
+                    [(PV4.DatumHash $ transSafeHash $ hashData witnessDatum, transDatum witnessDatum)]
+              , PV4.txInfoVotes =
+                  PV4.unsafeFromList
+                    [
+                      ( PV4.DRepVoter $ PV4.DRepCredential $ transCred $ KeyHashObj voterKeyHash
+                      , PV4.unsafeFromList
+                          [
+                            ( PV4.GovernanceActionId (PV4.TxId $ transSafeHash govActionTxId) (toInteger govActionIx)
+                            , PV4.VoteYes
+                            )
+                          ]
+                      )
                     ]
-                , PV4.txInfoMint = PV4.emptyMintValue
-                , PV4.txInfoInputs =
-                    [ PV4.TxInInfo
-                        txInRef
-                        ( PV4.TxOut
-                            addr2
-                            (transCoinToValue coin2)
-                            PV4.NoOutputDatum
-                            Nothing
-                        )
-                    ]
-                , PV4.txInfoId = PV4.TxId $ transSafeHash txBodyHash
-                , PV4.txInfoGuards = []
-                , PV4.txInfoDirectDeposits = PV4.unsafeFromList []
-                , PV4.txInfoData = PV4.unsafeFromList []
-                , PV4.txInfoCurrentTreasuryAmount = Nothing
-                , PV4.txInfoAccountBalanceIntervals =
-                    PV4.AccountBalanceIntervals $ PV4.unsafeFromList []
-                }
-          Left failure -> expectationFailure $ "Failed to translate TxInfo: " <> show failure
-      describe "transGuardingTopTxInfo" $ do
-        prop
-          "TopTxInfo construction matches a reference construction built from the ledger values"
-          (propTopTxInfoMatchesReference @era)
+              , PV4.txInfoProposalProcedures =
+                  [ PV4.ProposalProcedure
+                      (lovelace proposalDeposit)
+                      (transCred . unAccountId $ aaId returnAddr)
+                      PV4.InfoAction
+                  ]
+              , PV4.txInfoCurrentTreasuryAmount = Just $ lovelace treasury
+              , PV4.txInfoTreasuryDonation = lovelace donation
+              }
+      describe "txInfoInputs" $ do
+        prop "keeps TxIn order with the resolved outputs" $ do
+          txIns <- arbitrary `suchThat` ((>= 2) . Set.size)
+          inputs <- forM (Set.toList txIns) $ \txIn -> do
+            cred <- arbitrary
+            txOut <- mkBasicTxOut (Addr Testnet cred StakeRefNull) <$> arbitrary
+            pure (txIn, txOut)
+          let
+            utxo = UTxO $ Map.fromList inputs
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & inputsTxBodyL .~ txIns
+            lti = topLti utxo tx
+          pure $ do
+            txInfo <- transTxInfo lti
+            [ (PV4.txInInfoOutRef i, PV4.txOutAddress (PV4.txInInfoResolved i))
+              | i <- PV4.txInfoInputs txInfo
+              ]
+              `shouldBe` [ (expectedTxOutRef txIn, PV4.Address (transCred cred) Nothing)
+                         | (txIn, txOut) <- inputs
+                         , Addr _ cred _ <- [txOut ^. addrTxOutL]
+                         ]
+        prop "fails on a Ptr address" $ do
+          txIn <- arbitrary
+          addr <- Addr Testnet <$> arbitrary <*> fmap StakeRefPtr arbitrary
+          txOut <- mkBasicTxOut addr <$> arbitrary
+          let
+            utxo = UTxO [(txIn, txOut)]
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody
+                  & inputsTxBodyL .~ [txIn]
+            ledgerTxInfo = topLti utxo tx
+          pure $
+            transTxInfoFailsWith ledgerTxInfo $
+              inject (PointerPresentInOutput @era (TxOutFromInput txIn))
+        prop "fails when a TxIn is in the spending inputs and also in the reference inputs" $ do
+          txIn <- arbitrary
+          addr <- Addr Testnet <$> arbitrary <*> genValidStakeRef
+          txOut <- mkBasicTxOut addr <$> arbitrary
+          let
+            utxo = UTxO [(txIn, txOut)]
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody
+                  & inputsTxBodyL .~ [txIn]
+                  & referenceInputsTxBodyL .~ [txIn]
+            ledgerTxInfo = topLti utxo tx
+          pure $
+            transTxInfoFailsWith ledgerTxInfo $
+              inject
+                (ConwayContextError @era (ReferenceInputsNotDisjointFromInputs (txIn :| [])))
+      describe "txInfoReferenceInputs" $ do
+        prop "preserves TxIn order with the resolved outputs" $ do
+          txIns <- arbitrary `suchThat` ((>= 2) . Set.size)
+          inputs <- forM (Set.toList txIns) $ \txIn -> do
+            cred <- arbitrary
+            txOut <- mkBasicTxOut (Addr Testnet cred StakeRefNull) <$> arbitrary
+            pure (txIn, txOut)
+          let
+            utxo = UTxO $ Map.fromList inputs
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & referenceInputsTxBodyL .~ txIns
+            lti = topLti utxo tx
+          pure $ do
+            txInfo <- transTxInfo lti
+            PV4.txInfoInputs txInfo `shouldBe` []
+            [ (PV4.txInInfoOutRef i, PV4.txOutAddress (PV4.txInInfoResolved i))
+              | i <- PV4.txInfoReferenceInputs txInfo
+              ]
+              `shouldBe` [ (expectedTxOutRef txIn, PV4.Address (transCred cred) Nothing)
+                         | (txIn, txOut) <- inputs
+                         , Addr _ cred _ <- [txOut ^. addrTxOutL]
+                         ]
+        prop "fails on a Ptr address" $ do
+          txIn <- arbitrary
+          addr <- Addr Testnet <$> arbitrary <*> fmap StakeRefPtr arbitrary
+          txOut <- mkBasicTxOut addr <$> arbitrary
+          let
+            utxo = UTxO [(txIn, txOut)]
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody
+                  & referenceInputsTxBodyL .~ [txIn]
+            ledgerTxInfo = topLti utxo tx
+          pure $
+            transTxInfoFailsWith ledgerTxInfo $
+              inject (PointerPresentInOutput @era (TxOutFromInput txIn))
+      describe "txInfoOutputs" $ do
+        prop "keeps the order that is in the Ledger.TxBody transaction outputs" $ do
+          pc0 <- arbitrary
+          pc1 <- arbitrary
+          pc2 <- arbitrary
+          val0 <- arbitrary
+          val1 <- arbitrary
+          val2 <- arbitrary
+          let
+            txOuts =
+              [ mkBasicTxOut (Addr Testnet pc0 StakeRefNull) val0
+              , mkBasicTxOut (Addr Testnet pc1 StakeRefNull) val1
+              , mkBasicTxOut (Addr Testnet pc2 StakeRefNull) val2
+              ]
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
+            ledgerTxInfo = topLti mempty tx
+          pure $ do
+            txInfo <- transTxInfo ledgerTxInfo
+            map PV4.txOutAddress (PV4.txInfoOutputs txInfo)
+              `shouldBe` [PV4.Address (transCred pc) Nothing | pc <- [pc0, pc1, pc2]]
+        prop "fails on a Ptr address at any index" $ do
+          let genValidTxOut =
+                mkBasicTxOut @era
+                  <$> (Addr Testnet <$> arbitrary <*> genValidStakeRef)
+                  <*> arbitrary
+          txOutsBefore <- listOf genValidTxOut
+          txOutsAfter <- listOf genValidTxOut
+          ptrAddr <- Addr Testnet <$> arbitrary <*> fmap StakeRefPtr arbitrary
+          ptrTxOut <- mkBasicTxOut @era ptrAddr <$> arbitrary
+          let
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody
+                  & outputsTxBodyL .~ SSeq.fromList (txOutsBefore <> [ptrTxOut] <> txOutsAfter)
+            ledgerTxInfo = topLti mempty tx
+          pure $
+            transTxInfoFailsWith ledgerTxInfo $
+              inject (PointerPresentInOutput @era (TxOutFromOutput $ TxIx $ fromIntegral $ length txOutsBefore))
+        prop "fails on a Byron address" $ do
+          ba0 <- arbitrary
+          ba2 <- arbitrary
+          paymentCred <- arbitrary
+          val0 <- arbitrary
+          val1 <- arbitrary
+          val2 <- arbitrary
+          let
+            txOuts =
+              [ mkBasicTxOut (AddrBootstrap ba0) val0
+              , mkBasicTxOut (Addr Testnet paymentCred StakeRefNull) val1
+              , mkBasicTxOut (AddrBootstrap ba2) val2
+              ]
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
+            ledgerTxInfo = topLti mempty tx
+          pure $
+            transTxInfoFailsWith ledgerTxInfo $
+              inject (ByronTxOutInContext @era (TxOutFromOutput $ TxIx 0))
+        prop "reports the first error kind when Ptr and Byron addresses are mixed" $ do
+          pc0 <- arbitrary
+          pc2 <- arbitrary
+          ptr0 <- arbitrary
+          ptr2 <- arbitrary
+          bootstrapAddr <- arbitrary
+          val0 <- arbitrary
+          val1 <- arbitrary
+          val2 <- arbitrary
+          let
+            txOuts =
+              [ mkBasicTxOut (Addr Testnet pc0 (StakeRefPtr ptr0)) val0
+              , mkBasicTxOut (AddrBootstrap bootstrapAddr) val1
+              , mkBasicTxOut (Addr Testnet pc2 (StakeRefPtr ptr2)) val2
+              ]
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & outputsTxBodyL .~ txOuts
+            ledgerTxInfo = topLti mempty tx
+          pure $
+            transTxInfoFailsWith ledgerTxInfo $
+              inject (PointerPresentInOutput @era (TxOutFromOutput $ TxIx 0))
+      prop "reports a Ptr input before a Ptr output" $ do
+        txIn <- arbitrary
+        inputAddr <- Addr Testnet <$> arbitrary <*> fmap StakeRefPtr arbitrary
+        inputTxOut <- mkBasicTxOut inputAddr <$> arbitrary
+        outputAddr <- Addr Testnet <$> arbitrary <*> fmap StakeRefPtr arbitrary
+        outputTxOut <- mkBasicTxOut outputAddr <$> arbitrary
+        let
+          utxo = UTxO [(txIn, inputTxOut)]
+          tx =
+            mkBasicTx @era @TopTx $
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & outputsTxBodyL .~ [outputTxOut]
+          ledgerTxInfo = topLti utxo tx
+        pure $
+          transTxInfoFailsWith ledgerTxInfo $
+            inject (PointerPresentInOutput @era (TxOutFromInput txIn))
+      describe "txInfoTxCerts" $ do
+        prop "translates every certificate" $ \certs -> do
+          let
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & certsTxBodyL .~ SSeq.fromList certs
+            lti = topLti mempty tx
+          txInfo <- transTxInfo lti
+          mapM_ evaluate $ PV4.txInfoTxCerts txInfo
+      describe "txInfoRedeemers" $ do
+        prop "translates a redeemer for every purpose" $ do
+          -- A distinct script per purpose, so each purpose must pick up its own script hash.
+          -- None of them is evaluated here, so it does not matter what they do.
+          let testSpendScript = Plutus.alwaysSucceedsNoDatum SPlutusV4
+              testMintScript = Plutus.alwaysSucceedsWithDatum SPlutusV4
+              testWdrlScript = Plutus.alwaysFailsNoDatum SPlutusV4
+              testCertScript = Plutus.alwaysFailsWithDatum SPlutusV4
+              testVoteScript = Plutus.evenRedeemerNoDatum SPlutusV4
+              testProposingScript = Plutus.purposeIsWellformedNoDatum SPlutusV4
+              testGuardScript = Plutus.inputsOutputsAreNotEmptyNoDatum SPlutusV4
+              allTestScripts =
+                [ testSpendScript
+                , testMintScript
+                , testWdrlScript
+                , testCertScript
+                , testVoteScript
+                , testProposingScript
+                , testGuardScript
+                ]
+              testSpendScriptHash = hashPlutusScript testSpendScript
+              testMintScriptHash = hashPlutusScript testMintScript
+              testWdrlScriptHash = hashPlutusScript testWdrlScript
+              testCertScriptHash = hashPlutusScript testCertScript
+              testVoteScriptHash = hashPlutusScript testVoteScript
+              testProposingScriptHash = hashPlutusScript testProposingScript
+              testGuardScriptHash = hashPlutusScript testGuardScript
+          txIn <- arbitrary
+          testSpendScriptData <- arbitrary
+          testMintScriptData <- arbitrary
+          assetName <- arbitrary
+          testWdrlScriptData <- arbitrary
+          withdrawal <- arbitrary
+          testCertScriptData <- arbitrary
+          certDeposit <- arbitrary
+          certKeyHash <- arbitrary
+          testVoteScriptData <- arbitrary
+          govActionId <- arbitrary
+          votingProcedure <- arbitrary
+          testProposingScriptData <- arbitrary
+          proposalDeposit <- arbitrary
+          returnAddr <- arbitrary
+          anchor <- arbitrary
+          testGuardScriptData <- arbitrary
+          guardKeyHash <- arbitrary
+          exUnits <- arbitrary
+          let
+            lovelace (Coin c) = PV4.Lovelace c
+            proposal =
+              ProposalProcedure
+                proposalDeposit
+                returnAddr
+                (TreasuryWithdrawals mempty (SJust testProposingScriptHash))
+                anchor
+            -- Needs no script, so it pushes the script proposal to index 1
+            infoProposal = ProposalProcedure proposalDeposit returnAddr InfoAction anchor
+            utxo =
+              UTxO
+                [
+                  ( txIn
+                  , mkBasicTxOut (Addr Testnet (ScriptHashObj testSpendScriptHash) StakeRefNull) mempty
+                  )
+                ]
+            expectedPurposes :: Map.Map (PlutusPurpose AsIx era) (PV4.ScriptPurpose, Data era)
+            expectedPurposes =
+              Map.fromList
+                [
+                  ( SpendingPurpose (AsIx 0)
+                  , (PV4.Spending (transScriptHash testSpendScriptHash) (expectedTxOutRef txIn), testSpendScriptData)
+                  )
+                ,
+                  ( MintingPurpose (AsIx 0)
+                  ,
+                    ( PV4.Minting
+                        (transScriptHash testMintScriptHash)
+                        (PV4.CurrencySymbol $ PV4.getScriptHash $ transScriptHash testMintScriptHash)
+                    , testMintScriptData
+                    )
+                  )
+                ,
+                  ( WithdrawingPurpose (AsIx 0)
+                  ,
+                    ( PV4.Withdrawing (transScriptHash testWdrlScriptHash) (transCred $ ScriptHashObj testWdrlScriptHash)
+                    , testWdrlScriptData
+                    )
+                  )
+                ,
+                  ( CertifyingPurpose (AsIx 1)
+                  ,
+                    ( PV4.Certifying (transScriptHash testCertScriptHash) 1 $
+                        PV4.TxCertRegAccount
+                          (PV4.AccountId $ transCred $ ScriptHashObj testCertScriptHash)
+                          (lovelace certDeposit)
+                    , testCertScriptData
+                    )
+                  )
+                ,
+                  ( VotingPurpose (AsIx 0)
+                  ,
+                    ( PV4.Voting
+                        (transScriptHash testVoteScriptHash)
+                        (PV4.DRepVoter $ PV4.DRepCredential $ transCred $ ScriptHashObj testVoteScriptHash)
+                    , testVoteScriptData
+                    )
+                  )
+                ,
+                  ( ProposingPurpose (AsIx 1)
+                  ,
+                    ( PV4.Proposing (transScriptHash testProposingScriptHash) 1 $
+                        PV4.ProposalProcedure
+                          (lovelace proposalDeposit)
+                          (transCred . unAccountId $ aaId returnAddr)
+                          (PV4.TreasuryWithdrawals (PV4.unsafeFromList []) (Just $ transScriptHash testProposingScriptHash))
+                    , testProposingScriptData
+                    )
+                  )
+                , -- Guard indices count every guard, so the key-hash guard at 0 shifts the script to 1
 
+                  ( GuardingPurpose (AsIx 1)
+                  , (PV4.Guarding (transScriptHash testGuardScriptHash) 1, testGuardScriptData)
+                  )
+                ]
+            tx =
+              mkBasicTx @era @TopTx
+                ( mkBasicTxBody
+                    & inputsTxBodyL .~ [txIn]
+                    & mintTxBodyL .~ MultiAsset [(PolicyID testMintScriptHash, [(assetName, 1)])]
+                    & withdrawalsTxBodyL
+                      .~ Withdrawals [(AccountAddress Testnet $ AccountId $ ScriptHashObj testWdrlScriptHash, withdrawal)]
+                    -- The key-hash cert needs no script, so it pushes the script cert to index 1
+                    & certsTxBodyL
+                      .~ [ RegDepositTxCert (KeyHashObj certKeyHash) certDeposit
+                         , RegDepositTxCert (ScriptHashObj testCertScriptHash) certDeposit
+                         ]
+                    & votingProceduresTxBodyL
+                      .~ VotingProcedures [(DRepVoter $ ScriptHashObj testVoteScriptHash, [(govActionId, votingProcedure)])]
+                    & proposalProceduresTxBodyL .~ OSet.fromList [infoProposal, proposal]
+                    & guardsTxBodyL .~ OSet.fromList [KeyHashObj guardKeyHash, ScriptHashObj testGuardScriptHash]
+                )
+                & witsTxL . rdmrsTxWitsL . unRedeemersL .~ fmap (\(_, d) -> (d, exUnits)) expectedPurposes
+                & witsTxL . scriptTxWitsL
+                  .~ Map.fromList
+                    [ (hashPlutusScript s, fromPlutusScript $ errorFail $ mkPlutusScript s)
+                    | s <- allTestScripts
+                    ]
+            lti = topLti utxo tx
+          pure $ do
+            txInfo <- transTxInfo lti
+            PV4.txInfoRedeemers txInfo
+              `shouldBe` PV4.unsafeFromList [(key, expectedRedeemer d) | (key, d) <- Map.elems expectedPurposes]
+        prop "fails when a redeemer points to an item that needs no script" $ do
+          keyHash <- arbitrary
+          withdrawal <- arbitrary
+          redeemer <- arbitrary
+          exUnits <- arbitrary
+          let
+            -- The redeemer targets a key-hash withdrawal. That needs no script, so translating
+            -- the redeemer finds no script hash for its purpose in ltiScriptHashesUsed
+            purpose = WithdrawingPurpose @era (AsIx 0)
+            tx =
+              mkBasicTx @era @TopTx
+                ( mkBasicTxBody
+                    & withdrawalsTxBodyL
+                      .~ Withdrawals [(AccountAddress Testnet $ AccountId $ KeyHashObj keyHash, withdrawal)]
+                )
+                & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.singleton purpose (redeemer, exUnits)
+            lti = topLti mempty tx
+          pure $
+            transTxInfoFailsWith lti $
+              inject (ScriptHashNotFoundForPurpose purpose)
+        prop "fails when a redeemer points past the body's items" $ do
+          txIn <- arbitrary
+          addr <- Addr Testnet <$> arbitrary <*> genValidStakeRef
+          txOut <- mkBasicTxOut addr <$> arbitrary
+          redeemer <- arbitrary
+          exUnits <- arbitrary
+          let
+            -- There is only one input, so index 1 points at nothing
+            purpose = SpendingPurpose @era (AsIx 1)
+            utxo = UTxO [(txIn, txOut)]
+            tx =
+              mkBasicTx @era @TopTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+                & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.singleton purpose (redeemer, exUnits)
+            lti = topLti utxo tx
+          pure $
+            transTxInfoFailsWith lti $
+              inject (RedeemerPointerPointsToNothing purpose)
+      describe "txInfoValidRange" $ do
+        prop "translates each possible validity bound" $ do
+          -- Bounded, so the slot always converts to a POSIX time
+          let genBound = oneof [pure SNothing, SJust <$> choose (0, 1000000)]
+          lower <- genBound
+          upper <- genBound
+          let
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody & vldtTxBodyL .~ ValidityInterval (SlotNo <$> lower) (SlotNo <$> upper)
+            lti = topLti mempty tx
+            -- testGlobals has 1s slots from POSIX time 0, so slot n is n * 1000 ms
+            expectedBound = \case
+              SJust n -> Just $ PV4.POSIXTime $ toInteger n * 1000
+              SNothing -> Nothing
+          pure $ do
+            txInfo <- transTxInfo lti
+            PV4.txInfoValidRange txInfo
+              `shouldBe` PV4.POSIXTimeRange (expectedBound lower) (expectedBound upper)
+      describe "txInfoGuards" $ do
+        prop "keeps the insertion order" $ do
+          keyHash <- arbitrary
+          scriptHash <- arbitrary
+          otherGuards <- arbitrary
+          let
+            guardSet = Set.fromList [KeyHashObj keyHash, ScriptHashObj scriptHash] <> otherGuards
+            -- Reversed, so the insertion order differs from the Ord order
+            reversedGuards = reverse $ Set.toList guardSet
+            tx = mkBasicTx @era @TopTx $ mkBasicTxBody & guardsTxBodyL .~ OSet.fromList reversedGuards
+            lti = topLti mempty tx
+          pure $ do
+            txInfo <- transTxInfo lti
+            PV4.txInfoGuards txInfo `shouldBe` fmap transCred reversedGuards
+      describe "txInfoAccountBalanceIntervals" $ do
+        prop "translates every constructor" $ do
+          accountCred <- arbitrary
+          lowerBoundLovelace@(Coin lowerBoundLovelaceInteger) <- arbitrary
+          -- Distinct bounds, so swapping them in BothBounds is caught
+          upperBoundLovelace@(Coin upperBoundLovelaceInteger) <- arbitrary `suchThat` (/= lowerBoundLovelace)
+          (interval, expectedInterval) <-
+            elements
+              [
+                ( AccountBalanceLowerBound (Inclusive lowerBoundLovelace)
+                , PV4.AccountBalanceLowerBound (PV4.Lovelace lowerBoundLovelaceInteger)
+                )
+              ,
+                ( AccountBalanceUpperBound (Exclusive upperBoundLovelace)
+                , PV4.AccountBalanceUpperBound (PV4.Lovelace upperBoundLovelaceInteger)
+                )
+              ,
+                ( AccountBalanceBothBounds (Inclusive lowerBoundLovelace) (Exclusive upperBoundLovelace)
+                , PV4.AccountBalanceBothBounds
+                    (PV4.Lovelace lowerBoundLovelaceInteger)
+                    (PV4.Lovelace upperBoundLovelaceInteger)
+                )
+              ,
+                ( AccountBalanceExact lowerBoundLovelace
+                , PV4.AccountBalanceExact (PV4.Lovelace lowerBoundLovelaceInteger)
+                )
+              ]
+          let
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody
+                  & accountBalanceIntervalsTxBodyL
+                    .~ AccountBalanceIntervals [(AccountAddress Testnet $ AccountId accountCred, interval)]
+            lti = topLti mempty tx
+          pure $ do
+            txInfo <- transTxInfo lti
+            PV4.txInfoAccountBalanceIntervals txInfo
+              `shouldBe` PV4.AccountBalanceIntervals
+                (PV4.unsafeFromList [(PV4.AccountId $ transCred accountCred, expectedInterval)])
+      describe "txInfoRequiredTopLevelGuards" $ do
+        prop "translates the optional datum" $ do
+          guardCred <- arbitrary
+          guardDatum <- arbitrary
+          let
+            tx =
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody & requiredTopLevelGuardsTxBodyL .~ [(guardCred, guardDatum)]
+            lti = topLti mempty tx
+            expectedDatum = case guardDatum of
+              SJust datum -> Just $ transDatum datum
+              SNothing -> Nothing
+          pure $ do
+            txInfo <- transTxInfo lti
+            PV4.txInfoRequiredTopLevelGuards txInfo
+              `shouldBe` PV4.unsafeFromList [(transCred guardCred, expectedDatum)]
+      describe "txInfoSubTxIx" $ do
+        prop "threads the sub-transaction index" $ \(txIx :: TxIx) -> do
+          let
+            tx = mkBasicTx @era @SubTx mkBasicTxBody
+            ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerSubTxInfo txIx
+          txInfo <- transTxInfo ledgerTxInfo
+          PV4.txInfoSubTxIx txInfo `shouldBe` Just (transTxIx txIx)
+    describe "transGuardingTopTxInfo" $ do
+      prop
+        "TopTxInfo construction matches a reference construction built from the ledger values"
+        (propTopTxInfoMatchesReference @era)
+
+    describe "toPlutusArgs" $ do
+      -- Each prop has a single script, so the script hash in the context can only come from it
+      let testPlutusScript = Plutus.alwaysSucceedsNoDatum SPlutusV4
+          testScriptHash = hashPlutusScript testPlutusScript
+          testScriptCred = ScriptHashObj testScriptHash
+          testScriptTxOut = mkBasicTxOut @era (Addr Testnet testScriptCred StakeRefNull) mempty
+          withTestPlutusScript tx =
+            tx
+              & witsTxL . scriptTxWitsL
+                .~ Map.singleton testScriptHash (fromPlutusScript $ errorFail $ mkPlutusScript testPlutusScript)
+          expectScriptContext lti purpose expectedScriptInfo = do
+            redeemer <- arbitrary
+            pure $ do
+              txInfo <- transTxInfo lti
+              toPlutusArgs SPlutusV4 lti txInfo purpose redeemer
+                `shouldBeRight` PlutusV4Args
+                  PV4.ScriptContext
+                    { PV4.scriptContextTxInfo = txInfo
+                    , PV4.scriptContextRedeemer = expectedRedeemer redeemer
+                    , PV4.scriptContextScriptInfo = expectedScriptInfo
+                    , PV4.scriptContextScriptHash = transScriptHash testScriptHash
+                    }
+          genTxSpending txOut = do
+            txIn <- arbitrary
+            let tx = withTestPlutusScript $ mkBasicTx @era @TopTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
+            pure (txIn, UTxO [(txIn, txOut)], tx)
+      prop "gives SpendingScript with the inline datum of the spent output" $ do
+        datum <- arbitrary
+        (txIn, utxo, tx) <- genTxSpending $ testScriptTxOut & datumTxOutL .~ Datum (dataToBinaryData datum)
+        expectScriptContext
+          (topLti utxo tx)
+          (SpendingPurpose $ AsIxItem 0 txIn)
+          (PV4.SpendingScript (expectedTxOutRef txIn) (Just $ transDatum datum))
+      prop "gives SpendingScript without a datum when the spent output has none" $ do
+        (txIn, utxo, tx) <- genTxSpending testScriptTxOut
+        expectScriptContext
+          (topLti utxo tx)
+          (SpendingPurpose $ AsIxItem 0 txIn)
+          (PV4.SpendingScript (expectedTxOutRef txIn) Nothing)
+      prop "gives MintingScript with the policy's currency symbol" $ do
+        assetName <- arbitrary
+        let
+          policyId = PolicyID testScriptHash
+          tx =
+            withTestPlutusScript $
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody & mintTxBodyL .~ MultiAsset [(policyId, [(assetName, 1)])]
+        expectScriptContext
+          (topLti mempty tx)
+          (MintingPurpose $ AsIxItem 0 policyId)
+          (PV4.MintingScript $ PV4.CurrencySymbol $ PV4.getScriptHash $ transScriptHash testScriptHash)
+      prop "gives WithdrawingScript with the credential wrapped in an AccountId" $ do
+        withdrawal <- arbitrary
+        let
+          accountAddr = AccountAddress Testnet $ AccountId testScriptCred
+          tx =
+            withTestPlutusScript $
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(accountAddr, withdrawal)]
+        expectScriptContext
+          (topLti mempty tx)
+          (WithdrawingPurpose $ AsIxItem 0 accountAddr)
+          (PV4.WithdrawingScript $ PV4.AccountId $ transCred testScriptCred)
+      prop "gives CertifyingScript with the certificate's index" $ do
+        keyHash <- arbitrary
+        deposit@(Coin depositLovelace) <- arbitrary
+        let
+          cert = RegDepositTxCert testScriptCred deposit
+          -- The key-hash cert needs no script, so it pushes the script cert to index 1
+          tx =
+            withTestPlutusScript $
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody & certsTxBodyL .~ [RegDepositTxCert (KeyHashObj keyHash) deposit, cert]
+        expectScriptContext
+          (topLti mempty tx)
+          (CertifyingPurpose $ AsIxItem 1 cert)
+          ( PV4.CertifyingScript 1 $
+              PV4.TxCertRegAccount (PV4.AccountId $ transCred testScriptCred) (PV4.Lovelace depositLovelace)
+          )
+      prop "gives VotingScript with the voter" $ do
+        govActionId <- arbitrary
+        votingProcedure <- arbitrary
+        let
+          voter = DRepVoter testScriptCred
+          tx =
+            withTestPlutusScript $
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody
+                  & votingProceduresTxBodyL .~ VotingProcedures [(voter, [(govActionId, votingProcedure)])]
+        expectScriptContext
+          (topLti mempty tx)
+          (VotingPurpose $ AsIxItem 0 voter)
+          (PV4.VotingScript $ PV4.DRepVoter $ PV4.DRepCredential $ transCred testScriptCred)
+      prop "gives ProposingScript with the proposal's index" $ do
+        deposit@(Coin depositLovelace) <- arbitrary
+        returnAddr <- arbitrary
+        anchor <- arbitrary
+        let
+          proposal =
+            ProposalProcedure deposit returnAddr (TreasuryWithdrawals mempty (SJust testScriptHash)) anchor
+          infoProposal = ProposalProcedure deposit returnAddr InfoAction anchor
+          tx =
+            withTestPlutusScript $
+              mkBasicTx @era @TopTx $
+                mkBasicTxBody & proposalProceduresTxBodyL .~ OSet.fromList [infoProposal, proposal]
+        expectScriptContext
+          (topLti mempty tx)
+          (ProposingPurpose $ AsIxItem 1 proposal)
+          ( PV4.ProposingScript 1 $
+              PV4.ProposalProcedure
+                (PV4.Lovelace depositLovelace)
+                (transCred . unAccountId $ aaId returnAddr)
+                (PV4.TreasuryWithdrawals (PV4.unsafeFromList []) (Just $ transScriptHash testScriptHash))
+          )
+      prop "gives GuardingScript without a TopTxInfo for a sub-transaction" $ \(txIx :: TxIx) -> do
+        keyHash <- arbitrary
+        let
+          -- Guard indices include every guard, so the key-hash guard at 0 puts the plutus script to 1
+          tx =
+            withTestPlutusScript $
+              mkBasicTx @era @SubTx $
+                mkBasicTxBody & guardsTxBodyL .~ OSet.fromList [KeyHashObj keyHash, testScriptCred]
+        expectScriptContext
+          (mkLocalLedgerTxInfo mempty tx $ LedgerSubTxInfo txIx)
+          (GuardingPurpose $ AsIxItem 1 testScriptHash)
+          (PV4.GuardingScript 1 Nothing)
   describe "PlutusV1-V3" $ do
     let plutusV1toV3 :: [SupportedLanguage era]
         plutusV1toV3 =
@@ -366,7 +963,7 @@ spec = describe "TxInfo" $ do
           tx =
             mkBasicTx @era @TopTx $
               mkBasicTxBody & directDepositsTxBodyL .~ dd
-          ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
+          ledgerTxInfo = topLti mempty tx
           txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
         pure $
           txInfoResult `shouldBeLeft` inject (DirectDepositsNotSupported @era dd)
@@ -376,18 +973,18 @@ spec = describe "TxInfo" $ do
           tx =
             mkBasicTx @era @TopTx $
               mkBasicTxBody & accountBalanceIntervalsTxBodyL .~ abi
-          ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
+          ledgerTxInfo = topLti mempty tx
           txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
-      prop "GuardScriptHashesNotSupported" $ \(scriptHash :: ScriptHash) ->
+      prop "GuardScriptHashesNotSupported" $ \scriptHash ->
         let
           neScriptHashes = scriptHash :| []
           guards = OSet.fromList [ScriptHashObj scriptHash]
           tx =
             mkBasicTx @era @TopTx $
               mkBasicTxBody & guardsTxBodyL .~ guards
-          ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
+          ledgerTxInfo = topLti mempty tx
           txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (GuardScriptHashesNotSupported @era neScriptHashes)
@@ -396,7 +993,7 @@ spec = describe "TxInfo" $ do
           tx =
             mkBasicTx @era @TopTx $
               mkBasicTxBody & requiredTopLevelGuardsTxBodyL .~ NEM.toMap neRequiredTopLevelGuards
-          ledgerTxInfo = mkLocalLedgerTxInfo mempty tx $ LedgerTopTxInfo mempty
+          ledgerTxInfo = topLti mempty tx
           txInfoResult = unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
          in
           txInfoResult

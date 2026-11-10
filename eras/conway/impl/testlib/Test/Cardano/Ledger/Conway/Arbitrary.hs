@@ -171,13 +171,7 @@ instance Era era => Arbitrary (ConwayTxCert era) where
       ]
 
 instance Arbitrary ConwayGovCert where
-  arbitrary =
-    oneof
-      [ ConwayRegDRep <$> arbitrary <*> arbitrary <*> arbitrary
-      , ConwayUnRegDRep <$> arbitrary <*> arbitrary
-      , ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
-      , ConwayResignCommitteeColdKey <$> arbitrary <*> arbitrary
-      ]
+  arbitrary = genericArbitraryU
 
 deriving instance Arbitrary (ConwayInstantStake era)
 
