@@ -87,7 +87,7 @@ import Cardano.Ledger.Dijkstra.Rules.LeiosCert (
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.API (incrBlocks)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsLastEbAnnouncementL)
+import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..), lsLastEbAnnouncementL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (slotToEpochBoundary)
@@ -344,7 +344,7 @@ instance InjectRuleFailure "BBODY" DijkstraGovPredFailure DijkstraEra where
 instance
   ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , EraBlockBody era
@@ -384,7 +384,7 @@ dijkstraBbodyTransition ::
   forall era.
   ( Signal (EraRule "BBODY" era) ~ LeiosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
@@ -432,11 +432,11 @@ dijkstraBbodyTransition = do
 
   let txs = blockBody ^. txSeqBlockBodyL
 
-  ls' <-
+  LedgerStateWithLimits ls' _ <-
     trans @(EraRule "LEDGERS" era) $
       TRC
         ( Shelley.LedgersEnv bhSlot curEpoch pp account
-        , ls
+        , LedgerStateWithLimits ls mempty
         , fromStrict txs
         )
 

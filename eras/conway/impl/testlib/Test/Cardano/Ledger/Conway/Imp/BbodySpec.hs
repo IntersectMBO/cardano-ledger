@@ -6,7 +6,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec, conwayOnlySpec) where
 
@@ -26,7 +25,6 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State (chainAccountStateL)
-import Control.State.Transition
 import Data.Foldable (for_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Sequence as Seq
@@ -46,9 +44,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 
 conwayOnlySpec ::
   forall era.
-  ( ConwayEraImp era
-  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayOnlySpec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
@@ -259,9 +255,7 @@ spec = describe "BBODY" $ do
 -- return the block body limits that it accumulates for them.
 accumulateBlockBodyLimits ::
   forall era.
-  ( ShelleyEraImp era
-  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
-  ) =>
+  ShelleyEraImp era =>
   [Tx TopTx era] ->
   ImpTestM era (BlockBodyLimits era)
 accumulateBlockBodyLimits txs = do

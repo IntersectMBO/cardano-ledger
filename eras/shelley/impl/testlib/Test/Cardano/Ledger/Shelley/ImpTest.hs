@@ -533,6 +533,7 @@ class
   , STS (EraRule "LEDGERS" era)
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , ToExpr (PredicateFailure (EraRule "LEDGERS" era))
   , -- For the LEDGER rule
