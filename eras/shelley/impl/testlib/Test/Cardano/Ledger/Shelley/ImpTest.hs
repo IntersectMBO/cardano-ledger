@@ -287,6 +287,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure,
   ShelleyBbodyState (..),
   ShelleyDelegPredFailure,
+  ShelleyLedgersEnv (..),
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -529,6 +530,11 @@ class
     Eq (Event (EraRule "LEDGERS" era))
   , ToExpr (Event (EraRule "LEDGERS" era))
   , Typeable (Event (EraRule "LEDGERS" era))
+  , STS (EraRule "LEDGERS" era)
+  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
+  , ToExpr (PredicateFailure (EraRule "LEDGERS" era))
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
