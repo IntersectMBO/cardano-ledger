@@ -198,10 +198,7 @@ spec = describe "BBODY" $ do
           expectedSize = if isPostV10 protVer then sum sizes else 0
       totalRefScriptSizeInBlock protVer (SSeq.fromList txs) <$> getUTxO `shouldReturn` expectedSize
 
-  -- disabled in conformance because submiting phase2-invalid transactions are not supported atm
-  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/910
-  -- TODO: Re-enable after issue is resolved, by removing this override
-  disableInConformanceIt "Use a reference script in a collateral output" $ do
+  it "Use a reference script in a collateral output" $ do
     protVer <- getsPParams ppProtocolVersionL
 
     -- produce an utxo with a failing script
@@ -228,12 +225,15 @@ spec = describe "BBODY" $ do
       -- submit an invalid transaction which attempts to consume the failing script
       -- and specifies as collateral return the txout with reference script
       createCollateralTx <-
-        submitPhase2Invalid $
-          mkBasicTx
-            ( mkBasicTxBody
-                & inputsTxBodyL .~ [failingPlutusTxIn]
-                & collateralReturnTxBodyL .~ pure collRefScriptTxOut
-            )
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        withDisabledPostSubmitTxHook $
+          submitPhase2Invalid $
+            mkBasicTx
+              ( mkBasicTxBody
+                  & inputsTxBodyL .~ [failingPlutusTxIn]
+                  & collateralReturnTxBodyL .~ pure collRefScriptTxOut
+              )
       totalRefScriptSizeInBlock protVer [createCollateralTx] <$> getUTxO `shouldReturn` 0
 
       -- consume the script, passing the output from the previous collateral as reference input
