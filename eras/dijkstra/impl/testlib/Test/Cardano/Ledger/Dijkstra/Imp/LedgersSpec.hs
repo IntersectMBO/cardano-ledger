@@ -106,6 +106,26 @@ spec = describe "LEDGERS" $ do
     -- this time we are providing exactly the limit
     modifyPParams $ ppMaxBlockExUnitsL .~ maxTxUnits
     withTxsInBlock_ $ submitTx_ tx
+
+  it "Transactions after the first failure are not applied" $ do
+    script <- RequireSignature @era <$> freshKeyHash
+    let refScriptCount = 3
+    -- Three transactions, each referencing the script `refScriptCount` times between itself and its sub-transaction
+    txs <- mkRefScriptBatchTxs 3 refScriptCount (fromNativeScript script)
+    -- the limit allows one transaction, so the second one already exceeds it
+    let blockLimit = refScriptCount * originalBytesSize script
+    modifyPParams $ ppMaxRefScriptSizePerBlockL .~ fromIntegral blockLimit
+    submitFailingBlock
+      txs
+      [ injectFailure $
+          BodyRefScriptsSizeTooBig
+            Mismatch
+              { -- Only the first two were applied, the second one exceeding the limit.
+                -- The third one never contributes, since LEDGERS stops at the first failure.
+                mismatchSupplied = 2 * blockLimit
+              , mismatchExpected = blockLimit
+              }
+      ]
   where
     -- Create the given number of transactions, each referencing the same script the given number of times
     -- across the top-level transaction and its sub-transaction
