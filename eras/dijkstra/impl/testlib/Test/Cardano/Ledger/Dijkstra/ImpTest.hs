@@ -57,6 +57,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (EbReferencesAnnouncement (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -686,7 +687,7 @@ mkLeiosCert signKeys headerHash = do
     pure (seatId, signDSIGN () msg signKey)
   expectRightDeep . aggregateLeiosCert committee $ Map.fromList votes
   where
-    msg = hashToBytes $ extractHash headerHash
+    msg = Plain.serialize' $ hashToBytes $ extractHash headerHash
 
 -- | Submit an endorser block through `applyEndorserBlockEither`, the consensus endpoint, instead
 -- of running the EB rule directly.

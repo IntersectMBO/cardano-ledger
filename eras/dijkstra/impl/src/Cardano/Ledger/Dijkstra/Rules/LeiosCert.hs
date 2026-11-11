@@ -26,6 +26,7 @@ import Cardano.Crypto.Leios (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, LEIOSCERT)
 import Cardano.Ledger.Slot (epochFromSlot)
@@ -134,7 +135,8 @@ leiosCertTransition = do
       ( verifyLeiosCert
           lseLeiosCommittee
           threshold
-          (hashToBytes (extractHash lseAnnouncedInBlockHeader))
+          -- The CBOR of the hash, as the Leios prototype signs it.
+          (Plain.serialize' (hashToBytes (extractHash lseAnnouncedInBlockHeader)))
           cert
       )
       ?!: fromVerificationError
