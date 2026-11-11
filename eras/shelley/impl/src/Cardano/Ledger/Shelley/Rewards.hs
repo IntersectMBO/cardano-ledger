@@ -31,9 +31,8 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
   NonZero,
-  ProtVer (..),
+  ProtVer,
   UnitInterval,
-  natVersion,
   nonZeroOr,
   (%.),
   (%?),
@@ -303,7 +302,7 @@ rewardOnePoolMember pv minCost minMargin totalStake addrsRew rewardInfo hk (Coin
     -- warning: totalStake could be zero!
     stakeShare = StakeShare $ c % unCoin totalStake
     clamp :: forall x. Ord x => x -> x -> x
-    clamp = if pvMajor pv >= natVersion @12 then max else const
+    clamp = const
     effectiveCost = clamp spssCost minCost
     effectiveMargin = clamp spssMargin minMargin
     r = calcStakePoolMemberReward poolR effectiveCost effectiveMargin stakeShare sigma
@@ -351,7 +350,7 @@ mkPoolRewardInfo
             appPerf = mkApparentPerformance pp_d sigmaA numBlocksMade blocksTotal
             poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
             clamp :: forall x. Ord x => x -> x -> x
-            clamp = if pvMajor (pp ^. ppProtocolVersionL) >= natVersion @12 then max else const
+            clamp = const
             effectiveCost = clamp (spssCost stakePoolSnapShot) (pp ^. ppMinPoolCostL)
             effectiveMargin = clamp (spssMargin stakePoolSnapShot) (pp ^. ppMinPoolMarginG)
             stakePoolOperatorReward =
