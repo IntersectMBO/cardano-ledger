@@ -267,7 +267,6 @@ instance
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
   , AtMostEra "Alonzo" era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era
   , EraBlockHeader (BHeader MockCrypto) era
   ) =>
@@ -302,7 +301,6 @@ chainTransition ::
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
   , AtMostEra "Alonzo" era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
   , EraCertState era
   , EraBlockHeader (BHeader MockCrypto) era

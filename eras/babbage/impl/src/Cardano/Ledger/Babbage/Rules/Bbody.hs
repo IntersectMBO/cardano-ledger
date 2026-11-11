@@ -12,6 +12,7 @@
 module Cardano.Ledger.Babbage.Rules.Bbody () where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits)
 import Cardano.Ledger.Alonzo.Core
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Babbage.Era (BBODY, BabbageEra)
@@ -20,7 +21,7 @@ import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Block (PraosBbodySignal (..))
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Embed (..), STS (..), withJudgmentContext)
 import Data.Sequence (Seq)
@@ -83,12 +84,12 @@ instance
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , AlonzoEraTx era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   STS (BBODY era)
   where

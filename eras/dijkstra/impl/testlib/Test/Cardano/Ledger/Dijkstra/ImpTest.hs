@@ -195,6 +195,7 @@ class
   , DijkstraEraBlockBody era
   , EraEndorserBlock era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
+  , InjectRuleFailure "BBODY" DijkstraLedgersPredFailure era
   , InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraPoolPredFailure era

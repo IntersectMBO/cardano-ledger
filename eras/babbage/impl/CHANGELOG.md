@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Change the `STS` state of `LEDGERS` rule to `LedgerStateWithLimits`
 * Remove `feesOK`
 * Replace `TranslateEra BabbageEra (Tx TopTx)` with `TranslateEra BabbageEra MempoolTx`
 * Move `EncCBOR`, `ToCBOR` and annotator `DecCBOR` instances from `Tx l BabbageEra` to `MempoolTx BabbageEra`
