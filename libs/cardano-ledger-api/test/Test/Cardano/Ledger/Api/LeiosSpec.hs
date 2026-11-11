@@ -9,6 +9,7 @@ import Cardano.Crypto.Leios (LeiosSeatId (..), aggregateLeiosCert)
 import Cardano.Ledger.Api.Era (DijkstraEra)
 import Cardano.Ledger.Api.Leios
 import Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (extractHash)
 import Cardano.Ledger.Shelley.LedgerState (nesELL)
 import Cardano.Ledger.Slot (epochInfoFirst)
@@ -40,7 +41,7 @@ mkValidLeiosCertWithEnv = do
           , lseVotePeriodLength = Milliseconds32 4_000
           , lseDiffusionPeriodLength = Milliseconds32 7_000
           }
-      msg = hashToBytes $ extractHash headerHash
+      msg = Plain.serialize' $ hashToBytes $ extractHash headerHash
   cert <-
     expectRightDeep $
       aggregateLeiosCert committee $
