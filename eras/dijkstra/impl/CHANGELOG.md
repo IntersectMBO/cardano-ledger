@@ -2,6 +2,8 @@
 
 ## 0.6.0.0
 
+* Add `getRefScriptsFromCreatedTxOuts`
+* Change the `Tx l era` argument of `getDijkstraScriptsProvided` to `Tx TopTx era`
 * Add `dsattUTxO` to `DijkstraStAnnTopTx`
 * Add `exUnitsDijkstraStAnnTx`
 * Add `dsattExUnits` to `DijkstraStAnnTopTx`

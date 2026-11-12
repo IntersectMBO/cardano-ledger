@@ -672,6 +672,13 @@ class
   impWitsPState :: Tx l era -> ImpTestM era (PState era)
   impWitsPState _ = getPState
 
+  -- | Like `getScriptsProvided`, but for a transaction of either level, so that the fixups can
+  -- also be applied to sub-transactions.
+  impScriptsProvided :: UTxO era -> Tx l era -> ScriptsProvided era
+  default impScriptsProvided ::
+    STxLevel l era ~ STxTopLevel l era => UTxO era -> Tx l era -> ScriptsProvided era
+  impScriptsProvided utxo tx = withTopTxLevelOnly tx (getScriptsProvided utxo)
+
 data AnyLevelTx era = AnyLevelTx (forall l. Typeable l => Tx l era)
 
 impSatisfySignature ::
@@ -1194,7 +1201,7 @@ addNativeScriptTxWits ::
 addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
   scriptsRequired <- impNativeScriptsRequired tx
   utxo <- getUTxO
-  let ScriptsProvided provided = getScriptsProvided utxo tx
+  let ScriptsProvided provided = impScriptsProvided utxo tx
       scriptsToAdd = scriptsRequired Map.\\ provided
   pure $
     tx

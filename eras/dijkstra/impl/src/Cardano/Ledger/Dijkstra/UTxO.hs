@@ -14,6 +14,7 @@ module Cardano.Ledger.Dijkstra.UTxO (
   dijkstraConsumed,
   getDijkstraScriptsNeeded,
   getDijkstraScriptsProvided,
+  getRefScriptsFromCreatedTxOuts,
   getDijkstraSupplementalDataHashes,
   getDijkstraMinFeeTxUtxo,
   scriptsProvidedDijkstraStAnnTx,
@@ -29,6 +30,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   zipAsIxItem,
  )
+import Cardano.Ledger.Babbage.TxOut (getTxOutsReferenceScripts)
 import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
@@ -200,28 +202,35 @@ poolOwnersWitnessRequired PState {psStakePools, psFutureStakePoolParams} stakePo
     poolId = sppId stakePoolParams
     withoutBlsKey params = params {sppBlsKey = SNothing}
 
--- | Like 'getBabbageScriptsProvided', but for 'TopTx' also aggregates
--- scripts from all subtransactions.
+-- | Like 'getBabbageScriptsProvided', but also aggregates scripts from all subtransactions, and
+-- includes the reference scripts of all the outputs created by the batch (CIP-0172).
 getDijkstraScriptsProvided ::
-  ( EraTx era
-  , DijkstraEraTxBody era
-  , STxLevel l era ~ STxBothLevels l era
-  ) =>
+  (EraTx era, DijkstraEraTxBody era) =>
   UTxO era ->
-  Tx l era ->
+  Tx TopTx era ->
   ScriptsProvided era
 getDijkstraScriptsProvided utxo tx =
-  withBothTxLevels
-    tx
-    ( \topTx ->
-        ScriptsProvided $
-          Map.unions $
-            unScriptsProvided (getBabbageScriptsProvided utxo topTx)
-              : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
-                | subTx <- OMap.elems (topTx ^. bodyTxL . subTransactionsTxBodyL)
-                ]
-    )
-    (getBabbageScriptsProvided utxo)
+  ScriptsProvided $
+    Map.unions $
+      getRefScriptsFromCreatedTxOuts (tx ^. bodyTxL)
+        : unScriptsProvided (getBabbageScriptsProvided utxo tx)
+        : [ unScriptsProvided (getBabbageScriptsProvided utxo subTx)
+          | subTx <- OMap.elems (tx ^. bodyTxL . subTransactionsTxBodyL)
+          ]
+
+-- | Collect the reference scripts of all the outputs created by the batch, which can be used by
+-- any transaction of the batch (CIP-0172). This includes the collateral return output, since its
+-- script is part of the transaction, whether the output is created or not.
+getRefScriptsFromCreatedTxOuts ::
+  (EraTx era, DijkstraEraTxBody era) =>
+  TxBody TopTx era ->
+  Map.Map ScriptHash (Script era)
+getRefScriptsFromCreatedTxOuts txBody =
+  getTxOutsReferenceScripts (txBody ^. outputsTxBodyL)
+    <> getTxOutsReferenceScripts (txBody ^. collateralReturnTxBodyL)
+    <> foldMap
+      (getTxOutsReferenceScripts . (^. bodyTxL . outputsTxBodyL))
+      (txBody ^. subTransactionsTxBodyL)
 
 getDijkstraScriptsNeeded ::
   (DijkstraEraTxBody era, DijkstraEraScript era) =>

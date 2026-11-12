@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.State ()
+import Cardano.Ledger.Babbage.TxOut (getTxOutsReferenceScripts)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
@@ -169,7 +170,7 @@ getReferenceScripts ::
   UTxO era ->
   Set TxIn ->
   Map.Map ScriptHash (Script era)
-getReferenceScripts utxo ins = Map.fromList (getReferenceScriptsNonDistinct utxo ins)
+getReferenceScripts (UTxO mp) ins = getTxOutsReferenceScripts (Map.restrictKeys mp ins)
 
 getReferenceScriptsNonDistinct ::
   BabbageEraTxOut era =>

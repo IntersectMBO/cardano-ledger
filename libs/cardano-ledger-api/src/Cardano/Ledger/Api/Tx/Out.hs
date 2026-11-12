@@ -73,6 +73,7 @@ module Cardano.Ledger.Api.Tx.Out (
   datumTxOutL,
   Datum (..),
   referenceScriptTxOutL,
+  getTxOutsReferenceScripts,
 ) where
 
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
@@ -81,6 +82,7 @@ import Cardano.Ledger.Api.Scripts (AnyEraScript, Script)
 import Cardano.Ledger.Api.Scripts.Data (Data (..), DataHash, Datum (..))
 import Cardano.Ledger.Api.Tx.Address
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
+import Cardano.Ledger.Babbage.TxOut (getTxOutsReferenceScripts)
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin

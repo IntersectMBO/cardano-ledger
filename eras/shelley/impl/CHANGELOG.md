@@ -36,6 +36,7 @@
 
 ### `testlib`
 
+* Add `impScriptsProvided` method to `ShelleyEraImp`
 * Add `impWitsPState` method to `ShelleyEraImp`
 * Add `updateAddrTxWitsWith`
 * Add a `PState` argument and the `EraCertState` constraint to `impWitsVKeyNeeded`

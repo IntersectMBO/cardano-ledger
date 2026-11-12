@@ -279,7 +279,7 @@ fixupScriptWits ::
 fixupScriptWits tx = impAnn "fixupScriptWits" $ do
   contexts <- impGetPlutusContexts tx
   utxo <- getUTxO
-  let ScriptsProvided provided = getScriptsProvided utxo tx
+  let ScriptsProvided provided = impScriptsProvided utxo tx
   let contextsToAdd = filter (\(_, sh, _) -> not (Map.member sh provided)) contexts
   scriptWits <- forM contextsToAdd $ \(_, sh, ScriptTestContext plutus _) ->
     (sh,) . fromPlutusScript <$> mkPlutusScript plutus
@@ -587,7 +587,7 @@ computeScriptIntegrity ::
   StrictMaybe (ScriptIntegrity era)
 computeScriptIntegrity pp utxo tx = mkScriptIntegrity pp tx langs
   where
-    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
+    ScriptsProvided scriptsProvided = impScriptsProvided utxo tx
     scriptsNeeded = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
     scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
     langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
