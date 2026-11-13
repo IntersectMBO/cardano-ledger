@@ -55,6 +55,7 @@
 * Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
 * Add `ToExpr` instance for `EbAnnouncement`
 * Add `Arbitrary` and `ToExpr` instances for `BlsVerKeyHash`
+* Add `plutusLanguageOf` and `showPlcVersion` to `Test.Cardano.Ledger.Plutus`
 
 ## 1.23.0.0
 
