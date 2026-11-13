@@ -39,7 +39,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, EB, EBLEDGERS)
 import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams, ppMaxEndorserBlockReferencesSizeL)
-import Cardano.Ledger.Dijkstra.Rules.EbLedgers (EbLedgersPredFailure)
+import Cardano.Ledger.Dijkstra.Rules.EbLedgers (
+  EbExUnitsTooBig,
+  EbLedgersPredFailure,
+  EbRefScriptsSizeTooBig,
+  EbTxsSizeTooBig,
+ )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerEvent)
 import Cardano.Ledger.Dijkstra.State (ebAnnouncementL, ebIsAppliedL)
 import Cardano.Ledger.Rules.ValidationMode (Test)
@@ -313,6 +318,15 @@ instance InjectRuleFailure "EB" EbAnnouncementSizeMismatch DijkstraEra where
 
 instance InjectRuleFailure "EB" EbAlreadyApplied DijkstraEra where
   injectFailure = EbAlreadyAppliedInEB
+
+instance InjectRuleFailure "EB" EbTxsSizeTooBig DijkstraEra where
+  injectFailure = EbLedgersFailure . injectFailure
+
+instance InjectRuleFailure "EB" EbExUnitsTooBig DijkstraEra where
+  injectFailure = EbLedgersFailure . injectFailure
+
+instance InjectRuleFailure "EB" EbRefScriptsSizeTooBig DijkstraEra where
+  injectFailure = EbLedgersFailure . injectFailure
 
 instance
   ( Era era

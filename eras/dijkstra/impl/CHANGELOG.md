@@ -2,6 +2,11 @@
 
 ## 0.6.0.0
 
+* Enforce the `maxEndorserBlockTxsSize`, `maxEndorserBlockExecutionUnits` and `maxRefScriptSizePerEndorserBlock` limits in the `EBLEDGERS` rule, stopping at the first failing transaction:
+  - Add `EbTxsSizeTooBig`, `EbExUnitsTooBig` and `EbRefScriptsSizeTooBig` to `Cardano.Ledger.Dijkstra.Rules.EbLedgers`, and `InjectRuleFailure "EBLEDGERS"` and `InjectRuleFailure "EB"` instances for them
+  - Add `validateEbLimits`, `validateEbTxsSize`, `validateEbExUnits` and `validateEbRefScriptsSize` to `Cardano.Ledger.Dijkstra.Rules.EbLedgers`
+  - Add `EbTxsSizeTooBigInEBLEDGERS`, `EbExUnitsTooBigInEBLEDGERS` and `EbRefScriptsSizeTooBigInEBLEDGERS` constructors to `EbLedgersPredFailure`
+  - Add `EraRuleFailure "EBLEDGERS" DijkstraEra` type instance and `InjectRuleFailure "EBLEDGERS" EbLedgersPredFailure DijkstraEra` instance
 * Validate the references of an `EndorserBlock` in the `EB` rule and in `applyEndorserBlockNoValidation`:
   - Add `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied` to `Cardano.Ledger.Dijkstra.Rules.Eb`, and `InjectRuleFailure "EB"` instances for them
   - Add `validateEbReferences` and `validateEbAnnouncementSlot` to `Cardano.Ledger.Dijkstra.Rules.Eb`
@@ -79,6 +84,7 @@
 
 ### `testlib`
 
+* Add `InjectRuleFailure "EB"` superclasses for `EbTxsSizeTooBig`, `EbExUnitsTooBig` and `EbRefScriptsSizeTooBig` to `DijkstraEraImp`, and `Arbitrary` and `ToExpr` instances for them
 * Add `announceEndorserBlock`
 * Add `InjectRuleFailure "EB"` superclasses for `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied`, and the `Show (PredicateFailure (EraRule "EBLEDGERS" era))` superclass, to `DijkstraEraImp`
 * Add `Arbitrary` and `ToExpr` instances for `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied`
