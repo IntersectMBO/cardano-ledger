@@ -84,6 +84,7 @@
 
 ### `testlib`
 
+* Add `InjectRuleFailure "EB"` superclasses for `EbTxsSizeTooBig`, `EbExUnitsTooBig` and `EbRefScriptsSizeTooBig` to `DijkstraEraImp`, and `Arbitrary` and `ToExpr` instances for them
 * Add `announceEndorserBlock`
 * Add `InjectRuleFailure "EB"` superclasses for `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied`, and the `Show (PredicateFailure (EraRule "EBLEDGERS" era))` superclass, to `DijkstraEraImp`
 * Add `Arbitrary` and `ToExpr` instances for `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied`
