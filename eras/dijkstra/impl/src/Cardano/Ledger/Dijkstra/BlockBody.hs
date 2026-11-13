@@ -1,5 +1,6 @@
 module Cardano.Ledger.Dijkstra.BlockBody (
   DijkstraBlockBody (DijkstraBlockBody),
+  DijkstraBlockBodyLimits (..),
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
   PerasCert (..),

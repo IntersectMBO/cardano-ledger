@@ -37,7 +37,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
@@ -50,6 +49,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (ppMaxRefScriptSizePerTxG)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Dijkstra.BlockBody (DijkstraBlockBodyLimits (..))
 import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   ENTITIES,
@@ -88,7 +88,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended
 import Data.Word (Word32)
 import GHC.Generics (Generic (..))
@@ -329,7 +328,7 @@ instance
   , InjectRuleFailure "LEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
   , EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
-  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , BlockBodyLimits era ~ DijkstraBlockBodyLimits era
   , SafeToHash (Tx TopTx era)
   ) =>
   STS (LEDGER era)
@@ -386,7 +385,7 @@ dijkstraLedgerTransition ::
   , EraRule "SUBLEDGERS" era ~ SUBLEDGERS era
   , InjectRuleFailure "LEDGER" Conway.ConwayLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era
-  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , BlockBodyLimits era ~ DijkstraBlockBodyLimits era
   , SafeToHash (Tx TopTx era)
   ) =>
   TransitionRule (LEDGER era)
@@ -495,10 +494,10 @@ dijkstraLedgerTransition = do
     LedgerStateWithLimits
       (LedgerState utxoStateFinal certStateFinal lastEbAnnouncement)
       ( blockBodyLimits
-          <> ConwayBlockBodyLimits
-            { cbblTxsSize = errorFail . integralToBounded @Int @Word32 $ originalBytesSize tx
-            , cbblExUnits = exUnitsStAnnTx stAnnTx
-            , cbblRefScriptsSize = totalRefScriptsSize
+          <> DijkstraBlockBodyLimits
+            { dbblTxsSize = originalBytesSize tx
+            , dbblExUnits = exUnitsStAnnTx stAnnTx
+            , dbblRefScriptsSize = totalRefScriptsSize
             }
       )
 

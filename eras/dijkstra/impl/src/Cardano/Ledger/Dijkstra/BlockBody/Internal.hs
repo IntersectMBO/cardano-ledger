@@ -29,6 +29,7 @@
 module Cardano.Ledger.Dijkstra.BlockBody.Internal (
   DijkstraBlockBody (DijkstraBlockBody, MkDijkstraBlockBody),
   DijkstraBlockBodyRaw (..),
+  DijkstraBlockBodyLimits (..),
   mkBasicBlockBodyDijkstra,
   DijkstraEraBlockBody (..),
   PerasCert (..),
@@ -52,7 +53,6 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Block (LeiosEraBlockHeader)
-import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era
 import Cardano.Ledger.Dijkstra.Tx (
@@ -73,6 +73,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoizedEra,
  )
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Control.DeepSeq (NFData)
 import Data.Array.Byte (ByteArray)
 import Data.Coerce (Coercible, coerce)
@@ -111,9 +112,28 @@ instance
 
 type instance MemoHashIndex (DijkstraBlockBodyRaw era) = EraIndependentBlockBody
 
+-- | Totals over the transactions applied by @LEDGER@. The sizes are `Int`, because the total
+-- size of the transactions in an `EndorserBlock` that exceeds its limit can be larger than
+-- @maxBound :: Word32@.
+data DijkstraBlockBodyLimits era = DijkstraBlockBodyLimits
+  { dbblTxsSize :: !Int
+  , dbblExUnits :: !ExUnits
+  , dbblRefScriptsSize :: !Int
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance NFData (DijkstraBlockBodyLimits era)
+
+instance Semigroup (DijkstraBlockBodyLimits era) where
+  DijkstraBlockBodyLimits s1 ex1 rss1 <> DijkstraBlockBodyLimits s2 ex2 rss2 =
+    DijkstraBlockBodyLimits (s1 + s2) (ex1 <> ex2) (rss1 + rss2)
+
+instance Monoid (DijkstraBlockBodyLimits era) where
+  mempty = DijkstraBlockBodyLimits 0 mempty 0
+
 instance EraBlockBody DijkstraEra where
   type BlockBody DijkstraEra = DijkstraBlockBody DijkstraEra
-  type BlockBodyLimits DijkstraEra = ConwayBlockBodyLimits DijkstraEra
+  type BlockBodyLimits DijkstraEra = DijkstraBlockBodyLimits DijkstraEra
   type ProtocolEraBlockHeader h DijkstraEra = LeiosEraBlockHeader h DijkstraEra
   mkBasicBlockBody = mkBasicBlockBodyDijkstra
   txSeqBlockBodyL = lensMemoRawType @DijkstraEra dbbrTxs (\bb p -> bb {dbbrTxs = p})
