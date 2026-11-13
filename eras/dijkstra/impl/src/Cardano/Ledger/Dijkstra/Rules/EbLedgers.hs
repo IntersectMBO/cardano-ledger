@@ -65,7 +65,7 @@ import Data.Foldable (Foldable (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
-newtype EbLedgersPredFailure era = LedgerFailureInEbLedgers (PredicateFailure (EraRule "LEDGER" era))
+newtype EbLedgersPredFailure era = LedgerFailureInEBLEDGERS (PredicateFailure (EraRule "LEDGER" era))
   deriving (Generic)
 
 deriving instance Eq (PredicateFailure (EraRule "LEDGER" era)) => Eq (EbLedgersPredFailure era)
@@ -81,7 +81,7 @@ instance
   EncCBOR (PredicateFailure (EraRule "LEDGER" era)) =>
   EncCBOR (EbLedgersPredFailure era)
   where
-  encCBOR (LedgerFailureInEbLedgers x) = encode $ Sum (LedgerFailureInEbLedgers @era) 0 !> To x
+  encCBOR (LedgerFailureInEBLEDGERS x) = encode $ Sum (LedgerFailureInEBLEDGERS @era) 0 !> To x
 
 instance
   ( Era era
@@ -90,7 +90,7 @@ instance
   DecCBOR (EbLedgersPredFailure era)
   where
   decCBOR = decode $ Summands "EbLedgersPredFailure" $ \case
-    0 -> SumD LedgerFailureInEbLedgers <! From
+    0 -> SumD LedgerFailureInEBLEDGERS <! From
     k -> Invalid k
 
 instance
@@ -156,4 +156,4 @@ instance
   ) =>
   Embed (LEDGER era) (EBLEDGERS era)
   where
-  wrapFailed = LedgerFailureInEbLedgers
+  wrapFailed = LedgerFailureInEBLEDGERS

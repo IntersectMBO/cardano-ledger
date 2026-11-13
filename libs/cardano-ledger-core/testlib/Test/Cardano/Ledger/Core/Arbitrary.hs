@@ -296,7 +296,7 @@ instance Arbitrary EbReferencesAnnouncement where
   arbitrary = EbReferencesAnnouncement <$> arbitrary <*> arbitrary
 
 instance Arbitrary EbAnnouncement where
-  arbitrary = EbAnnouncement <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = EbAnnouncement <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 -- | Generate a 'ProtVer' whose major version falls within the era's accepted range.
 genEraProtVer :: forall era. Era era => Gen ProtVer

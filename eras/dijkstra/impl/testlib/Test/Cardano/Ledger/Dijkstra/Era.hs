@@ -44,6 +44,7 @@ instance EraTest DijkstraEra where
        , "CERT"
        , "CERTS"
        , "DELEG"
+       , "EB"
        , "GOVCERT"
        , "GOV"
        , "LEDGER"

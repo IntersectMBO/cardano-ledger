@@ -226,6 +226,30 @@ instance Arbitrary (DijkstraLeiosCertPredFailure era) where
   arbitrary = genericArbitraryU
 
 instance
+  Arbitrary (PredicateFailure (EraRule "EBLEDGERS" era)) =>
+  Arbitrary (EbPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  Arbitrary (PredicateFailure (EraRule "LEDGER" era)) =>
+  Arbitrary (EbLedgersPredFailure era)
+  where
+  arbitrary = LedgerFailureInEBLEDGERS <$> arbitrary
+
+deriving newtype instance Arbitrary (EbWasNotAnnounced era)
+
+deriving newtype instance Arbitrary (EbReferencesSizeTooBig era)
+
+deriving newtype instance Arbitrary (EbAnnouncementSlotMismatch era)
+
+deriving newtype instance Arbitrary (EbAnnouncementHashMismatch era)
+
+deriving newtype instance Arbitrary (EbAnnouncementSizeMismatch era)
+
+deriving newtype instance Arbitrary (EbAlreadyApplied era)
+
+instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXOW" era))
   , Arbitrary (PredicateFailure (EraRule "ENTITIES" era))
