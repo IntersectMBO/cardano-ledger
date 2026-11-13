@@ -113,6 +113,7 @@ library cddl
   build-depends:
     base,
     cardano-ledger-allegra,
+    cardano-ledger-core:cddl,
     cardano-ledger-shelley:cddl,
     heredoc,
 

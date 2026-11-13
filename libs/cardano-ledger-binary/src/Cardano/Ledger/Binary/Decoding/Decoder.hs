@@ -354,14 +354,9 @@ enforceDecoderVersion version d = Decoder $ \bsl _ -> runDecoder d bsl version
 decodeBytesDefinite :: Decoder s ByteString
 decodeBytesDefinite = fromPlainDecoder Plain.decodeBytes
 
--- | Decode a bytestring, accepting both definite and indefinite length encodings. Chunks
--- of an indefinite length bytestring are concatenated together.
+-- | Decode a bytestring, accepting definite length encodings only.
 decodeBytes :: Decoder s ByteString
-decodeBytes =
-  ifDecoderVersionAtLeast
-    (natVersion @12)
-    decodeBytesDefOrIndef
-    decodeBytesDefinite
+decodeBytes = decodeBytesDefinite
 
 decodeFixedSized :: FSC.FixedSizeCodec a => Decoder s a
 decodeFixedSized = FSC.rawDecodeFixedSized =<< decodeBytes
@@ -1386,11 +1381,7 @@ decodeByteArrayDefinite :: Decoder s ByteArray
 decodeByteArrayDefinite = fromPlainDecoder C.decodeByteArray
 
 decodeByteArray :: Decoder s ByteArray
-decodeByteArray =
-  ifDecoderVersionAtLeast
-    (natVersion @12)
-    decodeByteArrayDefOrIndef
-    decodeByteArrayDefinite
+decodeByteArray = decodeByteArrayDefinite
 {-# INLINE decodeByteArray #-}
 
 decodeByteArrayCanonical :: Decoder s ByteArray

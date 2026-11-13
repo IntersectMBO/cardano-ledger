@@ -68,6 +68,7 @@ module Cardano.Ledger.Conway.HuddleSpec (
   maybeTaggedNonemptyOset,
   conwayCostModelsGenerator,
   generateMaybeTaggedSet,
+  redeemerMapRule,
 ) where
 
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
@@ -90,23 +91,29 @@ import Cardano.Ledger.Huddle.Gen (
   antiVectorOfUnique,
   arbitrary,
   faultyNum,
-  genArrayTerm,
-  genMapTerm,
+  faultyTryGen,
   genRule,
+  genTerm,
   generateFromGRef,
+  generateFromName,
   liftAntiGen,
+  listOf,
   oneof,
   replicateMNorm,
   shuffle,
+  twiddleArray,
+  twiddleMap,
   unwrapSingle,
   unwrapSingleOrError,
   validateArrayTerm,
   validateFromGRef,
+  validateFromName,
+  validateMapTerm,
   withAntiGen,
   (|!),
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
-import Control.Monad (unless)
+import Control.Monad (forM_, unless)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Foldable (traverse_)
 import Data.Maybe (fromMaybe)
@@ -726,7 +733,7 @@ conwayRedeemer pname p =
 generateMaybeTaggedSet :: Int -> CBORGen Term -> CBORGen Term
 generateMaybeTaggedSet nElems gen = do
   elems <- fromMaybe QC.discard <$> withAntiGen (antiVectorOfUnique nElems) gen
-  elemsArr <- genArrayTerm elems
+  elemsArr <- twiddleArray elems
   tagged <- arbitrary
   if tagged
     then do
@@ -1120,9 +1127,9 @@ conwayCostModelsGenerator = Gen.sized $ \size -> do
   kvs <- forM keys $ \k -> resize (size `div` 2) $ do
     nVals <- Gen.sized $ \sz -> choose (0, sz)
     v <- withAntiGen (replicateMNorm nVals) $ genRule @"int64" @era
-    vs <- genArrayTerm v
+    vs <- twiddleArray v
     pure (TInt k, vs)
-  SingleTerm <$> genMapTerm kvs
+  SingleTerm <$> twiddleMap kvs
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRuleNamed pname p =
@@ -1150,6 +1157,69 @@ instance HuddleRule "redeemer_tag" ConwayEra where
 instance HuddleRule "redeemer" ConwayEra where
   huddleRuleNamed = conwayRedeemer
 
+instance Era era => HuddleRule "redeemer_index" era where
+  huddleRuleNamed pname _p =
+    pname =.= VUInt `sized` (4 :: Word64)
+
+redeemerMapRule ::
+  ( HuddleRule "redeemer_tag" era
+  , HuddleRule "big_int" era
+  , HuddleRule "bounded_bytes" era
+  , HuddleRule "ex_units" era
+  ) =>
+  Proxy era -> Type0
+redeemerMapRule p =
+  a $
+    mp
+      [ 1
+          <+ asKey
+            ( arr
+                [ "tag" ==> huddleRule @"redeemer_tag" p
+                , "index" ==> huddleRule @"redeemer_index" p
+                ]
+            )
+          ==> arr
+            [ "data" ==> huddleRule @"plutus_data" p
+            , "ex_units" ==> huddleRule @"ex_units" p
+            ]
+      ]
+
+instance HuddleRule "redeemer_map" ConwayEra where
+  huddleRuleNamed pname p =
+    withValidator validator $
+      withCBORGen generator $
+        pname =.= redeemerMapRule p
+    where
+      validator rTerm = do
+        term <- unwrapSingle rTerm
+        kvs <- validateMapTerm term
+        forM_ kvs $ \(kTerm, vTerm) -> do
+          k <- validateArrayTerm kTerm
+          case k of
+            [t, i] -> do
+              validateFromName "redeemer_tag" t
+              validateFromName "redeemer_index" i
+            _ -> fail "expected 2 elements"
+          v <- validateArrayTerm vTerm
+          case v of
+            [d, eu] -> do
+              validateFromName "plutus_data" d
+              validateFromName "ex_units" eu
+            _ -> fail "expected 2 elements"
+      generator = do
+        n <- Gen.sized $ \sz -> antiChoose (1, max 1 sz) (0, sz)
+        kvs <- replicateMNorm n . Gen.scale (`div` max 1 n) $ do
+          t <- generateFromName "redeemer_tag"
+          i <- generateFromName "redeemer_index"
+          d <- generateFromName "plutus_data"
+          e <- generateFromName "ex_units"
+          keyArr <- faultyTryGen [t, i] $ listOf genTerm
+          valueArr <- faultyTryGen [d, e] $ listOf genTerm
+          key <- twiddleArray keyArr
+          value <- twiddleArray valueArr
+          pure (key, value)
+        SingleTerm <$> twiddleMap kvs
+
 instance HuddleRule "redeemers" ConwayEra where
   huddleRuleNamed pname p =
     comment
@@ -1159,19 +1229,7 @@ instance HuddleRule "redeemers" ConwayEra where
           |]
       $ pname
         =.= sarr [1 <+ a (huddleRule @"redeemer" p)]
-        / smp
-          [ 1
-              <+ asKey
-                ( arr
-                    [ "tag" ==> huddleRule @"redeemer_tag" p
-                    , "index" ==> VUInt `sized` (4 :: Word64)
-                    ]
-                )
-              ==> arr
-                [ "data" ==> huddleRule @"plutus_data" p
-                , "ex_units" ==> huddleRule @"ex_units" p
-                ]
-          ]
+        / huddleRule @"redeemer_map" p
 
 instance HuddleRule "script_data_hash" ConwayEra where
   huddleRuleNamed pname p =

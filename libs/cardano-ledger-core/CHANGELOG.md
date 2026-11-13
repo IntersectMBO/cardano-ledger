@@ -38,6 +38,8 @@
 
 ### `cddl`
 
+* Remove `genArrayTerm`, `genBytesTerm`, `genStringTerm` and `genMapTerm` from `Cardano.Ledger.Huddle.Gen` in favor of `twiddleArray`, `twiddleBytes`, `twiddleText` and `twiddleMap`
+* Re-export `twiddleArray`, `twiddleBytes`, `twiddleText` and `twiddleMap` from `Cardano.Ledger.Huddle.Gen`
 * Add `HuddleRule2` and `huddleRule2`
 
 ### `testlib`
