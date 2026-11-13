@@ -89,12 +89,8 @@ module Cardano.Ledger.State.StakePool (
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6)
-import Cardano.Crypto.DSIGN (
-  BLS12381MinSigDSIGN,
-  DSIGNAggregatable (PossessionProofDSIGN),
-  DSIGNAlgorithm (VerKeyDSIGN),
-  hashVerKeyDSIGN,
- )
+import Cardano.Crypto.DSIGN (hashVerKeyDSIGN)
+import Cardano.Crypto.Leios (LeiosVerificationKey (unLeiosVerificationKey), ProvenPossession)
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
@@ -146,7 +142,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF
 import Cardano.Ledger.Orphans ()
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
 import Control.Monad.Trans (lift)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -156,6 +152,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import Data.Default (Default (..))
 import Data.Foldable (asum)
+import Data.Function (on)
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -497,65 +494,31 @@ data StakePoolParams era = StakePoolParams
   }
   deriving (Show, Generic, Eq, Ord)
 
-data BlsKey = BlsKey
-  { blsPubKey :: !(VerKeyDSIGN BLS12381MinSigDSIGN)
-  , blsPossessionProof :: !(PossessionProofDSIGN BLS12381MinSigDSIGN)
-  }
+newtype BlsKey = BlsKey {unBlsKey :: LeiosVerificationKey ProvenPossession}
   deriving (Show, Generic, Eq, NoThunks, NFData)
 
 instance Ord BlsKey where
-  compare a b =
-    compare
-      (rawEncodeFixedSized (blsPubKey a))
-      (rawEncodeFixedSized (blsPubKey b))
-      <> compare
-        (rawEncodeFixedSized (blsPossessionProof a))
-        (rawEncodeFixedSized (blsPossessionProof b))
+  compare = compare `on` (rawEncodeFixedSized . unBlsKey)
 
 -- | Hash of the public key of a 'BlsKey'. The proof of possession is not part of the
 -- hash, so two keys with the same public key but different proofs of possession hash
 -- to the same value.
 hashBlsKey :: BlsKey -> BlsVerKeyHash
-hashBlsKey = BlsVerKeyHash . hashVerKeyDSIGN . blsPubKey
+hashBlsKey = BlsVerKeyHash . hashVerKeyDSIGN . unLeiosVerificationKey . unBlsKey
 
 instance ToJSON BlsKey where
-  toJSON blsKey =
-    Aeson.object
-      [ "blsPubKey"
-          .= Text.decodeLatin1 (B16.encode (rawEncodeFixedSized $ blsPubKey blsKey))
-      , "blsPossessionProof"
-          .= Text.decodeLatin1
-            ( B16.encode
-                (rawEncodeFixedSized $ blsPossessionProof blsKey)
-            )
-      ]
+  toJSON = toJSON . Text.decodeLatin1 . B16.encode . rawEncodeFixedSized . unBlsKey
 
 instance FromJSON BlsKey where
-  parseJSON = Aeson.withObject "BlsKey" $ \obj -> do
-    pubKeyHex <- Text.encodeUtf8 <$> obj .: "blsPubKey"
-    blsPossessionProofHex <- Text.encodeUtf8 <$> obj .: "blsPossessionProof"
-    blsPubKey <-
-      case rawDecodeFixedSized =<< either (const Nothing) Just (B16.decode pubKeyHex) of
-        Nothing -> fail "Invalid hex for BlsPubKey"
-        Just vk -> pure vk
-    blsPossessionProof <-
-      case rawDecodeFixedSized
-        =<< either (const Nothing) Just (B16.decode blsPossessionProofHex) of
-        Nothing -> fail "Invalid hex for PossessionProof"
-        Just p -> pure p
-    pure $ BlsKey {blsPubKey, blsPossessionProof}
+  parseJSON =
+    Aeson.withText "BlsKey" $
+      fmap BlsKey . rawDecodeFixedSized <=< either fail pure . B16.decode . Text.encodeUtf8
 
 instance EncCBOR BlsKey where
-  encCBOR lk =
-    encodeListLen 2
-      <> encodeFixedSized (blsPubKey lk)
-      <> encodeFixedSized (blsPossessionProof lk)
+  encCBOR = encodeFixedSized . unBlsKey
 
 instance DecCBOR BlsKey where
-  decCBOR = decodeRecordNamed "BlsKey" (const 2) $ do
-    blsPubKey <- decodeFixedSized
-    blsPossessionProof <- decodeFixedSized
-    pure BlsKey {blsPubKey, blsPossessionProof}
+  decCBOR = BlsKey <$> decodeFixedSized
 
 -- | A registered voting key, together with the epoch its registration took
 -- effect in. The key stops being honoured @maxKeyAgeEpochs@ epochs later, at

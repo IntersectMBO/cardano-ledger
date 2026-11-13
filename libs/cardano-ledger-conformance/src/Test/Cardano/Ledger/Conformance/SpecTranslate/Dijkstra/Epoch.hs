@@ -126,10 +126,10 @@ instance SpecTranslate DijkstraEra Weight where
 
   toSpecRep = pure
 
-instance SpecTranslate DijkstraEra LeiosVerificationKey where
-  type SpecRep DijkstraEra LeiosVerificationKey = Integer
+instance SpecTranslate DijkstraEra (LeiosVerificationKey pp) where
+  type SpecRep DijkstraEra (LeiosVerificationKey pp) = Integer
 
-  toSpecRep = pure . verkeyToInteger
+  toSpecRep = pure . verkeyToInteger . unLeiosVerificationKey
 
 instance SpecTranslate DijkstraEra LeiosSeat where
   type SpecRep DijkstraEra LeiosSeat = Agda.LeiosSeat
