@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (..), DijkstraEra)
-import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
+import Cardano.Ledger.Dijkstra.BlockBody (DijkstraBlockBodyLimits, PerasCert)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
 import Cardano.Ledger.Dijkstra.Core (
   AlonzoEraScript (..),
@@ -150,6 +150,8 @@ instance ToExpr LeiosCert where
 instance ToExpr (Tx TopTx era) => ToExpr (DijkstraBlockBodyRaw era)
 
 instance (AlonzoEraTx era, ToExpr (Tx TopTx era), ToExpr PerasCert) => ToExpr (DijkstraBlockBody era)
+
+instance ToExpr (DijkstraBlockBodyLimits era)
 
 instance ToExpr (DijkstraTopTxRaw DijkstraEra)
 
@@ -350,6 +352,12 @@ instance ToExpr (EbAnnouncementHashMismatch era)
 instance ToExpr (EbAnnouncementSizeMismatch era)
 
 instance ToExpr (EbAlreadyApplied era)
+
+instance ToExpr (EbTxsSizeTooBig era)
+
+instance ToExpr (EbExUnitsTooBig era)
+
+instance ToExpr (EbRefScriptsSizeTooBig era)
 
 instance
   ToExpr (PredicateFailure (EraRule "EBLEDGERS" era)) =>
