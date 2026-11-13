@@ -28,14 +28,19 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Slotting.Slot (SlotInterval (..))
+import Data.Either (isRight)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word
 import Numeric.Natural (Natural)
+import qualified PlutusCore.Version as PLC
+import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Plutus (plutusLanguageOf, showPlcVersion)
 import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec, sameAsToBuiltinDataSpec)
+import UntypedPlutusCore (DefaultFun, Program (Program), Term (Builtin))
 
 spec :: Spec
 spec = do
@@ -43,6 +48,7 @@ spec = do
     costModelsSpec
     exUnitsSpec
     dataSpec
+    decodePlutusRunnableSpec
 
 costModelsSpec :: Spec
 costModelsSpec = do
@@ -139,3 +145,31 @@ dataSpec = describe "ToPlutusData" $ do
       sameAsToBuiltinDataSpec @[Integer] id
       sameAsToBuiltinDataSpec @(Map Integer Integer) (PV4.unsafeFromList . Map.toList)
       sameAsToBuiltinDataSpec $ \ProtVer {pvMajor, pvMinor} -> PV4.ProtocolVersion (getVersion pvMajor) (toInteger pvMinor)
+
+-- | Only programs consisting of a single builtin are checked, so this does not cover new constant
+-- types or term constructors.
+decodePlutusRunnableSpec :: Spec
+decodePlutusRunnableSpec =
+  describe "decodePlutusRunnable" $ do
+    describe "deserialises to the correct Plutus version for any given protocol version" $ do
+      forM_ [minBound .. maxBound :: Language] $ \lang -> do
+        describe (show lang) $
+          withSLanguage lang $ \(_ :: SLanguage l) ->
+            forM_ PLC.knownVersions $ \plcVersion -> do
+              describe ("PLC Version " <> showPlcVersion plcVersion) $
+                forM_ [minBound .. maxBound :: Version] $ \protVer -> do
+                  it ("ProtVer " <> show protVer) $ do
+                    plutusLedgerLang <- expectRight $ plutusLanguageOf lang
+                    forM_ [minBound .. maxBound :: DefaultFun] $ \f -> do
+                      let bs = P.serialiseUPLC (Program () plcVersion (Builtin () f))
+                          actualLedgerRes = plutusRunnableResult $ decodePlutusRunnable protVer (Plutus @l $ PlutusBinary bs)
+                          actualPlutusRes = P.deserialiseScript plutusLedgerLang (P.MajorProtocolVersion $ getVersion protVer) bs
+                      assertBool
+                        ( "Mismatch for builtin "
+                            <> show f
+                            <> "\n decodePlutusRunnable: "
+                            <> show actualLedgerRes
+                            <> "\n P.deserialiseScript: "
+                            <> show actualPlutusRes
+                        )
+                        $ isRight actualLedgerRes == isRight actualPlutusRes
