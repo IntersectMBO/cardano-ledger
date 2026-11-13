@@ -32,10 +32,14 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word
 import Numeric.Natural (Natural)
+import qualified PlutusCore.Version as PLC
+import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Plutus (plutusLanguageOf, showPlcVersion)
 import Test.Cardano.Ledger.Plutus.ToPlutusData (roundTripPlutusDataSpec, sameAsToBuiltinDataSpec)
+import UntypedPlutusCore (DefaultFun, Program (Program), Term (Builtin))
 
 spec :: Spec
 spec = do
@@ -43,6 +47,7 @@ spec = do
     costModelsSpec
     exUnitsSpec
     dataSpec
+    decodePlutusRunnableSpec
 
 costModelsSpec :: Spec
 costModelsSpec = do
@@ -139,3 +144,39 @@ dataSpec = describe "ToPlutusData" $ do
       sameAsToBuiltinDataSpec @[Integer] id
       sameAsToBuiltinDataSpec @(Map Integer Integer) (PV4.unsafeFromList . Map.toList)
       sameAsToBuiltinDataSpec $ \ProtVer {pvMajor, pvMinor} -> PV4.ProtocolVersion (getVersion pvMajor) (toInteger pvMinor)
+
+-- | Only programs consisting of a single builtin are checked, so this does not cover new constant
+-- types or term constructors.
+decodePlutusRunnableSpec :: Spec
+decodePlutusRunnableSpec =
+  describe "decodePlutusRunnable" $ do
+    describe "deserialises to the correct Plutus version for any given protocol version" $ do
+      forM_ [minBound .. maxBound :: Language] $ \lang -> do
+        describe (show lang) $
+          withSLanguage lang $ \(_ :: SLanguage l) ->
+            forM_ PLC.knownVersions $ \plcVersion -> do
+              describe ("PLC Version " <> showPlcVersion plcVersion) $
+                forM_ [plutusLanguageIntroducedIn @l .. maxBound :: Version] $ \protVer -> do
+                  it ("ProtVer " <> show protVer) $ do
+                    plutusLedgerLang <- expectRight $ plutusLanguageOf lang
+                    forM_ [minBound .. maxBound :: DefaultFun] $ \f -> do
+                      let bs = P.serialiseUPLC (Program () plcVersion (Builtin () f))
+                          actualLedgerRes = plutusRunnableResult $ decodePlutusRunnable protVer (Plutus @l $ PlutusBinary bs)
+                          actualPlutusRes = P.deserialiseScript plutusLedgerLang (P.MajorProtocolVersion $ getVersion protVer) bs
+                      -- We can't simply use `actualLedgerRes `shouldBe` actualPlutusRes`, because
+                      -- on failure the flat decoder renders raw memory addresses of its input
+                      -- buffer into the error message (`BadEncoding (Ptr, S {currPtr = ...})`).
+                      -- Each call decodes from a freshly allocated buffer, so two otherwise
+                      -- identical errors never compare equal. Instead we require both sides to
+                      -- agree on success or failure, and compare the results only on success.
+                      case (actualLedgerRes, actualPlutusRes) of
+                        (Right ledger, Right plutus) -> ledger `shouldBe` plutus
+                        (Left _, Left _) -> pure ()
+                        _ ->
+                          expectationFailure $
+                            "Ledger and Plutus disagree on "
+                              <> show f
+                              <> ",  ledger: "
+                              <> show actualLedgerRes
+                              <> ",  plutus: "
+                              <> show actualPlutusRes

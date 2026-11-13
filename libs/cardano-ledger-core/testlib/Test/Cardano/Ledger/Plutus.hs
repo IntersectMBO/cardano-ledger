@@ -25,6 +25,10 @@ module Test.Cardano.Ledger.Plutus (
   -- * CostModels
   testingCostModels,
   zeroTestingCostModels,
+
+  -- * Utilities
+  plutusLanguageOf,
+  showPlcVersion,
 ) where
 
 import Cardano.Ledger.Binary.Plain (decodeFullFromHexText)
@@ -42,10 +46,13 @@ import Cardano.Ledger.Plutus.Language (
   PlutusBinary (..),
  )
 import Data.Int (Int64)
+import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text (Text)
 import GHC.Stack
 import Numeric.Natural (Natural)
+import qualified PlutusCore.Version as PLC
+import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.Test.Examples as P (
   alwaysFailingNAryFunction,
   alwaysSucceedingNAryFunction,
@@ -130,3 +137,14 @@ alwaysFailsPlutus n = Plutus (PlutusBinary (P.alwaysFailingNAryFunction n))
 decodeHexPlutus :: HasCallStack => Text.Text -> Plutus l
 decodeHexPlutus =
   either (error . show) (Plutus . PlutusBinary) . decodeFullFromHexText
+
+plutusLanguageOf :: Language -> Either String P.PlutusLedgerLanguage
+plutusLanguageOf l =
+  -- Data constructors of `P.PlutusLedgerLanguage` use the same name convention
+  -- as `Language`, so we compare the show instance between the two.
+  case [pl | pl <- [minBound .. maxBound], show pl == show l] of
+    [pl] -> Right pl
+    _ -> Left $ "No plutus ledger language named " <> show l
+
+showPlcVersion :: PLC.Version -> String
+showPlcVersion (PLC.Version major minor patch) = intercalate "." $ map show [major, minor, patch]

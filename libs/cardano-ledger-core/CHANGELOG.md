@@ -37,6 +37,7 @@
   - `MarkSnapShot` now also encodes `msLeiosMaxKeyAge`, so the on-disk ledger state format changes and requires replay
 * Remove `ssStakeMarkPoolDistr` field from `SnapShots` and `ssStakeMarkPoolDistrL` in favor of `msStakePoolDistr`
 * Add `EraIndependentBlockHeaderBody` phantom type to `Cardano.Ledger.Hashes`
+* Add `plutusLanguageIntroducedIn` to `PlutusLanguage`
 
 ### `cddl`
 
@@ -55,6 +56,7 @@
 * Add `Arbitrary` instances for `EbAnnouncement` and `EbReferencesAnnouncement` (moved from `cardano-protocol:testlib`)
 * Add `ToExpr` instance for `EbAnnouncement`
 * Add `Arbitrary` and `ToExpr` instances for `BlsVerKeyHash`
+* Add `plutusLanguageOf` and `showPlcVersion` to `Test.Cardano.Ledger.Plutus`
 
 ## 1.23.0.0
 
