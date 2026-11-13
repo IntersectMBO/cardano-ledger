@@ -88,7 +88,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (epochFromSlot)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended
 import Data.Word (Word32)
 import GHC.Generics (Generic (..))
@@ -496,7 +495,7 @@ dijkstraLedgerTransition = do
       (LedgerState utxoStateFinal certStateFinal lastEbAnnouncement)
       ( blockBodyLimits
           <> ConwayBlockBodyLimits
-            { cbblTxsSize = errorFail . integralToBounded @Int @Word32 $ originalBytesSize tx
+            { cbblTxsSize = originalBytesSize tx
             , cbblExUnits = exUnitsStAnnTx stAnnTx
             , cbblRefScriptsSize = totalRefScriptsSize
             }

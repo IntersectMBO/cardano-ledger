@@ -9,7 +9,7 @@
 * Generalize the `wireSizeTxF` re-export and remove the `binaryUpgradeTx` re-export from `Cardano.Ledger.Conway.Core`
 * Change `validateRefScriptSize` to take an `Int` parameter instead of `UTxO` and `Tx`
 * Change the `STS` state of `LEDGER` and `MEMPOOL` rules to `LedgerStateWithLimits`
-* Add `ConwayBlockBodyLimits`, `cbblTxsSize`, `cbblExUnits`, `cbblRefScriptsSize`
+* Add `ConwayBlockBodyLimits`, `cbblTxsSize`, `cbblExUnits`, `cbblRefScriptsSize`, with `Int` totals in `cbblTxsSize` and `cbblRefScriptsSize`
 * Add `psStakePoolDistrG`
 * Change `TICKF` to run the `SNAP` rule at the epoch boundary:
   - Add `SNAP` related constraints to the `STS` instance of `TICKF`

@@ -33,11 +33,13 @@ import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.Typeable (Typeable)
-import Data.Word (Word32)
 import GHC.Generics (Generic)
 
+-- | Totals over the transactions applied by @LEDGER@. `cbblTxsSize` is an `Int`, because the
+-- total size of the transactions in a Dijkstra @EndorserBlock@ that exceeds its limit can be
+-- larger than @maxBound :: Word32@.
 data ConwayBlockBodyLimits era = ConwayBlockBodyLimits
-  { cbblTxsSize :: !Word32
+  { cbblTxsSize :: !Int
   , cbblExUnits :: !ExUnits
   , cbblRefScriptsSize :: !Int
   }
