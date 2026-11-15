@@ -22,6 +22,10 @@ module Cardano.Ledger.State.Leios (
   selectLeiosCommittee,
   leiosCommitteeToJSON,
   EbAnnouncement (..),
+  ebAnnouncementL,
+  ebAnnouncementSlotNoL,
+  ebAnnouncedInBlockHeaderL,
+  ebIsAppliedL,
 ) where
 
 import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
@@ -49,7 +53,6 @@ import Cardano.Ledger.State.StakePool (BlsKey (..), BlsKeyState (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value, object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
-import Data.Function ((&))
 import Data.Ord (Down (..))
 import qualified Data.Text.Encoding as Text
 import Data.Vector (Vector)
@@ -58,6 +61,7 @@ import qualified Data.Vector.Algorithms.Intro as Intro
 import qualified Data.Vector.Strict as VS
 import Data.Word (Word16)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 -- | The committee with no seats: the value for eras before Leios and for a
@@ -137,29 +141,47 @@ data EbAnnouncement = EbAnnouncement
   -- ^ Slot number of the block whose header made the announcement
   , ebAnnouncedInBlockHeader :: !(SafeHash EraIndependentBlockHeader)
   -- ^ Hash of the block header that made the announcement
+  , ebIsApplied :: !Bool
+  -- ^ Whether the announced EB has been applied. Set by the @EB@ rule and required by @BBODY@
+  -- before it accepts a certificate for the EB
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData)
   deriving (ToJSON) via KeyValuePairs EbAnnouncement
 
 instance EncCBOR EbAnnouncement where
-  encCBOR (EbAnnouncement a s h) =
-    encodeListLen 3
+  encCBOR (EbAnnouncement a s h x) =
+    encodeListLen 4
       <> encCBOR a
       <> encCBOR s
       <> encCBOR h
+      <> encCBOR x
 
 instance DecCBOR EbAnnouncement where
   decCBOR =
-    decodeRecordNamed "EbAnnouncement" (const 3) $
+    decodeRecordNamed "EbAnnouncement" (const 4) $
       EbAnnouncement
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
+        <*> decCBOR
 
 instance ToKeyValuePairs EbAnnouncement where
-  toKeyValuePairs (EbAnnouncement a s h) =
+  toKeyValuePairs (EbAnnouncement a s h x) =
     [ "announcement" .= a
     , "slotNo" .= s
     , "announcedInBlockHeader" .= h
+    , "isApplied" .= x
     ]
+
+ebAnnouncementL :: Lens' EbAnnouncement EbReferencesAnnouncement
+ebAnnouncementL = lens ebAnnouncement $ \ebA x -> ebA {ebAnnouncement = x}
+
+ebAnnouncementSlotNoL :: Lens' EbAnnouncement SlotNo
+ebAnnouncementSlotNoL = lens ebAnnouncementSlotNo $ \ebA x -> ebA {ebAnnouncementSlotNo = x}
+
+ebAnnouncedInBlockHeaderL :: Lens' EbAnnouncement (SafeHash EraIndependentBlockHeader)
+ebAnnouncedInBlockHeaderL = lens ebAnnouncedInBlockHeader $ \ebA x -> ebA {ebAnnouncedInBlockHeader = x}
+
+ebIsAppliedL :: Lens' EbAnnouncement Bool
+ebIsAppliedL = lens ebIsApplied $ \ebA x -> ebA {ebIsApplied = x}

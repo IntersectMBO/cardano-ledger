@@ -339,6 +339,18 @@ instance ToExpr (AccountBalanceInterval era)
 
 instance ToExpr (AccountBalanceIntervals era)
 
+instance ToExpr (EbWasNotAnnounced era)
+
+instance ToExpr (EbReferencesSizeTooBig era)
+
+instance ToExpr (EbAnnouncementSlotMismatch era)
+
+instance ToExpr (EbAnnouncementHashMismatch era)
+
+instance ToExpr (EbAnnouncementSizeMismatch era)
+
+instance ToExpr (EbAlreadyApplied era)
+
 instance
   ToExpr (PredicateFailure (EraRule "EBLEDGERS" era)) =>
   ToExpr (EbPredFailure era)

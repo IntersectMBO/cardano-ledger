@@ -40,6 +40,7 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   submitFailingEndorserBlock,
   makeEndorserBlock,
   mkEbReferencesAnnouncement,
+  announceEndorserBlock,
 ) where
 
 import Cardano.Base.Typeable (Typeable)
@@ -58,7 +59,11 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Block (EbReferencesAnnouncement (..))
+import Cardano.Ledger.Block (
+  Block,
+  EbReferencesAnnouncement (..),
+  ebReferencesAnnouncementBlockHeaderL,
+ )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Governance (
@@ -216,6 +221,13 @@ class
   , InjectRuleFailure "LEDGER" DijkstraSubLedgerPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraSubGovCertPredFailure era
   , InjectRuleFailure "EB" EbPredFailure era
+  , InjectRuleFailure "EB" EbWasNotAnnounced era
+  , InjectRuleFailure "EB" EbReferencesSizeTooBig era
+  , InjectRuleFailure "EB" EbAnnouncementSlotMismatch era
+  , InjectRuleFailure "EB" EbAnnouncementHashMismatch era
+  , InjectRuleFailure "EB" EbAnnouncementSizeMismatch era
+  , InjectRuleFailure "EB" EbAlreadyApplied era
+  , Show (PredicateFailure (EraRule "EBLEDGERS" era))
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   , STS (EraRule "EB" era)
   , ToExpr (PredicateFailure (EraRule "EB" era))
@@ -758,3 +770,15 @@ mkEbReferencesAnnouncement eb =
     }
   where
     references = eb ^. referencesEndorserBlockL
+
+announceEndorserBlock ::
+  ( HasCallStack
+  , DijkstraEraImp era
+  ) =>
+  EndorserBlock era ->
+  ImpTestM era (Block TestBlockHeader era)
+announceEndorserBlock eb = do
+  tickToCurSlot
+  withTxsInModifiedBlock
+    (ebReferencesAnnouncementBlockHeaderL .~ SJust (mkEbReferencesAnnouncement eb))
+    (pure ())

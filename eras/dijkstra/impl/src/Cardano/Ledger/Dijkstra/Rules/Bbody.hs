@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -120,6 +119,7 @@ data DijkstraBbodyPredFailure era
   | LeiosCertBlockBodyHasTxs
   | LeiosCertFailure (PredicateFailure (EraRule "LEIOSCERT" era))
   | LeiosCertWithoutEbAnnouncement
+  | LeiosCertEbNotApplied
   deriving (Generic)
 
 instance
@@ -170,6 +170,7 @@ instance
       LeiosCertBlockBodyHasTxs -> Sum LeiosCertBlockBodyHasTxs 8
       LeiosCertFailure f -> Sum (LeiosCertFailure @era) 9 !> To f
       LeiosCertWithoutEbAnnouncement -> Sum LeiosCertWithoutEbAnnouncement 10
+      LeiosCertEbNotApplied -> Sum LeiosCertEbNotApplied 11
 
 instance
   ( Era era
@@ -190,6 +191,7 @@ instance
     8 -> SumD LeiosCertBlockBodyHasTxs
     9 -> SumD LeiosCertFailure <! From
     10 -> SumD LeiosCertWithoutEbAnnouncement
+    11 -> SumD LeiosCertEbNotApplied
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" DijkstraEra = DijkstraBbodyPredFailure DijkstraEra
@@ -467,7 +469,8 @@ dijkstraBbodyTransition = do
       whenFailureFree $
         case ls ^. lsLastEbAnnouncementL of
           SNothing -> failBecause $ injectFailure LeiosCertWithoutEbAnnouncement
-          SJust EbAnnouncement {ebAnnouncementSlotNo, ebAnnouncedInBlockHeader} ->
+          SJust EbAnnouncement {ebAnnouncementSlotNo, ebAnnouncedInBlockHeader, ebIsApplied} -> do
+            ebIsApplied ?! injectFailure LeiosCertEbNotApplied
             trans @(EraRule "LEIOSCERT" era) $
               TRC
                 ( LeiosCertEnv
@@ -494,6 +497,7 @@ dijkstraBbodyTransition = do
                      { ebAnnouncement = ebRefsAnn
                      , ebAnnouncementSlotNo = bhSlot
                      , ebAnnouncedInBlockHeader = block ^. blockHeaderHashBlockHeaderG
+                     , ebIsApplied = False
                      }
                )
 

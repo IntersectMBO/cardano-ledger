@@ -11,6 +11,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
+import Cardano.Ledger.State (EbAnnouncement)
 import Cardano.Ledger.TxIn
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
@@ -48,6 +49,7 @@ spec = do
     roundTripCborSpec @DRep
     roundTripCborSpec @ScriptHash
     roundTripCborSpec @(SafeHash EraIndependentData)
+    roundTripCborSpec @EbAnnouncement
 
   describe "DecCBOR instances equivalence" $ do
     decoderEquivalenceSpec @PV1.Data minBound maxBound

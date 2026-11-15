@@ -17,6 +17,7 @@ import Cardano.Ledger.Block (
   versionInfoBlockHeaderL,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.BlockBody (DijkstraEraBlockBody (..))
 import Cardano.Ledger.Dijkstra.Rules (DijkstraBbodyPredFailure (..))
 import Cardano.Ledger.Shelley.LedgerState (esLStateL, lsLastEbAnnouncementL, nesEsL)
@@ -27,7 +28,10 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  ( DijkstraEraImp era
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   it "PerasCertValidationFailed" $ do
     protVer <- getProtVer
@@ -74,6 +78,7 @@ spec = describe "BBODY" $ do
               { ebAnnouncement = ebRefsAnn
               , ebAnnouncementSlotNo = block ^. slotNoBlockHeaderL
               , ebAnnouncedInBlockHeader = block ^. blockHeaderHashBlockHeaderG
+              , ebIsApplied = False
               }
 
     it "Records the announcement made in the block header" $ do
@@ -98,7 +103,8 @@ spec = describe "BBODY" $ do
       getsNES (nesEsL . esLStateL . lsLastEbAnnouncementL) `shouldReturn` SNothing
 
     it "Records the announcement of a block that certifies an EB" $ do
-      cert <- announceCertifiableEb
+      (eb, cert) <- announceCertifiableEb
+      submitEndorserBlock eb
       replicateM_ 14 passTick
       protVer <- getProtVer
       ebRefsAnn <- arbitrary
@@ -130,8 +136,18 @@ spec = describe "BBODY" $ do
       (pure ())
       $ \_ -> pure [injectFailure LeiosCertWithoutEbAnnouncement]
 
+  it "LeiosCertEbNotApplied" $ do
+    (_, cert) <- announceCertifiableEb
+    replicateM_ 14 passTick
+    protVer <- getProtVer
+    withTxsInModifiedFailingBlockM
+      (modifyBlockBody protVer $ leiosCertBlockBodyL .~ SJust cert)
+      (pure ())
+      $ \_ -> pure [injectFailure LeiosCertEbNotApplied]
+
   it "Cannot certify the same EB twice" $ do
-    cert <- announceCertifiableEb
+    (eb, cert) <- announceCertifiableEb
+    submitEndorserBlock eb
     replicateM_ 14 passTick
     protVer <- getProtVer
     let certify = modifyBlockBody protVer $ leiosCertBlockBodyL .~ SJust cert
@@ -142,9 +158,14 @@ spec = describe "BBODY" $ do
 
 -- | Seats a Leios committee, announces an EB and certifies it with enough votes for the quorum.
 -- The certificate can be included 14 slots later.
-announceCertifiableEb :: DijkstraEraImp era => ImpTestM era LeiosCert
+announceCertifiableEb ::
+  ( DijkstraEraImp era
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
+  ) =>
+  ImpTestM era (EndorserBlock era, LeiosCert)
 announceCertifiableEb = do
   signKeys <- setupLeiosCommittee 4
-  ebRefsAnn <- arbitrary
-  block <- withTxsInModifiedBlock (ebReferencesAnnouncementBlockHeaderL .~ SJust ebRefsAnn) (pure ())
-  mkLeiosCert (take 3 signKeys) $ block ^. blockHeaderHashBlockHeaderG
+  eb <- makeEndorserBlock []
+  block <- announceEndorserBlock eb
+  cert <- mkLeiosCert (take 3 signKeys) $ block ^. blockHeaderHashBlockHeaderG
+  pure (eb, cert)

@@ -26,7 +26,10 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  ( DijkstraEraImp era
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEIOSCERT" $ do
   it "Certifies the EB announced by the preceding block" $ do
     signKeys <- setupLeiosCommittee 4
@@ -102,10 +105,16 @@ spec = describe "LEIOSCERT" $ do
     replicateM_ 14 passTick
     certifyInFailingBlock cert [injectFailure $ LeiosCertSignersWithoutKey [0]]
 
-announceEb :: DijkstraEraImp era => ImpTestM era (Block TestBlockHeader era)
+announceEb ::
+  ( DijkstraEraImp era
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
+  ) =>
+  ImpTestM era (Block TestBlockHeader era)
 announceEb = do
-  ebRefsAnn <- arbitrary
-  withTxsInModifiedBlock (ebReferencesAnnouncementBlockHeaderL .~ SJust ebRefsAnn) (pure ())
+  eb <- makeEndorserBlock []
+  block <- announceEndorserBlock eb
+  submitEndorserBlock eb
+  pure block
 
 certifyInBlock :: DijkstraEraImp era => LeiosCert -> ImpTestM era ()
 certifyInBlock cert = do
