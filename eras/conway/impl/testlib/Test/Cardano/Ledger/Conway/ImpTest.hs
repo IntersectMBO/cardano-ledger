@@ -256,11 +256,16 @@ conwayModifyPParams f = modifyNES $ \nes ->
   nes
     & nesEsL . curPParamsEpochStateL %~ f
     & newEpochStateGovStateL . drepPulsingStateGovStateL %~ modifyDRepPulser
+    & newEpochStateGovStateL . futurePParamsGovStateL %~ modifyFuturePParams
   where
     modifyDRepPulser pulser =
       case finishDRepPulser pulser of
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
+    modifyFuturePParams = \case
+      NoPParamsUpdate -> NoPParamsUpdate
+      DefinitePParamsUpdate pp -> DefinitePParamsUpdate (f pp)
+      PotentialPParamsUpdate mpp -> PotentialPParamsUpdate (f <$> mpp)
 
 instance ShelleyEraImp ConwayEra where
   initGenesis = do
