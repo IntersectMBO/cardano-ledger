@@ -147,7 +147,10 @@ spec = describe "EB" $ do
       referencesSizeTooBig eb maxEbRefsSize =
         injectEbFailure $
           EbReferencesSizeTooBig
-            Mismatch {mismatchSupplied = ebRefsSize eb, mismatchExpected = maxEbRefsSize}
+            Mismatch
+              { mismatchSupplied = ebRefsSize eb
+              , mismatchExpected = fromIntegral @Word32 @Int maxEbRefsSize
+              }
 
       endorsedTxs eb = toList . unEbTransactions $ eb ^. transactionsEndorserBlockL
 
@@ -225,14 +228,15 @@ spec = describe "EB" $ do
           ]
     it "Succeeds when the EB references are exactly at the size limit" $ do
       (blockTxs, eb) <- genRBandEB
+      maxEbRefsSize <- integralToBounded @Int @Word32 $ ebRefsSize eb
       _ <- submitAnnouncingRB blockTxs $ mkEbReferencesAnnouncement eb
-      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ fromIntegral @Int @Word32 (ebRefsSize eb)
+      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ maxEbRefsSize
       expectSameStateWithoutValidation eb
     it "Fails when the EB references exceed the size limit" $ do
       (blockTxs, eb) <- genRBandEB
-      let maxEbRefsSize = ebRefsSize eb - 1
+      maxEbRefsSize <- integralToBounded @Int @Word32 $ ebRefsSize eb - 1
       _ <- submitAnnouncingRB blockTxs $ mkEbReferencesAnnouncement eb
-      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ fromIntegral @Int @Word32 maxEbRefsSize
+      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ maxEbRefsSize
       impAnn "Submit EB" $ submitFailingEndorserBlock eb [referencesSizeTooBig eb maxEbRefsSize]
     it "Errors without validation when the EB was not announced" $ do
       (_, eb) <- genRBandEB
@@ -240,14 +244,14 @@ spec = describe "EB" $ do
     it "Errors without validation with every failure of the EB references, ignoring the slot" $ do
       (blockTxs, eb) <- genRBandEB
       wrongHash <- arbitrary
+      maxEbRefsSize <- integralToBounded @Int @Word32 $ ebRefsSize eb - 1
       let announcedSize = ebReferencesAnnouncementSize (mkEbReferencesAnnouncement eb) + 1
-          maxEbRefsSize = ebRefsSize eb - 1
       _ <-
         submitAnnouncingRB blockTxs $
           mkEbReferencesAnnouncement eb
             & ebReferencesAnnouncementHashL .~ wrongHash
             & ebReferencesAnnouncementSizeL .~ announcedSize
-      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ fromIntegral @Int @Word32 maxEbRefsSize
+      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ maxEbRefsSize
       passTick
       tickToCurSlot
       expectNoValidationToThrow
