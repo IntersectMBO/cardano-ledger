@@ -2,7 +2,6 @@
 
 ## 0.6.0.0
 
-* Add `validateBlockExUnits` and `validateBlockRefScriptsSize`
 * Remove `TooManyExUnits` and `BodyRefScriptsSizeTooBig` from `DijkstraBbodyPredFailure`
 * Add `DijkstraLedgersPredFailure` and use it as the predicate failure of the `LEDGERS` rule instead of `ShelleyLedgersPredFailure`
 * Add `LEDGERS`

@@ -41,27 +41,18 @@ import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosBbodySignal (..))
+import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
-import Control.State.Transition (
-  Embed (..),
-  Rule,
-  RuleType (..),
-  STS (..),
-  TRC (..),
-  TransitionRule,
-  liftSTS,
-  trans,
-  withJudgmentContext,
-  (?!),
- )
+import Control.State.Transition
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (Shelley.ShelleyBbodyPredFailure era)
@@ -156,24 +147,18 @@ instance
 -- | Validate that total execution units (all transactions) do not exceed block limit.
 -- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp
 validateExUnits ::
-  forall era.
-  ( AlonzoEraPParams era
-  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
-  ) =>
+  AlonzoEraPParams era =>
   PParams era ->
-  -- | Total execution units of all transactions in the block, as accumulated by LEDGERS.
+  -- | Total execution units of all transactions in the block
   ExUnits ->
-  Rule (EraRule "BBODY" era) 'Transition ()
+  Test (Mismatch RelLTEQ OrdExUnits)
 validateExUnits pp txTotal =
   let ppMax = pp ^. ppMaxBlockExUnitsL
-   in pointWiseExUnits (<=) txTotal ppMax
-        ?! injectFailure
-          ( TooManyExUnits $
-              Mismatch
-                { mismatchSupplied = OrdExUnits txTotal
-                , mismatchExpected = OrdExUnits ppMax
-                }
-          )
+   in failureUnless (pointWiseExUnits (<=) txTotal ppMax) $
+        Mismatch
+          { mismatchSupplied = OrdExUnits txTotal
+          , mismatchExpected = OrdExUnits ppMax
+          }
 
 bbodyTransition ::
   forall era h.
@@ -212,7 +197,7 @@ bbodyTransition (Shelley.BbodyEnv pp account) (Shelley.BbodyState ls blocksMade)
         , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
         )
 
-  validateExUnits pp abblExUnits
+  validateTrans (injectFailure . TooManyExUnits @era) $ validateExUnits pp abblExUnits
 
   pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 

@@ -72,6 +72,7 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -85,6 +86,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
+import Validation (failureUnless)
 
 data ConwayBbodyPredFailure era
   = WrongBlockBodySizeBBODY (Mismatch RelEQ Int)
@@ -238,7 +240,6 @@ instance
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ BBODY era
@@ -270,7 +271,6 @@ bbodyTransition ::
   ( Signal (EraRule "BBODY" era) ~ PraosBbodySignal era
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , Environment (EraRule "BBODY" era) ~ Shelley.BbodyEnv era
-  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
@@ -327,9 +327,11 @@ bbodyTransition = do
         , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
         )
 
-  Alonzo.validateExUnits pp cbblExUnits
+  validateTrans (injectFailure . TooManyExUnits @era) $
+    Alonzo.validateExUnits pp cbblExUnits
 
-  validateBodyRefScriptsSizeTooBig pp cbblRefScriptsSize
+  validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
+    validateBodyRefScriptsSizeTooBig pp cbblRefScriptsSize
 
   pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
@@ -346,22 +348,15 @@ instance
 
 -- | Validate that total reference script size does not exceed block limit.
 validateBodyRefScriptsSizeTooBig ::
-  forall era.
-  ( InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , ConwayEraPParams era
-  ) =>
+  ConwayEraPParams era =>
   PParams era ->
   -- | Total reference script size of all transactions in the block, as accumulated by LEDGERS.
   Int ->
-  Rule (EraRule "BBODY" era) 'Transition ()
+  Test (Mismatch RelLTEQ Int)
 validateBodyRefScriptsSizeTooBig pp totalSize =
   let maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-   in totalSize
-        <= maxSize
-          ?! injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = totalSize
-                  , mismatchExpected = maxSize
-                  }
-            )
+   in failureUnless (totalSize <= maxSize) $
+        Mismatch
+          { mismatchSupplied = totalSize
+          , mismatchExpected = maxSize
+          }

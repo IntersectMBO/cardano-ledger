@@ -17,20 +17,17 @@
 module Cardano.Ledger.Dijkstra.Rules.Ledgers (
   LEDGERS,
   DijkstraLedgersPredFailure (..),
-  validateBlockExUnits,
-  validateBlockRefScriptsSize,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (ExUnits, OrdExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (OrdExUnits (..))
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits (..))
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMaxRefScriptSizePerBlockG)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, LEDGER, LEDGERS)
@@ -39,7 +36,6 @@ import Cardano.Ledger.Dijkstra.Rules.GovCert (DijkstraGovCertPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerEvent, DijkstraLedgerPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
-import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -56,10 +52,8 @@ import Control.State.Transition
 import Data.Default (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
-import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
-import Validation (failureUnless)
 
 data DijkstraLedgersPredFailure era
   = -- | LEDGER rule subtransition failures
@@ -230,36 +224,16 @@ ledgersTransition = do
                 TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
             let ConwayBlockBodyLimits {cbblExUnits, cbblRefScriptsSize} =
                   newLedgerState ^. lswlBlockBodyLimitsL
-            runTest $ validateBlockExUnits pp cbblExUnits
-            runTest $ validateBlockRefScriptsSize pp cbblRefScriptsSize
+            validateTrans (injectFailure . TooManyExUnits @era) $
+              Alonzo.validateExUnits pp cbblExUnits
+            validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
+              Conway.validateBodyRefScriptsSizeTooBig pp cbblRefScriptsSize
             pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
       (initLedgerState, mempty)
       $ zip [minBound ..]
       $ toList txs
   pure finalLedgerState
-
-validateBlockExUnits ::
-  AlonzoEraPParams era => PParams era -> ExUnits -> Test (DijkstraLedgersPredFailure era)
-validateBlockExUnits pp exUnits =
-  let maxExUnits = pp ^. ppMaxBlockExUnitsL
-   in failureUnless (pointWiseExUnits (<=) exUnits maxExUnits) $
-        TooManyExUnits
-          Mismatch
-            { mismatchSupplied = OrdExUnits exUnits
-            , mismatchExpected = OrdExUnits maxExUnits
-            }
-
-validateBlockRefScriptsSize ::
-  ConwayEraPParams era => PParams era -> Int -> Test (DijkstraLedgersPredFailure era)
-validateBlockRefScriptsSize pp refScriptsSize =
-  let maxRefScriptsSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-   in failureUnless (refScriptsSize <= maxRefScriptsSize) $
-        BodyRefScriptsSizeTooBig
-          Mismatch
-            { mismatchSupplied = refScriptsSize
-            , mismatchExpected = maxRefScriptsSize
-            }
 
 instance
   ( STS (LEDGER era)
