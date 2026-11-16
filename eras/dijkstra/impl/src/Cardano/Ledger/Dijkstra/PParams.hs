@@ -122,6 +122,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotInterval (..))
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON (..), withObject, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -463,7 +464,9 @@ instance FromJSON (UpgradeDijkstraPParams Identity era) where
     udppPerasTargetCommitteeSize <- o .: "perasTargetCommitteeSize"
     udppPerasBootstrapRound <- o .: "perasBootstrapRound"
     udppPerasQuorumThresholdSafetyMargin <- o .: "perasQuorumThresholdSafetyMargin"
-    udppRefInputsCostPerMultiAssetByte <- o .: "refInputsCostPerMultiAssetByte"
+    -- The Leios prototype networks name this parameter by its old name.
+    udppRefInputsCostPerMultiAssetByte <-
+      o .: "refInputsCostPerMultiAssetByte" <|> o .: "refInputsCostPerMultiAssetPolicy"
     udppRefInputsCostPerDatumByte <- o .: "refInputsCostPerDatumByte"
     pure UpgradeDijkstraPParams {..}
 
