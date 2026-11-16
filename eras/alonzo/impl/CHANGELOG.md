@@ -21,6 +21,7 @@
 
 ### `testlib`
 
+* Add `nonUnitReturnValueNoDatum` Plutus script to `plutusTestScripts`
 * Add `mkTestLedgerTxInfoWithScripts`
 * Restrict `mkTestLedgerTxInfo` to `TopTx` transactions
 * Add `Arbitrary` instance for `MempoolTx AlonzoEra`
