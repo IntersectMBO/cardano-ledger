@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Include sub-transaction outputs in `producedTxOuts` for successful Dijkstra batches.
+
 * Re-export `getTxOutsReferenceScripts` from `Cardano.Ledger.Api.Tx.Out`
 * Re-export protocol parameters introduced in Conway and Dijkstra eras from `Cardano.Ledger.Api.PParams`:
   - `UpgradeConwayPParams`
