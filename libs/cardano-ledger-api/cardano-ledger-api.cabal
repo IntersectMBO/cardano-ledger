@@ -138,6 +138,7 @@ test-suite cardano-ledger-api-test
     Test.Cardano.Ledger.Api.State.QuerySpec
     Test.Cardano.Ledger.Api.Tx
     Test.Cardano.Ledger.Api.Tx.Body
+    Test.Cardano.Ledger.Api.Tx.ImpSpec
     Test.Cardano.Ledger.Api.Tx.Out
 
   default-language: Haskell2010
