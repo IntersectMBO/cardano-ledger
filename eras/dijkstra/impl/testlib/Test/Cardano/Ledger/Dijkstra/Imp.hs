@@ -16,6 +16,7 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbBuilderSpec as EbBuilder
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbSpec as EB
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
@@ -67,6 +68,7 @@ spec era = do
     SUBPOOL.spec
     SUBGOVCERT.spec
     EB.spec
+    EbBuilder.spec
 
 dijkstraOnlySpec :: Spec
 dijkstraOnlySpec =
