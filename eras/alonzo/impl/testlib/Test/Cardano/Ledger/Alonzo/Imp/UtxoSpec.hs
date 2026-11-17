@@ -77,9 +77,7 @@ spec = describe "UTXO" $ do
       )
       [injectFailure $ OutputTooBigUTxO [outputTooBigEntry pp tooBigTxOut]]
 
-  -- The formal specification does not check the number of collateral inputs
-  -- TODO: Re-enable once it does, by removing this override
-  disableInConformanceIt "TooManyCollateralInputs" $ do
+  it "TooManyCollateralInputs" $ do
     maxCollateralInputs <- getsPParams ppMaxCollateralInputsL
     collateralInputs <- replicateM (fromIntegral maxCollateralInputs + 1) freshFundedTxIn
     submitFailingTx

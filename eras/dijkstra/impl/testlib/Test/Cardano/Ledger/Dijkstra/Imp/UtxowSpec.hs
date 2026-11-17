@@ -308,12 +308,6 @@ spec = describe "UTXOW" $ do
   describe "Reference scripts in outputs (CIP-0172)" $ do
     -- Scripts are not registered with `impAddNativeScript`, otherwise the fixup would also add
     -- them as witnesses to the transaction that does not have the providing output.
-    --
-    -- The spec adds the scripts of the outputs to the script pool, but does not account for them
-    -- when checking for missing and extraneous script witnesses, so it rejects every transaction
-    -- that relies on them and accepts ones that witness them again.
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1374
-    -- TODO: Re-enable after issue is resolved, by removing the overrides
     let script = fromNativeScript @era $ RequireAllOf []
         scriptHash = hashScript script
         failingScript = fromNativeScript @era $ RequireAnyOf []
@@ -321,7 +315,7 @@ spec = describe "UTXOW" $ do
         mkRefScriptTxOut refScript addr =
           mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust refScript
 
-    disableInConformanceIt "A transaction can use a script from its own output" $ do
+    it "A transaction can use a script from its own output" $ do
       txIn <- produceScript scriptHash
       addr <- freshKeyAddr_
       let tx :: forall l. Typeable l => Tx l era
@@ -331,7 +325,7 @@ spec = describe "UTXOW" $ do
         [injectFailure $ Conway.MissingScriptWitnessesUTXOW $ NES.singleton scriptHash]
       submitAnyTx_ $ tx & bodyTxL . outputsTxBodyL .~ [mkRefScriptTxOut script addr]
 
-    disableInConformanceIt "A top-level transaction can use a script from a sub-transaction output" $ do
+    it "A top-level transaction can use a script from a sub-transaction output" $ do
       txIn <- produceScript scriptHash
       addr <- freshKeyAddr_
       submitTx_ $
@@ -339,14 +333,14 @@ spec = describe "UTXOW" $ do
           [mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [mkRefScriptTxOut script addr]]
           & bodyTxL . inputsTxBodyL .~ [txIn]
 
-    disableInConformanceIt "A sub-transaction can use a script from a top-level transaction output" $ do
+    it "A sub-transaction can use a script from a top-level transaction output" $ do
       txIn <- produceScript scriptHash
       addr <- freshKeyAddr_
       submitTx_ $
         mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]]
           & bodyTxL . outputsTxBodyL .~ [mkRefScriptTxOut script addr]
 
-    disableInConformanceIt
+    it
       "A sub-transaction can use a script from an output of a later sub-transaction"
       $ do
         txIn <- produceScript scriptHash
@@ -357,7 +351,7 @@ spec = describe "UTXOW" $ do
             , mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [mkRefScriptTxOut script addr]
             ]
 
-    disableInConformanceIt
+    it
       "A sub-transaction can use a script from an output of a previous sub-transaction"
       $ do
         txIn <- produceScript scriptHash
@@ -382,7 +376,6 @@ spec = describe "UTXOW" $ do
 
     -- The spec does not model the collateral return output yet
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/724
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1374
     -- TODO: Re-enable after issues are resolved, by removing this override
     disableInConformanceIt "A transaction can use a script from its collateral return output" $ do
       txIn <- produceScript scriptHash
@@ -393,7 +386,7 @@ spec = describe "UTXOW" $ do
           & bodyTxL . collateralReturnTxBodyL .~ SJust (mkRefScriptTxOut script addr)
 
     describe "ExtraneousScriptWitnessesUTXOW for a script provided by an output" $ do
-      disableInConformanceIt "witnessed by the top-level transaction" $ do
+      it "witnessed by the top-level transaction" $ do
         txIn <- produceScript scriptHash
         addr <- freshKeyAddr_
         let tx =
@@ -405,7 +398,7 @@ spec = describe "UTXOW" $ do
           tx
           [injectFailure $ Conway.ExtraneousScriptWitnessesUTXOW $ NES.singleton scriptHash]
 
-      disableInConformanceIt "witnessed by a sub-transaction" $ do
+      it "witnessed by a sub-transaction" $ do
         txIn <- produceScript scriptHash
         addr <- freshKeyAddr_
         let tx =
@@ -454,14 +447,14 @@ spec = describe "UTXOW" $ do
                 addr <- freshKeyAddrNoPtr_
                 pure (txIn, mkRefScriptTxOut refScript addr)
 
-          disableInConformanceIt "A transaction can use a script from its own output" $ do
+          it "A transaction can use a script from its own output" $ do
             (txIn, refScriptTxOut) <- produceWithRefScriptTxOut plutus
             submitTx_ $
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txIn]
                 & bodyTxL . outputsTxBodyL .~ [refScriptTxOut]
 
-          disableInConformanceIt
+          it
             "A top-level transaction can use a script from a sub-transaction output"
             $ do
               (txIn, refScriptTxOut) <- produceWithRefScriptTxOut plutus
@@ -471,7 +464,6 @@ spec = describe "UTXOW" $ do
 
           -- The spec does not model the collateral return output yet
           -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/724
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1374
           -- TODO: Re-enable after issues are resolved, by removing this override
           disableInConformanceIt "A transaction can use a script from its collateral return output" $ do
             (txIn, refScriptTxOut) <- produceWithRefScriptTxOut plutus
@@ -480,7 +472,7 @@ spec = describe "UTXOW" $ do
                 & bodyTxL . inputsTxBodyL .~ [txIn]
                 & bodyTxL . collateralReturnTxBodyL .~ SJust refScriptTxOut
 
-          disableInConformanceIt "A failing script provided by an output is evaluated" $ do
+          it "A failing script provided by an output is evaluated" $ do
             (txIn, refScriptTxOut) <- produceWithRefScriptTxOut $ alwaysFailsWithDatum slang
             submitPhase2Invalid_ $
               mkBasicTx mkBasicTxBody
@@ -494,7 +486,7 @@ spec = describe "UTXOW" $ do
             let withoutSubTxScriptWits =
                   withPostFixupSubTxs $ pure . (witsTxL . scriptTxWitsL .~ mempty)
 
-            disableInConformanceIt
+            it
               "A sub-transaction can use a script from a top-level transaction output"
               $ do
                 (txIn, refScriptTxOut) <- produceWithRefScriptTxOut plutus
@@ -502,7 +494,7 @@ spec = describe "UTXOW" $ do
                   mkTopTxWithSubTxs [mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]]
                     & bodyTxL . outputsTxBodyL .~ [refScriptTxOut]
 
-            disableInConformanceIt
+            it
               "A sub-transaction can use a script from an output of a later sub-transaction"
               $ do
                 (txIn, refScriptTxOut) <- produceWithRefScriptTxOut plutus
@@ -512,7 +504,7 @@ spec = describe "UTXOW" $ do
                     , mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [refScriptTxOut]
                     ]
 
-            disableInConformanceIt
+            it
               "A sub-transaction can use a script from an output of a previous sub-transaction"
               $ do
                 (txIn, refScriptTxOut) <- produceWithRefScriptTxOut plutus
