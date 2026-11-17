@@ -24,6 +24,7 @@ module Cardano.Ledger.Dijkstra.Rules.Eb (
   EbAnnouncementSizeMismatch (..),
   EbAlreadyApplied (..),
   validateEbReferences,
+  validateEbReferencesSize,
   validateEbAnnouncementSlot,
 ) where
 
@@ -231,7 +232,7 @@ validateEbReferences ::
   PParams era -> EbAnnouncement -> EbReferences era -> Test (EbPredFailure era)
 validateEbReferences pp ebA ebRefs =
   sequenceA_
-    [ first (fmap EbReferencesSizeTooBigInEB) $ validateEbReferencesSize pp ebRefs
+    [ first (fmap EbReferencesSizeTooBigInEB) $ validateEbReferencesSize pp (originalBytesSize ebRefs)
     , first (fmap EbAnnouncementHashMismatchInEB) $ validateEbAnnouncementHash announcement ebRefs
     , first (fmap EbAnnouncementSizeMismatchInEB) $ validateEbAnnouncementSize announcement ebRefs
     , first (fmap EbAlreadyAppliedInEB) $ validateEbNotApplied ebA
@@ -240,13 +241,9 @@ validateEbReferences pp ebA ebRefs =
     announcement = ebA ^. ebAnnouncementL
 
 validateEbReferencesSize ::
-  ( DijkstraEraPParams era
-  , EraEndorserBlock era
-  ) =>
-  PParams era -> EbReferences era -> Test (EbReferencesSizeTooBig era)
-validateEbReferencesSize pp ebRefs =
+  DijkstraEraPParams era => PParams era -> Int -> Test (EbReferencesSizeTooBig era)
+validateEbReferencesSize pp ebRefsSize =
   let maxEbRefsSize = fromIntegral @Word32 @Int $ pp ^. ppMaxEndorserBlockReferencesSizeL
-      ebRefsSize = originalBytesSize ebRefs
    in failureUnless (ebRefsSize <= maxEbRefsSize) $
         EbReferencesSizeTooBig
           Mismatch
