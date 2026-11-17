@@ -163,6 +163,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp
     Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.EbBuilderSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EbSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
