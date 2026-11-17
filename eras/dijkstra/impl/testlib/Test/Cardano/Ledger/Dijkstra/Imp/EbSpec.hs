@@ -153,8 +153,8 @@ spec = describe "EB" $ do
         injectEbFailure $
           EbReferencesSizeTooBig
             Mismatch
-              { mismatchSupplied = ebRefsSize eb
-              , mismatchExpected = fromIntegral @Word32 @Int maxEbRefsSize
+              { mismatchSupplied = originalBytesSize32 $ eb ^. referencesEndorserBlockL
+              , mismatchExpected = maxEbRefsSize
               }
 
       endorsedTxs eb = toList . unEbTransactions $ eb ^. transactionsEndorserBlockL
