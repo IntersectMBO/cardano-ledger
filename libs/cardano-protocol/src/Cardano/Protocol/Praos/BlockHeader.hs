@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -44,13 +45,13 @@ import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (..),
   decodeFixedSized,
-  decodeRecordNamed,
   encodeFixedSized,
   encodeListLen,
+  ifDecoderVersionAtLeast,
   serialize',
   unCBORGroup,
  )
-import Cardano.Ledger.Binary.Decoding.Coders
+import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (EraBlockHeader (..), PraosEraBlockHeader (..), blockHeaderL)
 import Cardano.Ledger.Core (Era)
@@ -229,7 +230,7 @@ instance Crypto crypto => DecCBOR (HeaderRaw crypto) where
       ( decodeRecordNamed "HeaderRaw" (const 2) $
           HeaderRaw <$> decCBOR <*> decodeFixedSized
       )
-      (decode $ RecD HeaderRaw <! From <! D decoeFixedSized)
+      (decode $ RecD HeaderRaw <! From <! D decodeFixedSized)
 
 instance Crypto crypto => DecCBOR (Annotator (HeaderRaw crypto)) where
   decCBOR = pure <$> decCBOR
