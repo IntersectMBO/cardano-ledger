@@ -22,8 +22,7 @@
 -- checked over its original bytes. See "Cardano.Protocol.Praos.BlockHeader" for
 -- the remaining details.
 module Cardano.Protocol.Leios.BlockHeader (
-  Header (HeaderConstr),
-  HeaderRaw (..),
+  Header (Header, headerBody, headerSig),
   HeaderBody (
     HeaderBodyConstr,
     HeaderBody,
@@ -41,15 +40,13 @@ module Cardano.Protocol.Leios.BlockHeader (
     hbEbReferencesAnnouncement
   ),
   HeaderBodyRaw (..),
-  mkHeader,
   mkHeaderBody,
-  headerBody,
-  headerSig,
   headerHash,
   headerSize,
 ) where
 
 import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
+import qualified Cardano.Binary.FixedSizeCodec as FSC
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (
@@ -92,7 +89,6 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
-  getMemoRawBytes,
   getMemoRawType,
   memoRawTypeL,
   mkMemoizedEra,
@@ -103,7 +99,6 @@ import Cardano.Protocol.TPraos.BlockHeader (PrevHash)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
-import qualified Data.ByteString.Short as SBS
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word32)
@@ -225,31 +220,22 @@ mkHeaderBody ::
   HeaderBody crypto
 mkHeaderBody _ = mkMemoizedEra @era
 
-data HeaderRaw crypto = HeaderRaw
-  { headerRawBody :: !(HeaderBody crypto)
-  , headerRawSig :: !(KES.SignedKES (KES crypto) (HeaderBody crypto))
+data Header crypto = Header
+  { headerBody :: !(HeaderBody crypto)
+  , headerSig :: !(KES.SignedKES (KES crypto) (HeaderBody crypto))
   }
   deriving (Generic)
 
-deriving instance Crypto crypto => Show (HeaderRaw crypto)
+deriving instance Crypto crypto => Show (Header crypto)
 
-instance Crypto c => Eq (HeaderRaw c) where
+instance Crypto c => Eq (Header c) where
   h1 == h2 =
-    headerRawSig h1 == headerRawSig h2
-      && headerRawBody h1 == headerRawBody h2
+    headerSig h1 == headerSig h2
+      && headerBody h1 == headerBody h2
 
 instance
   Crypto crypto =>
-  NoThunks (HeaderRaw crypto)
-
-newtype Header crypto = HeaderConstr (MemoBytes (HeaderRaw crypto))
-  deriving (Generic)
-  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR)
-
-instance Memoized (Header crypto) where
-  type RawType (Header crypto) = HeaderRaw crypto
-
-type instance MemoHashIndex (HeaderRaw crypto) = EraIndependentBlockHeader
+  NoThunks (Header crypto)
 
 -- | The original header body bytes and the raw signature, so the encoding of
 -- the enclosing array does not affect the header hash.
@@ -259,23 +245,10 @@ instance Crypto crypto => SafeToHash (Header crypto) where
 
 instance Crypto crypto => HashAnnotated (Header crypto) EraIndependentBlockHeader
 
-mkHeader ::
-  forall era crypto proxy.
-  (Era era, Crypto crypto) =>
-  proxy era ->
-  HeaderBody crypto ->
-  KES.SignedKES (KES crypto) (HeaderBody crypto) ->
-  Header crypto
-mkHeader _ body sig = mkMemoizedEra @era $ HeaderRaw body sig
-
-headerBody :: Header crypto -> HeaderBody crypto
-headerBody = headerRawBody . getMemoRawType
-
-headerSig :: Header crypto -> KES.SignedKES (KES crypto) (HeaderBody crypto)
-headerSig = headerRawSig . getMemoRawType
-
-headerSize :: Header crypto -> Int
-headerSize = SBS.length . getMemoRawBytes
+-- | Size of the hashed bytes: the original header body bytes and the raw
+-- signature. This does not depend on the encoding of the enclosing array.
+headerSize :: Crypto crypto => Header crypto -> Int
+headerSize = originalBytesSize
 
 headerHash ::
   Crypto crypto =>
@@ -344,33 +317,28 @@ deriving via
   instance
     Crypto crypto => DecCBOR (Annotator (HeaderBody crypto))
 
-instance Crypto crypto => EncCBOR (HeaderRaw crypto) where
-  encCBOR (HeaderRaw body sig) =
-    encodeListLen 2 <> encCBOR body <> encodeFixedSized sig
+instance Crypto crypto => Plain.ToCBOR (Header crypto) where
+  toCBOR (Header body sig) =
+    Plain.encodeListLen 2 <> Plain.toCBOR body <> FSC.encodeFixedSized sig
 
-instance Crypto crypto => DecCBOR (Annotator (HeaderRaw crypto)) where
+instance Crypto crypto => EncCBOR (Header crypto)
+
+instance Crypto crypto => DecCBOR (Annotator (Header crypto)) where
   decCBOR =
-    decodeRecordNamed "HeaderRaw" (const 2) $ do
+    decodeRecordNamed "Header" (const 2) $ do
       body <- decCBOR
       sig <- decodeFixedSized
-      pure $ HeaderRaw <$> body <*> pure sig
+      pure $ Header <$> body <*> pure sig
 
-instance Crypto c => EncCBOR (Header c)
-
-deriving via
-  Mem (HeaderRaw c)
-  instance
-    Crypto c => DecCBOR (Annotator (Header c))
-
-headerBodyL :: (Era era, Crypto c) => proxy era -> Lens' (Header c) (HeaderBody c)
-headerBodyL p = lens headerBody (\h b -> mkHeader p b (headerSig h))
+headerBodyL :: Lens' (Header c) (HeaderBody c)
+headerBodyL = lens headerBody (\h b -> h {headerBody = b})
 
 headerBodyRawL ::
   forall era c proxy.
   (Era era, Crypto c) =>
   proxy era ->
   Lens' (Header c) (HeaderBodyRaw c)
-headerBodyRawL p = headerBodyL p . memoRawTypeL @era
+headerBodyRawL _ = headerBodyL . memoRawTypeL @era
 
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockHeaderSizeBlockHeaderG =
@@ -378,7 +346,7 @@ instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockHeaderHashBlockHeaderG =
     blockHeaderL . to hashAnnotated
   blockIssuerBlockHeaderG =
-    blockHeaderL . headerBodyL (Proxy @era) . to (hashKey . hbVk)
+    blockHeaderL . headerBodyL . to (hashKey . hbVk)
   blockBodySizeBlockHeaderL =
     blockHeaderL . headerBodyRawL (Proxy @era) . lens hbrBodySize (\hbr sz -> hbr {hbrBodySize = sz})
   blockBodyHashBlockHeaderL =

@@ -12,12 +12,15 @@
 * Change the Leios header hash to cover only the original `HeaderBody` bytes and the raw KES signature, so the encoding of the enclosing array does not affect it:
   - Change `SafeToHash` for the Leios `Header` to return those bytes instead of the original bytes of the whole header
   - Add `Crypto` constraint to `headerHash` and to `HashAnnotated` for the Leios `Header`
+* Change the Leios `Header` from a memoized newtype to a record with `headerBody` and `headerSig` fields:
+  - Remove `HeaderRaw`, `HeaderConstr` and `mkHeader`
+  - Change `headerSize` to the size of the hashed bytes instead of the size as received, and add a `Crypto` constraint to it
 
 ### `testlib`
 
 * Move the `Arbitrary` instance for `EbReferencesAnnouncement` to `cardano-ledger-core:testlib`
 * Add `genHeaderBody` to `Test.Cardano.Protocol.Leios.BlockHeader.Arbitrary`
-* Add non-annotator `DecCBOR` instances for the Leios `HeaderBody` and `HeaderRaw`
+* Add non-annotator `DecCBOR` instances for the Leios `HeaderBody` and `Header`
 
 ## 0.2.0.0
 

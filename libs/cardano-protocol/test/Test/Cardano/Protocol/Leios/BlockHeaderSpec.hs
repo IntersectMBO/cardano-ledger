@@ -20,15 +20,12 @@ import Cardano.Ledger.Binary (
   natVersion,
   serialize,
  )
-import Cardano.Ledger.MemoBytes (mkMemoized)
 import Cardano.Protocol.Crypto (KES, StandardCrypto)
 import Cardano.Protocol.Leios.BlockHeader (
-  Header,
+  Header (..),
   HeaderBody (..),
-  HeaderRaw (HeaderRaw),
-  headerBody,
   headerHash,
-  headerSig,
+  headerSize,
  )
 import Control.Monad (foldM)
 import qualified Data.ByteString as BS
@@ -67,19 +64,22 @@ instance EncCBOR IndefiniteLengthHeader where
 
 spec :: Spec
 spec = do
-  describe "Leios header hash" $
+  describe "Leios header" $
     forM_ [natVersion @12 .. maxBound] $ \version ->
-      prop ("does not depend on the header array encoding in " <> show version) $
-        \(header :: Header StandardCrypto) -> do
-          let decodeHeader =
-                decodeFullAnnotator version "Header" (decCBOR @(Annotator (Header StandardCrypto)))
-              definiteBytes = serialize version header
-              indefiniteBytes = serialize version (IndefiniteLengthHeader header)
-          definiteBytes `shouldNotBe` indefiniteBytes
-          definite <- expectRight $ decodeHeader definiteBytes
-          indefinite <- expectRight $ decodeHeader indefiniteBytes
-          headerHash definite `shouldBe` headerHash header
-          headerHash indefinite `shouldBe` headerHash header
+      describe (show version) $ do
+        let decodeHeader =
+              decodeFullAnnotator version "Header" (decCBOR @(Annotator (Header StandardCrypto)))
+        prop "hash and size do not depend on the header array encoding" $
+          \(header :: Header StandardCrypto) -> do
+            let definiteBytes = serialize version header
+                indefiniteBytes = serialize version (IndefiniteLengthHeader header)
+            definiteBytes `shouldNotBe` indefiniteBytes
+            definite <- expectRight $ decodeHeader definiteBytes
+            indefinite <- expectRight $ decodeHeader indefiniteBytes
+            headerHash definite `shouldBe` headerHash header
+            headerHash indefinite `shouldBe` headerHash header
+            headerSize definite `shouldBe` headerSize header
+            headerSize indefinite `shouldBe` headerSize header
   describe "Leios header KES signature over an encoded header body" $
     forM_ [natVersion @12 .. maxBound] $ \version ->
       describe (show version) $
@@ -102,10 +102,9 @@ spec = do
                       bodyBytes
                 let header :: Header StandardCrypto
                     header =
-                      mkMemoized version $
-                        HeaderRaw signedBody $
-                          KES.SignedKES $
-                            KES.unsoundPureSignKES () period (BSL.toStrict bodyBytes) signKey
+                      Header signedBody $
+                        KES.SignedKES $
+                          KES.unsoundPureSignKES () period (BSL.toStrict bodyBytes) signKey
                 decodedHeader <-
                   expectRight $
                     decodeFullAnnotator version "Header" (decCBOR @(Annotator (Header StandardCrypto))) $
