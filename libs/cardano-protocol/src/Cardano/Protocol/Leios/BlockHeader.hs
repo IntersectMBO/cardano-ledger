@@ -49,6 +49,7 @@ module Cardano.Protocol.Leios.BlockHeader (
   headerSize,
 ) where
 
+import Cardano.Binary.FixedSizeCodec (rawEncodeFixedSized)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (
@@ -91,8 +92,8 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
+  getMemoRawBytes,
   getMemoRawType,
-  getMemoSafeHash,
   memoRawTypeL,
   mkMemoizedEra,
  )
@@ -102,6 +103,7 @@ import Cardano.Protocol.TPraos.BlockHeader (PrevHash)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (SlotNo)
+import qualified Data.ByteString.Short as SBS
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word32)
@@ -242,15 +244,20 @@ instance
 
 newtype Header crypto = HeaderConstr (MemoBytes (HeaderRaw crypto))
   deriving (Generic)
-  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, SafeToHash)
+  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR)
 
 instance Memoized (Header crypto) where
   type RawType (Header crypto) = HeaderRaw crypto
 
 type instance MemoHashIndex (HeaderRaw crypto) = EraIndependentBlockHeader
 
-instance HashAnnotated (Header crypto) EraIndependentBlockHeader where
-  hashAnnotated = getMemoSafeHash
+-- | The original header body bytes and the raw signature, so the encoding of
+-- the enclosing array does not affect the header hash.
+instance Crypto crypto => SafeToHash (Header crypto) where
+  originalBytes h =
+    originalBytes (headerBody h) <> rawEncodeFixedSized (KES.getSig $ headerSig h)
+
+instance Crypto crypto => HashAnnotated (Header crypto) EraIndependentBlockHeader
 
 mkHeader ::
   forall era crypto proxy.
@@ -268,9 +275,10 @@ headerSig :: Header crypto -> KES.SignedKES (KES crypto) (HeaderBody crypto)
 headerSig = headerRawSig . getMemoRawType
 
 headerSize :: Header crypto -> Int
-headerSize = originalBytesSize
+headerSize = SBS.length . getMemoRawBytes
 
 headerHash ::
+  Crypto crypto =>
   Header crypto ->
   Hash.Hash HASH EraIndependentBlockHeader
 headerHash = extractHash . hashAnnotated
@@ -366,7 +374,7 @@ headerBodyRawL p = headerBodyL p . memoRawTypeL @era
 
 instance (Crypto c, Era era) => EraBlockHeader (Header c) era where
   blockHeaderSizeBlockHeaderG =
-    blockHeaderL . to originalBytesSize
+    blockHeaderL . to headerSize
   blockHeaderHashBlockHeaderG =
     blockHeaderL . to hashAnnotated
   blockIssuerBlockHeaderG =

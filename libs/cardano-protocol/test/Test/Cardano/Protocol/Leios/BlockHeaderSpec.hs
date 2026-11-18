@@ -27,6 +27,7 @@ import Cardano.Protocol.Leios.BlockHeader (
   HeaderBody (..),
   HeaderRaw (HeaderRaw),
   headerBody,
+  headerHash,
   headerSig,
  )
 import Control.Monad (foldM)
@@ -55,8 +56,30 @@ instance EncCBOR IndefiniteLength where
       <> encodeNullStrictMaybe encCBOR hbEbReferencesAnnouncement
       <> encodeBreak
 
+newtype IndefiniteLengthHeader = IndefiniteLengthHeader (Header StandardCrypto)
+
+instance EncCBOR IndefiniteLengthHeader where
+  encCBOR (IndefiniteLengthHeader header) =
+    encodeListLenIndef
+      <> encCBOR (headerBody header)
+      <> encodeFixedSized (headerSig header)
+      <> encodeBreak
+
 spec :: Spec
-spec =
+spec = do
+  describe "Leios header hash" $
+    forM_ [natVersion @12 .. maxBound] $ \version ->
+      prop ("does not depend on the header array encoding in " <> show version) $
+        \(header :: Header StandardCrypto) -> do
+          let decodeHeader =
+                decodeFullAnnotator version "Header" (decCBOR @(Annotator (Header StandardCrypto)))
+              definiteBytes = serialize version header
+              indefiniteBytes = serialize version (IndefiniteLengthHeader header)
+          definiteBytes `shouldNotBe` indefiniteBytes
+          definite <- expectRight $ decodeHeader definiteBytes
+          indefinite <- expectRight $ decodeHeader indefiniteBytes
+          headerHash definite `shouldBe` headerHash header
+          headerHash indefinite `shouldBe` headerHash header
   describe "Leios header KES signature over an encoded header body" $
     forM_ [natVersion @12 .. maxBound] $ \version ->
       describe (show version) $
