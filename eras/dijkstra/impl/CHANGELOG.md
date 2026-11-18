@@ -2,6 +2,13 @@
 
 ## 0.6.0.0
 
+* Add `Cardano.Ledger.Dijkstra.Block.Endorser.Builder` with the `EraEndorserBlockBuilder` type class, for building the `EndorserBlock` that a ranking block announces:
+  - Add `mkInitEbBuilderState`, `snocTxEbBuilderValidated` and `finalizeEbBuilder` methods
+  - Add `EbBuilderState` and `EbBuilderResult`
+  - Add `mkInitEbBuilderStateDijkstra`, `snocTxEbBuilderValidatedDijkstra` and `finalizeEbBuilderDijkstra`
+  - Add `EraEndorserBlockBuilder DijkstraEra` instance
+  - Export `EraEndorserBlockBuilder`, `EbBuilderState` and `EbBuilderResult` from `Cardano.Ledger.Dijkstra`
+* Add `validateEbReferencesSize` to `Cardano.Ledger.Dijkstra.Rules.Eb`
 * Enforce the `ppMaxEndorserBlockTxsSizeL`, `ppMaxEndorserBlockExUnitsL` and `ppMaxRefScriptSizePerEndorserBlockL` limits in the `EBLEDGERS` rule, stopping at the first failing transaction:
   - Add `EbTxsSizeTooBig`, `EbExUnitsTooBig` and `EbRefScriptsSizeTooBig` to `Cardano.Ledger.Dijkstra.Rules.EbLedgers`, and `InjectRuleFailure "EBLEDGERS"` and `InjectRuleFailure "EB"` instances for them
   - Add `validateEbLimits`, `validateEbTxsSize`, `validateEbExUnits` and `validateEbRefScriptsSize` to `Cardano.Ledger.Dijkstra.Rules.EbLedgers`
@@ -85,6 +92,7 @@
 
 ### `testlib`
 
+* Add `EraEndorserBlockBuilder` superclass to `DijkstraEraImp`
 * Add `ToExpr` instance for `DijkstraBlockBodyLimits`
 * Add `InjectRuleFailure "EB"` superclasses for `EbTxsSizeTooBig`, `EbExUnitsTooBig` and `EbRefScriptsSizeTooBig` to `DijkstraEraImp`, and `Arbitrary` and `ToExpr` instances for them
 * Add `announceEndorserBlock`
