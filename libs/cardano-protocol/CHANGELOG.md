@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol`
 
+## 0.2.0.2
+
+* Bring back the pre-protocol-version-12 `DecCBOR` decoder for the Praos `HeaderRaw`, which does not enforce the list length
+
 ## 0.2.0.0
 
 * Remove the `Header` pattern synonym from `Cardano.Protocol.Leios.BlockHeader`

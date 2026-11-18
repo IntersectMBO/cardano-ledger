@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -37,18 +39,19 @@ import Cardano.Crypto.Util (
   SignableRepresentation (getSignableRepresentation),
  )
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BaseTypes (ProtVer (pvMajor))
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
   decodeFixedSized,
-  decodeRecordNamed,
   encodeFixedSized,
   encodeListLen,
+  ifDecoderVersionAtLeast,
   serialize',
   unCBORGroup,
  )
+import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (EraBlockHeader (..), PraosEraBlockHeader (..), blockHeaderL)
 import Cardano.Ledger.Core (Era)
@@ -222,8 +225,12 @@ instance Crypto crypto => EncCBOR (HeaderRaw crypto) where
 
 instance Crypto crypto => DecCBOR (HeaderRaw crypto) where
   decCBOR =
-    decodeRecordNamed "HeaderRaw" (const 2) $
-      HeaderRaw <$> decCBOR <*> decodeFixedSized
+    ifDecoderVersionAtLeast
+      (natVersion @12)
+      ( decodeRecordNamed "HeaderRaw" (const 2) $
+          HeaderRaw <$> decCBOR <*> decodeFixedSized
+      )
+      (decode $ RecD HeaderRaw <! From <! D decodeFixedSized)
 
 instance Crypto crypto => DecCBOR (Annotator (HeaderRaw crypto)) where
   decCBOR = pure <$> decCBOR
