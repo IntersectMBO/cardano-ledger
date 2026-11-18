@@ -76,6 +76,7 @@ data DijkstraForecast (t :: Timeline) era = DijkstraForecast
   { dfPoolDistr :: !PoolDistr
   , dfMaxBlockHeaderSize :: !Word16
   , dfMaxBlockBodySize :: !Word32
+  , dfMaxTxSize :: !Word32
   , dfProtocolVersion :: !ProtVer
   , dfLeiosCommittee :: !LeiosCommittee
   , dfLeiosCommitteeSize :: !Word16
@@ -104,6 +105,7 @@ instance NoThunks (DijkstraForecast t era)
 
 -- | Additional forecast fields available only in Leios eras.
 class EraForecast era => DijkstraEraForecast era where
+  maxTxSizeForecastL :: Lens' (Forecast t era) Word32
   leiosCommitteeForecastL :: Lens' (Forecast t era) LeiosCommittee
   leiosCommitteeSizeForecastL :: Lens' (Forecast t era) Word16
   leiosQuorumStakeThresholdForecastL :: Lens' (Forecast t era) UnitInterval
@@ -127,7 +129,8 @@ mkDijkstraForecast ::
   DijkstraForecast t era
 mkDijkstraForecast nes =
   DijkstraForecast
-    { dfPoolDistr = nes ^. nesStakePoolDistrG
+    { dfMaxTxSize = pp ^. ppMaxTxSizeL
+    , dfPoolDistr = nes ^. nesStakePoolDistrG
     , dfMaxBlockHeaderSize = pp ^. ppMaxBHSizeL
     , dfMaxBlockBodySize = pp ^. ppMaxBBSizeL
     , dfProtocolVersion = pp ^. ppProtocolVersionL
@@ -159,6 +162,10 @@ dfMaxBlockHeaderSizeL = lens dfMaxBlockHeaderSize $ \s x -> s {dfMaxBlockHeaderS
 
 dfMaxBlockBodySizeL :: Lens' (DijkstraForecast t era) Word32
 dfMaxBlockBodySizeL = lens dfMaxBlockBodySize $ \s x -> s {dfMaxBlockBodySize = x}
+
+dfMaxTxSizeL :: Lens' (DijkstraForecast t era) Word32
+dfMaxTxSizeL =
+  lens dfMaxTxSize $ \s x -> s {dfMaxTxSize = x}
 
 dfProtocolVersionL :: Lens' (DijkstraForecast t era) ProtVer
 dfProtocolVersionL = lens dfProtocolVersion $ \s x -> s {dfProtocolVersion = x}
@@ -234,6 +241,7 @@ instance EraForecast DijkstraEra where
   protocolVersionForecastL = dfProtocolVersionL
 
 instance DijkstraEraForecast DijkstraEra where
+  maxTxSizeForecastL = dfMaxTxSizeL
   leiosCommitteeForecastL = dfLeiosCommitteeL
   leiosCommitteeSizeForecastL = dfLeiosCommitteeSizeL
   leiosQuorumStakeThresholdForecastL = dfLeiosQuorumStakeThresholdL
