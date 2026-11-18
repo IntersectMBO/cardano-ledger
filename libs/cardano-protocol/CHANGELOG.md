@@ -9,6 +9,9 @@
   - Change `SignableRepresentation` for `HeaderBody` to use the original bytes instead of re-serializing
   - Change `Eq` for `HeaderBody` to also compare the original bytes
 * Remove the non-annotator `DecCBOR` instances for the Leios `HeaderBody` and `HeaderRaw`
+* Change the Leios header hash to cover only the original `HeaderBody` bytes and the raw KES signature, so the encoding of the enclosing array does not affect it:
+  - Change `SafeToHash` for the Leios `Header` to return those bytes instead of the original bytes of the whole header
+  - Add `Crypto` constraint to `headerHash` and to `HashAnnotated` for the Leios `Header`
 
 ### `testlib`
 
