@@ -48,11 +48,9 @@ generateCBORFromCDDL ::
   IO BS.ByteString
 generateCBORFromCDDL spec = do
   term <-
-    generate . runAntiGen
-      $ runCBORGen
-        (GenConfig {gcTwiddle = twiddleNothing, gcRoot = mapIndex spec})
-        . generateFromName
-      $ Name (T.pack "record_entry")
+    generate . runAntiGen $
+      runCBORGen (GenConfig $ mapIndex spec) . generateFromName $
+        Name (T.pack "record_entry")
   pure $ toStrictByteString $ encodeTerm term
 
 -- | Test if a reference CDDL accepts CBOR generated from another spec

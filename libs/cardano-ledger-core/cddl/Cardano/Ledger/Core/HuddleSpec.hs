@@ -30,7 +30,7 @@ import Cardano.Ledger.Huddle.Gen (
   oneof,
   vectorOf,
  )
-import Codec.CBOR.Cuddle.CBOR.Gen (twiddleArray)
+import Codec.CBOR.Cuddle.CBOR.Gen (genBytes)
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
@@ -310,3 +310,14 @@ instance Era era => HuddleRule "protocol_version" era where
 instance Era era => HuddleGroup "protocol_version" era where
   huddleGroupNamed pname p =
     pname =.~ grp [a $ huddleRule @"major_protocol_version" p, a $ VUInt `sized` (4 :: Word64)]
+
+instance Era era => HuddleRule "definite_bytes" era where
+  huddleRuleNamed pname _ =
+    withGenerator generator $
+      withValidator validator $
+        pname =.= VBytes
+    where
+      generator = SingleTerm . TBytes <$> genBytes
+      validator = \case
+        SingleTerm (TBytes _) -> pure ()
+        _ -> fail "Expected definite-encoded bytes"

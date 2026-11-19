@@ -133,6 +133,18 @@ antiVectorOfUniqueBy eq n gen = do
       | otherwise = pure (Just elems)
   go n triesPerElement []
 
+genArrayTerm :: [Term] -> CBORGen Term
+genArrayTerm es = GenT.elements [TList es, TListI es]
+
+genBytesTerm :: ByteString -> CBORGen Term
+genBytesTerm bs = GenT.elements [TBytes bs, TBytesI $ LBS.fromStrict bs]
+
+genStringTerm :: T.Text -> CBORGen Term
+genStringTerm t = GenT.elements [TString t, TStringI $ LT.fromStrict t]
+
+genMapTerm :: [(Term, Term)] -> CBORGen Term
+genMapTerm m = GenT.elements [TMap m, TMapI m]
+
 -- Term validators
 
 validateInt :: Term -> Validator Integer
