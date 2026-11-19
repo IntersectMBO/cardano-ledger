@@ -236,6 +236,7 @@ library testlib
     Test.Cardano.Ledger.Plutus.Guardrail
     Test.Cardano.Ledger.Plutus.ScriptTestContext
     Test.Cardano.Ledger.Plutus.ToPlutusData
+    Test.Cardano.Ledger.State.SnapShots
     Test.Cardano.Ledger.TreeDiff
 
   other-modules:
