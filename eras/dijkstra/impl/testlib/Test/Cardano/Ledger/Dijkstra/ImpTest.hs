@@ -227,6 +227,9 @@ class
   , InjectRuleFailure "EB" EbAnnouncementHashMismatch era
   , InjectRuleFailure "EB" EbAnnouncementSizeMismatch era
   , InjectRuleFailure "EB" EbAlreadyApplied era
+  , InjectRuleFailure "EB" EbTxsSizeTooBig era
+  , InjectRuleFailure "EB" EbExUnitsTooBig era
+  , InjectRuleFailure "EB" EbRefScriptsSizeTooBig era
   , Show (PredicateFailure (EraRule "EBLEDGERS" era))
   , Inject (NonEmpty (Conway.PredicateFailure (EraRule "MEMPOOL" era))) (ApplyTxError era)
   , STS (EraRule "EB" era)

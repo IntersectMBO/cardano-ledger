@@ -461,7 +461,7 @@ conwayLedgerTransitionTRC
         (LedgerState utxoState'' certStateAfterCERTS lastEbAnnouncement)
         ( blockBodyLimits
             <> ConwayBlockBodyLimits
-              { cbblTxsSize = sizeTxForFeeCalculation tx
+              { cbblTxsSize = fromIntegral @Word32 @Int $ sizeTxForFeeCalculation tx
               , cbblExUnits = exUnitsStAnnTx stAnnTx
               , -- Check before using for pv <= 10, see `totalRefScriptSizeInBlock`
                 cbblRefScriptsSize = refScriptsSize

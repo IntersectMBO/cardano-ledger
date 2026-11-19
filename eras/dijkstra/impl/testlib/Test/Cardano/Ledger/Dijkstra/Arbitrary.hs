@@ -25,7 +25,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.Block.Endorser
@@ -45,7 +45,7 @@ import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
 import Cardano.Ledger.MemoBytes (mkMemoizedEra)
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx))
-import Cardano.Ledger.Plutus (Language (..))
+import Cardano.Ledger.Plutus (Language (..), OrdExUnits (..))
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
@@ -235,7 +235,7 @@ instance
   Arbitrary (PredicateFailure (EraRule "LEDGER" era)) =>
   Arbitrary (EbLedgersPredFailure era)
   where
-  arbitrary = LedgerFailureInEBLEDGERS <$> arbitrary
+  arbitrary = genericArbitraryU
 
 deriving newtype instance Arbitrary (EbWasNotAnnounced era)
 
@@ -248,6 +248,17 @@ deriving newtype instance Arbitrary (EbAnnouncementHashMismatch era)
 deriving newtype instance Arbitrary (EbAnnouncementSizeMismatch era)
 
 deriving newtype instance Arbitrary (EbAlreadyApplied era)
+
+deriving newtype instance Arbitrary (EbTxsSizeTooBig era)
+
+-- | The supplied total is a sum of transaction budgets, so unlike the limit it can exceed the
+-- bound of a single budget
+instance Arbitrary (EbExUnitsTooBig era) where
+  arbitrary = do
+    supplied <- OrdExUnits . mconcat <$> listOf1 arbitrary
+    EbExUnitsTooBig . Mismatch supplied <$> arbitrary
+
+deriving newtype instance Arbitrary (EbRefScriptsSizeTooBig era)
 
 instance
   ( Era era
