@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Plutus.Examples (
   inputsOutputsAreNotEmptyNoDatum,
   inputsOutputsAreNotEmptyWithDatum,
   inputsOverlapsWithRefInputs,
+  inputSpendingGuard,
 ) where
 
 import Cardano.Ledger.Plutus.Language (Plutus (..), PlutusBinary (..), SLanguage (..))
@@ -1252,4 +1253,50 @@ inputsOverlapsWithRefInputs =
       , "14800c8a4006452003229001914800c8a4006452003229001914800c88ca60026eb80966002047375804337580"
       , "3f375803b37560373758033375602f375602b37560270119bac00f9bab00d9bab00b9bab0099bab0079bac0059"
       , "800801cdd69816001204e2900194004dd69816800a50020000099319801249035054350049a9315d0ab9c1"
+      ]
+
+-- | Script performing tx-level validation for the UTxOs it locks, acting as their guard
+-- When spending, succeeds only if its own hash is in txInfoGuards
+-- When guarding, expects a CurrencySymbol redeemer and succeeds only if every input
+-- locked by its own hash holds a token of that policy
+-- Fails on malformed arguments or for any other purpose
+inputSpendingGuard :: SLanguage l -> Plutus l
+inputSpendingGuard =
+  decodeHexPlutus . mconcat . \case
+    SPlutusV1 -> error "Script not available in PlutusV1"
+    SPlutusV2 -> error "Script not available in PlutusV2"
+    SPlutusV3 -> error "Script not available in PlutusV3"
+    -- ScriptHash "ad5bb17865099fccc647fdfb51d1b0422494e35df692e7b79c4bec60"
+    -- Preprocessed PlutusV4 Script:
+    -- @@@
+    -- inputSpendingGuard_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                         PlutusTx.Builtins.Internal.BuiltinUnit
+    -- inputSpendingGuard_0 arg_1 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1 of
+    --                                                                 {PlutusLedgerApi.V4.Data.Contexts.ScriptContext txInfo_2
+    --                                                                                                                 (PlutusLedgerApi.V1.Scripts.Redeemer redeemer_3)
+    --                                                                                                                 scriptInfo_4
+    --                                                                                                                 ownHash_5 -> case scriptInfo_4 of
+    --                                                                                                                              {PlutusLedgerApi.V4.Data.Contexts.SpendingScript _txOutRef_6
+    --                                                                                                                                                                               _mDatum_7 -> PlutusTx.Data.List.elem (PlutusLedgerApi.V1.Data.Credential.ScriptCredential ownHash_5) (PlutusLedgerApi.V4.Data.Contexts.txInfoGuards txInfo_2);
+    --                                                                                                                               PlutusLedgerApi.V4.Data.Contexts.GuardingScript _ix_8
+    --                                                                                                                                                                               _topTxInfo_9 -> let {protocolPolicy_10 = PlutusTx.IsData.Class.unsafeFromBuiltinData redeemer_3 :: PlutusLedgerApi.V1.Data.Value.CurrencySymbol;
+    --                                                                                                                                                                                                    holdsProtocolToken_11 txInInfo_12 = let txOut_13 = PlutusLedgerApi.V4.Data.Contexts.txInInfoResolved txInInfo_12
+    --                                                                                                                                                                                                                                         in case PlutusLedgerApi.V4.Data.Address.addressCredential (PlutusLedgerApi.V4.Data.Tx.txOutAddress txOut_13) of
+    --                                                                                                                                                                                                                                            {PlutusLedgerApi.V1.Data.Credential.ScriptCredential sh_14 -> PlutusTx.Bool.not (sh_14 PlutusTx.Eq.Class.== ownHash_5) PlutusTx.Bool.|| (PlutusLedgerApi.V1.Data.Value.currencySymbolValueOf (PlutusLedgerApi.V4.Data.Tx.txOutValue txOut_13) protocolPolicy_10 PlutusTx.Ord.Class.> 0);
+    --                                                                                                                                                                                                                                             _ -> GHC.Types.True}}
+    --                                                                                                                                                                                                in PlutusTx.Data.List.all holdsProtocolToken_11 (PlutusLedgerApi.V4.Data.Contexts.txInfoInputs txInfo_2);
+    --                                                                                                                               _ -> GHC.Types.False}})
+    -- @@@
+    SPlutusV4 ->
+      [ "5901e60102009800aba0aba1ab9c4888c8a64dd6000c8a40064646464520032232323293370e90014800c88009"
+      , "93370e90064800c880094a130029800806488888888888888888880464c804132330010019800806c888888888"
+      , "88888888880224c80488c8a400645266ebc01000a6600a00a0034a2a5019ba548008cc048dd480225eb806ea80"
+      , "10c8c0040048a40064464653266e1d20029001910012947266e3cdd7180a4800c8800400f4a333710900049805"
+      , "9980111110019348c04cdd5800d200014a1330060060031baa937586600244440084d220021149bac937580092"
+      , "2301600148a40064520032298008034dd5802400a66026eb8c0680050080a511bae300d001191800800914800c"
+      , "a4cdd79ba9375c00d20032200248cc01001000650019002910008c00844526eb000e452003229001914800c8a4"
+      , "006452003229001914800c8a4006452003229001914800c8a4006452003229001914800c8a4006452003223298"
+      , "009bae0259800811cdd6010cdd600fcdd600ecdd580dcdd600ccdd580bcdd580acdd5809c0466eb003e6eac036"
+      , "6eac02e6eac0266eac01e6eb00166002007375a60600048138c0a1d680000452003280098019805000a5002132"
+      , "6330034901035054350049a930c8c0040048a40064466e00dd6c80148800466008008003480001"
       ]

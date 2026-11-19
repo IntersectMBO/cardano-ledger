@@ -57,6 +57,7 @@
 * Add `ToExpr` instance for `EbAnnouncement`
 * Add `Arbitrary` and `ToExpr` instances for `BlsVerKeyHash`
 * Add `plutusLanguageOf` and `showPlcVersion` to `Test.Cardano.Ledger.Plutus`
+* Add `inputSpendingGuard` PlutusV4 spending and guard script to `Test.Cardano.Ledger.Plutus.Examples`
 
 ## 1.23.0.0
 

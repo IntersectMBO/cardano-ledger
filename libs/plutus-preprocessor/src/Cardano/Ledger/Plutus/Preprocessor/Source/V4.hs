@@ -253,3 +253,46 @@ ensureTreasuryReserveQ =
                   _ -> False
           _ -> False
     |]
+
+-- | Script performing tx-level validation for the UTxOs it locks, by acting as both their
+-- spending script and their guard:
+--
+-- * As a spending script it only succeeds when its own hash is in `txInfoGuards`, i.e. it
+--   delegates validation to its guard execution.
+-- * As a guard it expects a `CurrencySymbol` redeemer and only succeeds when every input
+--   locked by its own hash holds a token of that policy.
+--
+-- This could also be written as two separate scripts: a spending script that
+-- requires a guard hash (e.g. supplied as a script parameter) to be in
+-- `txInfoGuards`, and a guard script that checks the inputs locked by the
+-- spending script hash (e.g. supplied as a script parameter). Doing so has the
+-- following advantages:
+--
+-- * The tx-level logic can be upgraded without changing the address of the UTxOs: new UTxOs
+--   reference the upgraded guard, while the spending script hash stays the same.
+-- * Each script is smaller, so the spending script, which runs once per input, costs less to
+--   deserialise and to include as a witness or reference script.
+-- * Each script has a single purpose, which makes it simpler to audit.
+inputSpendingGuardQ :: Q [Dec]
+inputSpendingGuardQ =
+  [d|
+    inputSpendingGuard :: P.BuiltinData -> P.BuiltinUnit
+    inputSpendingGuard arg =
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV4D.ScriptContext txInfo (PV4D.Redeemer redeemer) scriptInfo ownHash ->
+            case scriptInfo of
+              PV4D.SpendingScript _txOutRef _mDatum ->
+                PLD.elem (PV4D.ScriptCredential ownHash) (PV4D.txInfoGuards txInfo)
+              PV4D.GuardingScript _ix _topTxInfo ->
+                let protocolPolicy = unsafeFromBuiltinData redeemer :: PV4D.CurrencySymbol
+                    holdsProtocolToken txInInfo =
+                      let txOut = PV4D.txInInfoResolved txInInfo
+                       in case PV4D.addressCredential (PV4D.txOutAddress txOut) of
+                            PV4D.ScriptCredential sh ->
+                              P.not (sh P.== ownHash)
+                                P.|| (PV4D.currencySymbolValueOf (PV4D.txOutValue txOut) protocolPolicy P.> 0)
+                            _ -> True
+                 in PLD.all holdsProtocolToken (PV4D.txInfoInputs txInfo)
+              _ -> False
+    |]
