@@ -34,7 +34,6 @@ import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -351,13 +350,10 @@ instance
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
-  , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ BBODY era
   , AlonzoEraTx era
-  , BabbageEraTxBody era
   , DijkstraEraPParams era
   , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEIOSCERT" era) ~ LeiosCertEnv

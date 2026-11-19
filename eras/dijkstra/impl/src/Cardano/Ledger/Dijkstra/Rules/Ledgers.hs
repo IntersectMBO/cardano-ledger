@@ -38,7 +38,6 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  LedgerState (..),
   LedgerStateWithLimits (..),
   lswlBlockBodyLimitsL,
   lswlLedgerStateL,
@@ -176,8 +175,6 @@ instance
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   , ConwayEraPParams era
   , EraRule "LEDGERS" era ~ LEDGERS era
-  , InjectRuleFailure "LEDGERS" DijkstraLedgersPredFailure era
-  , Default (LedgerState era)
   ) =>
   STS (LEDGERS era)
   where
@@ -204,7 +201,6 @@ ledgersTransition ::
   , BlockBodyLimits era ~ ConwayBlockBodyLimits era
   , ConwayEraPParams era
   , EraRule "LEDGERS" era ~ LEDGERS era
-  , InjectRuleFailure "LEDGERS" DijkstraLedgersPredFailure era
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do
@@ -224,9 +220,9 @@ ledgersTransition = do
                 TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
             let ConwayBlockBodyLimits {cbblExUnits, cbblRefScriptsSize} =
                   newLedgerState ^. lswlBlockBodyLimitsL
-            validateTrans (injectFailure . TooManyExUnits @era) $
+            validateTrans TooManyExUnits $
               Alonzo.validateExUnits pp cbblExUnits
-            validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
+            validateTrans BodyRefScriptsSizeTooBig $
               Conway.validateBodyRefScriptsSizeTooBig pp cbblRefScriptsSize
             pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
