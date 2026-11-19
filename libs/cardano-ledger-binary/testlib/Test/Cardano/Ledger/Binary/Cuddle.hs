@@ -199,11 +199,7 @@ data HuddleEnv = HuddleEnv
   }
 
 toGenConfig :: HuddleEnv -> GenConfig
-toGenConfig HuddleEnv {..} =
-  GenConfig
-    { gcTwiddle = heTwiddle
-    , gcRoot = mapIndex heRoot
-    }
+toGenConfig HuddleEnv {..} = GenConfig $ mapIndex heRoot
 
 huddleAntiCborProp ::
   forall a.
