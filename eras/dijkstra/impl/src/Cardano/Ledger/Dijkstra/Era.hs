@@ -20,6 +20,7 @@ module Cardano.Ledger.Dijkstra.Era (
   GOV,
   GOVCERT,
   LEDGER,
+  LEDGERS,
   LEIOSCERT,
   MEMPOOL,
   POOL,
@@ -60,7 +61,6 @@ module Cardano.Ledger.Dijkstra.Era (
   DijkstraUTXOW,
 ) where
 
-import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Internal.Era (DijkstraEra)
@@ -224,6 +224,10 @@ type instance EraRule "ENTITIES" DijkstraEra = ENTITIES DijkstraEra
 
 type instance EraRule "LEDGER" DijkstraEra = LEDGER DijkstraEra
 
+data LEDGERS era
+
+type instance EraRule "LEDGERS" DijkstraEra = LEDGERS DijkstraEra
+
 type instance EraRule "TICKF" DijkstraEra = Conway.TICKF DijkstraEra
 
 type instance EraRule "RATIFY" DijkstraEra = Conway.RATIFY DijkstraEra
@@ -307,8 +311,6 @@ data SNAP era
 type instance EraRule "SNAP" DijkstraEra = SNAP DijkstraEra
 
 -- Rules inherited from Shelley
-
-type instance EraRule "LEDGERS" DijkstraEra = Babbage.LEDGERS DijkstraEra
 
 type instance EraRule "RUPD" DijkstraEra = Shelley.RUPD DijkstraEra
 

@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Change the `STS` state of `LEDGERS` rule to `LedgerStateWithLimits`
 * Add `getTxOutsReferenceScripts`
 * Remove `feesOK`
 * Replace `TranslateEra BabbageEra (Tx TopTx)` with `TranslateEra BabbageEra MempoolTx`

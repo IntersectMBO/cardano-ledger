@@ -524,16 +524,6 @@ instance
   wrapEvent = UtxowEvent
 
 instance
-  ( STS (LEDGER era)
-  , PredicateFailure (EraRule "LEDGER" era) ~ DijkstraLedgerPredFailure era
-  , Event (EraRule "LEDGER" era) ~ DijkstraLedgerEvent era
-  ) =>
-  Embed (LEDGER era) (Babbage.LEDGERS era)
-  where
-  wrapFailed = Shelley.LedgerFailure
-  wrapEvent = Shelley.LedgerEvent
-
-instance
   ( STS (GOV era)
   , PredicateFailure (EraRule "GOV" era) ~ DijkstraGovPredFailure era
   , Event (EraRule "GOV" era) ~ Conway.ConwayGovEvent era

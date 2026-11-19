@@ -189,7 +189,7 @@ instance
   ) =>
   STS (LEDGERS era)
   where
-  type State (LEDGERS era) = LedgerState era
+  type State (LEDGERS era) = LedgerStateWithLimits era
   type Signal (LEDGERS era) = Seq (Tx TopTx era)
   type Environment (LEDGERS era) = ShelleyLedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
@@ -215,7 +215,7 @@ ledgersTransition = do
   TRC (LedgersEnv slot epochNo pp account, initLedgerState, txs) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sysStart <- liftSTS $ asks systemStart
-  (LedgerStateWithLimits ledgerState _) <-
+  ledgerState <-
     foldM
       ( \ !curLedgerState (ix, tx) ->
           -- build the annotations against the same utxo snapshot that the rule will validate against
@@ -224,7 +224,7 @@ ledgersTransition = do
            in trans @(EraRule "LEDGER" era) $
                 TRC (LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
       )
-      (LedgerStateWithLimits initLedgerState mempty)
+      initLedgerState
       $ zip [minBound ..]
       $ toList txs
   pure ledgerState

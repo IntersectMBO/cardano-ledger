@@ -73,6 +73,7 @@ spec era = do
 conwayOnlySpec :: Spec
 conwayOnlySpec = do
   describe "ConwayEra Specific" $ withImpInitEachEraVersion (Proxy @ConwayEra) $ do
+    BBODY.conwayOnlySpec
     CERTS.conwayOnlySpec
     SNAP.conwayOnlySpec
     UTXO.conwayOnlySpec

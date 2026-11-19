@@ -2,6 +2,8 @@
 
 ## 1.19.0.0
 
+* Change `validateExUnits` to take `PParams era` and `ExUnits` and change its return type to `Test (Mismatch RelLTEQ OrdExUnits)`
+* Change the `STS` state of `LEDGERS` rule to `LedgerStateWithLimits`
 * Add `asatUTxO` field to `AlonzoStAnnTx`
 * Replace the `Tx l era` argument of `validateExUnitsTooBigUTxO` with `StAnnTx TopTx era`
 * Add `ExUnits` argument to `alonzoMinFeeTx`

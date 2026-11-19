@@ -2,6 +2,9 @@
 
 ## 1.25.0.0
 
+* Remove `totalRefScriptSizeInBlock`
+* Change `validateBodyRefScriptsSizeTooBig` to take the total reference script size and change its return type to `Test (Mismatch RelLTEQ Int)`
+* Change `bbodyTransition` from `Rule (EraRule "BBODY" era) 'Transition ()` to `TransitionRule (EraRule "BBODY" era)`
 * Add `ExUnits` argument to `getConwayMinFeeTx`
 * Add `getConwayWitsVKeyNeededWith`
 * Replace `TranslateEra ConwayEra (Tx TopTx)` with `TranslateEra ConwayEra MempoolTx`

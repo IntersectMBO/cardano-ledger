@@ -28,8 +28,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
-  LedgerState (..),
-  LedgerStateWithLimits,
+  LedgerStateWithLimits (..),
   NewEpochState (..),
   StashedAVVMAddresses,
   curPParamsEpochStateL,
@@ -121,6 +120,7 @@ instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era
 
 instance
   ( EraGov era
+  , EraBlockBody era
   , STS (Shelley.TICK era)
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
@@ -128,7 +128,7 @@ instance
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
@@ -159,9 +159,13 @@ instance
 
         let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 
-        newledgerState <-
+        LedgerStateWithLimits newledgerState _ <-
           trans @(EraRule "LEDGERS" era) $
-            TRC (Shelley.LedgersEnv slot (epochFromSlotNo slot) pparams account, ledgerState, fromStrict txs)
+            TRC
+              ( Shelley.LedgersEnv slot (epochFromSlotNo slot) pparams account
+              , LedgerStateWithLimits ledgerState mempty
+              , fromStrict txs
+              )
 
         let newEpochstate = epochState {esLState = newledgerState}
             newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}

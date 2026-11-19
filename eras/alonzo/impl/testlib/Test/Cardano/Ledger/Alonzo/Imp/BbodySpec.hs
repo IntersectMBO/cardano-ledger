@@ -93,7 +93,8 @@ spec = describe "BBODY" $ do
                   & bodyTxL . certsTxBodyL .~ [txCert]
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert cPurpose (dex 0)
 
-        it "enforces ppMaxBlockExUnits" $ do
+        -- From Dijkstra onwards this limit is enforced by LEDGERS, not BBODY
+        it "enforces ppMaxBlockExUnits" $ whenMajorVersionAtMost @11 $ do
           maxBlockUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxBlockExUnitsL
           maxTxUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
 

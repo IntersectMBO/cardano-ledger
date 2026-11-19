@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Change the `LedgerState era` argument of `ledgersSigGen` to `LedgerStateWithLimits era`
 * Add an `EncCBOR (MempoolTx era)` constraint to `propAbstractSizeBoundsBytes` and `propAbstractSizeNotTooBig`
 
 ## 1.10.0.0

@@ -29,6 +29,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import Cardano.Ledger.Alonzo.BlockBody (AlonzoBlockBodyLimits (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, BBODY)
 import Cardano.Ledger.Alonzo.Rules.Ledgers ()
@@ -40,27 +41,18 @@ import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..), EraBlockHeader (..), TPraosBbodySignal (..))
+import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.BlockBody (incrBlocks)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerStateWithLimits (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (slotToEpochBoundary)
 import Control.DeepSeq (NFData)
-import Control.State.Transition (
-  Embed (..),
-  Rule,
-  RuleType (..),
-  STS (..),
-  TRC (..),
-  TransitionRule,
-  liftSTS,
-  trans,
-  withJudgmentContext,
-  (?!),
- )
+import Control.State.Transition
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (Shelley.ShelleyBbodyPredFailure era)
@@ -155,24 +147,18 @@ instance
 -- | Validate that total execution units (all transactions) do not exceed block limit.
 -- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp
 validateExUnits ::
-  forall era.
-  ( AlonzoEraTx era
-  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
-  ) =>
-  StrictSeq.StrictSeq (Tx TopTx era) ->
-  -- | Max block exunits protocol parameter.
+  AlonzoEraPParams era =>
+  PParams era ->
+  -- | Total execution units of all transactions in the block
   ExUnits ->
-  Rule (EraRule "BBODY" era) 'Transition ()
-validateExUnits txs ppMax =
-  let txTotal = foldMap getTotalExUnits txs
-   in pointWiseExUnits (<=) txTotal ppMax
-        ?! injectFailure
-          ( TooManyExUnits $
-              Mismatch
-                { mismatchSupplied = OrdExUnits txTotal
-                , mismatchExpected = OrdExUnits ppMax
-                }
-          )
+  Test (Mismatch RelLTEQ OrdExUnits)
+validateExUnits pp txTotal =
+  let ppMax = pp ^. ppMaxBlockExUnitsL
+   in failureUnless (pointWiseExUnits (<=) txTotal ppMax) $
+        Mismatch
+          { mismatchSupplied = OrdExUnits txTotal
+          , mismatchExpected = OrdExUnits ppMax
+          }
 
 bbodyTransition ::
   forall era h.
@@ -183,11 +169,12 @@ bbodyTransition ::
   , State (EraRule "BBODY" era) ~ Shelley.ShelleyBbodyState era
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , EraBlockBody era
-  , AlonzoEraTx era
+  , AlonzoEraPParams era
   , EraBlockHeader h era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   Shelley.BbodyEnv era ->
   Shelley.ShelleyBbodyState era ->
@@ -202,17 +189,15 @@ bbodyTransition (Shelley.BbodyEnv pp account) (Shelley.BbodyState ls blocksMade)
 
   (firstSlot, curEpoch) <- liftSTS $ slotToEpochBoundary bhSlot
 
-  let txs = blockBody ^. txSeqBlockBodyL
-
-  ls' <-
+  LedgerStateWithLimits ls' AlonzoBlockBodyLimits {abblExUnits} <-
     trans @(EraRule "LEDGERS" era) $
       TRC
         ( Shelley.LedgersEnv bhSlot curEpoch pp account
-        , ls
-        , StrictSeq.fromStrict txs
+        , LedgerStateWithLimits ls mempty
+        , StrictSeq.fromStrict $ blockBody ^. txSeqBlockBodyL
         )
 
-  validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
+  validateTrans (injectFailure . TooManyExUnits @era) $ validateExUnits pp abblExUnits
 
   pure $ Shelley.BbodyState ls' $ incrBlocks block firstSlot (pp ^. ppDG) blocksMade
 
@@ -222,12 +207,12 @@ instance
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (BBODY era)
   , Environment (EraRule "LEDGERS" era) ~ Shelley.ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , AlonzoEraTx era
+  , BlockBodyLimits era ~ AlonzoBlockBodyLimits era
   ) =>
   STS (BBODY era)
   where
