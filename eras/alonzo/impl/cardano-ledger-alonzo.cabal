@@ -232,6 +232,7 @@ library testlib
     microlens,
     microlens-mtl,
     mtl,
+    plutus-core,
     plutus-ledger-api,
     serialise,
     small-steps,
