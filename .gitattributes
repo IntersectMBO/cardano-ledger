@@ -1,0 +1,1 @@
+*.cbor -text diff=cbor merge=binary
