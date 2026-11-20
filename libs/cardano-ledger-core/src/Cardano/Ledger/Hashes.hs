@@ -348,6 +348,7 @@ newtype SafeHash i = SafeHash (Hash.Hash HASH i)
     , ToJSON
     , FromJSON
     , MemPack
+    , Storable
     )
 
 instance Default (SafeHash i) where
