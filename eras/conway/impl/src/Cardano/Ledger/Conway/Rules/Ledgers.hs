@@ -16,6 +16,7 @@
 module Cardano.Ledger.Conway.Rules.Ledgers (
   LEDGERS,
   ConwayLedgersPredFailure (LedgerFailureInLedgers),
+  validateBodyRefScriptsSizeTooBig,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
@@ -26,6 +27,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra, LEDGER, LEDGERS)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
@@ -36,6 +38,7 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -51,8 +54,10 @@ import Control.State.Transition
 import Data.Default (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import Validation (failureUnless)
 
 data ConwayLedgersPredFailure era
   = LedgerFailureInLedgers (PredicateFailure (EraRule "LEDGER" era))
@@ -224,3 +229,18 @@ instance
   where
   wrapFailed = LedgerFailureInLedgers
   wrapEvent = Shelley.LedgerEvent
+
+-- | Validate that total reference script size does not exceed block limit.
+validateBodyRefScriptsSizeTooBig ::
+  ConwayEraPParams era =>
+  PParams era ->
+  -- | Total reference script size of all transactions in the block
+  Int ->
+  Test (Mismatch RelLTEQ Int)
+validateBodyRefScriptsSizeTooBig pp totalSize =
+  let maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+   in failureUnless (totalSize <= maxSize) $
+        Mismatch
+          { mismatchSupplied = totalSize
+          , mismatchExpected = maxSize
+          }

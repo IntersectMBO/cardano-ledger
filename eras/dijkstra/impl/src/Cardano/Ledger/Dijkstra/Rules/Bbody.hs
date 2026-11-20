@@ -30,10 +30,10 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
 
 import Cardano.Crypto.Leios (LeiosCert)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (OrdExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, getTotalExUnits)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
@@ -398,13 +398,11 @@ dijkstraBbodyTransition ::
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , DijkstraEraBlockBody era
   , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , STS (EraRule "BBODY" era)
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , AlonzoEraTx era
-  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , DijkstraEraPParams era
   , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
@@ -451,9 +449,12 @@ dijkstraBbodyTransition = do
         , fromStrict txs
         )
 
-  Alonzo.validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
+  validateTrans (injectFailure . TooManyExUnits @era) $
+    Alonzo.validateExUnits pp (foldMap getTotalExUnits txs)
 
-  Conway.validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
+  validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
+    Conway.validateBodyRefScriptsSizeTooBig pp $
+      Conway.totalRefScriptSizeInBlock (pp ^. ppProtocolVersionL) txs (ls ^. utxoL)
 
   case blockBody ^. perasCertBlockBodyL of
     SNothing -> pure ()

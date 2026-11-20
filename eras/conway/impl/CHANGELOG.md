@@ -2,6 +2,8 @@
 
 ## 1.25.0.0
 
+* Move `validateBodyRefScriptsSizeTooBig` to `Cardano.Ledger.Conway.Rules.Ledgers`
+* Change `validateBodyRefScriptsSizeTooBig` to take the total reference script size of the block instead of `BlockBody` and `UTxO`, and to return a `Test` instead of a `Rule`
 * Change `LEDGERS` to stop applying transactions after the first failure, so a block with several failing transactions now reports only the first failure instead of one per transaction
 * Add `ConwayLedgersPredFailure` and use it as the predicate failure of the `LEDGERS` rule
 * Add `LEDGERS`
