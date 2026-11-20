@@ -22,11 +22,9 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleAntiCborProp,
   huddleRoundTripGenValidateProp,
   specWithHuddle,
-  noTwiddle,
   HuddleEnv (..),
   toGenConfig,
   resolveHuddle,
-  cardanoTwiddleConfig,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -54,14 +52,7 @@ import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
  )
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
-import Codec.CBOR.Cuddle.CDDL.Custom.Generator (
-  GenConfig (..),
-  TwiddleConfig (..),
-  TwiddlePolicy (..),
-  runCBORGen,
-  twiddleAll,
-  twiddleNothing,
- )
+import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen)
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
@@ -99,7 +90,6 @@ import Test.Hspec (
   describe,
   expectationFailure,
   it,
-  mapSubject,
   shouldBe,
  )
 import Test.QuickCheck (
@@ -193,9 +183,8 @@ huddleRoundTripAnnCborSpec version ruleName =
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         huddleRoundTripAnnCborProp @a version ruleName
 
-data HuddleEnv = HuddleEnv
-  { heTwiddle :: TwiddleConfig
-  , heRoot :: CTreeRoot MonoReferenced
+newtype HuddleEnv = HuddleEnv
+  { heRoot :: CTreeRoot MonoReferenced
   }
 
 toGenConfig :: HuddleEnv -> GenConfig
@@ -258,18 +247,12 @@ huddleAntiCborSpec version ruleName =
         . it (T.unpack ruleName <> ": " <> T.unpack lbl)
         $ huddleAntiCborProp @a version ruleName
 
-cardanoTwiddleConfig :: TwiddleConfig
-cardanoTwiddleConfig = twiddleAll {tcBytes = DefiniteOnly}
-
 specWithHuddle :: Cuddle.Huddle -> SpecWith HuddleEnv -> Spec
 specWithHuddle h =
   beforeAll $
     case resolveHuddle h of
-      Right ct -> pure $ HuddleEnv cardanoTwiddleConfig ct
+      Right ct -> pure $ HuddleEnv ct
       Left err -> error err
-
-noTwiddle :: SpecWith HuddleEnv -> SpecWith HuddleEnv
-noTwiddle = mapSubject $ \env -> env {heTwiddle = twiddleNothing}
 
 -- | Verify that random data generated is:
 --

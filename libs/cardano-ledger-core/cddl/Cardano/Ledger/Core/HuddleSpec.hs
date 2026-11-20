@@ -28,6 +28,7 @@ import Cardano.Ledger.Huddle.Gen (
   RuleTerm (..),
   arbitrary,
   oneof,
+  twiddleArray,
   vectorOf,
  )
 import Codec.CBOR.Cuddle.CBOR.Gen (genBytes)

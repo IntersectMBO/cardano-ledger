@@ -168,7 +168,7 @@ boundedBytesRule pname =
       bytes <- validateBytesTerm sTerm
       let len = BS.length bytes
       when (len > 64) $ fail $ "Expected bytes with length at most 64, got " <> show len
-    generator = withTwiddle (\tc -> tc {tcBytes = DefiniteAndIndefinite}) $ do
+    generator = do
       n <- choose (0, 64) |! Gen.sized (\sz -> choose (65, max 65 sz))
       bytes <- genNBytes n
       term <- twiddleBytes bytes
