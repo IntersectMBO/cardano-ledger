@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Change `LEDGERS` to stop applying transactions after the first failure, so a block with several failing transactions now reports only the first failure instead of one per transaction
 * Add `ConwayLedgersPredFailure` and use it as the predicate failure of the `LEDGERS` rule
 * Add `LEDGERS`
 * Change `EraRule "LEDGERS"` from `Babbage.LEDGERS` to the Conway-specific `LEDGERS`

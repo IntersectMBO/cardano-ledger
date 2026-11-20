@@ -199,14 +199,16 @@ ledgersTransition = do
   sysStart <- liftSTS $ asks systemStart
   (LedgerStateWithLimits finalLedgerState _, _) <-
     foldM -- cache is lazy on purpose, since it is unused when validation is off
-      ( \(!curLedgerState, stAnnTxCache) (ix, tx) -> do
-          let
-            utxo = curLedgerState ^. lswlLedgerStateL . utxoL
-            stAnnTx = mkStAnnTx ei sysStart pp utxo stAnnTxCache tx
-          newLedgerState <-
-            trans @(EraRule "LEDGER" era) $
-              TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
-          pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
+      ( \acc@(!curLedgerState, stAnnTxCache) (ix, tx) ->
+          -- Skip the remaining transactions once one has failed
+          whenFailureFreeDefault acc $ do
+            let
+              utxo = curLedgerState ^. lswlLedgerStateL . utxoL
+              stAnnTx = mkStAnnTx ei sysStart pp utxo stAnnTxCache tx
+            newLedgerState <-
+              trans @(EraRule "LEDGER" era) $
+                TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
+            pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
       (LedgerStateWithLimits initLedgerState mempty, mempty)
       $ zip [minBound ..]
