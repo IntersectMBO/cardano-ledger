@@ -191,7 +191,12 @@ instance HuddleRule "genesis_hash" AllegraEra where
   huddleRuleNamed = genesisHashRule
 
 instance HuddleRule "vrf_cert" AllegraEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleGroup "operational_cert" AllegraEra where
   huddleGroupNamed = shelleyOperationalCertGroup
@@ -352,7 +357,7 @@ allegraMetadatumRule pname p =
     =.= huddleRule1 @"assoc_map" p (huddleRule @"metadatum" p)
     / sarr [0 <+ a (allegraMetadatumRule pname p)]
     / VInt
-    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (huddleRule @"definite_bytes" p `sized` (0 :: Word64, 64 :: Word64))
     / (VText `sized` (0 :: Word64, 64 :: Word64))
 
 instance HuddleRule "metadatum" AllegraEra where

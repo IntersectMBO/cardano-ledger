@@ -140,8 +140,8 @@ scriptDataHashRule ::
   forall era. Era era => Proxy "script_data_hash" -> Proxy era -> Rule
 scriptDataHashRule pname p = pname =.= huddleRule @"hash32" p
 
-boundedBytesRule :: Proxy "bounded_bytes" -> Rule
-boundedBytesRule pname =
+boundedBytesRule :: Era era => Proxy "bounded_bytes" -> Proxy era -> Rule
+boundedBytesRule pname era =
   comment
     [str| The real bounded_bytes does not have this limit. it instead has
         | a different limit which cannot be expressed in CDDL.
@@ -156,7 +156,7 @@ boundedBytesRule pname =
         |]
     $ withValidator validator
     $ withCBORGen generator
-    $ pname =.= VBytes `sized` (0 :: Word64, 64 :: Word64)
+    $ pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 64 :: Word64)
   where
     -- TODO implement the custom generator/validator properly once this PR gets
     -- merged: https://github.com/IntersectMBO/cuddle/pull/209
@@ -338,7 +338,7 @@ instance HuddleRule "policy_id" AlonzoEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" AlonzoEra where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "native_script" AlonzoEra where
   huddleRuleNamed = nativeScriptRule
@@ -373,7 +373,12 @@ instance HuddleRule "block" AlonzoEra where
           ]
 
 instance HuddleRule "vrf_cert" AlonzoEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleRule "header" AlonzoEra where
   huddleRuleNamed pname p =
@@ -576,16 +581,16 @@ instance HuddleRule "network_id" AlonzoEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
 instance Era era => HuddleRule "plutus_v1_script" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| Alonzo introduces Plutus smart contracts.
           | Plutus V1 scripts are opaque bytestrings.
           |]
       . withCBORGen plutusScriptGen
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
 
 instance HuddleRule "bounded_bytes" AlonzoEra where
-  huddleRuleNamed pname _ = boundedBytesRule pname
+  huddleRuleNamed = boundedBytesRule
 
 instance HuddleRule "big_uint" AlonzoEra where
   huddleRuleNamed = bigUintRule

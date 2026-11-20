@@ -70,8 +70,8 @@ maryMintRule ::
   Rule
 maryMintRule pname p = pname =.= huddleRule1 @"multiasset" p (huddleRule @"int64" p)
 
-assetNameRule :: Proxy "asset_name" -> Rule
-assetNameRule pname = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
+assetNameRule :: Era era => Proxy "asset_name" -> Proxy era -> Rule
+assetNameRule pname era = pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "block" MaryEra where
   huddleRuleNamed = blockRule
@@ -80,7 +80,12 @@ instance HuddleRule "transaction" MaryEra where
   huddleRuleNamed = transactionRule
 
 instance HuddleRule "vrf_cert" MaryEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleRule "header" MaryEra where
   huddleRuleNamed = headerRule
@@ -230,7 +235,7 @@ instance HuddleRule "policy_id" MaryEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" MaryEra where
-  huddleRuleNamed pname _ = assetNameRule pname
+  huddleRuleNamed = assetNameRule
 
 instance HuddleRule "mint" MaryEra where
   huddleRuleNamed = maryMintRule

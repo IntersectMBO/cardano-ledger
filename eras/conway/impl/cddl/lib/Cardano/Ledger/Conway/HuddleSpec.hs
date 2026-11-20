@@ -783,7 +783,7 @@ maybeTaggedNonemptyList pname = binding $ \x ->
   pname =.= tag 258 (arr [1 <+ a x]) / sarr [1 <+ a x]
 
 instance HuddleRule "bounded_bytes" ConwayEra where
-  huddleRuleNamed pname _ = boundedBytesRule pname
+  huddleRuleNamed = boundedBytesRule
 
 instance HuddleRule "big_uint" ConwayEra where
   huddleRuleNamed = bigUintRule
@@ -828,7 +828,7 @@ instance HuddleRule "vote" ConwayEra where
   huddleRuleNamed pname _ = voteRule pname
 
 instance HuddleRule "asset_name" ConwayEra where
-  huddleRuleNamed pname _ = assetNameRule pname
+  huddleRuleNamed = assetNameRule
 
 instance HuddleRule "drep_credential" ConwayEra where
   huddleRuleNamed = drepCredentialRule
@@ -860,12 +860,12 @@ instance HuddleRule "operational_cert" ConwayEra where
   huddleRuleNamed = babbageOperationalCertRule
 
 instance Era era => HuddleRule "plutus_v3_script" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| Conway introduces Plutus V3 with support for new governance features.
           |]
       . withCBORGen plutusScriptGen
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
 
 instance Era era => HuddleRule "negative_int64" era where
   huddleRuleNamed pname p =
@@ -1050,7 +1050,7 @@ instance HuddleRule "withdrawals" ConwayEra where
 
 instance HuddleRule "data" ConwayEra where
   huddleRuleNamed pname p =
-    pname =.= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
+    pname =.= tag 24 (huddleRule @"definite_bytes" p `cbor` huddleRule @"plutus_data" p)
 
 instance HuddleRule "datum_option" ConwayEra where
   huddleRuleNamed pname p =
@@ -1411,7 +1411,12 @@ instance HuddleRule "update" ConwayEra where
   huddleRuleNamed = updateRule
 
 instance HuddleRule "vrf_cert" ConwayEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleRule "header_body" ConwayEra where
   huddleRuleNamed = babbageHeaderBodyRule
