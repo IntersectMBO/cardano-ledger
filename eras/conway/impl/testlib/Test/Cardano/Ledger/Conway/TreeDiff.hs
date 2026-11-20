@@ -360,6 +360,10 @@ instance ToExpr (ConwayAccounts era)
 instance ToExpr (ConwayAccountState era)
 
 instance
+  ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
+  ToExpr (ConwayLedgersPredFailure era)
+
+instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (ConwayBbodyPredFailure era)
 

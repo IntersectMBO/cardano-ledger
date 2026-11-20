@@ -212,7 +212,7 @@ instance InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure DijkstraEra whe
 instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayLedgersPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 

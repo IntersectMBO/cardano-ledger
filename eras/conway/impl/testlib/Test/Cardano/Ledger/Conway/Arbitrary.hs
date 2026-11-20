@@ -256,6 +256,14 @@ instance Arbitrary (VState era) where
 
 instance
   ( Era era
+  , Arbitrary (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  Arbitrary (ConwayLedgersPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
   , Arbitrary (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   Arbitrary (ConwayBbodyPredFailure era)
