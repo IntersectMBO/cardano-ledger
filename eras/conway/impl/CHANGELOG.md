@@ -2,6 +2,8 @@
 
 ## 1.25.0.0
 
+* Add `LEDGERS`
+* Change `EraRule "LEDGERS"` from `Babbage.LEDGERS` to the Conway-specific `LEDGERS`
 * Add `ExUnits` argument to `getConwayMinFeeTx`
 * Add `getConwayWitsVKeyNeededWith`
 * Replace `TranslateEra ConwayEra (Tx TopTx)` with `TranslateEra ConwayEra MempoolTx`

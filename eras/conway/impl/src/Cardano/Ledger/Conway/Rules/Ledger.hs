@@ -587,36 +587,6 @@ instance
   wrapEvent = CertsEvent
 
 instance
-  ( Embed (EraRule "UTXOW" era) (LEDGER era)
-  , Embed (EraRule "CERTS" era) (LEDGER era)
-  , Embed (EraRule "GOV" era) (LEDGER era)
-  , ConwayEraGov era
-  , AlonzoEraTx era
-  , AlonzoEraUTxO era
-  , ConwayEraTxBody era
-  , ConwayEraPParams era
-  , GovState era ~ ConwayGovState era
-  , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
-  , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Signal (EraRule "UTXOW" era) ~ StAnnTx TopTx era
-  , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , State (EraRule "CERTS" era) ~ CertState era
-  , EraRule "GOV" era ~ GOV era
-  , ConwayEraCertState era
-  , EraRule "LEDGER" era ~ LEDGER era
-  , InjectRuleFailure "LEDGER" Shelley.ShelleyLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
-  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
-  , SafeToHash (TxWits era)
-  ) =>
-  Embed (LEDGER era) (Babbage.LEDGERS era)
-  where
-  wrapFailed = Shelley.LedgerFailure
-  wrapEvent = Shelley.LedgerEvent
-
-instance
   ( ConwayEraCertState era
   , ConwayEraTxCert era
   , ConwayEraPParams era

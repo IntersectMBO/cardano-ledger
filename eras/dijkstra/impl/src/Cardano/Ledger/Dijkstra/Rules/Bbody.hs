@@ -515,11 +515,11 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
-  ( BaseM (Babbage.LEDGERS era) ~ ShelleyBase
-  , Babbage.LEDGERS era ~ EraRule "LEDGERS" era
-  , STS (Babbage.LEDGERS era)
+  ( BaseM (Conway.LEDGERS era) ~ ShelleyBase
+  , Conway.LEDGERS era ~ EraRule "LEDGERS" era
+  , STS (Conway.LEDGERS era)
   ) =>
-  Embed (Babbage.LEDGERS era) (BBODY era)
+  Embed (Conway.LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
