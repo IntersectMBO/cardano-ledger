@@ -2,6 +2,7 @@
 
 ## 0.6.0.0
 
+* Add `maxTxSizeForecastL` method to `DijkstraEraForecast` class and add `dfMaxTxSize` field to `DijkstraForecast` record type. It's the existing `maxTxSize` protocol parameter, which wasn't forecasted before Leios.
 * Validate the references of an `EndorserBlock` in the `EB` rule and in `applyEndorserBlockNoValidation`:
   - Add `EbWasNotAnnounced`, `EbReferencesSizeTooBig`, `EbAnnouncementSlotMismatch`, `EbAnnouncementHashMismatch`, `EbAnnouncementSizeMismatch` and `EbAlreadyApplied` to `Cardano.Ledger.Dijkstra.Rules.Eb`, and `InjectRuleFailure "EB"` instances for them
   - Add `validateEbReferences` and `validateEbAnnouncementSlot` to `Cardano.Ledger.Dijkstra.Rules.Eb`
