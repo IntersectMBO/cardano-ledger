@@ -170,8 +170,8 @@ shelleyBootstrapWitnessRule pname p =
     =.= arr
       [ "public_key" ==> huddleRule @"vkey" p
       , "signature" ==> huddleRule @"signature" p
-      , "chain_code" ==> VBytes
-      , "attributes" ==> VBytes
+      , "chain_code" ==> huddleRule @"definite_bytes" p
+      , "attributes" ==> huddleRule @"definite_bytes" p
       ]
 
 shelleyOperationalCertGroup ::
@@ -237,7 +237,7 @@ poolMetadataRule ::
   forall era. HuddleRule "url" era => Proxy "pool_metadata" -> Proxy era -> Rule
 poolMetadataRule pname p =
   pname
-    =.= arr [a $ huddleRule @"url" p, a VBytes]
+    =.= arr [a $ huddleRule @"url" p, a $ huddleRule @"definite_bytes" p]
 
 singleHostAddrGroup ::
   forall era. Era era => Proxy "single_host_addr" -> Proxy era -> GroupDef
@@ -495,7 +495,12 @@ instance HuddleRule "update" ShelleyEra where
   huddleRuleNamed = updateRule
 
 instance HuddleRule "vrf_cert" ShelleyEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleGroup "operational_cert" ShelleyEra where
   huddleGroupNamed = shelleyOperationalCertGroup

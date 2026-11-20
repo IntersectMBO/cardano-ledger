@@ -537,7 +537,7 @@ dijkstraCertificateRule pname p =
     / arr [a $ huddleGroup @"drep_update_cert" p]
 
 instance HuddleRule "bounded_bytes" DijkstraEra where
-  huddleRuleNamed pname _ = boundedBytesRule pname
+  huddleRuleNamed = boundedBytesRule
 
 instance HuddleRule "big_uint" DijkstraEra where
   huddleRuleNamed = bigUintRule
@@ -575,8 +575,8 @@ dijkstraBootstrapWitnessRule pname p =
     =.= arr
       [ "public_key" ==> huddleRule @"vkey" p
       , "signature" ==> huddleRule @"signature" p
-      , "chain_code" ==> VBytes `sized` (32 :: Word64)
-      , "attributes" ==> VBytes
+      , "chain_code" ==> huddleRule @"definite_bytes" p `sized` (32 :: Word64)
+      , "attributes" ==> huddleRule @"definite_bytes" p
       ]
 
 instance HuddleRule "bootstrap_witness" DijkstraEra where
@@ -595,7 +595,7 @@ instance HuddleRule "vote" DijkstraEra where
   huddleRuleNamed pname _ = voteRule pname
 
 instance HuddleRule "asset_name" DijkstraEra where
-  huddleRuleNamed pname _ = assetNameRule pname
+  huddleRuleNamed = assetNameRule
 
 instance HuddleRule "drep_credential" DijkstraEra where
   huddleRuleNamed = drepCredentialRule
@@ -661,12 +661,12 @@ instance HuddleRule "pool_metadata" DijkstraEra where
   huddleRuleNamed = poolMetadataRule
 
 instance HuddleRule "bls_key" DijkstraEra where
-  huddleRuleNamed pname _p =
+  huddleRuleNamed pname era =
     withCBORGen blsKeyGen $
       ( pname
           =.= arr
-            [ "bls_pubkey" ==> VBytes `sized` (96 :: Word64)
-            , "bls_possession_proof" ==> VBytes `sized` (48 :: Word64)
+            [ "bls_pubkey" ==> huddleRule @"definite_bytes" era `sized` (96 :: Word64)
+            , "bls_possession_proof" ==> huddleRule @"definite_bytes" era `sized` (48 :: Word64)
             ]
       )
         //- "BLS key"
@@ -1106,7 +1106,12 @@ leiosHeaderBodyRule pname p =
       ]
 
 instance HuddleRule "vrf_cert" DijkstraEra where
-  huddleRuleNamed pname _ = pname =.= arr [a (VBytes `sized` (64 :: Word64)), a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a (huddleRule @"definite_bytes" era `sized` (64 :: Word64))
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleRule "header_body" DijkstraEra where
   huddleRuleNamed = leiosHeaderBodyRule
@@ -1139,13 +1144,13 @@ instance HuddleRule "block" DijkstraEra where
         ]
 
 instance HuddleRule "peras_certificate" DijkstraEra where
-  huddleRuleNamed pname _era = pname =.= VBytes
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era
 
 instance HuddleRule "leios_certificate" DijkstraEra where
   huddleRuleNamed pname era =
     pname
       =.= arr
-        [ "signers" ==> VBytes `sized` (0 :: Word64, maxBytes)
+        [ "signers" ==> huddleRule @"definite_bytes" era `sized` (0 :: Word64, maxBytes)
             & comment (fromString $ "bitfield with up to " <> show (maxBytes * 8) <> " entries")
         , "signature" ==> huddleRule @"leios_signature" era
         ]
@@ -1153,9 +1158,9 @@ instance HuddleRule "leios_certificate" DijkstraEra where
       maxBytes = fromIntegral @Int @Word64 maxLeiosCertSignersBytes
 
 instance HuddleRule "leios_signature" DijkstraEra where
-  huddleRuleNamed pname _era =
+  huddleRuleNamed pname era =
     withCBORGen leiosSignatureGen $
-      pname =.= VBytes `sized` leiosSignatureSize
+      pname =.= huddleRule @"definite_bytes" era `sized` leiosSignatureSize
     where
       leiosSignatureGen = do
         sig <- liftGen genLeiosSignature
@@ -1252,12 +1257,12 @@ instance HuddleRule "redeemer_tag" DijkstraEra where
   huddleRuleNamed pname _ = dijkstraRedeemerTagRule pname
 
 instance Era era => HuddleRule "plutus_v4_script" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| Dijkstra introduces Plutus V4.
           |]
       . withCBORGen plutusScriptGen
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
 
 instance HuddleRule "auxiliary_data" DijkstraEra where
   huddleRuleNamed pname p =
