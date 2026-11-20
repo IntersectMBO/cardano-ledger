@@ -92,6 +92,14 @@ It is recommended to use [`nix`](https://nixos.org/download.html) for building e
 
 Haskell files can be built with [`cabal`](https://www.haskell.org/cabal/) inside of a nix shell, which can be entered by invoking `nix develop` from the root directory.
 
+If you don't use `nix`, we recommend running the following command manually, once, after the initial clone of the repo, to set up a few quality-of-life features in `git`:
+
+```bash
+git config set --fixed-value --value=../.gitconfig include.path ../.gitconfig
+```
+
+If you do use `nix`, this will be done by the `shellHook` the first time you use `nix develop`.
+
 ## Nix Cache
 
 When using `nix` it is recommended that you setup the cache, so that it can

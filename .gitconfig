@@ -1,0 +1,6 @@
+[blame]
+    ignoreRevsFile = .git-blame-ignore-revs
+[fsck]
+    skipList = .git-fsck-skiplist
+[diff "cbor"]
+    textconv = scripts/cbor-textconv.sh
