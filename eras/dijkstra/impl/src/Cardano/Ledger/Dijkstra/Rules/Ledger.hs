@@ -530,7 +530,7 @@ instance
   ) =>
   Embed (LEDGER era) (Conway.LEDGERS era)
   where
-  wrapFailed = Shelley.LedgerFailure
+  wrapFailed = Conway.LedgerFailureInLedgers
   wrapEvent = Shelley.LedgerEvent
 
 instance

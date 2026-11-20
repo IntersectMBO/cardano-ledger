@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Add `ConwayLedgersPredFailure` and use it as the predicate failure of the `LEDGERS` rule
 * Add `LEDGERS`
 * Change `EraRule "LEDGERS"` from `Babbage.LEDGERS` to the Conway-specific `LEDGERS`
 * Add `ExUnits` argument to `getConwayMinFeeTx`

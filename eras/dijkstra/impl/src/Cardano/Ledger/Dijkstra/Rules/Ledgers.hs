@@ -18,65 +18,65 @@ import Cardano.Ledger.Dijkstra.Rules.Utxo (DijkstraUtxoPredFailure)
 import Cardano.Ledger.Dijkstra.Rules.Utxow (DijkstraUtxowPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
-type instance EraRuleFailure "LEDGERS" DijkstraEra = Shelley.ShelleyLedgersPredFailure DijkstraEra
+type instance EraRuleFailure "LEDGERS" DijkstraEra = Conway.ConwayLedgersPredFailure DijkstraEra
 
 type instance EraRuleEvent "LEDGERS" DijkstraEra = Shelley.ShelleyLedgersEvent DijkstraEra
 
-instance InjectRuleFailure "LEDGERS" Shelley.ShelleyLedgersPredFailure DijkstraEra
+instance InjectRuleFailure "LEDGERS" Conway.ConwayLedgersPredFailure DijkstraEra
 
 instance InjectRuleFailure "LEDGERS" DijkstraLedgerPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure
+  injectFailure = Conway.LedgerFailureInLedgers
 
 instance InjectRuleFailure "LEDGERS" DijkstraUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Babbage.BabbageUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Alonzo.AlonzoUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Shelley.ShelleyUtxowPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Babbage.BabbageUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Alonzo.AlonzoUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Alonzo.AlonzoUtxosPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayUtxosPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Shelley.ShelleyUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Allegra.AllegraUtxoPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayCertsPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayCertPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayDelegPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Shelley.ShelleyPoolPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraGovCertPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" Conway.ConwayGovPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
 
 instance InjectRuleFailure "LEDGERS" DijkstraGovPredFailure DijkstraEra where
-  injectFailure = Shelley.LedgerFailure . injectFailure
+  injectFailure = Conway.LedgerFailureInLedgers . injectFailure
