@@ -71,6 +71,7 @@ module Cardano.Ledger.Conway.HuddleSpec (
   redeemerMapRule,
 ) where
 
+import Cardano.Ledger.Babbage.HuddleSpec (maryValueRule)
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
   alonzoRedeemer,
   alonzoRedeemerTag,
@@ -114,10 +115,12 @@ import Cardano.Ledger.Huddle.Gen (
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Control.Monad (forM_, unless)
+import Data.ByteString.Lazy qualified as LBS
 import Data.Containers.ListUtils (nubOrd)
 import Data.Foldable (traverse_)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
+import Data.Text.Lazy qualified as LT
 import Data.Traversable (forM)
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
@@ -655,21 +658,32 @@ conwayMultiasset pname p =
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
         ]
 
-conwayValueRule ::
-  forall era.
-  ( HuddleRule "positive_coin" era
-  , HuddleRule1 "multiasset" era
-  ) =>
-  Proxy "value" ->
-  Proxy era ->
-  Rule
-conwayValueRule pname p =
-  pname
-    =.= huddleRule @"coin" p
-    / sarr
-      [ a $ huddleRule @"coin" p
-      , a $ huddleRule1 @"multiasset" p (huddleRule @"positive_coin" p)
-      ]
+forceDefinite :: RuleTerm -> RuleTerm
+forceDefinite = \case
+  SingleTerm (TListI es) -> SingleTerm $ TList es
+  SingleTerm (TMapI kvs) -> SingleTerm $ TMap kvs
+  SingleTerm (TBytesI bs) -> SingleTerm $ TBytes $ LBS.toStrict bs
+  SingleTerm (TStringI s) -> SingleTerm $ TString $ LT.toStrict s
+  x -> x
+
+conwayValuePairRule ::
+  HuddleRule1 "multiasset" era =>
+  Proxy "value_pair" -> Proxy era -> Rule
+conwayValuePairRule pname era =
+  withOverrideCBORGen (fmap forceDefinite) $
+    withValidator validator $
+      pname
+        =.= arr
+          [ a $ huddleRule @"coin" era
+          , a $ huddleRule1 @"multiasset" era (huddleRule @"positive_coin" era)
+          ]
+  where
+    validator term = case term of
+      SingleTerm (TList [coinTerm, maTerm]) -> do
+        validateFromName "coin" coinTerm
+        validateFromName "multiasset" maTerm
+      SingleTerm (TList _) -> fail "Expected a list with two elements"
+      _ -> fail "Expected a definite length list"
 
 conwayMintRule ::
   forall era.
@@ -1039,8 +1053,11 @@ instance HuddleRule "required_signers" ConwayEra where
     pname
       =.= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
 
+instance HuddleRule "value_pair" ConwayEra where
+  huddleRuleNamed = conwayValuePairRule
+
 instance HuddleRule "value" ConwayEra where
-  huddleRuleNamed = conwayValueRule
+  huddleRuleNamed = maryValueRule
 
 instance HuddleRule "mint" ConwayEra where
   huddleRuleNamed = conwayMintRule
