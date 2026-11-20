@@ -343,6 +343,9 @@ instance HuddleRule "asset_name" AlonzoEra where
 instance HuddleRule "native_script" AlonzoEra where
   huddleRuleNamed = nativeScriptRule
 
+instance HuddleRule "value_pair" AlonzoEra where
+  huddleRuleNamed = maryValuePairRule
+
 instance HuddleRule "value" AlonzoEra where
   huddleRuleNamed = maryValueRule
 

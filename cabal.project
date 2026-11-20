@@ -27,7 +27,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cuddle.git
-  tag: 824d2e472f08235fb436877722c5ddc906f6e484
+  tag: e28d891c06f7d629290a3db7c1e144c486c10732
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec

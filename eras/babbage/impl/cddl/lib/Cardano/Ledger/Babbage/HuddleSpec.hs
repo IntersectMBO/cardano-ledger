@@ -242,6 +242,9 @@ instance HuddleRule "policy_id" BabbageEra where
 instance HuddleRule "asset_name" BabbageEra where
   huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 32 :: Word64)
 
+instance HuddleRule "value_pair" BabbageEra where
+  huddleRuleNamed = maryValuePairRule
+
 instance HuddleRule "value" BabbageEra where
   huddleRuleNamed = maryValueRule
 

@@ -8,6 +8,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary.HuddleSpec (
@@ -17,10 +18,18 @@ module Cardano.Ledger.Mary.HuddleSpec (
   maryMultiasset,
   maryValueRule,
   maryMintRule,
+  maryValuePairRule,
   assetNameRule,
 ) where
 
 import Cardano.Ledger.Allegra.HuddleSpec
+import Cardano.Ledger.Huddle.Gen (
+  RuleTerm (..),
+  Term (..),
+  generateFromName,
+  validateFromName,
+  (|!),
+ )
 import Cardano.Ledger.Mary (MaryEra)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -51,16 +60,41 @@ maryMultiasset pname p =
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
         ]
 
+maryValuePairRule ::
+  HuddleRule1 "multiasset" era =>
+  Proxy "value_pair" -> Proxy era -> Rule
+maryValuePairRule pname era =
+  withCBORGen generator $
+    withValidator validator $
+      pname =.= arr [a $ huddleRule @"coin" era, a $ huddleRule1 @"multiasset" era VUInt]
+  where
+    generator = do
+      coin <- generateFromName "coin"
+      multiasset <- generateFromName "multiasset"
+      toListTerm <- pure TList |! pure TListI
+      pure $ SingleTerm $ toListTerm [coin, multiasset]
+    validator term = case term of
+      SingleTerm (TList [coinTerm, maTerm]) -> do
+        validateFromName "coin" coinTerm
+        validateFromName "multiasset" maTerm
+      SingleTerm (TList _) -> fail "Expected a list with two elements"
+      _ -> fail "Expected a definite length list"
+
+instance HuddleRule "value_pair" MaryEra where
+  huddleRuleNamed = maryValuePairRule
+
 maryValueRule ::
   forall era.
-  HuddleRule1 "multiasset" era =>
+  ( HuddleRule1 "multiasset" era
+  , HuddleRule "value_pair" era
+  ) =>
   Proxy "value" ->
   Proxy era ->
   Rule
 maryValueRule pname p =
   pname
     =.= huddleRule @"coin" p
-    / sarr [a $ huddleRule @"coin" p, a $ huddleRule1 @"multiasset" p VUInt]
+    / huddleRule @"value_pair" p
 
 maryMintRule ::
   forall era.
