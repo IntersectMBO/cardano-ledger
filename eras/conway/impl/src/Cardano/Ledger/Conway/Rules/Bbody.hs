@@ -29,7 +29,6 @@ module Cardano.Ledger.Conway.Rules.Bbody (
   shelleyToConwayBbodyPredFailure,
   totalRefScriptSizeInBlock,
   bbodyTransition,
-  validateBodyRefScriptsSizeTooBig,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
@@ -68,7 +67,10 @@ import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
-import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLedgersPredFailure)
+import Cardano.Ledger.Conway.Rules.Ledgers (
+  ConwayLedgersPredFailure,
+  validateBodyRefScriptsSizeTooBig,
+ )
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
@@ -89,8 +91,8 @@ import Control.State.Transition (
   failOnJust,
   judgmentContext,
   liftSTS,
+  validateTrans,
   withJudgmentContext,
-  (?!),
  )
 import Data.Foldable (Foldable (foldMap'))
 import qualified Data.Foldable as F (foldl')
@@ -99,7 +101,6 @@ import Data.Monoid (Sum (getSum))
 import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
-import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -327,7 +328,12 @@ bbodyTransition = do
     failOnJust checkHeaderProtVerTooHigh $
       injectFailure . HeaderProtVerTooHigh @era
 
-  validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
+  validateTrans (injectFailure . BodyRefScriptsSizeTooBig @era) $
+    validateBodyRefScriptsSizeTooBig pp $
+      totalRefScriptSizeInBlock
+        (pp ^. ppProtocolVersionL)
+        (blockBody ^. txSeqBlockBodyL)
+        (ls ^. utxoL)
 
 instance
   ( Era era
@@ -339,34 +345,6 @@ instance
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent
-
--- | Validate that total reference script size does not exceed block limit.
-validateBodyRefScriptsSizeTooBig ::
-  forall era.
-  ( AlonzoEraTx era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , EraBlockBody era
-  , ConwayEraPParams era
-  ) =>
-  PParams era ->
-  BlockBody era ->
-  UTxO era ->
-  Rule (EraRule "BBODY" era) 'Transition ()
-validateBodyRefScriptsSizeTooBig pp blockBody utxo =
-  let protVer = pp ^. ppProtocolVersionL
-      txs = blockBody ^. txSeqBlockBodyL
-      totalSize = totalRefScriptSizeInBlock protVer txs utxo
-      maxSize = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-   in totalSize
-        <= maxSize
-          ?! injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = totalSize
-                  , mismatchExpected = maxSize
-                  }
-            )
 
 totalRefScriptSizeInBlock ::
   (AlonzoEraTx era, BabbageEraTxBody era) => ProtVer -> StrictSeq (Tx TopTx era) -> UTxO era -> Int
