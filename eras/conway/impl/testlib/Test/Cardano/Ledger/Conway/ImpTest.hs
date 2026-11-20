@@ -180,6 +180,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure,
   ConwayHardForkEvent,
   ConwayLedgerPredFailure (..),
+  ConwayLedgersPredFailure,
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure,
   ConwayUtxowPredFailure,
@@ -380,6 +381,7 @@ class
   , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ConwayLedgersPredFailure era
   , InjectRuleEvent "TICK" ConwayHardForkEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Inject (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (ApplyTxError era)

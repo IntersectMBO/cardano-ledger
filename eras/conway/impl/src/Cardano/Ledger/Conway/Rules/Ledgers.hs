@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -15,7 +16,7 @@
 
 module Cardano.Ledger.Conway.Rules.Ledgers (
   LEDGERS,
-  ConwayLedgersPredFailure (LedgerFailureInLedgers),
+  ConwayLedgersPredFailure (..),
   validateBodyRefScriptsSizeTooBig,
 ) where
 
@@ -26,6 +27,7 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Conway.BlockBody (ConwayBlockBodyLimits (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, LEDGER, LEDGERS)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
@@ -43,6 +45,7 @@ import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   LedgerStateWithLimits (..),
+  lswlBlockBodyLimitsL,
   lswlLedgerStateL,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -173,6 +176,8 @@ instance
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , ConwayEraPParams era
   ) =>
   STS (LEDGERS era)
   where
@@ -196,6 +201,8 @@ ledgersTransition ::
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
   , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  , ConwayEraPParams era
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do
@@ -213,6 +220,12 @@ ledgersTransition = do
             newLedgerState <-
               trans @(EraRule "LEDGER" era) $
                 TRC (Shelley.LedgerEnv slot (Just epochNo) ix pp account, curLedgerState, stAnnTx)
+            let ConwayBlockBodyLimits {cbblExUnits, cbblRefScriptsSize} =
+                  newLedgerState ^. lswlBlockBodyLimitsL
+            validateTrans TooManyExUnits $
+              Alonzo.validateExUnits pp cbblExUnits
+            validateTrans BodyRefScriptsSizeTooBig $
+              validateBodyRefScriptsSizeTooBig pp cbblRefScriptsSize
             pure (newLedgerState, stAnnTx ^. cacheStAnnTxG)
       )
       (LedgerStateWithLimits initLedgerState mempty, mempty)

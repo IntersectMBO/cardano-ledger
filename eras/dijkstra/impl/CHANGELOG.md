@@ -2,6 +2,7 @@
 
 ## 0.6.0.0
 
+* Remove `TooManyExUnits` and `BodyRefScriptsSizeTooBig` from `DijkstraBbodyPredFailure`
 * Use `ConwayLedgersPredFailure` as the predicate failure of the `LEDGERS` rule
 * Change `EraRule "LEDGERS"` from Babbage's `LEDGERS` to Conway's
 * Rename `upgradeTimelock` to `upgradeNativeScript`, deprecate the old name, and fix it to retain the original bytes of a native script

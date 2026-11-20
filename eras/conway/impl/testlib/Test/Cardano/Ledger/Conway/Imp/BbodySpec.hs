@@ -11,21 +11,17 @@ module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec) where
 
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
-import Cardano.Ledger.Conway.Rules (
-  ConwayBbodyPredFailure (..),
-  totalRefScriptSizeInBlock,
- )
+import Cardano.Ledger.Conway.Rules (ConwayLedgersPredFailure (..))
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Plutus (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Data.Foldable (for_)
-import Data.List (inits)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Traversable (for)
 import Data.Word (Word32)
@@ -87,115 +83,88 @@ spec = describe "BBODY" $ do
           )
       ]
 
-  it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $
-    whenMajorVersionAtLeast @11 $ do
-      lang <- elements $ eraLanguages @era
-      Just plutusScript <- pure $ withSLanguage lang $ \slang ->
-        mkPlutusScript @era $ purposeIsWellformedNoDatum slang
-      let scriptSize = originalBytesSize plutusScript
+  it "BodyRefScriptsSizeTooBig with reference scripts in the same block" $ do
+    lang <- elements $ eraLanguages @era
+    Just plutusScript <- pure $ withSLanguage lang $ \slang ->
+      mkPlutusScript @era $ purposeIsWellformedNoDatum slang
+    let scriptSize = originalBytesSize plutusScript
 
-      pp <- getsPParams id
-      let
-        maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
-        maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
-        maxScriptsPerTx = 100
-        maxSingle = min maxRefScriptSizePerTx (maxScriptsPerTx * scriptSize)
-      txScriptCounts <-
-        genNumAdditionsExceeding
-          scriptSize
-          maxSingle
-          maxRefScriptSizePerBlock
+    pp <- getsPParams id
+    let
+      maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
+      maxRefScriptSizePerBlock = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerBlockG
+      maxScriptsPerTx = 100
+      maxSingle = min maxRefScriptSizePerTx (maxScriptsPerTx * scriptSize)
+    txScriptCounts <-
+      genNumAdditionsExceeding
+        scriptSize
+        maxSingle
+        maxRefScriptSizePerBlock
 
-      let
-        -- These txs will be grouped into a block
-        buildTxs = for_ txScriptCounts $ \n -> do
-          refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
-          submitTx $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . referenceInputsTxBodyL .~ Set.fromList refIns
+    let
+      -- These txs will be grouped into a block
+      buildTxs = for_ txScriptCounts $ \n -> do
+        refIns <- replicateM n $ produceRefScript (fromPlutusScript plutusScript)
+        submitTx $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . referenceInputsTxBodyL .~ Set.fromList refIns
 
-      withTxsInFailingBlock
-        buildTxs
-        [ injectFailure
-            ( BodyRefScriptsSizeTooBig $
-                Mismatch
-                  { mismatchSupplied = scriptSize * sum txScriptCounts
-                  , mismatchExpected = maxRefScriptSizePerBlock
-                  }
-            )
-        ]
+    withTxsInFailingBlock
+      buildTxs
+      [ injectFailure
+          ( BodyRefScriptsSizeTooBig $
+              Mismatch
+                { mismatchSupplied = scriptSize * sum txScriptCounts
+                , mismatchExpected = maxRefScriptSizePerBlock
+                }
+          )
+      ]
 
-  it "totalRefScriptSizeInBlock" $ do
+  it "Reference script sizes contributed by individual transactions" $ do
     script <- RequireSignature @era <$> freshKeyHash
     let scriptSize = originalBytesSize script
     scriptSpendIn <- impAddNativeScript script >>= produceScript
     scriptSpendIn2 <- impAddNativeScript script >>= produceScript
 
-    -- We want to verify that the total size of reference scripts in a list of transactions
-    -- remains unchanged before and after applying them to the ledger state.
-    -- To do this, we generate the expected transactions, simulate submitting them to obtain
-    -- their individual reference script sizes, and then restore the original state -
-    -- meaning the transactions are not actually applied.
-    -- Finally, we check that the accumulated sizes from both before and after match.
-    txsWithSizes <- simulateThenRestore $ do
-      let mkTxWithExpectedSize expectedSize txAction = do
-            tx <- txAction
-            totalRefScriptSizeInBlock [tx] <$> getUTxO `shouldReturn` expectedSize
-            pure (tx, expectedSize)
+    -- We want to verify how much each transaction contributes to the total reference script
+    -- size of a block, so we submit them one by one, checking the size each contributes
+    -- against the UTxO it is applied to.
+    let mkTxWithExpectedSize expectedSize txAction = do
+          utxo <- getUTxO
+          tx <- txAction
+          txNonDistinctRefScriptsSize utxo tx `shouldBe` expectedSize
+          pure tx
 
-      -- submit reference scripts
-      refScriptTx1 <-
-        mkTxWithExpectedSize 0 $
-          produceRefScriptsTx (fromNativeScript script :| [])
-      let refScriptTx1In = txInAt 0 (fst refScriptTx1)
-      refScriptTx2 <-
-        mkTxWithExpectedSize 0 $
-          produceRefScriptsTx (fromNativeScript script :| [])
-      -- spend script using the reference script
-      spendScriptWithRefScriptTx <-
-        mkTxWithExpectedSize scriptSize $
-          submitTx $
-            mkTxWithInputsAndRefInputs [scriptSpendIn] [refScriptTx1In]
-      -- spend using two ref inputs
-      spendScriptWithTwoRefScriptsTx <-
-        mkTxWithExpectedSize (2 * scriptSize) $
-          submitTx $
-            mkTxWithInputsAndRefInputs [scriptSpendIn2] [refScriptTx1In, txInAt 0 (fst refScriptTx2)]
-      -- spend the root utxo
-      rootIn <- fst <$> getImpRootTxOut
-      spendRootUtxoTx <-
-        mkTxWithExpectedSize scriptSize $
-          submitTx $
-            mkTxWithInputsAndRefInputs [rootIn] [refScriptTx1In]
-      -- spend the reference script itself
-      -- We must check the size without submitting the transaction,
-      -- since applying it removes the reference script from the UTxO
-      spendRefScriptTx <-
-        mkTxWithExpectedSize scriptSize $
-          fixupTx $
-            mkTxWithInputsAndRefInputs [refScriptTx1In] [refScriptTx1In]
-
-      let txsWithRefScriptSizes =
-            [ refScriptTx1
-            , refScriptTx2
-            , spendScriptWithRefScriptTx
-            , spendScriptWithTwoRefScriptsTx
-            , spendRootUtxoTx
-            , spendRefScriptTx
-            ]
-
-      -- check and return the accumulated reference script size of all transactions,
-      -- so we can check that the same sum for the unapplied transactions matches
-      let (txs, sizes) = unzip txsWithRefScriptSizes
-      totalRefScriptSizeInBlock (SSeq.fromList txs) <$> getUTxO `shouldReturn` sum sizes
-
-      pure txsWithRefScriptSizes
-
-    -- for each prefix of the list, the accumulated sum should match the sum of the applied transactions
-    for_ (drop 1 $ inits txsWithSizes) $ \prefix -> do
-      let (txs, sizes) = unzip prefix
-          expectedSize = sum sizes
-      totalRefScriptSizeInBlock (SSeq.fromList txs) <$> getUTxO `shouldReturn` expectedSize
+    -- producing a reference script contributes nothing
+    refScriptTx1 <-
+      mkTxWithExpectedSize 0 $
+        produceRefScriptsTx (fromNativeScript script :| [])
+    let refScriptTx1In = txInAt 0 refScriptTx1
+    refScriptTx2 <-
+      mkTxWithExpectedSize 0 $
+        produceRefScriptsTx (fromNativeScript script :| [])
+    -- spend script using the reference script
+    void $
+      mkTxWithExpectedSize scriptSize $
+        submitTx $
+          mkTxWithInputsAndRefInputs [scriptSpendIn] [refScriptTx1In]
+    -- spend using two ref inputs, which are counted separately even though they hold the same script
+    void $
+      mkTxWithExpectedSize (2 * scriptSize) $
+        submitTx $
+          mkTxWithInputsAndRefInputs [scriptSpendIn2] [refScriptTx1In, txInAt 0 refScriptTx2]
+    -- spend the root utxo
+    rootIn <- fst <$> getImpRootTxOut
+    void $
+      mkTxWithExpectedSize scriptSize $
+        submitTx $
+          mkTxWithInputsAndRefInputs [rootIn] [refScriptTx1In]
+    -- spending the output that holds the reference script also counts it, since the size
+    -- is measured over inputs and reference inputs alike
+    void $
+      mkTxWithExpectedSize scriptSize $
+        submitTx $
+          mkTxWithInputsAndRefInputs [refScriptTx1In] []
 
   it "Use a reference script in a collateral output" $ do
     -- produce an utxo with a failing script
@@ -218,31 +187,28 @@ spec = describe "BBODY" $ do
           else freshKeyAddrNoPtr_
       pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
 
-    txs <- simulateThenRestore $ do
-      -- submit an invalid transaction which attempts to consume the failing script
-      -- and specifies as collateral return the txout with reference script
-      createCollateralTx <-
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
-        -- TODO: Re-enable after issue is resolved, by removing this override
-        withDisabledPostSubmitTxHook $
-          submitPhase2Invalid $
-            mkBasicTx
-              ( mkBasicTxBody
-                  & inputsTxBodyL .~ [failingPlutusTxIn]
-                  & collateralReturnTxBodyL .~ pure collRefScriptTxOut
-              )
-      totalRefScriptSizeInBlock [createCollateralTx] <$> getUTxO `shouldReturn` 0
+    -- submit an invalid transaction which attempts to consume the failing script
+    -- and specifies as collateral return the txout with reference script
+    utxo <- getUTxO
+    createCollateralTx <-
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+      -- TODO: Re-enable after issue is resolved, by removing this override
+      withDisabledPostSubmitTxHook $
+        submitPhase2Invalid $
+          mkBasicTx
+            ( mkBasicTxBody
+                & inputsTxBodyL .~ [failingPlutusTxIn]
+                & collateralReturnTxBodyL .~ pure collRefScriptTxOut
+            )
+    -- the transaction that produces the collateral output contributes nothing itself
+    txNonDistinctRefScriptsSize utxo createCollateralTx `shouldBe` 0
 
-      -- consume the script, passing the output from the previous collateral as reference input
-      let refScriptTxIn = txInAt 1 createCollateralTx
-      useCollateralTx <- submitTx $ mkTxWithInputsAndRefInputs [scriptTxIn] [refScriptTxIn]
-      totalRefScriptSizeInBlock [createCollateralTx, useCollateralTx]
-        <$> getUTxO `shouldReturn` scriptSize
-      pure [createCollateralTx, useCollateralTx]
-
-    totalRefScriptSizeInBlock (SSeq.fromList txs)
-      <$> getUTxO
-        `shouldReturn` scriptSize
+    -- applying the invalid transaction creates its collateral return, so the reference
+    -- script it carries is counted for the next transaction
+    utxoWithCollateralReturn <- getUTxO
+    let refScriptTxIn = txInAt 1 createCollateralTx
+    useCollateralTx <- submitTx $ mkTxWithInputsAndRefInputs [scriptTxIn] [refScriptTxIn]
+    txNonDistinctRefScriptsSize utxoWithCollateralReturn useCollateralTx `shouldBe` scriptSize
 
 -- Generate a list of integers such that the sum of their multiples by scale is greater than toExceed
 -- and each individual value multiplied by the scale is smaller than maxSingle
