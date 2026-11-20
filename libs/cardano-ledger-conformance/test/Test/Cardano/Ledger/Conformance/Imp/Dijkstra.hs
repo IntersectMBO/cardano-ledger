@@ -65,7 +65,7 @@ spec = do
 
               CERT.spec
 
-              xdescribe "disabled" ConwayCERTS.spec
+              ConwayCERTS.spec
 
               ENTITIES.spec
 
