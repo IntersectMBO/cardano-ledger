@@ -85,6 +85,7 @@ import Cardano.Ledger.BaseTypes (
   ToKeyValuePairs (..),
   UnitInterval,
   knownNonZeroBounded,
+  unboundRational,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -1164,6 +1165,7 @@ instance ConwayEraPParams DijkstraEra where
       , ppu /= emptyPParamsUpdate
       , isValid (/= 0) ppuNOptL
       , isValid (/= EpochInterval 0) ppuEMaxL
+      , isValid (all ((>= 1) . unboundRational) . unMaxPledgeLeverage) ppuMaxPledgeLeverageL
       ]
     where
       isValid ::

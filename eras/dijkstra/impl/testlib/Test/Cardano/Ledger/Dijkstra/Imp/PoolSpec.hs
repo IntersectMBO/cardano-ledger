@@ -10,10 +10,20 @@ module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec, dijkstraOnlySpec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Conway.Governance (
+  GovPurposeId (..),
+  Voter (..),
+  constitutionGovStateL,
+  constitutionGuardrailsScriptHashL,
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra
 import Cardano.Ledger.Dijkstra.Core
-import Cardano.Ledger.Dijkstra.PParams (ppMaxPledgeLeverageL, ppMinPoolMarginL)
+import Cardano.Ledger.Dijkstra.PParams (
+  ppMaxPledgeLeverageL,
+  ppMinPoolMarginL,
+  ppuMaxPledgeLeverageL,
+ )
 import Cardano.Ledger.Dijkstra.Rules
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole, witVKeyHash)
 import Cardano.Ledger.Plutus.CostModels (emptyCostModels)
@@ -85,8 +95,8 @@ poolRewards (o, d) = fold <$> traverse @[] getBalance [o, d]
 -- that is a thousandth of the pledge of the first one, then have both of them mint the
 -- same number of blocks, and report the rewards that each of them earned.
 --
--- The first pool is well pledged: its pledge is a tenth of its stake, which is exactly
--- the leverage that `maxPledgeLeverage` is set to whenever it is set in this spec.
+-- The first pool pledges a tenth of its stake, so a leverage cap of ten leaves
+-- all of its stake eligible for rewards.
 rewardsOfWellAndOverPledgedPools ::
   DijkstraEraImp era =>
   ImpTestM era (Coin, Coin)
@@ -329,6 +339,47 @@ spec = describe "POOL" $ do
       -- the well pledged pool earns. It is not cut off from the rewards entirely.
       overLeveragedRewards `shouldSatisfy` (> Coin 0)
       Coin (100 * unCoin overLeveragedRewards) `shouldSatisfy` (< wellPledgedRewards)
+
+  describe "pledge leverage bounds" $ do
+    for_ @[] [0 %! 1, 1 %! 100, 9999 %! 10000] $ \leverage ->
+      it ("rejects " <> show leverage <> " as a malformed proposal") $ do
+        modifyNES $
+          nesEsL . epochStateGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL .~ SNothing
+        let ppu = emptyPParamsUpdate & ppuMaxPledgeLeverageL .~ SJust (MaxPledgeLeverage (SJust leverage))
+        action <- mkParameterChangeGovAction SNothing ppu
+        mkProposal action >>= flip submitFailingProposal [injectFailure $ MalformedProposal action]
+    for_ @[]
+      [ ("minimum", SJust (1 %! 1))
+      , ("fractional", SJust (101 %! 100))
+      , ("above the CIP upper bound", SJust (10001 %! 1))
+      , ("maximum representable value", SJust maxBound)
+      , ("unset", SNothing)
+      ]
+      $ \(caseName, leverage) ->
+        -- The conformance adapter omits MaxPledgeLeverage, so the formal model
+        -- sees an empty parameter update. Re-enable when it supports this field.
+        disableInConformanceIt ("enacts " <> caseName <> " and pays rewards") $ do
+          modifyPParams $ \pp ->
+            pp
+              & ppA0L .~ 3 %! 10
+              & ppNOptL .~ 500
+              & ppMaxPledgeLeverageL .~ MaxPledgeLeverage (SJust (1 %! 1))
+          -- Exercise ledger validation without a constitutional guardrails script.
+          modifyNES $
+            nesEsL . epochStateGovStateL . constitutionGovStateL . constitutionGuardrailsScriptHashL .~ SNothing
+          committee <- registerInitialCommittee
+          (drep, _, _) <- setupSingleDRep 1_000_000
+          let cap = MaxPledgeLeverage leverage
+          action <-
+            submitParameterChange SNothing $
+              emptyPParamsUpdate & ppuMaxPledgeLeverageL .~ SJust cap
+          submitYesVote_ (DRepVoter drep) action
+          submitYesVoteCCs_ committee action
+          passNEpochs 2
+          getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId action)
+          getsPParams ppMaxPledgeLeverageL `shouldReturn` cap
+          (well, _) <- rewardsOfWellAndOverPledgedPools
+          well `shouldSatisfy` (> Coin 0)
 
   describe "BLS PoolReg" $ do
     let
