@@ -874,7 +874,7 @@ data QueryResultIndividualPoolStake = QueryResultIndividualPoolStake
   { qripsStake :: !Rational
   , qripsTotalStake :: !(CompactForm Coin)
   , qripsVrf :: !(VRFVerKeyHash StakePoolVRF)
-  , qripsBls :: !(StrictMaybe BlsKey)
+  , qripsBls :: !(StrictMaybe (LeiosVerificationKey ProvenPossession))
   }
   deriving (Eq, Show, Generic)
   deriving (ToJSON) via KeyValuePairs QueryResultIndividualPoolStake

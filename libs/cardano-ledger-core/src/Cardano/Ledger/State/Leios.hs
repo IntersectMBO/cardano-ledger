@@ -28,7 +28,7 @@ module Cardano.Ledger.State.Leios (
   ebIsAppliedL,
 ) where
 
-import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight, mkLeiosCommittee)
+import Cardano.Crypto.Leios (LeiosCommittee (..), LeiosSeat (..), Weight)
 import Cardano.Ledger.BaseTypes (
   EpochInterval,
   KeyValuePairs (..),
@@ -49,7 +49,7 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Hashes (EraIndependentBlockHeader, SafeHash)
 import Cardano.Ledger.Keys (KeyHash, StakePool)
 import Cardano.Ledger.Slot (EpochNo, SlotNo)
-import Cardano.Ledger.State.StakePool (BlsKey (..), BlsKeyState (..))
+import Cardano.Ledger.State.StakePool (BlsKeyState (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value, object, toJSON, (.=))
 import qualified Data.ByteString.Base16 as B16
@@ -67,7 +67,7 @@ import NoThunks.Class (NoThunks)
 -- | The committee with no seats: the value for eras before Leios and for a
 -- committee size of zero.
 emptyLeiosCommittee :: LeiosCommittee
-emptyLeiosCommittee = UnsafeLeiosCommittee VS.empty
+emptyLeiosCommittee = LeiosCommittee VS.empty
 
 -- | A stake pool standing for committee selection. Keeps 'selectLeiosCommittee'
 -- independent of the snapshot the candidates are projected from.
@@ -86,10 +86,9 @@ data LeiosCandidate = LeiosCandidate
 -- | Seat the @committeeSize@ pools with the most stake, largest first, ties
 -- broken by ascending pool id. A pool with no registered key, one whose key has
 -- aged out (CIP-0164: honoured for @maxKeyAge@ epochs after its registration,
--- judged against the epoch this committee is selected for), or one whose proof
--- of possession does not verify, is seated keyless. A size of zero yields the
--- empty committee without inspecting the candidates, so pre-Dijkstra snapshots
--- carry it for free even when forced.
+-- judged against the epoch this committee is selected for) is seated keyless.
+-- A size of zero yields the empty committee without inspecting the candidates,
+-- so pre-Dijkstra snapshots carry it for free even when forced.
 selectLeiosCommittee ::
   EpochNo -> EpochInterval -> Word16 -> Vector LeiosCandidate -> LeiosCommittee
 selectLeiosCommittee _ _ 0 _ = emptyLeiosCommittee
@@ -99,7 +98,7 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
     & V.take size
     & V.map toSeat
     & V.convert
-    & mkLeiosCommittee
+    & LeiosCommittee
   where
     -- Only the top @size@ need to be in order, so partial-sort them in place
     -- and leave the rest untouched instead of ordering the whole vector.
@@ -110,14 +109,14 @@ selectLeiosCommittee epochNo maxKeyAge committeeSize candidates =
     higherStake a b =
       compare (Down (lcStake a), lcPoolId a) (Down (lcStake b), lcPoolId b)
 
-    toSeat c = (honouredKey c, lcWeight c)
+    toSeat c = LeiosSeat {seatWeight = lcWeight c, seatVKey = honouredKey c}
 
     -- The key is offered to the committee only while it is still honoured; an
     -- aged-out key leaves the pool seated but keyless.
     honouredKey c = do
       bks <- lcKey c
       if epochNo < addEpochInterval (bksRegisteredIn bks) maxKeyAge
-        then let BlsKey vk pop = bksKey bks in SJust (vk, pop)
+        then SJust $ bksKey bks
         else SNothing
 
 -- | Render a 'LeiosCommittee' as JSON for ledger purposes.

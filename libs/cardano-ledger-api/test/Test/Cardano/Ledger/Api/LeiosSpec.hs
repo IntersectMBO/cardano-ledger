@@ -5,7 +5,7 @@ module Test.Cardano.Ledger.Api.LeiosSpec (spec) where
 
 import Cardano.Crypto.DSIGN (signDSIGN)
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Crypto.Leios (LeiosSeatId (..), aggregateLeiosCert, leiosSignContext)
+import Cardano.Crypto.Leios (LeiosSeatId (..), aggregateLeiosCert)
 import Cardano.Ledger.Api.Era (DijkstraEra)
 import Cardano.Ledger.Api.Leios
 import Cardano.Ledger.BaseTypes
@@ -18,7 +18,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Lens.Micro.Mtl (use)
-import Test.Cardano.Crypto.Leios.Gen (TestSeatType (..), mkCommitteeFromTestSeats)
+import Test.Cardano.Crypto.Leios.Gen (mkCommitteeFromTestSeats)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -28,7 +28,7 @@ mkValidLeiosCertWithEnv = do
   headerHash <- arbitrary
   annSlot <- getCurSlotNo
   let (keys, committee) =
-        mkCommitteeFromTestSeats $ replicate 3 (WithKey, 1 / 4) <> [(NoKey, 1 / 4)]
+        mkCommitteeFromTestSeats $ replicate 3 (True, 1 / 4) <> [(False, 1 / 4)]
       env =
         LeiosCertEnv
           { lseCurrentSlotNo = annSlot + 14
@@ -45,7 +45,7 @@ mkValidLeiosCertWithEnv = do
     expectRightDeep $
       aggregateLeiosCert committee $
         Map.fromList
-          [ (LeiosSeatId i, signDSIGN leiosSignContext msg key)
+          [ (LeiosSeatId i, signDSIGN () msg key)
           | (i, key) <- zip [0 ..] (take 3 keys)
           ]
   pure (env, cert)
