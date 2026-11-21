@@ -50,7 +50,7 @@ spec = withImpInitEachEraVersion (Proxy @DijkstraEra) $
     it "matches ledger additions without sub-transactions" $ do
       out <- freshTxOutWithCoin (Coin 3_000_000)
       added <- checkProducedOutputs $ mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [out]
-      Map.size (unUTxO added) `shouldSatisfy` (> 0)
+      Map.size (unUTxO added) `shouldSatisfy` (== 2)
     it "returns only the collateral return for a phase-2-invalid batch" $ do
       tx <- switchTxToPhase2InvalidLegacyMode =<< batchWithOutputs
       collateralAddr <- freshKeyAddrNoPtr_
