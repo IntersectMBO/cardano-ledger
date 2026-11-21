@@ -893,11 +893,9 @@ votingSpec =
             & ppuTxFeePerByteL .~ SJust (CoinPerByte $ CompactCoin 100)
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
-    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1366
-    -- TODO: Re-enable after issue is resolved, by removing this override
-    disableInConformanceIt "voting stake for pools with zero delegations" $ do
+    it "voting stake for pools with zero delegations" $ do
       -- Set a realistic value for the gov-action deposit
-      modifyNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 100_000_000_000
+      modifyPParams $ ppGovActionDepositL .~ Coin 100_000_000_000
 
       pParams <- getsNES $ nesEsL . curPParamsEpochStateL
       let protVer = pParams ^. ppProtocolVersionL

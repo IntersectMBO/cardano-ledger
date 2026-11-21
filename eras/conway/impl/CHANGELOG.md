@@ -19,6 +19,7 @@
 
 ### `testlib`
 
+* Make `conwayModifyPParams` also modify the future `PParams`
 * Add `Arbitrary` instance for `MempoolTx ConwayEra`
 * Replace the `DecCBOR` instance for `Tx TopTx ConwayEra` with one for `MempoolTx ConwayEra`
 * Add `lookupDRepState`, `expectDRepRegistered`, `expectDelegatedVote`, `expectNotDelegatedVote` and `expectReverseDRepDelegation`
