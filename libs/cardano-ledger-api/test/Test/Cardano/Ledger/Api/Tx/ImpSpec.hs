@@ -46,7 +46,7 @@ spec = withImpInitEachEraVersion (Proxy @DijkstraEra) $
   describe "producedTxOuts" $ do
     it "matches ledger additions for a batch with multiple sub-transactions" $ do
       added <- checkProducedOutputs =<< batchWithOutputs
-      Map.size (unUTxO added) `shouldSatisfy` (>= 4)
+      Map.size (unUTxO added) `shouldSatisfy` (== 5)
     it "matches ledger additions without sub-transactions" $ do
       out <- freshTxOutWithCoin (Coin 3_000_000)
       added <- checkProducedOutputs $ mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [out]
