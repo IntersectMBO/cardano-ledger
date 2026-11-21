@@ -360,6 +360,15 @@ spec = describe "POOL" $ do
       pools <- getPools
       expectNothing $ Map.lookup (sppId pps) pools
 
+    it "fails to re-register with the active BLS key and an invalid proof of possession" $ do
+      blsKey <- freshBlsKey
+      pps <- registerPoolWithBlsKey (SJust blsKey)
+      bogusProof <- arbitrary
+      let bogusKey = blsKey {blsPossessionProof = bogusProof}
+      submitFailingTx
+        (registerPoolTx pps {sppBlsKey = SJust bogusKey})
+        [injectFailure $ BlsKeyInvalidProofOfPossession (sppId pps) bogusKey]
+
     it "re-registering with the same and different BLS key" $ do
       blsKey <- freshBlsKey
       pps <- registerPoolWithBlsKey (SJust blsKey)

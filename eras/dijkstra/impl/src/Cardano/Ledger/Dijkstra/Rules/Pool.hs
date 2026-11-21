@@ -22,7 +22,6 @@ module Cardano.Ledger.Dijkstra.Rules.Pool (
 ) where
 
 import Cardano.Crypto.DSIGN (verifyPossessionProofDSIGN)
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
 import Cardano.Crypto.Hash.Class (hashSize)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
@@ -33,11 +32,11 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, POOL)
-import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust, checkFailOnJustStatic)
+import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust, checkFailOnLeftStatic)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_, guard)
+import Control.Monad (forM_, guard, unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -238,19 +237,14 @@ poolTransition = do
               <= fromIntegral (hashSize ([] @HASH))
                 ?! injectFailure (PoolMedataHashTooBig sppId s)
 
-      -- Returns the BlsKey wrapped in 'SJust' if it is invalid. A valid 'BlsKey' returns 'SNothing'.
-      let invalidBlsKey = do
-            SJust blsKey@BlsKey {blsPubKey, blsPossessionProof} <- pure newBlsKey
-            Left _ <-
-              pure $
-                verifyPossessionProofDSIGN
-                  minSigPoPDST
-                  blsPubKey
-                  blsPossessionProof
-            pure (sppId, blsKey)
-      checkFailOnJustStatic invalidBlsKey $ uncurry BlsKeyInvalidProofOfPossession
-
-      let newBlsKeyHash = hashBlsKey <$> newBlsKey
+      let checkBlsKeyPoP ownBlsKeys =
+            forM_ newBlsKey $ \blsKey@BlsKey {blsPubKey, blsPossessionProof} ->
+              -- we don't want to run the check on a key that is the same as
+              -- the active or the pending one: we already checked those
+              unless (newBlsKey `elem` ownBlsKeys) $
+                checkFailOnLeftStatic (verifyPossessionProofDSIGN blsPubKey blsPossessionProof) $
+                  const (BlsKeyInvalidProofOfPossession sppId blsKey)
+          newBlsKeyHash = hashBlsKey <$> newBlsKey
           -- Returns the BLS key if another pool uses its public key, which is the case when
           -- its hash is in use, but is none of the given hashes of the pool's own BLS keys. A
           -- registration without a BLS key never clashes.
@@ -265,6 +259,7 @@ poolTransition = do
       case Map.lookup sppId psStakePools of
         -- register new, Pool-Reg
         Nothing -> do
+          checkBlsKeyPoP []
           Map.notMember sppVrf psVRFKeyHashes
             ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
           checkFailOnJust (blsKeyUsedByAnotherPool []) $ BlsKeyAlreadyRegistered sppId
@@ -282,11 +277,14 @@ poolTransition = do
           let activeVrf = stakePoolState ^. spsVrfL
               mbFutureParams = Map.lookup sppId psFutureStakePoolParams
               mbFutureVrf = (^. sppVrfL) <$> mbFutureParams
+              activeBlsKey = bksKey <$> stakePoolState ^. spsBlsKeyL
+              futureBlsKey = sppBlsKey =<< maybeToStrictMaybe mbFutureParams
               -- The only reference to this VRF key hash, if any, must be the
               -- pool's own, held through its active or its future parameters.
               expectedOccurrences
                 | sppVrf == activeVrf || mbFutureVrf == Just sppVrf = Just (knownNonZeroBounded @1)
                 | otherwise = Nothing
+          checkBlsKeyPoP [activeBlsKey, futureBlsKey]
           Map.lookup sppVrf psVRFKeyHashes
             == expectedOccurrences
               ?! injectFailure (VRFKeyHashAlreadyRegistered sppId sppVrf)
@@ -305,9 +303,8 @@ poolTransition = do
                           | otherwise = id
                      in addNewOccurrence . removeOldOccurrence
                 | otherwise = id
-              activeBlsKeyHash = hashBlsKey . bksKey <$> stakePoolState ^. spsBlsKeyL
-              newFutureBlsKeyHash =
-                hashBlsKey <$> (sppBlsKey =<< maybeToStrictMaybe mbFutureParams)
+              activeBlsKeyHash = hashBlsKey <$> activeBlsKey
+              newFutureBlsKeyHash = hashBlsKey <$> futureBlsKey
               -- The re-registration replaces the future parameters, which releases their BLS key,
               -- unless the active parameters use it as well. If the re-registration uses that
               -- same key, `trackNewBlsKeyHash` records it again.

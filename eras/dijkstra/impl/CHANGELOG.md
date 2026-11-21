@@ -75,6 +75,7 @@
 
 ### `cddl`
 
+* Change the `bls_key` rule to uncompressed points: `bls_pubkey` is now 192 bytes and `bls_possession_proof` 96 bytes
 * Add the `nonempty_omap` generic rule, with `nonemptyOMap` and a `HuddleRule2 "nonempty_omap"` instance
 * Add the `eb_references` rule, a `nonempty_omap` from transaction hash to transaction size
 

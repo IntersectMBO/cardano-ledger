@@ -483,7 +483,7 @@ pool_params =
 vrf_keyhash = hash32
 
 ; BLS key
-bls_key = [bls_pubkey : bytes .size 96, bls_possession_proof : bytes .size 48]
+bls_key = [bls_pubkey : bytes .size 192, bls_possession_proof : bytes .size 96]
 
 ; A unit interval is a number in the range between 0 and 1, which
 ; means there are two extra constraints:
