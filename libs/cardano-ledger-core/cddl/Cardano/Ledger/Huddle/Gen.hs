@@ -20,11 +20,16 @@ module Cardano.Ledger.Huddle.Gen (
   genRule,
   generateFromName,
   generateFromGRef,
-  genArrayTerm,
-  genBytesTerm,
-  genStringTerm,
-  genMapTerm,
   unwrapSingleOrError,
+  twiddleArray,
+  twiddleMap,
+  twiddleText,
+  twiddleBytes,
+  genNBytes,
+  genBytes,
+  genNBytesText,
+  genText,
+  genTerm,
 
   -- * Term validators
   module CustomValidator,
@@ -53,14 +58,25 @@ module Cardano.Ledger.Huddle.Gen (
 
 import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Huddle (HuddleRule ())
-import Codec.CBOR.Cuddle.CBOR.Gen (generateFromGRef, generateFromName)
+import Codec.CBOR.Cuddle.CBOR.Gen (
+  genBytes,
+  genNBytes,
+  genNBytesText,
+  genTerm,
+  genText,
+  generateFromGRef,
+  generateFromName,
+  twiddleArray,
+  twiddleBytes,
+  twiddleMap,
+  twiddleText,
+ )
 import Codec.CBOR.Cuddle.CBOR.Validator (validateFromGRef, validateFromName)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (nintMin, uintMax)
 import Codec.CBOR.Cuddle.CDDL.Custom.Core as CustomCore
 import Codec.CBOR.Cuddle.CDDL.Custom.Generator as CustomGen
 import Codec.CBOR.Cuddle.CDDL.Custom.Validator as CustomValidator
-import Control.Monad.Reader (asks)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function (on)
@@ -116,27 +132,6 @@ antiVectorOfUniqueBy eq n gen = do
             else go (m - 1) triesPerElement (x : elems)
       | otherwise = pure (Just elems)
   go n triesPerElement []
-
-genArrayTerm :: [Term] -> CBORGen Term
-genArrayTerm es =
-  ifTwiddle (GenT.elements [TList es, TListI es]) (pure $ TList es)
-
-genBytesTerm :: ByteString -> CBORGen Term
-genBytesTerm bs =
-  ifTwiddle (GenT.elements [TBytes bs, TBytesI $ LBS.fromStrict bs]) (pure $ TBytes bs)
-
-genStringTerm :: T.Text -> CBORGen Term
-genStringTerm t =
-  ifTwiddle (GenT.elements [TString t, TStringI $ LT.fromStrict t]) (pure $ TString t)
-
-genMapTerm :: [(Term, Term)] -> CBORGen Term
-genMapTerm m =
-  ifTwiddle (GenT.elements [TMap m, TMapI m]) (pure $ TMap m)
-
-ifTwiddle :: CBORGen a -> CBORGen a -> CBORGen a
-ifTwiddle yes no = do
-  twiddle <- asks (gcTwiddle . geConfig)
-  if twiddle then yes else no
 
 -- Term validators
 

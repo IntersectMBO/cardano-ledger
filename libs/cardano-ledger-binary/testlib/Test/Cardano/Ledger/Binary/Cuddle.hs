@@ -22,7 +22,6 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleAntiCborProp,
   huddleRoundTripGenValidateProp,
   specWithHuddle,
-  noTwiddle,
   HuddleEnv (..),
   toGenConfig,
   resolveHuddle,
@@ -91,7 +90,6 @@ import Test.Hspec (
   describe,
   expectationFailure,
   it,
-  mapSubject,
   shouldBe,
  )
 import Test.QuickCheck (
@@ -185,17 +183,12 @@ huddleRoundTripAnnCborSpec version ruleName =
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         huddleRoundTripAnnCborProp @a version ruleName
 
-data HuddleEnv = HuddleEnv
-  { heTwiddle :: Bool
-  , heRoot :: CTreeRoot MonoReferenced
+newtype HuddleEnv = HuddleEnv
+  { heRoot :: CTreeRoot MonoReferenced
   }
 
 toGenConfig :: HuddleEnv -> GenConfig
-toGenConfig HuddleEnv {..} =
-  GenConfig
-    { gcTwiddle = heTwiddle
-    , gcRoot = mapIndex heRoot
-    }
+toGenConfig HuddleEnv {..} = GenConfig $ mapIndex heRoot
 
 huddleAntiCborProp ::
   forall a.
@@ -258,11 +251,8 @@ specWithHuddle :: Cuddle.Huddle -> SpecWith HuddleEnv -> Spec
 specWithHuddle h =
   beforeAll $
     case resolveHuddle h of
-      Right ct -> pure $ HuddleEnv True ct
+      Right ct -> pure $ HuddleEnv ct
       Left err -> error err
-
-noTwiddle :: SpecWith HuddleEnv -> SpecWith HuddleEnv
-noTwiddle = mapSubject $ \env -> env {heTwiddle = False}
 
 -- | Verify that random data generated is:
 --

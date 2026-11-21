@@ -97,7 +97,7 @@ library
     cardano-crypto-class,
     cardano-data ^>=1.4,
     cardano-ledger-allegra ^>=1.11,
-    cardano-ledger-binary ^>=1.10,
+    cardano-ledger-binary >=1.10 && <1.12,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.24,
     cardano-ledger-mary ^>=1.12,
     cardano-ledger-shelley ^>=1.21,
@@ -139,6 +139,7 @@ library cddl
 
   build-depends:
     base,
+    bytestring,
     cardano-ledger-alonzo,
     cardano-ledger-core:cddl,
     cardano-ledger-mary:cddl,

@@ -322,11 +322,15 @@ metadata = {* metadatum_label => metadatum}
 metadatum_label = uint .size 8
 
 metadatum =
-  {* metadatum => metadatum}
+  assoc_map<metadatum>
   / [* metadatum]
   / int
   / bytes .size (0 .. 64)
   / text .size (0 .. 64)
+
+; The plutus data map is different from all the other maps in that it
+; allows duplicate keys.
+assoc_map<a0> = {* a0 => a0}
 
 auxiliary_data_array =
   [transaction_metadata : metadata, auxiliary_scripts : auxiliary_scripts]

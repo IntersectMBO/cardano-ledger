@@ -49,7 +49,7 @@ generateCBORFromCDDL ::
 generateCBORFromCDDL spec = do
   term <-
     generate . runAntiGen $
-      runCBORGen (GenConfig {gcTwiddle = False, gcRoot = mapIndex spec}) . generateFromName $
+      runCBORGen (GenConfig $ mapIndex spec) . generateFromName $
         Name (T.pack "record_entry")
   pure $ toStrictByteString $ encodeTerm term
 

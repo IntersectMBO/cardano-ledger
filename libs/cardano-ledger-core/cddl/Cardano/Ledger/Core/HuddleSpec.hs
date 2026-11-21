@@ -27,10 +27,11 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose),
   RuleTerm (..),
   arbitrary,
-  genArrayTerm,
   oneof,
+  twiddleArray,
   vectorOf,
  )
+import Codec.CBOR.Cuddle.CBOR.Gen (genBytes)
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
@@ -52,10 +53,10 @@ plutusScriptGen :: MonadGen m => m RuleTerm
 plutusScriptGen = SingleTerm . TBytes <$> (genByteString =<< choose (8, 1024))
 
 instance Era era => HuddleRule "hash28" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (28 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (28 :: Word64)
 
 instance Era era => HuddleRule "hash32" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "max_word64" era where
   huddleRuleNamed pname _ = pname =.= (18446744073709551615 :: Integer)
@@ -97,7 +98,7 @@ instance Era era => HuddleRule "unit_interval" era where
             , genUnitInterval64 (max64 - 1000) max64
             ]
         SingleTerm . TTagged 30
-          <$> genArrayTerm [TInteger $ toInteger n, TInteger $ toInteger d]
+          <$> twiddleArray [TInteger $ toInteger n, TInteger $ toInteger d]
 
 instance Era era => HuddleRule "nonnegative_interval" era where
   huddleRuleNamed pname p =
@@ -131,19 +132,19 @@ instance Era era => HuddleRule "vrf_keyhash" era where
   huddleRuleNamed pname p = pname =.= huddleRule @"hash32" p
 
 instance Era era => HuddleRule "vkey" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "vrf_vkey" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "kes_vkey" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (32 :: Word64)
 
 instance Era era => HuddleRule "kes_signature" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (448 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (448 :: Word64)
 
 instance Era era => HuddleRule "signkey_kes" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (64 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (64 :: Word64)
 
 instance Era era => HuddleRule "sequence_number" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
@@ -152,7 +153,7 @@ instance Era era => HuddleRule "kes_period" era where
   huddleRuleNamed pname _ = pname =.= VUInt `H.sized` (8 :: Word64)
 
 instance Era era => HuddleRule "signature" era where
-  huddleRuleNamed pname _ = pname =.= VBytes `H.sized` (64 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (64 :: Word64)
 
 instance Era era => HuddleRule "coin" era where
   huddleRuleNamed pname _ = pname =.= VUInt
@@ -164,7 +165,7 @@ genHash28 :: MonadGen m => m ByteString
 genHash28 = genByteString 28
 
 instance Era era => HuddleRule "address" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| address format:
           |   [ 8 bit header | payload ];
@@ -198,7 +199,7 @@ instance Era era => HuddleRule "address" era where
           | 1001-1101: future formats
           |]
       . withCBORGen generator
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
     where
       generator = do
         stakeRef <- choose (0, 0b11)
@@ -227,7 +228,7 @@ instance Era era => HuddleRule "address" era where
         pure $ SingleTerm bytesTerm
 
 instance Era era => HuddleRule "reward_account" era where
-  huddleRuleNamed pname _ = withCBORGen generator $ pname =.= VBytes
+  huddleRuleNamed pname era = withCBORGen generator $ pname =.= huddleRule @"definite_bytes" era
     where
       generator = do
         isMainnet <- arbitrary
@@ -288,8 +289,9 @@ instance Era era => HuddleRule "port" era where
 
 ipRule ::
   forall era (r :: Symbol).
-  KnownSymbol r => Int -> Proxy r -> Proxy era -> Rule
-ipRule n pname _ = pname =.= VBytes `H.sized` (fromIntegral n :: Word64)
+  (Era era, KnownSymbol r) =>
+  Int -> Proxy r -> Proxy era -> Rule
+ipRule n pname era = pname =.= huddleRule @"definite_bytes" era `H.sized` (fromIntegral n :: Word64)
 
 instance Era era => HuddleRule "ipv4" era where
   huddleRuleNamed = ipRule 4
@@ -310,3 +312,14 @@ instance Era era => HuddleRule "protocol_version" era where
 instance Era era => HuddleGroup "protocol_version" era where
   huddleGroupNamed pname p =
     pname =.~ grp [a $ huddleRule @"major_protocol_version" p, a $ VUInt `sized` (4 :: Word64)]
+
+instance Era era => HuddleRule "definite_bytes" era where
+  huddleRuleNamed pname _ =
+    withGenerator generator $
+      withValidator validator $
+        pname =.= VBytes
+    where
+      generator = SingleTerm . TBytes <$> genBytes
+      validator = \case
+        SingleTerm (TBytes _) -> pure ()
+        _ -> fail "Expected definite-encoded bytes"

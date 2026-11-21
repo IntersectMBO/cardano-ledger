@@ -76,7 +76,7 @@ alonzoTransactionOutputRule pname p =
 
 dataRule ::
   forall era. HuddleRule "plutus_data" era => Proxy "data" -> Proxy era -> Rule
-dataRule pname p = pname =.= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
+dataRule pname p = pname =.= tag 24 (huddleRule @"definite_bytes" p `cbor` huddleRule @"plutus_data" p)
 
 datumOptionRule ::
   forall era.
@@ -95,7 +95,7 @@ scriptRefRule ::
   Proxy "script_ref" ->
   Proxy era ->
   Rule
-scriptRefRule pname p = pname =.= tag 24 (VBytes `cbor` huddleRule @"script" p)
+scriptRefRule pname p = pname =.= tag 24 (huddleRule @"definite_bytes" p `cbor` huddleRule @"script" p)
 
 babbageTransactionOutput ::
   forall era.
@@ -240,7 +240,10 @@ instance HuddleRule "policy_id" BabbageEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" BabbageEra where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 32 :: Word64)
+
+instance HuddleRule "value_pair" BabbageEra where
+  huddleRuleNamed = maryValuePairRule
 
 instance HuddleRule "value" BabbageEra where
   huddleRuleNamed = maryValueRule
@@ -261,7 +264,7 @@ instance HuddleRule "network_id" BabbageEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
 instance HuddleRule "bounded_bytes" BabbageEra where
-  huddleRuleNamed pname _ = boundedBytesRule pname
+  huddleRuleNamed = boundedBytesRule
 
 instance HuddleRule "big_uint" BabbageEra where
   huddleRuleNamed = bigUintRule
@@ -321,7 +324,12 @@ instance HuddleRule "block" BabbageEra where
           ]
 
 instance HuddleRule "vrf_cert" BabbageEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleRule "header" BabbageEra where
   huddleRuleNamed pname p =
@@ -509,13 +517,13 @@ instance HuddleGroup "script_invalid_hereafter" BabbageEra where
   huddleGroupNamed = scriptInvalidHereafterGroup
 
 instance Era era => HuddleRule "plutus_v2_script" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| Babbage introduces Plutus V2 with improved cost model
           | and additional builtins.
           |]
       . withCBORGen plutusScriptGen
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
 
 instance HuddleRule "script" BabbageEra where
   huddleRuleNamed = babbageScript

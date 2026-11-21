@@ -33,19 +33,12 @@ module Cardano.Ledger.Alonzo.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Huddle.Gen (
-  MonadGen (choose),
-  RuleTerm (..),
-  Term (..),
-  genArrayTerm,
-  generateFromGRef,
-  liftAntiGen,
-  listOf,
-  oneof,
-  scale,
-  (|!),
- )
+import Cardano.Ledger.Huddle.Gen hiding (sized)
+import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Mary.HuddleSpec
+import Control.Monad (unless, when)
+import Data.Bits (shiftR)
+import qualified Data.ByteString as BS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Text.Heredoc
@@ -78,15 +71,60 @@ positiveIntervalRule pname p =
   pname
     =.= tag 30 (arr [a (huddleRule @"positive_int" p), a (huddleRule @"positive_int" p)])
 
+-- | Generator for a bignum (tag 2 or 3) whose bytes are always encoded with a
+-- definite length. Only the length of the bytes is ever zapped.
+--
+-- TODO implement the custom generator/validator properly once this PR gets
+-- merged: https://github.com/IntersectMBO/cuddle/pull/209
+--
+-- The real decoder (plutus-core) also accepts bignums with indefinite-length
+-- (chunked) bytes, but the validator decodes `.cbor` contents with cborg's
+-- `decodeTerm`, which rejects them. Any generated chunked bignum would therefore
+-- be reported as invalid even though it decodes fine, so we never generate one.
+genBigInt :: Word64 -> Gen.CBORGen RuleTerm
+genBigInt t = do
+  n <- Gen.sized $ \sz -> antiChoose (0, 64) (0, max 65 sz)
+  SingleTerm . TTagged t . TBytes <$> genNBytes n
+
+-- | Validator for a bignum (tag 2 or 3).
+--
+-- TODO implement the custom generator/validator properly once this PR gets
+-- merged: https://github.com/IntersectMBO/cuddle/pull/209
+--
+-- cborg's `decodeTerm` turns bignums into `TInteger`, so cuddle validates them
+-- as integers. For a `Tag 2`/`Tag 3` rule cuddle only checks the inner rule when
+-- it is plain `bytes` (and even then it doesn't look at the bytes), so it can't
+-- reach the custom validator on `bounded_bytes`. Instead we check the integer
+-- here: it must have the right sign, and its magnitude (`n` for tag 2,
+-- `-1 - n` for tag 3) must fit in 64 bytes.
+validateBigInt :: (Integer -> Bool) -> (Integer -> Integer) -> RuleTerm -> Gen.Validator ()
+validateBigInt inRange magnitude rTerm = do
+  term <- unwrapSingle rTerm
+  i <- case term of
+    TInteger i -> pure i
+    TInt i -> pure (toInteger i)
+    _ -> fail "Expected a bignum"
+  unless (inRange i) $ fail "Bignum has the wrong sign"
+  let nBytes = length . takeWhile (> 0) $ iterate (`shiftR` 8) (magnitude i)
+  when (nBytes > 64) $
+    fail $
+      "Bignum needs " <> show nBytes <> " bytes, at most 64 allowed"
+
 bigUintRule ::
   forall era.
   HuddleRule "bounded_bytes" era => Proxy "big_uint" -> Proxy era -> Rule
-bigUintRule pname p = pname =.= tag 2 (huddleRule @"bounded_bytes" p)
+bigUintRule pname p =
+  withValidator (validateBigInt (>= 0) id) $
+    withCBORGen (genBigInt 2) $
+      pname =.= tag 2 (huddleRule @"bounded_bytes" p)
 
 bigNintRule ::
   forall era.
   HuddleRule "bounded_bytes" era => Proxy "big_nint" -> Proxy era -> Rule
-bigNintRule pname p = pname =.= tag 3 (huddleRule @"bounded_bytes" p)
+bigNintRule pname p =
+  withValidator (validateBigInt (< 0) (\i -> -1 - i)) $
+    withCBORGen (genBigInt 3) $
+      pname =.= tag 3 (huddleRule @"bounded_bytes" p)
 
 bigIntRule ::
   forall era.
@@ -102,8 +140,8 @@ scriptDataHashRule ::
   forall era. Era era => Proxy "script_data_hash" -> Proxy era -> Rule
 scriptDataHashRule pname p = pname =.= huddleRule @"hash32" p
 
-boundedBytesRule :: Proxy "bounded_bytes" -> Rule
-boundedBytesRule pname =
+boundedBytesRule :: Era era => Proxy "bounded_bytes" -> Proxy era -> Rule
+boundedBytesRule pname era =
   comment
     [str| The real bounded_bytes does not have this limit. it instead has
         | a different limit which cannot be expressed in CDDL.
@@ -116,7 +154,25 @@ boundedBytesRule pname =
         |  bytestrings consists of a token #2.31 followed by a sequence
         |  of definite-length encoded bytestrings and a stop code )
         |]
-    $ pname =.= VBytes `sized` (0 :: Word64, 64 :: Word64)
+    $ withValidator validator
+    $ withCBORGen generator
+    $ pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 64 :: Word64)
+  where
+    -- TODO implement the custom generator/validator properly once this PR gets
+    -- merged: https://github.com/IntersectMBO/cuddle/pull/209
+    --
+    -- specifically the part about chunks, the `cborg` terms don't give us
+    -- control over the chunks.
+    validator term = do
+      sTerm <- unwrapSingle term
+      bytes <- validateBytesTerm sTerm
+      let len = BS.length bytes
+      when (len > 64) $ fail $ "Expected bytes with length at most 64, got " <> show len
+    generator = do
+      n <- choose (0, 64) |! Gen.sized (\sz -> choose (65, max 65 sz))
+      bytes <- genNBytes n
+      term <- twiddleBytes bytes
+      pure $ SingleTerm term
 
 exUnitPricesRule ::
   forall era.
@@ -170,11 +226,11 @@ constr pname =
           if t == 102
             then do
               uInt <- TInt <$> choose (0, 2 ^ (64 :: Int) - 1)
-              elems <- genArrayTerm =<< unwrapElems =<< listOf (generateFromGRef ref)
-              pure . SingleTerm <$> genArrayTerm [uInt, elems]
+              elems <- twiddleArray =<< unwrapElems =<< listOf (generateFromGRef ref)
+              pure . SingleTerm <$> twiddleArray [uInt, elems]
             else listOf $ generateFromGRef ref
       singleElems <- unwrapElems elems
-      SingleTerm . TTagged t <$> genArrayTerm singleElems
+      SingleTerm . TTagged t <$> twiddleArray singleElems
 
 instance HuddleGroup "operational_cert" AlonzoEra where
   huddleGroupNamed = shelleyOperationalCertGroup
@@ -282,10 +338,13 @@ instance HuddleRule "policy_id" AlonzoEra where
   huddleRuleNamed pname p = pname =.= huddleRule @"script_hash" p
 
 instance HuddleRule "asset_name" AlonzoEra where
-  huddleRuleNamed pname _ = pname =.= VBytes `sized` (0 :: Word64, 32 :: Word64)
+  huddleRuleNamed pname era = pname =.= huddleRule @"definite_bytes" era `sized` (0 :: Word64, 32 :: Word64)
 
 instance HuddleRule "native_script" AlonzoEra where
   huddleRuleNamed = nativeScriptRule
+
+instance HuddleRule "value_pair" AlonzoEra where
+  huddleRuleNamed = maryValuePairRule
 
 instance HuddleRule "value" AlonzoEra where
   huddleRuleNamed = maryValueRule
@@ -317,7 +376,12 @@ instance HuddleRule "block" AlonzoEra where
           ]
 
 instance HuddleRule "vrf_cert" AlonzoEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleRule "header" AlonzoEra where
   huddleRuleNamed pname p =
@@ -520,16 +584,16 @@ instance HuddleRule "network_id" AlonzoEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
 instance Era era => HuddleRule "plutus_v1_script" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| Alonzo introduces Plutus smart contracts.
           | Plutus V1 scripts are opaque bytestrings.
           |]
       . withCBORGen plutusScriptGen
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
 
 instance HuddleRule "bounded_bytes" AlonzoEra where
-  huddleRuleNamed pname _ = boundedBytesRule pname
+  huddleRuleNamed = boundedBytesRule
 
 instance HuddleRule "big_uint" AlonzoEra where
   huddleRuleNamed = bigUintRule
@@ -547,7 +611,7 @@ instance
   huddleRuleNamed pname p =
     pname
       =.= huddleRule1 @"constr" p (huddleRule @"plutus_data" p)
-      / smp [0 <+ asKey (huddleRule @"plutus_data" p) ==> huddleRule @"plutus_data" p]
+      / huddleRule1 @"assoc_map" p (huddleRule @"plutus_data" p)
       / sarr [0 <+ a (huddleRule @"plutus_data" p)]
       / huddleRule @"big_int" p
       / huddleRule @"bounded_bytes" p
