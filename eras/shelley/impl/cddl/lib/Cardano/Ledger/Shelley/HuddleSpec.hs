@@ -75,7 +75,7 @@ shelleyCDDL =
 headerRule ::
   forall era. HuddleRule "header_body" era => Proxy "header" -> Proxy era -> Rule
 headerRule pname p =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr [a $ huddleRule @"header_body" p, "body_signature" ==> huddleRule @"kes_signature" p]
 

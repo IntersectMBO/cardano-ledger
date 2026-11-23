@@ -56,7 +56,7 @@ alonzoCDDL =
 
 exUnitsRule :: Era era => Proxy "ex_units" -> Proxy era -> Rule
 exUnitsRule pname era =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr
         [ "mem" ==> (0 :: Integer) ... huddleRule @"max_int64" era

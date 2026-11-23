@@ -97,7 +97,7 @@ auxiliaryDataArrayRule ::
   ) =>
   Proxy "auxiliary_data_array" -> Proxy era -> Rule
 auxiliaryDataArrayRule pname p =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr
         [ "transaction_metadata" ==> huddleRule @"metadata" p

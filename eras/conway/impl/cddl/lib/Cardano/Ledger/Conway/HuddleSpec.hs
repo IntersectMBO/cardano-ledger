@@ -116,7 +116,7 @@ anchorRule ::
   forall era.
   (HuddleRule "url" era, HuddleRule "hash32" era) => Proxy "anchor" -> Proxy era -> Rule
 anchorRule pname p =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr
         [ "anchor_url" ==> huddleRule @"url" p
@@ -394,7 +394,7 @@ votingProcedureRule ::
   Proxy era ->
   Rule
 votingProcedureRule pname p =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr [a (huddleRule @"vote" p), a (huddleRule @"anchor" p / VNil)]
 
@@ -422,7 +422,7 @@ constitutionRule ::
   Proxy era ->
   Rule
 constitutionRule pname p =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr
         [ a (huddleRule @"anchor" p)
@@ -563,7 +563,7 @@ proposalProcedureRule ::
   Proxy era ->
   Rule
 proposalProcedureRule pname p =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     pname
       =.= arr
         [ "deposit" ==> huddleRule @"coin" p
@@ -635,7 +635,7 @@ conwayValuePairRule ::
   HuddleRule1 "multiasset" era =>
   Proxy "value_pair" -> Proxy era -> Rule
 conwayValuePairRule pname era =
-  withOverrideCBORGen (fmap Gen.forceDefinite) $
+  withOverrideCBORGen (forceDefinite =<<) $
     withValidator validator $
       pname
         =.= arr
@@ -836,7 +836,7 @@ instance HuddleRule "voter" ConwayEra where
 
 instance (Era era, HuddleRule "transaction_id" era) => HuddleRule "gov_action_id" era where
   huddleRuleNamed pname p =
-    withOverrideCBORGen (fmap forceDefinite) $
+    withOverrideCBORGen (forceDefinite =<<) $
       pname
         =.= arr
           [ "transaction_id" ==> huddleRule @"transaction_id" p
@@ -1347,7 +1347,7 @@ instance HuddleRule "transaction" ConwayEra where
 
 instance HuddleRule "ex_unit_prices" ConwayEra where
   huddleRuleNamed pname p =
-    withOverrideCBORGen (fmap forceDefinite) $
+    withOverrideCBORGen (forceDefinite =<<) $
       pname
         =.= arr
           [ "mem_price" ==> huddleRule @"nonnegative_interval" p
@@ -1404,7 +1404,7 @@ instance HuddleRule "update" ConwayEra where
 
 instance HuddleRule "vrf_cert" ConwayEra where
   huddleRuleNamed pname era =
-    withOverrideCBORGen (fmap forceDefinite) $
+    withOverrideCBORGen (forceDefinite =<<) $
       pname
         =.= arr
           [ a $ huddleRule @"definite_bytes" era

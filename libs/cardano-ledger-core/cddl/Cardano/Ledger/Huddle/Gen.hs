@@ -1,10 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Cardano.Ledger.Huddle.Gen (
   -- * MonadGen
@@ -183,10 +183,18 @@ unwrapSingleOrError :: RuleTerm -> Term
 unwrapSingleOrError (SingleTerm x) = x
 unwrapSingleOrError _ = error "Expected a single term"
 
-forceDefinite :: RuleTerm -> RuleTerm
+forceDefinite :: RuleTerm -> CBORGen RuleTerm
 forceDefinite = \case
-  SingleTerm (TListI es) -> SingleTerm $ TList es
-  SingleTerm (TMapI kvs) -> SingleTerm $ TMap kvs
-  SingleTerm (TBytesI bs) -> SingleTerm $ TBytes $ LBS.toStrict bs
-  SingleTerm (TStringI s) -> SingleTerm $ TString $ LT.toStrict s
-  x -> x
+  SingleTerm (TListI es) -> do
+    toListTerm <- pure TList |! pure TListI
+    pure $ SingleTerm $ toListTerm es
+  SingleTerm (TMapI kvs) -> do
+    toMapTerm <- pure TMap |! pure TMapI
+    pure $ SingleTerm $ toMapTerm kvs
+  SingleTerm (TBytesI bs) -> do
+    toBytesTerm <- pure (TBytes . LBS.toStrict) |! pure TBytesI
+    pure $ SingleTerm $ toBytesTerm bs
+  SingleTerm (TStringI s) -> do
+    toTextTerm <- pure (TString . LT.toStrict) |! pure TStringI
+    pure $ SingleTerm $ toTextTerm s
+  x -> pure x
