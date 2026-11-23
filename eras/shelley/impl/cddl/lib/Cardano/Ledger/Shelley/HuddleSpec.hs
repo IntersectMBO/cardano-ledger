@@ -56,6 +56,7 @@ module Cardano.Ledger.Shelley.HuddleSpec (
 
 import Cardano.Ledger.Core.HuddleSpec (plutusScriptGen)
 import Cardano.Ledger.Huddle
+import Cardano.Ledger.Huddle.Gen (forceDefinite)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Data.Int (Int32)
 import Data.Proxy (Proxy (..))
@@ -74,8 +75,9 @@ shelleyCDDL =
 headerRule ::
   forall era. HuddleRule "header_body" era => Proxy "header" -> Proxy era -> Rule
 headerRule pname p =
-  pname
-    =.= arr [a $ huddleRule @"header_body" p, "body_signature" ==> huddleRule @"kes_signature" p]
+  withOverrideCBORGen (fmap forceDefinite) $
+    pname
+      =.= arr [a $ huddleRule @"header_body" p, "body_signature" ==> huddleRule @"kes_signature" p]
 
 proposedProtocolParameterUpdatesRule ::
   forall era.

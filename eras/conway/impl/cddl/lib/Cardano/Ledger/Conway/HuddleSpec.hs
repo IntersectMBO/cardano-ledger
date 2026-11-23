@@ -83,36 +83,7 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
   urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Huddle.Gen (
-  CBORGen,
-  MonadGen (choose, resize),
-  RuleTerm (..),
-  Term (..),
-  antiChoose,
-  antiVectorOfUnique,
-  arbitrary,
-  faultyNum,
-  faultyTryGen,
-  genRule,
-  genTerm,
-  generateFromGRef,
-  generateFromName,
-  liftAntiGen,
-  listOf,
-  oneof,
-  replicateMNorm,
-  shuffle,
-  twiddleArray,
-  twiddleMap,
-  unwrapSingle,
-  unwrapSingleOrError,
-  validateArrayTerm,
-  validateFromGRef,
-  validateFromName,
-  validateMapTerm,
-  withAntiGen,
-  (|!),
- )
+import Cardano.Ledger.Huddle.Gen hiding (sized)
 import Cardano.Ledger.Huddle.Gen qualified as Gen
 import Control.Monad (forM_, unless, when)
 import Data.Containers.ListUtils (nubOrd)
@@ -145,11 +116,12 @@ anchorRule ::
   forall era.
   (HuddleRule "url" era, HuddleRule "hash32" era) => Proxy "anchor" -> Proxy era -> Rule
 anchorRule pname p =
-  pname
-    =.= arr
-      [ "anchor_url" ==> huddleRule @"url" p
-      , "anchor_data_hash" ==> huddleRule @"hash32" p
-      ]
+  withOverrideCBORGen (fmap forceDefinite) $
+    pname
+      =.= arr
+        [ "anchor_url" ==> huddleRule @"url" p
+        , "anchor_data_hash" ==> huddleRule @"hash32" p
+        ]
 
 drepRule ::
   forall era.
@@ -422,8 +394,9 @@ votingProcedureRule ::
   Proxy era ->
   Rule
 votingProcedureRule pname p =
-  pname
-    =.= arr [a (huddleRule @"vote" p), a (huddleRule @"anchor" p / VNil)]
+  withOverrideCBORGen (fmap forceDefinite) $
+    pname
+      =.= arr [a (huddleRule @"vote" p), a (huddleRule @"anchor" p / VNil)]
 
 votingProceduresRule ::
   forall era.
@@ -449,11 +422,12 @@ constitutionRule ::
   Proxy era ->
   Rule
 constitutionRule pname p =
-  pname
-    =.= arr
-      [ a (huddleRule @"anchor" p)
-      , a (huddleRule @"guardrails_script_hash" p / VNil)
-      ]
+  withOverrideCBORGen (fmap forceDefinite) $
+    pname
+      =.= arr
+        [ a (huddleRule @"anchor" p)
+        , a (huddleRule @"guardrails_script_hash" p / VNil)
+        ]
 
 parameterChangeActionGroup ::
   forall era.
@@ -589,13 +563,14 @@ proposalProcedureRule ::
   Proxy era ->
   Rule
 proposalProcedureRule pname p =
-  pname
-    =.= arr
-      [ "deposit" ==> huddleRule @"coin" p
-      , a (huddleRule @"reward_account" p)
-      , a (huddleRule @"gov_action" p)
-      , a (huddleRule @"anchor" p)
-      ]
+  withOverrideCBORGen (fmap forceDefinite) $
+    pname
+      =.= arr
+        [ "deposit" ==> huddleRule @"coin" p
+        , a (huddleRule @"reward_account" p)
+        , a (huddleRule @"gov_action" p)
+        , a (huddleRule @"anchor" p)
+        ]
 
 proposalProceduresRule ::
   forall era.
@@ -861,11 +836,12 @@ instance HuddleRule "voter" ConwayEra where
 
 instance (Era era, HuddleRule "transaction_id" era) => HuddleRule "gov_action_id" era where
   huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ "transaction_id" ==> huddleRule @"transaction_id" p
-        , "gov_action_index" ==> VUInt `sized` (2 :: Word64)
-        ]
+    withOverrideCBORGen (fmap forceDefinite) $
+      pname
+        =.= arr
+          [ "transaction_id" ==> huddleRule @"transaction_id" p
+          , "gov_action_index" ==> VUInt `sized` (2 :: Word64)
+          ]
 
 instance HuddleRule "operational_cert" ConwayEra where
   huddleRuleNamed = babbageOperationalCertRule
@@ -1371,11 +1347,12 @@ instance HuddleRule "transaction" ConwayEra where
 
 instance HuddleRule "ex_unit_prices" ConwayEra where
   huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ "mem_price" ==> huddleRule @"nonnegative_interval" p
-        , "step_price" ==> huddleRule @"nonnegative_interval" p
-        ]
+    withOverrideCBORGen (fmap forceDefinite) $
+      pname
+        =.= arr
+          [ "mem_price" ==> huddleRule @"nonnegative_interval" p
+          , "step_price" ==> huddleRule @"nonnegative_interval" p
+          ]
 
 instance HuddleRule "pool_voting_thresholds" ConwayEra where
   huddleRuleNamed = poolVotingThresholdsRule
@@ -1427,11 +1404,12 @@ instance HuddleRule "update" ConwayEra where
 
 instance HuddleRule "vrf_cert" ConwayEra where
   huddleRuleNamed pname era =
-    pname
-      =.= arr
-        [ a $ huddleRule @"definite_bytes" era
-        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
-        ]
+    withOverrideCBORGen (fmap forceDefinite) $
+      pname
+        =.= arr
+          [ a $ huddleRule @"definite_bytes" era
+          , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+          ]
 
 instance HuddleRule "header_body" ConwayEra where
   huddleRuleNamed = babbageHeaderBodyRule
