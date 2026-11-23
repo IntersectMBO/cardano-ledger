@@ -1227,10 +1227,11 @@ instance HuddleRule "redeemer_map" ConwayEra where
           i <- generateFromName "redeemer_index"
           d <- generateFromName "plutus_data"
           e <- generateFromName "ex_units"
+          toDefiniteArray <- pure TList |! pure TListI
           keyArr <- faultyTryGen [t, i] $ listOf genTerm
           valueArr <- faultyTryGen [d, e] $ listOf genTerm
           key <- twiddleArray keyArr
-          value <- twiddleArray valueArr
+          let value = toDefiniteArray valueArr
           pure (key, value)
         SingleTerm <$> twiddleMap kvs
 
