@@ -40,7 +40,7 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
-    disableInConformanceIt "register a pool with too low cost" $ do
+    it "register a pool with too low cost" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
       minPoolCost <- getsPParams ppMinPoolCostL
@@ -56,7 +56,7 @@ spec = describe "POOL" $ do
             tx
             [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
-    disableInConformanceIt "re-register a pool with too low cost" $ do
+    it "re-register a pool with too low cost" $ do
       pv <- getsPParams ppProtocolVersionL
       (kh, vrf) <- registerNewPool
       pps <- poolParams kh vrf
