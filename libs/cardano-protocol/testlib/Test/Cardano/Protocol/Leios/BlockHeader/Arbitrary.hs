@@ -28,10 +28,9 @@ import Cardano.Ledger.Core (BlockBody, EraBlockBody)
 import Cardano.Ledger.MemoBytes (mkMemoized)
 import Cardano.Protocol.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.Leios.BlockHeader (
-  Header (HeaderConstr),
+  Header (Header),
   HeaderBody (HeaderBodyConstr),
   HeaderBodyRaw (HeaderBodyRaw),
-  HeaderRaw (HeaderRaw),
  )
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -77,7 +76,7 @@ genHeader version = do
   period <- arbitrary
   sKey <- arbitrary
   let hSig = KES.unsoundPureSignedKES () period hBody sKey
-  pure $ mkMemoized version $ HeaderRaw hBody hSig
+  pure $ Header hBody hSig
 
 instance
   ( Crypto c
@@ -90,12 +89,10 @@ instance
 
 deriving newtype instance Crypto c => DecCBOR (HeaderBody c)
 
-instance Crypto c => DecCBOR (HeaderRaw c) where
+instance Crypto c => DecCBOR (Header c) where
   decCBOR =
-    decodeRecordNamed "HeaderRaw" (const 2) $
-      HeaderRaw <$> decCBOR <*> decodeFixedSized
-
-deriving newtype instance Crypto c => DecCBOR (Header c)
+    decodeRecordNamed "Header" (const 2) $
+      Header <$> decCBOR <*> decodeFixedSized
 
 instance
   ( Crypto c
