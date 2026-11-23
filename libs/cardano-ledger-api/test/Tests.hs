@@ -8,6 +8,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.HuddleSpec ()
 import Cardano.Ledger.Mary (MaryEra)
 import Data.Default (def)
 import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
@@ -58,6 +59,11 @@ apiSpec =
       -- which removes the isValid flag from mempool transactions. They are still
       -- upgradeable via the translateEra method at the hard fork boundary.
       Upgrade.spec @DijkstraEra (BinaryUpgradeOpts True False)
+      Upgrade.nativeScriptUpgradeSpec @MaryEra
+      Upgrade.nativeScriptUpgradeSpec @AlonzoEra
+      Upgrade.nativeScriptUpgradeSpec @BabbageEra
+      Upgrade.nativeScriptUpgradeSpec @ConwayEra
+      Upgrade.nativeScriptUpgradeSpec @DijkstraEra
 
 main :: IO ()
 main = ledgerTestMain apiSpec

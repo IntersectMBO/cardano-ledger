@@ -30,6 +30,7 @@ module Cardano.Ledger.Dijkstra.Scripts (
   pattern GuardingPurpose,
   pattern RequireGuard,
   evalDijkstraNativeScript,
+  upgradeNativeScript,
   upgradeTimelock,
   AccountBalanceInterval (..),
   AccountBalanceIntervals (..),
@@ -421,7 +422,7 @@ instance EraScript DijkstraEra where
   type NativeScript DijkstraEra = DijkstraNativeScript DijkstraEra
 
   upgradeScript = \case
-    NativeScript ts -> NativeScript $ upgradeTimelock ts
+    NativeScript ts -> NativeScript $ upgradeNativeScript ts
     PlutusScript (ConwayPlutusV1 s) -> PlutusScript $ DijkstraPlutusV1 s
     PlutusScript (ConwayPlutusV2 s) -> PlutusScript $ DijkstraPlutusV2 s
     PlutusScript (ConwayPlutusV3 s) -> PlutusScript $ DijkstraPlutusV3 s
@@ -433,15 +434,20 @@ instance EraScript DijkstraEra where
 
   fromNativeScript = NativeScript
 
+upgradeNativeScript :: NativeScript ConwayEra -> NativeScript DijkstraEra
+upgradeNativeScript (MkTimelock (Memo raw bytes)) =
+  let rewrap r = MkDijkstraNativeScript $ Memo r bytes
+   in case raw of
+        TimelockSignature keyHash -> rewrap $ DijkstraRequireSignature keyHash
+        TimelockAllOf subScripts -> rewrap . DijkstraRequireAllOf $ upgradeNativeScript <$> subScripts
+        TimelockAnyOf subScripts -> rewrap . DijkstraRequireAnyOf $ upgradeNativeScript <$> subScripts
+        TimelockMOf n subScripts -> rewrap . DijkstraRequireMOf n $ upgradeNativeScript <$> subScripts
+        TimelockTimeStart mslot -> rewrap $ DijkstraTimeStart mslot
+        TimelockTimeExpire mslot -> rewrap $ DijkstraTimeExpire mslot
+
 upgradeTimelock :: NativeScript ConwayEra -> NativeScript DijkstraEra
-upgradeTimelock = \case
-  RequireSignature keyHash -> RequireSignature keyHash
-  RequireAllOf sigs -> RequireAllOf $ upgradeTimelock <$> sigs
-  RequireAnyOf sigs -> RequireAnyOf $ upgradeTimelock <$> sigs
-  RequireMOf n sigs -> RequireMOf n $ upgradeTimelock <$> sigs
-  RequireTimeStart mslot -> RequireTimeStart mslot
-  RequireTimeExpire mslot -> RequireTimeExpire mslot
-  _ -> error "Impossible: All NativeScripts should have been accounted for"
+upgradeTimelock = upgradeNativeScript
+{-# DEPRECATED upgradeTimelock "In favor of `upgradeNativeScript`" #-}
 
 instance MemPack (PlutusScript DijkstraEra) where
   packedByteCount = \case
