@@ -1,1 +1,3 @@
+# To turn cbor diffing off on a per-clone basis, add this to `.git/info/attributes`:
+# *.cbor -diff
 *.cbor -text diff=cbor merge=binary

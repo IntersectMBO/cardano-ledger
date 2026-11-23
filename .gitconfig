@@ -1,6 +1,9 @@
+# The values in this file can be overridden on a per-clone basis in `.git/config`
+# (eg using `git config set ...`).
 [blame]
     ignoreRevsFile = .git-blame-ignore-revs
 [fsck]
     skipList = .git-fsck-skiplist
 [diff "cbor"]
     textconv = scripts/cbor-textconv.sh
+    maxBytes = 128k
