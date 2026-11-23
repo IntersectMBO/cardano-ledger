@@ -56,11 +56,12 @@ alonzoCDDL =
 
 exUnitsRule :: Era era => Proxy "ex_units" -> Proxy era -> Rule
 exUnitsRule pname era =
-  pname
-    =.= arr
-      [ "mem" ==> (0 :: Integer) ... huddleRule @"max_int64" era
-      , "steps" ==> (0 :: Integer) ... huddleRule @"max_int64" era
-      ]
+  withOverrideCBORGen (fmap forceDefinite) $
+    pname
+      =.= arr
+        [ "mem" ==> (0 :: Integer) ... huddleRule @"max_int64" era
+        , "steps" ==> (0 :: Integer) ... huddleRule @"max_int64" era
+        ]
 
 networkIdRule :: Proxy "network_id" -> Rule
 networkIdRule pname = pname =.= int 0 / int 1

@@ -114,13 +114,11 @@ import Cardano.Ledger.Huddle.Gen (
   (|!),
  )
 import Cardano.Ledger.Huddle.Gen qualified as Gen
-import Control.Monad (forM_, unless)
-import Data.ByteString.Lazy qualified as LBS
+import Control.Monad (forM_, unless, when)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Foldable (traverse_)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Text.Lazy qualified as LT
 import Data.Traversable (forM)
 import Data.Word (Word64)
 import GHC.TypeLits (KnownSymbol)
@@ -658,19 +656,11 @@ conwayMultiasset pname p =
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
         ]
 
-forceDefinite :: RuleTerm -> RuleTerm
-forceDefinite = \case
-  SingleTerm (TListI es) -> SingleTerm $ TList es
-  SingleTerm (TMapI kvs) -> SingleTerm $ TMap kvs
-  SingleTerm (TBytesI bs) -> SingleTerm $ TBytes $ LBS.toStrict bs
-  SingleTerm (TStringI s) -> SingleTerm $ TString $ LT.toStrict s
-  x -> x
-
 conwayValuePairRule ::
   HuddleRule1 "multiasset" era =>
   Proxy "value_pair" -> Proxy era -> Rule
 conwayValuePairRule pname era =
-  withOverrideCBORGen (fmap forceDefinite) $
+  withOverrideCBORGen (fmap Gen.forceDefinite) $
     withValidator validator $
       pname
         =.= arr
@@ -681,7 +671,14 @@ conwayValuePairRule pname era =
     validator term = case term of
       SingleTerm (TList [coinTerm, maTerm]) -> do
         validateFromName "coin" coinTerm
-        validateFromName "multiasset" maTerm
+        policies <- validateMapTerm maTerm
+        forM_ policies $ \(policyIdTerm, assetsTerm) -> do
+          validateFromName "policy_id" policyIdTerm
+          assets <- validateMapTerm assetsTerm
+          when (null assets) $ fail "Expected a non-empty asset map"
+          forM_ assets $ \(assetNameTerm, quantityTerm) -> do
+            validateFromName "asset_name" assetNameTerm
+            validateFromName "positive_coin" quantityTerm
       SingleTerm (TList _) -> fail "Expected a list with two elements"
       _ -> fail "Expected a definite length list"
 

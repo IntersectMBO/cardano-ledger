@@ -160,13 +160,11 @@ library cddl
   build-depends:
     QuickCheck,
     base,
-    bytestring,
     cardano-ledger-babbage:cddl,
     cardano-ledger-conway,
     cardano-ledger-core:cddl,
     containers,
     heredoc,
-    text,
 
 executable generate-cddl
   main-is: Main.hs

@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Cardano.Ledger.Huddle.Gen (
   -- * MonadGen
@@ -30,6 +31,7 @@ module Cardano.Ledger.Huddle.Gen (
   genNBytesText,
   genText,
   genTerm,
+  forceDefinite,
 
   -- * Term validators
   module CustomValidator,
@@ -180,3 +182,11 @@ unwrapSingle _ = fail "Expected a single term"
 unwrapSingleOrError :: RuleTerm -> Term
 unwrapSingleOrError (SingleTerm x) = x
 unwrapSingleOrError _ = error "Expected a single term"
+
+forceDefinite :: RuleTerm -> RuleTerm
+forceDefinite = \case
+  SingleTerm (TListI es) -> SingleTerm $ TList es
+  SingleTerm (TMapI kvs) -> SingleTerm $ TMap kvs
+  SingleTerm (TBytesI bs) -> SingleTerm $ TBytes $ LBS.toStrict bs
+  SingleTerm (TStringI s) -> SingleTerm $ TString $ LT.toStrict s
+  x -> x
