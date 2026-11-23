@@ -228,14 +228,9 @@ data Header crypto = Header
 
 deriving instance Crypto crypto => Show (Header crypto)
 
-instance Crypto c => Eq (Header c) where
-  h1 == h2 =
-    headerSig h1 == headerSig h2
-      && headerBody h1 == headerBody h2
+deriving instance Crypto crypto => Eq (Header crypto)
 
-instance
-  Crypto crypto =>
-  NoThunks (Header crypto)
+instance Crypto crypto => NoThunks (Header crypto)
 
 -- | The original header body bytes and the raw signature, so the encoding of
 -- the enclosing array does not affect the header hash.
