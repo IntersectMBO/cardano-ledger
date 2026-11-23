@@ -16,7 +16,6 @@ import Test.Cardano.Ledger.Babbage.Imp.UtxosSpec qualified as BabbageUTXOS
 import Test.Cardano.Ledger.Babbage.Imp.UtxowSpec qualified as BabbageUTXOW
 import Test.Cardano.Ledger.Conformance.Imp.Conway.Ratify qualified as RatifySpec
 import Test.Cardano.Ledger.Conformance.Imp.Core
-import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as BBODY
 import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as CERTS
 import Test.Cardano.Ledger.Conway.Imp.DelegSpec qualified as DELEG
 import Test.Cardano.Ledger.Conway.Imp.EnactSpec qualified as ENACT
@@ -24,6 +23,7 @@ import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as EPOCH
 import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as GOVCERT
 import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as GOV
 import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as LEDGER
+import Test.Cardano.Ledger.Conway.Imp.LedgersSpec qualified as LEDGERS
 import Test.Cardano.Ledger.Conway.Imp.MempoolSpec qualified as MEMPOOL
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as RATIFY
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec qualified as SNAP
@@ -49,7 +49,6 @@ spec = do
           modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
             modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
               AlonzoBBODY.spec
-              BBODY.spec
 
               CERTS.spec
 
@@ -67,6 +66,7 @@ spec = do
 
               ShelleyLEDGER.spec
               LEDGER.spec
+              LEDGERS.spec
 
               MEMPOOL.spec
 

@@ -24,7 +24,6 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition.Extended
 import Data.Proxy
 import qualified Test.Cardano.Ledger.Babbage.Imp as Babbage
-import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as CERTS
 import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as DELEG
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as ENACT
@@ -33,6 +32,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GOVCERT
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as GOV
 import qualified Test.Cardano.Ledger.Conway.Imp.HardForkSpec as HARDFORK
 import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Conway.Imp.LedgersSpec as LEDGERS
 import qualified Test.Cardano.Ledger.Conway.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as RATIFY
 import qualified Test.Cardano.Ledger.Conway.Imp.SnapSpec as SNAP
@@ -54,7 +54,6 @@ spec ::
 spec era = do
   Babbage.spec era
   describe "ConwayEra Onwards" $ withImpInitEachEraVersion era $ do
-    BBODY.spec
     CERTS.spec
     DELEG.spec
     ENACT.spec
@@ -62,6 +61,7 @@ spec era = do
     GOV.spec
     GOVCERT.spec
     LEDGER.spec
+    LEDGERS.spec
     MEMPOOL.spec
     HARDFORK.spec
     RATIFY.spec
