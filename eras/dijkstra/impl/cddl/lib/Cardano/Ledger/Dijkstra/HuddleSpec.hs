@@ -552,10 +552,10 @@ instance HuddleRule "network_id" DijkstraEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
 instance HuddleRule "dns_name" DijkstraEra where
-  huddleRuleNamed pname _ = dnsNameRule pname
+  huddleRuleNamed = dnsNameRule
 
 instance HuddleRule "url" DijkstraEra where
-  huddleRuleNamed pname _ = urlRule pname
+  huddleRuleNamed = urlRule
 
 instance HuddleRule "genesis_hash" DijkstraEra where
   huddleRuleNamed = genesisHashRule

@@ -174,11 +174,11 @@ voterRule pname p =
     / arr [3, a (huddleRule @"script_hash" p)]
     / arr [4, a (huddleRule @"addr_keyhash" p)]
 
-dnsNameRule :: Proxy "dns_name" -> Rule
-dnsNameRule pname = pname =.= VText `sized` (0 :: Word64, 128 :: Word64)
+dnsNameRule :: Era era => Proxy "dns_name" -> Proxy era -> Rule
+dnsNameRule pname era = pname =.= huddleRule @"definite_text" era `sized` (0 :: Word64, 128 :: Word64)
 
-urlRule :: Proxy "url" -> Rule
-urlRule pname = pname =.= VText `sized` (0 :: Word64, 128 :: Word64)
+urlRule :: Era era => Proxy "url" -> Proxy era -> Rule
+urlRule pname era = pname =.= huddleRule @"definite_text" era `sized` (0 :: Word64, 128 :: Word64)
 
 voteRule :: Proxy "vote" -> Rule
 voteRule pname = pname =.= (0 :: Integer) ... (2 :: Integer)
@@ -809,10 +809,10 @@ instance HuddleRule "network_id" ConwayEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
 instance HuddleRule "dns_name" ConwayEra where
-  huddleRuleNamed pname _ = dnsNameRule pname
+  huddleRuleNamed = dnsNameRule
 
 instance HuddleRule "url" ConwayEra where
-  huddleRuleNamed pname _ = urlRule pname
+  huddleRuleNamed = urlRule
 
 instance HuddleRule "genesis_hash" ConwayEra where
   huddleRuleNamed = genesisHashRule

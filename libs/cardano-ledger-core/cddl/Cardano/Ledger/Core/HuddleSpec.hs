@@ -27,9 +27,12 @@ import Cardano.Ledger.Huddle.Gen (
   MonadGen (choose),
   RuleTerm (..),
   arbitrary,
+  deferGen,
+  genText,
   oneof,
   twiddleArray,
   vectorOf,
+  (|!),
  )
 import Codec.CBOR.Cuddle.CBOR.Gen (genBytes)
 import Codec.CBOR.Cuddle.Huddle as H
@@ -37,8 +40,10 @@ import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.MemPack (VarLen (..), packByteString)
 import Data.Proxy (Proxy (..))
+import qualified Data.Text.Lazy as LT
 import Data.Word (Word16, Word32, Word64)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import Text.Heredoc
@@ -319,7 +324,22 @@ instance Era era => HuddleRule "definite_bytes" era where
       withValidator validator $
         pname =.= VBytes
     where
-      generator = SingleTerm . TBytes <$> genBytes
+      generator = deferGen $ do
+        toBytesTerm <- pure TBytes |! pure (TBytesI . LBS.fromStrict)
+        pure $ SingleTerm . toBytesTerm <$> genBytes
       validator = \case
         SingleTerm (TBytes _) -> pure ()
-        _ -> fail "Expected definite-encoded bytes"
+        _ -> fail "Expected definite-length bytes"
+
+instance Era era => HuddleRule "definite_text" era where
+  huddleRuleNamed pname _ =
+    withGenerator generator $
+      withValidator validator $
+        pname =.= VText
+    where
+      generator = deferGen $ do
+        toTextTerm <- pure TString |! pure (TStringI . LT.fromStrict)
+        pure $ SingleTerm . toTextTerm <$> genText
+      validator = \case
+        SingleTerm (TString _) -> pure ()
+        _ -> fail "Expected definite-length string"
