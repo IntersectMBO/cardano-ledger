@@ -232,7 +232,21 @@ huddleAntiCborProp version ruleName env@HuddleEnv {heRoot} = property @(Gen Prop
                     , "Decoding succeeded, expected failure"
                     ]
               pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
-            Right (Evidenced SValid _) -> discard
+            Right (Evidenced SValid trc) -> pure . property $ expectationFailure errMsg
+              where
+                errMsg =
+                  unlines
+                    [ "Generated term:"
+                    , prettyHexEnc encoding
+                    , mempty
+                    , "Validation result:"
+                    , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
+                        prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
+                    , mempty
+                    , T.unpack $ prettyZapResult zr
+                    , mempty
+                    , "The zapper generated a valid example"
+                    ]
       | otherwise -> discard
 
 huddleAntiCborSpec ::
