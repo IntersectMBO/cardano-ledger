@@ -1,7 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -17,6 +17,9 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-unsafe-ledger-internal #-}
+#endif
 
 -- | This module provides data structures and operations for talking about
 --     Non-native Script languages. It is expected that new languages (or new
@@ -72,10 +75,11 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   getDecoderVersion,
   getVersion,
-  natVersion,
   unlessDecoderVersionAtLeast,
  )
+import Cardano.Ledger.Core.Era (eraProtVerLow)
 import Cardano.Ledger.Hashes (SafeToHash (..), ScriptHash (..))
+import Cardano.Ledger.Internal.Era (AlonzoEra, BabbageEra, ConwayEra, DijkstraEra)
 import qualified Codec.Extras.SerialiseViaFlat as PlutusCore (
   DeserialiseFailureInfo (..),
   DeserialiseFailureReason (..),
@@ -471,6 +475,8 @@ class
   -- | Tag that will be used as a prefix to compute the `ScriptHash`
   plutusLanguageTag :: Plutus l -> Word8
 
+  plutusLanguageIntroducedIn :: Version
+
   decodePlutusRunnable ::
     -- | Which major protocol version to use for deserialization and further execution
     Version ->
@@ -523,6 +529,7 @@ instance PlutusLanguage 'PlutusV1 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV1
   plutusLanguageTag _ = 0x01
+  plutusLanguageIntroducedIn = eraProtVerLow @AlonzoEra
   decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
     PlutusRunnable p (hashPlutusScript p) $ PV1.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget rs =
@@ -543,6 +550,7 @@ instance PlutusLanguage 'PlutusV2 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV2
   plutusLanguageTag _ = 0x02
+  plutusLanguageIntroducedIn = eraProtVerLow @BabbageEra
   decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
     PlutusRunnable p (hashPlutusScript p) $ PV2.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget rs =
@@ -563,6 +571,7 @@ instance PlutusLanguage 'PlutusV3 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV3
   plutusLanguageTag _ = 0x03
+  plutusLanguageIntroducedIn = eraProtVerLow @ConwayEra
   decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
     PlutusRunnable p (hashPlutusScript p) $ PV3.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget rs =
@@ -584,6 +593,7 @@ instance PlutusLanguage 'PlutusV4 where
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV4
   plutusLanguageTag _ = 0x04
+  plutusLanguageIntroducedIn = eraProtVerLow @DijkstraEra
   decodePlutusRunnable pv p@(Plutus (PlutusBinary bs)) =
     PlutusRunnable p (hashPlutusScript p) $ PV4.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget rs =
@@ -638,15 +648,10 @@ withSLanguage l f =
     PlutusV3 -> f SPlutusV3
     PlutusV4 -> f SPlutusV4
 
--- | Prevent decoding a version of Plutus until
--- the appropriate protocol version.
+-- | Prevent decoding a version of Plutus until the appropriate protocol version.
 guardPlutus :: Language -> Decoder s ()
 guardPlutus lang =
-  let v = case lang of
-        PlutusV1 -> natVersion @5
-        PlutusV2 -> natVersion @7
-        PlutusV3 -> natVersion @9
-        PlutusV4 -> natVersion @12
+  let v = withSLanguage lang $ \(_ :: SLanguage l) -> plutusLanguageIntroducedIn @l
    in unlessDecoderVersionAtLeast v $
         fail (show lang <> " is not supported until " <> show v <> " major protocol version")
 
