@@ -27,9 +27,10 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~))
 import qualified PlutusLedgerApi.Common as P
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsWithDatum)
 
 spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEDGERS" $ do
@@ -124,6 +125,51 @@ spec = describe "LEDGERS" $ do
                 -- The third one never contributes, since LEDGERS stops at the first failure.
                 mismatchSupplied = 2 * blockLimit
               , mismatchExpected = blockLimit
+              }
+      ]
+
+  it "A reference script in a collateral output counts towards the block limit" $ do
+    -- produce an utxo with a failing script
+    failingPlutusTxIn <- produceScript $ hashPlutusScript (alwaysFailsWithDatum SPlutusV4)
+
+    -- produce an utxo with a succeeding script
+    script <- RequireSignature @era <$> freshKeyHash
+    scriptTxIn <- impAddNativeScript script >>= produceScript
+    let scriptSize = originalBytesSize script
+
+    -- prepare a txout holding the succeeding script as reference script
+    addr <- freshKeyAddrNoPtr_
+    let collRefScriptTxOut =
+          mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
+
+    -- The collateral return carries the only reference script in the block, so one byte
+    -- less than its size is enough to breach the limit
+    modifyPParams $ ppMaxRefScriptSizePerBlockL .~ fromIntegral (scriptSize - 1)
+
+    withTxsInFailingBlock
+      ( do
+          -- an invalid transaction whose collateral return carries the reference script
+          createCollateralTx <-
+            -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+            -- TODO: Re-enable after issue is resolved, by removing this override
+            withDisabledPostSubmitTxHook $
+              submitPhase2Invalid $
+                mkBasicTx
+                  ( mkBasicTxBody
+                      & inputsTxBodyL .~ [failingPlutusTxIn]
+                      & collateralReturnTxBodyL .~ pure collRefScriptTxOut
+                  )
+          -- applying it creates the collateral return, so a later transaction in the same
+          -- block can reference the script it holds
+          submitTx_ $ mkTxWithInputsAndRefInputs [scriptTxIn] [txInAt 1 createCollateralTx]
+      )
+      [ injectFailure $
+          BodyRefScriptsSizeTooBig
+            Mismatch
+              { -- contributed entirely by the second transaction: the one that produces the
+                -- collateral return carries no reference scripts of its own
+                mismatchSupplied = scriptSize
+              , mismatchExpected = scriptSize - 1
               }
       ]
   where
