@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,18 +10,33 @@
 
 module Test.Cardano.Ledger.Api.Upgrade (
   BinaryUpgradeOpts (..),
+  nativeScriptUpgradeSpec,
   spec,
 ) where
 
 import Cardano.Ledger.Api.Era (EraApi (..))
-import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR, decNoShareCBOR, encodeMemPack)
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecCBOR (decCBOR),
+  EncCBOR,
+  Term (..),
+  decNoShareCBOR,
+  decodeFullAnnotator,
+  encodeMemPack,
+  encodeTerm,
+  serialize,
+ )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Huddle (HuddleItem (HIRule), HuddleRule, collectFrom, huddleRule)
+import Cardano.Ledger.Huddle.Gen (genRule, runAntiGen, runCBORGen)
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (UnsafeMkMempoolTx), unwrapMempoolTx)
 import Data.Default (Default (def))
+import Data.Proxy (Proxy (..))
 import Data.Typeable (Typeable)
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Api.Arbitrary ()
+import Test.Cardano.Ledger.Binary.Cuddle (noTwiddle, specWithHuddle, toGenConfig)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -134,6 +151,32 @@ specScriptUpgrade = do
             ++ show err
       Right (curScript :: Script era) ->
         curScript `shouldBe` upgradeScript prevScript
+
+nativeScriptUpgradeSpec ::
+  forall era.
+  (EraScript era, EraScript (PreviousEra era), HuddleRule "native_script" (PreviousEra era)) =>
+  Spec
+nativeScriptUpgradeSpec =
+  let prevVersion = eraProtVerHigh @(PreviousEra era)
+      nativeScriptRule = huddleRule @"native_script" (Proxy @(PreviousEra era))
+      genNativeScript = genRule @"native_script" @(PreviousEra era)
+      twiddleLists = \case
+        TList ts -> elements [TList, TListI] <*> traverse twiddleLists ts
+        t -> pure t
+   in specWithHuddle (collectFrom [HIRule nativeScriptRule]) . noTwiddle $
+        it ("upgradeScript preserves native scripts from " <> eraName @(PreviousEra era)) $ \env ->
+          property $ do
+            term <- runAntiGen $ runCBORGen (toGenConfig env) genNativeScript
+            xb <- serialize prevVersion . encodeTerm <$> twiddleLists term
+            pure $ do
+              xNativeScriptPrevious <-
+                expectRight $ decodeFullAnnotator prevVersion "NativeScript" decCBOR xb
+              xNativeScriptCurrent <-
+                expectRight $ decodeFullAnnotator (eraProtVerLow @era) "NativeScript" decCBOR xb
+              let xScriptPrevious = fromNativeScript @(PreviousEra era) xNativeScriptPrevious
+                  xScriptCurrent = fromNativeScript @era xNativeScriptCurrent
+              hashScript xScriptCurrent `shouldBe` hashScript xScriptPrevious
+              upgradeScript xScriptPrevious `shouldBe` xScriptCurrent
 
 specTxWitsUpgrade ::
   forall era.

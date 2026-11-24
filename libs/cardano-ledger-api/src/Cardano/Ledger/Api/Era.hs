@@ -99,7 +99,8 @@ import Cardano.Ledger.Conway.TxCert (ConwayTxCertUpgradeError)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Scripts
+import Cardano.Ledger.Dijkstra.Scripts hiding (upgradeNativeScript)
+import qualified Cardano.Ledger.Dijkstra.Scripts as D (upgradeNativeScript)
 import Cardano.Ledger.Dijkstra.Tx (DijkstraTopTxRaw (..), DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..), upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
@@ -658,4 +659,4 @@ instance EraApi DijkstraEra where
 
   upgradeTxAuxData = translateAlonzoTxAuxData
 
-  upgradeNativeScript = upgradeTimelock
+  upgradeNativeScript = D.upgradeNativeScript
