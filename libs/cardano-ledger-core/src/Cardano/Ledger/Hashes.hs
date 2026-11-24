@@ -74,6 +74,7 @@ module Cardano.Ledger.Hashes (
   -- $SAFEHASH
   SafeHash,
   SafeToHash (..),
+  originalBytesSize32,
 
   -- * Header Hash
   HashHeader (..),
@@ -115,8 +116,10 @@ import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.MemPack
 import Data.Typeable
+import Data.Word (Word32)
 import Foreign.Storable (Storable)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 
@@ -428,3 +431,15 @@ standardHashSize = fromIntegral . hashSize $ Proxy @HASH
 
 standardAddrHashSize :: Int
 standardAddrHashSize = fromIntegral . hashSize $ Proxy @ADDRHASH
+
+-- | Same as `originalBytesSize`, but producing @`Word32`@. It is partial only
+-- for types that are larger than 4GiB, which do not exist on Cardano.
+originalBytesSize32 :: (HasCallStack, SafeToHash t) => t -> Word32
+originalBytesSize32 x
+  | sz > fromIntegral @Word32 @Int maxBound =
+      error $ "Original bytes size does not fit in Word32: " <> show sz
+  | otherwise = fromIntegral @Int @Word32 sz
+  where
+    -- Note that we do not need to check negative numbers, because
+    -- `originalBytesSize` is guaranteed to return a non-negative value
+    sz = originalBytesSize x

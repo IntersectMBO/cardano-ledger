@@ -125,7 +125,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Set as Set
 import qualified Data.SimpleOMap.Strict as SimpleOMap
 import Data.Traversable (mapAccumM)
-import Data.Word (Word32)
 import Lens.Micro
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -765,7 +764,7 @@ makeEndorserBlock txs = do
 mkEbReferencesAnnouncement :: EraEndorserBlock era => EndorserBlock era -> EbReferencesAnnouncement
 mkEbReferencesAnnouncement eb =
   EbReferencesAnnouncement
-    { ebReferencesAnnouncementSize = fromIntegral @Int @Word32 $ originalBytesSize references
+    { ebReferencesAnnouncementSize = originalBytesSize32 references
     , ebReferencesAnnouncementHash = hashAnnotated references
     }
   where

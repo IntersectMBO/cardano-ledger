@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Add `originalBytesSize32` to `Cardano.Ledger.Hashes`
 * Add `ebReferencesAnnouncementHashL` and `ebReferencesAnnouncementSizeL` to `Cardano.Ledger.Block`
 * Add `ebAnnouncementL`, `ebAnnouncementSlotNoL`, `ebAnnouncedInBlockHeaderL` and `ebIsAppliedL` to `Cardano.Ledger.State`
 * Change the `Tx t era` argument of `getScriptsProvided` to `Tx TopTx era`
