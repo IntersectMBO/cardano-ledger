@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
@@ -29,6 +30,7 @@ module Test.Cardano.Ledger.Plutus (
   -- * Utilities
   plutusLanguageOf,
   showPlcVersion,
+  applyPlutusParams,
 ) where
 
 import Cardano.Ledger.Binary.Plain (decodeFullFromHexText)
@@ -50,8 +52,10 @@ import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text (Text)
 import GHC.Stack
+import Lens.Micro (over)
 import Numeric.Natural (Natural)
-import qualified PlutusCore.Version as PLC
+import qualified PlutusCore as PLC
+import qualified PlutusCore.MkPlc as PLC
 import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.Test.Examples as P (
   alwaysFailingNAryFunction,
@@ -66,6 +70,7 @@ import Test.Cardano.Ledger.Plutus.ScriptTestContext (
   PlutusArgs (..),
   ScriptTestContext (..),
  )
+import qualified UntypedPlutusCore as UPLC
 
 -- | Construct a test cost model where all parameters are set to the same value
 mkCostModelConst :: HasCallStack => Language -> Int64 -> CostModel
@@ -148,3 +153,26 @@ plutusLanguageOf l =
 
 showPlcVersion :: PLC.Version -> String
 showPlcVersion (PLC.Version major minor patch) = intercalate "." $ map show [major, minor, patch]
+
+-- | Apply parameters to a Plutus script, e.g. to instantiate a parameterized script. Note that the
+-- resulting script has a different hash than the original one.
+applyPlutusParams ::
+  PLC.Contains UPLC.DefaultUni a =>
+  Plutus l ->
+  [a] ->
+  Plutus l
+applyPlutusParams (Plutus (PlutusBinary sbs)) params =
+  Plutus $
+    PlutusBinary $
+      P.serialiseUPLC $
+        P.uncheckedDeserialiseUPLC sbs `applyPlcProgramArguments` params
+
+applyPlcProgramArguments ::
+  PLC.HasTermLevel uni a =>
+  UPLC.Program name uni fun () ->
+  [a] ->
+  UPLC.Program name uni fun ()
+applyPlcProgramArguments p args =
+  let termArgs = PLC.mkConstant () <$> args
+      applied t = PLC.mkIterAppNoAnn t termArgs
+   in over UPLC.progTerm applied p

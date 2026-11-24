@@ -510,7 +510,7 @@ mkRefTxOut ::
   ScriptHash ->
   ImpTestM era (TxOut era)
 mkRefTxOut sh = do
-  let mbyPlutusScript = impLookupPlutusScript sh
+  mbyPlutusScript <- impLookupPlutusScript sh
   addr <- case mbyPlutusScript of
     Just plutusScript
       | plutusScriptLanguage plutusScript >= PlutusV4 -> freshKeyAddrNoPtr_

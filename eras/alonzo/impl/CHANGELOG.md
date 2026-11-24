@@ -21,6 +21,8 @@
 
 ### `testlib`
 
+* Add `impAddPlutusScript` to register Plutus scripts at runtime, e.g. scripts with applied parameters
+* Change `impLookupScriptContext` and `impLookupPlutusScript` to run in `ImpTestM`, so they also find the scripts registered with `impAddPlutusScript`
 * Add `mkTestLedgerTxInfoWithScripts`
 * Restrict `mkTestLedgerTxInfo` to `TopTx` transactions
 * Add `Arbitrary` instance for `MempoolTx AlonzoEra`
