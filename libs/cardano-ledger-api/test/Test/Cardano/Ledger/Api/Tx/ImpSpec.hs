@@ -18,7 +18,8 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
 -- Take the snapshot after fixup, which can submit transactions to fund inputs.
-checkProducedOutputs :: HasCallStack => Tx TopTx DijkstraEra -> ImpTestM DijkstraEra (UTxO DijkstraEra)
+checkProducedOutputs ::
+  HasCallStack => Tx TopTx DijkstraEra -> ImpTestM DijkstraEra (UTxO DijkstraEra)
 checkProducedOutputs tx = do
   fixed <- fixupTx tx
   UTxO utxoBefore <- getUTxO
