@@ -36,7 +36,6 @@ import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BlockHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Base16.Lazy as B16L
 import qualified Data.ByteString.Lazy as BSL
 import Data.Either (fromRight)
 import Data.Int
@@ -240,12 +239,8 @@ goldenMinFee =
       -- The correct behavior is for the minimum fee for this transaction
       -- to be 1006053 lovelace, as indicated by the failure above.
       -- Nodes that had the bug determined the minimum fee to be 1001829.
-      hex <- readDataFile "golden/hex-block-node-issue-4228.cbor"
-      let cborBytesBlock =
-            case B16L.decode hex of
-              Left err -> error err
-              Right val -> val
-          blockBody =
+      cborBytesBlock <- readDataFile "golden/block-node-issue-4228.cbor"
+      let blockBody =
             case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
               Left err -> error (show err)
               Right (Block _bHeader bBody :: Block (BHeader StandardCrypto) AlonzoEra) -> bBody
