@@ -101,6 +101,7 @@ import Cardano.Ledger.Plutus (
   hashData,
   hashPlutusScript,
   plutusLanguage,
+  transScriptHash,
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.API.Mempool (mkStAnnTx)
@@ -126,6 +127,7 @@ import Data.Word (Word64)
 import Lens.Micro
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
+import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -430,6 +432,12 @@ plutusTestScripts lang =
     ]
       ++ [ mkScriptTestEntry (inputsOverlapsWithRefInputs lang) $ PlutusArgs (P.I 0) Nothing
          | plutusLanguage lang >= PlutusV2
+         ]
+      ++ [ -- As a guard, checks that every input it locks holds a token minted by the
+         -- `alwaysSucceedsNoDatum` policy
+         mkScriptTestEntry (inputSpendingGuard lang) $
+           PlutusArgs (PV1.toData $ transScriptHash $ hashPlutusScript $ alwaysSucceedsNoDatum lang) Nothing
+         | plutusLanguage lang >= PlutusV4
          ]
 
 malformedPlutus :: Plutus l

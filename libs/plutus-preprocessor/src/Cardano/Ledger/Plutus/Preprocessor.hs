@@ -239,4 +239,16 @@ allTestScripts =
         PlutusV4 -> Just V4.inputsOverlapsWithRefInputsBytes
     , "Script that succeeds only if any the inputs also appears in the reference inputs" :| []
     )
+  ,
+    ( "inputSpendingGuard"
+    , \case
+        PlutusV4 -> Just V4.inputSpendingGuardBytes
+        _ -> Nothing
+    , "Script performing tx-level validation for the UTxOs it locks, acting as their guard"
+        :| [ "When spending, succeeds only if its own hash is in txInfoGuards"
+           , "When guarding, expects a CurrencySymbol redeemer and succeeds only if every input"
+           , "locked by its own hash holds a token of that policy"
+           , "Fails on malformed arguments or for any other purpose"
+           ]
+    )
   ]
