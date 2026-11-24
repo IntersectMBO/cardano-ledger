@@ -40,6 +40,7 @@ import Control.State.Transition (
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Void (Void)
+import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro
 
@@ -72,7 +73,7 @@ hardforkTransition = do
         | pvMajor newPv == natVersion @10 =
             esLStateL . lsCertStateL %~ updateDRepDelegations
         | pvMajor newPv == natVersion @11 =
-            esLStateL . lsCertStateL . certPStateL %~ populateVRFKeyHashes
+            esLStateL . lsCertStateL . certPStateL %~ oldPopulateVRFKeyHashes
         | otherwise = id
   pure $ update epochState
 
@@ -100,3 +101,18 @@ updateDRepDelegations certState =
         & certDStateL . accountsL . accountsMapL .~ accountsWithoutUnknownDRepDelegations
         -- Populate DRep delegations with delegatees
         & certVStateL . vsDRepsL .~ dRepsWithDelegations
+
+oldPopulateVRFKeyHashes :: PState era -> PState era
+oldPopulateVRFKeyHashes pState =
+  pState
+    & psVRFKeyHashesL
+      %~ accumulateVRFKeyHashes (pState ^. psStakePoolsL) (^. spsVrfL)
+        . accumulateVRFKeyHashes (pState ^. psFutureStakePoolParamsL) (^. sppVrfL)
+  where
+    accumulateVRFKeyHashes ::
+      Map.Map (KeyHash StakePool) a ->
+      (a -> VRFVerKeyHash StakePoolVRF) ->
+      Map.Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64) ->
+      Map.Map (VRFVerKeyHash StakePoolVRF) (NonZero Word64)
+    accumulateVRFKeyHashes spMap getVrf acc =
+      Map.foldr' (addVRFKeyHashOccurrence . getVrf) acc spMap
