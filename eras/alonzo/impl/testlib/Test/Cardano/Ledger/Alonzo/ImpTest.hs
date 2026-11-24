@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   scriptTestContexts,
   impLookupPlutusScript,
   impAddPlutusScript,
+  impSlotToPOSIXTime,
   malformedPlutus,
   addCollateralInput,
   makeCollateralInput,
@@ -105,6 +106,7 @@ import Cardano.Ledger.Plutus (
   transScriptHash,
   withSLanguage,
  )
+import Cardano.Ledger.Plutus.TxInfo (slotToPOSIXTime)
 import Cardano.Ledger.Shelley.API.Mempool (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
@@ -202,6 +204,12 @@ impAddPlutusScript plutusScript plutusArgs = do
   let scriptHash = hashPlutusScript plutusScript
   impPlutusScriptsL %= Map.insert scriptHash (ScriptTestContext plutusScript plutusArgs)
   pure scriptHash
+
+-- | POSIX time in milliseconds of the start of the given slot, as seen by Plutus scripts
+impSlotToPOSIXTime :: SlotNo -> ImpTestM era Integer
+impSlotToPOSIXTime slot = do
+  globals <- use impGlobalsL
+  PV1.getPOSIXTime <$> expectRight (slotToPOSIXTime (epochInfo globals) (systemStart globals) slot)
 
 impGetPlutusContexts ::
   forall era l.

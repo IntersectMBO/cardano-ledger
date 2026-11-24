@@ -251,4 +251,20 @@ allTestScripts =
            , "Fails on malformed arguments or for any other purpose"
            ]
     )
+  ,
+    ( "partialWithdrawalVestingScript"
+    , \case
+        PlutusV4 -> Just V4.partialWithdrawalVestingScriptBytes
+        _ -> Nothing
+    , "Withdrawing script for a stateless vesting reward account"
+        :| [ "Expects parameters to be applied before use: the beneficiary PubKeyHash, the total"
+           , "vested Lovelace, and the start and end POSIX times of the linear vesting schedule"
+           , "When withdrawing, succeeds only if the beneficiary is in txInfoGuards, the validity"
+           , "range has a lower bound t, and the account balance interval has a lower bound lo"
+           , "with lo >= locked(t) + withdrawal"
+           , "When delegating, succeeds only if the beneficiary is in txInfoGuards"
+           , "When registering, always succeeds"
+           , "Fails on malformed arguments or for any other purpose"
+           ]
+    )
   ]

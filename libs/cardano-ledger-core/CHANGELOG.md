@@ -46,6 +46,7 @@
 
 ### `testlib`
 
+* Add `partialWithdrawalVestingScript` PlutusV4 withdrawing script to `Test.Cardano.Ledger.Plutus.Examples`
 * Add `applyPlutusParams` to `Test.Cardano.Ledger.Plutus`
 * Replace the `Arbitrary (Tx TopTx era)` and `DecCBOR (Tx TopTx era)` constraints on `roundTripCoreEraTypesSpec` with `Arbitrary (MempoolTx era)`, `EncCBOR (MempoolTx era)`, `DecCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`
 * Replace the `Arbitrary (Tx TopTx era)` constraint on `decoderEquivalenceCoreEraTypesSpec` with `Arbitrary (MempoolTx era)`, `EncCBOR (MempoolTx era)` and `DecCBOR (Annotator (MempoolTx era))`

@@ -205,6 +205,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNESL,
   impGlobalsL,
   impCurSlotNoG,
+  impEpochFirstSlot,
   impKeyPairsG,
   impNativeScriptsG,
   impPlutusScriptsL,
@@ -485,6 +486,12 @@ impCurSlotNoL = lens impCurSlotNo (\x y -> x {impCurSlotNo = y})
 
 impCurSlotNoG :: SimpleGetter (ImpTestState era) SlotNo
 impCurSlotNoG = impCurSlotNoL
+
+-- | First slot of the given epoch
+impEpochFirstSlot :: EpochNo -> ImpTestM era SlotNo
+impEpochFirstSlot epochNo = do
+  globals <- gets impGlobals
+  pure $ epochInfoFirst (epochInfoPure globals) epochNo
 
 impRootTxInL :: Lens' (ImpTestState era) TxIn
 impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
