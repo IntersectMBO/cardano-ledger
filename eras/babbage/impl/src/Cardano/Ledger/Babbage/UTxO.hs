@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   getAlonzoScriptsNeeded,
   getAlonzoWitsVKeyNeeded,
+  ledgerLevelTxInfoAlonzoStAnnTx,
   plutusLanguagesUsedAlonzoStAnnTx,
   plutusScriptsWithContextAlonzoStAnnTx,
   scriptsNeededAlonzoStAnnTx,
@@ -88,6 +89,8 @@ instance AlonzoEraUTxO BabbageEra where
   refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
 
   exUnitsStAnnTx = exUnitsAlonzoStAnnTx
+
+  ledgerLevelTxInfoStAnnTx = ledgerLevelTxInfoAlonzoStAnnTx
 
 getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>

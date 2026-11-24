@@ -42,6 +42,9 @@ module Cardano.Ledger.Alonzo.UTxO (
   -- * Plutus languages used
   plutusLanguagesUsedAlonzoStAnnTx,
 
+  -- * Level specific TxInfo
+  ledgerLevelTxInfoAlonzoStAnnTx,
+
   -- * Datums needed
   getInputDataHashesTxBody,
 
@@ -55,6 +58,7 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   CollectError,
   EraPlutusContext,
+  LedgerLevelTxInfo (..),
   SupportedPlutusRunnable (..),
   mkSupportedPlutusRunnable,
  )
@@ -187,6 +191,10 @@ class EraUTxO era => AlonzoEraUTxO era where
   -- Derived from the transaction alone, so it never goes stale.
   exUnitsStAnnTx :: StAnnTx TopTx era -> ExUnits
 
+  -- | Level-specific information for constructing the Plutus `TxInfo` of a top-level
+  -- transaction, i.e. the memoized `TxInfoResult` of every sub-transaction where supported.
+  ledgerLevelTxInfoStAnnTx :: StAnnTx TopTx era -> LedgerLevelTxInfo TopTx era
+
 instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
@@ -203,6 +211,8 @@ instance AlonzoEraUTxO AlonzoEra where
   refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
 
   exUnitsStAnnTx = exUnitsAlonzoStAnnTx
+
+  ledgerLevelTxInfoStAnnTx = ledgerLevelTxInfoAlonzoStAnnTx
 
 scriptsProvidedAlonzoStAnnTx ::
   ( EraTxLevel era
@@ -242,6 +252,9 @@ plutusLanguagesUsedAlonzoStAnnTx ::
 plutusLanguagesUsedAlonzoStAnnTx stAnnTx =
   withTopTxLevelOnly stAnnTx $
     \AlonzoStAnnTx {asatPlutusLanguagesUsed} -> asatPlutusLanguagesUsed
+
+ledgerLevelTxInfoAlonzoStAnnTx :: AlonzoStAnnTx TopTx era -> LedgerLevelTxInfo TopTx era
+ledgerLevelTxInfoAlonzoStAnnTx _ = LedgerTopTxInfo mempty
 
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>

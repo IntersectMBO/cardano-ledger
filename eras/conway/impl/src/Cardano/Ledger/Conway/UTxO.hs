@@ -30,6 +30,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   getMintingScriptsNeeded,
   getSpendingScriptsNeeded,
   getWithdrawingScriptsNeeded,
+  ledgerLevelTxInfoAlonzoStAnnTx,
   plutusLanguagesUsedAlonzoStAnnTx,
   plutusScriptsWithContextAlonzoStAnnTx,
   scriptsNeededAlonzoStAnnTx,
@@ -162,6 +163,8 @@ instance AlonzoEraUTxO ConwayEra where
   refScriptsSizeStAnnTx = refScriptsSizeAlonzoStAnnTx
 
   exUnitsStAnnTx = exUnitsAlonzoStAnnTx
+
+  ledgerLevelTxInfoStAnnTx = ledgerLevelTxInfoAlonzoStAnnTx
 
 getConwayMinFeeTxUtxo ::
   ( EraTx era

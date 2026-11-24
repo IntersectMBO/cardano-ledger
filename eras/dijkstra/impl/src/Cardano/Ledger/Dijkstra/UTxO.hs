@@ -17,13 +17,14 @@ module Cardano.Ledger.Dijkstra.UTxO (
   getRefScriptsFromCreatedTxOuts,
   getDijkstraSupplementalDataHashes,
   getDijkstraMinFeeTxUtxo,
+  mkDijkstraLedgerTopTxInfo,
   scriptsProvidedDijkstraStAnnTx,
   batchNonDistinctRefScriptsSize,
   localProducedValue,
   poolOwnersWitnessRequired,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (CollectError)
+import Cardano.Ledger.Alonzo.Plutus.Context (CollectError, LedgerLevelTxInfo (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
@@ -260,6 +261,8 @@ instance AlonzoEraUTxO DijkstraEra where
   refScriptsSizeStAnnTx = refScriptsSizeDijkstraStAnnTx
   exUnitsStAnnTx = exUnitsDijkstraStAnnTx
 
+  ledgerLevelTxInfoStAnnTx = mkDijkstraLedgerTopTxInfo . subTransactionsDijkstraStAnnTx
+
 getDijkstraSupplementalDataHashes ::
   ( EraTx era
   , DijkstraEraTxBody era
@@ -346,6 +349,15 @@ instance DijkstraEraUTxO DijkstraEra where
 subTransactionsDijkstraStAnnTx ::
   DijkstraStAnnTx TopTx era -> [DijkstraStAnnTx SubTx era]
 subTransactionsDijkstraStAnnTx DijkstraStAnnTopTx {dsattSubTransactions} = dsattSubTransactions
+
+mkDijkstraLedgerTopTxInfo ::
+  EraTx era => [DijkstraStAnnTx SubTx era] -> LedgerLevelTxInfo TopTx era
+mkDijkstraLedgerTopTxInfo stAnnSubTxs =
+  LedgerTopTxInfo $
+    Map.fromList
+      [ (txIdTx dsastTx, dsastTxInfoResult)
+      | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
+      ]
 
 -- | Minimum fee calculation for a transaction.
 --

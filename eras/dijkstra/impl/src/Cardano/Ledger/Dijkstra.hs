@@ -77,7 +77,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
 import Cardano.Ledger.Dijkstra.TxBody ()
 import Cardano.Ledger.Dijkstra.TxInfo ()
 import Cardano.Ledger.Dijkstra.TxWits ()
-import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize)
+import Cardano.Ledger.Dijkstra.UTxO (batchNonDistinctRefScriptsSize, mkDijkstraLedgerTopTxInfo)
 import Cardano.Ledger.Plutus (Language (..), plutusLanguage)
 import Cardano.Ledger.Shelley.API (
   ApplyBlock (..),
@@ -177,12 +177,7 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiLevelTxInfo =
-            LedgerTopTxInfo $
-              Map.fromList
-                [ (txIdTx dsastTx, dsastTxInfoResult)
-                | DijkstraStAnnSubTx {dsastTx, dsastTxInfoResult} <- stAnnSubTxs
-                ]
+        , ltiLevelTxInfo = mkDijkstraLedgerTopTxInfo stAnnSubTxs
         }
     languagesUsed =
       Set.fromList [plutusLanguage spr | (_, SupportedPlutusRunnable spr) <- plutusScriptsUsed]
