@@ -351,6 +351,12 @@ instance ToExpr (EbAnnouncementSizeMismatch era)
 
 instance ToExpr (EbAlreadyApplied era)
 
+instance ToExpr (EbTxsSizeTooBig era)
+
+instance ToExpr (EbExUnitsTooBig era)
+
+instance ToExpr (EbRefScriptsSizeTooBig era)
+
 instance
   ToExpr (PredicateFailure (EraRule "EBLEDGERS" era)) =>
   ToExpr (EbPredFailure era)
