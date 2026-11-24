@@ -54,6 +54,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad.Reader (asks)
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
@@ -70,6 +71,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsWithDatum,
   alwaysSucceedsNoDatum,
   alwaysSucceedsWithDatum,
+  purposeIsWellformedNoDatum,
  )
 
 spec ::
@@ -554,7 +556,7 @@ spec = describe "UTXOW" $ do
 
   describe "ExUnits" $
     forM_ (filter (>= PlutusV4) $ eraLanguages @era) $ \lang ->
-      describe (show lang) $ withSLanguage lang $ \slang ->
+      describe (show lang) $ withSLanguage lang $ \slang -> do
         it "Attempt to calculate ExUnits with an invalid tx" $ do
           txIn <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum slang
           txFixed <- (mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn]) &) =<< asks iteFixup
@@ -585,6 +587,26 @@ spec = describe "UTXOW" $ do
             `shouldBe` [ (badPurpose, Left $ RedeemerPointsToUnknownScriptHash badPurpose)
                        , (goodPurpose, Left . ContextError . inject $ ScriptHashNotFoundForPurpose badPurpose)
                        ]
+
+        it "Calculate ExUnits for a top-level guard with sub-transactions" $ do
+          let overrideExUnits tx = do
+                pp <- getsNES $ nesEsL . curPParamsEpochStateL
+                utxo <- getUTxO
+                Globals {epochInfo, systemStart} <- use impGlobalsL
+                purposeUnits <-
+                  either (fail . show) pure . sequence $
+                    evalTxExUnits pp tx utxo epochInfo systemStart
+                pure $ tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ spliceUnits purposeUnits
+              spliceUnits =
+                Map.merge
+                  Map.dropMissing
+                  Map.preserveMissing
+                  (Map.zipWithMatched $ \_ -> set _2)
+              guardCred = ScriptHashObj . hashPlutusScript $ purposeIsWellformedNoDatum slang
+          withPostFixup (overrideExUnits >=> fixupPPHash >=> rederiveAddrTxWits) $
+            submitTx_ $
+              mkTopTxWithSubTxs [mkBasicTx mkBasicTxBody]
+                & bodyTxL . guardsTxBodyL .~ [guardCred]
 
   forM_ [l | l <- eraLanguages @era, l >= PlutusV4] $ \lang -> withSLanguage lang $ \slang ->
     describe "Sub-transaction Plutus evaluation" $ do

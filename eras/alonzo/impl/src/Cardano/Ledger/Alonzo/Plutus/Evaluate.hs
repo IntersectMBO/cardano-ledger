@@ -44,7 +44,7 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (mkPlutusWithContext)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (
-  AlonzoEraUTxO,
+  AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
   resolveNeededPlutusScriptsWithPurpose,
  )
@@ -59,6 +59,7 @@ import Cardano.Ledger.Plutus.Evaluate (
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language (Language (..), plutusLanguage)
 import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (mkStAnnTx))
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -280,6 +281,7 @@ type RedeemerReportWithLogs era =
 evalTxExUnits ::
   forall era.
   ( AlonzoEraTx era
+  , ApplyTx era
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -304,9 +306,13 @@ evalTxExUnits pp tx utxo epochInfo systemStart =
 --
 --  The execution budgets in the supplied transaction are completely ignored.
 --  The results of 'evalTxExUnitsWithLogs' are intended to replace them.
+--
+--  Only the redeemers of the top-level transaction are evaluated. Sub-transactions only
+--  contribute to the context of the top-level scripts, for example the guards.
 evalTxExUnitsWithLogs ::
   forall era.
   ( AlonzoEraTx era
+  , ApplyTx era
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -330,6 +336,7 @@ evalTxExUnitsWithLogs ::
   RedeemerReportWithLogs era
 evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndCount rdmrs
   where
+    stAnnTx = mkStAnnTx epochInfo systemStart pp utxo mempty tx
     keyedByPurpose (plutusPurpose, _) = hoistPlutusPurpose toAsIx plutusPurpose
     purposeToScriptHash = fromElems keyedByPurpose scriptsNeeded
     ledgerTxInfo =
@@ -341,17 +348,16 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiTx = tx
         , ltiScriptsUsed = plutusScriptsUsed
         , ltiScriptHashesUsed = toScriptHashByPurpose plutusScriptsUsed
-        , ltiLevelTxInfo = LedgerTopTxInfo mempty
+        , ltiLevelTxInfo = ledgerLevelTxInfoStAnnTx stAnnTx
         }
     txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
-    txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
     rdmrs = wits ^. rdmrsTxWitsL . unRedeemersL
     protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
-    provided@(ScriptsProvided scriptsProvided) = getScriptsProvided utxo tx
-    needed@(AlonzoScriptsNeeded scriptsNeeded) = getScriptsNeeded utxo txBody
+    provided@(ScriptsProvided scriptsProvided) = scriptsProvidedStAnnTx stAnnTx
+    needed@(AlonzoScriptsNeeded scriptsNeeded) = scriptsNeededStAnnTx stAnnTx
     (_, plutusScriptsUsed) = resolveNeededPlutusScriptsWithPurpose protVer provided needed mempty
     findAndCount pointer (redeemerData, exUnits) = do
       (plutusPurpose, plutusScriptHash) <-
