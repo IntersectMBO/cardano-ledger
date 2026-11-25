@@ -66,6 +66,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   EqRaw (..),
 ) where
 
+import Cardano.Base.Bytes (byteArrayFromShortByteString)
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
   Annotated (..),
@@ -198,6 +199,7 @@ instance Show t => Show (MemoBytes t) where
 
 instance SafeToHash (MemoBytes t) where
   originalBytes = fromShort . mbBytes
+  originalByteArray = byteArrayFromShortByteString . mbBytes
   originalBytesSize = SBS.length . mbBytes
 
 -- | Useful when deriving DecCBOR(Annotator T)

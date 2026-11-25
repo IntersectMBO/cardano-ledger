@@ -90,6 +90,7 @@ module Cardano.Ledger.Hashes (
   standardAddrHashSize,
 ) where
 
+import Cardano.Base.Bytes (byteArrayFromByteString, byteArrayToByteString)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashSize)
 import qualified Cardano.Crypto.Hash as Hash
@@ -107,6 +108,7 @@ import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Array.Byte (ByteArray)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS (length)
 import Data.ByteString.Short (ShortByteString, fromShort)
@@ -371,8 +373,14 @@ unsafeMakeSafeHash = SafeHash
 --  'SafeToHash' is a superclass requirement of the 'HashAnnotated' class which provides more
 --   convenient ways to construct SafeHashes than using 'makeHashWithExplicitProxys'.
 class SafeToHash t where
+  {-# MINIMAL (originalBytes | originalByteArray) #-}
+
   -- | Extract the original bytes from 't'
   originalBytes :: t -> ByteString
+  originalBytes = byteArrayToByteString . originalByteArray
+
+  originalByteArray :: t -> ByteArray
+  originalByteArray = byteArrayFromByteString . originalBytes
 
   originalBytesSize :: t -> Int
   originalBytesSize = BS.length . originalBytes
