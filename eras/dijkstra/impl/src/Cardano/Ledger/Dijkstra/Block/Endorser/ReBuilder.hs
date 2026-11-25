@@ -34,7 +34,10 @@ module Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra ()
-import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
+import Cardano.Ledger.Dijkstra.Block.Endorser (
+  EbTransactions (..),
+  EraEndorserBlock (..),
+ )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams, ppMaxEndorserBlockTxsSizeL)
 import Cardano.Ledger.Dijkstra.Rules.Eb (
@@ -51,12 +54,11 @@ import Cardano.Ledger.Dijkstra.Rules.Eb (
   validateEbReferencesSize,
  )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
-import Cardano.Ledger.Dijkstra.State (ebAnnouncementL)
 import Cardano.Ledger.Plutus.ExUnits (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.API (ApplyTx (..), ValidatedTx)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State (EraGov)
+import Cardano.Ledger.State
 import Control.State.Transition (PredicateFailure)
 import Data.Bifunctor (first)
 import qualified Data.Foldable as Foldable
@@ -70,8 +72,8 @@ import qualified Data.Vector.Primitive as P
 import qualified Data.Vector.Storable as S
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro ((%~), (&), (^.))
-import Validation (failureUnless, validationToEither)
+import Lens.Micro
+import Validation (Validation (..), failureUnless, validationToEither)
 
 -- | Running state for the re-construction of an announced `EndorserBlock`.
 data EbReBuilderState era = EbReBuilderState
@@ -132,7 +134,8 @@ data EbReBuilderResult era
 
 -- | Produced when finalisation is initiated, but transactions are still expected.
 newtype EbReBuilderFinalizerError era
-  = EbReBuilderMissingTxsError (NonEmpty (SafeHash EraIndependentTx))
+  = -- Q: do we need to keep the order here?
+    EbReBuilderMissingTxsError (NonEmpty (SafeHash EraIndependentTx))
   deriving (Eq, Show, Generic)
 
 class EraEndorserBlockBuilder era => EraEndorserBlockReBuilder era where
@@ -174,7 +177,7 @@ instance EraEndorserBlockReBuilder DijkstraEra where
 
   snocTxEbReBuilder = error "snocTxEbReBuilder: not implemented yet"
 
-  finalizeEbReBuilder = error "finalizeEbReBuilder: not implemented yet"
+  finalizeEbReBuilder = finalizeEbReBuilderDijkstra
 
 mkInitEbReBuilderStateDijkstra ::
   forall era.
@@ -220,6 +223,30 @@ mkInitEbReBuilderStateDijkstra nes ebRefs =
     txHashes = S.fromListN ebRefsCount $ Foldable.toList $ OMap.toStrictSeqOKeys (ebRefs ^. txRefsEbReferencesG)
     totalTxsSize = P.foldl' (+) 0 txSizes
     runEbTest toInitError = first (toInitError . NE.head) . validationToEither
+
+finalizeEbReBuilderDijkstra ::
+  forall era.
+  EraEndorserBlock era =>
+  EbReBuilderState era ->
+  Either (EbReBuilderFinalizerError era) (EndorserBlock era, NewEpochState era)
+finalizeEbReBuilderDijkstra EbReBuilderState {ebrbsEbReferences, ebrbsStAnnTxs, ebrbsNewEpochState} =
+  case validationToEither resolvedTxs of
+    Left missingTxs -> Left $ EbReBuilderMissingTxsError missingTxs
+    Right txs -> Right (endorserBlock txs, newEpochState)
+  where
+    endorserBlock txs =
+      mkBasicEndorserBlock
+        & referencesEndorserBlockL .~ ebrbsEbReferences
+        & transactionsEndorserBlockL .~ EbTransactions txs
+    newEpochState =
+      ebrbsNewEpochState & nesEsL . esLStateL . lsLastEbAnnouncementL %~ fmap (ebIsAppliedL .~ True)
+    resolvedTxs =
+      traverse resolveTx $ OMap.toStrictSeqOKeys (ebrbsEbReferences ^. txRefsEbReferencesG)
+    resolveTx ::
+      SafeHash EraIndependentTx -> Validation (NonEmpty (SafeHash EraIndependentTx)) (Tx TopTx era)
+    resolveTx txHash = case Map.lookup txHash ebrbsStAnnTxs of
+      Nothing -> Failure $ pure txHash
+      Just stAnnTx -> Success $ stAnnTx ^. txStAnnTxG
 
 data FullEbReBuilderError era
   = FullEbInitError (EbReBuilderInitError era)
