@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Change the CBOR encoding of `BlsKey` to uncompressed points, and decode them without the subgroup checks
 * Add `ebReferencesAnnouncementHashL` and `ebReferencesAnnouncementSizeL` to `Cardano.Ledger.Block`
 * Add `ebAnnouncementL`, `ebAnnouncementSlotNoL`, `ebAnnouncedInBlockHeaderL` and `ebIsAppliedL` to `Cardano.Ledger.State`
 * Change the `Tx t era` argument of `getScriptsProvided` to `Tx TopTx era`
