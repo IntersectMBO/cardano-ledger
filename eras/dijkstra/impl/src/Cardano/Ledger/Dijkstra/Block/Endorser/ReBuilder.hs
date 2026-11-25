@@ -151,7 +151,7 @@ instance EraEndorserBlockReBuilder DijkstraEra where
 
   mkInitEbReBuilderState = error "mkInitEbReBuilderState: not implemented yet"
 
-  getEbReBuilderStateNewEpochState = error "getEbReBuilderStateNewEpochState: not implemented yet"
+  getEbReBuilderStateNewEpochState EbReBuilderState {ebrbsNewEpochState} = ebrbsNewEpochState
 
   modifyEbReBuilderStateUTxO = error "modifyEbReBuilderStateUTxO: not implemented yet"
 
