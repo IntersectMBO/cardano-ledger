@@ -43,6 +43,7 @@ import qualified Data.Set as Set
 import qualified Data.Set.NonEmpty as NES
 import Data.Typeable (Typeable)
 import Lens.Micro
+import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -64,6 +65,7 @@ spec = describe "UTXOS" $ do
   costModelsSpec
   datumAndReferenceInputsSpec
   conwayFeaturesPlutusV1V2FailureSpec
+  conwayInvalidReturnValueSpec
   describe "Spending script without a Datum" $ do
     forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
       it (show lang) $ do
@@ -309,6 +311,27 @@ conwayFeaturesPlutusV1V2FailureSpec = do
               (drepKH, _, _) <- setupSingleDRep 1_000_000_000
               let updateDRepTxCert = UpdateDRepTxCert @era drepKH SNothing
               testCertificateNotSupported updateDRepTxCert
+
+conwayInvalidReturnValueSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpInit (LedgerSpec era))
+conwayInvalidReturnValueSpec =
+  describe "PlutusV3 onwards don't allow non-unit return values" $
+    forM_ (eraLanguages @era) $ \lang ->
+      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1279
+      -- TODO: Re-enable after issue is resolved, by removing this override
+      disableInConformanceIt (show lang) $ withSLanguage lang $ \slang -> do
+        AnyLevelTx tx <- mkTokenMintingTx $ hashPlutusScript (nonUnitReturnValueNoDatum slang)
+        if lang >= PlutusV3
+          then do
+            txFixed <- fixupTx tx
+            [pwc] <- impPlutusWithContexts txFixed
+            -- Since submitPhase2Invalid_ only tells us that the script failed,
+            -- we `evaluatePlutusWithContext` to get the reason why it failed.
+            snd (evaluatePlutusWithContext P.Quiet pwc) `shouldBe` Left P.InvalidReturnValue
+            submitPhase2Invalid_ tx
+          else submitTx_ tx
 
 govPolicySpec ::
   forall era.

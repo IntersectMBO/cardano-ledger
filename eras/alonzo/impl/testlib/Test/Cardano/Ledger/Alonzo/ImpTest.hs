@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   scriptTestContexts,
   impLookupPlutusScript,
   malformedPlutus,
+  nonUnitReturnValueNoDatum,
   addCollateralInput,
   makeCollateralInput,
   txWithMaxRedeemers,
@@ -126,6 +127,8 @@ import qualified Data.Text as T
 import Data.Word (Word64)
 import Lens.Micro
 import Lens.Micro.Mtl (use)
+import qualified PlutusCore.MkPlc as PLC (mkConstant)
+import qualified PlutusCore.Version as PLC (plcVersion100)
 import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Era
@@ -142,6 +145,8 @@ import Test.Cardano.Ledger.Plutus (
  )
 import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
+import qualified UntypedPlutusCore as UPLC
+import qualified UntypedPlutusCore.MkUPlc as UPLC (mkIterLamAbs)
 
 class
   ( MaryEraImp era
@@ -429,6 +434,7 @@ plutusTestScripts lang =
     , mkScriptTestEntry (inputsOutputsAreNotEmptyNoDatum lang) $ PlutusArgs (P.I 122) Nothing
     , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
     , mkScriptTestEntry guardrailScript $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (nonUnitReturnValueNoDatum lang) $ PlutusArgs (P.I 0) Nothing
     ]
       ++ [ mkScriptTestEntry (inputsOverlapsWithRefInputs lang) $ PlutusArgs (P.I 0) Nothing
          | plutusLanguage lang >= PlutusV2
@@ -442,6 +448,21 @@ plutusTestScripts lang =
 
 malformedPlutus :: Plutus l
 malformedPlutus = Plutus (PlutusBinary "invalid")
+
+-- | Minting script that returns an integer instead of `()`. The `()` return
+-- value is the *only* valid result for PlutusV3 onwards.
+nonUnitReturnValueNoDatum :: PlutusLanguage l => SLanguage l -> Plutus l
+nonUnitReturnValueNoDatum lang =
+  -- Minting scripts are applied to 2 arguments (redeemer and context) in
+  -- PlutusV1 and PlutusV2, but only to the context starting with PlutusV3.
+  let arity = if plutusLanguage lang >= PlutusV3 then 1 else 2
+      -- With DeBruijn names, binders are always index 0
+      args = replicate arity (UPLC.UVarDecl () (UPLC.DeBruijn 0))
+      body = PLC.mkConstant () (0 :: Integer)
+   in Plutus $
+        PlutusBinary $
+          P.serialiseUPLC $
+            UPLC.Program () PLC.plcVersion100 (UPLC.mkIterLamAbs args body)
 
 instance ShelleyEraImp AlonzoEra where
   initGenesis =
