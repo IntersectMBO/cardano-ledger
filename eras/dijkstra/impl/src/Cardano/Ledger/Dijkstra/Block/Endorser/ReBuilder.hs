@@ -56,6 +56,7 @@ import qualified Data.Vector.Primitive as P
 import qualified Data.Vector.Storable as S
 import Data.Word (Word32)
 import GHC.Generics (Generic)
+import Lens.Micro
 
 -- | Running state for the re-construction of an announced `EndorserBlock`.
 data EbReBuilderState era = EbReBuilderState
@@ -153,7 +154,8 @@ instance EraEndorserBlockReBuilder DijkstraEra where
 
   getEbReBuilderStateNewEpochState EbReBuilderState {ebrbsNewEpochState} = ebrbsNewEpochState
 
-  modifyEbReBuilderStateUTxO = error "modifyEbReBuilderStateUTxO: not implemented yet"
+  modifyEbReBuilderStateUTxO ebReBuilderState@EbReBuilderState {ebrbsNewEpochState} f =
+    ebReBuilderState {ebrbsNewEpochState = ebrbsNewEpochState & utxoL %~ f}
 
   snocTxEbReBuilder = error "snocTxEbReBuilder: not implemented yet"
 
