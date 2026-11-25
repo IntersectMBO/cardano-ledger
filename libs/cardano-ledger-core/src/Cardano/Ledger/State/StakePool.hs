@@ -95,17 +95,6 @@ import Cardano.Crypto.DSIGN (
   DSIGNAlgorithm (VerKeyDSIGN),
   hashVerKeyDSIGN,
  )
-import Cardano.Crypto.DSIGN.BLS12381.Internal (
-  PossessionProofDSIGN (PossessionProofBLS12381),
-  VerKeyDSIGN (VerKeyBLS12381),
- )
-import Cardano.Crypto.EllipticCurve.BLS12_381 (
-  BLS,
-  Point,
-  blsIsInf,
-  blsSerialize,
-  unsafeBlsDeserialize,
- )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
@@ -125,13 +114,13 @@ import Cardano.Ledger.Binary (
   Encoding,
   Interns,
   TokenType (TypeListLen, TypeListLen64, TypeListLenIndef, TypeNull),
-  decodeBytes,
+  decodeFixedSized,
   decodeNull,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeRecordNamedT,
   decodeRecordSum,
-  encodeBytes,
+  encodeFixedSized,
   encodeListLen,
   encodeNullStrictMaybe,
   ifDecoderVersionAtLeast,
@@ -557,25 +546,16 @@ instance FromJSON BlsKey where
     pure $ BlsKey {blsPubKey, blsPossessionProof}
 
 instance EncCBOR BlsKey where
-  encCBOR BlsKey {blsPubKey = VerKeyBLS12381 pubKey, blsPossessionProof = PossessionProofBLS12381 proof} =
+  encCBOR lk =
     encodeListLen 2
-      <> encodeBytes (blsSerialize pubKey)
-      <> encodeBytes (blsSerialize proof)
+      <> encodeFixedSized (blsPubKey lk)
+      <> encodeFixedSized (blsPossessionProof lk)
 
 instance DecCBOR BlsKey where
   decCBOR = decodeRecordNamed "BlsKey" (const 2) $ do
-    blsPubKey <- VerKeyBLS12381 <$> decodeUncheckedPoint "public key"
-    blsPossessionProof <- PossessionProofBLS12381 <$> decodeUncheckedPoint "proof of possession"
+    blsPubKey <- decodeFixedSized
+    blsPossessionProof <- decodeFixedSized
     pure BlsKey {blsPubKey, blsPossessionProof}
-
-decodeUncheckedPoint :: BLS curve => String -> Decoder s (Point curve)
-decodeUncheckedPoint name = do
-  bytes <- decodeBytes
-  case unsafeBlsDeserialize bytes of
-    Left err -> fail $ "BlsKey " <> name <> ": " <> show err
-    Right point
-      | blsIsInf point -> fail $ "BlsKey " <> name <> ": infinity point"
-      | otherwise -> pure point
 
 -- | A registered voting key, together with the epoch its registration took
 -- effect in. The key stops being honoured @maxKeyAgeEpochs@ epochs later, at

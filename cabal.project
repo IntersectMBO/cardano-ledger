@@ -27,8 +27,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-base.git
-  tag: 9a57a9e63c8ec4dfe69dcd2525dd686f851d8755
-  --sha256: sha256-T+vJm18XMsuzxOc4W5gFaE8fYb/AbDe1UPbBEa/uXrc=
+  tag: 301bc5b78635ae26daf5e2b41dba832733010fd7
+  --sha256: sha256-YjfXkSeBbc1VoVgP1Rza1ybaSt/y6hk7IRi81YYQ5iI=
   subdir:
     cardano-crypto-class
     cardano-crypto-leios

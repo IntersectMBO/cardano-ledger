@@ -36,7 +36,7 @@ import Cardano.Ledger.Rules.ValidationMode (checkFailOnJust, checkFailOnLeftStat
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_, guard, unless)
+import Control.Monad (forM_, guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -241,9 +241,12 @@ poolTransition = do
             forM_ newBlsKey $ \blsKey@BlsKey {blsPubKey, blsPossessionProof} ->
               -- we don't want to run the check on a key that is the same as
               -- the active or the pending one: we already checked those
-              unless (newBlsKey `elem` ownBlsKeys) $
-                checkFailOnLeftStatic (verifyPossessionProofDSIGN blsPubKey blsPossessionProof) $
-                  const (BlsKeyInvalidProofOfPossession sppId blsKey)
+              checkFailOnLeftStatic
+                ( if newBlsKey `elem` ownBlsKeys
+                    then Right ()
+                    else verifyPossessionProofDSIGN blsPubKey blsPossessionProof
+                )
+                $ const (BlsKeyInvalidProofOfPossession sppId blsKey)
           newBlsKeyHash = hashBlsKey <$> newBlsKey
           -- Returns the BLS key if another pool uses its public key, which is the case when
           -- its hash is in use, but is none of the given hashes of the pool's own BLS keys. A
