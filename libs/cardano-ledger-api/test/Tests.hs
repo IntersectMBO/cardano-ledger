@@ -18,6 +18,7 @@ import qualified Test.Cardano.Ledger.Api.State.Imp.QuerySpec as ImpQuery (spec, 
 import qualified Test.Cardano.Ledger.Api.State.QuerySpec as StateQuery (spec)
 import qualified Test.Cardano.Ledger.Api.Tx as Tx (spec)
 import qualified Test.Cardano.Ledger.Api.Tx.Body as TxBody (spec)
+import qualified Test.Cardano.Ledger.Api.Tx.ImpSpec as ImpTx (spec)
 import qualified Test.Cardano.Ledger.Api.Tx.Out as TxOut (spec)
 import Test.Cardano.Ledger.Api.Upgrade (BinaryUpgradeOpts (..))
 import qualified Test.Cardano.Ledger.Api.Upgrade as Upgrade
@@ -41,6 +42,7 @@ apiSpec =
     describe "State" $ do
       StateQuery.spec
     describe "Imp" $ do
+      ImpTx.spec
       Leios.spec
       ImpQuery.spec @ConwayEra
       ImpQuery.spec @DijkstraEra

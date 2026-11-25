@@ -144,7 +144,9 @@ instance AnyEraTx ConwayEra
 
 instance AnyEraTx DijkstraEra
 
--- | Construct all of the unspent outputs that will be produced by this transaction
+-- | Construct all of the unspent outputs that will be produced by this transaction,
+-- including sub-transaction outputs in Dijkstra. Phase-2-invalid transactions
+-- produce only their collateral return.
 producedTxOuts :: AnyEraTx era => Tx TopTx era -> UTxO era
 producedTxOuts tx =
   case tx ^. isPhase2ValidTxG of
@@ -153,6 +155,8 @@ producedTxOuts tx =
         case join (txBody ^. collateralReturnTxBodyG) of
           Nothing -> mempty
           Just txOut -> Map.singleton (mkCollateralTxIn txBody) txOut
-    _ -> txouts txBody
+    _ ->
+      txouts txBody
+        <> foldMap (foldMap (txouts . (^. bodyTxL))) (txBody ^. subTransactionsTxBodyG)
   where
     txBody = tx ^. bodyTxL
