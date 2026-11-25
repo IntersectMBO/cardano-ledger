@@ -36,6 +36,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra ()
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
+import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams, ppMaxEndorserBlockTxsSizeL)
 import Cardano.Ledger.Dijkstra.Rules.Eb (
   EbAlreadyApplied (..),
   EbAnnouncementHashMismatch (..),
@@ -43,20 +44,34 @@ import Cardano.Ledger.Dijkstra.Rules.Eb (
   EbAnnouncementSlotMismatch (..),
   EbReferencesSizeTooBig (..),
   EbWasNotAnnounced (..),
+  validateEbAnnouncementHash,
+  validateEbAnnouncementSize,
+  validateEbAnnouncementSlot,
+  validateEbNotApplied,
+  validateEbReferencesSize,
  )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
+import Cardano.Ledger.Dijkstra.State (ebAnnouncementL)
 import Cardano.Ledger.Plutus.ExUnits (OrdExUnits)
+import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.API (ApplyTx (..), ValidatedTx)
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State (EraGov)
 import Control.State.Transition (PredicateFailure)
+import Data.Bifunctor (first)
+import qualified Data.Foldable as Foldable
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.SimpleOMap.Strict as OMap
 import qualified Data.Vector.Primitive as P
 import qualified Data.Vector.Storable as S
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro
+import Lens.Micro ((%~), (&), (^.))
+import Validation (failureUnless, validationToEither)
 
 -- | Running state for the re-construction of an announced `EndorserBlock`.
 data EbReBuilderState era = EbReBuilderState
@@ -150,7 +165,7 @@ instance EraEndorserBlockReBuilder DijkstraEra where
   newtype EbReBuilderTxError DijkstraEra
     = DijkstraEbReBuilderTxError (NonEmpty (DijkstraLedgerPredFailure DijkstraEra))
 
-  mkInitEbReBuilderState = error "mkInitEbReBuilderState: not implemented yet"
+  mkInitEbReBuilderState = mkInitEbReBuilderStateDijkstra
 
   getEbReBuilderStateNewEpochState EbReBuilderState {ebrbsNewEpochState} = ebrbsNewEpochState
 
@@ -160,6 +175,51 @@ instance EraEndorserBlockReBuilder DijkstraEra where
   snocTxEbReBuilder = error "snocTxEbReBuilder: not implemented yet"
 
   finalizeEbReBuilder = error "finalizeEbReBuilder: not implemented yet"
+
+mkInitEbReBuilderStateDijkstra ::
+  forall era.
+  ( DijkstraEraPParams era
+  , EraBlockBody era
+  , EraEndorserBlock era
+  , EraGov era
+  ) =>
+  NewEpochState era ->
+  EbReferences era ->
+  Either (EbReBuilderInitError era) (EbReBuilderState era)
+mkInitEbReBuilderStateDijkstra nes ebRefs =
+  case nes ^. nesEsL . esLStateL . lsLastEbAnnouncementL of
+    SNothing ->
+      Left $ EbReBuilderInitNoAnnouncement $ EbWasNotAnnounced $ hashAnnotated ebRefs
+    SJust ebA -> do
+      let announcement = ebA ^. ebAnnouncementL
+      runEbTest EbReBuilderInitEbReferencesSizeTooBig $
+        validateEbReferencesSize pp ebRefs
+      runEbTest EbReBuilderInitEbAnnouncementHashMismatch $
+        validateEbAnnouncementHash announcement ebRefs
+      runEbTest EbReBuilderInitEbAnnouncementSizeMismatch $
+        validateEbAnnouncementSize announcement ebRefs
+      runEbTest EbReBuilderInitEbAlreadyApplied $
+        validateEbNotApplied ebA
+      runEbTest EbReBuilderInitEbAnnouncementSlotMismatch $
+        validateEbAnnouncementSlot ebA lastTickSlotNo
+      runEbTest EbReBuilderInitEbTxsSizeTooBig $ validateEbTxsSize pp totalTxsSize
+      pure
+        EbReBuilderState
+          { ebrbsEbReferences = ebRefs
+          , ebrbsTxHashes = txHashes
+          , ebrbsTxSizes = txSizes
+          , ebrbsStAnnTxs = Map.empty
+          , ebrbsBlockBodyLimits = mempty
+          , ebrbsNewEpochState = nes
+          }
+  where
+    pp = nes ^. nesEsL . curPParamsEpochStateL
+    lastTickSlotNo = nes ^. nesLastTickSlotNoL
+    ebRefsCount = OMap.size (ebRefs ^. txRefsEbReferencesG)
+    txSizes = P.fromListN ebRefsCount $ Foldable.toList $ OMap.toStrictSeq (ebRefs ^. txRefsEbReferencesG)
+    txHashes = S.fromListN ebRefsCount $ Foldable.toList $ OMap.toStrictSeqOKeys (ebRefs ^. txRefsEbReferencesG)
+    totalTxsSize = P.foldl' (+) 0 txSizes
+    runEbTest toInitError = first (toInitError . NE.head) . validationToEither
 
 data FullEbReBuilderError era
   = FullEbInitError (EbReBuilderInitError era)
@@ -186,6 +246,17 @@ newtype EbExUnitsTooBig era = EbExUnitsTooBig (Mismatch RelLTEQ OrdExUnits)
 
 newtype EbRefScriptsSizeTooBig era = EbRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   deriving (Eq, Show, Generic)
+
+validateEbTxsSize ::
+  DijkstraEraPParams era => PParams era -> Word32 -> Test (EbTxsSizeTooBig era)
+validateEbTxsSize pp txsSize =
+  let maxTxsSize = pp ^. ppMaxEndorserBlockTxsSizeL
+   in failureUnless (txsSize <= maxTxsSize) $
+        EbTxsSizeTooBig
+          Mismatch
+            { mismatchSupplied = txsSize
+            , mismatchExpected = maxTxsSize
+            }
 
 --------------------------------------------------------------------------------------
 -- Placeholders, remove with https://github.com/IntersectMBO/cardano-ledger/pull/6284
