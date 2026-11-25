@@ -264,6 +264,11 @@ instance SpecTranslate DijkstraEra DRepVotingThresholds where
       <*> toSpecRep dvtPPGovGroup
       <*> toSpecRep dvtTreasuryWithdrawal
 
+instance SpecTranslate DijkstraEra MaxPledgeLeverage where
+  type SpecRep DijkstraEra MaxPledgeLeverage = SpecRep DijkstraEra (Maybe NonNegativeInterval)
+
+  toSpecRep = toSpecRep . unMaxPledgeLeverage
+
 instance SpecTranslate DijkstraEra PoolVotingThresholds where
   type SpecRep DijkstraEra PoolVotingThresholds = Agda.PoolThresholds
 
@@ -296,6 +301,7 @@ instance SpecTranslate DijkstraEra (DijkstraPParams Identity DijkstraEra) where
     let
       ppPv = (0, 0)
       ppMinUTxOValue = 0
+    ppMaxPledgeLeverage <- toSpecRep dppMaxPledgeLeverage
     ppCoinsPerUTxOByte <- toSpecRep dppCoinsPerUTxOByte
     ppCostmdlsAssoc <- toSpecRep dppCostModels
     ppPrices <- toSpecRep dppPrices
@@ -554,6 +560,7 @@ instance SpecTranslate DijkstraEra (DijkstraPParams StrictMaybe DijkstraEra) whe
     ppuMinPoolCost <- toSpecRep dppMinPoolCost
     ppuEmax <- toSpecRep dppEMax
     ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe $ unTHKD dppNOpt)
+    ppuMaxPledgeLeverage <- toSpecRep dppMaxPledgeLeverage
     let
       ppuPv = Nothing
       ppuMinUTxOValue = Nothing

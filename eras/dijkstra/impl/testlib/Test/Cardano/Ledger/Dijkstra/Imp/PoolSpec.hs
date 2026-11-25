@@ -356,9 +356,7 @@ spec = describe "POOL" $ do
       , ("unset", SNothing)
       ]
       $ \(caseName, leverage) ->
-        -- The conformance adapter omits MaxPledgeLeverage, so the formal model
-        -- sees an empty parameter update. Re-enable when it supports this field.
-        disableInConformanceIt ("enacts " <> caseName <> " and pays rewards") $ do
+        it ("enacts " <> caseName <> " and pays rewards") $ do
           modifyPParams $ \pp ->
             pp
               & ppA0L .~ 3 %! 10
