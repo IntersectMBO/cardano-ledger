@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Require `ApplyTx` constraint on `evalTxExUnits` and `evalTxExUnitsWithLogs`
+* Add `ledgerLevelTxInfoStAnnTx` method to `AlonzoEraUTxO`
+* Add `ledgerLevelTxInfoAlonzoStAnnTx`
 * Add `asatUTxO` field to `AlonzoStAnnTx`
 * Replace the `Tx l era` argument of `validateExUnitsTooBigUTxO` with `StAnnTx TopTx era`
 * Add `ExUnits` argument to `alonzoMinFeeTx`
