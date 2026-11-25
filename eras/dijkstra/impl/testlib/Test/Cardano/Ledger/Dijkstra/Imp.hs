@@ -19,6 +19,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbSpec as EB
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgersSpec as LEDGERS
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec as LEIOSCERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec as POOL
@@ -51,6 +52,7 @@ spec era = do
     BBODY.spec
     LEIOSCERT.spec
     LEDGER.spec
+    LEDGERS.spec
     MEMPOOL.spec
     SUBLEDGER.spec
     CERT.spec

@@ -94,8 +94,10 @@ spec = describe "BBODY" $ do
                   & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert cPurpose (dex 0)
 
         it "enforces ppMaxBlockExUnits" $ do
-          maxBlockUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxBlockExUnitsL
           maxTxUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
+          -- Shrink the block limit to the per-transaction limit, so that two transactions are enough to exceed it.
+          modifyPParams $ ppMaxBlockExUnitsL .~ maxTxUnits
+          maxBlockUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxBlockExUnitsL
 
           let
             ExUnits bMem bSteps = maxBlockUnits

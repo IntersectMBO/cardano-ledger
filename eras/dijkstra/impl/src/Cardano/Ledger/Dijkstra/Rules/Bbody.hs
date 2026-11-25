@@ -30,12 +30,10 @@ module Cardano.Ledger.Dijkstra.Rules.Bbody (
 
 import Cardano.Crypto.Leios (LeiosCert)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (OrdExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -111,8 +109,6 @@ data DijkstraBbodyPredFailure era
   | InvalidBodyHashBBODY (Mismatch RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits (Mismatch RelLTEQ OrdExUnits)
-  | BodyRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
   | PerasCertValidationFailed PerasCert Nonce
   | HeaderProtVerTooLow (Mismatch RelGTEQ Word32)
   | LeiosCertMissing
@@ -161,8 +157,6 @@ instance
       WrongBlockBodySizeBBODY mm -> Sum WrongBlockBodySizeBBODY 0 !> To mm
       InvalidBodyHashBBODY mm -> Sum (InvalidBodyHashBBODY @era) 1 !> To mm
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
-      TooManyExUnits mm -> Sum TooManyExUnits 3 !> To mm
-      BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> To mm
       PerasCertValidationFailed cert nonce ->
         Sum PerasCertValidationFailed 5 !> To cert !> To nonce
       HeaderProtVerTooLow mm -> Sum HeaderProtVerTooLow 6 !> To mm
@@ -183,8 +177,6 @@ instance
     0 -> SumD WrongBlockBodySizeBBODY <! From
     1 -> SumD InvalidBodyHashBBODY <! From
     2 -> SumD LedgersFailure <! From
-    3 -> SumD TooManyExUnits <! From
-    4 -> SumD BodyRefScriptsSizeTooBig <! From
     5 -> SumD PerasCertValidationFailed <! From <! From
     6 -> SumD HeaderProtVerTooLow <! From
     7 -> SumD LeiosCertMissing
@@ -212,7 +204,7 @@ instance InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure DijkstraEra whe
 instance InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure DijkstraEra where
   injectFailure = conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" Shelley.ShelleyLedgersPredFailure DijkstraEra where
+instance InjectRuleFailure "BBODY" Conway.ConwayLedgersPredFailure DijkstraEra where
   injectFailure =
     conwayToDijkstraBbodyPredFailure . Conway.shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 
@@ -357,13 +349,10 @@ instance
   , AlonzoEraTxWits era
   , EraBlockBody era
   , AlonzoEraPParams era
-  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
-  , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , EraRule "BBODY" era ~ BBODY era
   , AlonzoEraTx era
-  , BabbageEraTxBody era
   , DijkstraEraPParams era
   , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEIOSCERT" era) ~ LeiosCertEnv
@@ -397,14 +386,11 @@ dijkstraBbodyTransition ::
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , DijkstraEraBlockBody era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "BBODY" Conway.ConwayBbodyPredFailure era
   , InjectRuleFailure "BBODY" Shelley.ShelleyBbodyPredFailure era
   , STS (EraRule "BBODY" era)
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , AlonzoEraTx era
-  , InjectRuleFailure "BBODY" Alonzo.AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , DijkstraEraPParams era
   , Embed (EraRule "LEIOSCERT" era) (EraRule "BBODY" era)
@@ -450,10 +436,6 @@ dijkstraBbodyTransition = do
         , ls
         , fromStrict txs
         )
-
-  Alonzo.validateExUnits @era txs $ pp ^. ppMaxBlockExUnitsL
-
-  Conway.validateBodyRefScriptsSizeTooBig @era pp blockBody (ls ^. utxoL)
 
   case blockBody ^. perasCertBlockBodyL of
     SNothing -> pure ()
@@ -510,16 +492,14 @@ conwayToDijkstraBbodyPredFailure = \case
   Conway.WrongBlockBodySizeBBODY mm -> WrongBlockBodySizeBBODY mm
   Conway.InvalidBodyHashBBODY mm -> InvalidBodyHashBBODY mm
   Conway.LedgersFailure f -> LedgersFailure f
-  Conway.TooManyExUnits mm -> TooManyExUnits mm
-  Conway.BodyRefScriptsSizeTooBig mm -> BodyRefScriptsSizeTooBig mm
   Conway.HeaderProtVerTooHigh {} -> error "Impossible: HeaderProtVerTooHigh cannot be triggered in Dijkstra era"
 
 instance
-  ( BaseM (Babbage.LEDGERS era) ~ ShelleyBase
-  , Babbage.LEDGERS era ~ EraRule "LEDGERS" era
-  , STS (Babbage.LEDGERS era)
+  ( BaseM (Conway.LEDGERS era) ~ ShelleyBase
+  , Conway.LEDGERS era ~ EraRule "LEDGERS" era
+  , STS (Conway.LEDGERS era)
   ) =>
-  Embed (Babbage.LEDGERS era) (BBODY era)
+  Embed (Conway.LEDGERS era) (BBODY era)
   where
   wrapFailed = LedgersFailure
   wrapEvent = Alonzo.ShelleyInAlonzoEvent . Shelley.LedgersEvent

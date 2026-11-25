@@ -15,7 +15,6 @@ import Test.Cardano.Ledger.Babbage.Imp.UtxosSpec qualified as BabbageUTXOS
 import Test.Cardano.Ledger.Babbage.Imp.UtxowSpec qualified as BabbageUTXOW
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Dijkstra ()
 import Test.Cardano.Ledger.Conformance.Imp.Core
-import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as ConwayBBODY
 import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as ConwayCERTS
 import Test.Cardano.Ledger.Conway.Imp.DelegSpec qualified as ConwayDELEG
 import Test.Cardano.Ledger.Conway.Imp.EnactSpec qualified as ConwayENACT
@@ -23,6 +22,7 @@ import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as ConwayEPOCH
 import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as ConwayGOVCERT
 import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as ConwayGOV
 import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as ConwayLEDGER
+import Test.Cardano.Ledger.Conway.Imp.LedgersSpec qualified as ConwayLEDGERS
 import Test.Cardano.Ledger.Conway.Imp.MempoolSpec qualified as ConwayMEMPOOL
 import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as ConwayRATIFY
 import Test.Cardano.Ledger.Conway.Imp.SnapSpec qualified as ConwaySNAP
@@ -61,8 +61,6 @@ spec = do
         enableImpInitRunningInConformance $ do
           modifyImpInitPostSubmitTxHook submitTxConformanceHook $ do
             modifyImpInitPostEpochBoundaryHook epochBoundaryConformanceHook $ do
-              ConwayBBODY.spec
-
               CERT.spec
 
               ConwayCERTS.spec
@@ -85,6 +83,7 @@ spec = do
 
               ShelleyLEDGER.spec
               ConwayLEDGER.spec
+              ConwayLEDGERS.spec
               LEDGER.spec
               SUBLEDGER.spec
 

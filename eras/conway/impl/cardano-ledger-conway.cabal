@@ -202,7 +202,6 @@ library testlib
     Test.Cardano.Ledger.Conway.GenesisSpec
     Test.Cardano.Ledger.Conway.GovActionReorderSpec
     Test.Cardano.Ledger.Conway.Imp
-    Test.Cardano.Ledger.Conway.Imp.BbodySpec
     Test.Cardano.Ledger.Conway.Imp.CertsSpec
     Test.Cardano.Ledger.Conway.Imp.DelegSpec
     Test.Cardano.Ledger.Conway.Imp.EnactSpec
@@ -211,6 +210,7 @@ library testlib
     Test.Cardano.Ledger.Conway.Imp.GovSpec
     Test.Cardano.Ledger.Conway.Imp.HardForkSpec
     Test.Cardano.Ledger.Conway.Imp.LedgerSpec
+    Test.Cardano.Ledger.Conway.Imp.LedgersSpec
     Test.Cardano.Ledger.Conway.Imp.MempoolSpec
     Test.Cardano.Ledger.Conway.Imp.RatifySpec
     Test.Cardano.Ledger.Conway.Imp.SnapSpec

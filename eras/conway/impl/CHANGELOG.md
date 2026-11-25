@@ -2,6 +2,16 @@
 
 ## 1.25.0.0
 
+* Move the block-level `ExUnits` and reference script size checks from `BBODY` to `LEDGERS`
+* Remove `TooManyExUnits` and `BodyRefScriptsSizeTooBig` from `ConwayBbodyPredFailure`, and add them to `ConwayLedgersPredFailure`
+* Remove `totalRefScriptSizeInBlock`
+* Change `bbodyTransition` to return a `TransitionRule` instead of a `Rule`
+* Move `validateBodyRefScriptsSizeTooBig` to `Cardano.Ledger.Conway.Rules.Ledgers`
+* Change `validateBodyRefScriptsSizeTooBig` to take the total reference script size of the block instead of `BlockBody` and `UTxO`, and to return a `Test` instead of a `Rule`
+* Change `LEDGERS` to stop applying transactions after the first failure, so a block with several failing transactions now reports only the first failure instead of one per transaction
+* Add `ConwayLedgersPredFailure` and use it as the predicate failure of the `LEDGERS` rule
+* Add `LEDGERS`
+* Change `EraRule "LEDGERS"` from `Babbage.LEDGERS` to the Conway-specific `LEDGERS`
 * Add `ExUnits` argument to `getConwayMinFeeTx`
 * Add `getConwayWitsVKeyNeededWith`
 * Replace `TranslateEra ConwayEra (Tx TopTx)` with `TranslateEra ConwayEra MempoolTx`

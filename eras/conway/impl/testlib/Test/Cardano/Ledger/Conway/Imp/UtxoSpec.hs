@@ -21,8 +21,9 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Plutus.Language (withSLanguage)
+import Cardano.Ledger.Plutus (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxoPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
@@ -32,13 +33,15 @@ import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.State
 import Cardano.Ledger.Val
 import Control.Monad (forM)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational ((%!))
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum, alwaysSucceedsNoDatum)
 
 spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
@@ -187,6 +190,93 @@ spec = describe "UTXO" $ do
         [fromNativeScript spendingScript, fromNativeScript spendingScript]
           ++ extraScripts
           ++ extraScripts
+
+    it "Reference script sizes contributed by individual transactions" $ do
+      script <- nativeScript
+      let scriptSize = originalBytesSize script
+      scriptSpendIn <- impAddNativeScript script >>= produceScript
+      scriptSpendIn2 <- impAddNativeScript script >>= produceScript
+
+      let mkTxWithExpectedSize expectedSize txAction = do
+            utxo <- getUTxO
+            tx <- txAction
+            txNonDistinctRefScriptsSize utxo tx `shouldBe` expectedSize
+            pure tx
+
+      -- producing a reference script contributes nothing
+      refScriptTx1 <-
+        mkTxWithExpectedSize 0 $
+          produceRefScriptsTx (fromNativeScript script :| [])
+      let refScriptTx1In = txInAt 0 refScriptTx1
+      refScriptTx2 <-
+        mkTxWithExpectedSize 0 $
+          produceRefScriptsTx (fromNativeScript script :| [])
+      -- spend script using the reference script
+      void $
+        mkTxWithExpectedSize scriptSize $
+          submitTx $
+            mkTxWithInputsAndRefInputs [scriptSpendIn] [refScriptTx1In]
+      -- spend using two ref inputs, which are counted separately even though they hold the same script
+      void $
+        mkTxWithExpectedSize (2 * scriptSize) $
+          submitTx $
+            mkTxWithInputsAndRefInputs [scriptSpendIn2] [refScriptTx1In, txInAt 0 refScriptTx2]
+      -- spend the root utxo
+      rootIn <- fst <$> getImpRootTxOut
+      void $
+        mkTxWithExpectedSize scriptSize $
+          submitTx $
+            mkTxWithInputsAndRefInputs [rootIn] [refScriptTx1In]
+      -- spending the output that holds the reference script also counts it, since the size
+      -- is measured over inputs and reference inputs alike
+      void $
+        mkTxWithExpectedSize scriptSize $
+          submitTx $
+            mkTxWithInputsAndRefInputs [refScriptTx1In] []
+
+    it "Use a reference script in a collateral output" $ do
+      -- produce an utxo with a failing script
+      lang <- elements $ eraLanguages @era
+      failingPlutusTxIn <- withSLanguage lang $ \slang -> do
+        let plutus = alwaysFailsWithDatum slang
+        produceScript $ hashPlutusScript plutus
+
+      -- produce a utxo with a succeeding script
+      script <- nativeScript
+      scriptTxIn <- impAddNativeScript script >>= produceScript
+      let scriptSize = originalBytesSize script
+
+      -- prepare a txout with the succeeding script as reference script
+      ProtVer pv _ <- getProtVer
+      collRefScriptTxOut <- do
+        addr <-
+          if pv < natVersion @12
+            then freshKeyAddr_
+            else freshKeyAddrNoPtr_
+        pure $ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ pure (fromNativeScript script)
+
+      -- submit an invalid transaction which attempts to consume the failing script
+      -- and specifies as collateral return the txout with reference script
+      utxo <- getUTxO
+      createCollateralTx <-
+        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1029
+        -- TODO: Re-enable after issue is resolved, by removing this override
+        withDisabledPostSubmitTxHook $
+          submitPhase2Invalid $
+            mkBasicTx
+              ( mkBasicTxBody
+                  & inputsTxBodyL .~ [failingPlutusTxIn]
+                  & collateralReturnTxBodyL .~ pure collRefScriptTxOut
+              )
+      -- the transaction that produces the collateral output contributes nothing itself
+      txNonDistinctRefScriptsSize utxo createCollateralTx `shouldBe` 0
+
+      -- applying the invalid transaction creates its collateral return, so the reference
+      -- script it carries is counted for the next transaction
+      utxoWithCollateralReturn <- getUTxO
+      let refScriptTxIn = txInAt 1 createCollateralTx
+      useCollateralTx <- submitTx $ mkTxWithInputsAndRefInputs [scriptTxIn] [refScriptTxIn]
+      txNonDistinctRefScriptsSize utxoWithCollateralReturn useCollateralTx `shouldBe` scriptSize
 
 conwayOnlySpec ::
   forall era.

@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Change `validateExUnits` to take `PParams` and the total `ExUnits` of the block instead of the transactions, and to return a `Test` instead of a `Rule`
 * Add `asatUTxO` field to `AlonzoStAnnTx`
 * Replace the `Tx l era` argument of `validateExUnitsTooBigUTxO` with `StAnnTx TopTx era`
 * Add `ExUnits` argument to `alonzoMinFeeTx`
