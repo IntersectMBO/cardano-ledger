@@ -21,6 +21,10 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   genMetadata,
   genMetadata',
   genUtf8StringOfSize,
+  genUTxOStateWith,
+  genLedgerStateWith,
+  genEpochStateWith,
+  genNewEpochStateWith,
   RawSeed (..),
   ASC (..),
   StakeProportion (..),
@@ -147,15 +151,34 @@ instance
   ) =>
   Arbitrary (NewEpochState era)
   where
-  arbitrary =
-    NewEpochState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genNewEpochStateWith arbitrary
+
+-- The ledger state generators below take the generator for the `GovState` nested in them, and the
+-- `Arbitrary` instances call them with `arbitrary`. The `GovState` has a CBOR roundtrip test of its
+-- own, so the roundtrip tests of these state types can pass a cheaper generator for it, which
+-- matters for eras whose `GovState` is expensive to roundtrip, like Conway. See
+-- `roundTripStateEraTypesSpecWith`. Because the instances use these generators too, the
+-- roundtrip tests generate the same structure as the instances do.
+
+-- | Generate a `NewEpochState` with the given generator for its `GovState`
+genNewEpochStateWith ::
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (StashedAVVMAddresses era)
+  , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
+  ) =>
+  Gen (GovState era) ->
+  Gen (NewEpochState era)
+genNewEpochStateWith genGovState =
+  NewEpochState
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> genEpochStateWith genGovState
+    <*> arbitrary
+    <*> arbitrary
 
 instance
   ( EraTxOut era
@@ -166,13 +189,20 @@ instance
   ) =>
   Arbitrary (EpochState era)
   where
-  arbitrary =
-    EpochState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genEpochStateWith arbitrary
   shrink = genericShrink
+
+-- | Generate an `EpochState` with the given generator for its `GovState`
+genEpochStateWith ::
+  (EraTxOut era, Arbitrary (TxOut era), Arbitrary (CertState era), Arbitrary (InstantStake era)) =>
+  Gen (GovState era) ->
+  Gen (EpochState era)
+genEpochStateWith genGovState =
+  EpochState
+    <$> arbitrary
+    <*> genLedgerStateWith genGovState
+    <*> arbitrary
+    <*> arbitrary
 
 instance
   ( EraTxOut era
@@ -183,11 +213,7 @@ instance
   ) =>
   Arbitrary (LedgerState era)
   where
-  arbitrary =
-    LedgerState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genLedgerStateWith arbitrary
   shrink LedgerState {..} =
     -- We drop the first element in the list so the list does not contain the
     -- original LedgerState which would cause `shrink` to loop indefinitely.
@@ -205,14 +231,7 @@ instance
   ) =>
   Arbitrary (UTxOState era)
   where
-  arbitrary =
-    UTxOState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genUTxOStateWith arbitrary
 
   -- The 'genericShrink' function returns first the immediate subterms of a
   -- value (in case it is a recursive data-type), and then shrinks the value
@@ -226,6 +245,31 @@ instance
   -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
   -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
   shrink = recursivelyShrink
+
+-- | Generate a `LedgerState` with the given generator for its `GovState`
+genLedgerStateWith ::
+  (EraTxOut era, Arbitrary (TxOut era), Arbitrary (CertState era), Arbitrary (InstantStake era)) =>
+  Gen (GovState era) ->
+  Gen (LedgerState era)
+genLedgerStateWith genGovState =
+  LedgerState
+    <$> genUTxOStateWith genGovState
+    <*> arbitrary
+    <*> arbitrary
+
+-- | Generate a `UTxOState` with the given generator for its `GovState`
+genUTxOStateWith ::
+  (EraTxOut era, Arbitrary (TxOut era), Arbitrary (InstantStake era)) =>
+  Gen (GovState era) ->
+  Gen (UTxOState era)
+genUTxOStateWith genGovState =
+  UTxOState
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> genGovState
+    <*> arbitrary
+    <*> arbitrary
 
 instance Arbitrary (ShelleyInstantStake era) where
   arbitrary = ShelleyInstantStake <$> arbitrary <*> arbitrary

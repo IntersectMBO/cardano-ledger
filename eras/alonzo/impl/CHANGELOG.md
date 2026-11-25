@@ -42,6 +42,7 @@
 * Change `mkTxWithPlutusAndBootstrapAddress` and `mkTokenMintingTx` to return `AnyLevelTx`
 * Add `DecCBOR` instances for `PlutusData` and `Data`
 * Add `mkTokenMintingTx`
+* Add `roundTripAlonzoCommonSpecWith`, which takes the generators for the `GovState`
 
 ## 1.18.0.0
 

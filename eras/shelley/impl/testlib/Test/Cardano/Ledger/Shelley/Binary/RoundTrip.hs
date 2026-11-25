@@ -8,7 +8,9 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.RoundTrip (
   roundTripShelleyCommonSpec,
+  roundTripShelleyCommonSpecWith,
   roundTripStateEraTypesSpec,
+  roundTripStateEraTypesSpecWith,
 ) where
 
 import Cardano.Ledger.Binary
@@ -17,6 +19,7 @@ import Cardano.Ledger.Metadata (Metadatum (I))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.State
 import qualified Data.Text as T
+import Data.Typeable (Proxy (..), typeRep)
 import Test.Cardano.Base.Bytes (genByteString)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   embedTrip,
@@ -25,14 +28,24 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
-import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Arbitrary (
+  genEpochStateWith,
+  genNewEpochStateWith,
+  genUTxOStateWith,
+ )
 import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Era (ShelleyEraTest)
 
 roundTripShelleyCommonSpec :: forall era. ShelleyEraTest era => Spec
-roundTripShelleyCommonSpec = do
+roundTripShelleyCommonSpec = roundTripShelleyCommonSpecWith @era arbitrary arbitrary
+
+-- | Like `roundTripShelleyCommonSpec`, but with the given generators for the `GovState`. See
+-- `roundTripStateEraTypesSpecWith`.
+roundTripShelleyCommonSpecWith ::
+  forall era. ShelleyEraTest era => Gen (GovState era) -> Gen (GovState era) -> Spec
+roundTripShelleyCommonSpecWith genGovState genNestedGovState = do
   roundTripCoreEraTypesSpec @era
-  roundTripStateEraTypesSpec @era
+  roundTripStateEraTypesSpecWith @era genGovState genNestedGovState
   describe "Metadatum size limits" $
     forEachEraVersion @era metadatumSizeLimitSpec
   describe "Metadatum int range" $
@@ -57,13 +70,55 @@ roundTripStateEraTypesSpec ::
   , Arbitrary (InstantStake era)
   ) =>
   Spec
-roundTripStateEraTypesSpec = do
+roundTripStateEraTypesSpec = roundTripStateEraTypesSpecWith @era arbitrary arbitrary
+
+-- | Like `roundTripStateEraTypesSpec`, but with the given generators for the `GovState`:
+--
+-- * the first for the roundtrip of the `GovState` itself,
+-- * the second for the `GovState` nested in other types such as `UTxOState`, `EpochState` and `NewEpochState`.
+--
+-- The `GovState` is decoded the same way when it is nested, and the first generator already
+-- covers its decoding, so the second one only needs to give it a realistic structure. That lets
+-- eras whose `GovState` is expensive to roundtrip, like Conway with the cost models in its
+-- `PParams`, to pass a cheaper generator, instead of decoding the same expensive
+-- parts again in every state type. The other fields of these state types still come from their
+-- `Arbitrary` instances.
+roundTripStateEraTypesSpecWith ::
+  forall era.
+  ( EraTxOut era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
+  , Eq (StashedAVVMAddresses era)
+  , Show (StashedAVVMAddresses era)
+  , EncCBOR (StashedAVVMAddresses era)
+  , DecCBOR (StashedAVVMAddresses era)
+  , Arbitrary (StashedAVVMAddresses era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (Value era)
+  , Arbitrary (PParams era)
+  , Arbitrary (GovState era)
+  , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
+  ) =>
+  Gen (GovState era) ->
+  Gen (GovState era) ->
+  Spec
+roundTripStateEraTypesSpecWith genGovState genNestedGovState = do
   describe "State Types Families" $ do
-    roundTripShareEraSpec @era @(GovState era)
+    prop (show $ typeRep $ Proxy @(GovState era)) $
+      forAllShrink genGovState shrink $
+        roundTripShareEraExpectation @era
   describe "State Types" $ do
-    roundTripShareEraTypeSpec @era @UTxOState
-    roundTripEraTypeSpec @era @EpochState
-    roundTripEraTypeSpec @era @NewEpochState
+    prop (show $ typeRep $ Proxy @(UTxOState era)) $
+      forAllShrink (genUTxOStateWith genNestedGovState) shrink $
+        roundTripShareEraTypeExpectation @era @UTxOState
+    prop (show $ typeRep $ Proxy @(EpochState era)) $
+      forAllShrink (genEpochStateWith genNestedGovState) shrink $
+        roundTripEraTypeExpectation @era @EpochState
+    prop (show $ typeRep $ Proxy @(NewEpochState era)) $
+      forAllShrink (genNewEpochStateWith genNestedGovState) shrink $
+        roundTripEraTypeExpectation @era @NewEpochState
 
 metadatumSizeLimitSpec :: Version -> Spec
 metadatumSizeLimitSpec v = do

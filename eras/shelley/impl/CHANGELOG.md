@@ -53,6 +53,8 @@
 * Add `getPState`
 * Add `EraForecast` superclass to `ShelleyEraImp`, together with `Eq`, `ToExpr`, `NFData` and `Typeable` superclasses for the `TICKF` event
 * Add `ToExpr` instance for `ShelleyTickfEvent`
+* Add `genUTxOStateWith`, `genLedgerStateWith`, `genEpochStateWith` and `genNewEpochStateWith`, which take the generator for the `GovState`
+* Add `roundTripStateEraTypesSpecWith` and `roundTripShelleyCommonSpecWith`, which take the generators for the `GovState`
 
 ## 1.20.0.0
 
