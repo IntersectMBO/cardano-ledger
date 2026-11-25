@@ -86,6 +86,8 @@ import Cardano.Crypto.Leios (
   LeiosCommittee (..),
   LeiosSeat (..),
   LeiosVerificationKey,
+  UnprovenPossession,
+  coerceLeiosVerificationKey,
  )
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
@@ -484,7 +486,7 @@ instance EncCBOR PV4.ScriptContext where
 instance EncCBOR BitField where
   encCBOR (BitField ba) = encCBOR ba
 
-instance EncCBOR (LeiosVerificationKey pp) where
+instance EncCBOR (LeiosVerificationKey UnprovenPossession) where
   encCBOR = encodeFixedSized
 
 instance EncCBOR LeiosCert where
@@ -497,7 +499,7 @@ instance EncCBOR LeiosSeat where
   encCBOR (LeiosSeat weight vkey) =
     encodeListLen 2
       <> encCBOR weight
-      <> encCBOR vkey
+      <> encCBOR (coerceLeiosVerificationKey <$> vkey)
 
 -- | The seats only: a seated committee no longer carries proofs of possession,
 -- they were verified when it was selected.

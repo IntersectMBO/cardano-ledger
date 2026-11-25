@@ -106,6 +106,10 @@ module Cardano.Ledger.Api.State.Query (
   getNextEpochCommitteeMembers,
 ) where
 
+import Cardano.Crypto.Leios (
+  coerceLeiosVerificationKey,
+  unsafeCoerceLeiosVerificationKey,
+ )
 import Cardano.Ledger.Api.State.Query.Account as Account
 import Cardano.Ledger.Api.State.Query.Governance as Governance
 import Cardano.Ledger.BaseTypes (
@@ -923,7 +927,7 @@ instance EncCBOR QueryResultIndividualPoolStake where
       , encCBOR stake
       , encCBOR totalStake
       , encCBOR vrf
-      , ifEncodingVersionAtLeast (natVersion @12) (encCBOR blsKey) mempty
+      , ifEncodingVersionAtLeast (natVersion @12) (encCBOR $ coerceLeiosVerificationKey <$> blsKey) mempty
       ]
 
 instance DecCBOR QueryResultIndividualPoolStake where
@@ -934,7 +938,7 @@ instance DecCBOR QueryResultIndividualPoolStake where
         <$> decCBOR
         <*> decCBOR
         <*> decCBOR
-        <*> if blsKeySupported then decCBOR else pure SNothing
+        <*> if blsKeySupported then fmap unsafeCoerceLeiosVerificationKey <$> decCBOR else pure SNothing
 
 instance EncCBOR QueryResultPoolDistr where
   encCBOR (QueryResultPoolDistr distr total) =

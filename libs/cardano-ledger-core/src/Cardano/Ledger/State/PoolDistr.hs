@@ -23,6 +23,10 @@ module Cardano.Ledger.State.PoolDistr (
   PoolDistr (..),
 ) where
 
+import Cardano.Crypto.Leios (
+  coerceLeiosVerificationKey,
+  unsafeCoerceLeiosVerificationKey,
+ )
 import Cardano.Ledger.BaseTypes (
   KeyValuePairs (..),
   NonZero,
@@ -93,7 +97,7 @@ instance EncCBOR IndividualPoolStake where
       , encCBOR stakeCoin
       , encCBOR vrf
       ]
-        <> [ encCBOR blsKey
+        <> [ encCBOR (coerceLeiosVerificationKey <$> blsKey)
            | SJust _ <- [blsKey]
            ]
 
@@ -106,14 +110,14 @@ instance DecCBOR IndividualPoolStake where
       <*> decCBOR
       <*> case mLen of
         Just 3 -> pure SNothing
-        Just 4 -> decCBOR
+        Just 4 -> fmap unsafeCoerceLeiosVerificationKey <$> decCBOR
         Just _ -> fail "Invalid length"
         Nothing -> do
           brk <- decodeBreakOr
           if brk
             then pure SNothing
             else do
-              res <- decCBOR
+              res <- fmap unsafeCoerceLeiosVerificationKey <$> decCBOR
               brk2 <- decodeBreakOr
               unless brk2 $ fail "Expected break"
               pure res

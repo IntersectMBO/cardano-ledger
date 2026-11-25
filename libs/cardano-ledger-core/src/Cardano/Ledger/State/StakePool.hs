@@ -102,6 +102,7 @@ import Cardano.Crypto.Leios (
   IsPossessionProven (..),
   LeiosProofOfPossession,
   LeiosVerificationKey (unLeiosVerificationKey),
+  coerceLeiosVerificationKey,
   unsafeCoerceLeiosVerificationKey,
  )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
@@ -604,14 +605,14 @@ bksRegisteredInL = lens bksRegisteredIn $ \bks e -> bks {bksRegisteredIn = e}
 instance EncCBOR BlsKeyState where
   encCBOR bks =
     encode $
-      Rec BlsKeyState
-        !> To (bksKey bks)
+      Rec (BlsKeyState . unsafeCoerceLeiosVerificationKey)
+        !> To (coerceLeiosVerificationKey $ bksKey bks)
         !> To (bksRegisteredIn bks)
 
 instance DecCBOR BlsKeyState where
   decCBOR =
     decode $
-      RecD BlsKeyState
+      RecD (BlsKeyState . unsafeCoerceLeiosVerificationKey)
         <! From
         <! From
 
