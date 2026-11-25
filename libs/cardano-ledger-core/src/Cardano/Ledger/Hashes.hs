@@ -109,7 +109,7 @@ import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=
 import qualified Data.Aeson as Aeson
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS (length)
-import Data.ByteString.Short (ShortByteString, fromShort)
+import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
@@ -370,9 +370,21 @@ unsafeMakeSafeHash = SafeHash
 --
 --  'SafeToHash' is a superclass requirement of the 'HashAnnotated' class which provides more
 --   convenient ways to construct SafeHashes than using 'makeHashWithExplicitProxys'.
+--
+--   Instances must implement at least one of 'originalBytes' and 'originalShortBytes'.
 class SafeToHash t where
+  {-# MINIMAL originalBytes | originalShortBytes #-}
+
   -- | Extract the original bytes from 't'
   originalBytes :: t -> ByteString
+  originalBytes = fromShort . originalShortBytes
+
+  -- | Extract the original bytes as a 'ShortByteString'. Instances that store
+  -- short bytes should return them directly to avoid copying.
+  --
+  -- @fromShort (originalShortBytes t) == originalBytes t@
+  originalShortBytes :: t -> ShortByteString
+  originalShortBytes = toShort . originalBytes
 
   originalBytesSize :: t -> Int
   originalBytesSize = BS.length . originalBytes
@@ -384,7 +396,7 @@ class SafeToHash t where
   makeHashWithExplicitProxys _ x = SafeHash $ Hash.castHash (Hash.hashWith originalBytes x)
 
 instance SafeToHash ShortByteString where
-  originalBytes = fromShort
+  originalShortBytes = id
   originalBytesSize = SBS.length
 
 instance SafeToHash ByteString where
@@ -392,7 +404,9 @@ instance SafeToHash ByteString where
 
 -- | Hash of a hash. Hash is always safe to hash. Do you even hash?
 instance Hash.HashAlgorithm h => SafeToHash (Hash.Hash h i) where
+  -- Avoid allocating an intermediate ShortByteString when extracting strict bytes.
   originalBytes = Hash.hashToBytes
+  originalShortBytes = Hash.hashToBytesShort
 
 -- | Types that are 'SafeToHash' AND have the type uniquely determines the 'index' type
 -- tag of @`SafeHash` index@

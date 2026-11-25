@@ -2,6 +2,7 @@
 
 ## 1.25.0.0
 
+* Avoid copying the stored bytes in `originalShortBytes` for `PlutusScript ConwayEra`
 * Add `ExUnits` argument to `getConwayMinFeeTx`
 * Add `getConwayWitsVKeyNeededWith`
 * Replace `TranslateEra ConwayEra (Tx TopTx)` with `TranslateEra ConwayEra MempoolTx`

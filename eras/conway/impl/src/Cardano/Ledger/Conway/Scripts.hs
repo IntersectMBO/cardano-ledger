@@ -179,7 +179,7 @@ instance NFData (PlutusScript ConwayEra) where
 instance NoThunks (PlutusScript ConwayEra)
 
 instance SafeToHash (PlutusScript ConwayEra) where
-  originalBytes ps = withPlutusScript ps originalBytes
+  originalShortBytes ps = withPlutusScript ps originalShortBytes
 
 instance MemPack (PlutusScript ConwayEra) where
   packedByteCount = \case

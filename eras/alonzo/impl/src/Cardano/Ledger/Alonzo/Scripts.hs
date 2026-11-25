@@ -551,8 +551,11 @@ instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScr
 
 -- | Both constructors know their original bytes
 instance (SafeToHash (PlutusScript era), SafeToHash (NativeScript era)) => SafeToHash (AlonzoScript era) where
+  -- Preserve any specialized strict accessor supplied by the wrapped instances.
   originalBytes (NativeScript t) = originalBytes t
   originalBytes (PlutusScript plutus) = originalBytes plutus
+  originalShortBytes (NativeScript t) = originalShortBytes t
+  originalShortBytes (PlutusScript plutus) = originalShortBytes plutus
 
 isPlutusScript :: AlonzoEraScript era => Script era -> Bool
 isPlutusScript = isJust . toPlutusScript

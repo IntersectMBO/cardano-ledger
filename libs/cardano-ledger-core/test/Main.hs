@@ -4,6 +4,7 @@ import qualified Test.Cardano.Ledger.AddressSpec as AddressSpec
 import qualified Test.Cardano.Ledger.BaseTypesSpec as BaseTypesSpec
 import qualified Test.Cardano.Ledger.BinarySpec as BinarySpec
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.HashesSpec as HashesSpec
 import qualified Test.Cardano.Ledger.JsonSpec as JsonSpec
 import qualified Test.Cardano.Ledger.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.State.LeiosCommitteeSpec as LeiosCommitteeSpec
@@ -19,6 +20,7 @@ main =
       AddressSpec.spec
       BaseTypesSpec.spec
       BinarySpec.spec
+      HashesSpec.spec
       JsonSpec.spec
       LeiosCommitteeSpec.spec
       PlutusSpec.spec

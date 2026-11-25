@@ -263,7 +263,7 @@ instance Show PlutusBinary where
   show = show . BS64.encode . fromShort . unPlutusBinary
 
 instance SafeToHash PlutusBinary where
-  originalBytes (PlutusBinary binaryBlutus) = fromShort binaryBlutus
+  originalShortBytes = unPlutusBinary
 
 -- | Non-Native Plutus Script language. This is expected to be an open type. We will add
 -- new Constuctors to this type as additional Plutus language versions as are added.  We

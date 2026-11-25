@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Avoid copying the stored bytes in `originalShortBytes` for `PlutusScript BabbageEra`
 * Add `getTxOutsReferenceScripts`
 * Remove `feesOK`
 * Replace `TranslateEra BabbageEra (Tx TopTx)` with `TranslateEra BabbageEra MempoolTx`

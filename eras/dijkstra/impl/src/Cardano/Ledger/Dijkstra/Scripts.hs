@@ -476,7 +476,7 @@ instance NFData (PlutusScript DijkstraEra) where
 instance NoThunks (PlutusScript DijkstraEra)
 
 instance SafeToHash (PlutusScript DijkstraEra) where
-  originalBytes ps = withPlutusScript ps originalBytes
+  originalShortBytes ps = withPlutusScript ps originalShortBytes
 
 instance AlonzoEraScript DijkstraEra where
   data PlutusScript DijkstraEra

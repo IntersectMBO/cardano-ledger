@@ -2,6 +2,7 @@
 
 ## 0.6.0.0
 
+* Avoid copying the stored bytes in `originalShortBytes` for `DijkstraTx TopTx era`, `Tx TopTx DijkstraEra` and `PlutusScript DijkstraEra`
 * Rename `upgradeTimelock` to `upgradeNativeScript`, deprecate the old name, and fix it to retain the original bytes of a native script
 * Reject maximum pledge leverage updates below `1` in `ppuWellFormed` to prevent negative rewards.
 * Add `maxTxSizeForecastL` method to `DijkstraEraForecast` class and add `dfMaxTxSize` field to `DijkstraForecast` record type. It's the existing `maxTxSize` protocol parameter, which wasn't forecasted before Leios.

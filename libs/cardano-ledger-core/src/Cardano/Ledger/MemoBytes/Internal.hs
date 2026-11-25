@@ -197,7 +197,7 @@ instance Show t => Show (MemoBytes t) where
       <> ")"
 
 instance SafeToHash (MemoBytes t) where
-  originalBytes = fromShort . mbBytes
+  originalShortBytes = mbBytes
   originalBytesSize = SBS.length . mbBytes
 
 -- | Useful when deriving DecCBOR(Annotator T)

@@ -129,7 +129,7 @@ instance NFData (PlutusScript BabbageEra) where
 instance NoThunks (PlutusScript BabbageEra)
 
 instance SafeToHash (PlutusScript BabbageEra) where
-  originalBytes ps = withPlutusScript ps originalBytes
+  originalShortBytes ps = withPlutusScript ps originalShortBytes
 
 instance MemPack (PlutusScript BabbageEra) where
   packedByteCount = \case

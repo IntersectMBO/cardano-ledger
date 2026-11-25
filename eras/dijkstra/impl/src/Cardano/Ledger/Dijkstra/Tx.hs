@@ -233,7 +233,7 @@ instance EraTx era => EncCBOR (DijkstraTx l era) where
         <> encodeNullStrictMaybe encCBOR dstAuxData
 
 instance SafeToHash (DijkstraTx TopTx era) where
-  originalBytes (DijkstraTopTx t) = originalBytes t
+  originalShortBytes (DijkstraTopTx t) = originalShortBytes t
   originalBytesSize (DijkstraTopTx t) = originalBytesSize t
 
 instance HashAnnotated (DijkstraTx TopTx era) EraIndependentTx where
@@ -563,7 +563,7 @@ exUnitsDijkstraStAnnTx DijkstraStAnnTopTx {dsattExUnits} = dsattExUnits
 --------------------------------------------------------------------------------
 
 instance SafeToHash (Tx TopTx DijkstraEra) where
-  originalBytes = originalBytes . unDijkstraTx
+  originalShortBytes = originalShortBytes . unDijkstraTx
   originalBytesSize = originalBytesSize . unDijkstraTx
 
 instance HashAnnotated (Tx TopTx DijkstraEra) EraIndependentTx where

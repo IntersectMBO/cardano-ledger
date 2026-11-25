@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Add `originalShortBytes` to `SafeToHash`, with defaults requiring instances to implement at least one byte accessor and specialized implementations for `MemoBytes`, `PlutusBinary`, `ShortByteString` and cryptographic hashes
 * Add `ebReferencesAnnouncementHashL` and `ebReferencesAnnouncementSizeL` to `Cardano.Ledger.Block`
 * Add `ebAnnouncementL`, `ebAnnouncementSlotNoL`, `ebAnnouncedInBlockHeaderL` and `ebIsAppliedL` to `Cardano.Ledger.State`
 * Change the `Tx t era` argument of `getScriptsProvided` to `Tx TopTx era`
