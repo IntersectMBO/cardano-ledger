@@ -810,9 +810,7 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-        -- TODO: Re-enable after issue is resolved, by removing this override
-        disableInConformanceIt "Rewards contribute to active voting stake even in the absence of StakeDistr" $ whenPostBootstrap $ do
+        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ whenPostBootstrap $ do
           let govActionLifetime = 5
               govActionDeposit = Coin 1_000_000
               poolDeposit = Coin 858_000
@@ -1680,9 +1678,7 @@ delayingActionsSpec =
         getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId pGai2)
         getParameterChangeProposals `shouldReturn` Map.empty
     describe "An action expires when delayed enough even after being ratified" $ do
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
-      -- TODO: Re-enable after issue is resolved, by removing this override
-      disableInConformanceIt "Same lineage" $ whenPostBootstrap $ do
+      it "Same lineage" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -1707,9 +1703,7 @@ delayingActionsSpec =
         getConstitutionProposals `shouldReturn` Map.empty
         passEpoch
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai2)
-      -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
-      -- TODO: Re-enable after issue is resolved, by removing this override
-      disableInConformanceIt "Other lineage" $ whenPostBootstrap $ do
+      it "Other lineage" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2

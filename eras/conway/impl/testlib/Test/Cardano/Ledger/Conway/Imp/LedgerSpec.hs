@@ -113,9 +113,7 @@ spec = describe "LEDGER" $ do
       then submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
       else submitAnyTx_ tx >> (getBalance cred `shouldReturn` mempty)
 
-  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/923
-  -- TODO: Re-enable after issue is resolved, by removing this override
-  disableInConformanceIt "Withdraw and unregister staking credential in the same transaction" $ do
+  it "Withdraw and unregister staking credential in the same transaction" $ do
     refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
     (_, cred, _) <- setupSingleDRep 1_000_000
     ra <- getAccountAddressFor cred
