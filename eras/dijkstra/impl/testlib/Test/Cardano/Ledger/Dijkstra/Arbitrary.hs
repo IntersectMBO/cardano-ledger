@@ -189,15 +189,10 @@ instance Arbitrary (MempoolTx DijkstraEra) where
     UnsafeMkMempoolTx . (isPhase2ValidTxL .~ Phase2Valid) <$> arbitrary
 
 instance Era era => Arbitrary (DijkstraTxCert era) where
-  arbitrary =
-    oneof
-      [ DijkstraTxCertDeleg <$> arbitrary
-      , DijkstraTxCertPool <$> arbitrary
-      , DijkstraTxCertGov <$> arbitrary
-      ]
+  arbitrary = genericArbitraryU
 
 instance Arbitrary DijkstraDelegCert where
-  arbitrary = DijkstraRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = genericArbitraryU
 
 instance
   ( EraPParams era
