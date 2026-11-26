@@ -23,6 +23,10 @@ module Cardano.Ledger.State.PoolDistr (
   PoolDistr (..),
 ) where
 
+import Cardano.Crypto.Leios (
+  coerceLeiosVerificationKey,
+  unsafeCoerceLeiosVerificationKey,
+ )
 import Cardano.Ledger.BaseTypes (
   KeyValuePairs (..),
   NonZero,
@@ -39,7 +43,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
-import Cardano.Ledger.State.StakePool (BlsKey (..))
+import Cardano.Ledger.State.StakePool (LeiosVerificationKey, ProvenPossession)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (ToJSON (..), (.=))
@@ -70,7 +74,7 @@ data IndividualPoolStake = IndividualPoolStake
   -- is part of `individualPoolStake` we also add proposal-deposits to this
   -- field.
   , individualPoolStakeVrf :: !(VRFVerKeyHash StakePoolVRF)
-  , individualPoolStakeBls :: !(StrictMaybe BlsKey)
+  , individualPoolStakeBls :: !(StrictMaybe (LeiosVerificationKey ProvenPossession))
   -- ^ The pool's registered BLS key, used to select and verify the Leios
   -- voting committee. 'SNothing' when the pool has not registered one.
   }
@@ -93,7 +97,7 @@ instance EncCBOR IndividualPoolStake where
       , encCBOR stakeCoin
       , encCBOR vrf
       ]
-        <> [ encCBOR blsKey
+        <> [ encCBOR (coerceLeiosVerificationKey <$> blsKey)
            | SJust _ <- [blsKey]
            ]
 
@@ -106,14 +110,14 @@ instance DecCBOR IndividualPoolStake where
       <*> decCBOR
       <*> case mLen of
         Just 3 -> pure SNothing
-        Just 4 -> decCBOR
+        Just 4 -> fmap unsafeCoerceLeiosVerificationKey <$> decCBOR
         Just _ -> fail "Invalid length"
         Nothing -> do
           brk <- decodeBreakOr
           if brk
             then pure SNothing
             else do
-              res <- decCBOR
+              res <- fmap unsafeCoerceLeiosVerificationKey <$> decCBOR
               brk2 <- decodeBreakOr
               unless brk2 $ fail "Expected break"
               pure res

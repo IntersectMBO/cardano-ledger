@@ -84,7 +84,7 @@ library
     base >=4.18 && <5,
     base16-bytestring,
     bytestring,
-    cardano-crypto-class >=2.3 && <2.7,
+    cardano-crypto-class >=2.3 && <2.8,
     cardano-data ^>=1.4,
     cardano-ledger-allegra ^>=1.11,
     cardano-ledger-binary >=1.4,

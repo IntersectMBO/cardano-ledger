@@ -78,7 +78,10 @@ import Cardano.Crypto.Leios (
   LeiosCert (..),
   LeiosCommittee (..),
   LeiosSeat (..),
+  LeiosVerificationKey,
+  UnprovenPossession,
   maxLeiosCommitteeSize,
+  unsafeCoerceLeiosVerificationKey,
  )
 import Control.Monad (when)
 import Data.Binary.Get (Get, getWord32be, getWord32le, runGetOrFail)
@@ -718,6 +721,9 @@ maxLeiosCertSignersBytes = (maxLeiosCommitteeSize + 7) `div` 8
 instance DecCBOR BitField where
   decCBOR = BitField <$> decCBOR
 
+instance DecCBOR (LeiosVerificationKey UnprovenPossession) where
+  decCBOR = decodeFixedSized
+
 instance DecCBOR LeiosCert where
   decCBOR =
     decodeRecordNamed "LeiosCert" (const 2) $
@@ -737,9 +743,11 @@ instance DecCBOR LeiosCert where
         pure signers
 
 instance DecCBOR LeiosSeat where
-  decCBOR = decodeRecordNamed "LeiosSeat" (const 2) $ LeiosSeat <$> decCBOR <*> decCBOR
+  decCBOR =
+    decodeRecordNamed "LeiosSeat" (const 2) $
+      LeiosSeat
+        <$> decCBOR
+        <*> (fmap unsafeCoerceLeiosVerificationKey <$> decCBOR)
 
--- | Straight to the constructor: 'mkLeiosCommittee' takes proofs of possession,
--- which a seated committee no longer carries.
 instance DecCBOR LeiosCommittee where
-  decCBOR = UnsafeLeiosCommittee . VStrict.fromList <$> decCBOR
+  decCBOR = LeiosCommittee . VStrict.fromList <$> decCBOR

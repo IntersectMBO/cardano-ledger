@@ -3,14 +3,17 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module provides the 'StakePoolState' data type, which represents the
 -- state of a stake pool within the ledger. Unlike 'PoolParams', which includes
@@ -48,6 +51,8 @@ module Cardano.Ledger.State.StakePool (
   BlsKeyState (..),
   bksKeyL,
   bksRegisteredInL,
+  LeiosVerificationKey,
+  IsPossessionProven (..),
   stakePoolStateToStakePoolParams,
 
   -- * Pool Parameters and Related Types
@@ -72,7 +77,10 @@ module Cardano.Ledger.State.StakePool (
   decodeStakePoolParamsFlat,
   PoolMetadata (..),
   BlsKey (..),
+  blsPubKeyL,
+  blsPossessionProofL,
   hashBlsKey,
+  hashLeiosVerificationKey,
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
@@ -89,11 +97,13 @@ module Cardano.Ledger.State.StakePool (
 ) where
 
 import Cardano.Base.IP (IPv4, IPv6)
-import Cardano.Crypto.DSIGN (
-  BLS12381MinSigDSIGN,
-  DSIGNAggregatable (PossessionProofDSIGN),
-  DSIGNAlgorithm (VerKeyDSIGN),
-  hashVerKeyDSIGN,
+import Cardano.Crypto.DSIGN (hashVerKeyDSIGN)
+import Cardano.Crypto.Leios (
+  IsPossessionProven (..),
+  LeiosProofOfPossession,
+  LeiosVerificationKey (unLeiosVerificationKey),
+  coerceLeiosVerificationKey,
+  unsafeCoerceLeiosVerificationKey,
  )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
 import Cardano.Ledger.BaseTypes (
@@ -146,7 +156,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF
 import Cardano.Ledger.Orphans ()
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
 import Control.Monad.Trans (lift)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -156,6 +166,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import Data.Default (Default (..))
 import Data.Foldable (asum)
+import Data.Function (on)
 import Data.MemPack.Buffer (byteArrayFromShortByteString, byteArrayToShortByteString)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -165,6 +176,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+import Type.Reflection (Typeable, typeRep)
 
 -- | State representation of a stake pool. This type contains all the same
 -- information as 'PoolParams' except for the pool ID, which is stored
@@ -295,6 +307,10 @@ instance Default StakePoolState where
 -- | Convert 'StakePoolParams' to 'StakePoolState' by dropping the pool ID.
 -- This is the primary way to create a 'StakePoolState' from registration
 -- or update parameters.
+--
+-- WARNING: It's assumed that the BLS key proof-of-possession has already been validated
+-- and it's therefore acceptable to coerce the public key from unproven to proven using
+-- `unsafeCoerceLeiosVerificationKey`.
 mkStakePoolState ::
   -- | The registration epoch recorded for a voting key that is new to the pool; its
   -- lifetime is counted from here.
@@ -325,20 +341,26 @@ mkStakePoolState epochNo mbCurrentBlsKeyState deposit delegators spp =
     -- else starts a fresh lifetime.
     registerBlsKey newBlsKey
       | SJust currentBlsKeyState <- mbCurrentBlsKeyState
-      , bksKey currentBlsKeyState == newBlsKey =
+      , unLeiosVerificationKey (bksKey currentBlsKeyState) == unLeiosVerificationKey (blsPubKey newBlsKey) =
           currentBlsKeyState
-      | otherwise = BlsKeyState newBlsKey epochNo
+      | otherwise = do
+          let blsk = unsafeCoerceLeiosVerificationKey $ blsPubKey newBlsKey
+           in BlsKeyState {bksKey = blsk, bksRegisteredIn = epochNo}
 
 -- | Convert 'StakePoolState' back to 'StakePoolParams' by providing the pool ID.
 -- This is useful when you need to reconstruct the full parameters from
 -- the state representation.
+--
+-- WARNING: This isn't guaranteed to return the original `StakePoolParams` because
+-- the proof-of-possession of the BLS key isn't retained in the `StakePoolState` and
+-- can't be recreated without the signing key.
 stakePoolStateToStakePoolParams ::
   Network -> KeyHash StakePool -> StakePoolState -> StakePoolParams era
 stakePoolStateToStakePoolParams networkId poolId sps =
   StakePoolParams
     { sppId = poolId
     , sppVrf = spsVrf sps
-    , sppBlsKey = bksKey <$> spsBlsKey sps
+    , sppBlsKey = SNothing -- This is lossy, because we don't have the proof-of-possession
     , sppPledge = spsPledge sps
     , sppCost = spsCost sps
     , sppMargin = spsMargin sps
@@ -498,52 +520,60 @@ data StakePoolParams era = StakePoolParams
   deriving (Show, Generic, Eq, Ord)
 
 data BlsKey = BlsKey
-  { blsPubKey :: !(VerKeyDSIGN BLS12381MinSigDSIGN)
-  , blsPossessionProof :: !(PossessionProofDSIGN BLS12381MinSigDSIGN)
+  { blsPubKey :: !(LeiosVerificationKey UnprovenPossession)
+  , blsPossessionProof :: !LeiosProofOfPossession
   }
-  deriving (Show, Generic, Eq, NoThunks, NFData)
+  deriving (Show, Ord, Generic, Eq, NoThunks, NFData)
 
-instance Ord BlsKey where
-  compare a b =
-    compare
-      (rawEncodeFixedSized (blsPubKey a))
-      (rawEncodeFixedSized (blsPubKey b))
-      <> compare
-        (rawEncodeFixedSized (blsPossessionProof a))
-        (rawEncodeFixedSized (blsPossessionProof b))
+instance Ord (LeiosVerificationKey pp) where
+  compare = compare `on` rawEncodeFixedSized
+
+instance Ord LeiosProofOfPossession where
+  compare = compare `on` rawEncodeFixedSized
+
+blsPubKeyL :: Lens' BlsKey (LeiosVerificationKey UnprovenPossession)
+blsPubKeyL = lens blsPubKey $ \bls k -> bls {blsPubKey = k}
+
+blsPossessionProofL :: Lens' BlsKey LeiosProofOfPossession
+blsPossessionProofL = lens blsPossessionProof $ \bls k -> bls {blsPossessionProof = k}
 
 -- | Hash of the public key of a 'BlsKey'. The proof of possession is not part of the
 -- hash, so two keys with the same public key but different proofs of possession hash
 -- to the same value.
 hashBlsKey :: BlsKey -> BlsVerKeyHash
-hashBlsKey = BlsVerKeyHash . hashVerKeyDSIGN . blsPubKey
+hashBlsKey = hashLeiosVerificationKey . blsPubKey
+
+hashLeiosVerificationKey :: LeiosVerificationKey pp -> BlsVerKeyHash
+hashLeiosVerificationKey = BlsVerKeyHash . hashVerKeyDSIGN . unLeiosVerificationKey
+
+instance ToJSON (LeiosVerificationKey pp) where
+  toJSON = toJSON . Text.decodeLatin1 . B16.encode . rawEncodeFixedSized
+
+instance ToJSON LeiosProofOfPossession where
+  toJSON = toJSON . Text.decodeLatin1 . B16.encode . rawEncodeFixedSized
 
 instance ToJSON BlsKey where
   toJSON blsKey =
     Aeson.object
-      [ "blsPubKey"
-          .= Text.decodeLatin1 (B16.encode (rawEncodeFixedSized $ blsPubKey blsKey))
-      , "blsPossessionProof"
-          .= Text.decodeLatin1
-            ( B16.encode
-                (rawEncodeFixedSized $ blsPossessionProof blsKey)
-            )
+      [ "blsPubKey" .= blsPubKey blsKey
+      , "blsPossessionProof" .= blsPossessionProof blsKey
       ]
+
+instance Typeable pp => FromJSON (LeiosVerificationKey pp) where
+  parseJSON =
+    Aeson.withText ("LeiosVerificationKey " <> show (typeRep @pp)) $
+      rawDecodeFixedSized <=< either fail pure . B16.decode . Text.encodeUtf8
+
+instance FromJSON LeiosProofOfPossession where
+  parseJSON =
+    Aeson.withText "LeiosProofOfPossession" $
+      rawDecodeFixedSized <=< either fail pure . B16.decode . Text.encodeUtf8
 
 instance FromJSON BlsKey where
   parseJSON = Aeson.withObject "BlsKey" $ \obj -> do
-    pubKeyHex <- Text.encodeUtf8 <$> obj .: "blsPubKey"
-    blsPossessionProofHex <- Text.encodeUtf8 <$> obj .: "blsPossessionProof"
-    blsPubKey <-
-      case rawDecodeFixedSized =<< either (const Nothing) Just (B16.decode pubKeyHex) of
-        Nothing -> fail "Invalid hex for BlsPubKey"
-        Just vk -> pure vk
-    blsPossessionProof <-
-      case rawDecodeFixedSized
-        =<< either (const Nothing) Just (B16.decode blsPossessionProofHex) of
-        Nothing -> fail "Invalid hex for PossessionProof"
-        Just p -> pure p
-    pure $ BlsKey {blsPubKey, blsPossessionProof}
+    BlsKey
+      <$> obj .: "blsPubKey"
+      <*> obj .: "blsPossessionProof"
 
 instance EncCBOR BlsKey where
   encCBOR lk =
@@ -561,12 +591,12 @@ instance DecCBOR BlsKey where
 -- effect in. The key stops being honoured @maxKeyAgeEpochs@ epochs later, at
 -- which point the pool's committee seat is keyless until it registers again.
 data BlsKeyState = BlsKeyState
-  { bksKey :: !BlsKey
+  { bksKey :: !(LeiosVerificationKey ProvenPossession)
   , bksRegisteredIn :: !EpochNo
   }
   deriving (Show, Generic, Eq, Ord, NoThunks, NFData, ToJSON, FromJSON)
 
-bksKeyL :: Lens' BlsKeyState BlsKey
+bksKeyL :: Lens' BlsKeyState (LeiosVerificationKey ProvenPossession)
 bksKeyL = lens bksKey $ \bks k -> bks {bksKey = k}
 
 bksRegisteredInL :: Lens' BlsKeyState EpochNo
@@ -575,14 +605,14 @@ bksRegisteredInL = lens bksRegisteredIn $ \bks e -> bks {bksRegisteredIn = e}
 instance EncCBOR BlsKeyState where
   encCBOR bks =
     encode $
-      Rec BlsKeyState
-        !> To (bksKey bks)
+      Rec (BlsKeyState . unsafeCoerceLeiosVerificationKey)
+        !> To (coerceLeiosVerificationKey $ bksKey bks)
         !> To (bksRegisteredIn bks)
 
 instance DecCBOR BlsKeyState where
   decCBOR =
     decode $
-      RecD BlsKeyState
+      RecD (BlsKeyState . unsafeCoerceLeiosVerificationKey)
         <! From
         <! From
 

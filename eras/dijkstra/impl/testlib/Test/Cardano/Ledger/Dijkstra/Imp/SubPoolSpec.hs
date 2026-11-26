@@ -7,6 +7,7 @@
 module Test.Cardano.Ledger.Dijkstra.Imp.SubPoolSpec (spec) where
 
 import Cardano.Crypto.Hash.Class (hashSize)
+import Cardano.Crypto.Leios (coerceLeiosVerificationKey, unLeiosVerificationKey)
 import Cardano.Ledger.Address (accountAddressIdL, accountAddressNetworkIdL)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
@@ -24,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (esLStateL, lsCertStateL, nesELL, nesE
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro (to, (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Base.Bytes (genByteArray)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -51,11 +52,13 @@ expectStakePoolParams ::
   DijkstraEraImp era => KeyHash StakePool -> Maybe (StakePoolParams era) -> ImpTestM era ()
 expectStakePoolParams kh expected = impAnn "expectStakePoolParams" $ do
   actual <- lookupStakePoolParams kh
+  let sppAccountIdL = sppAccountAddressL . accountAddressIdL
+      spsBlsPubKeyL = spsBlsKeyL . to (fmap $ coerceLeiosVerificationKey . bksKey)
+      sppBlsPubKeyL = sppBlsKeyL . to (fmap blsPubKey)
   impAnn "accountId" $
-    (view spsAccountIdL <$> actual)
-      `shouldBeExpr` (view (sppAccountAddressL . accountAddressIdL) <$> expected)
+    (view spsAccountIdL <$> actual) `shouldBeExpr` (view sppAccountIdL <$> expected)
   impAnn "blsKey" $
-    (fmap bksKey . view spsBlsKeyL <$> actual) `shouldBeExpr` (view sppBlsKeyL <$> expected)
+    (view spsBlsPubKeyL <$> actual) `shouldBeExpr` (view sppBlsPubKeyL <$> expected)
   impAnn "vrf" $ (view spsVrfL <$> actual) `shouldBeExpr` (view sppVrfL <$> expected)
   impAnn "pledge" $ (view spsPledgeL <$> actual) `shouldBeExpr` (view sppPledgeL <$> expected)
   impAnn "cost" $ (view spsCostL <$> actual) `shouldBeExpr` (view sppCostL <$> expected)
@@ -546,7 +549,8 @@ spec = describe "SUBPOOL" $ do
     expectActiveBlsKey kh mbBlsKey = do
       pools <- psStakePools <$> getPState
       sps <- expectJust $ Map.lookup kh pools
-      bksKey <$> spsBlsKey sps `shouldBe` mbBlsKey
+      (unLeiosVerificationKey . bksKey <$> spsBlsKey sps)
+        `shouldBe` (unLeiosVerificationKey . blsPubKey <$> mbBlsKey)
     expectFutureBlsKey :: KeyHash StakePool -> StrictMaybe BlsKey -> ImpTestM era ()
     expectFutureBlsKey kh mbBlsKey = do
       fps <- psFutureStakePoolParams <$> getPState

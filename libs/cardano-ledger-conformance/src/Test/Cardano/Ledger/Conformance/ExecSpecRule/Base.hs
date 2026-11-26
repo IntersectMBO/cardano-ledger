@@ -17,14 +17,16 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Base (
 ) where
 
 import Cardano.Crypto.DSIGN (
-  BLS12381MinSigDSIGN,
-  PossessionProofDSIGN,
   SignedDSIGN (..),
-  VerKeyDSIGN,
-  verifyPossessionProofDSIGN,
   verifySignedDSIGN,
  )
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
+import Cardano.Crypto.Leios (
+  LeiosProofOfPossession,
+  LeiosVerificationKey,
+  UnprovenPossession,
+  mkLeiosVerificationKey,
+  verifyLeiosPossessionProof,
+ )
 import Cardano.Ledger.Core (HASH, Hash)
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Data.ByteString (ByteString)
@@ -68,15 +70,15 @@ externalFunctions = Agda.MkExternalFunctions {..}
 
     extIsValidPoP vk pop =
       isRight $
-        verifyPossessionProofDSIGN minSigPoPDST verkey proofofpossesion
+        verifyLeiosPossessionProof verkey proofofpossesion
       where
-        verkey :: VerKeyDSIGN BLS12381MinSigDSIGN
+        verkey :: LeiosVerificationKey UnprovenPossession
         verkey =
-          fromMaybe (error "Failed to convert an Agda VerKey to a Haskell VerKey")
+          maybe (error "Failed to convert an Agda VerKey to a Haskell VerKey") mkLeiosVerificationKey
             . verkeyFromInteger96
             $ vk
 
-        proofofpossesion :: PossessionProofDSIGN BLS12381MinSigDSIGN
+        proofofpossesion :: LeiosProofOfPossession
         proofofpossesion =
           fromMaybe (error "Failed to decode the PoP")
             . popFromInteger

@@ -94,6 +94,7 @@ module Cardano.Ledger.Hashes (
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashSize)
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.Leios (LeiosDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -237,7 +238,7 @@ fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash
 -- | Hash of a BLS verification key. The hash stands in for the key where an 'Ord'
 -- instance is needed, which 'DSIGN.VerKeyDSIGN' does not have.
 newtype BlsVerKeyHash = BlsVerKeyHash
-  {unBlsVerKeyHash :: Hash.Hash HASH (DSIGN.VerKeyDSIGN DSIGN.BLS12381MinSigDSIGN)}
+  {unBlsVerKeyHash :: Hash.Hash HASH (DSIGN.VerKeyDSIGN LeiosDSIGN)}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype
     ( NFData

@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Dijkstra.Base (
   SpecTranslate (..),
 ) where
 
-import Cardano.Crypto.Util (bytesToNatural)
+import Cardano.Crypto.Leios (LeiosProofOfPossession, unLeiosVerificationKey)
 import Cardano.Ledger.Address (
   DirectDeposits (..),
   accountAddressCredentialL,
@@ -36,7 +36,6 @@ import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (FixedSizeCodec (rawEncodeFixedSized))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -87,6 +86,8 @@ import Test.Cardano.Ledger.Conformance.Orphans.Dijkstra ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   committeeCredentialToStrictMaybe,
+  popToInteger,
+  verkeyToInteger,
  )
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Dijkstra.TreeDiff ()
@@ -391,19 +392,31 @@ instance SpecTranslate DijkstraEra (AlonzoTxAuxData DijkstraEra) where
 
   toSpecRep = toSpecRep . hashAnnotated
 
-instance SpecTranslate DijkstraEra BlsKey where
-  type SpecRep DijkstraEra BlsKey = (Integer, Integer)
+instance SpecTranslate DijkstraEra (LeiosVerificationKey pp) where
+  type SpecRep DijkstraEra (LeiosVerificationKey pp) = Integer
 
-  toSpecRep (BlsKey key pop) =
-    pure
-      ( toInteger . bytesToNatural . rawEncodeFixedSized $ key
-      , toInteger . bytesToNatural . rawEncodeFixedSized $ pop
+  toSpecRep = pure . verkeyToInteger . unLeiosVerificationKey
+
+instance SpecTranslate DijkstraEra LeiosProofOfPossession where
+  type SpecRep DijkstraEra LeiosProofOfPossession = Integer
+
+  toSpecRep = pure . popToInteger
+
+instance SpecTranslate DijkstraEra BlsKey where
+  type
+    SpecRep DijkstraEra BlsKey =
+      ( SpecRep DijkstraEra (LeiosVerificationKey UnprovenPossession)
+      , SpecRep DijkstraEra LeiosProofOfPossession
       )
 
-instance SpecTranslate DijkstraEra BlsKeyState where
-  type SpecRep DijkstraEra BlsKeyState = (Integer, SpecRep DijkstraEra EpochNo)
+  toSpecRep (BlsKey key pop) = (,) <$> toSpecRep key <*> toSpecRep pop
 
-  toSpecRep (BlsKeyState bls e) = ((,) . fst <$> toSpecRep bls) <*> toSpecRep e
+instance SpecTranslate DijkstraEra BlsKeyState where
+  type
+    SpecRep DijkstraEra BlsKeyState =
+      (SpecRep DijkstraEra (LeiosVerificationKey ProvenPossession), SpecRep DijkstraEra EpochNo)
+
+  toSpecRep (BlsKeyState bls e) = (,) <$> toSpecRep bls <*> toSpecRep e
 
 instance SpecTranslate DijkstraEra (StakePoolParams DijkstraEra) where
   type SpecRep DijkstraEra (StakePoolParams DijkstraEra) = Agda.StakePoolParams

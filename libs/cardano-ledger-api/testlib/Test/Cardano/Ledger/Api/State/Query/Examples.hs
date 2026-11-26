@@ -35,7 +35,12 @@ module Test.Cardano.Ledger.Api.State.Query.Examples (
 ) where
 
 import Cardano.Base.IP (toIPv4, toIPv6)
-import Cardano.Crypto.Leios (mkLeiosCommittee)
+import Cardano.Crypto.Leios (
+  LeiosCommittee (..),
+  LeiosSeat (..),
+  LeiosVerificationKey,
+  ProvenPossession,
+ )
 import Cardano.Ledger.Api.Governance (
   Committee (..),
   Constitution (..),
@@ -117,7 +122,7 @@ import Test.Cardano.Ledger.Conway.Examples (
  )
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
-import Test.Cardano.Ledger.Dijkstra.Examples (exampleBlsKey)
+import Test.Cardano.Ledger.Dijkstra.Examples (exampleBlsKey, exampleLeiosVerificationKey)
 import Test.Cardano.Ledger.Era (EraTest (..))
 import Test.Cardano.Ledger.Shelley.Examples (
   examplePoolDistr,
@@ -272,7 +277,7 @@ querySetSnapshotStakePoolDistrExamples =
                     { individualPoolStake = 3 % 8
                     , individualTotalPoolStake = CompactCoin 5_000_000_000
                     , individualPoolStakeVrf = exampleVrfVerKeyHash
-                    , individualPoolStakeBls = exampleIndividualPoolStakeBls @era
+                    , individualPoolStakeBls = exampleIndividualPoolStakeVerification @era
                     }
                 )
               ]
@@ -281,9 +286,21 @@ querySetSnapshotStakePoolDistrExamples =
     ]
 
 -- | 'SNothing' before Dijkstra, where the key is neither encoded nor decoded.
-exampleIndividualPoolStakeBls :: forall era. Era era => StrictMaybe BlsKey
+exampleIndividualPoolStakeBls ::
+  forall era.
+  Era era =>
+  StrictMaybe BlsKey
 exampleIndividualPoolStakeBls
   | eraProtVerHigh @era >= natVersion @12 = SJust exampleBlsKey
+  | otherwise = SNothing
+
+-- | 'SNothing' before Dijkstra, where the key is neither encoded nor decoded.
+exampleIndividualPoolStakeVerification ::
+  forall era.
+  Era era =>
+  StrictMaybe (LeiosVerificationKey ProvenPossession)
+exampleIndividualPoolStakeVerification
+  | eraProtVerHigh @era >= natVersion @12 = SJust exampleLeiosVerificationKey
   | otherwise = SNothing
 
 queryStakePoolDefaultVoteExamples :: [DefaultVote]
@@ -529,9 +546,11 @@ queryStakePoolStateExamples =
   , Map.map (\stakePoolState -> stakePoolState {qrspsDelegators = SNothing}) stakePoolStates
   ]
   where
+    blsKey = exampleIndividualPoolStakeBls @era
+    verificationKey = exampleIndividualPoolStakeVerification @era
     stakePoolParams =
       exampleStakePoolParams
-        { sppBlsKey = exampleIndividualPoolStakeBls @era
+        { sppBlsKey = blsKey
         , sppPledge = Coin 100_000_000_000
         , sppCost = Coin 170_000_000
         }
@@ -541,7 +560,7 @@ queryStakePoolStateExamples =
           ( sppId stakePoolParams
           , QueryResultStakePoolState
               { qrspsVrf = sppVrf stakePoolParams
-              , qrspsBlsKey = (`BlsKeyState` EpochNo 200) <$> sppBlsKey stakePoolParams
+              , qrspsBlsKey = (`BlsKeyState` EpochNo 200) <$> verificationKey
               , qrspsPledge = sppPledge stakePoolParams
               , qrspsCost = sppCost stakePoolParams
               , qrspsMargin = sppMargin stakePoolParams
@@ -750,8 +769,8 @@ queryLeiosCommitteeExamples =
   where
     -- one seat with a voting key and one without
     exampleLeiosCommittee =
-      mkLeiosCommittee $
+      LeiosCommittee $
         VS.fromList
-          [ (SJust (blsPubKey exampleBlsKey, blsPossessionProof exampleBlsKey), 3 % 8)
-          , (SNothing, 1 % 4)
+          [ LeiosSeat (3 % 8) (SJust exampleLeiosVerificationKey)
+          , LeiosSeat (1 % 4) SNothing
           ]

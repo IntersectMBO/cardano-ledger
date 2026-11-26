@@ -1,17 +1,20 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.State.LeiosCommitteeSpec (spec) where
 
-import Cardano.Crypto.DSIGN (createPossessionProofDSIGN, deriveVerKeyDSIGN, genKeyDSIGN)
-import Cardano.Crypto.DSIGN.BLS12381.Internal (minSigPoPDST)
+import Cardano.Crypto.DSIGN (genKeyDSIGN)
+import Cardano.Crypto.Leios (
+  LeiosSigningKey,
+  LeiosVerificationKey,
+  ProvenPossession,
+  deriveLeiosVerificationKey,
+ )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (CompactForm (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State (
-  BlsKey (..),
   BlsKeyState (..),
   LeiosCandidate (..),
   LeiosSeat (..),
@@ -37,23 +40,21 @@ candidateWith :: Int -> Word64 -> StrictMaybe BlsKeyState -> LeiosCandidate
 candidateWith poolId stake =
   LeiosCandidate (mkKeyHash poolId) (CompactCoin stake) (fromIntegral stake % 1)
 
--- | A valid voting key derived from a seed, carrying its own proof of possession.
-validKey :: Int -> BlsKey
-validKey i =
-  BlsKey
-    { blsPubKey = deriveVerKeyDSIGN signKey
-    , blsPossessionProof = createPossessionProofDSIGN minSigPoPDST signKey
-    }
-  where
-    signKey = genKeyDSIGN (mkSeedFromBytes (BS.replicate 32 (fromIntegral i)))
+-- | A signing key derived from a seed.
+signingKey :: Int -> LeiosSigningKey
+signingKey = genKeyDSIGN . mkSeedFromBytes . BS.replicate 32 . fromIntegral
+
+-- | A voting key derived from a seed, with proven possession.
+provenKey :: Int -> LeiosVerificationKey ProvenPossession
+provenKey = deriveLeiosVerificationKey . signingKey
 
 -- | A valid voting key stamped with its registration epoch.
 keyState :: Int -> EpochNo -> BlsKeyState
-keyState i registeredIn = BlsKeyState (validKey i) registeredIn
+keyState = BlsKeyState . provenKey
 
 -- | Seat the committee at an epoch far past any registration and with an
--- effectively unbounded key age, so only the stake ordering and proof of
--- possession matter — the aging cutoff is exercised separately below.
+-- effectively unbounded key age, so only the stake ordering matters —
+-- the aging cutoff is exercised separately below.
 seatsOf :: Word16 -> [LeiosCandidate] -> [LeiosSeat]
 seatsOf committeeSize =
   VS.toList
@@ -99,20 +100,14 @@ spec = describe "selectLeiosCommittee" $ do
           keyed =
             sortOn
               (lcPoolId . fst)
-              [(candidateWith i 1 (SJust (keyState i (EpochNo 0))), validKey i) | i <- [1 .. n]]
+              [(candidateWith i 1 (SJust (keyState i (EpochNo 0))), provenKey i) | i <- [1 .. n]]
           candidates = map fst keyed
           seated = [vk | LeiosSeat _ (SJust vk) <- seatsOf (fromIntegral n) candidates]
-       in seated === [blsPubKey key | (_, key) <- keyed]
+       in seated === [key | (_, key) <- keyed]
 
   prop "a pool with no registered key gets a keyless seat" $
     \(poolId :: Int) ->
       map seatVKey (seatsOf 1 [candidateWith poolId 1 SNothing]) === [SNothing]
-
-  it "a key whose proof of possession does not verify is seated keyless" $
-    -- A key built from one seed carrying another seed's proof of possession.
-    let mismatched = (validKey 1) {blsPossessionProof = blsPossessionProof (validKey 2)}
-        candidate = candidateWith 0 1 (SJust (BlsKeyState mismatched (EpochNo 0)))
-     in map seatVKey (seatsOf 1 [candidate]) `shouldBe` [SNothing]
 
   prop "a key is seated while honoured and keyless once it ages out" $
     \(poolId :: Int) (registeredIn :: EpochNo) (Positive ageWord) ->
@@ -125,7 +120,7 @@ spec = describe "selectLeiosCommittee" $ do
               $ selectLeiosCommittee e maxKeyAge 1 (V.fromList [candidate])
           boundary = addEpochInterval registeredIn maxKeyAge
        in conjoin
-            [ keysAt registeredIn === [SJust (blsPubKey (validKey 7))]
+            [ keysAt registeredIn === [SJust (provenKey 7)]
                 & counterexample "not honoured in its registration epoch"
             , keysAt boundary === [SNothing]
                 & counterexample "still honoured at the expiry boundary"
