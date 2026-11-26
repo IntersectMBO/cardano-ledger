@@ -39,7 +39,7 @@ import Cardano.Ledger.Dijkstra.Block.Endorser (
   EraEndorserBlock (..),
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
-import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams, ppMaxEndorserBlockTxsSizeL)
+import Cardano.Ledger.Dijkstra.PParams (DijkstraEraPParams)
 import Cardano.Ledger.Dijkstra.Rules.Eb (
   EbAlreadyApplied (..),
   EbAnnouncementHashMismatch (..),
@@ -53,9 +53,13 @@ import Cardano.Ledger.Dijkstra.Rules.Eb (
   validateEbNotApplied,
   validateEbReferencesSize,
  )
+import Cardano.Ledger.Dijkstra.Rules.EbLedgers (
+  EbExUnitsTooBig,
+  EbRefScriptsSizeTooBig,
+  EbTxsSizeTooBig,
+  validateEbTxsSize,
+ )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
-import Cardano.Ledger.Plutus.ExUnits (OrdExUnits)
-import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.API (ApplyTx (..), ValidatedTx)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
@@ -73,7 +77,7 @@ import qualified Data.Vector.Storable as S
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
-import Validation (Validation (..), failureUnless, validationToEither)
+import Validation (Validation (..), validationToEither)
 
 -- | Running state for the re-construction of an announced `EndorserBlock`.
 data EbReBuilderState era = EbReBuilderState
@@ -260,30 +264,6 @@ reBuildFullEndorserBlock ::
   Map (SafeHash EraIndependentTx) (Either (ValidatedTx era) (Tx TopTx era)) ->
   Either (FullEbReBuilderError era) (EndorserBlock era, NewEpochState era)
 reBuildFullEndorserBlock = error "reBuildFullEndorserBlock: not implemented yet"
-
---------------------------------------------------------------------------------------
--- Placeholders, remove with https://github.com/IntersectMBO/cardano-ledger/pull/6270
--------------------------------------------------------------------------------------
-
-newtype EbTxsSizeTooBig era = EbTxsSizeTooBig (Mismatch RelLTEQ Word32)
-  deriving (Eq, Show, Generic)
-
-newtype EbExUnitsTooBig era = EbExUnitsTooBig (Mismatch RelLTEQ OrdExUnits)
-  deriving (Eq, Show, Generic)
-
-newtype EbRefScriptsSizeTooBig era = EbRefScriptsSizeTooBig (Mismatch RelLTEQ Int)
-  deriving (Eq, Show, Generic)
-
-validateEbTxsSize ::
-  DijkstraEraPParams era => PParams era -> Word32 -> Test (EbTxsSizeTooBig era)
-validateEbTxsSize pp txsSize =
-  let maxTxsSize = pp ^. ppMaxEndorserBlockTxsSizeL
-   in failureUnless (txsSize <= maxTxsSize) $
-        EbTxsSizeTooBig
-          Mismatch
-            { mismatchSupplied = txsSize
-            , mismatchExpected = maxTxsSize
-            }
 
 --------------------------------------------------------------------------------------
 -- Placeholders, remove with https://github.com/IntersectMBO/cardano-ledger/pull/6284
