@@ -74,7 +74,6 @@ import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
 import Cardano.Base.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import Cardano.Crypto.Leios (
-  BitField (..),
   LeiosCert (..),
   LeiosCommittee (..),
   LeiosSeat (..),
@@ -82,6 +81,8 @@ import Cardano.Crypto.Leios (
  )
 import Control.Monad (when)
 import Data.Binary.Get (Get, getWord32be, getWord32le, runGetOrFail)
+import Data.Bitmap (Bitmap)
+import qualified Data.Bitmap as Bitmap
 import Data.Fixed (Fixed (..))
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.IntMap as IntMap
@@ -715,26 +716,23 @@ decodeScriptContextFromData scriptContextData =
 maxLeiosCertSignersBytes :: Int
 maxLeiosCertSignersBytes = (maxLeiosCommitteeSize + 7) `div` 8
 
-instance DecCBOR BitField where
-  decCBOR = BitField <$> decCBOR
+-- | Rejects bytes past the capacity @n@ and drops trailing zero bytes.
+instance KnownNat n => DecCBOR (Bitmap n) where
+  decCBOR = do
+    bytes <- decCBOR
+    case Bitmap.fromByteArray bytes of
+      Nothing ->
+        fail $
+          "Bitmap of "
+            <> show (Prim.sizeofByteArray bytes)
+            <> " bytes exceeds allowed set bit capacity of "
+            <> show (Bitmap.capacityBits (Proxy @n))
+      Just bitmap -> pure bitmap
 
 instance DecCBOR LeiosCert where
   decCBOR =
     decodeRecordNamed "LeiosCert" (const 2) $
-      LeiosCert
-        <$> decodeSigners
-        <*> decCBOR
-    where
-      decodeSigners = do
-        signers <- decCBOR
-        let numBytes = Prim.sizeofByteArray (bitFieldBytes signers)
-        when (numBytes > maxLeiosCertSignersBytes) $
-          fail $
-            "LeiosCert signers of "
-              <> show numBytes
-              <> " bytes exceeds the maximum of "
-              <> show maxLeiosCertSignersBytes
-        pure signers
+      LeiosCert <$> decCBOR <*> decCBOR
 
 instance DecCBOR LeiosSeat where
   decCBOR = decodeRecordNamed "LeiosSeat" (const 2) $ LeiosSeat <$> decCBOR <*> decCBOR

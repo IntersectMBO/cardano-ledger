@@ -123,7 +123,7 @@ library
     cardano-base >=0.1.6,
     cardano-crypto,
     cardano-crypto-class >=2.4 && <2.7,
-    cardano-crypto-leios ^>=0.3,
+    cardano-crypto-leios ^>=0.4,
     cardano-crypto-wrapper,
     cardano-data >=1.4,
     cardano-ledger-binary ^>=1.10,

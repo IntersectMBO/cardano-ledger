@@ -2,6 +2,9 @@
 
 ## 1.10.2.0
 
+* Replace the `EncCBOR`/`DecCBOR` instances for `BitField` with ones for
+  `Data.Bitmap.Bitmap n`. Decoding rejects bytes past the capacity `n` and drops
+  trailing zero bytes, which also bounds `LeiosCert` signers.
 * Add `decodeNonEmptyMapNoDuplicatesAnn`
 * Rename `decodeMapTraverse` to `decodeMapTraverseWithDuplicates`
 
