@@ -5,5 +5,7 @@
 [fsck]
     skipList = .git-fsck-skiplist
 [diff "cbor"]
-    textconv = scripts/cbor-textconv.sh
     maxBytes = 128k
+    # This is controlled using `scripts/with-cbor-diff` but can be overridden permanently
+    # as described above
+    # textconv = scripts/cbor-textconv.sh
