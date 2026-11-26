@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Plutus.Examples (
   inputsOutputsAreNotEmptyWithDatum,
   inputsOverlapsWithRefInputs,
   inputSpendingGuard,
+  partialWithdrawalVestingScript,
 ) where
 
 import Cardano.Ledger.Plutus.Language (Plutus (..), PlutusBinary (..), SLanguage (..))
@@ -1299,4 +1300,85 @@ inputSpendingGuard =
       , "009bae0259800811cdd6010cdd600fcdd600ecdd580dcdd600ccdd580bcdd580acdd5809c0466eb003e6eac036"
       , "6eac02e6eac0266eac01e6eb00166002007375a60600048138c0a1d680000452003280098019805000a5002132"
       , "6330034901035054350049a930c8c0040048a40064466e00dd6c80148800466008008003480001"
+      ]
+
+-- | Withdrawing script for a stateless vesting reward account
+-- Expects parameters to be applied before use: the beneficiary PubKeyHash, the total
+-- vested Lovelace, and the start and end POSIX times of the linear vesting schedule
+-- When withdrawing, succeeds only if the beneficiary is in txInfoGuards, the validity
+-- range has a lower bound t, and the account balance interval has a lower bound lo
+-- with lo >= locked(t) + withdrawal
+-- When delegating, succeeds only if the beneficiary is in txInfoGuards
+-- When registering, always succeeds
+-- Fails on malformed arguments or for any other purpose
+partialWithdrawalVestingScript :: SLanguage l -> Plutus l
+partialWithdrawalVestingScript =
+  decodeHexPlutus . mconcat . \case
+    SPlutusV1 -> error "Script not available in PlutusV1"
+    SPlutusV2 -> error "Script not available in PlutusV2"
+    SPlutusV3 -> error "Script not available in PlutusV3"
+    -- ScriptHash "bd35d27831b5c5ccc016b44a8713eab1a6b9e8ab3a27f9902e1180d6"
+    -- Preprocessed PlutusV4 Script:
+    -- @@@
+    -- partialWithdrawalVestingScript_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                     PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                     PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                     PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                     PlutusTx.Builtins.Internal.BuiltinData ->
+    --                                     PlutusTx.Builtins.Internal.BuiltinUnit
+    -- partialWithdrawalVestingScript_0 beneficiaryData_1 totalVestingAmountData_2 startTimeData_3 endTimeData_4 scriptContextData_5 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData scriptContextData_5 of
+    --                                                                                                                                                                    {PlutusLedgerApi.V4.Data.Contexts.ScriptContext txInfo_6
+    --                                                                                                                                                                                                                    (PlutusLedgerApi.V1.Scripts.Redeemer _redeemer_7)
+    --                                                                                                                                                                                                                    scriptInfo_8
+    --                                                                                                                                                                                                                    _ownHash_9 -> let {beneficiary_10 = PlutusTx.IsData.Class.unsafeFromBuiltinData beneficiaryData_1 :: PlutusLedgerApi.V1.Crypto.PubKeyHash;
+    --                                                                                                                                                                                                                                       totalVestingAmount_11 = PlutusTx.IsData.Class.unsafeFromBuiltinData totalVestingAmountData_2 :: GHC.Num.Integer.Integer;
+    --                                                                                                                                                                                                                                       startTime_12 = PlutusTx.IsData.Class.unsafeFromBuiltinData startTimeData_3 :: GHC.Num.Integer.Integer;
+    --                                                                                                                                                                                                                                       endTime_13 = PlutusTx.IsData.Class.unsafeFromBuiltinData endTimeData_4 :: GHC.Num.Integer.Integer;
+    --                                                                                                                                                                                                                                       isSignedByBeneficiary_14 = PlutusTx.Data.List.elem (PlutusLedgerApi.V1.Data.Credential.PubKeyCredential beneficiary_10) (PlutusLedgerApi.V4.Data.Contexts.txInfoGuards txInfo_6);
+    --                                                                                                                                                                                                                                       lockedVestingAmount_15 time_16 | time_16 PlutusTx.Ord.Class.<= startTime_12 = totalVestingAmount_11
+    --                                                                                                                                                                                                                                                                      | time_16 PlutusTx.Ord.Class.>= endTime_13 = 0
+    --                                                                                                                                                                                                                                                                      | GHC.Base.otherwise = let duration_17 = endTime_13 PlutusTx.Numeric.- startTime_12
+    --                                                                                                                                                                                                                                                                                              in (((totalVestingAmount_11 PlutusTx.Numeric.* (endTime_13 PlutusTx.Numeric.- time_16)) PlutusTx.Numeric.+ duration_17) PlutusTx.Numeric.- 1) `PlutusTx.Prelude.divide` duration_17;
+    --                                                                                                                                                                                                                                       accountBalanceLowerBound_18 accountId_19 = case PlutusLedgerApi.V4.Data.Contexts.txInfoAccountBalanceIntervals txInfo_6 of
+    --                                                                                                                                                                                                                                                                                  {PlutusLedgerApi.V4.Data.Contexts.AccountBalanceIntervals intervals_20 -> case PlutusTx.Data.AssocMap.lookup accountId_19 intervals_20 of
+    --                                                                                                                                                                                                                                                                                                                                                            {GHC.Maybe.Just (PlutusLedgerApi.V4.Data.Contexts.AccountBalanceLowerBound (PlutusLedgerApi.V1.Data.Value.Lovelace balanceLowerBound_21)) -> GHC.Maybe.Just balanceLowerBound_21;
+    --                                                                                                                                                                                                                                                                                                                                                             GHC.Maybe.Just (PlutusLedgerApi.V4.Data.Contexts.AccountBalanceBothBounds (PlutusLedgerApi.V1.Data.Value.Lovelace balanceLowerBound_22)
+    --                                                                                                                                                                                                                                                                                                                                                                                                                                       _) -> GHC.Maybe.Just balanceLowerBound_22;
+    --                                                                                                                                                                                                                                                                                                                                                             GHC.Maybe.Just (PlutusLedgerApi.V4.Data.Contexts.AccountBalanceExact (PlutusLedgerApi.V1.Data.Value.Lovelace balanceLowerBound_23)) -> GHC.Maybe.Just balanceLowerBound_23;
+    --                                                                                                                                                                                                                                                                                                                                                             _ -> GHC.Maybe.Nothing}};
+    --                                                                                                                                                                                                                                       withdrawalAmount_24 cred_25 = case PlutusTx.Data.AssocMap.lookup cred_25 (PlutusLedgerApi.V4.Data.Contexts.txInfoWithdrawals txInfo_6) of
+    --                                                                                                                                                                                                                                                                     {GHC.Maybe.Just (PlutusLedgerApi.V1.Data.Value.Lovelace w_26) -> w_26;
+    --                                                                                                                                                                                                                                                                      GHC.Maybe.Nothing -> 0};
+    --                                                                                                                                                                                                                                       remainsLockedAtLeast_27 (accountId_28@(PlutusLedgerApi.V4.Data.Address.AccountId cred_29)) = case (PlutusLedgerApi.V4.Data.Time.fromInclusive (PlutusLedgerApi.V4.Data.Contexts.txInfoValidRange txInfo_6),
+    --                                                                                                                                                                                                                                                                                                                                          accountBalanceLowerBound_18 accountId_28) of
+    --                                                                                                                                                                                                                                                                                                                                    {(GHC.Maybe.Just (PlutusLedgerApi.V1.Data.Time.POSIXTime time_30),
+    --                                                                                                                                                                                                                                                                                                                                      GHC.Maybe.Just balanceLowerBound_31) -> balanceLowerBound_31 PlutusTx.Ord.Class.>= (lockedVestingAmount_15 time_30 PlutusTx.Numeric.+ withdrawalAmount_24 cred_29);
+    --                                                                                                                                                                                                                                                                                                                                     _ -> GHC.Types.False}}
+    --                                                                                                                                                                                                                                   in case scriptInfo_8 of
+    --                                                                                                                                                                                                                                      {PlutusLedgerApi.V4.Data.Contexts.WithdrawingScript accountId_32 -> isSignedByBeneficiary_14 PlutusTx.Bool.&& remainsLockedAtLeast_27 accountId_32;
+    --                                                                                                                                                                                                                                       PlutusLedgerApi.V4.Data.Contexts.CertifyingScript _ix_33
+    --                                                                                                                                                                                                                                                                                         txCert_34 -> case txCert_34 of
+    --                                                                                                                                                                                                                                                                                                      {PlutusLedgerApi.V4.Data.Contexts.TxCertRegAccount _
+    --                                                                                                                                                                                                                                                                                                                                                         _ -> GHC.Types.True;
+    --                                                                                                                                                                                                                                                                                                       PlutusLedgerApi.V4.Data.Contexts.TxCertDelegAccount _
+    --                                                                                                                                                                                                                                                                                                                                                           _ -> isSignedByBeneficiary_14;
+    --                                                                                                                                                                                                                                                                                                       (PlutusLedgerApi.V4.Data.Contexts.TxCertRegAccountDeleg {}) -> isSignedByBeneficiary_14;
+    --                                                                                                                                                                                                                                                                                                       _ -> GHC.Types.False};
+    --                                                                                                                                                                                                                                       _ -> GHC.Types.False}})
+    -- @@@
+    SPlutusV4 ->
+      [ "59026b0102009800aba0aba1ab9c48888888a64dd6000c8a4006452003223232323293370e9002480248800993"
+      , "370e900348024880094a19900491000a4465266e1d20009001910013266e1d20049001910013266e1d20069001"
+      , "910012942a008a80229446ea8c04c004994a801528664dd64c00402e444444444444444444401326400d223300"
+      , "675a0049194ccc00480064003003cc0040364444444444444444444015264014800a465266e1d2000900191001"
+      , "3266e1d20049001910013266e1d20069001910013002c004dd6980b4800c8800466400644002914004dd68010c"
+      , "004dd6980b4800c880041baa001c00923371266e00ca4cdc4802000cca4cdc4800802cc8cdc199b813370066e0"
+      , "8dd680a99b8100200600148008004cdc0800801520001bad0119bad0131bad011998009000dd6c013300100e91"
+      , "1111111111111111100649900620049000d2000000d280888c8a4c008006500130050016004323001001229001"
+      , "9499baf300600490019100124660080080032800c8014880046004a500c04640124400209919800800cc00402a"
+      , "4444444444444444444011264008464520032293375e00800533005005001a515280cdd2a4000660246ea4dd70"
+      , "07a5eb8088a4dd6001c8a4006452003229001914800c8a4006452003229001914800c8a4006452003229001914"
+      , "800c8a4006452003229001914800c8a400644653001375c04b30010239bac0219bac01f9bac01d9bab01b9bac0"
+      , "199bab0179bab0159bab013808cdd6007cdd5806cdd5805cdd5804cdd5803cdd6002cc00400e6eb4c0dc009027"
+      , "18143ad000008a40065001300330110014a0043754004264c6600c9201035054350049a931"
       ]

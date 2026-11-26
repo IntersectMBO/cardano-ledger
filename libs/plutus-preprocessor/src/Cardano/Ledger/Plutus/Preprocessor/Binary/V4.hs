@@ -31,6 +31,7 @@ $inputsOutputsAreNotEmptyWithDatumQ
 $inputsOverlapsWithRefInputsQ
 $ensureTreasuryReserveQ
 $inputSpendingGuardQ
+$partialWithdrawalVestingScriptQ
 
 -- ================================================================
 -- Compile and serialize the real functions as Plutus scripts.
@@ -130,4 +131,10 @@ inputSpendingGuardBytes :: (Q [Dec], PlutusBinary)
 inputSpendingGuardBytes =
   ( inputSpendingGuardQ
   , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||inputSpendingGuard||])
+  )
+
+partialWithdrawalVestingScriptBytes :: (Q [Dec], PlutusBinary)
+partialWithdrawalVestingScriptBytes =
+  ( partialWithdrawalVestingScriptQ
+  , PlutusBinary $ Common.serialiseCompiledCode $$(P.compile [||partialWithdrawalVestingScript||])
   )

@@ -296,3 +296,60 @@ inputSpendingGuardQ =
                  in PLD.all holdsProtocolToken (PV4D.txInfoInputs txInfo)
               _ -> False
     |]
+
+partialWithdrawalVestingScriptQ :: Q [Dec]
+partialWithdrawalVestingScriptQ =
+  [d|
+    partialWithdrawalVestingScript ::
+      P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> P.BuiltinUnit
+    partialWithdrawalVestingScript beneficiaryData totalVestingAmountData startTimeData endTimeData scriptContextData =
+      P.check $
+        case unsafeFromBuiltinData scriptContextData of
+          PV4D.ScriptContext txInfo (PV4D.Redeemer _redeemer) scriptInfo _ownHash ->
+            let beneficiary = unsafeFromBuiltinData beneficiaryData :: PV4D.PubKeyHash
+                -- Lovelace vested linearly between `startTime` and `endTime` (POSIX times in milliseconds)
+                totalVestingAmount = unsafeFromBuiltinData totalVestingAmountData :: Integer
+                startTime = unsafeFromBuiltinData startTimeData :: Integer
+                endTime = unsafeFromBuiltinData endTimeData :: Integer
+                -- Key hash guards are the required signers of the transaction
+                isSignedByBeneficiary =
+                  PLD.elem (PV4D.PubKeyCredential beneficiary) (PV4D.txInfoGuards txInfo)
+                -- Lovelace still locked at `time`, rounded up so that rounding never releases
+                -- funds early
+                lockedVestingAmount time
+                  | time P.<= startTime = totalVestingAmount
+                  | time P.>= endTime = 0
+                  | P.otherwise =
+                      let duration = endTime P.- startTime
+                       in (totalVestingAmount P.* (endTime P.- time) P.+ duration P.- 1) `P.divide` duration
+                -- The ledger checks the account balance against this lower bound before the
+                -- withdrawals of the transaction are applied
+                accountBalanceLowerBound accountId =
+                  case PV4D.txInfoAccountBalanceIntervals txInfo of
+                    PV4D.AccountBalanceIntervals intervals ->
+                      case PAMD.lookup accountId intervals of
+                        Just (PV4D.AccountBalanceLowerBound (PV4D.Lovelace balanceLowerBound)) -> Just balanceLowerBound
+                        Just (PV4D.AccountBalanceBothBounds (PV4D.Lovelace balanceLowerBound) _) -> Just balanceLowerBound
+                        Just (PV4D.AccountBalanceExact (PV4D.Lovelace balanceLowerBound)) -> Just balanceLowerBound
+                        _ -> Nothing
+                withdrawalAmount cred =
+                  case PAMD.lookup cred (PV4D.txInfoWithdrawals txInfo) of
+                    Just (PV4D.Lovelace w) -> w
+                    Nothing -> 0
+                -- The ledger requires the current time to be at or after the lower bound of the
+                -- validity range, so the beneficiary can only pick an earlier `time`, which locks more
+                remainsLockedAtLeast accountId@(PV4D.AccountId cred) =
+                  case (PV4D.fromInclusive (PV4D.txInfoValidRange txInfo), accountBalanceLowerBound accountId) of
+                    (Just (PV4D.POSIXTime time), Just balanceLowerBound) -> balanceLowerBound P.>= lockedVestingAmount time P.+ withdrawalAmount cred
+                    _ -> False
+             in case scriptInfo of
+                  PV4D.WithdrawingScript accountId -> isSignedByBeneficiary P.&& remainsLockedAtLeast accountId
+                  PV4D.CertifyingScript _ix txCert ->
+                    case txCert of
+                      -- Anyone can register the account, since they pay the deposit
+                      PV4D.TxCertRegAccount _ _ -> True
+                      PV4D.TxCertDelegAccount _ _ -> isSignedByBeneficiary
+                      PV4D.TxCertRegAccountDeleg {} -> isSignedByBeneficiary
+                      _ -> False
+                  _ -> False
+    |]

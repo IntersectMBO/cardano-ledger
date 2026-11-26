@@ -205,8 +205,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNESL,
   impGlobalsL,
   impCurSlotNoG,
+  impEpochFirstSlot,
   impKeyPairsG,
   impNativeScriptsG,
+  impPlutusScriptsL,
   produceScript,
   advanceToPointOfNoReturn,
   simulateThenRestore,
@@ -431,6 +433,7 @@ data ImpTestState era = ImpTestState
   , impKeyPairs :: !(Map (KeyHash Witness) (KeyPair Witness))
   , impByronKeyPairs :: !(Map BootstrapAddress ByronKeyPair)
   , impNativeScripts :: !(Map ScriptHash (NativeScript era))
+  , impPlutusScripts :: !(Map ScriptHash ScriptTestContext)
   , impCurSlotNo :: !SlotNo
   , impGlobals :: !Globals
   , impEvents :: Seq (SomeSTSEvent era)
@@ -484,6 +487,12 @@ impCurSlotNoL = lens impCurSlotNo (\x y -> x {impCurSlotNo = y})
 impCurSlotNoG :: SimpleGetter (ImpTestState era) SlotNo
 impCurSlotNoG = impCurSlotNoL
 
+-- | First slot of the given epoch
+impEpochFirstSlot :: EpochNo -> ImpTestM era SlotNo
+impEpochFirstSlot epochNo = do
+  globals <- gets impGlobals
+  pure $ epochInfoFirst (epochInfoPure globals) epochNo
+
 impRootTxInL :: Lens' (ImpTestState era) TxIn
 impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
 
@@ -499,6 +508,9 @@ impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
 impNativeScriptsG ::
   SimpleGetter (ImpTestState era) (Map ScriptHash (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
+
+impPlutusScriptsL :: Lens' (ImpTestState era) (Map ScriptHash ScriptTestContext)
+impPlutusScriptsL = lens impPlutusScripts (\x y -> x {impPlutusScripts = y})
 
 impEventsL :: Lens' (ImpTestState era) (Seq (SomeSTSEvent era))
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
@@ -792,6 +804,7 @@ defaultInitImpTestState nes = do
       , impKeyPairs = prepState ^. keyPairsL
       , impByronKeyPairs = prepState ^. keyPairsByronL
       , impNativeScripts = mempty
+      , impPlutusScripts = mempty
       , impCurSlotNo = slotNo
       , impGlobals = globals
       , impEvents = mempty
