@@ -230,7 +230,7 @@ instance
   Arbitrary (PredicateFailure (EraRule "LEDGER" era)) =>
   Arbitrary (EbLedgersPredFailure era)
   where
-  arbitrary = LedgerFailureInEBLEDGERS <$> arbitrary
+  arbitrary = genericArbitraryU
 
 deriving newtype instance Arbitrary (EbWasNotAnnounced era)
 
@@ -243,6 +243,12 @@ deriving newtype instance Arbitrary (EbAnnouncementHashMismatch era)
 deriving newtype instance Arbitrary (EbAnnouncementSizeMismatch era)
 
 deriving newtype instance Arbitrary (EbAlreadyApplied era)
+
+deriving newtype instance Arbitrary (EbTxsSizeTooBig era)
+
+deriving newtype instance Arbitrary (EbExUnitsTooBig era)
+
+deriving newtype instance Arbitrary (EbRefScriptsSizeTooBig era)
 
 instance
   ( Era era
