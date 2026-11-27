@@ -12,7 +12,7 @@ set-git-config-env()
 }
 
 set-git-config-env \
-	diff.cbor.textconv="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/cbor-textconv.sh"
+	diff.cbor.textconv="'$(dirname "$(realpath "${BASH_SOURCE[0]}")")/cbor-textconv.sh'"
 
 # If this file is being run rather than sourced, run our arguments as a command
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then exec "$@"; fi

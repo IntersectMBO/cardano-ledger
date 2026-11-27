@@ -37,12 +37,18 @@ merged back to master.
 
 ### Recommended `git` configuration
 
-Once you cloned the repository, it is recommended to run the following
+#### For `git blame`
+
+Once you've cloned the repository, it's recommended to run the following
 from the repository's root:
+
 ```bash
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
-This way `git blame` will ignore the commits specified in the `.git-blame-ignore-revs`
+
+(This setting will be made automatically if you run `nix develop` or  or use the command given in the **Building** section of the [README](README.md#building).)
+
+With this setting, `git blame` will ignore the commits specified in the `.git-blame-ignore-revs`
 file. This can come in handy if you want to exclude large commits
 with only formatting changes.
 You can ignore the above however, if you tend to look at `git blame`
@@ -53,6 +59,32 @@ the specified commits.
 If you want to add further revisions to the `ignore-revs` file,
 just prepend the full commit hash that you want `git blame` to ignore
 and add the commit's title and date as a comment for clarity.
+
+#### For diffing CBOR files
+
+Normally, CBOR files are treated as binary when git is showing diffs. However, a pretty-printing text converter is provided in `scripts/cbor-textconv.sh`. This uses the `cuddle` and `fourmolu` utilities to output a version formatted as indented Haskell source code. With some additional git configuration, `git` can be made to use this as a preprocessor when showing diffs, which makes it much easier to understand what changed in a commit or in the working directory.
+
+You can configure this permanently with
+
+```shell
+git config set diff.cbor.textconv scripts/cbor-textconv.sh
+```
+
+However, it may be more helpful to use it on a per-command basis, when you're working on CBOR changes. For this, you can use `scripts/with-cbor-diff`. For example,
+
+```shell
+scripts/with-cbor-diff git log -p '*.cbor'
+```
+
+You can enable it for the lifetime of the current shell by sourcing it instead:
+
+```shell
+. scripts/with-cbor-diff
+```
+
+As a convenience, `nix develop` defines a shell function, `with-cbor-diff`, that's shorter to type and handles running vs sourcing automatically based on whether any arguments were given.
+
+Note that `direnv`'s `use-flake` mechanism won't define it because `direnv` works with environment variables only. As a fallback, you can set `PATH` to include `$PWD/scripts` and then use the script directly.
 
 ### Releasing and versioning
 
