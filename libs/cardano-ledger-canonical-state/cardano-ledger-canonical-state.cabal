@@ -140,8 +140,8 @@ library testlib
     cardano-ledger-canonical-state:{cardano-ledger-canonical-state, conway, validate},
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core,
-    cborg,
     cuddle,
+    cborg,
     generic-random,
     hspec,
     hspec-expectations,
@@ -182,6 +182,8 @@ test-suite tests
     directory,
     filepath,
     megaparsec,
+    prettyprinter,
+    prettyprinter-ansi-terminal,
     scls-cbor,
     text,
 

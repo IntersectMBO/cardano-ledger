@@ -6,11 +6,11 @@ module Test.Cardano.Ledger.Binary.Cuddle.GenerateCBOR (
   generateCBORMain,
 ) where
 
-import Codec.CBOR.Cuddle.CBOR.Gen
+import Codec.CBOR.Cuddle.CBOR.Generator (generateFromName)
 import Codec.CBOR.Cuddle.CBOR.Validator
-import Codec.CBOR.Cuddle.CBOR.Validator.Trace
 import Codec.CBOR.Cuddle.CDDL
 import Codec.CBOR.Cuddle.CDDL.Custom.Generator
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator (Evidenced (..), SValidity (..))
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
 import Codec.CBOR.Cuddle.IndexMappable
 import qualified Codec.CBOR.Term as CBOR
@@ -125,7 +125,7 @@ generateCBORMain eraCDDLs = do
     Left err -> die $ "Failed to resolve CDDL: " <> err
     Right root -> do
       when (gcboBinary opts) $ hSetBinaryMode stdout True
-      let env = HuddleEnv {heTwiddle = True, heRoot = root}
+      let env = HuddleEnv root
           multipleRules = length (gcboRuleNames opts) > 1
       forM_ (gcboRuleNames opts) $ \ruleName -> do
         when (multipleRules && not (gcboBinary opts)) $

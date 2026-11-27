@@ -27,7 +27,6 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripArbitraryValidate,
   huddleRoundTripCborSpec,
   huddleRoundTripGenValidate,
-  noTwiddle,
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
@@ -55,7 +54,7 @@ spec :: Spec
 spec = do
   describe "CDDL" $ do
     let v = eraProtVerHigh @ConwayEra
-    describe "Huddle" $ specWithHuddle conwayCDDL . noTwiddle $ do
+    describe "Huddle" $ specWithHuddle conwayCDDL $ do
       -- Value
       huddleRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
       huddleRoundTripArbitraryValidate @(Value ConwayEra) v "value"

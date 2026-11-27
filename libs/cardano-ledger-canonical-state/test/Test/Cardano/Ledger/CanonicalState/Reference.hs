@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.CanonicalState.Reference (
   LoadError (..),
 ) where
 
+import Codec.CBOR.Cuddle.CDDL (mapCDDLDropExt)
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
 import Codec.CBOR.Cuddle.CDDL.Resolve (
   MonoReferenced,
@@ -18,7 +19,6 @@ import Codec.CBOR.Cuddle.CDDL.Resolve (
   buildRefCTree,
   buildResolvedCTree,
  )
-import Codec.CBOR.Cuddle.IndexMappable (mapCDDLDropExt)
 import Codec.CBOR.Cuddle.Parser (pCDDL)
 import Data.Text (Text)
 import qualified Data.Text as T

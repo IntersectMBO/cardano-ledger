@@ -430,7 +430,7 @@ plutus_v1_script = bytes
 
 plutus_data =
   constr<plutus_data>
-  / {* plutus_data => plutus_data}
+  / assoc_map<plutus_data>
   / [* plutus_data]
   / big_int
   / bounded_bytes
@@ -566,6 +566,10 @@ constr<a0> =
   / #6.1399([* a0])
   / #6.1400([* a0])
 
+; The plutus data map is different from all the other maps in that it
+; allows duplicate keys.
+assoc_map<a0> = {* a0 => a0}
+
 big_int = int/ big_uint/ big_nint
 
 big_uint = #6.2(bounded_bytes)
@@ -612,7 +616,7 @@ metadata = {* metadatum_label => metadatum}
 metadatum_label = uint .size 8
 
 metadatum =
-  {* metadatum => metadatum}
+  assoc_map<metadatum>
   / [* metadatum]
   / int
   / bytes .size (0 .. 64)

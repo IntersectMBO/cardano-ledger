@@ -20,7 +20,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (EbReferences))
 import Cardano.Ledger.Dijkstra.HuddleSpec (dijkstraCDDL)
-import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval, AccountBalanceIntervals)
+import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceInterval)
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.MempoolTx (MempoolTx)
 import Cardano.Ledger.Plutus.Data (Data, Datum)
@@ -44,7 +44,6 @@ import Test.Cardano.Ledger.Core.Binary (
   fullGenCddlSpec,
  )
 import Test.Cardano.Ledger.Dijkstra.Arbitrary (
-  genNonEmptyAccountBalanceIntervals,
   genSmallDijkstraCertBlockBody,
   genSmallDijkstraTxsBlockBody,
  )
@@ -64,10 +63,6 @@ spec = do
       describe "CertRB" $
         fullAnnGenCddlSpec @(BlockBody DijkstraEra) genSmallDijkstraCertBlockBody v "block_body"
       fullCddlSpec @(AccountBalanceInterval DijkstraEra) v "account_balance_interval"
-      fullGenCddlSpec @(AccountBalanceIntervals DijkstraEra)
-        genNonEmptyAccountBalanceIntervals
-        v
-        "account_balance_intervals"
       modifyMaxSize (min 70) $
         fullCddlSpec @(Value DijkstraEra) v "value"
       fullAnnCddlSpec @(TxBody TopTx DijkstraEra) v "transaction_body"

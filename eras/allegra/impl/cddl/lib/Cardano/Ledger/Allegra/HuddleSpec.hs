@@ -27,7 +27,11 @@ module Cardano.Ledger.Allegra.HuddleSpec (
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Huddle.Gen hiding (sized)
+import qualified Cardano.Ledger.Huddle.Gen as Gen
 import Cardano.Ledger.Shelley.HuddleSpec
+import Control.Monad (replicateM)
+import Data.Foldable (forM_)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Text.Heredoc
@@ -93,11 +97,12 @@ auxiliaryDataArrayRule ::
   ) =>
   Proxy "auxiliary_data_array" -> Proxy era -> Rule
 auxiliaryDataArrayRule pname p =
-  pname
-    =.= arr
-      [ "transaction_metadata" ==> huddleRule @"metadata" p
-      , "auxiliary_scripts" ==> huddleRule @"auxiliary_scripts" p
-      ]
+  withOverrideCBORGen (forceDefinite =<<) $
+    pname
+      =.= arr
+        [ "transaction_metadata" ==> huddleRule @"metadata" p
+        , "auxiliary_scripts" ==> huddleRule @"auxiliary_scripts" p
+        ]
 
 auxiliaryDataRule ::
   forall era.
@@ -187,7 +192,12 @@ instance HuddleRule "genesis_hash" AllegraEra where
   huddleRuleNamed = genesisHashRule
 
 instance HuddleRule "vrf_cert" AllegraEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    pname
+      =.= arr
+        [ a $ huddleRule @"definite_bytes" era
+        , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+        ]
 
 instance HuddleGroup "operational_cert" AllegraEra where
   huddleGroupNamed = shelleyOperationalCertGroup
@@ -342,16 +352,38 @@ instance HuddleRule "block" AllegraEra where
 instance HuddleRule1 "set" AllegraEra where
   huddleRule1Named pname _ = untaggedSet pname
 
-allegraMetadatumRule :: Era era => Proxy "metadatum" -> Proxy era -> Rule
+allegraMetadatumRule :: HuddleRule "metadatum" era => Proxy "metadatum" -> Proxy era -> Rule
 allegraMetadatumRule pname p =
   pname
-    =.= smp
-      [ 0 <+ asKey (allegraMetadatumRule pname p) ==> allegraMetadatumRule pname p
-      ]
+    =.= huddleRule1 @"assoc_map" p (huddleRule @"metadatum" p)
     / sarr [0 <+ a (allegraMetadatumRule pname p)]
     / VInt
-    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (huddleRule @"definite_bytes" p `sized` (0 :: Word64, 64 :: Word64))
     / (VText `sized` (0 :: Word64, 64 :: Word64))
 
 instance HuddleRule "metadatum" AllegraEra where
   huddleRuleNamed = allegraMetadatumRule
+
+instance Era era => HuddleRule1 "assoc_map" era where
+  huddleRule1Named pname _p =
+    binding $ \x ->
+      comment
+        [str| The plutus data map is different from all the other maps in that it
+          | allows duplicate keys.
+          |]
+        $ withCBORGen (generator x)
+        $ withValidator (validator x)
+        $ pname =.= mp [0 <+ asKey x ==> x]
+    where
+      generator ref = Gen.sized $ \sz -> do
+        n <- choose (0, sz)
+        let
+          genData =
+            fmap unwrapSingleOrError . scale (const (sz `div` max 1 (2 * n))) $
+              generateFromGRef ref
+        assocMap <- replicateM n $ (,) <$> genData <*> genData
+        SingleTerm <$> twiddleMap assocMap
+      validator ref term = do
+        assocMap <- validateMapTerm term
+        let validateData = validateFromGRef ref
+        forM_ assocMap $ \(k, v) -> validateData k >> validateData v

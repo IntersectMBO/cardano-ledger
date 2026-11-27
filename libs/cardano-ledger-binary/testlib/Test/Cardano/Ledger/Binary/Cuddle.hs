@@ -22,7 +22,6 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   huddleAntiCborProp,
   huddleRoundTripGenValidateProp,
   specWithHuddle,
-  noTwiddle,
   HuddleEnv (..),
   toGenConfig,
   resolveHuddle,
@@ -41,19 +40,18 @@ import Cardano.Ledger.Binary (
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Decoding (label)
-import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
+import Codec.CBOR.Cuddle.CBOR.Generator (generateFromName)
 import Codec.CBOR.Cuddle.CBOR.Validator (ValidateCBORError (..), validateCBOR)
-import Codec.CBOR.Cuddle.CBOR.Validator.Trace (
-  Evidenced (..),
-  SValidity (..),
-  TraceOptions (..),
-  ValidationTrace,
-  defaultTraceOptions,
-  prettyValidationTrace,
- )
-import Codec.CBOR.Cuddle.CDDL (Name (..))
+import Codec.CBOR.Cuddle.CDDL (Name (..), mapCDDLDropExt)
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
 import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen)
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator (
+  Evidenced (..),
+  SValidity (..),
+  StepTrace,
+  defaultTraceOptions,
+  prettyStepTrace,
+ )
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
@@ -91,7 +89,6 @@ import Test.Hspec (
   describe,
   expectationFailure,
   it,
-  mapSubject,
   shouldBe,
  )
 import Test.QuickCheck (
@@ -185,17 +182,12 @@ huddleRoundTripAnnCborSpec version ruleName =
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         huddleRoundTripAnnCborProp @a version ruleName
 
-data HuddleEnv = HuddleEnv
-  { heTwiddle :: Bool
-  , heRoot :: CTreeRoot MonoReferenced
+newtype HuddleEnv = HuddleEnv
+  { heRoot :: CTreeRoot MonoReferenced
   }
 
 toGenConfig :: HuddleEnv -> GenConfig
-toGenConfig HuddleEnv {..} =
-  GenConfig
-    { gcTwiddle = heTwiddle
-    , gcRoot = mapIndex heRoot
-    }
+toGenConfig HuddleEnv {..} = GenConfig $ mapIndex heRoot
 
 huddleAntiCborProp ::
   forall a.
@@ -231,15 +223,27 @@ huddleAntiCborProp version ruleName env@HuddleEnv {heRoot} = property @(Gen Prop
                     , prettyHexEnc encoding
                     , mempty
                     , "Validation result:"
-                    , T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
-                        prettyValidationTrace (defaultTraceOptions {toFoldValid = True}) trc
+                    , showStepTrace trc
                     , mempty
                     , T.unpack $ prettyZapResult zr
                     , mempty
                     , "Decoding succeeded, expected failure"
                     ]
               pure . counterexample errMsg . isLeft $ decodeFull' @a version bs
-            Right (Evidenced SValid _) -> discard
+            Right (Evidenced SValid trc) -> pure . property $ expectationFailure errMsg
+              where
+                errMsg =
+                  unlines
+                    [ "Generated term:"
+                    , prettyHexEnc encoding
+                    , mempty
+                    , "Validation result:"
+                    , showStepTrace trc
+                    , mempty
+                    , T.unpack $ prettyZapResult zr
+                    , mempty
+                    , "The zapper generated a valid example"
+                    ]
       | otherwise -> discard
 
 huddleAntiCborSpec ::
@@ -258,11 +262,8 @@ specWithHuddle :: Cuddle.Huddle -> SpecWith HuddleEnv -> Spec
 specWithHuddle h =
   beforeAll $
     case resolveHuddle h of
-      Right ct -> pure $ HuddleEnv True ct
+      Right ct -> pure $ HuddleEnv ct
       Left err -> error err
-
-noTwiddle :: SpecWith HuddleEnv -> SpecWith HuddleEnv
-noTwiddle = mapSubject $ \env -> env {heTwiddle = False}
 
 -- | Verify that random data generated is:
 --
@@ -339,10 +340,12 @@ cddlFailure encoding err =
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
 
-showValidationTrace :: Evidenced ValidationTrace -> String
-showValidationTrace (Evidenced _ t) =
-  T.unpack . Ansi.renderStrict . layoutPretty defaultLayoutOptions $
-    prettyValidationTrace defaultTraceOptions t
+showStepTrace :: StepTrace b v -> String
+showStepTrace res =
+  T.unpack
+    . Ansi.renderStrict
+    . layoutPretty defaultLayoutOptions
+    $ prettyStepTrace defaultTraceOptions res
 
 huddleRoundTripGenValidateProp ::
   forall a.
@@ -360,8 +363,8 @@ huddleRoundTripGenValidateProp gen version ruleName HuddleEnv {heRoot = cddl} =
       case validateCBOR bs (Name ruleName) (mapIndex cddl) of
         Left e -> expectationFailure $ "Validation input error:\n" <> show e
         Right (Evidenced SValid _) -> pure ()
-        Right res@(Evidenced SInvalid _) ->
-          expectationFailure $ "CBOR Validation failed:\n" <> showValidationTrace res
+        Right (Evidenced SInvalid trc) ->
+          expectationFailure $ "CBOR Validation failed:\n" <> showStepTrace trc
 
 huddleRoundTripGenValidate ::
   forall a.

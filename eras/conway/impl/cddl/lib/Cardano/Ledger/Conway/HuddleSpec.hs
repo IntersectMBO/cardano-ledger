@@ -68,8 +68,10 @@ module Cardano.Ledger.Conway.HuddleSpec (
   maybeTaggedNonemptyOset,
   conwayCostModelsGenerator,
   generateMaybeTaggedSet,
+  redeemerMapRule,
 ) where
 
+import Cardano.Ledger.Babbage.HuddleSpec (maryValueRule)
 import Cardano.Ledger.Babbage.HuddleSpec hiding (
   alonzoRedeemer,
   alonzoRedeemerTag,
@@ -81,32 +83,9 @@ import Cardano.Ledger.Babbage.HuddleSpec hiding (
   urlRule,
  )
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Huddle.Gen (
-  CBORGen,
-  MonadGen (choose, resize),
-  RuleTerm (..),
-  Term (..),
-  antiChoose,
-  antiVectorOfUnique,
-  arbitrary,
-  faultyNum,
-  genArrayTerm,
-  genMapTerm,
-  genRule,
-  generateFromGRef,
-  liftAntiGen,
-  oneof,
-  replicateMNorm,
-  shuffle,
-  unwrapSingle,
-  unwrapSingleOrError,
-  validateArrayTerm,
-  validateFromGRef,
-  withAntiGen,
-  (|!),
- )
+import Cardano.Ledger.Huddle.Gen hiding (sized)
 import Cardano.Ledger.Huddle.Gen qualified as Gen
-import Control.Monad (unless)
+import Control.Monad (forM_, unless, when)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Foldable (traverse_)
 import Data.Maybe (fromMaybe)
@@ -137,11 +116,12 @@ anchorRule ::
   forall era.
   (HuddleRule "url" era, HuddleRule "hash32" era) => Proxy "anchor" -> Proxy era -> Rule
 anchorRule pname p =
-  pname
-    =.= arr
-      [ "anchor_url" ==> huddleRule @"url" p
-      , "anchor_data_hash" ==> huddleRule @"hash32" p
-      ]
+  withOverrideCBORGen (forceDefinite =<<) $
+    pname
+      =.= arr
+        [ "anchor_url" ==> huddleRule @"url" p
+        , "anchor_data_hash" ==> huddleRule @"hash32" p
+        ]
 
 drepRule ::
   forall era.
@@ -166,11 +146,11 @@ voterRule pname p =
     / arr [3, a (huddleRule @"script_hash" p)]
     / arr [4, a (huddleRule @"addr_keyhash" p)]
 
-dnsNameRule :: Proxy "dns_name" -> Rule
-dnsNameRule pname = pname =.= VText `sized` (0 :: Word64, 128 :: Word64)
+dnsNameRule :: Era era => Proxy "dns_name" -> Proxy era -> Rule
+dnsNameRule pname era = pname =.= huddleRule @"definite_text" era `sized` (0 :: Word64, 128 :: Word64)
 
-urlRule :: Proxy "url" -> Rule
-urlRule pname = pname =.= VText `sized` (0 :: Word64, 128 :: Word64)
+urlRule :: Era era => Proxy "url" -> Proxy era -> Rule
+urlRule pname era = pname =.= huddleRule @"definite_text" era `sized` (0 :: Word64, 128 :: Word64)
 
 voteRule :: Proxy "vote" -> Rule
 voteRule pname = pname =.= (0 :: Integer) ... (2 :: Integer)
@@ -414,8 +394,9 @@ votingProcedureRule ::
   Proxy era ->
   Rule
 votingProcedureRule pname p =
-  pname
-    =.= arr [a (huddleRule @"vote" p), a (huddleRule @"anchor" p / VNil)]
+  withOverrideCBORGen (forceDefinite =<<) $
+    pname
+      =.= arr [a (huddleRule @"vote" p), a (huddleRule @"anchor" p / VNil)]
 
 votingProceduresRule ::
   forall era.
@@ -441,11 +422,12 @@ constitutionRule ::
   Proxy era ->
   Rule
 constitutionRule pname p =
-  pname
-    =.= arr
-      [ a (huddleRule @"anchor" p)
-      , a (huddleRule @"guardrails_script_hash" p / VNil)
-      ]
+  withOverrideCBORGen (forceDefinite =<<) $
+    pname
+      =.= arr
+        [ a (huddleRule @"anchor" p)
+        , a (huddleRule @"guardrails_script_hash" p / VNil)
+        ]
 
 parameterChangeActionGroup ::
   forall era.
@@ -581,13 +563,14 @@ proposalProcedureRule ::
   Proxy era ->
   Rule
 proposalProcedureRule pname p =
-  pname
-    =.= arr
-      [ "deposit" ==> huddleRule @"coin" p
-      , a (huddleRule @"reward_account" p)
-      , a (huddleRule @"gov_action" p)
-      , a (huddleRule @"anchor" p)
-      ]
+  withOverrideCBORGen (forceDefinite =<<) $
+    pname
+      =.= arr
+        [ "deposit" ==> huddleRule @"coin" p
+        , a (huddleRule @"reward_account" p)
+        , a (huddleRule @"gov_action" p)
+        , a (huddleRule @"anchor" p)
+        ]
 
 proposalProceduresRule ::
   forall era.
@@ -648,21 +631,31 @@ conwayMultiasset pname p =
             ==> mp [1 <+ asKey (huddleRule @"asset_name" p) ==> x]
         ]
 
-conwayValueRule ::
-  forall era.
-  ( HuddleRule "positive_coin" era
-  , HuddleRule1 "multiasset" era
-  ) =>
-  Proxy "value" ->
-  Proxy era ->
-  Rule
-conwayValueRule pname p =
-  pname
-    =.= huddleRule @"coin" p
-    / sarr
-      [ a $ huddleRule @"coin" p
-      , a $ huddleRule1 @"multiasset" p (huddleRule @"positive_coin" p)
-      ]
+conwayValuePairRule ::
+  HuddleRule1 "multiasset" era =>
+  Proxy "value_pair" -> Proxy era -> Rule
+conwayValuePairRule pname era =
+  withOverrideCBORGen (forceDefinite =<<) $
+    withValidator validator $
+      pname
+        =.= arr
+          [ a $ huddleRule @"coin" era
+          , a $ huddleRule1 @"multiasset" era (huddleRule @"positive_coin" era)
+          ]
+  where
+    validator term = case term of
+      TList [coinTerm, maTerm] -> do
+        validateFromName "coin" coinTerm
+        policies <- validateMapTerm maTerm
+        forM_ policies $ \(policyIdTerm, assetsTerm) -> do
+          validateFromName "policy_id" policyIdTerm
+          assets <- validateMapTerm assetsTerm
+          when (null assets) $ fail "Expected a non-empty asset map"
+          forM_ assets $ \(assetNameTerm, quantityTerm) -> do
+            validateFromName "asset_name" assetNameTerm
+            validateFromName "positive_coin" quantityTerm
+      TList _ -> fail "Expected a list with two elements"
+      _ -> fail "Expected a definite length list"
 
 conwayMintRule ::
   forall era.
@@ -726,7 +719,7 @@ conwayRedeemer pname p =
 generateMaybeTaggedSet :: Int -> CBORGen Term -> CBORGen Term
 generateMaybeTaggedSet nElems gen = do
   elems <- fromMaybe QC.discard <$> withAntiGen (antiVectorOfUnique nElems) gen
-  elemsArr <- genArrayTerm elems
+  elemsArr <- twiddleArray elems
   tagged <- arbitrary
   if tagged
     then do
@@ -748,14 +741,13 @@ mkMaybeTaggedSet pname n = binding $ \x ->
         let sz' = max n sz in antiChoose (n, sz') (0, sz')
       fmap SingleTerm . generateMaybeTaggedSet nElems $ unwrapSingleOrError <$> generateFromGRef ref
     validator ref term = do
-      term_ <- unwrapSingle term
       let
         validateInner t = do
           elems <- validateArrayTerm t
           unless (length elems == length (nubOrd elems)) $
             fail "not all elements are unique"
           traverse_ (validateFromGRef ref) elems
-      case term_ of
+      case term of
         TTagged t x | t == 258 -> validateInner x
         x -> validateInner x
 
@@ -776,7 +768,7 @@ maybeTaggedNonemptyList pname = binding $ \x ->
   pname =.= tag 258 (arr [1 <+ a x]) / sarr [1 <+ a x]
 
 instance HuddleRule "bounded_bytes" ConwayEra where
-  huddleRuleNamed pname _ = boundedBytesRule pname
+  huddleRuleNamed = boundedBytesRule
 
 instance HuddleRule "big_uint" ConwayEra where
   huddleRuleNamed = bigUintRule
@@ -791,10 +783,10 @@ instance HuddleRule "network_id" ConwayEra where
   huddleRuleNamed pname _ = networkIdRule pname
 
 instance HuddleRule "dns_name" ConwayEra where
-  huddleRuleNamed pname _ = dnsNameRule pname
+  huddleRuleNamed = dnsNameRule
 
 instance HuddleRule "url" ConwayEra where
-  huddleRuleNamed pname _ = urlRule pname
+  huddleRuleNamed = urlRule
 
 instance HuddleRule "genesis_hash" ConwayEra where
   huddleRuleNamed = genesisHashRule
@@ -821,7 +813,7 @@ instance HuddleRule "vote" ConwayEra where
   huddleRuleNamed pname _ = voteRule pname
 
 instance HuddleRule "asset_name" ConwayEra where
-  huddleRuleNamed pname _ = assetNameRule pname
+  huddleRuleNamed = assetNameRule
 
 instance HuddleRule "drep_credential" ConwayEra where
   huddleRuleNamed = drepCredentialRule
@@ -843,22 +835,23 @@ instance HuddleRule "voter" ConwayEra where
 
 instance (Era era, HuddleRule "transaction_id" era) => HuddleRule "gov_action_id" era where
   huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ "transaction_id" ==> huddleRule @"transaction_id" p
-        , "gov_action_index" ==> VUInt `sized` (2 :: Word64)
-        ]
+    withOverrideCBORGen (forceDefinite =<<) $
+      pname
+        =.= arr
+          [ "transaction_id" ==> huddleRule @"transaction_id" p
+          , "gov_action_index" ==> VUInt `sized` (2 :: Word64)
+          ]
 
 instance HuddleRule "operational_cert" ConwayEra where
   huddleRuleNamed = babbageOperationalCertRule
 
 instance Era era => HuddleRule "plutus_v3_script" era where
-  huddleRuleNamed pname _ =
+  huddleRuleNamed pname era =
     comment
       [str| Conway introduces Plutus V3 with support for new governance features.
           |]
       . withCBORGen plutusScriptGen
-      $ pname =.= VBytes
+      $ pname =.= huddleRule @"definite_bytes" era
 
 instance Era era => HuddleRule "negative_int64" era where
   huddleRuleNamed pname p =
@@ -1032,8 +1025,11 @@ instance HuddleRule "required_signers" ConwayEra where
     pname
       =.= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
 
+instance HuddleRule "value_pair" ConwayEra where
+  huddleRuleNamed = conwayValuePairRule
+
 instance HuddleRule "value" ConwayEra where
-  huddleRuleNamed = conwayValueRule
+  huddleRuleNamed = maryValueRule
 
 instance HuddleRule "mint" ConwayEra where
   huddleRuleNamed = conwayMintRule
@@ -1043,7 +1039,7 @@ instance HuddleRule "withdrawals" ConwayEra where
 
 instance HuddleRule "data" ConwayEra where
   huddleRuleNamed pname p =
-    pname =.= tag 24 (VBytes `cbor` huddleRule @"plutus_data" p)
+    pname =.= tag 24 (huddleRule @"definite_bytes" p `cbor` huddleRule @"plutus_data" p)
 
 instance HuddleRule "datum_option" ConwayEra where
   huddleRuleNamed pname p =
@@ -1120,9 +1116,9 @@ conwayCostModelsGenerator = Gen.sized $ \size -> do
   kvs <- forM keys $ \k -> resize (size `div` 2) $ do
     nVals <- Gen.sized $ \sz -> choose (0, sz)
     v <- withAntiGen (replicateMNorm nVals) $ genRule @"int64" @era
-    vs <- genArrayTerm v
+    vs <- twiddleArray v
     pure (TInt k, vs)
-  SingleTerm <$> genMapTerm kvs
+  SingleTerm <$> twiddleMap kvs
 
 instance HuddleRule "cost_models" ConwayEra where
   huddleRuleNamed pname p =
@@ -1150,6 +1146,69 @@ instance HuddleRule "redeemer_tag" ConwayEra where
 instance HuddleRule "redeemer" ConwayEra where
   huddleRuleNamed = conwayRedeemer
 
+instance Era era => HuddleRule "redeemer_index" era where
+  huddleRuleNamed pname _p =
+    pname =.= VUInt `sized` (4 :: Word64)
+
+redeemerMapRule ::
+  ( HuddleRule "redeemer_tag" era
+  , HuddleRule "big_int" era
+  , HuddleRule "bounded_bytes" era
+  , HuddleRule "ex_units" era
+  ) =>
+  Proxy era -> Type0
+redeemerMapRule p =
+  a $
+    mp
+      [ 1
+          <+ asKey
+            ( arr
+                [ "tag" ==> huddleRule @"redeemer_tag" p
+                , "index" ==> huddleRule @"redeemer_index" p
+                ]
+            )
+          ==> arr
+            [ "data" ==> huddleRule @"plutus_data" p
+            , "ex_units" ==> huddleRule @"ex_units" p
+            ]
+      ]
+
+instance HuddleRule "redeemer_map" ConwayEra where
+  huddleRuleNamed pname p =
+    withValidator validator $
+      withCBORGen generator $
+        pname =.= redeemerMapRule p
+    where
+      validator term = do
+        kvs <- validateMapTerm term
+        forM_ kvs $ \(kTerm, vTerm) -> do
+          k <- validateArrayTerm kTerm
+          case k of
+            [t, i] -> do
+              validateFromName "redeemer_tag" t
+              validateFromName "redeemer_index" i
+            _ -> fail "expected 2 elements"
+          v <- validateArrayTerm vTerm
+          case v of
+            [d, eu] -> do
+              validateFromName "plutus_data" d
+              validateFromName "ex_units" eu
+            _ -> fail "expected 2 elements"
+      generator = do
+        n <- Gen.sized $ \sz -> antiChoose (1, max 1 sz) (0, sz)
+        kvs <- replicateMNorm n . Gen.scale (`div` max 1 n) $ do
+          t <- generateFromName "redeemer_tag"
+          i <- generateFromName "redeemer_index"
+          d <- generateFromName "plutus_data"
+          e <- generateFromName "ex_units"
+          toDefiniteArray <- pure TList |! pure TListI
+          keyArr <- faultyTryGen [t, i] $ listOf genTerm
+          valueArr <- faultyTryGen [d, e] $ listOf genTerm
+          key <- twiddleArray keyArr
+          let value = toDefiniteArray valueArr
+          pure (key, value)
+        SingleTerm <$> twiddleMap kvs
+
 instance HuddleRule "redeemers" ConwayEra where
   huddleRuleNamed pname p =
     comment
@@ -1159,19 +1218,7 @@ instance HuddleRule "redeemers" ConwayEra where
           |]
       $ pname
         =.= sarr [1 <+ a (huddleRule @"redeemer" p)]
-        / smp
-          [ 1
-              <+ asKey
-                ( arr
-                    [ "tag" ==> huddleRule @"redeemer_tag" p
-                    , "index" ==> VUInt `sized` (4 :: Word64)
-                    ]
-                )
-              ==> arr
-                [ "data" ==> huddleRule @"plutus_data" p
-                , "ex_units" ==> huddleRule @"ex_units" p
-                ]
-          ]
+        / huddleRule @"redeemer_map" p
 
 instance HuddleRule "script_data_hash" ConwayEra where
   huddleRuleNamed pname p =
@@ -1298,11 +1345,12 @@ instance HuddleRule "transaction" ConwayEra where
 
 instance HuddleRule "ex_unit_prices" ConwayEra where
   huddleRuleNamed pname p =
-    pname
-      =.= arr
-        [ "mem_price" ==> huddleRule @"nonnegative_interval" p
-        , "step_price" ==> huddleRule @"nonnegative_interval" p
-        ]
+    withOverrideCBORGen (forceDefinite =<<) $
+      pname
+        =.= arr
+          [ "mem_price" ==> huddleRule @"nonnegative_interval" p
+          , "step_price" ==> huddleRule @"nonnegative_interval" p
+          ]
 
 instance HuddleRule "pool_voting_thresholds" ConwayEra where
   huddleRuleNamed = poolVotingThresholdsRule
@@ -1353,7 +1401,13 @@ instance HuddleRule "update" ConwayEra where
   huddleRuleNamed = updateRule
 
 instance HuddleRule "vrf_cert" ConwayEra where
-  huddleRuleNamed pname _ = pname =.= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+  huddleRuleNamed pname era =
+    withOverrideCBORGen (forceDefinite =<<) $
+      pname
+        =.= arr
+          [ a $ huddleRule @"definite_bytes" era
+          , a (huddleRule @"definite_bytes" era `sized` (80 :: Word64))
+          ]
 
 instance HuddleRule "header_body" ConwayEra where
   huddleRuleNamed = babbageHeaderBodyRule

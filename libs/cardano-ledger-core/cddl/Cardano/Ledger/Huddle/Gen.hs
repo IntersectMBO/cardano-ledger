@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,11 +21,17 @@ module Cardano.Ledger.Huddle.Gen (
   genRule,
   generateFromName,
   generateFromGRef,
-  genArrayTerm,
-  genBytesTerm,
-  genStringTerm,
-  genMapTerm,
   unwrapSingleOrError,
+  twiddleArray,
+  twiddleMap,
+  twiddleText,
+  twiddleBytes,
+  genNBytes,
+  genBytes,
+  genNBytesText,
+  genText,
+  genTerm,
+  forceDefinite,
 
   -- * Term validators
   module CustomValidator,
@@ -53,14 +60,13 @@ module Cardano.Ledger.Huddle.Gen (
 
 import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Huddle (HuddleRule ())
-import Codec.CBOR.Cuddle.CBOR.Gen (generateFromGRef, generateFromName)
+import Codec.CBOR.Cuddle.CBOR.Generator
 import Codec.CBOR.Cuddle.CBOR.Validator (validateFromGRef, validateFromName)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (nintMin, uintMax)
 import Codec.CBOR.Cuddle.CDDL.Custom.Core as CustomCore
 import Codec.CBOR.Cuddle.CDDL.Custom.Generator as CustomGen
 import Codec.CBOR.Cuddle.CDDL.Custom.Validator as CustomValidator
-import Control.Monad.Reader (asks)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function (on)
@@ -117,27 +123,6 @@ antiVectorOfUniqueBy eq n gen = do
       | otherwise = pure (Just elems)
   go n triesPerElement []
 
-genArrayTerm :: [Term] -> CBORGen Term
-genArrayTerm es =
-  ifTwiddle (GenT.elements [TList es, TListI es]) (pure $ TList es)
-
-genBytesTerm :: ByteString -> CBORGen Term
-genBytesTerm bs =
-  ifTwiddle (GenT.elements [TBytes bs, TBytesI $ LBS.fromStrict bs]) (pure $ TBytes bs)
-
-genStringTerm :: T.Text -> CBORGen Term
-genStringTerm t =
-  ifTwiddle (GenT.elements [TString t, TStringI $ LT.fromStrict t]) (pure $ TString t)
-
-genMapTerm :: [(Term, Term)] -> CBORGen Term
-genMapTerm m =
-  ifTwiddle (GenT.elements [TMap m, TMapI m]) (pure $ TMap m)
-
-ifTwiddle :: CBORGen a -> CBORGen a -> CBORGen a
-ifTwiddle yes no = do
-  twiddle <- asks (gcTwiddle . geConfig)
-  if twiddle then yes else no
-
 -- Term validators
 
 validateInt :: Term -> Validator Integer
@@ -185,3 +170,19 @@ unwrapSingle _ = fail "Expected a single term"
 unwrapSingleOrError :: RuleTerm -> Term
 unwrapSingleOrError (SingleTerm x) = x
 unwrapSingleOrError _ = error "Expected a single term"
+
+forceDefinite :: RuleTerm -> CBORGen RuleTerm
+forceDefinite = \case
+  SingleTerm (TListI es) -> do
+    toListTerm <- pure TList |! pure TListI
+    pure $ SingleTerm $ toListTerm es
+  SingleTerm (TMapI kvs) -> do
+    toMapTerm <- pure TMap |! pure TMapI
+    pure $ SingleTerm $ toMapTerm kvs
+  SingleTerm (TBytesI bs) -> do
+    toBytesTerm <- pure (TBytes . LBS.toStrict) |! pure TBytesI
+    pure $ SingleTerm $ toBytesTerm bs
+  SingleTerm (TStringI s) -> do
+    toTextTerm <- pure (TString . LT.toStrict) |! pure TStringI
+    pure $ SingleTerm $ toTextTerm s
+  x -> pure x

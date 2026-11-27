@@ -32,8 +32,8 @@ import Cardano.SCLS.CBOR.Canonical (getRawDecoder, getRawEncoding)
 import Cardano.SCLS.CBOR.Canonical.Encoder
 import Cardano.SCLS.NamespaceCodec
 import Cardano.SCLS.Versioned
-import Codec.CBOR.Cuddle.CBOR.Validator.Trace (Evidenced, ValidationTrace)
-import qualified Codec.CBOR.Cuddle.CBOR.Validator.Trace as VT
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator (Block (..), Evidenced, StepTrace)
+import qualified Codec.CBOR.Cuddle.CDDL.Custom.Validator as VT
 import Codec.CBOR.FlatTerm (fromFlatTerm, toFlatTerm)
 import Codec.CBOR.Term (decodeTerm)
 import Codec.CBOR.Write (toStrictByteString)
@@ -168,7 +168,7 @@ propNamespaceEntryRoundTrip a = do
 
 debugValidateType ::
   forall ns a.
-  (KnownSymbol ns, ToCanonicalCBOR ns a) => T.Text -> a -> Maybe (Evidenced ValidationTrace)
+  (KnownSymbol ns, ToCanonicalCBOR ns a) => T.Text -> a -> Maybe (Evidenced (StepTrace TermBlock))
 debugValidateType t a =
   validateBytesAgainst (toStrictByteString $ getRawEncoding (toCanonicalCBOR (Proxy @ns) a)) nsName t
   where
