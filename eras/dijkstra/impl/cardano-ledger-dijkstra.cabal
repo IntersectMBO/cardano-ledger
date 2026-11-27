@@ -164,6 +164,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EbSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.EpochSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec
     Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec
@@ -233,6 +234,7 @@ library testlib
     plutus-tx,
     small-steps,
     tree-diff,
+    vector-map,
 
   -- ghc-9.8 doesn't support the `-fno-spec-eval` option, and unless this is used on some
   -- modules in this component, ghc generates code that loops during dictionary evaluation

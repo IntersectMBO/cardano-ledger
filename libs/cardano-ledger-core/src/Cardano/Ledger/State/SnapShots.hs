@@ -45,6 +45,7 @@ module Cardano.Ledger.State.SnapShots (
   ssActiveStakeL,
   msSnapShotL,
   ssSnapShotL,
+  msLeiosCommitteeL,
   ssLeiosCommitteeL,
   gsSnapShotL,
 ) where
@@ -726,6 +727,9 @@ ssSnapShotL = lens ssSnapShot (\ss u -> ss {ssSnapShot = u})
 
 ssLeiosCommitteeL :: Lens' SetSnapShot LeiosCommittee
 ssLeiosCommitteeL = lens ssLeiosCommittee (\ss u -> ss {ssLeiosCommittee = u})
+
+msLeiosCommitteeL :: Lens' MarkSnapShot LeiosCommittee
+msLeiosCommitteeL = lens msLeiosCommittee (\ms u -> ms {msLeiosCommittee = u})
 
 gsSnapShotL :: Lens' GoSnapShot SnapShot
 gsSnapShotL = lens gsSnapShot (\gs u -> gs {gsSnapShot = u})

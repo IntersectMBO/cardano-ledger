@@ -18,6 +18,7 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbSpec as EB
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.EpochSpec as EPOCH
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LeiosCertSpec as LEIOSCERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.MempoolSpec as MEMPOOL
@@ -40,6 +41,7 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ Conway.ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ Conway.ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ Conway.ConwayHardForkEvent era
+  , Event (EraRule "POOLREAP" era) ~ Shelley.ShelleyPoolreapEvent era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   , HashAnnotated (Tx TopTx era) EraIndependentTx
   ) =>
@@ -55,6 +57,7 @@ spec era = do
     SUBLEDGER.spec
     CERT.spec
     ENTITIES.spec
+    EPOCH.spec
     SUBGOV.spec
     POOL.spec
     SNAP.spec
