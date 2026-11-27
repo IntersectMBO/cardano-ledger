@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -16,7 +17,7 @@ import Cardano.Ledger.Block (
   ebReferencesAnnouncementSizeL,
   slotNoBlockHeaderL,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Dijkstra (DijkstraApplyBlock (..))
 import Cardano.Ledger.Dijkstra.Block.Endorser (EbTransactions (..), EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder (
@@ -29,19 +30,25 @@ import Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder (
  )
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.PParams (
+  ppMaxEndorserBlockExUnitsL,
   ppMaxEndorserBlockReferencesSizeL,
   ppMaxEndorserBlockTxsSizeL,
+  ppMaxRefScriptSizePerEndorserBlockL,
  )
 import Cardano.Ledger.Dijkstra.Rules (
   EbAlreadyApplied (..),
   EbAnnouncementHashMismatch (..),
   EbAnnouncementSizeMismatch (..),
   EbAnnouncementSlotMismatch (..),
+  EbExUnitsTooBig (..),
+  EbRefScriptsSizeTooBig (..),
   EbReferencesSizeTooBig (..),
   EbTxsSizeTooBig (..),
   EbWasNotAnnounced (..),
  )
+import Cardano.Ledger.Plutus (ExUnits (..), OrdExUnits (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (nesLastTickSlotNoL)
+import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Control.Monad (foldM)
 import Control.Monad.State.Strict (gets)
@@ -54,6 +61,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
@@ -78,10 +86,12 @@ spec = describe "EB re-builder" $ do
 
     -- Builds an endorser block out of @n@ freshly submitted transactions, leaving the
     -- ledger state exactly as it was before those transactions were submitted.
+    makeEbFrom :: ImpTestM era () -> ImpTestM era (EndorserBlock era)
+    makeEbFrom txsAction =
+      simulateThenRestore $ impRecordSubmittedTxs txsAction >>= makeEndorserBlock
+
     makeEb :: Int -> ImpTestM era (EndorserBlock era)
-    makeEb n =
-      simulateThenRestore $
-        impRecordSubmittedTxs (replicateM_ n submitSimpleTx) >>= makeEndorserBlock
+    makeEb n = makeEbFrom (replicateM_ n submitSimpleTx)
 
     -- Announces an endorser block with an announcement that need not be the correct one.
     announceWith :: EbReferencesAnnouncement -> ImpTestM era (Block TestBlockHeader era)
@@ -126,6 +136,26 @@ spec = describe "EB re-builder" $ do
         EbReBuilderSuccess st' _ -> pure st'
         EbReBuilderError e _ -> assertFailure $ "Unexpected re-builder error: " <> show e
         EbReBuilderTxError txIx _ -> assertFailure $ "Unexpected LEDGER failure at " <> show txIx
+
+    -- Snocs transactions in order and returns the first re-builder error.
+    firstSnocError :: EbReBuilderState era -> [Tx TopTx era] -> ImpTestM era (EbReBuilderError era)
+    firstSnocError _ [] =
+      assertFailure "Expected a re-builder error, but every transaction was accepted"
+    firstSnocError st (tx : rest) = do
+      globals <- gets (^. impGlobalsL)
+      case snocTxEbReBuilder globals st (Right tx) of
+        EbReBuilderSuccess st' _ -> firstSnocError st' rest
+        EbReBuilderError e _ -> pure e
+        EbReBuilderTxError txIx _ -> assertFailure $ "Unexpected LEDGER failure at " <> show txIx
+
+    -- Expects the transaction to be rejected by the LEDGER rule, and returns its position.
+    snocTxFails :: EbReBuilderState era -> Tx TopTx era -> ImpTestM era TxIx
+    snocTxFails st tx = do
+      globals <- gets (^. impGlobalsL)
+      case snocTxEbReBuilder globals st (Right tx) of
+        EbReBuilderTxError txIx _ -> pure txIx
+        EbReBuilderSuccess _ _ -> assertFailure "Expected a LEDGER failure, got success"
+        EbReBuilderError e _ -> assertFailure $ "Expected a LEDGER failure, got " <> show e
 
     snocFails :: EbReBuilderState era -> Tx TopTx era -> ImpTestM era (EbReBuilderError era)
     snocFails st tx = do
@@ -259,3 +289,76 @@ spec = describe "EB re-builder" $ do
       eb <- makeAnnouncedEb 3
       _ <- initFor eb
       pure ()
+
+  describe "Transaction failures" $ do
+    it "Rejects a transaction whose declared size is wrong" $ do
+      eb <- makeEb 2
+      -- Announce references that over-declare the size of the first transaction.
+      let refs = eb ^. referencesEndorserBlockL . txRefsEbReferencesG
+          bumped =
+            OMap.fromFoldable $
+              zipWith
+                (\i (txHash, size) -> (txHash, if i == (0 :: Int) then size + 1 else size))
+                [0 ..]
+                (OMap.assocList refs)
+          ebWrongSize = eb & referencesEndorserBlockL .~ mkEbReferences bumped
+      _ <- announceWith $ mkEbReferencesAnnouncement ebWrongSize
+      st <- initFor ebWrongSize
+      firstTx : _ <- pure $ endorsedTxs eb
+      let actualSize = originalBytesSize32 firstTx
+      err <- snocFails st firstTx
+      err
+        `shouldBe` EbReBuilderTxSizeMismatch
+          minBound
+          Mismatch {mismatchSupplied = actualSize, mismatchExpected = actualSize + 1}
+
+    it "Reports a transaction that the LEDGER rule rejects" $ do
+      eb <- makeAnnouncedEb 2
+      -- Raising the minimum fee leaves hashes and sizes intact, but makes every fee too small.
+      modifyPParams $ ppTxFeePerByteL .~ CoinPerByte (CompactCoin 1000000)
+      st <- initFor eb
+      firstTx : _ <- pure $ endorsedTxs eb
+      snocTxFails st firstTx `shouldReturn` minBound
+
+    it "Rejects the transaction that pushes execution units over the limit" $ do
+      let alwaysSucceedsHash = hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
+      nEbTxs <- choose (2, 5)
+      txIns <- replicateM nEbTxs $ produceScript alwaysSucceedsHash
+      eb <- makeEbFrom $ forM_ txIns $ \txIn ->
+        submitTx_ $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL .~ [txIn]
+      _ <- announceWith $ mkEbReferencesAnnouncement eb
+      let ebExUnits@(ExUnits mem steps) = foldMap getTotalExUnits $ endorsedTxs eb
+          insufficientLimit = OrdExUnits $ ExUnits (mem - 1) steps
+      modifyPParams $ ppMaxEndorserBlockExUnitsL .~ insufficientLimit
+      st <- initFor eb
+      err <- firstSnocError st (endorsedTxs eb)
+      err
+        `shouldBe` EbReBuilderExUnitsTooBig
+          ( EbExUnitsTooBig
+              Mismatch
+                { mismatchSupplied = OrdExUnits ebExUnits
+                , mismatchExpected = insufficientLimit
+                }
+          )
+
+    it "Rejects the transaction that pushes the reference scripts size over the limit" $ do
+      script <- RequireSignature @era <$> freshKeyHash
+      refScriptTxIn <- produceRefScript $ fromNativeScript script
+      nEbTxs <- choose (2, 10)
+      eb <-
+        makeEbFrom . replicateM_ nEbTxs . submitTx_ $
+          mkBasicTx mkBasicTxBody & bodyTxL . referenceInputsTxBodyL .~ [refScriptTxIn]
+      _ <- announceWith $ mkEbReferencesAnnouncement eb
+      let refScriptsSize = nEbTxs * originalBytesSize script
+      exactLimit <- integralToBounded @Int @Word32 refScriptsSize
+      modifyPParams $ ppMaxRefScriptSizePerEndorserBlockL .~ exactLimit - 1
+      st <- initFor eb
+      err <- firstSnocError st (endorsedTxs eb)
+      err
+        `shouldBe` EbReBuilderRefScriptsSizeTooBig
+          ( EbRefScriptsSizeTooBig
+              Mismatch
+                { mismatchSupplied = refScriptsSize
+                , mismatchExpected = refScriptsSize - 1
+                }
+          )
