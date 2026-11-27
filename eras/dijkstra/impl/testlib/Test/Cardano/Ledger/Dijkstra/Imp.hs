@@ -8,6 +8,8 @@ module Test.Cardano.Ledger.Dijkstra.Imp where
 
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra
+import Cardano.Ledger.Dijkstra.Block.Endorser (EndorserBlock)
+import Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder (EraEndorserBlockReBuilder)
 import Cardano.Ledger.Dijkstra.Core
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
@@ -16,6 +18,7 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec as BBODY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbReBuilderSpec as EBREBUILDER
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EbSpec as EB
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
@@ -42,6 +45,9 @@ spec ::
   , Event (EraRule "HARDFORK" era) ~ Conway.ConwayHardForkEvent era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   , HashAnnotated (Tx TopTx era) EraIndependentTx
+  , EraEndorserBlockReBuilder era
+  , Eq (EndorserBlock era)
+  , Show (EndorserBlock era)
   ) =>
   proxy era ->
   Spec
@@ -67,6 +73,7 @@ spec era = do
     SUBPOOL.spec
     SUBGOVCERT.spec
     EB.spec
+    EBREBUILDER.spec
 
 dijkstraOnlySpec :: Spec
 dijkstraOnlySpec =

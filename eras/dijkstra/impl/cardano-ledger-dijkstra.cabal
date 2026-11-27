@@ -32,6 +32,7 @@ library
   exposed-modules:
     Cardano.Ledger.Dijkstra
     Cardano.Ledger.Dijkstra.Block.Endorser
+    Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder
     Cardano.Ledger.Dijkstra.BlockBody
     Cardano.Ledger.Dijkstra.BlockBody.Internal
     Cardano.Ledger.Dijkstra.Core
@@ -142,6 +143,7 @@ library
     text,
     transformers,
     validation-selective,
+    vector,
     vector-map >=1.1,
 
   if flag(asserts)
@@ -162,6 +164,7 @@ library testlib
     Test.Cardano.Ledger.Dijkstra.Imp
     Test.Cardano.Ledger.Dijkstra.Imp.BbodySpec
     Test.Cardano.Ledger.Dijkstra.Imp.CertSpec
+    Test.Cardano.Ledger.Dijkstra.Imp.EbReBuilderSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EbSpec
     Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec
     Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec

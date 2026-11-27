@@ -758,7 +758,7 @@ makeEndorserBlock ::
   ImpTestM era (EndorserBlock era)
 makeEndorserBlock txs = do
   let
-    refs = SimpleOMap.fromFoldable $ (\tx -> (hashAnnotated tx, tx ^. sizeTxF)) <$> txs
+    refs = SimpleOMap.fromFoldable $ (\tx -> (hashAnnotated tx, originalBytesSize32 tx)) <$> txs
   pure $
     mkBasicEndorserBlock
       & transactionsEndorserBlockL .~ EbTransactions txs

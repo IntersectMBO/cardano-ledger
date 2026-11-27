@@ -24,7 +24,11 @@ module Cardano.Ledger.Dijkstra.Rules.Eb (
   EbAnnouncementSizeMismatch (..),
   EbAlreadyApplied (..),
   validateEbReferences,
+  validateEbReferencesSize,
   validateEbAnnouncementSlot,
+  validateEbAnnouncementHash,
+  validateEbAnnouncementSize,
+  validateEbNotApplied,
 ) where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, StrictMaybe (..))
