@@ -116,6 +116,10 @@
               export LANG=en_US.UTF-8
               export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
               git config set --fixed-value --value=../.gitconfig include.path ../.gitconfig
+              with-cbor-diff() {
+                local S='${inputs.self}/scripts/with-cbor-diff'
+                if (( $# )); then "$S" "$@"; else . "$S"; fi
+              }
             '' + lib.optionalString (nixpkgs.glibcLocales != null
               && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
                 export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"

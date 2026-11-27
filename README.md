@@ -193,6 +193,7 @@ See [CONTRIBUTING](https://github.com/intersectmbo/cardano-ledger/blob/master/CO
 There's some ancient history in the repo that causes `git fsck` version `2.44.0` or later to report errors when running semantic checks on an old version of the `.gitmodules` file.
 
 This can be overcome by running `git config fsck.skipList .git-fsck-skiplist` once, sometime after cloning.
+This will be done automatically if you use `nix develop` or use the command given in the **Building** section.
 
 However, the problem prevents cloning if you have `transfer.fsckObjects` enabled in your global git configuration. You can overcome this by downloading the skiplist file before you clone and then specifying it in a config option to the `clone` command:
 
