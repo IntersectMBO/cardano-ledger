@@ -23,14 +23,22 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   genParameterChange,
   genNewConstitution,
   govActionGenerators,
+  govActionGeneratorsWith,
   genConwayPlutusPurposePointer,
   genGovAction,
+  genGovActionWith,
   genGovActionState,
   genPParamUpdateGovAction,
   genHardForkGovAction,
   genCommitteeGovAction,
   genConstitutionGovAction,
   genProposals,
+  genProposalsWith,
+  genPulsingSnapshotWith,
+  genDRepPulsingStateWith,
+  genConwayGovStateWith,
+  genRatifyStateWith,
+  genEnactStateWith,
   genNonEmptyVotingProcedures,
   ProposalsNewActions (..),
   ProposalsForEnactment (..),
@@ -84,13 +92,43 @@ instance
   (Era era, Arbitrary (PParamsUpdate era)) =>
   Arbitrary (PulsingSnapshot era)
   where
-  arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = genPulsingSnapshotWith arbitrary
+
+-- The governance state generators below take the generators of the values nested in them, and
+-- the `Arbitrary` instances call them with `arbitrary`. The CBOR roundtrip tests in
+-- "Test.Cardano.Ledger.Conway.Binary.RoundTrip" call them with generators that leave out the cost
+-- models of nested values, which are expensive to build and decode, and are already covered by
+-- the roundtrip tests of the nested types. Because the instances and the roundtrip tests share
+-- these generators, the roundtrip tests generate the same structure as the instances do, and keep
+-- doing so when the generators change. See "Cost models in the governance state roundtrips" in
+-- that module.
+
+-- | Generate a `PulsingSnapshot` with the given generator for its proposals.
+--
+-- There are at most a quarter as many proposals as the size, like `RatifyState`'s enacted
+-- proposals. Plain `arbitrary` lists would have up to 99 of them, many more than a real
+-- snapshot has, and every one of them that is a `ParameterChange` can carry cost models, which
+-- are expensive to build and decode. A quarter still reaches the 24 elements at which the CBOR
+-- encoding of a list length needs an extra byte.
+genPulsingSnapshotWith :: Gen (GovActionState era) -> Gen (PulsingSnapshot era)
+genPulsingSnapshotWith genGovActionState' =
+  PulsingSnapshot
+    <$> scale (`div` 4) (SSeq.fromList <$> listOf genGovActionState')
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
 
 instance
   (Arbitrary (InstantStake era), Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>
   Arbitrary (DRepPulsingState era)
   where
-  arbitrary = DRComplete <$> arbitrary <*> arbitrary
+  arbitrary = genDRepPulsingStateWith arbitrary arbitrary
+
+-- | Generate a `DRepPulsingState` with the given generators for its snapshot and ratify state.
+-- It has no fields of its own, so the roundtrip tests generate both without cost models.
+genDRepPulsingStateWith ::
+  Gen (PulsingSnapshot era) -> Gen (RatifyState era) -> Gen (DRepPulsingState era)
+genDRepPulsingStateWith genPulsingSnapshot genRatifyState = DRComplete <$> genPulsingSnapshot <*> genRatifyState
 
 instance
   ( EraPParams era
@@ -183,33 +221,62 @@ instance
   ) =>
   Arbitrary (ConwayGovState era)
   where
-  arbitrary =
-    ConwayGovState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genConwayGovStateWith arbitrary arbitrary arbitrary
 
   shrink = genericShrink
+
+-- | Generate a `ConwayGovState` with the given generators for its `PParams`, its proposals and
+-- its `DRepPulsingState`.
+--
+-- The `PParams` generator is used for the current, the previous and the future `PParams`. Their
+-- decoding is the part of the `ConwayGovState` roundtrip that is not covered elsewhere, so that
+-- roundtrip only gives a cost-model-free generator for the proposals and the `DRepPulsingState`.
+-- The future `PParams` are scaled down like in the `Arbitrary` instance of `FuturePParams`.
+genConwayGovStateWith ::
+  Era era =>
+  Gen (PParams era) ->
+  Gen (Proposals era) ->
+  Gen (DRepPulsingState era) ->
+  Gen (ConwayGovState era)
+genConwayGovStateWith genPParams genProposals' genDRepPulsingState =
+  ConwayGovState
+    <$> genProposals'
+    <*> arbitrary
+    <*> arbitrary
+    <*> genPParams
+    <*> genPParams
+    <*> scale
+      (`div` 10)
+      ( oneof
+          [ pure NoPParamsUpdate
+          , DefinitePParamsUpdate <$> genPParams
+          , PotentialPParamsUpdate <$> liftArbitrary genPParams
+          ]
+      )
+    <*> genDRepPulsingState
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (RatifyState era)
   where
-  arbitrary =
-    RatifyState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genRatifyStateWith arbitrary arbitrary
 
   shrink (RatifyState a b c d) =
     [ RatifyState a' (Seq.fromList b') c' d'
     | (a', b', c', d') <- shrink (a, toList b, c, d)
     ]
+
+-- | Generate a `RatifyState` with the given generators for its `EnactState` and its enacted
+-- proposals.
+--
+-- The enacted proposals are scaled down to a quarter, see `genPulsingSnapshotWith`.
+genRatifyStateWith :: Gen (EnactState era) -> Gen (GovActionState era) -> Gen (RatifyState era)
+genRatifyStateWith genEnactState genGovActionState' =
+  RatifyState
+    <$> genEnactState
+    <*> scale (`div` 4) (Seq.fromList <$> listOf genGovActionState')
+    <*> arbitrary
+    <*> arbitrary
 
 instance
   (Era era, Arbitrary (InstantStake era), Arbitrary (Accounts era)) =>
@@ -233,17 +300,25 @@ instance
   (Era era, Arbitrary (PParams era)) =>
   Arbitrary (EnactState era)
   where
-  arbitrary =
-    EnactState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genEnactStateWith arbitrary
 
   shrink = genericShrink
+
+-- | Generate an `EnactState` with the given generator for its current and previous `PParams`.
+--
+-- Those two `PParams` take nearly all of the time of an `EnactState` roundtrip, because of their
+-- cost models. `EnactState` is nested in `RatifyState`, so the roundtrip tests of the types that
+-- contain it pass `PParams` without cost models here.
+genEnactStateWith :: Era era => Gen (PParams era) -> Gen (EnactState era)
+genEnactStateWith genPParams =
+  EnactState
+    <$> arbitrary
+    <*> arbitrary
+    <*> genPParams
+    <*> genPParams
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
 
 instance Arbitrary (VState era) where
   arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
@@ -404,7 +479,18 @@ genProposals ::
   ) =>
   (Int, Int) ->
   Gen (Proposals era)
-genProposals range = do
+genProposals = genProposalsWith arbitrary
+
+-- | Like `genProposals`, but with the given generator for the `PParamsUpdate` in parameter changes.
+-- `Proposals` is nested in `ConwayGovState`, so its roundtrip test passes `PParamsUpdate`s without
+-- cost models here.
+genProposalsWith ::
+  forall era.
+  (HasCallStack, EraPParams era) =>
+  Gen (PParamsUpdate era) ->
+  (Int, Int) ->
+  Gen (Proposals era)
+genProposalsWith genPParamsUpdate range = do
   pgais <- arbitrary
   i <- chooseInt range
   go (def & pRootsL .~ fromPrevGovActionIds pgais) i
@@ -413,7 +499,7 @@ genProposals range = do
     go !ps n
       | n <= 0 = pure ps
       | otherwise = do
-          gas <- genGovActionState @era =<< genGovAction ps
+          gas <- genGovActionState @era =<< genGovActionWith genPParamsUpdate ps
           case proposalsAddAction gas ps of
             Nothing -> error "Error adding GovActionState to Proposals"
             Just ps' -> go ps' (n - 1)
@@ -423,9 +509,19 @@ genGovAction ::
   (Era era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   Proposals era ->
   Gen (GovAction era)
-genGovAction ps =
+genGovAction = genGovActionWith arbitrary
+
+-- | Like `genGovAction`, but with the given generator for the `PParamsUpdate` in parameter changes,
+-- which is where the cost models of a `GovAction` are
+genGovActionWith ::
+  forall era.
+  Era era =>
+  Gen (PParamsUpdate era) ->
+  Proposals era ->
+  Gen (GovAction era)
+genGovActionWith genPParamsUpdate ps =
   oneof
-    [ genWithParent genPParamUpdateGovAction grPParamUpdateL
+    [ genWithParent (\parent -> ParameterChange parent <$> genPParamsUpdate <*> arbitrary) grPParamUpdateL
     , genWithParent genHardForkGovAction grHardForkL
     , genTreasuryWithdrawals
     , genWithParent genCommitteeGovAction grCommitteeL
@@ -532,8 +628,13 @@ govActionGenerators ::
   , Arbitrary (PParamsUpdate era)
   ) =>
   [Gen (GovAction era)]
-govActionGenerators =
-  [ genParameterChange
+govActionGenerators = govActionGeneratorsWith arbitrary
+
+-- | Like `govActionGenerators`, but with the given generator for the `PParamsUpdate` in parameter
+-- changes, which is where the cost models of a `GovAction` are
+govActionGeneratorsWith :: Era era => Gen (PParamsUpdate era) -> [Gen (GovAction era)]
+govActionGeneratorsWith genPParamsUpdate =
+  [ ParameterChange <$> arbitrary <*> genPParamsUpdate <*> arbitrary
   , genHardForkInitiation
   , genTreasuryWithdrawals
   , genNoConfidence

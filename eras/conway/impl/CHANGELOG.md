@@ -26,6 +26,11 @@
 * Add `goldenMapRedeemers` to test redeemer map decoding across protocol versions
 * Add `ToExpr` instance for `ConwayTickfEvent`
 * Change `Arbitrary ConwayGovCert` to generate every constructor
+* Add `genPParamsNoCostModels` and `genPParamsUpdateNoCostModels` methods to `ConwayEraTest`
+* Add `genPulsingSnapshotWith`, `genDRepPulsingStateWith`, `genConwayGovStateWith`, `genRatifyStateWith`, `genEnactStateWith`, `genProposalsWith`, `genGovActionWith` and `govActionGeneratorsWith`
+* Change `Arbitrary` instances of `PulsingSnapshot` and `RatifyState` to generate a quarter as many proposals
+* Replace the constraints of `roundTripConwayEraTypesSpec` with `Arbitrary (PParams era)`, `Arbitrary (PParamsUpdate era)` and `ConwayEraTest era`
+* Add `GovState era ~ ConwayGovState era` constraint to `roundTripConwayCommonSpec`
 
 ## 1.24.0.0
 

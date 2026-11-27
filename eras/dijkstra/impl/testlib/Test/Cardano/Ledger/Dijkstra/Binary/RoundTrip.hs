@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip (
   roundTripDijkstraCommonSpec,
@@ -12,6 +14,7 @@ module Test.Cardano.Ledger.Dijkstra.Binary.RoundTrip (
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
 import Cardano.Ledger.Binary (Tokens (..), decodeFull, serialize')
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Core (
   EraTx (..),
   EraTxBody (mkBasicTxBody),
@@ -24,6 +27,7 @@ import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Block.Endorser (EraEndorserBlock (EbReferences))
 import Cardano.Ledger.Hashes (hashAnnotated)
 import Cardano.Ledger.MempoolTx.Internal (MempoolTx (..), unwrapMempoolTx)
+import Cardano.Ledger.State (GovState)
 import Data.Either (isLeft)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Binary.Golden (decodeEnc)
@@ -41,7 +45,8 @@ import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 import Test.Cardano.Ledger.Dijkstra.Binary.Annotator ()
 import Test.Cardano.Ledger.Dijkstra.Era (DijkstraEraTest)
 
-roundTripDijkstraCommonSpec :: forall era. DijkstraEraTest era => Spec
+roundTripDijkstraCommonSpec ::
+  forall era. (DijkstraEraTest era, GovState era ~ ConwayGovState era) => Spec
 roundTripDijkstraCommonSpec = do
   roundTripDijkstraEraTypesSpec @era
   roundTripConwayCommonSpec @era

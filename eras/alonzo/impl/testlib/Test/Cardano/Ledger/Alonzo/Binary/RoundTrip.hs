@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
   roundTripAlonzoCommonSpec,
+  roundTripAlonzoCommonSpecWith,
   roundTripAlonzoEraTypesSpec,
 ) where
 
@@ -19,6 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Plutus
+import Cardano.Ledger.State (GovState)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers, genNonEmptyTxDats)
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Era (AlonzoEraTest)
@@ -30,12 +32,18 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (
   roundTripEraTypeExpectation,
   roundTripEraTypeSpec,
  )
-import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
+import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpecWith)
 
 roundTripAlonzoCommonSpec :: forall era. AlonzoEraTest era => Spec
-roundTripAlonzoCommonSpec = do
+roundTripAlonzoCommonSpec = roundTripAlonzoCommonSpecWith @era arbitrary arbitrary
+
+-- | Like `roundTripAlonzoCommonSpec`, but with the given generators for the `GovState`. See
+-- `roundTripStateEraTypesSpecWith`.
+roundTripAlonzoCommonSpecWith ::
+  forall era. AlonzoEraTest era => Gen (GovState era) -> Gen (GovState era) -> Spec
+roundTripAlonzoCommonSpecWith genGovState genNestedGovState = do
   roundTripAlonzoEraTypesSpec @era
-  roundTripShelleyCommonSpec @era
+  roundTripShelleyCommonSpecWith @era genGovState genNestedGovState
 
 roundTripAlonzoEraTypesSpec ::
   forall era.
