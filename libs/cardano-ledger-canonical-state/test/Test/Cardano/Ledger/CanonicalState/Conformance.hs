@@ -8,12 +8,18 @@ module Test.Cardano.Ledger.CanonicalState.Conformance (
   Direction (..),
 ) where
 
-import Codec.CBOR.Cuddle.CBOR.Gen (generateFromName)
+import Codec.CBOR.Cuddle.CBOR.Generator (generateFromName)
 import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
-import Codec.CBOR.Cuddle.CBOR.Validator.Trace (Evidenced (..), SValidity (..), showValidationTrace)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot)
 import Codec.CBOR.Cuddle.CDDL.Custom.Generator (GenConfig (..), runCBORGen)
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator (
+  Evidenced (..),
+  SValidity (..),
+  StepTrace,
+  defaultTraceOptions,
+  prettyStepTrace,
+ )
 import Codec.CBOR.Cuddle.CDDL.Resolve (MonoReferenced)
 import Codec.CBOR.Cuddle.IndexMappable (mapIndex)
 import Codec.CBOR.Term (encodeTerm)
@@ -23,6 +29,8 @@ import qualified Data.ByteString.Base16 as Base16
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Prettyprinter (defaultLayoutOptions, layoutPretty)
+import qualified Prettyprinter.Render.Terminal as Ansi
 import Test.AntiGen (runAntiGen)
 import Test.QuickCheck (generate)
 
@@ -53,6 +61,13 @@ generateCBORFromCDDL spec = do
         Name (T.pack "record_entry")
   pure $ toStrictByteString $ encodeTerm term
 
+showStepTrace :: StepTrace b v -> String
+showStepTrace res =
+  T.unpack
+    . Ansi.renderStrict
+    . layoutPretty defaultLayoutOptions
+    $ prettyStepTrace defaultTraceOptions res
+
 -- | Test if a reference CDDL accepts CBOR generated from another spec
 propReferenceAcceptsCBOR ::
   -- | CDDL spec to generate CBOR from
@@ -73,4 +88,4 @@ propReferenceAcceptsCBOR genSpec validateSpec direction = do
     Right (Evidenced SInvalid trc) ->
       pure $
         Left $
-          FailureInfo direction (TE.decodeUtf8 $ Base16.encode cbor) (T.pack $ showValidationTrace trc)
+          FailureInfo direction (TE.decodeUtf8 $ Base16.encode cbor) (T.pack $ showStepTrace trc)

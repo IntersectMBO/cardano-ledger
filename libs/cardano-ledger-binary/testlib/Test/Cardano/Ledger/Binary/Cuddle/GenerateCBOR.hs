@@ -6,11 +6,11 @@ module Test.Cardano.Ledger.Binary.Cuddle.GenerateCBOR (
   generateCBORMain,
 ) where
 
-import Codec.CBOR.Cuddle.CBOR.Gen
+import Codec.CBOR.Cuddle.CBOR.Generator (generateFromName)
 import Codec.CBOR.Cuddle.CBOR.Validator
-import Codec.CBOR.Cuddle.CBOR.Validator.Trace
 import Codec.CBOR.Cuddle.CDDL
 import Codec.CBOR.Cuddle.CDDL.Custom.Generator
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator (Evidenced (..), SValidity (..))
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
 import Codec.CBOR.Cuddle.IndexMappable
 import qualified Codec.CBOR.Term as CBOR

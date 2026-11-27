@@ -74,10 +74,10 @@ maryValuePairRule pname era =
       toListTerm <- pure TList |! pure TListI
       pure $ SingleTerm $ toListTerm [coin, multiasset]
     validator term = case term of
-      SingleTerm (TList [coinTerm, maTerm]) -> do
+      TList [coinTerm, maTerm] -> do
         validateFromName "coin" coinTerm
         validateFromName "multiasset" maTerm
-      SingleTerm (TList _) -> fail "Expected a list with two elements"
+      TList _ -> fail "Expected a list with two elements"
       _ -> fail "Expected a definite length list"
 
 instance HuddleRule "value_pair" MaryEra where

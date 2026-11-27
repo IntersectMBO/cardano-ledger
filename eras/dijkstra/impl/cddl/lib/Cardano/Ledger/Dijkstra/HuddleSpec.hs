@@ -52,7 +52,6 @@ import Cardano.Ledger.Huddle.Gen (
   scale,
   twiddleArray,
   twiddleMap,
-  unwrapSingle,
   unwrapSingleOrError,
   validateArrayTerm,
   validateFromGRef,
@@ -131,7 +130,7 @@ nonemptyOMap pname = binding2 $ \k v ->
       values <- replicateM (length keys) (genTerm vRef)
       SingleTerm <$> twiddleMap (zip keys values)
     validator kRef vRef term = do
-      entries <- unwrapSingle term >>= validateMapTerm
+      entries <- validateMapTerm term
       when (null entries) $ fail "empty map"
       unless (length entries == length (nubOrd (map fst entries))) $
         fail "duplicate keys"
@@ -174,7 +173,6 @@ subTransactionsRule pname p =
     -- of body equality, not full-element equality (which is what the generic
     -- @nonempty_oset@ validator checks).
     validator term = do
-      term_ <- unwrapSingle term
       let
         bodyOf (TList (b : _)) = Just b
         bodyOf (TListI (b : _)) = Just b
@@ -185,7 +183,7 @@ subTransactionsRule pname p =
           unless (length bodies == length (nubOrd bodies)) $
             fail "duplicate sub_transaction bodies"
           traverse_ (validateFromName (Name "sub_transaction")) elems
-      case term_ of
+      case term of
         TTagged 258 x -> validateInner x
         x -> validateInner x
     generate = do

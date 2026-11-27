@@ -14,9 +14,9 @@ import Cardano.SCLS.NamespaceSymbol (
   SomeNamespaceSymbol (SomeNamespaceSymbol),
  )
 import Codec.CBOR.Cuddle.CBOR.Validator (validateCBOR)
-import Codec.CBOR.Cuddle.CBOR.Validator.Trace (Evidenced, ValidationTrace)
-import Codec.CBOR.Cuddle.CDDL (Name (..))
+import Codec.CBOR.Cuddle.CDDL (Name (..), mapCDDLDropExt)
 import Codec.CBOR.Cuddle.CDDL.CTree (CTreeRoot (..))
+import Codec.CBOR.Cuddle.CDDL.Custom.Validator (Block (..), Evidenced, StepTrace)
 import Codec.CBOR.Cuddle.CDDL.Resolve (
   MonoReferenced,
   NameResolutionFailure,
@@ -26,7 +26,7 @@ import Codec.CBOR.Cuddle.CDDL.Resolve (
   buildResolvedCTree,
  )
 import Codec.CBOR.Cuddle.Huddle (toCDDL)
-import Codec.CBOR.Cuddle.IndexMappable (IndexMappable (mapIndex), mapCDDLDropExt)
+import Codec.CBOR.Cuddle.IndexMappable (IndexMappable (mapIndex))
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
@@ -49,7 +49,7 @@ validSpecs :: Map.Map SomeNamespaceSymbol (CTreeRoot Codec.CBOR.Cuddle.CDDL.Reso
         ]
 
 -- | Validate raw bytes against a rule in the namespace.
-validateBytesAgainst :: ByteString -> Text -> Text -> Maybe (Evidenced ValidationTrace)
+validateBytesAgainst :: ByteString -> Text -> Text -> Maybe (Evidenced (StepTrace TermBlock))
 validateBytesAgainst bytes namespace name = do
   cddl <- namespaceSymbolFromText namespace >>= flip Map.lookup validSpecs
   case validateCBOR bytes (Name name) (mapIndex cddl) of

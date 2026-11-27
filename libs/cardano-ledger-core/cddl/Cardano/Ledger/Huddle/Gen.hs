@@ -60,19 +60,7 @@ module Cardano.Ledger.Huddle.Gen (
 
 import Cardano.Ledger.Binary (Term (..))
 import Cardano.Ledger.Huddle (HuddleRule ())
-import Codec.CBOR.Cuddle.CBOR.Gen (
-  genBytes,
-  genNBytes,
-  genNBytesText,
-  genTerm,
-  genText,
-  generateFromGRef,
-  generateFromName,
-  twiddleArray,
-  twiddleBytes,
-  twiddleMap,
-  twiddleText,
- )
+import Codec.CBOR.Cuddle.CBOR.Generator
 import Codec.CBOR.Cuddle.CBOR.Validator (validateFromGRef, validateFromName)
 import Codec.CBOR.Cuddle.CDDL (Name (..))
 import Codec.CBOR.Cuddle.CDDL.CTree (nintMin, uintMax)

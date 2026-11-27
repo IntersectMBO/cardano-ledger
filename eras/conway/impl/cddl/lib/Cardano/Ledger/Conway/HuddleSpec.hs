@@ -644,7 +644,7 @@ conwayValuePairRule pname era =
           ]
   where
     validator term = case term of
-      SingleTerm (TList [coinTerm, maTerm]) -> do
+      TList [coinTerm, maTerm] -> do
         validateFromName "coin" coinTerm
         policies <- validateMapTerm maTerm
         forM_ policies $ \(policyIdTerm, assetsTerm) -> do
@@ -654,7 +654,7 @@ conwayValuePairRule pname era =
           forM_ assets $ \(assetNameTerm, quantityTerm) -> do
             validateFromName "asset_name" assetNameTerm
             validateFromName "positive_coin" quantityTerm
-      SingleTerm (TList _) -> fail "Expected a list with two elements"
+      TList _ -> fail "Expected a list with two elements"
       _ -> fail "Expected a definite length list"
 
 conwayMintRule ::
@@ -741,14 +741,13 @@ mkMaybeTaggedSet pname n = binding $ \x ->
         let sz' = max n sz in antiChoose (n, sz') (0, sz')
       fmap SingleTerm . generateMaybeTaggedSet nElems $ unwrapSingleOrError <$> generateFromGRef ref
     validator ref term = do
-      term_ <- unwrapSingle term
       let
         validateInner t = do
           elems <- validateArrayTerm t
           unless (length elems == length (nubOrd elems)) $
             fail "not all elements are unique"
           traverse_ (validateFromGRef ref) elems
-      case term_ of
+      case term of
         TTagged t x | t == 258 -> validateInner x
         x -> validateInner x
 
@@ -1180,8 +1179,7 @@ instance HuddleRule "redeemer_map" ConwayEra where
       withCBORGen generator $
         pname =.= redeemerMapRule p
     where
-      validator rTerm = do
-        term <- unwrapSingle rTerm
+      validator term = do
         kvs <- validateMapTerm term
         forM_ kvs $ \(kTerm, vTerm) -> do
           k <- validateArrayTerm kTerm

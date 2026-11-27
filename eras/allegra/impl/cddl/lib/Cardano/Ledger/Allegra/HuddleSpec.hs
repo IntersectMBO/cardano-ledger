@@ -383,8 +383,7 @@ instance Era era => HuddleRule1 "assoc_map" era where
               generateFromGRef ref
         assocMap <- replicateM n $ (,) <$> genData <*> genData
         SingleTerm <$> twiddleMap assocMap
-      validator ref rTerm = do
-        term <- unwrapSingle rTerm
+      validator ref term = do
         assocMap <- validateMapTerm term
         let validateData = validateFromGRef ref
         forM_ assocMap $ \(k, v) -> validateData k >> validateData v

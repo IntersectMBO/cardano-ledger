@@ -28,13 +28,13 @@ import Cardano.Ledger.Huddle.Gen (
   RuleTerm (..),
   arbitrary,
   deferGen,
+  genBytes,
   genText,
   oneof,
   twiddleArray,
   vectorOf,
   (|!),
  )
-import Codec.CBOR.Cuddle.CBOR.Gen (genBytes)
 import Codec.CBOR.Cuddle.Huddle as H
 import Codec.CBOR.Term (Term (..))
 import Data.Bits (Bits (..))
@@ -328,7 +328,7 @@ instance Era era => HuddleRule "definite_bytes" era where
         toBytesTerm <- pure TBytes |! pure (TBytesI . LBS.fromStrict)
         pure $ SingleTerm . toBytesTerm <$> genBytes
       validator = \case
-        SingleTerm (TBytes _) -> pure ()
+        TBytes _ -> pure ()
         _ -> fail "Expected definite-length bytes"
 
 instance Era era => HuddleRule "definite_text" era where
@@ -341,5 +341,5 @@ instance Era era => HuddleRule "definite_text" era where
         toTextTerm <- pure TString |! pure (TStringI . LT.fromStrict)
         pure $ SingleTerm . toTextTerm <$> genText
       validator = \case
-        SingleTerm (TString _) -> pure ()
+        TString _ -> pure ()
         _ -> fail "Expected definite-length string"

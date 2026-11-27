@@ -98,9 +98,8 @@ genBigInt t = do
 -- reach the custom validator on `bounded_bytes`. Instead we check the integer
 -- here: it must have the right sign, and its magnitude (`n` for tag 2,
 -- `-1 - n` for tag 3) must fit in 64 bytes.
-validateBigInt :: (Integer -> Bool) -> (Integer -> Integer) -> RuleTerm -> Gen.Validator ()
-validateBigInt inRange magnitude rTerm = do
-  term <- unwrapSingle rTerm
+validateBigInt :: (Integer -> Bool) -> (Integer -> Integer) -> Term -> Gen.Validator ()
+validateBigInt inRange magnitude term = do
   i <- case term of
     TInteger i -> pure i
     TInt i -> pure (toInteger i)
@@ -165,8 +164,7 @@ boundedBytesRule pname era =
     -- specifically the part about chunks, the `cborg` terms don't give us
     -- control over the chunks.
     validator term = do
-      sTerm <- unwrapSingle term
-      bytes <- validateBytesTerm sTerm
+      bytes <- validateBytesTerm term
       let len = BS.length bytes
       when (len > 64) $ fail $ "Expected bytes with length at most 64, got " <> show len
     generator = do
