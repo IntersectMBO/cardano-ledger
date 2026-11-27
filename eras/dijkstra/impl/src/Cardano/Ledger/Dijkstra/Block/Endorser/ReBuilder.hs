@@ -7,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -32,6 +33,7 @@ module Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder (
 ) where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Conway.BlockBody
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra ()
 import Cardano.Ledger.Dijkstra.Block.Endorser (
@@ -57,13 +59,27 @@ import Cardano.Ledger.Dijkstra.Rules.EbLedgers (
   EbExUnitsTooBig,
   EbRefScriptsSizeTooBig,
   EbTxsSizeTooBig,
+  validateEbExUnits,
+  validateEbRefScriptsSize,
   validateEbTxsSize,
  )
 import Cardano.Ledger.Dijkstra.Rules.Ledger (DijkstraLedgerPredFailure)
-import Cardano.Ledger.Shelley.API (ApplyTx (..), ValidatedTx)
+import Cardano.Ledger.Rules.ValidationMode
+import Cardano.Ledger.Shelley.API (
+  ApplyTx (..),
+  LedgerEnv (..),
+  ValidatedTx,
+  extractValidatedTx,
+  getValidatedTxProtocolVersion,
+  getValidatedTxStAnnTx,
+  unsafeMakeValidatedTx,
+ )
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.State
-import Control.State.Transition (PredicateFailure)
+import Control.Monad (unless)
+import Control.Monad.Trans.Reader (runReader)
+import Control.State.Transition
 import Data.Bifunctor (first)
 import qualified Data.Foldable as Foldable
 import Data.List.NonEmpty (NonEmpty)
@@ -123,6 +139,9 @@ data EbReBuilderError era
     EbReBuilderTxHashMismatch !TxIx !(Mismatch RelEQ (SafeHash EraIndependentTx))
   | -- | The supplied transaction is not the size the references declare for it.
     EbReBuilderTxSizeMismatch !TxIx !(Mismatch RelEQ Word32)
+  | -- | No reference at this position: more transactions were supplied than the
+    -- announced references name.
+    EbReBuilderNoSuchReference !Int
   | EbReBuilderTxsSizeTooBig !(EbTxsSizeTooBig era)
   | EbReBuilderExUnitsTooBig !(EbExUnitsTooBig era)
   | EbReBuilderRefScriptsSizeTooBig !(EbRefScriptsSizeTooBig era)
@@ -168,6 +187,8 @@ class EraEndorserBlockBuilder era => EraEndorserBlockReBuilder era where
     EbReBuilderState era ->
     Either (EbReBuilderFinalizerError era) (EndorserBlock era, NewEpochState era)
 
+  mkEbReBuilderTxError :: NonEmpty (PredicateFailure (EraRule "LEDGER" era)) -> EbReBuilderTxError era
+
 instance EraEndorserBlockReBuilder DijkstraEra where
   newtype EbReBuilderTxError DijkstraEra
     = DijkstraEbReBuilderTxError (NonEmpty (DijkstraLedgerPredFailure DijkstraEra))
@@ -179,9 +200,10 @@ instance EraEndorserBlockReBuilder DijkstraEra where
   modifyEbReBuilderStateUTxO ebReBuilderState@EbReBuilderState {ebrbsNewEpochState} f =
     ebReBuilderState {ebrbsNewEpochState = ebrbsNewEpochState & utxoL %~ f}
 
-  snocTxEbReBuilder = error "snocTxEbReBuilder: not implemented yet"
+  snocTxEbReBuilder = snocTxEbReBuilderDijkstra
 
   finalizeEbReBuilder = finalizeEbReBuilderDijkstra
+  mkEbReBuilderTxError = DijkstraEbReBuilderTxError
 
 mkInitEbReBuilderStateDijkstra ::
   forall era.
@@ -199,17 +221,17 @@ mkInitEbReBuilderStateDijkstra nes ebRefs =
       Left $ EbReBuilderInitNoAnnouncement $ EbWasNotAnnounced $ hashAnnotated ebRefs
     SJust ebA -> do
       let announcement = ebA ^. ebAnnouncementL
-      runEbTest EbReBuilderInitEbReferencesSizeTooBig $
+      runTestEither EbReBuilderInitEbReferencesSizeTooBig $
         validateEbReferencesSize pp ebRefs
-      runEbTest EbReBuilderInitEbAnnouncementHashMismatch $
+      runTestEither EbReBuilderInitEbAnnouncementHashMismatch $
         validateEbAnnouncementHash announcement ebRefs
-      runEbTest EbReBuilderInitEbAnnouncementSizeMismatch $
+      runTestEither EbReBuilderInitEbAnnouncementSizeMismatch $
         validateEbAnnouncementSize announcement ebRefs
-      runEbTest EbReBuilderInitEbAlreadyApplied $
+      runTestEither EbReBuilderInitEbAlreadyApplied $
         validateEbNotApplied ebA
-      runEbTest EbReBuilderInitEbAnnouncementSlotMismatch $
+      runTestEither EbReBuilderInitEbAnnouncementSlotMismatch $
         validateEbAnnouncementSlot ebA lastTickSlotNo
-      runEbTest EbReBuilderInitEbTxsSizeTooBig $ validateEbTxsSize pp totalTxsSize
+      runTestEither EbReBuilderInitEbTxsSizeTooBig $ validateEbTxsSize pp totalTxsSize
       pure
         EbReBuilderState
           { ebrbsEbReferences = ebRefs
@@ -226,7 +248,6 @@ mkInitEbReBuilderStateDijkstra nes ebRefs =
     txSizes = P.fromListN ebRefsCount $ Foldable.toList $ OMap.toStrictSeq (ebRefs ^. txRefsEbReferencesG)
     txHashes = S.fromListN ebRefsCount $ Foldable.toList $ OMap.toStrictSeqOKeys (ebRefs ^. txRefsEbReferencesG)
     totalTxsSize = P.foldl' (+) 0 txSizes
-    runEbTest toInitError = first (toInitError . NE.head) . validationToEither
 
 finalizeEbReBuilderDijkstra ::
   forall era.
@@ -252,6 +273,119 @@ finalizeEbReBuilderDijkstra EbReBuilderState {ebrbsEbReferences, ebrbsStAnnTxs, 
       Nothing -> Failure $ pure txHash
       Just stAnnTx -> Success $ stAnnTx ^. txStAnnTxG
 
+snocTxEbReBuilderDijkstra ::
+  forall era.
+  ( EraGov era
+  , EraEndorserBlockReBuilder era
+  , DijkstraEraPParams era
+  , HashAnnotated (Tx TopTx era) EraIndependentTx
+  , STS (EraRule "LEDGER" era)
+  , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerStateWithLimits era
+  , Signal (EraRule "LEDGER" era) ~ StAnnTx TopTx era
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , BlockBodyLimits era ~ ConwayBlockBodyLimits era
+  ) =>
+  Globals ->
+  EbReBuilderState era ->
+  Either (ValidatedTx era) (Tx TopTx era) ->
+  EbReBuilderResult era
+snocTxEbReBuilderDijkstra
+  globals
+  ebrbState@EbReBuilderState
+    { ebrbsTxHashes
+    , ebrbsTxSizes
+    , ebrbsStAnnTxs
+    , ebrbsBlockBodyLimits
+    , ebrbsNewEpochState
+    }
+  validatedOrTx =
+    either id id $ do
+      (txIx, claimedTxHash, claimedTxSize) <- validateIxAgainstEbReferences
+      validateClaimedSizeAndHash txIx claimedTxHash claimedTxSize
+      LedgerStateWithLimits newLedgerState newLimits <- runLedgerRule txIx
+      validateBlockLimits newLimits
+      pure $
+        EbReBuilderSuccess
+          ( ebrbState
+              & ebrbsStAnnTxsL %~ Map.insert txHash stAnnTx
+              & ebrbsBlockBodyLimitsL .~ newLimits
+              & ebrbsNewEpochStateL . nesEsL . esLStateL .~ newLedgerState
+          )
+          validatedTx
+    where
+      validateIxAgainstEbReferences ::
+        Either (EbReBuilderResult era) (TxIx, SafeHash EraIndependentTx, Word32)
+      validateIxAgainstEbReferences = do
+        let expectedTxIx = Map.size ebrbsStAnnTxs
+        maybe (Left (failWith (EbReBuilderNoSuchReference expectedTxIx))) Right $ do
+          hash <- ebrbsTxHashes S.!? expectedTxIx
+          size <- ebrbsTxSizes P.!? expectedTxIx
+          index <- txIxFromIntegral @Int @Maybe expectedTxIx
+          pure (index, hash, size)
+      runLedgerRule :: TxIx -> Either (EbReBuilderResult era) (LedgerStateWithLimits era)
+      runLedgerRule txIx = do
+        let stsOpts =
+              ApplySTSOpts
+                { asoAssertions = globalAssertionPolicy
+                , asoValidation = validationPolicy
+                , asoEvents = EPDiscard
+                }
+            runLedger =
+              flip runReader globals $
+                applySTSOptsEither @(EraRule "LEDGER" era)
+                  stsOpts
+                  (TRC (ledgerEnv, LedgerStateWithLimits ledgerState ebrbsBlockBodyLimits, stAnnTx))
+        case runLedger of
+          Left predFailures ->
+            Left (EbReBuilderTxError txIx (mkEbReBuilderTxError predFailures))
+          Right lswl -> Right lswl
+      validateBlockLimits :: ConwayBlockBodyLimits era -> Either (EbReBuilderResult era) ()
+      validateBlockLimits ConwayBlockBodyLimits {cbblTxsSize, cbblExUnits, cbblRefScriptsSize} = do
+        runTestEither (failWith . EbReBuilderTxsSizeTooBig) $ validateEbTxsSize pp cbblTxsSize
+        runTestEither (failWith . EbReBuilderExUnitsTooBig) $ validateEbExUnits pp cbblExUnits
+        runTestEither (failWith . EbReBuilderRefScriptsSizeTooBig) $
+          validateEbRefScriptsSize pp cbblRefScriptsSize
+      validateClaimedSizeAndHash ::
+        TxIx -> SafeHash EraIndependentTx -> Word32 -> Either (EbReBuilderResult era) ()
+      validateClaimedSizeAndHash txIx claimedTxHash claimedTxSize = do
+        unless (txHash == claimedTxHash) $
+          Left $
+            failWith $
+              EbReBuilderTxHashMismatch
+                txIx
+                Mismatch {mismatchSupplied = txHash, mismatchExpected = claimedTxHash}
+        let txSize = originalBytesSize32 tx
+        unless (txSize == claimedTxSize) $
+          Left $
+            failWith $
+              EbReBuilderTxSizeMismatch
+                txIx
+                Mismatch {mismatchSupplied = txSize, mismatchExpected = claimedTxSize}
+      pp = ebrbsNewEpochState ^. nesEsL . curPParamsEpochStateL
+      ledgerEnv =
+        Shelley.LedgerEnv
+          { ledgerSlotNo = ebrbsNewEpochState ^. nesLastTickSlotNoL
+          , ledgerEpochNo = Nothing
+          , ledgerIx = minBound -- this is not actually used in LEDGER rule starting with conway
+          , ledgerPp = pp
+          , ledgerAccount = ebrbsNewEpochState ^. chainAccountStateG
+          }
+      ledgerState = ebrbsNewEpochState ^. nesEsL . esLStateL
+      (validationPolicy, validatedTx) = case validatedOrTx of
+        Left vTx
+          | pvMajor (getValidatedTxProtocolVersion vTx) == pvMajor (pp ^. ppProtocolVersionL) ->
+              (ValidateSuchThat (notElem lblStatic), vTx)
+        Left vTx ->
+          (ValidateAll, mkValidatedTx (extractValidatedTx vTx))
+        Right topTx ->
+          (ValidateAll, mkValidatedTx topTx)
+      mkValidatedTx = unsafeMakeValidatedTx globals ledgerEnv ledgerState
+      stAnnTx = getValidatedTxStAnnTx validatedTx
+      tx = stAnnTx ^. txStAnnTxG
+      txHash = hashAnnotated tx
+      failWith e = EbReBuilderError e validatedTx
+
 data FullEbReBuilderError era
   = FullEbInitError (EbReBuilderInitError era)
   | FullEbReBuilderError (EbReBuilderError era)
@@ -264,6 +398,9 @@ reBuildFullEndorserBlock ::
   Map (SafeHash EraIndependentTx) (Either (ValidatedTx era) (Tx TopTx era)) ->
   Either (FullEbReBuilderError era) (EndorserBlock era, NewEpochState era)
 reBuildFullEndorserBlock = error "reBuildFullEndorserBlock: not implemented yet"
+
+runTestEither :: (failure -> e) -> Test failure -> Either e ()
+runTestEither toError = first (toError . NE.head) . validationToEither
 
 --------------------------------------------------------------------------------------
 -- Placeholders, remove with https://github.com/IntersectMBO/cardano-ledger/pull/6284
