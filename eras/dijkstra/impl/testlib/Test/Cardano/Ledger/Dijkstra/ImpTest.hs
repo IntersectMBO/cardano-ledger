@@ -84,6 +84,7 @@ import Cardano.Ledger.Dijkstra (
   DijkstraEra,
   DijkstraEraForecast,
   EndorserBlockTransitionError (..),
+  EraEndorserBlockBuilder,
   applyEndorserBlockEither,
  )
 import Cardano.Ledger.Dijkstra.Block.Endorser (
@@ -201,6 +202,7 @@ class
   , DijkstraEraForecast era
   , DijkstraEraBlockBody era
   , EraEndorserBlock era
+  , EraEndorserBlockBuilder era
   , InjectRuleFailure "BBODY" DijkstraBbodyPredFailure era
   , InjectRuleFailure "BBODY" DijkstraLeiosCertPredFailure era
   , InjectRuleFailure "LEDGER" DijkstraLedgerPredFailure era

@@ -18,6 +18,9 @@ module Cardano.Ledger.Dijkstra (
   DijkstraApplyBlock (..),
   applyEndorserBlockEither,
   applyEndorserBlockNoValidation,
+  EraEndorserBlockBuilder (..),
+  EbBuilderState,
+  EbBuilderResult (..),
   InvalidEndorserBlockReferences (..),
   EndorserBlockTransitionError (EndorserBlockTransitionError),
   mkDijkstraBlockEnv,
@@ -54,6 +57,14 @@ import Cardano.Ledger.Dijkstra.Block (
   applyEndorserBlockNoValidation,
  )
 import Cardano.Ledger.Dijkstra.Block.Endorser ()
+import Cardano.Ledger.Dijkstra.Block.Endorser.Builder (
+  EbBuilderResult (..),
+  EbBuilderState,
+  EraEndorserBlockBuilder (..),
+  finalizeEbBuilderDijkstra,
+  mkInitEbBuilderStateDijkstra,
+  snocTxEbBuilderValidatedDijkstra,
+ )
 import Cardano.Ledger.Dijkstra.BlockBody ()
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era
@@ -121,6 +132,11 @@ instance
   DijkstraApplyBlock h DijkstraEra
 
 instance RunConwayRatify DijkstraEra
+
+instance EraEndorserBlockBuilder DijkstraEra where
+  mkInitEbBuilderState = mkInitEbBuilderStateDijkstra
+  snocTxEbBuilderValidated = snocTxEbBuilderValidatedDijkstra
+  finalizeEbBuilder = finalizeEbBuilderDijkstra
 
 instance Inject (NonEmpty (DijkstraMempoolPredFailure DijkstraEra)) (ApplyTxError DijkstraEra) where
   inject = DijkstraApplyTxError
