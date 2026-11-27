@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -7,23 +8,48 @@
 module Test.Cardano.Ledger.Dijkstra.Imp.EbReBuilderSpec (spec) where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Block (
+  Block,
+  EbReferencesAnnouncement (..),
+  LeiosEraBlockHeader (..),
+  ebReferencesAnnouncementHashL,
+  ebReferencesAnnouncementSizeL,
+  slotNoBlockHeaderL,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Dijkstra (DijkstraApplyBlock (..))
 import Cardano.Ledger.Dijkstra.Block.Endorser (EbTransactions (..), EraEndorserBlock (..))
 import Cardano.Ledger.Dijkstra.Block.Endorser.ReBuilder (
   EbReBuilderError (..),
   EbReBuilderFinalizerError (..),
+  EbReBuilderInitError (..),
   EbReBuilderResult (..),
   EbReBuilderState,
   EraEndorserBlockReBuilder (..),
  )
 import Cardano.Ledger.Dijkstra.Core
+import Cardano.Ledger.Dijkstra.PParams (
+  ppMaxEndorserBlockReferencesSizeL,
+  ppMaxEndorserBlockTxsSizeL,
+ )
+import Cardano.Ledger.Dijkstra.Rules (
+  EbAlreadyApplied (..),
+  EbAnnouncementHashMismatch (..),
+  EbAnnouncementSizeMismatch (..),
+  EbAnnouncementSlotMismatch (..),
+  EbReferencesSizeTooBig (..),
+  EbTxsSizeTooBig (..),
+  EbWasNotAnnounced (..),
+ )
+import Cardano.Ledger.Shelley.LedgerState (nesLastTickSlotNoL)
 import Cardano.Ledger.Tools (ensureMinCoinTxOut)
 import Control.Monad (foldM)
 import Control.Monad.State.Strict (gets)
 import Control.State.Transition.Extended (SingEP (..), ValidationPolicy (..))
 import Data.Foldable (toList)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.SimpleOMap.Strict as OMap
+import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.BlockHeader (TestBlockHeader)
 import Test.Cardano.Ledger.Dijkstra.ImpTest
@@ -50,21 +76,48 @@ spec = describe "EB re-builder" $ do
         mkBasicTx @era mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ [ensureMinCoinTxOut pp $ mkBasicTxOut addr amnt]
 
-    -- \| Builds an endorser block out of @n@ freshly submitted transactions and announces it,
-    -- leaving the ledger state exactly as it was before those transactions were submitted.
+    -- Builds an endorser block out of @n@ freshly submitted transactions, leaving the
+    -- ledger state exactly as it was before those transactions were submitted.
+    makeEb :: Int -> ImpTestM era (EndorserBlock era)
+    makeEb n =
+      simulateThenRestore $
+        impRecordSubmittedTxs (replicateM_ n submitSimpleTx) >>= makeEndorserBlock
+
+    -- Announces an endorser block with an announcement that need not be the correct one.
+    announceWith :: EbReferencesAnnouncement -> ImpTestM era (Block TestBlockHeader era)
+    announceWith announcement = do
+      tickToCurSlot
+      withTxsInModifiedBlock
+        (ebReferencesAnnouncementBlockHeaderL .~ SJust announcement)
+        (pure ())
+
     makeAnnouncedEb :: Int -> ImpTestM era (EndorserBlock era)
     makeAnnouncedEb n = do
-      eb <-
-        simulateThenRestore $
-          impRecordSubmittedTxs (replicateM_ n submitSimpleTx) >>= makeEndorserBlock
-      eb <$ announceEndorserBlock eb
+      eb <- makeEb n
+      eb <$ announceWith (mkEbReferencesAnnouncement eb)
 
     endorsedTxs eb = toList . unEbTransactions $ eb ^. transactionsEndorserBlockL
 
-    initFor eb = do
+    ebRefs eb = eb ^. referencesEndorserBlockL
+    ebRefsHash = hashAnnotated . ebRefs
+    ebRefsSize = originalBytesSize . ebRefs
+
+    -- The total of the sizes the references declare, which is what init checks against
+    -- `ppMaxEndorserBlockTxsSize`.
+    declaredTxsSize :: EndorserBlock era -> Word32
+    declaredTxsSize = sum . OMap.toStrictSeq . (^. txRefsEbReferencesG) . ebRefs
+
+    runInit eb = do
       nes <- getsNES id
-      either (assertFailure . show) pure $
-        mkInitEbReBuilderState nes (eb ^. referencesEndorserBlockL)
+      pure $ mkInitEbReBuilderState nes (ebRefs eb)
+
+    initFor eb = runInit eb >>= either (assertFailure . show) pure
+
+    initFails :: EndorserBlock era -> EbReBuilderInitError era -> ImpTestM era ()
+    initFails eb expected =
+      runInit eb >>= \case
+        Left err -> err `shouldBe` expected
+        Right _ -> assertFailure $ "Expected initialisation to fail with " <> show expected
 
     snocOk :: EbReBuilderState era -> Tx TopTx era -> ImpTestM era (EbReBuilderState era)
     snocOk st tx = do
@@ -142,3 +195,67 @@ spec = describe "EB re-builder" $ do
       Left err ->
         err
           `shouldBe` EbReBuilderMissingTxsError (NE.fromList (hashAnnotated <$> drop 1 txs))
+
+  describe "Initialisation" $ do
+    it "Fails when the EB was not announced" $ do
+      eb <- makeEb 2
+      initFails eb . EbReBuilderInitNoAnnouncement . EbWasNotAnnounced $ ebRefsHash eb
+
+    it "Fails when the announcement has a different hash" $ do
+      eb <- makeEb 2
+      wrongHash <- arbitrary
+      _ <- announceWith $ mkEbReferencesAnnouncement eb & ebReferencesAnnouncementHashL .~ wrongHash
+      initFails eb . EbReBuilderInitEbAnnouncementHashMismatch $
+        EbAnnouncementHashMismatch
+          Mismatch {mismatchSupplied = ebRefsHash eb, mismatchExpected = wrongHash}
+
+    it "Fails when the announcement has a different size" $ do
+      eb <- makeEb 2
+      let announcement = mkEbReferencesAnnouncement eb
+          wrongSize = ebReferencesAnnouncementSize announcement + 1
+      _ <- announceWith $ announcement & ebReferencesAnnouncementSizeL .~ wrongSize
+      initFails eb . EbReBuilderInitEbAnnouncementSizeMismatch $
+        EbAnnouncementSizeMismatch
+          Mismatch
+            { mismatchSupplied = ebRefsSize eb
+            , mismatchExpected = fromIntegral @Word32 @Int wrongSize
+            }
+
+    it "Fails when initialised at a slot after the announcing block" $ do
+      eb <- makeEb 2
+      block <- announceWith $ mkEbReferencesAnnouncement eb
+      passTick
+      tickToCurSlot
+      laterSlot <- getsNES nesLastTickSlotNoL
+      initFails eb . EbReBuilderInitEbAnnouncementSlotMismatch $
+        EbAnnouncementSlotMismatch
+          Mismatch {mismatchSupplied = laterSlot, mismatchExpected = block ^. slotNoBlockHeaderL}
+
+    it "Fails when the EB has already been applied" $ do
+      eb <- makeAnnouncedEb 2
+      impAnn "Submit EB" $ submitEndorserBlock eb
+      initFails eb . EbReBuilderInitEbAlreadyApplied . EbAlreadyApplied $ ebRefsHash eb
+
+    it "Fails when the references exceed the size limit" $ do
+      eb <- makeAnnouncedEb 2
+      maxEbRefsSize <- integralToBounded @Int @Word32 $ ebRefsSize eb - 1
+      modifyPParams $ ppMaxEndorserBlockReferencesSizeL .~ maxEbRefsSize
+      initFails eb . EbReBuilderInitEbReferencesSizeTooBig $
+        EbReferencesSizeTooBig
+          Mismatch
+            { mismatchSupplied = ebRefsSize eb
+            , mismatchExpected = fromIntegral @Word32 @Int maxEbRefsSize
+            }
+
+    it "Fails when the declared transaction sizes exceed the limit" $ do
+      eb <- makeAnnouncedEb 2
+      let declared = declaredTxsSize eb
+      modifyPParams $ ppMaxEndorserBlockTxsSizeL .~ declared - 1
+      initFails eb . EbReBuilderInitEbTxsSizeTooBig $
+        EbTxsSizeTooBig
+          Mismatch {mismatchSupplied = declared, mismatchExpected = declared - 1}
+
+    it "Succeeds on a correctly announced EB" $ do
+      eb <- makeAnnouncedEb 3
+      _ <- initFor eb
+      pure ()
